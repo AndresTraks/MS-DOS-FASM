@@ -1,4 +1,4 @@
-<img width="150" height="150" align="left" style="float: left; margin: 0 10px 0 0;" alt="MS-DOS logo" src="https://github.com/Microsoft/MS-DOS/blob/main/.readmes/msdos-logo.png">   
+<img width="110" height="110" align="left" style="float: left; margin: 0 10px 0 0;" alt="MS-DOS logo" src="https://github.com/Microsoft/MS-DOS/blob/main/.readmes/msdos-logo.png">   
 
 # MS-DOS v1.25, v2.0, v4.0 Source Code for FASM
 This repo contains the source code for MS-DOS v1.25, v2.0 and v4.00, modified to be assembled with [flat assembler](https://flatassembler.net/).
