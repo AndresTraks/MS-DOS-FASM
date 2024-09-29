@@ -1,0 +1,98 @@
+Version 2.2.4 (2012-01-19)
+-------------------------------------------------------------------------------
+
+* New feature: if a file already exists on the image, allow it to be
+  overwritten if the -g command-line option is specified.
+* If the end-of-cluster mark is found prematurely (as deduced from the file
+  size) when extracting a file, emit a warning message that says that the
+  extracted file may be damaged.
+* Bugfix: set the `ctime_ms' field to zero when creating a file (it was already
+  being implicitly zeroed though, so the bug wasn't observable).
+* Relicensed under the terms of the Fair License (see LICENSE.txt).
+
+Version 2.2.3 (2011-06-30)
+-------------------------------------------------------------------------------
+
+* Bugfix: fill the `last access date' field when inserting a file.
+
+Version 2.2.2 (2010-09-21)
+-------------------------------------------------------------------------------
+
+* Bugfix: invalid exit status after handling --help or --version (was 1, should
+  be 0).
+
+Version 2.2.1 (2009-08-31)
+-------------------------------------------------------------------------------
+
+* Change: if a boot sector is specified when creating/modifying an image,
+  warn when an invalid media ID was found in the BPB (because it is used in the
+  first FAT entry).
+
+Version 2.2.0 (2009-07-23)
+-------------------------------------------------------------------------------
+
+* New feature: support extracting all files at once.
+* Command-line interface: one can now specify the name of the inserted file by
+  using the -n option.
+* Command-line interface: -o is not mandatory anymore. For -x, -o will default
+  to the filename specified for -x. For -b, -o will default to 'bootsect.bin'.
+* Bugfix: when extracting files, treat any cluster value >= 0xFF8 as the EOC
+  mark.
+* Bugfix: do not try to extract empty files (before, it resulted in a warning,
+  but worked). (The program will still create an empty output file, of course.)
+
+Version 2.1.1 (2009-07-08)
+-------------------------------------------------------------------------------
+
+* Bugfix: fixed double fclose().
+
+Version 2.1.0 (2009-07-07)
+-------------------------------------------------------------------------------
+
+* Bugfix: correctly zero the old bits of the FAT12 entry when updating the FAT.
+
+Version 2.0.1 (2009-07-03)
+-------------------------------------------------------------------------------
+
+* Minor fixes in the --help output.
+
+Version 2.0.0 (2009-07-02)
+-------------------------------------------------------------------------------
+
+* New feature: support extracting files from images.
+* New command-line interface (hence a major version bump).
+  Should conform to IEEE Std 1003.1, 2004 Edition.
+
+Version 1.0.6 (2009-06-19)
+-------------------------------------------------------------------------------
+
+* Recompiled without -ansi for the release build (decreases the size of the
+  binary).
+
+Version 1.0.5 (2009-05-05)
+-------------------------------------------------------------------------------
+
+* Relicensed under the terms of the Simplified BSD license.
+* Added a README.
+
+Version 1.0.4 (2008-12-27)
+-------------------------------------------------------------------------------
+
+* Allow for generating a boot sector instead of requiring one on the
+  command-line.
+* Added an option to generate a boot sector as output file.
+
+Version 1.0.3 (2008-11-27)
+-------------------------------------------------------------------------------
+
+* New feature: allow for generating empty images.
+
+Version 1.0.1 (2008-11-04)
+-------------------------------------------------------------------------------
+
+* Added support for modifying existing FAT12 images.
+
+Version 1.0.0 (2008-10-28)
+-------------------------------------------------------------------------------
+
+* First release.

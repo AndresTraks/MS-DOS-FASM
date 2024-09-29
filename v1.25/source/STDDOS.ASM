@@ -6,8 +6,8 @@ TRUE	EQU	1
 
 ; Use the switches below to produce the standard Microsoft version of the IBM
 ; version of the operating system
-MSVER	=	TRUE
-IBM		=	FALSE
+MSVER	=	FALSE
+IBM		=	TRUE
 
 ; Set this switch to cause DOS to move itself to the end of memory
 HIGHMEM	EQU	FALSE

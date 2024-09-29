@@ -24,7 +24,8 @@ PRNBAUD	EQU	7		; 1200 baud
 AUXBAUD	EQU	0FH		; 19200 baud
 ;
 ; Select disk controller here.
-SCP		=	1
+IBM		=	1
+SCP		=	0
 TARBELLSD	=	0
 TARBELLDD	=	0
 CROMEMCO4FDC	=	0
@@ -71,7 +72,11 @@ STPSPD	EQU	0
 ;
 ; ****** End of selections ********************************************
 ;
-BIOSSEG	EQU	40H		; I/O system segment.
+	IF	IBM
+BIOSSEG	=	60H		; I/O system segment.
+	ELSE
+BIOSSEG	=	40H		; I/O system segment.
+	END	IF
 BIOSLEN	EQU	2048		; Maximum length of I/O system.
 DOSLEN	EQU	8192		; Maximum length of MS-DOS.
 QSIZE	EQU	80		; Input queue size.
@@ -109,6 +114,20 @@ PRNDATA	=	BASE+12
 STKSAV	EQU	1701H+DOSDIF
 DMAADD	EQU	15B4H+DOSDIF
 
+	IF	IBM
+IVT_KEYBOARD_VECTOR		=	09H*4
+IVT_KEYBOARD_SEGMENT	=	09H*4+2
+
+PIC1	=	20h
+
+KB_SHIFT	=	1
+KB_CTRL		=	2
+KB_EXTENDED	=	4
+
+FLOPPY_SECTORS_PER_HEAD		=	18
+FLOPPY_HEADS_PER_CYLINDER	=	2
+	END	IF
+
 	ORG	0
 
 	JMP	INIT
@@ -134,7 +153,11 @@ MAPDEV:
 INIT:
 	XOR	BP,BP		; Set up stack just below I/O system.
 	MOV	SS,BP
+	IF	IBM
+	MOV	SP,7C00H
+	ELSE
 	MOV	SP,BIOSSEG*16
+	END	IF
 
 	IF	INTINP-1
 	MOV	AL,0FFH		; Mask all interrupts.
@@ -143,11 +166,17 @@ INIT:
 
 	IF	INTINP
 	CLI			; Set up keyboard interrupt vector.
+	IF	IBM
+	MOV	word[IVT_KEYBOARD_VECTOR],KBINT
+	MOV	[IVT_KEYBOARD_SEGMENT],CS
+	ELSE
 	MOV	word[BP+64H],KBINT
 	MOV	[BP+66H],CS
+	END	IF
 	STI
 	END	IF
 
+	IF	IBM	=	0
 	MOV	word[BP+4*38H],PRNFCB
 	MOV	[BP+4*38H+2],CS
 	PUSH	CS
@@ -166,6 +195,7 @@ INITSTC:
 	LODSB
 	OUT	STCDATA,AL
 	LOOP	INITSTC
+	END	IF
 
 	IF	SERIAL
 	MOV	CX,4
@@ -182,6 +212,10 @@ SERINIT:
 ;
 ; Move MS-DOS down to the first segment just above the I/O system.
 ;
+	IF	IBM
+	MOV	AX,BIOSSEG
+	MOV	DS,AX
+	END	IF
 	MOV	SI,BIOSLEN	; Source points to where MS-DOS currently is.
 	MOV	AX,DOSSEG	; Destination is beginning of DOSSEG.
 	MOV	ES,AX
@@ -269,7 +303,91 @@ FCB:	DB	1,"COMMAND COM"
 ;
 ; ************ Time and Date ************
 ;
+IF	IBM
+;Days of each month (from MSDOS.ASM)
+MONTAB  DB      31              ;January
+        DB      28              ;February--reset each time year changes
+        DB      31              ;March
+        DB      30              ;April
+        DB      31              ;May
+        DB      30              ;June
+        DB      31              ;July
+        DB      31              ;August
+        DB      30              ;September
+        DB      31              ;October
+        DB      30              ;November
+        DB      31              ;December
+END	IF
+
+BCD_TO_BIN:
+	PUSH	BX
+	MOV	BH,AL		; BH = ones digit
+	AND	BH,0Fh
+	SHR	AL,4		; AL = tens digit
+	MOV	AH,10		; AX = 10 * AL + BH
+	MUL	AH
+	ADD	AL,BH
+	POP	BX
+	RET
+
 GETTIME:
+IF	IBM
+	PUSH	CX
+	PUSH	DX
+
+	MOV	AH,4
+	INT	1AH
+
+	MOV	AL,DH		; DH = month
+	CALL	BCD_TO_BIN
+	MOV	DH,AL
+
+	MOV	AL,DL		; DL = day
+	CALL	BCD_TO_BIN
+	MOV	DL,AL
+
+	MOV	AL,CH		; BX = centuries in years
+	CALL BCD_TO_BIN
+	MOV	BX,100
+	PUSH DX
+	MUL	BX
+	POP	DX
+	MOV	BX,AX
+
+	MOV	AL,CL		; AX = year
+	CALL	BCD_TO_BIN
+
+	ADD	AX,BX		; Add centuries
+	SUB	AX,1980		; Number of years passed since 01-01-1980
+	MOV	BX,AX
+
+	MOV	AX,365		; Total days per year
+	PUSH	DX
+	MUL	BX
+	POP	DX
+	SHR	BX,2		; Add leap years
+	ADD	AX,BX
+
+	XOR	CX,CX		; Add days for the months in the current year
+	XOR	BX,BX
+	DEC	DH
+ADD_MONTH_DAYS:
+	CMP	BL,DH		; Compare BX (current month) with AL (target month)
+	JGE	ADD_DAYS	; If all months have been added, go to next section
+
+	MOV	CL,[CS:MONTAB+BX]	; Get the number of days in the current month
+	ADD	AX,CX
+	INC	BL
+	JMP	ADD_MONTH_DAYS
+
+ADD_DAYS:
+	AND	DX,0FFH			; Add current month days
+	ADD	AX,DX
+
+	POP	DX
+	POP	CX
+	RETF
+ELSE
 	MOV	AL,0A7H		;Save counters 1,2,3
 	OUT	STCCOM,AL
 	MOV	AL,0E0H		;Enable data pointer sequencing
@@ -301,6 +419,7 @@ STCBYTE:
 	MOV	AH,AL
 	MOV	AL,CL
 	RET
+END	IF
 
 SETTIME:
 	PUSH	CX
@@ -406,9 +525,145 @@ QUEUE:	DB	-1		; For storing characters from STATUS to INP.
 KBINT:
 	PUSH	AX
 	PUSH	SI
+IF	IBM
+	IN	AL,60H	; get key
+
+	CMP	AL,1DH
+	JE	KB_STATUS_CTRL
+	CMP	AL,2AH
+	JE	KB_STATUS_SHIFT
+	CMP	AL,9DH
+	JE	KB_STATUS_CTRL_UP
+	CMP	AL,0AAH
+	JE	KB_STATUS_SHIFT_UP
+
+	TEST	[CS:KB_STATUS],KB_CTRL
+	JNZ	KB_HANDLE_CTRL
+	TEST	[CS:KB_STATUS],KB_EXTENDED
+	JNZ	KB_STATUS_EXTENDED_UP
+
+	CMP	AL,80H
+	JAE	LEAVINT
+
+	CMP	AL,0E0H
+	JE	KB_STATUS_EXTENDED
+
+	PUSH	SI		; Load character map
+	MOV	SI,KB_MAP_SHIFT
+	TEST	[CS:KB_STATUS],KB_SHIFT
+	JNZ KB_HANDLE_KEYCODE
+	MOV	SI,KB_MAP
+
+KB_HANDLE_KEYCODE:
+	XOR	AH,AH
+	ADD	SI,AX
+	MOV	AH,AL
+	MOV AL,[CS:SI]
+	POP	SI
+	CMP	AL,0
+	JZ	LEAVINT
+	CMP	AL,-1
+	JNE	FLSH
+	JMP LEAVINT
+
+KB_HANDLE_CTRL:
+	CMP AL,0x7F
+	JAE	LEAVINT
+	SUB	AL,2BH
+	JMP	FLSH
+
+KB_STATUS_CTRL:
+	OR	[CS:KB_STATUS],KB_CTRL
+	JMP	LEAVINT
+KB_STATUS_CTRL_UP:
+	AND	[CS:KB_STATUS],NOT	KB_CTRL
+	JMP	LEAVINT
+
+KB_STATUS_SHIFT:
+	OR	[CS:KB_STATUS],KB_SHIFT
+	JMP	LEAVINT
+KB_STATUS_SHIFT_UP:
+	AND	[CS:KB_STATUS],NOT	KB_SHIFT
+	JMP	LEAVINT
+
+KB_STATUS_EXTENDED:
+	OR	[CS:KB_STATUS],KB_EXTENDED
+	JMP	LEAVINT
+KB_STATUS_EXTENDED_UP:
+	AND	[CS:KB_STATUS],NOT	KB_EXTENDED
+	JMP	LEAVINT
+
+KB_STATUS DB 0
+
+KB_MAP:
+	DB 0
+	DB 0
+	DB '1234567890+_'
+	DB 0xe
+	DB 0
+	DB 'qwertyuiop'
+	DB '[]'
+	DB 13
+	DB 0
+	DB 'asdfghjkl'
+	DB ';'
+	DB "'"
+	DB '`'
+	DB ? ; LSHIFT
+	DB '\'
+	DB 'zxcvbnm'
+	DB ',./'
+	DB ? ; RSHIFT
+	DB '*'
+	DB -1
+	DB ' '
+	DB -1
+	DB 10 dup(-1) ; F1-F10
+	DB 2 dup(-1)
+	DB '789-'
+	DB '456+'
+	DB '123'
+	DB '0,'
+	DB 2 dup(-1)
+	DB 1 dup('\')
+	DB 41 dup(-1)
+
+KB_MAP_SHIFT:
+	DB 0
+	DB 0
+	DB '!@#$%^&*()_+'
+	DB 0xe
+	DB '_'
+	DB 'QWERTYUIOP'
+	DB '{}'
+	DB 13
+	DB 0
+	DB 'ASDFGHJKL'
+	DB ':'
+	DB '"'
+	DB '|'
+	DB 0
+	DB '\'
+	DB 'ZXCVBNM'
+	DB '<>?'
+	DB -1
+	DB '*'
+	DB -1
+	DB ' '
+	DB 13 dup(-1)
+	DB '789-'
+	DB '456+'
+	DB '123'
+	DB '0,'
+	DB 2 dup(-1)
+	DB 1 dup('|')
+	DB 41 dup(-1)
+ELSE
 	MOV	AL,20H		;End of Interrupt command
 	OUT	BASE+2,AL	;Send to slave
 	IN	AL,DATA		;Get the character
+END	IF
+
 	AND	AL,7FH
 	CMP	AL,"C"-"@"
 	JZ	FLSH
@@ -426,6 +681,10 @@ SAVKY:
 	MOV	[CS:SI],AL		;Put character in queue
 	MOV	[CS:REAR],SI	;Save pointer
 LEAVINT:
+IF	IBM
+	MOV	AL,20h		; Mark end of interrupt
+	OUT	PIC1,AL
+END	IF
 	POP	SI
 	POP	AX
 	IRET
@@ -436,6 +695,9 @@ QFULL:
 
 STATUS:
 	PUSH	SI
+	IF	IBM
+	JMP	NOPRN
+	END	IF
 ;See if printer ready
 	IN	AL,PRNSTAT
 	AND	AL,TBMT
@@ -556,7 +818,15 @@ OUTLP:
 	AND	AL,TBMT
 	JZ	OUTLP
 	POP	AX
+	IF	IBM
+	PUSH	BX
+	MOV	AH,0EH
+	MOV	BH,0
+	INT	10H
+	POP	BX
+	ELSE
 	OUT	DATA,AL
+	END	IF
 	RETF
 
 PRINT:
@@ -748,6 +1018,7 @@ PREVDENS:DB	1,3,5,7,9,11,13	; Table of previous disk I/O driver numbers.
 	END	IF			; End of 1793 DSKCHG function.
 
 CHKNEW:
+	IF	IBM	=	0
 	MOV	AH,AL		; Save disk drive number in AH.
 	; AL = previous disk drive number,
 	XCHG	AL,[CS:CURDRV]	;  make new drive current.
@@ -763,6 +1034,7 @@ CHKNEW:
 	CALL	DCOM
 	MOV	AL,AH		; Restore current drive number
 CHKNEW_RET:
+	END IF
 	RET
 
 	IF	CROMEMCO16FDC
@@ -808,6 +1080,28 @@ MOTORSON:
 ;	       12 = "disk" (none of the above) error
 ;
 READ:
+	IF	IBM
+	PUSH	ES
+	PUSH	DS
+	POP	ES
+
+	PUSH	CX
+	PUSH	AX
+	MOV	AX,DX
+	MOV	CH,FLOPPY_SECTORS_PER_HEAD
+	DIV	CH
+	MOV	CL,AH
+	INC	CL		; sector
+	XOR	AH,AH
+	MOV	CH,FLOPPY_HEADS_PER_CYLINDER
+	DIV	CH
+	MOV	CH,AL	; cylinder
+	POP	DX
+	MOV	DH,AH	; head
+	POP	AX
+	MOV	AH,2
+	INT	13H
+	ELSE
 	CALL	SEEK		;Position head
 	JC	ERROR
 	PUSH	ES		; Make ES same as DS.
@@ -819,6 +1113,8 @@ RDLP:
 	INC	DH		;Next sector number
 	LOOP	RDLP		;Read each sector requested
 	CLC			; No errors.
+	END	IF
+
 	POP	ES		; Restore ES register.
 	RETF
 ;
@@ -826,6 +1122,30 @@ RDLP:
 ; Registers same on entry and exit as read above.
 ;
 WRITE:
+	IF	IBM
+	PUSH	ES
+	PUSH	DS
+	POP	ES
+
+	PUSH	CX
+	PUSH	AX
+	MOV	AX,DX
+	MOV	CH,FLOPPY_SECTORS_PER_HEAD
+	DIV	CH
+	MOV	CL,AH
+	INC	CL		; sector
+	XOR	AH,AH
+	MOV	CH,FLOPPY_HEADS_PER_CYLINDER
+	DIV	CH
+	MOV	CH,AL	; cylinder
+	POP	DX
+	MOV	DH,AH	; head
+	POP AX
+	MOV	AH,3
+	INT	13H
+
+	POP	ES
+ELSE
 	CALL	SEEK		;Position head
 	JC	ERROR
 WRTLP:
@@ -835,6 +1155,7 @@ WRTLP:
 	LOOP	WRTLP		;Write CX sectors
 	CLC			; No errors.
 WRITERET:
+END	IF
 	RETF
 
 POPESERROR:
@@ -897,6 +1218,7 @@ DIRECTRET:
 	MOV	byte[CS:CURDRV],-1	; Force DSKCHG to do density check.
 	RETF
 
+	IF	IBM	=	0
 	IF	WD1791
 GETIODRIVER:
 	MOV	byte[CS:CURDRV],-1	; Force DSKCHG to do density check.
@@ -1421,6 +1743,7 @@ SKWAIT:
 	MOV	AL,0
 	RET
 	END IF
+	END IF
 
 CURDRV	DB	-1
 ;
@@ -1447,7 +1770,38 @@ CURDRV	DB	-1
 ;
 ; INITTAB is the initialization table for 86-DOS as described in the
 ; 86-DOS Programer's Manual under "Customizing the I/O System."
-;
+
+IF IBM
+DSKCHG:
+	XOR	AL,AL	; AL = disk I/O driver number.
+	CLC			; No disk error.
+	RETF
+
+HOME:
+	RET
+
+MOVHEAD:
+	RET
+
+DRVTAB:
+		DB	0
+TRKPT:	DB	0
+TRKTAB:	DB	-1
+INITTAB:
+		DB	1	; NUMIO
+
+		DB	0	; Physical unit no
+		DW	DPT
+
+DPT:
+		DW	512		; sector size
+		DB	1		; sectors per cluster
+		DW	1		; reserved sectors
+		DB	2		; FAT count
+		DW	224		; MAXENT
+		DW	2880	; num sectors
+END	IF
+
 	IF	SCP*COMBIN*FASTSEEK
 ;
 ; A PerSci 277 or 299 and one 5.25-inch drive.

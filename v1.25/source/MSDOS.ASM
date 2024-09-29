@@ -2739,10 +2739,15 @@ GETCH:
         JZ      GETCH
         CMP     AL,[CS:ESCCHAR]
         JZ      _ESC
+        IF      IBM
+        CMP     AL,0xE
+        JZ      BACKSP
+        ELSE
         CMP     AL,7FH
         JZ      BACKSP
         CMP     AL,8
         JZ      BACKSP
+        END     IF
         CMP     AL,13
         JZ      ENDLIN
         CMP     AL,10
