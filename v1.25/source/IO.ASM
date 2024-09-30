@@ -332,8 +332,7 @@ BCD_TO_BIN:
 
 GETTIME:
 IF	IBM
-	PUSH	CX
-	PUSH	DX
+	PUSH	BX
 
 	MOV	AH,4
 	INT	1AH
@@ -370,11 +369,10 @@ IF	IBM
 
 	XOR	CX,CX		; Add days for the months in the current year
 	XOR	BX,BX
-	DEC	DH
+	DEC	DH			; 0-based month
 ADD_MONTH_DAYS:
-	CMP	BL,DH		; Compare BX (current month) with AL (target month)
-	JGE	ADD_DAYS	; If all months have been added, go to next section
-
+	CMP	BL,DH
+	JGE	ADD_DAYS
 	MOV	CL,[CS:MONTAB+BX]	; Get the number of days in the current month
 	ADD	AX,CX
 	INC	BL
@@ -383,9 +381,27 @@ ADD_MONTH_DAYS:
 ADD_DAYS:
 	AND	DX,0FFH			; Add current month days
 	ADD	AX,DX
+	MOV	BX,AX
 
-	POP	DX
-	POP	CX
+	MOV	AH,2
+	INT	1AH
+
+	MOV	AL,CH	; hours
+	CALL	BCD_TO_BIN
+	MOV	CH,AL
+
+	MOV	AL,CL	; minutes
+	CALL	BCD_TO_BIN
+	MOV	CL,AL
+
+	MOV	AL,DH	; seconds
+	CALL	BCD_TO_BIN
+	MOV	DH,AL
+
+	XOR	DL,DL	; TODO: use INT	1AH, AH=0 to get time with milliseconds
+
+	MOV	AX,BX
+	POP	BX
 	RETF
 ELSE
 	MOV	AL,0A7H		;Save counters 1,2,3
