@@ -1,43 +1,42 @@
 ; HEX2BIN  version 1.02
 ; Converts Intel hex format files to straight binary
 
-FCB:	EQU	5CH
-READ:	EQU	20
-SETDMA:	EQU	26
-OPEN:	EQU	15
-CLOSE:	EQU	16
-CREATE:	EQU	22
-DELETE:	EQU	19
-BLKWRT:	EQU	40
-GETSEG:	EQU	38
-BUFSIZ:	EQU	1024
+FCB		EQU	5CH
+READ	EQU	20
+SETDMA	EQU	26
+OPEN	EQU	15
+CLOSE	EQU	16
+CREATE	EQU	22
+DELETE	EQU	19
+BLKWRT	EQU	40
+GETSEG	EQU	38
+BUFSIZ	EQU	1024
 
 	ORG	100H
-	PUT	100H
 
 HEX2BIN:
 	MOV	DI,FCB+9
-	CMP	B,[DI]," "
+	CMP	BYTE[DI]," "
 	JNZ	HAVEXT
 	MOV	SI,HEX
-	MOVB
-	MOVW
+	MOVSB
+	MOVSW
 HAVEXT:
 ;Get load offset (default is -100H)
 	MOV	CL,4		;Needed for shifts
 	MOV	[OFFSET],-100H
 	MOV	SI,FCB+11H	;Scan second FCB for offset
-	LODB
+	LODSB
 	CMP	AL," "		;Check if offset present
 	JZ	HAVOFF
-	MOV	B,[SIGN],0	;Assume positive sign for now
+	MOV	BYTE[SIGN],0	;Assume positive sign for now
 	CMP	AL,"+"
 	JZ	GETOFF		;Get a positive offset
 	CMP	AL,"-"
 	JNZ	GETOFF1		;If not + or -, then not signed
-	MOV	B,[SIGN],1	;Flag as negative offset
+	MOV	BYTE[SIGN],1	;Flag as negative offset
 GETOFF:
-	LODB			;Eat sign
+	LODSB			;Eat sign
 GETOFF1:
 	CALL	HEXCHK		;Check for valid hex character
 	JC	HAVOFF		;No offset if not valid
@@ -45,10 +44,10 @@ GETOFF1:
 CONVOFF:
 	SHL	BX,CL		;Multiply current sum by 16
 	OR	BL,AL		;Add in current hex digit
-	LODB			;Get next digit
+	LODSB			;Get next digit
 	CALL	HEXCHK		;And convert it to binary
 	JNC	CONVOFF		;Loop until all hex digits read
-	TEST	B,[SIGN],-1	;Check if offset was to be negative
+	TEST	BYTE[SIGN],-1	;Check if offset was to be negative
 	JZ	SAVOFF
 	NEG	BX
 SAVOFF:
@@ -60,22 +59,21 @@ HAVOFF:
 	MOV	AH,GETSEG
 	INT	33
 	MOV	ES,DX
-	SEG	ES
-	MOV	CX,[6]		;Get size of segment
+	MOV	CX,[ES:6]		;Get size of segment
 	MOV	[SEGSIZ],CX
 	XOR	AX,AX
 	MOV	DI,AX
 	MOV	BP,AX
-	SHR	CX
+	SHR	CX,1
 	REP
-	STOW			;Fill entire segment with zeros
+	STOSW			;Fill entire segment with zeros
 	MOV	AH,OPEN
 	MOV	DX,FCB
 	INT	21H
 	OR	AL,AL
 	JNZ	NOFIL
-	MOV	B,[FCB+32],0
-	MOV	[FCB+14],BUFSIZ	;Set record size to buffer size
+	MOV	BYTE[FCB+32],0
+	MOV	WORD[FCB+14],BUFSIZ	;Set record size to buffer size
 	MOV	DX,BUFFER
 	MOV	AH,SETDMA
 	INT	33
@@ -101,7 +99,7 @@ READLN:
 	CMP	DI,[SEGSIZ]
 	JAE	ADERR
 	CALL	GETBYT		;Get data byte
-	STOB
+	STOSB
 	CMP	DI,BP		;Check if this is the largest address so far
 	JBE	HAVBIG
 	MOV	BP,DI		;Save new largest
@@ -128,7 +126,7 @@ GETCH:
 	JZ	ERROR
 	MOV	SI,BUFFER
 NOREAD:
-	LODB
+	LODSB
 	CMP	AL,1AH
 	JZ	DONE
 	RET
@@ -137,37 +135,38 @@ GETBYT:
 	CALL	HEXDIG
 	MOV	BL,AL
 	CALL	HEXDIG
-	SHL	BL
-	SHL	BL
-	SHL	BL
-	SHL	BL
+	SHL	BL,1
+	SHL	BL,1
+	SHL	BL,1
+	SHL	BL,1
 	OR	AL,BL
 	RET
 
 HEXCHK:
 	SUB	AL,"0"
-	JC	RET
+	JC	_RET
 	CMP	AL,10
 	JC	CMCRET
 	SUB	AL,"A"-"0"-10
-	JC	RET
+	JC	_RET
 	CMP	AL,16
 CMCRET:
 	CMC
+_RET:
 	RET
 
 HEXDIG:
 	CALL	GETCH
 	CALL	HEXCHK
-	JNC	RET
+	JNC	_RET
 ERROR:
 	MOV	DX,ERRMES
 SHOWERR:
 	MOV	AH,9
 	INT	21H
 DONE:
-	MOV	[FCB+9],4F00H+"C"	;"CO"
-	MOV	B,[FCB+11],"M"
+	MOV	WORD[FCB+9],4F00H+"C"	;"CO"
+	MOV	BYTE[FCB+11],"M"
 	MOV	DX,FCB
 	MOV	AH,CREATE
 	INT	21H
@@ -204,11 +203,10 @@ NOFILE:	DB	"File not found$"
 ADDR:	DB	"Address out of range--conversion aborted$"
 DIRFUL:	DB	"Disk directory full$"
 
-OFFSET:	DS	2
-SEGSIZ:	DS	2
-SIGN:	DS	1
-BUFFER:	DS	BUFSIZ
+OFFSET	DW	2
+SEGSIZ:	DW	2
+SIGN:	DW	1
+BUFFER:	DW	BUFSIZ
 
 START:
-STARTSEG EQU	(START+15)/16
-
+STARTSEG =	(START+15)/16
