@@ -834,7 +834,7 @@ COMLOAD:PUSH    DS
         PUSH    AX
         CALL    SETUP
 XXX:
-        RET
+        RETF
 BADCOM:
         MOV     DX,BADNAM
 ERROR:
@@ -1634,7 +1634,7 @@ DATINIT:
         POP     DS
         POP     ES
 YYY:
-        RET
+        RETF
 
 ; DATE - Gets and sets the time
 
