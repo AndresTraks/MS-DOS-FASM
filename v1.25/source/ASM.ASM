@@ -25,71 +25,70 @@
 ;
 ;* * * * * * * * * * * * * * * * * * * * *
 
-SYMWID:	EQU	5	;5 symbols per line in dump
-FCB:	EQU	5CH
-BUFSIZ:	EQU	1024	;Source code buffer
-LSTBUFSIZ:EQU	BUFSIZ	;List file buffer
-HEXBUFSIZ:EQU	70	;Hex file buffer (26*2 + 5*2 + 3 + EXTRA)
-EOL:	EQU	13	;ASCII carriage return
-OBJECT:	EQU	100H	;DEFAULT "PUT" ADDRESS
+SYMWID	EQU	5	;5 symbols per line in dump
+FCB		EQU	5CH
+BUFSIZ	EQU	1024	;Source code buffer
+LSTBUFSIZ	EQU	BUFSIZ	;List file buffer
+HEXBUFSIZ	EQU	70	;Hex file buffer (26*2 + 5*2 + 3 + EXTRA)
+EOL		EQU	13	;ASCII carriage return
+OBJECT	EQU	100H	;DEFAULT "PUT" ADDRESS
 
 ;System call function codes
-PRINTMES: EQU	9
-OPEN:	EQU	15
-CLOSE:	EQU	16
-READ:	EQU	20
-SETDMA:	EQU	26
-MAKE:	EQU	22
-BLKWRT:	EQU	40
+PRINTMES EQU	9
+OPEN	EQU	15
+CLOSE	EQU	16
+READ	EQU	20
+SETDMA	EQU	26
+MAKE	EQU	22
+BLKWRT	EQU	40
 
 ;The following equates define some token values returned by GETSYM
-UNDEFID:EQU	0	;Undefined identifier (including no nearby RET)
-CONST:	EQU	1	;Constant (including $)
-REG:	EQU	2	;8-bit register
-XREG:	EQU	3	;16-bit register (except segment registers)
-SREG:	EQU	4	;Segment register
-FREG:	EQU	6	;8087 floating point register
+UNDEFID	EQU	0	;Undefined identifier (including no nearby RET)
+CONST	EQU	1	;Constant (including $)
+REG		EQU	2	;8-bit register
+XREG	EQU	3	;16-bit register (except segment registers)
+SREG	EQU	4	;Segment register
+FREG	EQU	6	;8087 floating point register
 
 ;Bits to build 8087 opcode table entries
-ONEREG:	EQU	40H	;Single ST register OK as operand
-NEEDOP:	EQU	80H	;Must have an operand
-INTEGER:EQU	20H	;For integer operations
-REAL:	EQU	28H	;For real operations
+ONEREG	EQU	40H	;Single ST register OK as operand
+NEEDOP	EQU	80H	;Must have an operand
+INTEGER	EQU	20H	;For integer operations
+REAL	EQU	28H	;For real operations
 EXTENDED EQU	10H	;For Long integers or Temporary real
-MEMORY:	EQU	18H	;For general memory operations
-STACKOP:EQU	10H	;Two register arithmetic with pop
-ARITH:	EQU	8	;Non-pop arithmetic operations
+MEMORY	EQU	18H	;For general memory operations
+STACKOP	EQU	10H	;Two register arithmetic with pop
+ARITH	EQU	8	;Non-pop arithmetic operations
 
 	ORG	100H
-	PUT	100H
 
-	JMPS	BEGIN
+	JMP	BEGIN
 
 HEADER:	DB	13,10,'Seattle Computer Products 8086 Assembler Version 2.44'
 	DB	13,10,'Copyright 1979-1983 by Seattle Computer Products, Inc.'
 	DB	13,10,13,10,'$'
 
 BEGIN:
-	MOV	SP,STACK
+	MOV	SP,_STACK
 	MOV	DX,HEADER
 	MOV	AH,PRINTMES
 	INT	33
 	MOV	AL,[FCB+17]
 	MOV	[SYMFLG],AL	;Save symbol table request flag
 	MOV	SI,FCB+9	;Point to file extension
-	LODB			;Get source drive letter
+	LODSB			;Get source drive letter
 	CALL	CHKDSK		;Valid drive?
 	OR	AL,AL
 	JZ	DEFAULT		;If no extension, use existing drive spec
 	MOV	[FCB],AL
 DEFAULT:
-	LODB			;Get HEX file drive letter
+	LODSB			;Get HEX file drive letter
 	CMP	AL,'Z'		;Suppress HEX file?
 	JZ	L0000
 	CALL	CHKDSK
 L0000:	
 	MOV	[HEXFCB],AL
-	LODB			;Get PRN file drive letter
+	LODSB			;Get PRN file drive letter
 	MOV	AH,0		;Signal no PRN file
 	CMP	AL,'Z'		;Suppress PRN file?
 	JZ	NOPRN
@@ -108,9 +107,9 @@ NOPRN:
 	MOV	[LSTDEV],AH	;Flag device for list ouput
 	MOV	SI,EXTEND
 	MOV	DI,FCB+9
-	MOVW
-	MOVB			;Set extension to ASM
-	MOVW			;Zero extent field
+	MOVSW
+	MOVSB			;Set extension to ASM
+	MOVSW			;Zero extent field
 	MOV	DX,FCB
 	MOV	AH,OPEN
 	INT	33
@@ -125,7 +124,7 @@ NOPRN:
 	XOR	AX,AX
 	MOV	[FCB+12],AX	;Zero CURRENT BLOCK field
 	MOV	[FCB+32],AL	;Zero Next Record field
-	MOV	[FCB+14],BUFSIZ	;Set record size
+	MOV	WORD[FCB+14],BUFSIZ	;Set record size
 	MOV	[BUFPT],SRCBUF	;Initialize buffer pointer
 	MOV	[CODE],START+1	;POINTER TO NEXT BYTE OF INTERMEDIATE CODE
 	MOV	[IY],START	;POINTER TO CURRENT RELOCATION BYTE
@@ -138,12 +137,12 @@ NOPRN:
 	DEC	AX
 	MOV	[LSTRET],AX	;Location of last RET
 	MOV	AX,[6]		;HL=END OF MEMORY
-	MOV	[HEAP],AX	;BACK END OF SYMBOL TABLE SPACE
+	MOV	[_HEAP],AX	;BACK END OF SYMBOL TABLE SPACE
 	MOV	[BCOUNT],4	;CODE BYTES PER RELOCATION BYTE
 
 ;Assemble each line of code
 
-LOOP:
+_LOOP:
 	CALL	NEXTCHR		;Get first character on line
 	CMP	AL,1AH
 	JZ	ENDJ
@@ -161,15 +160,15 @@ L0002:
 	JZ	ENDLN
 	MOV	AL,14H		;Garbage at end of line error
 	JP	ENDLIN
-ENDJ:	JMP	END
+ENDJ:	JMP	_END
 
 ENDLN:
 	XOR	AL,AL		;Flag no errors on line
 ENDLIN:
 ;AL = error code for line. Stack depth unknown
-	MOV	SP,STACK
+	MOV	SP,_STACK
 	CALL	NEXLIN
-	JP	LOOP
+	JP	_LOOP
 
 NEXLIN:
 	MOV	CH,0C0H		;Put end of line marker and error code (AL)
@@ -178,7 +177,7 @@ NEXLIN:
 	MOV	AL,[CHR]
 GETEOL:
 	CMP	AL,10
-	JZ	RET
+	JZ	MAKFIL_RET
 	CMP	AL,1AH
 	JZ	ENDJ
 	CALL	NEXTCHR		;Scan over comments for linefeed
@@ -194,29 +193,30 @@ PRERR:
 
 MAKFIL:
 	MOV	SI,DX
-	LODB			;Get drive select byte
+	LODSB			;Get drive select byte
 	CMP	AL,20H		;If not valid, don't make file
-	JNC	RET
+	JNC	MAKFIL_RET
 	MOV	CX,4
 	MOV	DI,SI
 	MOV	SI,FCB+1
 	REP
-	MOVW			;Copy source file name
+	MOVSW			;Copy source file name
 	MOV	AH,MAKE
 	INT	33
-	MOV	[DI-9+14],1	;Set record length to 1 byte
+	MOV	WORD[DI-9+14],1	;Set record length to 1 byte
 	MOV	BX,NOSPAC
 	OR	AL,AL		;Success?
 	JNZ	PRERR
+MAKFIL_RET:
 	RET
 
 CHKDSK:
 	SUB	AL,' '		;If not present, set zero flag
-	JZ	RET
+	JZ	MAKFIL_RET
 	SUB	AL,20H
 	JZ	DSKERR		;Must be in range A-O
 	CMP	AL,'P'-'@'
-	JC	RET
+	JC	MAKFIL_RET
 DSKERR:
 	MOV	BX,BADDSK
 	JP	PRERR
@@ -246,7 +246,7 @@ NEXTCHR:
 	MOV	AL,1AH		;Possibly signal End of File
 	JZ	NOMOD		;If nothing read
 GETCH:
-	LODB
+	LODSB
 	CMP	SI,SRCBUF+BUFSIZ
 	JNZ	NOMOD
 	MOV	SI,SRCBUF
@@ -277,12 +277,12 @@ MROPS:
 	JZ	ERROR		;Error if so
 	POP	CX		;Restore type flags
 	CMP	AL,DH		;If second operand is immediate, then done
-	JZ	RET
+	JZ	MAKFIL_RET
 	MOV	AL,UNDEFID	;Check for memory reference
 	CMP	AL,BH
-	JZ	STORE		;Is destination memory?
+	JZ	_STORE		;Is destination memory?
 	CMP	AL,DH
-	JZ	LOAD		;Is source memory?
+	JZ	_LOAD		;Is source memory?
 	TEST	CL,1		;Check if register-to-register operation OK
 	MOV	CL,27
 	JZ	ERROR
@@ -313,9 +313,9 @@ SEGCHK:
 	MOV	CX,8E03H	;Segment register move OP code
 	MOV	AL,UNDEFID
 	CMP	AL,DH		;Check if source is memory
-	JZ	LOAD
+	JZ	_LOAD
 	CMP	AL,BH		;Check if destination is memory
-	JZ	STORE
+	JZ	_STORE
 	MOV	AL,XREG
 	SUB	AL,DH		;Check if source is 16-bit register
 	JZ	RR		;If so, AL must be zero
@@ -325,12 +325,12 @@ SEGCHK:
 	SUB	AL,DH		;Let RR perform finish the test
 	JP	RR
 
-STORE:
+_STORE:
 	TEST	CL,004H		;Check if storing is OK
 	JNZ	STERR
 	XCHG	DX,BX		;If so, flip operands
 	AND	CH,0FDH		;   and zero direction bit
-LOAD:
+_LOAD:
 	MOV	DH,25
 	CMP	AL,BH		;Check if memory-to-memory
 	JZ	MRERR
@@ -430,7 +430,7 @@ VAL:				;Must be immediate
 VAL1:
 	CALL	GETVAL
 	MOV	AX,[CON]	;Defined part
-	MOV	[DATA],AX
+	MOV	[_DATA],AX
 	MOV	AX,[UNDEF]	;Undefined part
 	MOV	[DLABEL],AX
 	MOV	DL,CH
@@ -487,37 +487,38 @@ GETVAL:
 	MOV	AL,AH
 	MOV	CH,0		;Initial mode
 	TEST	AL,10H		;Test INDEX bit
-	RCL	AL		;BASE bit (zero flag not affected)
+	RCL	AL,1		;BASE bit (zero flag not affected)
 	JZ	NOIND		;Jump if not indexed, with BASE bit in carry
 	CMC
-	RCL	CH		;Rotate in BASE bit
-	RCL	AL		;BP bit
-	RCL	CH
-	RCL	AL		;DI bit
-	RCL	CH		;The low 3 bits now have indexing mode
+	RCL	CH,1		;Rotate in BASE bit
+	RCL	AL,1		;BP bit
+	RCL	CH,1
+	RCL	AL,1		;DI bit
+	RCL	CH,1		;The low 3 bits now have indexing mode
 MODE:
 	OR	CH,080H		;If undefined label, force 16-bit displacement
 	TEST	[UNDEF],-1
-	JNZ	RET
+	JNZ	MODE_RET
 	MOV	BX,[CON]
 	MOV	AL,BL
 	CBW			;Extend sign
 	CMP	AX,BX		;Is it a signed 8-bit number?
-	JNZ	RET		;If not, use 16-bit displacement
+	JNZ	MODE_RET		;If not, use 16-bit displacement
 	AND	CH,07FH		;Reset 16-bit displacement
 	OR	CH,040H		;Set 8-bit displacement
 	OR	BX,BX
-	JNZ	RET		;Use it if not zero displacement
+	JNZ	MODE_RET		;Use it if not zero displacement
 	AND	CH,7		;Specify no displacement
 	CMP	CH,6		;Check for BP+0 addressing mode
-	JNZ	RET
+	JNZ	MODE_RET
 	OR	CH,040H		;If BP+0, use 8-bit displacement
+MODE_RET:
 	RET
 
 NOIND:
 	MOV	CH,6		;Try direct address mode
-	JNC	RET		;If no base register, that's right
-	RCL	AL		;Check BP bit
+	JNC	MODE_RET		;If no base register, that's right
+	RCL	AL,1		;Check BP bit
 	JC	MODE
 	INC	CH		;If not, must be BX
 	JP	MODE
@@ -552,9 +553,9 @@ OPERATE:
 	OR	AL,AL		;Is it register or undefined label?
 	JZ	NOCON		;If so, then no constant part
 	CMP	CL,"-"		;Subtract it?
-	JNZ	ADD
+	JNZ	_ADD
 	NEG	BX
-ADD:
+_ADD:
 	ADD	DX,BX
 NEXTERM:
 	MOV	AL,[SYM]
@@ -600,24 +601,25 @@ GETFACT:
 	JZ	ERR2
 	MOV	BX,DX
 	XOR	DX,DX		;Make 32-bit dividend
-	DIV	AX,BX
-	JMPS	NEXFACT
+	DIV	BX
+	JMP	NEXFACT
 DOMUL:
-	MUL	AX,DX
+	MUL	DX
 NEXFACT:
 	MOV	DX,AX		;Result in DX
 	XCHG	AX,BP		;Restore flags to AH
 	MOV	AL,-1		;Indicate a number
-	JMPS	MULOP
+	JMP	MULOP
 ENDTERM:
 	POP	DX
 	MOV	AL,CL
+ENDTERM_RET:
 	RET
 
 FACTOR:
 	MOV	AL,[SYM]
 	CMP	AL,CONST
-	JZ	RET
+	JZ	ENDTERM_RET
 	CMP	AL,UNDEFID
 	JZ	UVAL
 	CMP	AL,"("
@@ -665,7 +667,7 @@ BXJ:
 PAREN:
 	CALL	GETSYM		;Eat the "("
 	CALL	EXPRESSION
-	CMP	B,[SYM],")"	;Better have closing paren
+	CMP	BYTE[SYM],")"	;Better have closing paren
 	MOV	CL,20
 	JNZ	ERR30
 	RET
@@ -723,12 +725,13 @@ ZERLEN:
 GETCHR:
 	CALL	NEXTCHR
 	CMP	AL,CH
-	JNZ	RET
+	JNZ	GETCHR_RET
 	CALL	NEXTCHR
 	CMP	AL,CH
-	JZ	RET
+	JZ	GETCHR_RET
 	POP	BX		;Kill return address to STRGDAT loop
 	MOV	AL,-1		;Flag type as constant
+GETCHR_RET:
 	RET
 
 
@@ -756,6 +759,7 @@ GETSYM:
 	CALL	GETSY
 	POP	AX
 	MOV	AL,[SYM]
+GETSYM_RET:
 	RET
 
 SCANB:
@@ -764,7 +768,7 @@ SCANT:
 	CMP	AL,' '
 	JZ	NEXB
 	CMP	AL,9
-	JNZ	RET
+	JNZ	GETSYM_RET
 NEXB:
 	CALL	NEXTCHR
 	JP	SCANT
@@ -792,7 +796,7 @@ GETSY:
 	CMP	AL,'0'
 	JC	NEXTCHJ
 	MOV	BX,SYM
-	MOV	B,[BX],CONST
+	MOV	BYTE[BX],CONST
 	CALL	READID
 	DEC	BX
 	MOV	AL,[BX]
@@ -803,7 +807,7 @@ GETSY:
 	JMP	HEX
 	INC	CL
 	MOV	[IX],ID
-DEC:
+_DEC:
 	MOV	SI,[IX]
 	MOV	AL,[SI]
 	INC	[IX]
@@ -812,15 +816,15 @@ DEC:
 	JMP	ERROR
 	SUB	AL,'0'
 	MOV	DX,BX
-	SHL	BX
-	SHL	BX
+	SHL	BX,1
+	SHL	BX,1
 	ADD	BX,DX
-	SHL	BX
+	SHL	BX,1
 	MOV	DL,AL
 	MOV	DH,0
 	ADD	BX,DX
 	DEC	CH
-	JNZ	DEC
+	JNZ	_DEC
 	XCHG	DX,BX
 	RET
 
@@ -829,7 +833,7 @@ HEX:
 	DEC	CH
 HEX1:
 	MOV	SI,DX
-	LODB
+	LODSB
 	INC	DX
 	SUB	AL,'0'
 	CMP	AL,10
@@ -838,10 +842,10 @@ HEX1:
 	JNC	ERR4
 	SUB	AL,'a'-10-'0'
 GOTIT:
-	SHL	BX
-	SHL	BX
-	SHL	BX
-	SHL	BX
+	SHL	BX,1
+	SHL	BX,1
+	SHL	BX,1
+	SHL	BX,1
 	ADD	BL,AL
 	DEC	CH
 	JNZ	HEX1
@@ -854,10 +858,10 @@ GETLET:
 	CALL	SCANB
 	CMP	AL,EOL
 	STC
-	JZ	RET
+	JZ	GETLET_RET
 	CMP	AL,';'
 	STC
-	JZ	RET
+	JZ	GETLET_RET
 	MOV	CL,10
 	OR	AL,20H
 	CMP	AL,'a'
@@ -887,6 +891,7 @@ NOMORE:
 	MOV	[LENID],AL
 	OR	AL,AL
 	MOV	AL,CL
+GETLET_RET:
 	RET
 
 LETTER:
@@ -897,9 +902,9 @@ LETTER:
 	MOV	AL,[ID]
 	MOV	CX,5
 	MOV	DI,FLGTAB
-	UP
+	CLD
 	REPNE
-	SCAB			;See if one of B,W,S,L,T
+	SCASB			;See if one of B,W,S,L,T
 	JZ	SAVFLG		;Go save flag
 	XOR	AL,AL
 	MOV	CH,[LENID]
@@ -943,7 +948,7 @@ FPREG:
 	CMP	[DLABEL],0	;Constant must be defined
 	MOV	CL,30
 	JNZ	ERRJ3
-	MOV	DX,[DATA]	;Get constant
+	MOV	DX,[_DATA]	;Get constant
 	CMP	DX,7		;Constant must be in range 0-7
 	MOV	CL,31
 	JA	ERRJ3
@@ -958,7 +963,7 @@ HAVREG:
 
 REGCHK:
 	MOV	BX,ID
-	CMP	[BX],"s"+7400H	;"st"
+	CMP	WORD[BX],"s"+7400H	;"st"
 	JZ	FPREG
 	MOV	CL,[BX]
 	INC	BX
@@ -983,11 +988,11 @@ REGCHK:
 	CMP	AL,'p'
 	JZ	PREG
 	CMP	AL,'i'
-	JNZ	RET
+	JNZ	SCANREG_RET
 	MOV	DL,6
 	MOV	AL,CL
 	CMP	AL,'s'
-	JZ	RET
+	JZ	SCANREG_RET
 	INC	DL
 	CMP	AL,'d'
 	RET
@@ -995,23 +1000,24 @@ PREG:
 	MOV	DL,4
 	MOV	AL,CL
 	CMP	AL,'s'
-	JZ	RET
+	JZ	SCANREG_RET
 	INC	DL
 	CMP	AL,'b'
 	RET
 SCANREG:
 	MOV	AL,CL
 	MOV	CX,4
-	UP
+	CLD
 	MOV	DI,BX
 	REPNZ
-	SCAB
+	SCASB
 	MOV	BX,DI
-	JNZ	RET
+	JNZ	SCANREG_RET
 	MOV	AL,CL
 	ADD	AL,DL
 	MOV	DL,AL
 	XOR	AL,AL
+SCANREG_RET:
 	RET
 
 REGTAB:	DB	'bdca'
@@ -1023,14 +1029,14 @@ LOOK:
 	INC	BX
 	MOV	DX,ID
 	CALL	CPSLP
-	JZ	RET
+	JZ	SCANREG_RET
 	XOR	AL,80H
-	ROL	AL		;Make end-of-symbol bit least significant
+	ROL	AL,1		;Make end-of-symbol bit least significant
 	MOV	CL,AL
 	DEC	BX
 	MOV	AL,[BX]
 	XOR	AL,80H
-	ROL	AL
+	ROL	AL,1
 	CMP	AL,CL
 	JNC	SMALL
 	INC	CH
@@ -1044,7 +1050,7 @@ SMALL:
 	MOV	AL,DL
 	OR	AL,DH
 	STC
-	JZ	RET
+	JZ	ALLRET_RET
 	XCHG	DX,BX
 	JP	LOOK
 
@@ -1053,11 +1059,11 @@ LOOKRET:
 	CMP	AL,3	;RET has 3 letters
 	JNZ	LOOKUP
 	DEC	BX
-	OR	B,[BX],080H
+	OR	BYTE[BX],080H
 	MOV	DX,RETSTR+2
 CHKRET:
 	MOV	SI,DX
-	LODB
+	LODSB
 	CMP	AL,[BX]
 	JNZ	LOOKIT
 	DEC	BX
@@ -1075,44 +1081,46 @@ CHKRET:
 	CBW
 	CMP	AX,BX		;Signed 8-bit number?
 	MOV	AL,1
-	JZ	RET
+	JZ	ALLRET_RET
 ALLRET:
 	MOV	BX,[RETPT]
 	MOV	AL,BH
 	OR	AL,BL
 	MOV	AL,0
-	JNZ	RET
-	MOV	BX,[HEAP]
+	JNZ	ALLRET_RET
+	MOV	BX,[_HEAP]
 	DEC	BX
 	DEC	BX
 	DEC	BX
-	MOV	[HEAP],BX
+	MOV	[_HEAP],BX
 	XOR	AL,AL
 	MOV	[BX],AL
 	MOV	[RETPT],BX
+ALLRET_RET:
 	RET
 
 LOOKUP:
 	DEC	BX
-	OR	B,[BX],080H
+	OR	BYTE[BX],080H
 LOOKIT:
 	MOV	BX,[BASE]
 	MOV	AL,BH
 	OR	AL,BL
 	JZ	EMPTY
 	CALL	LOOK
-	JC	ENTER
+	JC	_ENTER
 	MOV	DX,4
 	ADD	BX,DX
 	MOV	AL,[BX]
 	OR	AL,AL
-	JZ	RET
+	JZ	LOOKIT_RET
 	INC	BX
 	MOV	DX,[BX]
 	INC	BX
+LOOKIT_RET:
 	RET
 
-ENTER:
+_ENTER:
 	PUSH	BX		;Save pointer to link field
 	CALL	CREATE		;Add the node
 	POP	SI
@@ -1146,11 +1154,11 @@ CREATE:
 
 	MOV	AL,[LENID]
 	ADD	AL,8		;Storage needed for the node
-	MOV	BX,[HEAP]
+	MOV	BX,[_HEAP]
 	MOV	DL,AL
 	MOV	DH,0
 	SUB	BX,DX		;Heap grows downward
-	MOV	[HEAP],BX
+	MOV	[_HEAP],BX
 	XCHG	DX,BX
 	MOV	BX,[CODE]	;Check to make sure there's enough
 	CMP	BX,DX
@@ -1161,11 +1169,11 @@ CREATE:
 	MOV	CL,[BX]
 	INC	CL
 	MOV	CH,0
-	UP
+	CLD
 	MOV	SI,BX
 	MOV	DI,DX
 	REP
-	MOVB			;Move identifier and length into node
+	MOVSB			;Move identifier and length into node
 	MOV	DX,DI
 	MOV	BX,SI
 	MOV	CH,4
@@ -1182,21 +1190,22 @@ NILIFY:
 
 CPSLP:
 	MOV	SI,DX
-	LODB
+	LODSB
 	CMP	AL,[BX]
 	LAHF
 	INC	DX
 	INC	BX
 	SAHF
-	JNZ	RET
+	JNZ	CPSLP_RET
 	DEC	CH
 	JNZ	CPSLP
+CPSLP_RET:
 	RET
 
 GETLAB:
 	MOV	BX,0
 	MOV	[LABPT],BX
-	MOV	B,[FLAG],-1
+	MOV	BYTE[FLAG],-1
 	MOV	DH,0
 	MOV	AL,[CHR]
 	CMP	AL,' '+1
@@ -1204,16 +1213,16 @@ GETLAB:
 	OR	DH,001H
 NOT1:
 	CALL	GETLET
-	JC	RET
+	JC	CPSLP_RET
 	CMP	AL,':'
 	JNZ	LABCHK
 	CALL	NEXTCHR
-	JP	LABEL
+	JP	_LABEL
 LABCHK:
 	OR	AL,AL
 	TEST	DH,001H
-	JZ	RET
-LABEL:
+	JZ	CPSLP_RET
+_LABEL:
 	MOV	AL,[CHKLAB]
 	OR	AL,AL
 	JZ	$+5
@@ -1222,7 +1231,7 @@ LABEL:
 	MOV	CL,11
 	JNZ	ERR5
 	MOV	DX,[PC]
-	MOV	B,[BX],1
+	MOV	BYTE[BX],1
 	INC	BX
 	MOV	[BX],DX
 	MOV	[LABPT],BX
@@ -1231,7 +1240,7 @@ LABEL:
 ERR5:	JMP	ERROR
 
 ASMLIN:
-	MOV	B,[MAXFLG],1	;Allow only B and W flags normally
+	MOV	BYTE[MAXFLG],1	;Allow only B and W flags normally
 	MOV	BX,[PC]
 	MOV	[OLDPC],BX
 	CALL	GETLAB
@@ -1244,7 +1253,7 @@ ASMLIN:
 	MOV	CH,AL
 	JC	ERR5
 	INC	BX
-	CMP	B,[BX],"f"	;See if an 8087 mnemonic
+	CMP	BYTE[BX],"f"	;See if an 8087 mnemonic
 	JZ	NDPOP
 	CMP	AL,5
 	JNC	ERR5
@@ -1287,12 +1296,12 @@ OPERR:
 
 HAVOP:
 	MOV	AL,[BX+2]	;Get opcode
-	JMP	[BX]
+	JMP	WORD[BX]
 
 NDPOP:	;First letter is "F" so must be 8087 opcode ("Numeric Data Processor")
-	MOV	B,[MAXFLG],4	;Allow all type flags
+	MOV	BYTE[MAXFLG],4	;Allow all type flags
 	INC	BX
-	CMP	B,[BX],"n"	;"No-wait" form?
+	CMP	BYTE[BX],"n"	;"No-wait" form?
 	MOV	AH,0
 	JNZ	SAVNFLG
 	MOV	AH,1
@@ -1307,7 +1316,7 @@ SAVNFLG:
 	CBW
 	XCHG	AX,DX		;Save length in DX
 	MOV	SI,DX
-	OR	B,[SI+BX],80H	;Set high bit of last character
+	OR	BYTE[SI+BX],80H	;Set high bit of last character
 	MOV	AL,[BX]		;Get first char of opcode
 	INC	BX
 	SUB	AL,"a"
@@ -1315,7 +1324,7 @@ SAVNFLG:
 	CMP	AL,"z"-"a"
 	JA	OPERR
 	CBW
-	SHL	AX		;Double to index into address table
+	SHL	AX,1		;Double to index into address table
 	XCHG	AX,SI		;Put in index register
 	MOV	DI,[SI+NDPTAB]	;Get start of opcode table for this letter
 LOOKNDP:
@@ -1327,7 +1336,7 @@ FNDNDP:
 	MOV	SI,BX		;Pointer to start of opcode
 	MOV	CX,DX		;Get length of opcode
 	REPE
-	CMPB			;Compare opcode to table entry
+	CMPSB			;Compare opcode to table entry
 	JZ	HAVNDP
 	DEC	DI		;Back up in case that was last letter
 	MOV	AL,80H		;Look for char with high bit set
@@ -1347,9 +1356,9 @@ TRY2XM1:
 
 SPECIALOP:
 	AND	AL,7		;Mask to special op number
-	JZ	FWAIT		;If zero, go handle FWAIT
+	JZ	_FWAIT		;If zero, go handle FWAIT
 ;Handle FNOP
-	CMP	B,[NOWAIT],0	;Was "N" present (If not opcode was "FOP")
+	CMP	BYTE[NOWAIT],0	;Was "N" present (If not opcode was "FOP")
 	JZ	OPERR
 	MOV	AL,9BH		;Need Wait opcode after all
 	CALL	PUT
@@ -1358,19 +1367,19 @@ SPECIALOP:
 	MOV	AL,0D0H
 	JMP	PUT
 
-FWAIT:
-	CMP	B,[NOWAIT],0	;"FNWAIT" not legal
+_FWAIT:
+	CMP	BYTE[NOWAIT],0	;"FNWAIT" not legal
 	JNZ	OPERRJ
 	RET			;Nothing to do - "WAIT" already sent
 
 HAVNDP:
 	MOV	SI,DI
-	CMP	B,[NOWAIT],0
+	CMP	BYTE[NOWAIT],0
 	JNZ	NWAIT
 	MOV	AL,9BH		;Wait opcode
 	CALL	PUT
 NWAIT:
-	LODW			;Get opcode info
+	LODSW			;Get opcode info
 	TEST	AL,0F8H		;Any operand bits set?
 	JZ	NOOPS		;If no operands, output code
 	TEST	AL,78H		;Special case?
@@ -1412,7 +1421,7 @@ NWAIT:
 	OR	BL,BL		;One of these must be ST(0)
 	JNZ	ERRJ4
 	XOR	AL,4		;Flip direction
-	JMPS	PUTREG
+	JMP	PUTREG
 ST0DEST:
 	TEST	AL,2		;Is POP bit set?
 	JNZ	ERRJ4		;Don't allow destination ST(0) then pop
@@ -1423,7 +1432,7 @@ PUTREG:
 	PUSH	AX
 	CALL	GETSYM		;Get to next symbol
 	POP	AX
-	JMPS	NOOPS
+	JMP	NOOPS
 
 NOOPCHK:
 	XCHG	AX,CX
@@ -1468,11 +1477,11 @@ GETFORMAT:
 	DEC	CL		;Must now be in range 0-3
 	JL	BADFLAG
 	MOV	CH,AL		;Save opcode byte
-	SHR	AL		;Put format bits in bits 2 & 3
+	SHR	AL,1		;Put format bits in bits 2 & 3
 	AND	AL,0CH
 	OR	AL,CL		;Combine format bits with flag
 	MOV	BX,FORMATTAB
-	XLAT
+	XLATB
 	OR	AL,AL		;Valid combination?
 	JS	BADFLAG
 	OR	AH,AL		;Possibly set new bits in second byte
@@ -1530,7 +1539,7 @@ IMMED:
 	JZ	STIMM
 	MOV	AL,BL
 	OR	AL,AL
-	JZ	RET
+	JZ	IMM_RET
 	MOV	AL,BH
 	CALL	IMM
 	OR	AL,0C0H
@@ -1558,6 +1567,7 @@ IMM:
 	MOV	AL,CH
 	AND	AL,38H
 	OR	AL,BL
+IMM_RET:
 	RET
 
 PUT:
@@ -1576,31 +1586,32 @@ GEN:
 	CALL	PUTINC		;Save it and bump code pointer
 GEN1:
 	MOV	AL,[RELOC]
-	RCL	CH
-	RCL	AL
-	RCL	CH
-	RCL	AL
+	RCL	CH,1
+	RCL	AL,1
+	RCL	CH,1
+	RCL	AL,1
 	MOV	[RELOC],AL
 	MOV	BX,BCOUNT
-	DEC	B,[BX]
-	JNZ	RET
-	MOV	B,[BX],4
+	DEC	BYTE[BX]
+	JNZ	GEN1_RET
+	MOV	BYTE[BX],4
 	MOV	BX,RELOC
 	MOV	AL,[BX]
-	MOV	B,[BX],0
+	MOV	BYTE[BX],0
 	MOV	DI,[IY]
 	MOV	[DI],AL
 	MOV	BX,[CODE]
 	MOV	[IY],BX
 	INC	BX
 	MOV	[CODE],BX
+GEN1_RET:
 	RET
 
 PUTINC:
 	INC	[PC]
 PUTCD:
 	MOV	DI,[CODE]
-	STOB
+	STOSB
 	MOV	[CODE],DI
 	RET
 
@@ -1624,7 +1635,7 @@ PUTBYT:
 	MOV	AL,BH
 	OR	AL,BL
 	JNZ	PUTBW
-	MOV	BX,[DATA]
+	MOV	BX,[_DATA]
 	OR	AL,BH
 	JZ	PUTBW
 	INC	BH
@@ -1633,7 +1644,7 @@ PUTBYT:
 	JMP	ERROR
 PUTBW:
 	MOV	DX,[DLABEL]
-	MOV	BX,[DATA]
+	MOV	BX,[_DATA]
 PUTCHK:
 	OR	DX,DX
 	JZ	NOUNDEF
@@ -1808,24 +1819,24 @@ GRP5:
 	OR	AL,BL
 	MOV	CL,30
 	JNZ	ERR6
-	MOV	BX,[DATA]
+	MOV	BX,[_DATA]
 	POP	AX
 	OR	AL,AL
-	JZ	ORG
+	JZ	_ORG
 	DEC	AL
 	JZ	DSJ
 	DEC	AL
-	JZ	EQU
+	JZ	_EQU
 	DEC	AL
 	JZ	$+5
-	JMP	IF
+	JMP	_IF
 PUTOP:
 	MOV	AL,-3
 	JP	NEWLOC
-ALIGN:
-	MOV	AL,[PC]
+_ALIGN:
+	MOV	AL,BYTE[PC]
 	AND	AL,1
-	JZ	RET
+	JZ	_EQU_RET
 	MOV	BX,1
 DSJ:
 	XCHG	DX,BX
@@ -1835,7 +1846,7 @@ DSJ:
 	XCHG	DX,BX
 	MOV	AL,-4
 	JP	NEWLOC
-EQU:
+_EQU:
 	XCHG	DX,BX
 	MOV	BX,[LABPT]
 	MOV	AL,BH
@@ -1845,8 +1856,9 @@ EQU:
 	MOV	[BX],DL
 	INC	BX
 	MOV	[BX],DH
+_EQU_RET:
 	RET
-ORG:
+_ORG:
 	MOV	[PC],BX
 	MOV	AL,-2
 NEWLOC:
@@ -1873,7 +1885,7 @@ GRP7:
 	OR	AL,DL
 	JNZ	ACCJ
 	XCHG	DX,BX
-	MOV	BX,[DATA]
+	MOV	BX,[_DATA]
 	MOV	AL,BL
 	CBW
 	CMP	AX,BX
@@ -2004,7 +2016,7 @@ GRP14:
 	XCHG	AH,AL
 	PUSH	AX
 	XCHG	AH,AL
-	MOV	B,[MAXFLG],3	;Allow "L" flag
+	MOV	BYTE[MAXFLG],3	;Allow "L" flag
 	CALL	GETOP
 	CMP	AL,CONST
 	JZ	DIRECT
@@ -2050,7 +2062,7 @@ GOTOP:
 	MOV	DX,[PC]
 	INC	DX
 	INC	DX
-	SUB	[DATA],DX
+	SUB	[_DATA],DX
 	JMP	PUTWOR
 LONGJ:
 	POP	AX
@@ -2120,7 +2132,7 @@ NODEC:
 	MOV	AL,BH
 	OR	AL,BL
 	JZ	DORET
-	MOV	B,[BX],1
+	MOV	BYTE[BX],1
 	INC	BX
 	MOV	[BX],DX
 	MOV	BX,0
@@ -2137,23 +2149,24 @@ GRP17:
 	CMP	AL,CONST
 	MOV	CL,20
 ERR9:	JNZ	ERR10
-	MOV	BX,[DATA]
+	MOV	BX,[_DATA]
 	MOV	DX,[PC]
 	INC	DX
 	SUB	BX,DX
-	MOV	[DATA],BX
+	MOV	[_DATA],BX
 	CALL	PUTBYT
 	MOV	BX,[DLABEL]
 	MOV	AL,BH
 	OR	AL,BL
-	JNZ	RET
-	MOV	BX,[DATA]
+	JNZ	ERR9_RET
+	MOV	BX,[_DATA]
 	MOV	AL,BL
 	CBW
 	CMP	AX,BX		;Signed 8-bit number?
-	JZ	RET
+	JZ	ERR9_RET
 	MOV	CL,31
 ERR10:	JMP	ERROR
+ERR9_RET:
 	RET
 GRP18:
 	CALL	GETOP
@@ -2164,7 +2177,7 @@ GRP18:
 	MOV	AL,BH
 	OR	AL,BL
 	JNZ	GENINT
-	MOV	BX,[DATA]
+	MOV	BX,[_DATA]
 	MOV	DX,3
 	SBB	BX,DX
 	JNZ	GENINT
@@ -2183,23 +2196,23 @@ GRP19:	;ESC opcode
 	MOV	CL,1EH
 	TEST	[DLABEL],-1	;See if all labels have been defined
 	JNZ	ERRJ
-	MOV	AX,[DATA]
+	MOV	AX,[_DATA]
 	CMP	AX,64		;Must only be 6 bits
 	MOV	CL,1FH
 	JNB	ERRJ
 	MOV	BL,AL		;Save for second byte
-	SHR	AL
-	SHR	AL
-	SHR	AL
+	SHR	AL,1
+	SHR	AL,1
+	SHR	AL,1
 	OR	AL,0D8H		;ESC opcode
 	CALL	PUT
 	PUSH	BX
 	CALL	GETOP2
 	POP	BX
 	AND	BL,7		;Low 3 bits of first operand
-	SHL	BL
-	SHL	BL
-	SHL	BL
+	SHL	BL,1
+	SHL	BL,1
+	SHL	BL,1
 	CMP	AL,UNDEFID	;Check for memory operand
 	JZ	ESCMEM
 	CMP	AL,CONST	;Check for another immediate
@@ -2216,7 +2229,7 @@ ESCIMM:
 	MOV	CL,1EH
 	TEST	[DLABEL],-1	;See if second operand is fully defined
 	JNZ	ERRJ
-	MOV	AX,[DATA]
+	MOV	AX,[_DATA]
 	MOV	CL,1FH
 	CMP	AX,8		;Must only be 3 bit value
 	JNB	ERRJ
@@ -2275,30 +2288,30 @@ GETDAT:
 ENDDAT:
 	CMP	AL,2
 	JNZ	SAVDAT
-	MOV	BX,[DATA]
+	MOV	BX,[_DATA]
 	LAHF
 	OR	BL,080H
 	SAHF
-	MOV	[DATA],BX
+	MOV	[_DATA],BX
 SAVDAT:
 	OR	AL,AL
 	JZ	$+5
 	JMP	PUTBYT
 	JMP	PUTWOR
-IF:
+_IF:
 	OR	BX,BX
 	JZ	SKIPCD
-	INC	B,[IFFLG]
+	INC	BYTE[IFFLG]
 	RET
 
 SKIPCD:
-	INC	B,[CHKLAB]
+	INC	BYTE[CHKLAB]
 SKIPLP:
 	XOR	AL,AL
 	CALL	NEXLIN
 	CALL	NEXTCHR
 	CMP	AL,1AH
-	JZ	END
+	JZ	_END
 	CALL	GETLAB
 	JC	SKIPLP
 	MOV	DI,LENID
@@ -2307,20 +2320,20 @@ SKIPLP:
 	MOV	CL,[DI]
 	INC	CL
 	REPE
-	CMPB
+	CMPSB
 	JZ	ENDCOND
 	MOV	DI,LENID
 	MOV	SI,IFNEST
 	MOV	CL,[DI]
 	INC	CL
 	REPE
-	CMPB
+	CMPSB
 	JNZ	SKIPLP
-	INC	B,[CHKLAB]
+	INC	BYTE[CHKLAB]
 	JP	SKIPLP
 
 ENDCOND:
-	DEC	B,[CHKLAB]
+	DEC	BYTE[CHKLAB]
 	JNZ	SKIPLP
 	RET
 
@@ -2340,7 +2353,7 @@ ERRJMP:	JMP	ERROR
 ;
 ;*********************************************************************
 
-END:
+_END:
 	MOV	DL,4
 WREND:
 	MOV	CH,0FFH
@@ -2349,7 +2362,7 @@ WREND:
 	DEC	DL
 	JNZ	WREND
 	MOV	[BUFPT],SRCBUF
-	MOV	B,[HEXCNT],-5	;FLAG HEX BUFFER AS EMPTY
+	MOV	BYTE[HEXCNT],-5	;FLAG HEX BUFFER AS EMPTY
 	MOV	[LSTPNT],LSTBUF
 	MOV	[HEXPNT],HEXBUF
 	XOR	AX,AX
@@ -2363,7 +2376,7 @@ WREND:
 	XOR	AX,AX
 	MOV	[FCB+12],AX	;Set CURRENT BLOCK to zero
 	MOV	[FCB+20H],AL	;Set NEXT RECORD field to zero
-	MOV	[FCB+14],BUFSIZ
+	MOV	WORD[FCB+14],BUFSIZ
 	MOV	[COUNT],AL
 	MOV	CH,1
 	MOV	SI,START
@@ -2371,37 +2384,37 @@ FIXLINE:
 	MOV	DI,START	;Store code over used up intermediate code
 	XOR	AL,AL
 	MOV	[SPC],AL	;No "special" yet (ORG, PUT, DS)
-	MOV	[ERR],AL	;No second pass errors yet
+	MOV	[_ERR],AL	;No second pass errors yet
 NEXBT:
-	SHL	CL		;Shift out last bit of previous code
+	SHL	CL,1		;Shift out last bit of previous code
 	DEC	CH		;Still have codes left?
 	JNZ	TESTTYP
-	LODB			;Get next flag byte
+	LODSB			;Get next flag byte
 	MOV	CL,AL
 	MOV	CH,4
 TESTTYP:
-	SHL	CL		;Set flags based on two bits
+	SHL	CL,1		;Set flags based on two bits
 	JO	FIXUP
-	LODB
+	LODSB
 	JC	EMARK
 OBJBT:
-	STOB
+	STOSB
 	JP	NEXBT
 
 FIXUP:
 ;Either a word or byte fixup is needed from a forward reference
-	LODW			;Get pointer to symbol
+	LODSW			;Get pointer to symbol
 	XCHG	AX,BX
-	LODW			;Get constant part
+	LODSW			;Get constant part
 	ADD	AX,[BX+1]	;Add symbol value to constant part
-	CMP	B,[BX],0	;See if symbol got defined
+	CMP	BYTE[BX],0	;See if symbol got defined
 	JNZ	HAVDEF
-	MOV	B,[ERR],100	;Undefined - flag error
+	MOV	BYTE[_ERR],100	;Undefined - flag error
 	XOR	AX,AX
 HAVDEF:
 	OR	CL,CL		;See if word or byte fixup
 	JS	DEFBYT
-	STOW
+	STOSW
 	JP	NEXBT
 
 DEFBYT:
@@ -2426,7 +2439,7 @@ DEFBYT:
 	MOV	AL,DL		;Get code byte in AL
 	JNZ	OBJBT		;If not, we're OK
 RNGERR:
-	MOV	B,[ERR],101	;Value out of range
+	MOV	BYTE[_ERR],101	;Value out of range
 	JP	OBJBT
 
 FINIJ:	JMP	FINI
@@ -2441,7 +2454,7 @@ EMARK:
 	PUSH	AX		;Save error code
 	MOV	AH,[LSTDEV]
 	AND	AH,0FEH		;Reset error indicator
-	OR	AL,[ERR]	;See if any errors on this line
+	OR	AL,[_ERR]	;See if any errors on this line
 	JZ	NOERR
 	OR	AH,1		;Send line to console if error occured
 NOERR:
@@ -2452,7 +2465,7 @@ NOERR:
 	SUB	CX,SI		;Get count of bytes of code
 	JZ	SHOLIN
 CODLP:
-	LODB
+	LODSB
 	CALL	SAVCD		;Ouput code to HEX and PRN files
 	LOOP	CODLP
 SHOLIN:
@@ -2471,7 +2484,7 @@ NOFIL:
 	CALL	OUTLIN
 	POP	AX		;Restore error code
 	CALL	REPERR
-	MOV	AL,[ERR]
+	MOV	AL,[_ERR]
 	CALL	REPERR
 	POP	SI
 	POP	CX
@@ -2482,12 +2495,12 @@ NOFIL:
 
 SPEND:
 	MOV	[SPC],AL	;Record special function
-	LODW			;Get it's data
-	MOV	[DATA],AX
+	LODSW			;Get it's data
+	MOV	[_DATA],AX
 	JMP	NEXBT
 
 SPCFUN:
-	MOV	DX,[DATA]
+	MOV	DX,[_DATA]
 	CMP	AL,-2
 	JZ	DORG
 	CMP	AL,-3
@@ -2554,7 +2567,7 @@ CRLF:
 OUT10:
 	XOR	DX,DX
 	MOV	DI,10000
-	DIV	AX,DI
+	DIV	DI
 	OR	AL,AL		;>10,000?
 	JNZ	LEAD
 	SUB	AL,"0"-" "	;Convert leading zero to blank
@@ -2563,7 +2576,7 @@ LEAD:
 	CALL	LIST
 	XCHG	AX,DX
 	MOV	BL,100
-	DIV	AL,BL
+	DIV	BL
 	MOV	BL,AH
 	CALL	HIDIG		;Convert to decimal and print 1000s digit
 	CALL	DIGIT		;Print 100s digit
@@ -2585,7 +2598,7 @@ SUPZ:
 	JP	LIST
 
 STRTLIN:
-	MOV	B,[LINFLG],0
+	MOV	BYTE[LINFLG],0
 	MOV	BX,[PC]
 	MOV	AL,BH
 	CALL	PHEX
@@ -2598,19 +2611,19 @@ LIST:
 	PUSH	DX
 	AND	AL,7FH
 	MOV	DL,AL
-	TEST	B,[LSTDEV],3	;See if output goes to console
+	TEST	BYTE[LSTDEV],3	;See if output goes to console
 	JZ	PRNCHK
 	MOV	AH,2
 	INT	33		;Output to console
 PRNCHK:
-	TEST	B,[LSTDEV],4	;See if output goes to printer
+	TEST	BYTE[LSTDEV],4	;See if output goes to printer
 	JZ	FILCHK
 	MOV	AH,5
 	INT	33		;Output to printer
 FILCHK:
 	MOV	AL,DL
 	POP	DX
-	TEST	B,[LSTDEV],80H	;See if output goes to a file
+	TEST	BYTE[LSTDEV],80H	;See if output goes to a file
 	JZ	LISTRET
 	CALL	WRTBUF
 LISTRET:
@@ -2620,7 +2633,7 @@ LISTRET:
 WRTBUF:
 	PUSH	DI
 	MOV	DI,[LSTPNT]
-	STOB
+	STOSB
 	CMP	DI,LSTBUF+LSTBUFSIZ
 	JNZ	SAVPT
 	PUSH	AX
@@ -2644,17 +2657,17 @@ PHEX:
 	JP	LIST
 
 FINI:
-	OR	B,[LSTDEV],1
+	OR	BYTE[LSTDEV],1
 	CALL	PRTCNT
 	MOV	BX,SYMSIZE
 	MOV	AX,[6]
-	SUB	AX,[HEAP]		;Size of symbol table
+	SUB	AX,[_HEAP]		;Size of symbol table
 	CALL	PRNT10
 	MOV	BX,FRESIZE
-	MOV	AX,[HEAP]
+	MOV	AX,[_HEAP]
 	SUB	AX,[CODE]		;Free space remaining
 	CALL	PRNT10
-	AND	B,[LSTDEV],0FEH
+	AND	BYTE[LSTDEV],0FEH
 	MOV	AL,[HEXFCB]
 	CMP	AL,'Z'
 	JZ	SYMDMP
@@ -2699,12 +2712,12 @@ DOSYMTAB:
 	MOV	AL,DH
 	OR	AL,DL
 	JZ	ENDSYM
-	MOV	B,[SYMLIN],SYMWID  ;No symbols on this line yet
-	MOV	BX,[HEAP]
+	MOV	BYTE[SYMLIN],SYMWID  ;No symbols on this line yet
+	MOV	BX,[_HEAP]
 	MOV	SP,BX		;Need maximum stack for recursive tree walk
 	CALL	NODE
 ENDSYM:
-	TEST	B,[LSTDEV],80H	;Print listing to file?
+	TEST	BYTE[LSTDEV],80H	;Print listing to file?
 	JZ	EXIT
 	MOV	AL,1AH
 	CALL	WRTBUF		;Write end-of-file mark
@@ -2731,13 +2744,13 @@ L0014:
 	INC	BX
 	MOV	CH,AL
 	ADD	AL,24
-	SHR	AL
-	SHR	AL
-	SHR	AL
+	SHR	AL,1
+	SHR	AL,1
+	SHR	AL,1
 	MOV	CL,AL
 	INC	CL		;Invert last bit
 	AND	CL,1		;Number of extra tabs needed (0 or 1)
-	SHR	AL		;Number of positions wide this symbol needs
+	SHR	AL,1		;Number of positions wide this symbol needs
 	SUB	[SYMLIN],AL
 	JNC	WRTSYM		;Will it fit?
 	SUB	AL,SYMWID
@@ -2762,14 +2775,14 @@ TABVAL:
 	CALL	PHEX
 	MOV	AL,[BX+3]
 	CALL	PHEX
-	CMP	B,[SYMLIN],0	;Will any more fit on line?
+	CMP	BYTE[SYMLIN],0	;Will any more fit on line?
 	JZ	NEXSYMLIN
 	MOV	AL,9
 	CALL	LIST
 	JP	RIGHTSON
 NEXSYMLIN:
 	CALL	CRLF
-	MOV	B,[SYMLIN],SYMWID
+	MOV	BYTE[SYMLIN],SYMWID
 RIGHTSON:
 	POP	BX
 	MOV	DX,[BX]
@@ -2786,11 +2799,11 @@ SAVCD:
 	CALL	CODBYT
 	POP	DX
 	MOV	BX,COUNT
-	INC	B,[BX]
+	INC	BYTE[BX]
 	MOV	AL,[BX]
 	CMP	AL,8
 	JNZ	NOEXT
-	MOV	B,[BX],1
+	MOV	BYTE[BX],1
 	CALL	OUTLIN
 	MOV	AL,' '
 	MOV	CH,5
@@ -2805,11 +2818,12 @@ NOEXT:
 	INC	[PC]
 	INC	[HEXADD]
 	POP	BX
+NOEXT_RET:
 	RET
 
 REPERR:
 	OR	AL,AL		;Did an error occur?
-	JZ	RET
+	JZ	NOEXT_RET
 	INC	[ERRCNT]
 	PUSH	AX
 	MOV	BX,ERRMES	;Print "ERROR"
@@ -2826,7 +2840,7 @@ NEXTMES:
 	SCASB			;Look for high bit set in message
 	JA	NEXTMES		;   which means we've reached the end
 	XCHG	AX,BX		;Restore error number to AL
-	JMPS	ERRLOOK		;Keep looking
+	JMP	ERRLOOK		;Keep looking
 
 HAVMES:
 	MOV	BX,DI		;Put address of message in BX
@@ -2842,22 +2856,23 @@ PRINT:
 	MOV	AL,[BX]
 	CALL	LIST
 	OR	AL,AL
-	JS	RET
+	JS	SYSTEM_RET
 	INC	BX
 	JP	PRINT
 
 OUTA:
 	MOV	DL,AL
-OUT:
+_OUT:
 	AND	DL,7FH
 	MOV	CL,2
 SYSTEM:
 	CALL	5
+SYSTEM_RET:
 	RET
 
 CODBYT:
-	CMP	B,[HEXFCB],"Z"
-	JZ	RET
+	CMP	BYTE[HEXFCB],"Z"
+	JZ	SYSTEM_RET
 	PUSH	AX
 	MOV	DX,[LASTAD]
 	MOV	BX,[HEXADD]
@@ -2879,9 +2894,9 @@ NEWLIN:
 	MOV	BX,[HEXPNT]
 	MOV	[HEXLEN],BX
 	CALL	HEXBYT
-	MOV	AL,[HEXADD+1]
+	MOV	AL,BYTE[HEXADD+1]
 	CALL	HEXBYT
-	MOV	AL,[HEXADD]
+	MOV	AL,BYTE[HEXADD]
 	CALL	HEXBYT
 	XOR	AL,AL
 	CALL	HEXBYT
@@ -2899,18 +2914,18 @@ HEXBYT:
 	CALL	LHALF
 	CALL	PUTCHR
 	MOV	BX,HEXCNT
-	INC	B,[BX]
+	INC	BYTE[BX]
 	MOV	AL,[BX]
 	CMP	AL,26
-	JNZ	RET
+	JNZ	WRTHEX_RET
 ENHEXL:
 	MOV	DI,[HEXLEN]
 	MOV	CH,AL
 	CALL	UHALF
-	STOB
+	STOSB
 	MOV	AL,CH
 	CALL	LHALF
-	STOB
+	STOSB
 	MOV	AL,-6
 	MOV	[HEXCNT],AL
 	MOV	AL,[CHKSUM]
@@ -2934,11 +2949,12 @@ WRTHEX:
 	INT	33
 	OR	AL,AL
 	JNZ	DSKFUL
+WRTHEX_RET:
 	RET
 
 PUTCHR:
 	MOV	DI,[HEXPNT]
-	STOB
+	STOSB
 	MOV	[HEXPNT],DI
 	RET
 
@@ -2947,29 +2963,30 @@ FLUSHBUF:
 	MOV	DX,LSTBUF
 	MOV	DI,DX
 	SUB	CX,DX
-	JZ	RET		;Buffer empty?
+	JZ	LHALF_RET		;Buffer empty?
 	MOV	AH,SETDMA
 	INT	33
 	MOV	DX,LSTFCB
 	MOV	AH,BLKWRT
 	INT	33
 	OR	AL,AL
-	JZ	RET
+	JZ	LHALF_RET
 DSKFUL:
 	MOV	BX,WRTERR
 	JMP	PRERR
 
 UHALF:
-	RCR	AL
-	RCR	AL
-	RCR	AL
-	RCR	AL
+	RCR	AL,1
+	RCR	AL,1
+	RCR	AL,1
+	RCR	AL,1
 LHALF:
 	AND	AL,0FH
 	OR	AL,30H
 	CMP	AL,'9'+1
-	JC	RET
+	JC	LHALF_RET
 	ADD	AL,7
+LHALF_RET:
 	RET
 
 NONE:	DB	0
@@ -3006,7 +3023,7 @@ A3:
 A5:
 	DB	1
 	DB	'lign'
-	DW	ALIGN
+	DW	_ALIGN
 	DB	0
 C3:
 	DB	7
@@ -3100,7 +3117,7 @@ E3:
 	DW	GRP19
 	DB	0D8H
 	DB	'nd'
-	DW	END
+	DW	_END
 	DB	0
 E5:
 	DB	1
@@ -3522,199 +3539,199 @@ X4:
 
 XM1:	;F2XM1
 	DB	1		;One opcode
-	DM	"xm1"
+	DB	"xm1"
 	DB	1,0F0H
 
 NDPA:
 	DB	3
-	DM	"dd"
+	DB	"dd"
 	DB	6+ARITH,0C1H
-	DM	"ddp"
+	DB	"ddp"
 	DB	NEEDOP+STACKOP,0
-	DM	"bs"
+	DB	"bs"
 	DB	1,0E1H
 
 NDPB:
 	DB	2
-	DM	"ld"
+	DB	"ld"
 	DB	7+NEEDOP+MEMORY,20H
-	DM	"stp"
+	DB	"stp"
 	DB	7+NEEDOP+MEMORY,30H
 
 NDPC:
 	DB	5
-	DM	"om"
+	DB	"om"
 	DB	0+ONEREG+REAL,0D1H
-	DM	"omp"
+	DB	"omp"
 	DB	0+ONEREG+REAL,0D9H
-	DM	"hs"
+	DB	"hs"
 	DB	1,0E0H
-	DM	"ompp"
+	DB	"ompp"
 	DB	6,0D9H
-	DM	"lex"
+	DB	"lex"
 	DB	3,0E2H
 
 NDPD:
 	DB	6
-	DM	"iv"
+	DB	"iv"
 	DB	6+ARITH,0F1H
-	DM	"ivp"
+	DB	"ivp"
 	DB	NEEDOP+STACKOP,30H
-	DM	"ivr"
+	DB	"ivr"
 	DB	6+ARITH,0F9H
-	DM	"ivrp"
+	DB	"ivrp"
 	DB	NEEDOP+STACKOP,38H
-	DM	"ecstp"
+	DB	"ecstp"
 	DB	1,0F6H
-	DM	"isi"
+	DB	"isi"
 	DB	3,0E1H
 
 NDPE:
 	DB	1
-	DM	"ni"
+	DB	"ni"
 	DB	3,0E0H
 
 NDPF:
 	DB	1
-	DM	"ree"
+	DB	"ree"
 	DB	5+NEEDOP+ONEREG,0
 
 NDPI:
 	DB	13
-	DM	"add"
+	DB	"add"
 	DB	2+NEEDOP+INTEGER,0
-	DM	"ld"
+	DB	"ld"
 	DB	3+NEEDOP+INTEGER+EXTENDED,0
-	DM	"sub"
+	DB	"sub"
 	DB	2+NEEDOP+INTEGER,20H
-	DM	"stp"
+	DB	"stp"
 	DB	3+NEEDOP+INTEGER+EXTENDED,18H
-	DM	"st"
+	DB	"st"
 	DB	3+NEEDOP+INTEGER,10H
-	DM	"mul"
+	DB	"mul"
 	DB	2+NEEDOP+INTEGER,8
-	DM	"div"
+	DB	"div"
 	DB	2+NEEDOP+INTEGER,30H
-	DM	"subr"
+	DB	"subr"
 	DB	2+NEEDOP+INTEGER,28H
-	DM	"divr"
+	DB	"divr"
 	DB	2+NEEDOP+INTEGER,38H
-	DM	"com"
+	DB	"com"
 	DB	2+NEEDOP+INTEGER,10H
-	DM	"comp"
+	DB	"comp"
 	DB	2+NEEDOP+INTEGER,18H
-	DM	"ncstp"
+	DB	"ncstp"
 	DB	1,0F7H
-	DM	"nit"
+	DB	"nit"
 	DB	3,0E3H
 
 NDPL:
 	DB	10
-	DM	"d"
+	DB	"d"
 	DB	1+NEEDOP+ONEREG+REAL+EXTENDED,0
-	DM	"dz"
+	DB	"dz"
 	DB	1,0EEH
-	DM	"d1"
+	DB	"d1"
 	DB	1,0E8H
-	DM	"dpi"
+	DB	"dpi"
 	DB	1,0EBH
-	DM	"dl2t"
+	DB	"dl2t"
 	DB	1,0E9H
-	DM	"dl2e"
+	DB	"dl2e"
 	DB	1,0EAH
-	DM	"dlg2"
+	DB	"dlg2"
 	DB	1,0ECH
-	DM	"dln2"
+	DB	"dln2"
 	DB	1,0EDH
-	DM	"dcw"
+	DB	"dcw"
 	DB	1+NEEDOP+MEMORY,28H
-	DM	"denv"
+	DB	"denv"
 	DB	1+NEEDOP+MEMORY,20H
 
 NDPM:
 	DB	2
-	DM	"ul"
+	DB	"ul"
 	DB	6+ARITH,0C9H
-	DM	"ulp"
+	DB	"ulp"
 	DB	NEEDOP+STACKOP,8
 
 NDPO:
 	DB	1
-	DM	"p"
+	DB	"p"
 	DB	NEEDOP+1,0	;Flag special handling
 
 NDPN:
 	DB	1
-	DM	"op"
+	DB	"op"
 	DB	1,0D0H
 
 NDPP:
 	DB	3
-	DM	"rem"
+	DB	"rem"
 	DB	1,0F8H
-	DM	"tan"
+	DB	"tan"
 	DB	1,0F2H
-	DM	"atan"
+	DB	"atan"
 	DB	1,0F3H
 
 NDPR:
 	DB	2
-	DM	"ndint"
+	DB	"ndint"
 	DB	1,0FCH
-	DM	"stor"
+	DB	"stor"
 	DB	5+NEEDOP+MEMORY,20H
 
 NDPS:
 	DB	12
-	DM	"t"
+	DB	"t"
 	DB	5+NEEDOP+ONEREG+REAL,0D0H
-	DM	"tp"
+	DB	"tp"
 	DB	7+NEEDOP+ONEREG+REAL+EXTENDED,0D8H
-	DM	"ub"
+	DB	"ub"
 	DB	6+ARITH,0E1H
-	DM	"ubp"
+	DB	"ubp"
 	DB	NEEDOP+STACKOP,0E0H
-	DM	"ubr"
+	DB	"ubr"
 	DB	6+ARITH,0E9H
-	DM	"ubrp"
+	DB	"ubrp"
 	DB	NEEDOP+STACKOP,0E8H
-	DM	"qrt"
+	DB	"qrt"
 	DB	1,0FAH
-	DM	"cale"
+	DB	"cale"
 	DB	1,0FDH
-	DM	"ave"
+	DB	"ave"
 	DB	5+NEEDOP+MEMORY,30H
-	DM	"tcw"
+	DB	"tcw"
 	DB	1+NEEDOP+MEMORY,38H
-	DM	"tenv"
+	DB	"tenv"
 	DB	1+NEEDOP+MEMORY,30H
-	DM	"tsw"
+	DB	"tsw"
 	DB	5+NEEDOP+MEMORY,38H
 
 NDPT:
 	DB	1
-	DM	"st"
+	DB	"st"
 	DB	1,0E4H
 
 NDPW:
 	DB	1
-	DM	"ait"
+	DB	"ait"
 	DB	NEEDOP,0	;Flag special handling
 
 NDPX:
 	DB	3
-	DM	"ch"
+	DB	"ch"
 	DB	1+ONEREG,0C9H
-	DM	"am"
+	DB	"am"
 	DB	1,0E5H
-	DM	"tract"
+	DB	"tract"
 	DB	1,0F4H
 
 NDPY:
 	DB	2
-	DM	"l2x"
+	DB	"l2x"
 	DB	1,0F1H
-	DM	"l2xp1"
+	DB	"l2xp1"
 	DB	1,0F9H
 
 
@@ -3896,111 +3913,110 @@ NDPTAB:
 ;Error message table
 
 ERRTAB:
-	DM	1,"Register not allowed in immediate value"
-	DM	2,"Index or base register must be BP, BX, SI, or DI"
-	DM	3,"Only one base register (BX, BP) allowed"
-	DM	4,"Only one index register (SI or DI) allowed"
-	DM	5,"Only addition allowed on register or undefined label"
-	DM	6,"Only one undefined label per expression allowed"
-	DM	7,"Illegal digit in hexadecimal number"
-	DM	8,"Illegal digit in decimal number"
-	DM	10,"Illegal character in label or opcode"
-	DM	11,"Label defined twice"
-	DM	12,"Opcode not recognized"
-	DM	20,"Invalid operand"
-	DM	21,'"," and second operand expected'
-	DM	22,"Register mismatch"
-	DM	23,"Immediate operand not allowed"
-	DM	24,'"]" expected'
-	DM	25,"Two memory operands not allowed"
-	DM	26,"Destination must not be immediate value"
-	DM	27,"Both operands must not be registers"
-	DM	28,"Operand must be segment register"
-	DM	29,"First operand must be register"
-	DM	30,"Undefined label not allowed"
-	DM	31,"Value out of range"
-	DM	32,"Missing or illegal operand size flag"
-	DM	33,"Must have label on same line"
-	DM	35,"Zero-length string illegal"
-	DM	36,"ENDIF without IF"
-	DM	37,"One-character strings only"
-	DM	38,"Illegal expression"
-	DM	39,"End of string not found"
-	DM	100,"Undefined label"
-	DM	101,"Value out of range (forward)"
+	DB	1,"Register not allowed in immediate value"
+	DB	2,"Index or base register must be BP, BX, SI, or DI"
+	DB	3,"Only one base register (BX, BP) allowed"
+	DB	4,"Only one index register (SI or DI) allowed"
+	DB	5,"Only addition allowed on register or undefined label"
+	DB	6,"Only one undefined label per expression allowed"
+	DB	7,"Illegal digit in hexadecimal number"
+	DB	8,"Illegal digit in decimal number"
+	DB	10,"Illegal character in label or opcode"
+	DB	11,"Label defined twice"
+	DB	12,"Opcode not recognized"
+	DB	20,"Invalid operand"
+	DB	21,'"," and second operand expected'
+	DB	22,"Register mismatch"
+	DB	23,"Immediate operand not allowed"
+	DB	24,'"]" expected'
+	DB	25,"Two memory operands not allowed"
+	DB	26,"Destination must not be immediate value"
+	DB	27,"Both operands must not be registers"
+	DB	28,"Operand must be segment register"
+	DB	29,"First operand must be register"
+	DB	30,"Undefined label not allowed"
+	DB	31,"Value out of range"
+	DB	32,"Missing or illegal operand size flag"
+	DB	33,"Must have label on same line"
+	DB	35,"Zero-length string illegal"
+	DB	36,"ENDIF without IF"
+	DB	37,"One-character strings only"
+	DB	38,"Illegal expression"
+	DB	39,"End of string not found"
+	DB	100,"Undefined label"
+	DB	101,"Value out of range (forward)"
 	DB	255
 
-ERRMES:	DM	'***** ERROR:  '
+ERRMES:	DB	'***** ERROR:  '
 NOSPAC:	DB	13,10,'File creation error',13,10,"$"
 NOMEM:	DB	13,10,'Insufficient memory',13,10,'$'
 NOFILE:	DB	13,10,'File not found',13,10,'$'
 WRTERR:	DB	13,10,'Disk full',13,10,'$'
 BADDSK:	DB	13,10,'Bad disk specifier',13,10,'$'
-ERCNTM:	DM	13,10,13,10,'Error Count ='
-SYMSIZE	DM	13,10,'Symbol Table size = '
-FRESIZE	DM	      'Free space =        '
-SYMMES:	DM	13,10,'Symbol Table',13,10,13,10
+ERCNTM:	DB	13,10,13,10,'Error Count ='
+SYMSIZE	DB	13,10,'Symbol Table size = '
+FRESIZE	DB	      'Free space =        '
+SYMMES:	DB	13,10,'Symbol Table',13,10,13,10
 EXTEND:	DB	'ASM',0,0
 IFEND:	DB	5,'endif'
 IFNEST:	DB	2,'if'
-RETSTR:	DM	'ret'
+RETSTR:	DB	'ret'
 HEXFCB:	DB	0,'        HEX',0,0,0,0
-	DS	16
+	DW	16
 	DB	0,0,0,0,0
 LSTFCB:	DB	0,'        PRN',0,0,0,0
-	DS	16
+	DW	16
 	DB	0,0,0,0,0
-PC:	DS	2
-OLDPC:	DS	2
-LABPT:	DS	2
-FLAG:	DS	1
-MAXFLG:	DS	1
-ADDR:	DS	2
-ALABEL:	DS	2
-DATA:	DS	2
-DLABEL:	DS	2
-CON:	DS	2
-UNDEF:	DS	2
-LENID:	DS	1
-ID:	DS	80
-CHR:	DS	1
-SYM:	DS	1
-BASE:	DS	2
-HEAP:	DS	2
-SYMFLG:	DS	1
-SYMLIN:	DS	1
-CODE:	DS	2
-DATSIZ:	DS	1
-RELOC:	DS	1
-BCOUNT:	DS	1
-COUNT:	DS	1
-ERR:	DS	1
-LINE:	DS	2
-HEXLEN:	DS	2
-HEXADD:	DS	2
-LASTAD:	DS	2
-HEXCNT:	DS	1
-CHKSUM:	DS	1
-LINFLG:	DS	1
-PREV:	DS	1
-IFFLG:	DS	1
-CHKLAB:	DS	1
-ERRCNT:	DS	2
-LSTRET:	DS	2
-RETPT:	DS	2
-LSTDEV:	DS	2
-SPC:	DS	1
-NOWAIT:	DS	1
-IX:	DS	2
-IY:	DS	2
-HEXPNT:	DS	2
-LSTPNT:	DS	2
-HEXBUF:	DS	HEXBUFSIZ
-LSTBUF:	DS	LSTBUFSIZ
-BUFPT:	DS	2
-SRCBUF:	DS	BUFSIZ
-	DS	100H
-	ALIGN
-STACK:	EQU	$
-START:	EQU	$
-
+PC	DW	2
+OLDPC:	DW	2
+LABPT:	DW	2
+FLAG:	DW	1
+MAXFLG:	DW	1
+ADDR:	DW	2
+ALABEL:	DW	2
+_DATA	DW	2
+DLABEL	DW	2
+CON:	DW	2
+UNDEF	DW	2
+LENID:	DW	1
+ID:	DW	80
+CHR:	DW	1
+SYM:	DW	1
+BASE:	DW	2
+_HEAP	DW	2
+SYMFLG:	DW	1
+SYMLIN:	DW	1
+CODE	DW	2
+DATSIZ:	DW	1
+RELOC:	DW	1
+BCOUNT	DW	1
+COUNT:	DW	1
+_ERR:	DW	1
+LINE:	DW	2
+HEXLEN:	DW	2
+HEXADD	DW	2
+LASTAD:	DW	2
+HEXCNT:	DW	1
+CHKSUM:	DW	1
+LINFLG:	DW	1
+PREV:	DW	1
+IFFLG:	DW	1
+CHKLAB:	DW	1
+ERRCNT	DW	2
+LSTRET:	DW	2
+RETPT:	DW	2
+LSTDEV:	DW	2
+SPC:	DW	1
+NOWAIT:	DW	1
+IX	DW	2
+IY	DW	2
+HEXPNT	DW	2
+LSTPNT	DW	2
+HEXBUF:	DW	HEXBUFSIZ
+LSTBUF:	DW	LSTBUFSIZ
+BUFPT	DW	2
+SRCBUF:	DW	BUFSIZ
+	DW	100H
+ALIGN	4
+_STACK	=	$
+START	=	$
