@@ -25,3 +25,4 @@ CALL assemble.bat
 %IMGEN% -m -i bin\SYS.COM -f %IMAGE%
 
 %IMGEN% -m -i bin\*.bas -f %IMAGE%
+%IMGEN% -m -i bin\HELLO.HEX -f %IMAGE%

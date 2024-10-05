@@ -105,7 +105,7 @@ READLN:
 	MOV	BP,DI		;Save new largest
 HAVBIG:
 	LOOP	READLN
-	JP	READHEX
+	JMP	READHEX		; Changed from JP
 
 NOFIL:
 	MOV	DX,NOFILE
