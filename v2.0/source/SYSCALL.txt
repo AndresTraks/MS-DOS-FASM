@@ -19,7 +19,7 @@
                           MS-DOS 2.0
 
                     System Calls Reference
-
+
 
 
 
@@ -48,7 +48,7 @@
 |     C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R     |
 |                                                           |
 +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-
+
 
 
 
@@ -69,7 +69,7 @@
                           Section 1
 
             Extensions to existing call structure
-
+
 
     Name:   *   Alloc - allocate memory
 
@@ -93,7 +93,7 @@
                 has  been  destroyed.   This  is due to a user
                 program changing memory that does  not  belong
                 to it.
-
+
 
     Name:   *   CharOper - change  incompatible  configuration
                 parameters
@@ -133,7 +133,7 @@
         AL = FF
                 The function code specified in AL  is  not  in
                 the range 0:3
-
+
 
     Name:   *   CurrentDir - return text of current  directory
 
@@ -154,7 +154,7 @@
     Error returns:
         AX = error_invalid_drive
                 The drive specified in DL was invalid.
-
+
 
     Name:   *   Dealloc - free allocated memory
 
@@ -176,7 +176,7 @@
                 has  been  destroyed.   This  is due to a user
                 program changing memory that does  not  belong
                 to it.
-
+
 
     Name:   *   FileTimes  -  get/set  the  write  times  of a
                 handle
@@ -211,7 +211,7 @@
            = error_invalid_handle
                 The handle passed  in  BX  was  not  currently
                 open.
-
+
 
     Name:   *   FindFirst - find matching file
 
@@ -262,7 +262,7 @@
            = error_no_more_files
                 There    were    no    files   matching   this
                 specification.
-
+
 
     Name:   *   FindNext  -  step through a directory matching
                 files
@@ -281,7 +281,7 @@
     Error Returns:
         AX = error_no_more_files
                 There are no more files matching this pattern.
-
+
 
     Name:   *   GetDMA - get current DMA transfer address
 
@@ -295,7 +295,7 @@
 
     Error returns:
             None.
-
+
 +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
 |     C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R     |
 |                                                           |
@@ -330,7 +330,7 @@
 |                                                           |
 |     C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R     |
 +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-
+
 
     Name:   *   GetFreespace - get Disk free space
 
@@ -354,7 +354,7 @@
     NOTE:  This  call returns the same information in the same
         registers (except for the FAT pointer) as the get  FAT
         pointer calls did in previous versions of the DOS.
-
+
 
     Name:   *   GetInDOSF - get DOS critical-section flag
 
@@ -385,7 +385,7 @@
 
     Error returns:
             None.
-
+
 
     Name:   *   GetVector -  get interrupt vector
 
@@ -401,7 +401,7 @@
 
     Error returns:
             None.
-
+
 
     Name:   *   GetVerifyFlag -  return current setting of the
                 verify after write flag.
@@ -417,7 +417,7 @@
 
     Error returns:
             None.
-
+
 
     Name:   *   GetVersion - get DOS version number
 
@@ -438,7 +438,7 @@
 
     Error returns:
             None.
-
+
 
     Name:   *   International  -  return   country   dependent
                 information
@@ -482,7 +482,7 @@
         AX = error_invalid_function
                 The   function   passed   in   AL  was  not  0
                 (currently).
-
+
 
     Name:   *   KeepProcess -  terminate  process  and  remain
                 resident
@@ -503,7 +503,7 @@
 
     Error Returns:
             None.
-
+
 
     Name:   *   Rename - move a directory entry
 
@@ -528,7 +528,7 @@
                 the  file  specified  by  ES:DI  exists or the
                 destination  directory  entry  could  not   be
                 created.
-
+
 
     Name:   *   SetBlock - modify allocated blocks
 
@@ -556,7 +556,7 @@
            = error_not_enough_memory
                 There was not enough  free  memory  after  the
                 specified block to satisfy the grow request.
-
+
 
     Name:   *   SetCtrlCTrapping  -  turn  on/off   broad   ^C
                 checking
@@ -583,7 +583,7 @@
         AL = FF
                 The function passed in AL was not in the range
                 0:1.
-
+
 +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
 |     C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R     |
 |                                                           |
@@ -628,7 +628,7 @@
 |                                                           |
 |     C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R     |
 +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-
+
 
 
 
@@ -649,7 +649,7 @@
                           Section 2
 
                 XENIX-compatible system calls
-
+
 
 
         Previous  to  version  2.0,  MSDOS had a simple single
@@ -789,7 +789,7 @@
                 first/search next.      found.  ChDir to
                 New open will fail.     directory will still
                                         work.
-
+
 
     Name:   *   ChDir - Change the current directory
 
@@ -809,7 +809,7 @@
         AX = error_path_not_found
                 The path specified in DS:DX either indicated a
                 file or the path was invalid.
-
+
 
     Name:   *   ChMod - change write protection
 
@@ -841,7 +841,7 @@
            = error_invalid_function
                 The function passed in AL was not in the range
                 0:1.
-
+
 
     Name:   *   Close - close a file handle
 
@@ -859,7 +859,7 @@
         AX = error_invalid_handle
                 The handle passed  in  BX  was  not  currently
                 open.
-
+
 
     Name:   *   Creat - create a file
 
@@ -894,7 +894,7 @@
                 attributes,  but  there  were  no free handles
                 available for the process or that the internal
                 system tables were full.
-
+
 
     Name:   *   Dup - duplicate a file handle
 
@@ -917,7 +917,7 @@
                 There were no free handles  available  in  the
                 current process  or the internal system tables
                 were full.
-
+
 
     Name:   *   Dup2 - force a duplicate of a handle
 
@@ -936,7 +936,7 @@
         AX = error_invalid_handle
                 The handle passed  in  BX  was  not  currently
                 open.
-
+
 
     Name:   *   Exec - load / execute a program
 
@@ -1101,7 +1101,7 @@
                 be created.
            = error_file_not_found
                 The path specified was invalid or not found.
-
+
 
     Name:   *   Exit - terminate a process
 
@@ -1118,7 +1118,7 @@
 
     Error returns:
             None.
-
+
 
     Name:   *   Ioctl - I/O control for devices
 
@@ -1257,7 +1257,7 @@
                 0:7.
            = error_invalid_data
            = error_access_denied (calls AL=4..7)
-
+
 
     Name:   *   LSeek - move file read/write pointer
 
@@ -1293,7 +1293,7 @@
            = error_invalid_function
                 The function passed in AL was not in the range
                 0:2.
-
+
 
     Name:   *   MkDir - Create a directory entry
 
@@ -1313,7 +1313,7 @@
                 The directory could not be created (no room in
                 parent directory),  the directory/file already
                 existed or a device name was specified.
-
+
 
     Name:   *   Open - access a file
 
@@ -1362,7 +1362,7 @@
                 There were no free handles  available  in  the
                 current process  or the internal system tables
                 were full.
-
+
 
     Name:   *   Read - Do file/device I/O
 
@@ -1392,7 +1392,7 @@
            = error_access_denied
                 The handle passed in BX was opened in  a  mode
                 that did not allow reading.
-
+
 
     Name:   *   RmDir - Remove a directory entry
 
@@ -1415,7 +1415,7 @@
            = error_current_directory
                 The  path  specified was the current directory
                 on a drive.
-
+
 
     Name:   *   Unlink - delete a directory entry
 
@@ -1435,7 +1435,7 @@
            = error_access_denied
                 The   path   specified   was  a  directory  or
                 read-only.
-
+
 
     Name:   *   Wait - retrieve the return code of a child
 
@@ -1457,7 +1457,7 @@
 
     Error returns:
             None.
-
+
 
     Name:   *   Write - write to a file
 
@@ -1489,7 +1489,7 @@
            = error_access_denied
                 The handle  was  not  opened  in  a  mode that
                 allowed writing.
-
+
 
 The following  XENIX  convention  is  followed for the new 2.0
 system calls:
@@ -1537,7 +1537,7 @@ error_current_directory         EQU 16
 error_not_same_device           EQU 17
 error_no_more_files             EQU 18
 
-
+
 System call assignments:
 
 ABORT                           EQU 0   ;  0      0
@@ -1654,4 +1654,3 @@ DUP_PDB                         EQU 85  ; 85     55
 +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
 RENAME                          EQU 86  ; 86     56
 FILE_TIMES                      EQU 87  ; 87     57
-                                        

@@ -58,5 +58,3 @@ ESCTAB:
         DB      "Q"     ;51H Toggle insert mode, INS on IBM 
         DB      "R"     ;52H Escape char, F7 on IBM
         DB      "R"     ;52H End of table, must be same as previos character
-
-

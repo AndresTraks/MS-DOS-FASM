@@ -19,7 +19,7 @@
                           MS-DOS 2.0
 
                       Utility Extensions
-
+
 
 
 
@@ -36,7 +36,7 @@
                     item1 is present or item 2 is present  but
                     not both.
         <object>    indicates a syntactic variable.
-
+
 
 COMMAND invokation
 
@@ -131,7 +131,7 @@ FOR %%<c> IN <set> DO <command>
         the '%f' so that FOR would never see it.  If  the  FOR
         is  NOT  in  a batch file, then only ONE '%' should be
         used.
-
+
 
 SHIFT
 
@@ -178,7 +178,7 @@ GOTO <label>
     'REM looping...'
 
     NOTE: Labels are case insensitive, :FOO == :foo == :Foo
-
+
 
 ECHO [{ON | OFF | <message>}]
 
@@ -237,7 +237,7 @@ Redirection of standard input/standard output.
     DIR *.ASM > FOO.LST
         Sends  the  output  of  the  dir  command  to the file
         FOO.LST.
-
+
 
     FOR %0 IN (*.ASM) DO MASM %0; >>ERRS.LST
         Sends all error output from assembling every .ASM file
@@ -279,7 +279,7 @@ Piping of standard I/O
     DIR >/tmp/std1
     SORT </tmp/std1 >FILE
 
-
+
 
         The  pipe  is  not a real pipe but rather a quasi-pipe
     that uses temporary files to hold the input and output  as
@@ -454,7 +454,7 @@ COMMAND internal commands take path arguments.
 
         TYPE <path>   (must specify a file)
 
-
+
 
 
 FILCOM - compare two files
@@ -474,7 +474,7 @@ FILCOM - compare two files
     are different between the two files.  If either file being
     compared has extension .EXE, .COM, or .OBJ then the  files
     will be compared in byte-by-byte mode.
-
+
 
 
 RECOVER - recover files from a trashed disk.
@@ -508,7 +508,7 @@ RECOVER - recover files from a trashed disk.
     root, RECOVER prints a message and leaves the un-RECOVERED
     chains in the FAT so that RECOVER can be  run  again  once
     some room has been made in the ROOT.
-
+
 
 
 DEBUG ON MS-DOS 2.0
@@ -623,7 +623,7 @@ o   For  8087  opcodes  the  WAIT  or  FWAIT  prefix  must  be
                                 ; a FWAIT prefix
 
         FLD TBYTE PTR [BX]      ; This line will not
-
+
 
 
 FORMAT enhancements
@@ -640,7 +640,7 @@ FORMAT enhancements
     NOTE: On IBM systems the V switch must be given to  FORMAT
     to have it do Volume IDs.
 
-
+
 
 
 CHKDSK FOR MS-DOS 2.0
@@ -694,7 +694,7 @@ Making ORPHAN files is a SLOW process.
 which causes a  trace  of  the  files  and  directories  being
 processed to be printed as CHKDSK runs.
 
-
+
 FILTERS FOR MS-DOS 2.0
 
     A filter is a utility  that  reads  from  standard  input,
@@ -810,4 +810,3 @@ A>DIR | SORT /+14 | MORE
 
 will do the same thing except that MORE will give you a chance
 to read the directory before it scrolls off the screen.
-                                     

@@ -13,5 +13,3 @@ TITLE   STDIO - device IO for MSDOS
 NAME    STDIO
 
 INCLUDE IO.ASM
-
-

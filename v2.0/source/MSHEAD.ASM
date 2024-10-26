@@ -194,5 +194,3 @@ START           SEGMENT BYTE PUBLIC 'START'
                 ASSUME  CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
         JMP     DOSINIT
 START           ENDS
-
-

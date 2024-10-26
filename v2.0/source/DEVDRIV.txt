@@ -71,7 +71,7 @@ the request is completed when the interrupt  routine  returns.
 This additional  functionality  is  defined  at  this  time so
 that people will be  aware  and  thinking  about  the  future.
 
-
+
 FORMAT OF A DEVICE DRIVER
 
     A device  driver  is  simply  a  relocatable  memory image
@@ -115,7 +115,7 @@ drive letters get a little strange (like ] \  and  ^).   NOTE:
 Character devices  cannot  define multiple units (this because
 they have only one name).
 
-
+
 Here is what that special device header looks like:
 
            +--------------------------------------+
@@ -241,7 +241,7 @@ WARNING: THIS FEATURE WILL NOT BE SUPPORTED IN FUTURE VERSIONS
     OF THE  OPERATING  SYSTEM.   IMPLICATION:  Any application
     (not device driver)  which  uses  INT  29H  directly  will
     not work on future versions, YOU HAVE BEEN WARNED.
-
+
     In  order  to  "make"  a  device  driver  that SYSINIT can
 install, a memory image or .EXE  (non-IBM  only)  format  file
 must be  created  with  the  above  header  at the start.  The
@@ -264,7 +264,7 @@ NOTE:  Since  SYSINIT  may  install  the  driver anywhere, you
     place every time (The default BIOS  drivers  are  exempted
     from this of course).
 
-
+
 INSTALLATION OF DEVICE DRIVERS
 
     Unlike past versions MS-DOS 2.0 allows new device  drivers
@@ -351,7 +351,7 @@ date/time (CLOCK) device.  Thus  the  BIOS  device  list  must
 look like this:
 
 ->CON->AUX->PRN->CLOCK->any other block or character devices
-
+
 THE DRIVER
 
     A device driver will define the following functions:
@@ -445,7 +445,7 @@ this first  FAT  sector  must  be  read  BEFORE the actual BPB
 is returned.  If the NON  IBM  FORMAT  bit  is  set  then  the
 pointer points  to  one  sector  of scratch space which may be
 used for anything.
-
+
 CALL FORMAT
 
     When the  DOS calls a device driver to perform a finction,
@@ -495,7 +495,7 @@ interrupt routine on return.
 For the  moment  the Driver just sets it to one when it exits,
 in the future this will be set by  the  interrupt  routine  to
 tell the DOS the operation is complete.
-
+
     Bit 15 is the error bit, if it  is  set  then  the  low  8
 bits indicate the error:
 
@@ -516,7 +516,7 @@ bits indicate the error:
 Bit 9 is the busy bit which is set only by status  calls  (see
 STATUS CALL below).
 
-
+
    Here is the data block format for each function:
 
 READ or WRITE - ES:BX (Including IOCTL) ->
@@ -557,7 +557,7 @@ an I/O of more than FFFFH bytes and cannot wrap  around  (even
 to 0)  in  his  transfer segment, so in this case the last two
 bytes can be ignored).
 
-
+
 NON DESRUCTIVE READ NO WAIT - ES:BX ->
             +------------------------------------+
             | 13-BYTE Static Request Header      |
@@ -573,7 +573,7 @@ from the input buffer (hence the term Non  Destructive  Read).
 In essence  this  call  allows the DOS to look ahead one input
 character.
 
-
+
 MEDIA CHECK - ES:BX ->
             +------------------------------------+
             | 13-BYTE  Static Request Header     |
@@ -596,7 +596,7 @@ or other  interlock  mechanism)  the  performance of MSDOS 2.0
 is enhanced as the DOS  need  not  reread  the  FAT  for  each
 directory access.
 
-
+
 BUILD BPB - ES:BX ->
             +------------------------------------+
             | 13-BYTE Static Request Header      |
@@ -628,7 +628,7 @@ is actually determined.
 
     In addition to setting status word, driver  must  set  the
 Pointer to the BPB on return.
-
+
 
     In order to allow for many different  OEMs  to  read  each
 other's disks,  the  following  standard  is  suggested:   The
@@ -674,7 +674,7 @@ different  multi-head  drives  which  have  the  same  storage
 capacity, but  a  different  number  of  surfaces.   Number of
 hidden sectors is useful  for  supporting  drive  partitioning
 schemes.
-
+
 
     Currently, the media  descriptor  byte  has  been  defined
 for a small range of media:
@@ -703,7 +703,7 @@ for a small range of media:
             unit, 1 reserved sector,  2  FATs,  192  directory
             entries, 77*8*2 sectors
 
-
+
 STATUS Calls - ES:BX ->
             +------------------------------------+
             | 13-BYTE Static Request Header      |
@@ -729,7 +729,7 @@ set the busy bit as follows:
         busy = 0 so  that  the  DOS  won't  hang  waiting  for
         something to  get  into  a buffer which doesn't exist.
 
-
+
 FLUSH Calls - ES:BX ->
             +------------------------------------+
             | 13-BYTE Static Request Header      |
@@ -739,7 +739,7 @@ FLUSH Calls - ES:BX ->
 pending requests  that  it  has knowledge of.  Its primary use
 is to flush the input queue on character devices.
 
-
+
 INIT - ES:BX ->
             +------------------------------------+
             | 13-BYTE Static Request Header      |
@@ -755,7 +755,7 @@ INIT - ES:BX ->
     The number of units, break address, and  BPB  pointer  are
 set by the driver.
 
-
+
 FORMAT OF BPB (Bios Parameter Block) -
 
             +------------------------------------+
@@ -780,7 +780,7 @@ FORMAT OF BPB (Bios Parameter Block) -
             |      FAT                           |
             +------------------------------------+
 
-
+
 THE CLOCK DEVICE
 
     One of  the  most  popular add on boards seems to be "Real
@@ -799,4 +799,3 @@ The  third  byte  is  minutes,  the  fourth  hours,  the fifth
 hundredths of seconds, and the  sixth  seconds.   Reading  the
 CLOCK device  gets  the  date and time, writing to it sets the
 date and time.
-                                                                       
