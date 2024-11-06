@@ -1,16 +1,11 @@
-include DOSMAC.ASM
-IF2
-    %OUT    DOSSYM in Pass 2
-ENDIF
-
-IFNDEF  ALTVECT
+IF      ~DEFINED  ALTVECT
 ALTVECT EQU     0       ;FALSE
-ENDIF
+END     IF
 
 DOS_MAJOR_VERSION   EQU      2
 DOS_MINOR_VERSION   EQU     11
 
-BREAK <Control character definitions>
+;BREAK <Control character definitions>
 
 c_DEL       EQU     7Fh         ;    ASCII rubout or delete previous char
 c_BS        EQU     08h         ; ^H ASCII backspace
@@ -21,7 +16,7 @@ c_NAK       EQU     15h         ; ^U ASCII negative acknowledge
 c_ETX       EQU     03h         ; ^C ASCII end of text
 c_HT        EQU     09h         ; ^I ASCII tab
 
-BREAK <BPB Definition>
+;BREAK <BPB Definition>
 
 
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
@@ -41,7 +36,7 @@ BREAK <BPB Definition>
 ;                                                                          ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 
-BREAK  <Bios Parameter Block>
+;BREAK  <Bios Parameter Block>
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
@@ -49,42 +44,54 @@ BREAK  <Bios Parameter Block>
 ; Bios Parameter Block definition
 ; This structure is used to build a full DPB
 
-BPBLOCK STRUC
-BPSECSZ DW      ?       ; Size in bytes of physical sector
-BPCLUS  DB      ?       ; Sectors/Alloc unit
-BPRES   DW      ?       ; Number of reserved sectors
-BPFTCNT DB      ?       ; Number of FATs
-BPDRCNT DW      ?       ; Number of directory entries
-BPSCCNT DW      ?       ; Total number of sectors
-BPMEDIA DB      ?       ; Media descriptor byte
-BPFTSEC DW      ?       ; Number of sectors taken up by one FAT
-BPBLOCK ENDS
+STRUC BPBLOCK
+{
+.BPSECSZ DW      ?       ; Size in bytes of physical sector
+.BPCLUS  DB      ?       ; Sectors/Alloc unit
+.BPRES   DW      ?       ; Number of reserved sectors
+.BPFTCNT DB      ?       ; Number of FATs
+.BPDRCNT DW      ?       ; Number of directory entries
+.BPSCCNT DW      ?       ; Total number of sectors
+.BPMEDIA DB      ?       ; Media descriptor byte
+.BPFTSEC DW      ?       ; Number of sectors taken up by one FAT
+}
+
+virtual at 0
+  BPBLOCK BPBLOCK
+  sizeof.BPBLOCK = $ - BPBLOCK
+end virtual
+
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 
-BREAK <Disk I/O Buffer Header>
+;BREAK <Disk I/O Buffer Header>
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
 
 ; Field definition for I/O buffer information
 
-BUFFINFO        STRUC
-NEXTBUF         DD      ?       ; Pointer to next buffer in list
+STRUC BUFFINFO
+{
+.NEXTBUF         DD      ?       ; Pointer to next buffer in list
 ; The next two items are often refed as a word
-BUFDRV          DB      ?       ; Logical drive # assoc with buffer FF = free
-BUFDIRTY        DB      ?       ; Dirty flag
-BUFPRI          DB      ?       ; Buffer selection priority (see EQUs below)
-VISIT           DB      ?       ; Visit flag for buffer pool scans
-BUFSECNO        DW      ?       ; Sector number of buffer
+.BUFDRV          DB      ?       ; Logical drive # assoc with buffer FF = free
+.BUFDIRTY        DB      ?       ; Dirty flag
+.BUFPRI          DB      ?       ; Buffer selection priority (see EQUs below)
+.VISIT           DB      ?       ; Visit flag for buffer pool scans
+.BUFSECNO        DW      ?       ; Sector number of buffer
 ; The next two items are often refed as a word
-BUFWRTCNT       DB      ?       ; For FAT sectors, # times sector written out
-BUFWRTINC       DB      ?       ; "   "     "   , # sectors between each write
-BUFDRVDP        DD      ?       ; Pointer to drive parameters
-BUFFINFO        ENDS
+.BUFWRTCNT       DB      ?       ; For FAT sectors, # times sector written out
+.BUFWRTINC       DB      ?       ; "   "     "   , # sectors between each write
+.BUFDRVDP        DD      ?       ; Pointer to drive parameters
+}
 
-BUFINSIZ        EQU     SIZE BUFFINFO
+virtual at 0
+  BUFFINFO BUFFINFO
+  sizeof.BUFFINFO = $ - BUFFINFO
+end virtual
+BUFINSIZ        =     sizeof.BUFFINFO
                                 ; Size of structure in bytes
 
 FREEPRI EQU     0
@@ -98,75 +105,81 @@ FATPRI  EQU     30              ; FAT sector
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 
-BREAK <User stack inside of system call>
+;BREAK <User stack inside of system call>
 ; Location of user registers relative user stack pointer
 
-user_environ    STRUC
-user_AX     DW      ?
-user_BX     DW      ?
-user_CX     DW      ?
-user_DX     DW      ?
-user_SI     DW      ?
-user_DI     DW      ?
-user_BP     DW      ?
-user_DS     DW      ?
-user_ES     DW      ?
-user_IP     DW      ?
-user_CS     DW      ?
-user_F      DW      ?
-user_environ    ENDS
+STRUC user_environ
+{
+.user_AX     DW      ?
+.user_BX     DW      ?
+.user_CX     DW      ?
+.user_DX     DW      ?
+.user_SI     DW      ?
+.user_DI     DW      ?
+.user_BP     DW      ?
+.user_DS     DW      ?
+.user_ES     DW      ?
+.user_IP     DW      ?
+.user_CS     DW      ?
+.user_F      DW      ?
+}
 
-BREAK <interrupt definitions>
+virtual at 0
+  user_environ user_environ
+  sizeof.user_environ = $ - user_environ
+end virtual
+
+;BREAK <interrupt definitions>
 
 INTTAB          EQU     20H
-INTBASE         EQU     4 * inttab
+INTBASE         EQU     4 * INTTAB
 ENTRYPOINT      EQU     INTBASE+40H
 
         IF      ALTVECT
-ALTTAB  EQU     0F0H
-ALTBASE EQU     4 * ALTTAB
-        ENDIF
+ALTTAB  =     0F0H
+ALTBASE =     4 * ALTTAB
+        END     IF
 
 ;
 ; interrupt assignments
 ;
-        IF      NOT ALTVECT
-int_abort           EQU     INTTAB          ; abort process
-int_command         EQU     int_abort+1     ; call MSDOS
-int_terminate       EQU     int_abort+2     ; int to terminate address
-int_ctrl_c          EQU     int_abort+3     ; ^c trapper
-int_fatal_abort     EQU     int_abort+4     ; hard disk error
-int_disk_read       EQU     int_abort+5     ; logical sector disk read
-int_disk_write      EQU     int_abort+6     ; logical sector disk write
-int_keep_process    EQU     int_abort+7     ; terminate program and stay
+        IF      ALTVECT = 0
+int_abort           =     INTTAB          ; abort process
+int_command         =     int_abort+1     ; call MSDOS
+int_terminate       =     int_abort+2     ; int to terminate address
+int_ctrl_c          =     int_abort+3     ; ^c trapper
+int_fatal_abort     =     int_abort+4     ; hard disk error
+int_disk_read       =     int_abort+5     ; logical sector disk read
+int_disk_write      =     int_abort+6     ; logical sector disk write
+int_keep_process    =     int_abort+7     ; terminate program and stay
                                             ; resident
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
-int_spooler         EQU     int_abort+8     ; spooler call
-int_fastcon         EQU     int_abort+9     ; fast CON interrupt
+int_spooler         =     int_abort+8     ; spooler call
+int_fastcon         =     int_abort+9     ; fast CON interrupt
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
         ELSE
-int_abort           EQU     INTTAB          ; abort process
-int_command         EQU     int_abort+1     ; call MSDOS
-int_terminate       EQU     ALTTAB          ; int to terminate address
-int_ctrl_c          EQU     int_terminate+1 ; ^c trapper
-int_fatal_abort     EQU     int_terminate+2 ; hard disk error
-int_disk_read       EQU     int_abort+5     ; logical sector disk read
-int_disk_write      EQU     int_abort+6     ; logical sector disk write
-int_keep_process    EQU     int_abort+7     ; terminate program and stay
+int_abort           =     INTTAB          ; abort process
+int_command         =     int_abort+1     ; call MSDOS
+int_terminate       =     ALTTAB          ; int to terminate address
+int_ctrl_c          =     int_terminate+1 ; ^c trapper
+int_fatal_abort     =     int_terminate+2 ; hard disk error
+int_disk_read       =     int_abort+5     ; logical sector disk read
+int_disk_write      =     int_abort+6     ; logical sector disk write
+int_keep_process    =     int_abort+7     ; terminate program and stay
                                             ; resident
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
-int_spooler         EQU     int_terminate+3 ; spooler call
-int_fastcon         EQU     int_abort+9     ; fast CON interrupt
+int_spooler         =     int_terminate+3 ; spooler call
+int_fastcon         =     int_abort+9     ; fast CON interrupt
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
-        ENDIF
+        END     IF
 
 addr_int_abort          EQU    4 * int_abort
 addr_int_command        EQU    4 * int_command
@@ -185,7 +198,7 @@ addr_int_fastcon        EQU    4 * int_fastcon
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 
-BREAK <Disk map>
+;BREAK <Disk map>
 ;  MSDOS partitions the disk into 4 sections:
 ;
 ;  phys sector 0:   +-------------------+
@@ -207,7 +220,7 @@ BREAK <Disk map>
 ; All partition boundaries are sector boundaries.  The size of the FAT is
 ; adjusted to maximize the file space addressable.
 
-BREAK <Directory entry>
+;BREAK <Directory entry>
 
 ;
 ;       +---------------------------+
@@ -231,16 +244,22 @@ BREAK <Directory entry>
 ;   Time:   Bits 0-4=seconds/2, bits 5-10=minute, 11-15=hour
 ;   Date:   Bits 0-4=day, bits 5-8=month, bits 9-15=year-1980
 ;
-dir_entry   STRUC
-dir_name    DB      11 DUP (?)          ; file name
-dir_attr    DB      ?                   ; attribute bits
-dir_pad     DB      10 DUP (?)          ; reserved for expansion
-dir_time    DW      ?                   ; time of last write
-dir_date    DW      ?                   ; date of last write
-dir_first   DW      ?                   ; first allocation unit of file
-dir_size_l  DW      ?                   ; low 16 bits of file size
-dir_size_h  DW      ?                   ; high 16 bits of file size
-dir_entry   ENDS
+STRUC dir_entry
+{
+.dir_name    DB      11 DUP (?)          ; file name
+.dir_attr    DB      ?                   ; attribute bits
+.dir_pad     DB      10 DUP (?)          ; reserved for expansion
+.dir_time    DW      ?                   ; time of last write
+.dir_date    DW      ?                   ; date of last write
+.dir_first   DW      ?                   ; first allocation unit of file
+.dir_size_l  DW      ?                   ; low 16 bits of file size
+.dir_size_h  DW      ?                   ; high 16 bits of file size
+}
+
+virtual at 0
+  dir_entry dir_entry
+  sizeof.dir_entry = $ - dir_entry
+end virtual
 
 attr_read_only      EQU      1h
 attr_hidden         EQU      2h
@@ -259,7 +278,7 @@ attr_ignore         EQU     attr_read_only+attr_archive
 attr_changeable     EQU     attr_read_only+attr_hidden+attr_system+attr_archive
                                         ; changeable via CHMOD
 
-BREAK <File allocation Table information>
+;BREAK <File allocation Table information>
 ;
 ; The File Allocation Table uses a 12-bit entry for each allocation unit on
 ; the disk.  These entries are packed, two for every three bytes.  The contents
@@ -280,46 +299,50 @@ BREAK <File allocation Table information>
 ; number is selected so that disk checking programs know what to do (ie.  a
 ; cluster with entry FF7H which is not in a chain is not an error).
 
-BREAK <DPB structure>
+;BREAK <DPB structure>
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
 
 DIRSTRLEN       EQU     64      ; Max length in bytes of directory strings
 
-dpb     STRUC
-dpb_drive           DB      ?   ; Logical drive # assoc with DPB (A=0,B=1,...)
-dpb_UNIT            DB      ?   ; Driver unit number of DPB
-dpb_sector_size     DW      ?   ; Size of physical sector in bytes
-dpb_cluster_mask    DB      ?   ; Sectors/cluster - 1
-dpb_cluster_shift   DB      ?   ; Log2 of sectors/cluster
-dpb_first_FAT       DW      ?   ; Starting record of FATs
-dpb_FAT_count       DB      ?   ; Number of FATs for this drive
-dpb_root_entries    DW      ?   ; Number of directory entries
-dpb_first_sector    DW      ?   ; First sector of first cluster
-dpb_max_cluster     DW      ?   ; Number of clusters on drive + 1
-dpb_FAT_size        DB      ?   ; Number of records occupied by FAT
-dpb_dir_sector      DW      ?   ; Starting record of directory
-dpb_driver_addr     DD      ?   ; Pointer to driver
-dpb_media           DB      ?   ; Media byte
-dpb_first_access    DB      ?   ; This is initialized to -1 to force a media
+STRUC dpb
+{
+.dpb_drive           DB      ?   ; Logical drive # assoc with DPB (A=0,B=1,...)
+.dpb_UNIT            DB      ?   ; Driver unit number of DPB
+.dpb_sector_size     DW      ?   ; Size of physical sector in bytes
+.dpb_cluster_mask    DB      ?   ; Sectors/cluster - 1
+.dpb_cluster_shift   DB      ?   ; Log2 of sectors/cluster
+.dpb_first_FAT       DW      ?   ; Starting record of FATs
+.dpb_FAT_count       DB      ?   ; Number of FATs for this drive
+.dpb_root_entries    DW      ?   ; Number of directory entries
+.dpb_first_sector    DW      ?   ; First sector of first cluster
+.dpb_max_cluster     DW      ?   ; Number of clusters on drive + 1
+.dpb_FAT_size        DB      ?   ; Number of records occupied by FAT
+.dpb_dir_sector      DW      ?   ; Starting record of directory
+.dpb_driver_addr     DD      ?   ; Pointer to driver
+.dpb_media           DB      ?   ; Media byte
+.dpb_first_access    DB      ?   ; This is initialized to -1 to force a media
                                 ; check the first time this DPB is used
-dpb_next_dpb        DD      ?   ; Pointer to next Drive parameter block
-dpb_current_dir     DW      ?   ; Cluster number of start of current directory
+.dpb_next_dpb        DD      ?   ; Pointer to next Drive parameter block
+.dpb_current_dir     DW      ?   ; Cluster number of start of current directory
                                 ; 0 indicates root, -1 indicates invalid (disk
                                 ; ?  changed)
-dpb_dir_text        DB      DIRSTRLEN DUP(?)
+.dpb_dir_text        DB      DIRSTRLEN DUP(?)
                                 ; ASCIZ string of current directory
-dpb     ENDS
+}
 
-DPBSIZ  EQU     SIZE dpb        ; Size of the structure in bytes
+virtual at 0
+  dpb dpb
+  sizeof.dpb = $ - dpb
+end virtual
+DPBSIZ  =     sizeof.dpb        ; Size of the structure in bytes
 
-DSKSIZ  =       dpb_max_cluster ; Size of disk (temp used during init only)
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 
-BREAK <File Control Block definition>
+;BREAK <File Control Block definition>
 ;
 ; Field definition for FCBs
 ; The FCB has the following structure:
@@ -366,21 +389,22 @@ BREAK <File Control Block definition>
 ;       +---------------------------+
 ;
 
-sys_fcb     STRUC
-fcb_drive   DB      ?
-fcb_name    DB      8 DUP (?)
-fcb_ext     DB      3 DUP (?)
-fcb_EXTENT  DW      ?
-fcb_RECSIZ  DW      ?       ; Size of record (user settable)
-fcb_FILSIZ  DW      ?       ; Size of file in bytes; used with the following
+STRUC sys_fcb
+{
+.fcb_drive   DB      ?
+.fcb_name    DB      8 DUP (?)
+.fcb_ext     DB      3 DUP (?)
+.fcb_EXTENT  DW      ?
+.fcb_RECSIZ  DW      ?       ; Size of record (user settable)
+.fcb_FILSIZ  DW      ?       ; Size of file in bytes; used with the following
                             ; word
-fcb_DRVBP   DW      ?       ; BP for SEARCH FIRST and SEARCH NEXT
-fcb_FDATE   DW      ?       ; Date of last writing
-fcb_FTIME   DW      ?       ; Time of last writing
+.fcb_DRVBP   DW      ?       ; BP for SEARCH FIRST and SEARCH NEXT
+.fcb_FDATE   DW      ?       ; Date of last writing
+.fcb_FTIME   DW      ?       ; Time of last writing
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
-fcb_DEVID   DB      ?       ; Device ID number, bits 0-5 if file.
+.fcb_DEVID   DB      ?       ; Device ID number, bits 0-5 if file.
                             ; bit 7=0 for file, bit 7=1 for I/O device
                             ; If file, bit 6=0 if dirty
                             ; If I/O device, bit 6=0 if EOF (input)
@@ -389,19 +413,21 @@ fcb_DEVID   DB      ?       ; Device ID number, bits 0-5 if file.
                             ;               Bit 1=1 if console output device
                             ;               Bit 2=1 if null device
                             ;               Bit 3=1 if clock device
-fcb_FIRCLUS DW      ?       ; First cluster of file
-fcb_CLUSPOS DW      ?       ; Position of last cluster accessed
-fcb_LSTCLUS DW      ?       ; Last cluster accessed and directory pack 2 12
-            DB      ?       ; bit numbers into 24 bits...
+.fcb_FIRCLUS DW      ?       ; First cluster of file
+.fcb_CLUSPOS DW      ?       ; Position of last cluster accessed
+.fcb_LSTCLUS DW      ?       ; Last cluster accessed and directory pack 2 12
+             DB      ?       ; bit numbers into 24 bits...
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
-fcb_NR      DB      ?       ; Next record
-fcb_RR      DB      4 DUP (?)               ; Random record
-sys_fcb     ENDS
+.fcb_NR      DB      ?       ; Next record
+.fcb_RR      DB      4 DUP (?)               ; Random record
+}
 
-FILDIRENT       = fcb_FILSIZ            ; Used only by SEARCH FIRST and SEARCH
-                                        ; NEXT
+virtual at 0
+  sys_fcb sys_fcb
+  sizeof.sys_fcb = $ - sys_fcb
+end virtual
 
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
@@ -461,69 +487,81 @@ devid_block_dev EQU     1Fh             ; mask for block device number
 ;
 ; find first/next buffer
 ;
-find_buf    STRUC
-find_buf_sattr      DB  ?           ; attribute of search
-find_buf_drive      DB  ?           ; drive of search
-find_buf_name       DB  11 DUP (?)  ; formatted name
-find_buf_LastEnt    DW  ?           ; LastEnt
-find_buf_ThisDPB    DD  ?           ; This DPB
-find_buf_DirStart   DW  ?           ; DirStart
+STRUC find_buf
+{
+.find_buf_sattr      DB  ?           ; attribute of search
+.find_buf_drive      DB  ?           ; drive of search
+.find_buf_name       DB  11 DUP (?)  ; formatted name
+.find_buf_LastEnt    DW  ?           ; LastEnt
+.find_buf_ThisDPB    DD  ?           ; This DPB
+.find_buf_DirStart   DW  ?           ; DirStart
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 
-find_buf_attr       DB  ?           ; attribute found
-find_buf_time       DW  ?           ; time
-find_buf_date       DW  ?           ; date
-find_buf_size_l     DW  ?           ; low(size)
-find_buf_size_h     DW  ?           ; high(size)
-find_buf_pname      DB  13 DUP (?)  ; packed name
-find_buf    ENDS
+.find_buf_attr       DB  ?           ; attribute found
+.find_buf_time       DW  ?           ; time
+.find_buf_date       DW  ?           ; date
+.find_buf_size_l     DW  ?           ; low(size)
+.find_buf_size_h     DW  ?           ; high(size)
+.find_buf_pname      DB  13 DUP (?)  ; packed name
+}
 
-BREAK <Process data block>
+virtual at 0
+  find_buf find_buf
+  sizeof.find_buf = $ - find_buf
+end virtual
+
+;BREAK <Process data block>
 ;
 ; Process data block (otherwise known as program header)
 ;
 
 FilPerProc          EQU     20
 
-Process_data_block  STRUC
-PDB_Exit_Call       DW      ?           ; INT int_abort system terminate
-PDB_block_len       DW      ?           ; size of execution block
+STRUC Process_data_block
+{
+.PDB_Exit_Call       DW      ?           ; INT int_abort system terminate
+.PDB_block_len       DW      ?           ; size of execution block
                     DB      ?
-PDB_CPM_Call        DB  5 DUP (?)       ; ancient call to system
-PDB_Exit            DD      ?           ; pointer to exit routine
-PDB_Ctrl_C          DD      ?           ; pointer to ^C routine
-PDB_Fatal_abort     DD      ?           ; pointer to fatal error
+.PDB_CPM_Call        DB  5 DUP (?)       ; ancient call to system
+.PDB_Exit            DD      ?           ; pointer to exit routine
+.PDB_Ctrl_C          DD      ?           ; pointer to ^C routine
+.PDB_Fatal_abort     DD      ?           ; pointer to fatal error
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
-PDB_Parent_PID      DW      ?           ; PID of parent (terminate PID)
-PDB_JFN_Table       DB  FilPerProc DUP (?)
+.PDB_Parent_PID      DW      ?           ; PID of parent (terminate PID)
+.PDB_JFN_Table       DB  FilPerProc DUP (?)
                                         ; indices into system table
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
-PDB_environ         DW      ?           ; seg addr of environment
+.PDB_environ         DW      ?           ; seg addr of environment
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
-PDB_User_stack      DD      ?           ; stack of self during system calls
-PDB_PAD1            DB      1Eh DUP (?)
+.PDB_User_stack      DD      ?           ; stack of self during system calls
+.PDB_PAD1            DB      1Eh DUP (?)
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
-PDB_Call_system     DB      5 DUP (?)   ; portable method of system call
+.PDB_Call_system     DB      5 DUP (?)   ; portable method of system call
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
-PDB_PAD2            DB      6h DUP (?)  ;
+.PDB_PAD2            DB      6h DUP (?)  ;
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
-Process_data_block  ENDS
+}
 
-BREAK <EXEC and EXE file structures>
+virtual at 0
+  Process_data_block Process_data_block
+  sizeof.Process_data_block = $ - Process_data_block
+end virtual
+
+;BREAK <EXEC and EXE file structures>
 ;
 ; EXEC arg block - load/go program
 ;
@@ -536,71 +574,76 @@ BREAK <EXEC and EXE file structures>
 exec_func_no_execute    EQU 1           ; no execute bit
 exec_func_overlay       EQU 2           ; overlay bit
 
-Exec0           STRUC
-Exec0_environ   DW      ?               ; seg addr of environment
-Exec0_com_line  DD      ?               ; pointer to asciz command line
-Exec0_5C_FCB    DD      ?               ; default fcb at 5C
-Exec0_6C_FCB    DD      ?               ; default fcb at 6C
-Exec0           ENDS
+STRUC Exec0
+{
+.Exec0_environ   DW      ?               ; seg addr of environment
+.Exec0_com_line  DD      ?               ; pointer to asciz command line
+.Exec0_5C_FCB    DD      ?               ; default fcb at 5C
+.Exec0_6C_FCB    DD      ?               ; default fcb at 6C
+}
 
-Exec1           STRUC
-Exec1_environ   DW      ?               ; seg addr of environment
-Exec1_com_line  DD      ?               ; pointer to asciz command line
-Exec1_5C_FCB    DD      ?               ; default fcb at 5C
-Exec1_6C_FCB    DD      ?               ; default fcb at 6C
-Exec1_SP        DW      ?               ; stack pointer of program
-Exec1_SS        DW      ?               ; stack seg register of program
-Exec1_IP        DW      ?               ; entry point IP
-Exec1_CS        DW      ?               ; entry point CS
-Exec1           ENDS
+STRUC Exec1
+{
+.Exec1_environ   DW      ?               ; seg addr of environment
+.Exec1_com_line  DD      ?               ; pointer to asciz command line
+.Exec1_5C_FCB    DD      ?               ; default fcb at 5C
+.Exec1_6C_FCB    DD      ?               ; default fcb at 6C
+.Exec1_SP        DW      ?               ; stack pointer of program
+.Exec1_SS        DW      ?               ; stack seg register of program
+.Exec1_IP        DW      ?               ; entry point IP
+.Exec1_CS        DW      ?               ; entry point CS
+}
 
-Exec3           STRUC
-Exec3_load_addr DW      ?               ; seg address of load point
-Exec3_reloc_fac DW      ?               ; relocation factor
-Exec3           ENDS
+STRUC Exec3
+{
+.Exec3_load_addr DW      ?               ; seg address of load point
+.Exec3_reloc_fac DW      ?               ; relocation factor
+}
 
 ;
 ; Exit codes in upper byte
 ;
-Exit_terminate      EQU     0
-Exit_abort          EQU     0
-Exit_Ctrl_C         EQU     1
-Exit_Hard_Error     EQU     2
-Exit_Keep_process   EQU     3
+.Exit_terminate      EQU     0
+.Exit_abort          EQU     0
+.Exit_Ctrl_C         EQU     1
+.Exit_Hard_Error     EQU     2
+.Exit_Keep_process   EQU     3
 
 ;
 ; EXE file header
 ;
 
-EXE_file    STRUC
-exe_signature   DW  ?                   ; must contain 4D5A  (yay zibo!)
-exe_len_mod_512 DW  ?                   ; low 9 bits of length
-exe_pages       DW  ?                   ; number of 512b pages in file
-exe_rle_count   DW  ?                   ; count of reloc entries
-exe_par_dir     DW  ?                   ; number of paragraphs before image
-exe_min_BSS     DW  ?                   ; minimum number of para of BSS
-exe_max_BSS     DW  ?                   ; max number of para of BSS
-exe_SS          DW  ?                   ; stack of image
-exe_SP          DW  ?                   ; SP of image
-exe_chksum      DW  ?                   ; checksum  of file (ignored)
-exe_IP          DW  ?                   ; IP of entry
-exe_CS          DW  ?                   ; CS of entry
-exe_rle_table   DW  ?                   ; byte offset of reloc table
-exe_iov         DW  ?                   ; overlay number (0 for root)
-exe_sym_tab     DD  ?                   ; offset of symbol table in file
-EXE_file    ENDS
+STRUC EXE_file
+{
+.exe_signature   DW  ?                   ; must contain 4D5A  (yay zibo!)
+.exe_len_mod_512 DW  ?                   ; low 9 bits of length
+.exe_pages       DW  ?                   ; number of 512b pages in file
+.exe_rle_count   DW  ?                   ; count of reloc entries
+.exe_par_dir     DW  ?                   ; number of paragraphs before image
+.exe_min_BSS     DW  ?                   ; minimum number of para of BSS
+.exe_max_BSS     DW  ?                   ; max number of para of BSS
+.exe_SS          DW  ?                   ; stack of image
+.exe_SP          DW  ?                   ; SP of image
+.exe_chksum      DW  ?                   ; checksum  of file (ignored)
+.exe_IP          DW  ?                   ; IP of entry
+.exe_CS          DW  ?                   ; CS of entry
+.exe_rle_table   DW  ?                   ; byte offset of reloc table
+.exe_iov         DW  ?                   ; overlay number (0 for root)
+.exe_sym_tab     DD  ?                   ; offset of symbol table in file
+}
 
 exe_valid_signature     EQU 5A4Dh
 exe_valid_old_signature EQU 4D5Ah
 
-symbol_entry    STRUC
-sym_value       DD  ?
-sym_type        DW  ?
-sym_len         DB  ?
-sym_name        DB  255 dup (?)
-symbol_entry    ENDS
+STRUC symbol_entry
+{
+.sym_value       DD  ?
+.sym_type        DW  ?
+.sym_len         DB  ?
+.sym_name        DB  255 dup (?)
+}
 
-BREAK <Internal system file table format>
+;BREAK <Internal system file table format>
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
@@ -608,74 +651,98 @@ BREAK <Internal system file table format>
 ; system file table
 ;
 
-sft             STRUC
-sft_link        DD      ?
-sft_count       DW      ?               ; number of entries
-sft_table       DW      ?               ; beginning of array of the following
-sft             ENDS
+STRUC sft
+{
+.sft_link        DD      ?
+.sft_count       DW      ?               ; number of entries
+.sft_table       DW      ?               ; beginning of array of the following
+}
+
+virtual at 0
+  sft sft
+  sizeof.sft = $ - sft
+end virtual
 
 ;
 ; system file table entry
 ;
 
-sf_entry        STRUC
-sf_ref_count    DB      ?               ; number of processes sharing fcb
-sf_mode         DB      ?               ; mode of access
-sf_attr         DB      ?               ; attribute of file
-sf_fcb          DB      (SIZE sys_fcb) DUP (?)
+STRUC sf_entry
+{
+.sf_ref_count    DB      ?               ; number of processes sharing fcb
+.sf_mode         DB      ?               ; mode of access
+.sf_attr         DB      ?               ; attribute of file
+.sf_fcb          DB      sizeof.sys_fcb DUP (?)
                                         ; actual FCB
-sf_entry        ENDS
+}
+
+virtual at 0
+  sf_entry sf_entry
+  sizeof.sf_entry = $ - sf_entry
+end virtual
 
 sf_default_number   EQU     5h
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 
-BREAK <Memory arena structure>
+;BREAK <Memory arena structure>
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
 ;
 ; arena item
 ;
-arena   STRUC
-arena_signature     DB  ?               ; 4D for valid item, 5A for last item
-arena_owner         DW  ?               ; owner of arena item
-arena_size          DW  ?               ; size in paragraphs of item
-arena   ENDS
+STRUC arena
+{
+.arena_signature     DB  ?               ; 4D for valid item, 5A for last item
+.arena_owner         DW  ?               ; owner of arena item
+.arena_size          DW  ?               ; size in paragraphs of item
+}
+
+virtual at 0
+  arena arena
+  sizeof.arena = $ - arena
+end virtual
 
 ;
 ; Current structure of the data returned by the international call
 ;
 
-internat_block STRUC
-Date_tim_format DW      ?           ; 0-USA, 1-EUR, 2-JAP
-Currency_sym    DB      ?           ; Currency Symbol 5 bytes
-                DB      ?
-                DB      ?
-                DB      ?
-                DB      ?
-Thous_sep       DB      ?           ; Thousands separator 2 bytes
-                DB      ?
-Decimal_sep     DB      ?           ; Decimal separator 2 bytes
-                DB      ?
-Date_sep        DB      ?           ; Date separator 2 bytes
-                DB      ?
-Time_sep        DB      ?           ; Decimal separator 2 bytes
-                DB      ?
-Bit_feild       DB      ?           ; Bit values
-                                    ;   Bit 0 = 0 if currency symbol first
-                                    ;         = 1 if currency symbol last
-                                    ;   Bit 1 = 0 if No space after currency symbol
-                                    ;         = 1 if space after currency symbol
-Currency_cents  DB      ?           ; Number of places after currency dec point
-Time_24         DB      ?           ; 1 if 24 hour time, 0 if 12 hour time
-Map_call        DW      ?           ; Address of case mapping call (DWORD)
-                DW      ?           ; THIS IS TWO WORDS SO IT CAN BE INITIALIZED
+STRUC internat_block Date_tim_format, Currency_sym,Currency_sym2,Currency_sym3,Currency_sym4,Currency_sym5, Thous_sep,Thous_sep2, Decimal_sep,Decimal_sep2, Date_sep,Date_sep2, Time_sep,Time_sep2, Bit_feild, Currency_cents, Time_24, Map_call,Map_call2, Data_sep,Data_sep2
+{
+.Date_tim_format DW      Date_tim_format           ; 0-USA, 1-EUR, 2-JAP
+.Currency_sym    DB      Currency_sym           ; Currency Symbol 5 bytes
+                 DB      Currency_sym2
+                 DB      Currency_sym3
+                 DB      Currency_sym4
+                 DB      Currency_sym5
+.Thous_sep       DB      Thous_sep           ; Thousands separator 2 bytes
+                 DB      Thous_sep2
+.Decimal_sep     DB      Decimal_sep           ; Decimal separator 2 bytes
+                 DB      Decimal_sep2
+.Date_sep        DB      Date_sep           ; Date separator 2 bytes
+                 DB      Date_sep2
+.Time_sep        DB      Time_sep           ; Decimal separator 2 bytes
+                 DB      Time_sep2
+.Bit_feild       DB      Bit_feild           ; Bit values
+;                                    ;   Bit 0 = 0 if currency symbol first
+;                                    ;         = 1 if currency symbol last
+;                                    ;   Bit 1 = 0 if No space after currency symbol
+;                                    ;         = 1 if space after currency symbol
+.Currency_cents  DB      Currency_cents           ; Number of places after currency dec point
+.Time_24         DB      Time_24           ; 1 if 24 hour time, 0 if 12 hour time
+.Map_call        DW      Map_call           ; Address of case mapping call (DWORD)
+                 DW      Map_call2          ; THIS IS TWO WORDS SO IT CAN BE INITIALIZED
                                     ;  in pieces.
-Data_sep        DB      ?           ; Data list separator character
-                DB      ?
-internat_block ENDS
+.Data_sep        DB      Data_sep           ; Data list separator character
+                 DB      Data_sep2
+}
+
+virtual at 0
+  internat_block_sizeof internat_block ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+  sizeof.internat_block = $ - internat_block_sizeof
+end virtual
 
 ;
 ; Max size of the block returned by the INTERNATIONAL call
@@ -695,14 +762,14 @@ arena_signature_end     EQU 5Ah         ; valid signature, last block in arena
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 
-BREAK <Machine instruction definitions>
+;BREAK <Machine instruction definitions>
 
 mi_INT          EQU     0CDh
 mi_Long_JMP     EQU     0EAh
 mi_Long_CALL    EQU     09Ah
 mi_Long_RET     EQU     0CBh
 
-BREAK <Standard I/O assignments>
+;BREAK <Standard I/O assignments>
 
 stdin       EQU     0
 stdout      EQU     1
@@ -710,13 +777,13 @@ stderr      EQU     2
 stdaux      EQU     3
 stdprn      EQU     4
 
-BREAK <Xenix subfunction assignments>
+;BREAK <Xenix subfunction assignments>
 
 open_for_read   EQU 0
 open_for_write  EQU 1
 open_for_both   EQU 2
 
-BREAK <Xenix error codes>
+;BREAK <Xenix error codes>
 
 ;
 ; XENIX calls all return error codes through AX.  If an error occurred then
@@ -824,7 +891,7 @@ unlink_access_denied            EQU     error_access_denied
 write_invalid_handle            EQU     error_invalid_handle
 write_access_denied             EQU     error_access_denied
 
-BREAK <system call definitions>
+;BREAK <system call definitions>
 
 Abort                           EQU 0   ;  0      0
 Std_Con_Input                   EQU 1   ;  1      1
@@ -922,10 +989,10 @@ Find_Next                       EQU 79  ; 79     4F
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
-Set_Current_PDB                 EQU 80  ; 80     50
-Get_Current_PDB                 EQU 81  ; 81     51
+SET_CURRENT_PDB                 EQU 80  ; 80     50
+GET_CURRENT_PDB                 EQU 81  ; 81     51
 Get_In_Vars                     EQU 82  ; 82     52
-SetDPB                          EQU 83  ; 83     53
+SETDPB                          EQU 83  ; 83     53
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
@@ -952,7 +1019,7 @@ ServerCall                      EQU 93  ; 93     5D CommitAll, ServerDOSCall,
 UserIDOper                      EQU 94  ; 94     5E Get and Set
 AssignOper                      EQU 95  ; 95     5F On, Off, Get, Set, Cancel
 
-Set_Oem_Handler                 EQU 248 ; 248    F8
+SET_OEM_HANDLER                 EQU 248 ; 248    F8
 OEM_C1                          EQU 249 ; 249    F9
 OEM_C2                          EQU 250 ; 250    FA
 OEM_C3                          EQU 251 ; 251    FB
@@ -960,4 +1027,3 @@ OEM_C4                          EQU 252 ; 252    FC
 OEM_C5                          EQU 253 ; 253    FD
 OEM_C6                          EQU 254 ; 254    FE
 OEM_C7                          EQU 255 ; 255    FF
-SUBTTL

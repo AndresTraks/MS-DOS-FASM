@@ -2,21 +2,7 @@
 ; FCB management routines for MSDOS
 ;
 
-INCLUDE DOSSEG.ASM
-
-IFNDEF  KANJI
-KANJI   EQU     0       ;FALSE
-ENDIF
-
-CODE    SEGMENT BYTE PUBLIC  'CODE'
         ASSUME  SS:DOSGROUP,CS:DOSGROUP
-
-.xlist
-.xcref
-INCLUDE DOSSYM.ASM
-INCLUDE DEVSYM.ASM
-.cref
-.list
 
         i_need  Name1,BYTE
         i_need  NumIO,BYTE
@@ -27,15 +13,15 @@ INCLUDE DEVSYM.ASM
         i_need  SpaceFlag,BYTE
         i_need  Current_Country,WORD
 
-        procedure   MakeFcb,NEAR
+        procedure   MAKEFCB,NEAR
 DRVBIT  EQU     2
 NAMBIT  EQU     4
 EXTBIT  EQU     8
-        MOV     BYTE PTR [SpaceFlag],0
+        MOV     BYTE [SS:SpaceFlag],0
         XOR     DL,DL           ; Flag--not ambiguous file name
         TEST    AL,DRVBIT       ; Use current drive field if default?
         JNZ     DEFDRV
-        MOV     BYTE PTR ES:[DI],0      ; No - use default drive
+        MOV     BYTE [ES:DI],0      ; No - use default drive
 DEFDRV:
         INC     DI
         MOV     CX,8
@@ -69,12 +55,12 @@ SKPSPC:
 NOSCAN:
         CALL    GETLET
         JBE     NODRV           ; Quit if termination character
-        CMP     BYTE PTR[SI],":"        ; Check for potential drive specifier
+        CMP     BYTE [SI],":"        ; Check for potential drive specifier
         JNZ     NODRV
         INC     SI              ; Skip over colon
         SUB     AL,"@"          ; Convert drive letter to binary drive number
         JBE     BADDRV          ; Valid drive numbers are <= NUMIO
-        CMP     AL,BYTE PTR [NUMIO]
+        CMP     AL,BYTE [SS:NUMIO]
         JBE     HAVDRV
 BADDRV:
         MOV     DL,-1
@@ -88,7 +74,7 @@ NODRV:
 NORMSCAN:
         MOV     CX,8
         CALL    GETWORD         ; Get 8-letter file name
-        CMP     BYTE PTR [SI],"."
+        CMP     BYTE [SI],"."
         JNZ     NODOT
         INC     SI              ; Skip over dot if present
         MOV     CX,3            ; Get 3-letter extension
@@ -117,7 +103,7 @@ MUSTGETWORD:
 ;
         JB      FILLNAM
         JNZ     MustCheckCX
-        TEST    BYTE PTR [SpaceFlag],0FFh
+        TEST    BYTE [SS:SpaceFlag],0FFh
         JZ      FILLNAM
         CMP     AL," "
         JNZ     FILLNAM
@@ -140,11 +126,11 @@ NOSTAR:
         DEC     CX
         JMP     SHORT NOTDUAL3
 BNDERR:
-        MOV     BYTE PTR ES:[DI-1]," "  ; patch up that space
+        MOV     BYTE [ES:DI-1]," "  ; patch up that space
         JMP     MustGetWord             ; go back and scan until delim
 
 NOTDUAL3:
-        ENDIF
+        END IF
 
         CMP     AL,"?"
         JNZ     MUSTGETWORD
@@ -162,7 +148,6 @@ SCANB:
         JZ      SCANB
         DEC     SI
         return
-MakeFCB ENDP
 
 ;
 ; NameTrans is used by FindPath to scan off an element
@@ -172,11 +157,11 @@ MakeFCB ENDP
 ; Outputs:  DS:SI advanced over spot
 ;           ES:DI point to after Name1
 ; registers modified: AX, BX, CX, DX
-procedure   NameTrans,near
-        MOV     BYTE PTR [SpaceFlag],1
+procedure   NAMETRANS,near
+        MOV     BYTE [SS:SpaceFlag],1
         PUSH    SS
         POP     ES
-        MOV     DI,OFFSET DOSGROUP:NAME1
+        MOV     DI,NAME1
         PUSH    DI
         MOV     AL,' '
         MOV     CX,11
@@ -185,7 +170,7 @@ procedure   NameTrans,near
         MOV     DL,AL
         STOSB
         POP     DI
-        CMP     BYTE PTR [SI],'.'
+        CMP     BYTE [SI],'.'
 
         IF      KANJI
         JZ      FOOBAR
@@ -197,7 +182,7 @@ procedure   NameTrans,near
 FOOBAR:
         ELSE
         JNZ     NORMSCAN
-        ENDIF
+        END IF
 
         MOVSB
         LODSB
@@ -220,11 +205,10 @@ GOTDOTNAME:
         DEC     SI
         XOR     AL,AL
         return
-nametrans   ENDP
 
-SUBTTL BUILDFCB -- MAKE A BLANK FCB FOR A DEVICE
+;SUBTTL BUILDFCB -- MAKE A BLANK FCB FOR A DEVICE
 PAGE
-        procedure BuildFCB,near
+        procedure BUILDFCB,near
 ASSUME  DS:DOSGROUP,ES:DOSGROUP
 
 ; Function:
@@ -233,7 +217,7 @@ ASSUME  DS:DOSGROUP,ES:DOSGROUP
 ;       Same as GETNAME
 
         MOV     AX,"  "
-        MOV     DI,OFFSET DOSGROUP:DEVFCB+8     ; Point to extent field
+        MOV     DI,DEVFCB+8     ; Point to extent field
         STOSW
         STOSB                   ; Blank out extent field
         XOR     AX,AX
@@ -241,19 +225,19 @@ ASSUME  DS:DOSGROUP,ES:DOSGROUP
         REP     STOSW           ; Fill FCB with zeros
         STOSB
         invoke  DATE16
-        MOV     DI,OFFSET DOSGROUP:DEVFCB+22
+        MOV     DI,DEVFCB+22
         XCHG    AX,DX
         STOSW
         XCHG    AX,DX
         STOSW
         XCHG    AX,BX           ; But device number in AH
-        MOV     BX,OFFSET DOSGROUP:DEVFCB
+        MOV     BX,DEVFCB
         MOV     SI,DI
         XOR     AL,AL           ; Set zero, clear carry
+BuildFCB_ret:
         return
-BuildFCB    ENDP
 
-SUBTTL MOVENAME, LODNAME -- EXAMINE FCB AND SETUP
+;SUBTTL MOVENAME, LODNAME -- EXAMINE FCB AND SETUP
 PAGE
         procedure   FCB_move,NEAR
 
@@ -277,10 +261,10 @@ ASSUME  DS:NOTHING,ES:NOTHING
 
         XOR     DI,DI
 MOVSTART:
-        MOV     WORD PTR [CREATING],0E500H   ; Not creating, not DEL *.*
+        MOV     WORD [SS:CREATING],0E500H   ; Not creating, not DEL *.*
         MOV     SI,DX
         LODSB
-        MOV     [EXTFCB],AL     ; Set flag if extended FCB in use
+        MOV     [SS:EXTFCB],AL     ; Set flag if extended FCB in use
         XOR     AH,AH           ; Set default attributes
         CMP     AL,-1           ; Is it an extended FCB?
         JNZ     HAVATTRB
@@ -290,7 +274,7 @@ MOVSTART:
         LODSB                   ; Get drive select byte
 HAVATTRB:
         invoke  GETTHISDRV
-        retc
+        jc BuildFCB_ret
         PUSH    DS
         PUSH    DX
         PUSH    SI
@@ -303,8 +287,8 @@ HAVATTRB:
 ;
         PUSH    DI
         context ES
-        MOV     DI,OFFSET DOSGROUP:NAME1
-        CALL    LodName
+        MOV     DI,NAME1
+        CALL    LODNAME
         POP     DI
         JC      DrvNoSet
 
@@ -326,17 +310,17 @@ HAVATTRB:
 ;
         invoke  FATREAD
         ASSUME  DS:NOTHING,ES:NOTHING
-        MOV     BYTE PTR [ATTRIB],attr_directory+attr_hidden+attr_system
+        MOV     BYTE [SS:ATTRIB],attr_directory+attr_hidden+attr_system
         invoke  GETCURRDIR
 DrvNoSet:
         POP     AX
-        MOV     BYTE PTR [ATTRIB],AH
+        MOV     BYTE [SS:ATTRIB],AH
 
         POP     SI
         POP     DX
         POP     DS
         context ES
-        MOV     DI,OFFSET DOSGROUP:NAME1
+        MOV     DI,NAME1
 
         entry   LODNAME
 ; Inputs:   DS:SI point to an FCB
@@ -346,13 +330,13 @@ DrvNoSet:
 ;                 FCB from DS:SI copied and ucased to ES:DI
 ; Carry set if there was an error.
 ; Destroys AX,CX
-        CMP     BYTE PTR [SI]," "       ; Don't allow blank as first letter
+        CMP     BYTE [SI]," "       ; Don't allow blank as first letter
         STC                     ; In case of error
-        retz
+        jz BuildFCB_ret
 
         IF      KANJI
         MOV     CX,8
-        CMP     BYTE PTR [SI],0E5H
+        CMP     BYTE [SI],0E5H
         JNZ     MOVCHK
         INC     SI
         MOV     AL,5
@@ -383,7 +367,7 @@ MOVCHK2:
         JNZ     STOLET2         ; Is it a delimiter?
         CMP     AL," "          ; This is the only delimiter allowed
         STC                     ; In case of error
-        retnz
+        jnz BuildFCB_ret
 STOLET2:
         STOSB
         CALL    TESTKANJ
@@ -407,19 +391,18 @@ MOVCHK:
         JNZ     STOLET          ; Is it a delimiter?
         CMP     AL," "          ; This is the only delimiter allowed
         STC                     ; In case of error
-        retnz
+        jnz BuildFCB_ret
 STOLET:
         STOSB
         LOOP    MOVCHK
-        ENDIF
+        END IF
 
         CLC                     ; Got through whole name - no error
 RET6:   return
-FCB_Move    ENDP
 
-SUBTTL GETLET, DELIM -- CHECK CHARACTERS AND CONVERT
+;SUBTTL GETLET, DELIM -- CHECK CHARACTERS AND CONVERT
 PAGE
-        procedure   GetLet,NEAR
+        procedure   GETLET,NEAR
 ; Get a byte from [SI], convert it to upper case, and compare for delimiter.
 ; ZF set if a delimiter, CY set if a control character (other than TAB).
         LODSB
@@ -431,56 +414,54 @@ PAGE
         SUB     AL,20H          ; Convert to upper case
 CHK1:
         PUSH    SI
-        MOV     SI,[Current_Country]
-        ADD     SI,Map_call
+        MOV     SI,[SS:Current_Country]
+        ADD     SI,internat_block_sizeof.Map_call
         PUSH    CS              ; CS for long return
-        CALL    WORD PTR CS:[SI]
+        CALL    WORD [CS:SI]
         POP     SI
         entry   CHK
         CMP     AL,"."
-        retz
+        jz RET6
         CMP     AL,'"'
-        retz
+        jz RET6
         CALL    PATHCHRCMP
-        retz
+        jz RET6
         CMP     AL,"["
-        retz
+        jz RET6
         CMP     AL,"]"
-        retz
+        jz RET6
 
 DELIM:
         CMP     AL,":"          ; Allow ":" as separator in IBM version
-        retz
+        jz RET6
 
         CMP     AL,"<"
-        retz
+        jz RET6
         CMP     AL,"|"
-        retz
+        jz RET6
         CMP     AL,">"
-        retz
+        jz RET6
 
         CMP     AL,"+"
-        retz
+        jz RET6
         CMP     AL,"="
-        retz
+        jz RET6
         CMP     AL,";"
-        retz
+        jz RET6
         CMP     AL,","
-        retz
+        jz RET6
 SPCHK:
         CMP     AL,9            ; Filter out tabs too
-        retz
+        jz RET6
 ; WARNING! " " MUST be the last compare
         CMP     AL," "
         return
-GetLet  ENDP
 
         procedure   PATHCHRCMP,NEAR
         CMP     AL,'/'
-        retz
+        jz RET6
         CMP     AL,'\'
         return
-PathChrCMP  ENDP
 
         IF      KANJI
         procedure   TESTKANJ,NEAR
@@ -504,9 +485,5 @@ ISLEAD:
         INC     AX              ;Reset zero
         POP     AX
         return
-TESTKANJ  ENDP
-        ENDIF
+        END IF
 do_ext
-
-CODE    ENDS
-    END

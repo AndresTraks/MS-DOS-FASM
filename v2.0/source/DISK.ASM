@@ -2,20 +2,9 @@
 ; Disk routines for MSDOS
 ;
 
-INCLUDE DOSSEG.ASM
-
-CODE    SEGMENT BYTE PUBLIC  'CODE'
         ASSUME  SS:DOSGROUP,CS:DOSGROUP
 
-.xlist
-.xcref
-INCLUDE DOSSYM.ASM
-INCLUDE DEVSYM.ASM
-.cref
-.list
-
-TITLE   DISK - Disk utility routines
-NAME    Disk
+;TITLE   DISK - Disk utility routines
 
         i_need  COUTDSAV,BYTE
         i_need  COUTSAV,DWORD
@@ -59,7 +48,7 @@ NAME    Disk
         i_need  ValSec,WORD
         i_need  GrowCnt,DWORD
 
-SUBTTL LOAD -- MAIN READ ROUTINE AND DEVICE IN ROUTINES
+;SUBTTL LOAD -- MAIN READ ROUTINE AND DEVICE IN ROUTINES
 PAGE
 ; * * * * Drivers for file input from devices * * * *
 
@@ -71,37 +60,36 @@ ASSUME  DS:DOSGROUP,ES:NOTHING
         PUSH    BX
         MOV     BX,1
         invoke  get_sf_from_jfn
-        ADD     DI,sf_fcb
-        MOV     BL,BYTE PTR [COUTDSAV]
+        ADD     DI,sf_entry.sf_fcb
+        MOV     BL,BYTE [COUTDSAV]
         LDS     SI,[COUTSAV]
 ASSUME  DS:NOTHING
-        MOV     WORD PTR ES:[DI.fcb_FIRCLUS],SI
-        MOV     WORD PTR ES:[DI.fcb_FIRCLUS+2],DS
-        MOV     ES:[DI.fcb_DEVID],BL
+        MOV     WORD [ES:DI+sys_fcb.fcb_FIRCLUS],SI
+        MOV     WORD [ES:DI+sys_fcb.fcb_FIRCLUS+2],DS
+        MOV     [ES:DI+sys_fcb.fcb_DEVID],BL
         PUSH    SS
         POP     DS
 ASSUME  DS:DOSGROUP
         XOR     BX,BX
         invoke  get_sf_from_jfn
-        ADD     DI,sf_fcb
-        MOV     BL,BYTE PTR [CINDSAV]
+        ADD     DI,sf_entry.sf_fcb
+        MOV     BL,BYTE [CINDSAV]
         LDS     SI,[CINSAV]
 ASSUME  DS:NOTHING
-        MOV     WORD PTR ES:[DI.fcb_FIRCLUS],SI
-        MOV     WORD PTR ES:[DI.fcb_FIRCLUS+2],DS
-        MOV     ES:[DI.fcb_DEVID],BL
+        MOV     WORD [ES:DI+sys_fcb.fcb_FIRCLUS],SI
+        MOV     WORD [ES:DI+sys_fcb.fcb_FIRCLUS+2],DS
+        MOV     [ES:DI+sys_fcb.fcb_DEVID],BL
         PUSH    SS
         POP     DS
 ASSUME  DS:DOSGROUP
-        MOV     BYTE PTR [CONSWAP],0
-        MOV     BYTE PTR [IDLEINT],1
+        MOV     BYTE [CONSWAP],0
+        MOV     BYTE [IDLEINT],1
 SWAPRET:
         POP     BX
         POP     SI
         POP     DI
         POP     ES
         return
-SWAPBACK    ENDP
 
         procedure   SWAPCON,NEAR
 ASSUME  DS:DOSGROUP,ES:NOTHING
@@ -109,47 +97,46 @@ ASSUME  DS:DOSGROUP,ES:NOTHING
         PUSH    DI
         PUSH    SI
         PUSH    BX
-        MOV     BYTE PTR [CONSWAP],1
-        MOV     BYTE PTR [IDLEINT],0
+        MOV     BYTE [CONSWAP],1
+        MOV     BYTE [IDLEINT],0
         XOR     BX,BX
         invoke  get_sf_from_jfn
-        ADD     DI,sf_fcb
-        MOV     BL,ES:[DI.fcb_DEVID]
-        MOV     BYTE PTR [CINDSAV],BL
-        LDS     SI,DWORD PTR ES:[DI.fcb_FIRCLUS]
+        ADD     DI,sf_entry.sf_fcb
+        MOV     BL,[ES:DI+sys_fcb.fcb_DEVID]
+        MOV     BYTE [CINDSAV],BL
+        LDS     SI,DWORD [ES:DI+sys_fcb.fcb_FIRCLUS]
 ASSUME  DS:NOTHING
-        MOV     WORD PTR [CINSAV],SI
-        MOV     WORD PTR [CINSAV+2],DS
-        LDS     SI,[THISFCB]
-        MOV     BL,[SI.fcb_DEVID]
-        LDS     SI,DWORD PTR [SI.fcb_FIRCLUS]
-        MOV     ES:[DI.fcb_DEVID],BL
-        MOV     WORD PTR ES:[DI.fcb_FIRCLUS],SI
-        MOV     WORD PTR ES:[DI.fcb_FIRCLUS+2],DS
+        MOV     WORD [SS:CINSAV],SI
+        MOV     WORD [SS:CINSAV+2],DS
+        LDS     SI,[SS:THISFCB]
+        MOV     BL,[SI+sys_fcb.fcb_DEVID]
+        LDS     SI,DWORD [SI+sys_fcb.fcb_FIRCLUS]
+        MOV     [ES:DI+sys_fcb.fcb_DEVID],BL
+        MOV     WORD [ES:DI+sys_fcb.fcb_FIRCLUS],SI
+        MOV     WORD [ES:DI+sys_fcb.fcb_FIRCLUS+2],DS
         PUSH    SS
         POP     DS
 ASSUME  DS:DOSGROUP
         MOV     BX,1
         invoke  get_sf_from_jfn
-        ADD     DI,sf_fcb
-        MOV     BL,ES:[DI.fcb_DEVID]
-        MOV     BYTE PTR [COUTDSAV],BL
-        LDS     SI,DWORD PTR ES:[DI.fcb_FIRCLUS]
+        ADD     DI,sf_entry.sf_fcb
+        MOV     BL,[ES:DI+sys_fcb.fcb_DEVID]
+        MOV     BYTE [COUTDSAV],BL
+        LDS     SI,DWORD [ES:DI+sys_fcb.fcb_FIRCLUS]
 ASSUME  DS:NOTHING
-        MOV     WORD PTR [COUTSAV],SI
-        MOV     WORD PTR [COUTSAV+2],DS
-        LDS     SI,[THISFCB]
-        MOV     BL,[SI.fcb_DEVID]
-        LDS     SI,DWORD PTR [SI.fcb_FIRCLUS]
-        MOV     ES:[DI.fcb_DEVID],BL
-        MOV     WORD PTR ES:[DI.fcb_FIRCLUS],SI
-        MOV     WORD PTR ES:[DI.fcb_FIRCLUS+2],DS
+        MOV     WORD [SS:COUTSAV],SI
+        MOV     WORD [SS:COUTSAV+2],DS
+        LDS     SI,[SS:THISFCB]
+        MOV     BL,[SI+sys_fcb.fcb_DEVID]
+        LDS     SI,DWORD [SI+sys_fcb.fcb_FIRCLUS]
+        MOV     [ES:DI+sys_fcb.fcb_DEVID],BL
+        MOV     WORD [ES:DI+sys_fcb.fcb_FIRCLUS],SI
+        MOV     WORD [ES:DI+sys_fcb.fcb_FIRCLUS+2],DS
         PUSH    SS
         POP     DS
         JMP     SWAPRET
-SWAPCON ENDP
 
-        procedure   LOAD,NEAR
+        procedure   _LOAD,NEAR
 ASSUME  DS:NOTHING,ES:NOTHING
 ;
 ; Inputs:
@@ -189,11 +176,11 @@ DVRDRAWR:
         XOR     DX,DX                   ; Start at 0
         XOR     AX,AX                   ; Media Byte, unit = 0
         invoke  SETREAD
-        LDS     SI,[THISFCB]
+        LDS     SI,[SS:THISFCB]
         invoke  DEVIOCALL
         MOV     DX,DI                   ; DX is preserved by INT 24
         MOV     AH,86H                  ; Read error
-        MOV     DI,[DEVCALL.REQSTAT]
+        MOV     DI,[SS:DEVCALL.REQSTAT]
         TEST    DI,STERR
         JZ      CRDROK                  ; No errors
         invoke  CHARHARD
@@ -202,7 +189,7 @@ DVRDRAWR:
         JZ      DVRDRAWR                ; Retry
 CRDROK:
         MOV     DI,DX
-        ADD     DI,[CALLSCNT]           ; Amount transferred
+        ADD     DI,[SS:CALLSCNT]           ; Amount transferred
         JMP     SHORT ENDRDDEVJ2
 
 TESTRAW:
@@ -222,34 +209,34 @@ ASSUME  DS:NOTHING
         MOV     CX,1
         invoke  SETREAD
         POP     CX
-        LDS     SI,[THISFCB]
-        LDS     SI,DWORD PTR [SI.fcb_FIRCLUS]
+        LDS     SI,[SS:THISFCB]
+        LDS     SI,DWORD [SI+sys_fcb.fcb_FIRCLUS]
 DVRDLP:
         invoke  DSKSTATCHK
         invoke  DEVIOCALL2
         PUSH    DI
         MOV     AH,86H
-        MOV     DI,[DEVCALL.REQSTAT]
+        MOV     DI,[SS:DEVCALL.REQSTAT]
         TEST    DI,STERR
         JZ      CRDOK
         invoke  CHARHARD
         POP     DI
-        MOV     [CALLSCNT],1
+        MOV     [SS:CALLSCNT],1
         CMP     AL,1
         JZ      DVRDLP                  ;Retry
         XOR     AL,AL                   ;Pick some random character
         JMP     SHORT DVRDIGN
 CRDOK:
         POP     DI
-        CMP     [CALLSCNT],1
+        CMP     [SS:CALLSCNT],1
         JNZ     ENDRDDEVJ2
         PUSH    DS
-        MOV     DS,WORD PTR [CALLXAD+2]
-        MOV     AL,BYTE PTR [DI]
+        MOV     DS,WORD [SS:CALLXAD+2]
+        MOV     AL,BYTE [DI]
         POP     DS
 DVRDIGN:
-        INC     WORD PTR [CALLXAD]
-        MOV     [DEVCALL.REQSTAT],0
+        INC     WORD [SS:CALLXAD]
+        MOV     [SS:DEVCALL.REQSTAT],0
         INC     DI
         CMP     AL,1AH                  ; ^Z?
         JZ      ENDRDDEVJ
@@ -267,13 +254,13 @@ TRANBUF:
         STOSB
         CMP     AL,c_CR         ; Check for carriage return
         JNZ     NORMCH
-        MOV     BYTE PTR [SI],c_LF
+        MOV     BYTE [SI],c_LF
 NORMCH:
         CMP     AL,c_LF
         LOOPNZ  TRANBUF
         JNZ     ENDRDCON
         XOR     SI,SI           ; Cause a new buffer to be read
-        invoke  OUT             ; Transmit linefeed
+        invoke  _OUT             ; Transmit linefeed
         OR      AL,1            ; Clear zero flag--not end of file
 ENDRDCON:
         PUSH    SS
@@ -288,7 +275,7 @@ ASSUME  DS:DOSGROUP
         MOV     [NEXTADD],DI
         JNZ     SETFCBC         ; Zero set if Ctrl-Z found in input
         LES     DI,[THISFCB]
-        AND     ES:BYTE PTR [DI.fcb_DEVID],0FFH-40H ; Mark as no more data available
+        AND     BYTE [ES:DI+sys_fcb.fcb_DEVID],0FFH-40H ; Mark as no more data available
 SETFCBC:
         call    SETFCB
         return
@@ -301,35 +288,33 @@ ASSUME  DS:DOSGROUP
         MOV     SI,[CONTPOS]
         OR      SI,SI
         JNZ     TRANBUF
-        CMP     BYTE PTR [CONBUF],128
+        CMP     BYTE [CONBUF],128
         JZ      GETBUF
-        MOV     WORD PTR [CONBUF],0FF80H        ; Set up 128-byte buffer with no template
+        MOV     WORD [CONBUF],0FF80H        ; Set up 128-byte buffer with no template
 GETBUF:
         PUSH    CX
         PUSH    ES
         PUSH    DI
-        MOV     DX,OFFSET DOSGROUP:CONBUF
-        invoke  $STD_CON_STRING_INPUT           ; Get input buffer
+        MOV     DX,CONBUF
+        invoke  _STD_CON_STRING_INPUT           ; Get input buffer
         POP     DI
         POP     ES
         POP     CX
-        MOV     SI,2 + OFFSET DOSGROUP:CONBUF
-        CMP     BYTE PTR [SI],1AH       ; Check for Ctrl-Z in first character
+        MOV     SI,2 + CONBUF
+        CMP     BYTE [SI],1AH       ; Check for Ctrl-Z in first character
         JNZ     TRANBUF
         MOV     AL,1AH
         STOSB
         DEC     DI
         MOV     AL,10
-        invoke  OUT             ; Send linefeed
+        invoke  _OUT             ; Send linefeed
         XOR     SI,SI
         JMP     SHORT ENDRDCON
 
-LOAD    ENDP
-
-SUBTTL STORE -- MAIN WRITE ROUTINE AND DEVICE OUT ROUTINES
+;SUBTTL STORE -- MAIN WRITE ROUTINE AND DEVICE OUT ROUTINES
 PAGE
 ASSUME  DS:NOTHING,ES:NOTHING
-        procedure   STORE,NEAR
+        procedure   _STORE,NEAR
 ASSUME  DS:NOTHING,ES:NOTHING
 
 ; Inputs:
@@ -347,8 +332,8 @@ ASSUME  DS:DOSGROUP
         OR      BL,BL
         JS      WRTDEV
         invoke  DATE16
-        MOV     ES:[DI.fcb_FDATE],AX
-        MOV     ES:[DI.fcb_FTIME],DX
+        MOV     [ES:DI+sys_fcb.fcb_FDATE],AX
+        MOV     [ES:DI+sys_fcb.fcb_FTIME],DX
         call    DISKWRITE
         return
 
@@ -366,7 +351,7 @@ WRCONLP:
         LODSB
         CMP     AL,1AH          ; ^Z?
         JZ      CONEOF
-        invoke  OUT
+        invoke  _OUT
         LOOP    WRCONLP
 CONEOF:
         POP     AX                      ; Count
@@ -380,11 +365,11 @@ DVWRTRAW:
 ASSUME  DS:NOTHING
         XOR     AX,AX                   ; Media Byte, unit = 0
         invoke  SETWRITE
-        LDS     SI,[THISFCB]
+        LDS     SI,[SS:THISFCB]
         invoke  DEVIOCALL
         MOV     DX,DI
         MOV     AH,87H
-        MOV     DI,[DEVCALL.REQSTAT]
+        MOV     DI,[SS:DEVCALL.REQSTAT]
         TEST    DI,STERR
         JZ      CWRTROK
         invoke  CHARHARD
@@ -398,7 +383,7 @@ ASSUME  DS:DOSGROUP
 ENDWRDEV:
         LES     DI,[THISFCB]
         XOR     DX,DX
-        DIV     ES:[DI.fcb_RECSIZ]
+        DIV     [ES:DI+sys_fcb.fcb_RECSIZ]
         MOV     CX,AX                   ; Partial record is ignored
         call    ADDREC
         return
@@ -421,42 +406,42 @@ ASSUME  DS:NOTHING
         TEST    AL,ISNULL
         JNZ     WRTNUL
         MOV     AX,DX
-        CMP     BYTE PTR [BX],1AH       ; ^Z?
+        CMP     BYTE [BX],1AH       ; ^Z?
         JZ      WRTCOOKDONE             ; Yes, transfer nothing
         PUSH    CX
         MOV     CX,1
         invoke  SETWRITE
         POP     CX
-        LDS     SI,[THISFCB]
-        LDS     SI,DWORD PTR [SI.fcb_FIRCLUS]
+        LDS     SI,[SS:THISFCB]
+        LDS     SI,DWORD [SI+sys_fcb.fcb_FIRCLUS]
 DVWRTLP:
         invoke  DSKSTATCHK
         invoke  DEVIOCALL2
         PUSH    DI
         MOV     AH,87H
-        MOV     DI,[DEVCALL.REQSTAT]
+        MOV     DI,[SS:DEVCALL.REQSTAT]
         TEST    DI,STERR
         JZ      CWROK
         invoke  CHARHARD
         POP     DI
-        MOV     [CALLSCNT],1
+        MOV     [SS:CALLSCNT],1
         CMP     AL,1
         JZ      DVWRTLP
         JMP     SHORT DVWRTIGN
 CWROK:
         POP     DI
-        CMP     [CALLSCNT],0
+        CMP     [SS:CALLSCNT],0
         JZ      WRTCOOKDONE
 DVWRTIGN:
         INC     DX
-        INC     WORD PTR [CALLXAD]
+        INC     WORD [SS:CALLXAD]
         INC     DI
         PUSH    DS
-        MOV     DS,WORD PTR [CALLXAD+2]
-        CMP     BYTE PTR [DI],1AH       ; ^Z?
+        MOV     DS,WORD [SS:CALLXAD+2]
+        CMP     BYTE [DI],1AH       ; ^Z?
         POP     DS
         JZ      WRTCOOKDONE
-        MOV     [DEVCALL.REQSTAT],0
+        MOV     [SS:DEVCALL.REQSTAT],0
         LOOP    DVWRTLP
 WRTCOOKDONE:
         MOV     AX,DX
@@ -467,9 +452,7 @@ WRTNUL:
         MOV     DX,CX                   ;Entire transfer done
         JMP     WRTCOOKDONE
 
-STORE   ENDP
-
-        procedure   get_io_fcb,near
+        procedure   GET_IO_FCB,near
 ASSUME  DS:NOTHING,ES:NOTHING
 ; Convert JFN number in BX to FCB in DS:SI
         PUSH    SS
@@ -480,36 +463,35 @@ ASSUME  DS:DOSGROUP
         invoke  get_sf_from_jfn
         JC      RET44P
         MOV     SI,DI
-        ADD     SI,sf_fcb
+        ADD     SI,sf_entry.sf_fcb
         PUSH    ES
         POP     DS
 ASSUME  DS:NOTHING
 RET44P:
         POP     DI
         POP     ES
+RET44P_ret:
         return
-get_io_fcb  ENDP
 
-SUBTTL GETTHISDRV -- FIND CURRENT DRIVE
+;SUBTTL GETTHISDRV -- FIND CURRENT DRIVE
 PAGE
 ; Input:    AL has drive identifier (1=A, 0=default)
 ; Output:   AL has physical drive (0=A)
 ; Carry set if invalid drive (and AL is garbage anyway)
-        procedure   GetThisDrv,NEAR
+        procedure   GETTHISDRV,NEAR
 ASSUME  DS:NOTHING,ES:NOTHING
-        CMP     BYTE PTR [NUMIO],AL
-        retc
+        CMP     BYTE [SS:NUMIO],AL
+        jc RET44P_ret
         DEC     AL
         JNS     PHYDRV
-        MOV     AL,[CURDRV]
+        MOV     AL,[SS:CURDRV]
 PHYDRV:
-        MOV     BYTE PTR [THISDRV],AL
+        MOV     BYTE [SS:THISDRV],AL
         return
-GetThisDrv  ENDP
 
-SUBTTL DIRREAD -- READ A DIRECTORY SECTOR
+;SUBTTL DIRREAD -- READ A DIRECTORY SECTOR
 PAGE
-        procedure   DirRead,NEAR
+        procedure   DIRREAD,NEAR
 ASSUME  DS:DOSGROUP,ES:NOTHING
 
 ; Inputs:
@@ -552,12 +534,12 @@ HAVESKIPPED:
         XOR     AL,AL           ; Indicate pre-read
         MOV     AH,DIRPRI
         invoke  GETBUFFR
+FIRSTCLUSTER_ret:
         ret
-DirRead ENDP
 
-SUBTTL FATSECRD -- READ A FAT SECTOR
+;SUBTTL FATSECRD -- READ A FAT SECTOR
 PAGE
-        procedure   FATSecRd,NEAR
+        procedure   FATSECRD,NEAR
 ASSUME  DS:NOTHING,ES:NOTHING
 
 ; Inputs:
@@ -572,8 +554,8 @@ ASSUME  DS:NOTHING,ES:NOTHING
 ;       Same as DREAD
 
         MOV     DI,CX
-        MOV     CL,ES:[BP.dpb_FAT_count]
-        MOV     AL,ES:[BP.dpb_FAT_size]
+        MOV     CL,[ES:BP+dpb.dpb_FAT_count]
+        MOV     AL,[ES:BP+dpb.dpb_FAT_size]
         XOR     AH,AH
         MOV     CH,AH
         PUSH    DX
@@ -592,7 +574,7 @@ NXTFAT:
 
 ; NOTE FALL THROUGH
 
-SUBTTL DREAD -- DO A DISK READ
+;SUBTTL DREAD -- DO A DISK READ
 PAGE
         entry   DREAD
 ASSUME  DS:NOTHING,ES:NOTHING
@@ -608,19 +590,19 @@ ASSUME  DS:NOTHING,ES:NOTHING
 ; DS,ES:BP preserved. All other registers destroyed.
 
         CALL    DSKREAD
-        retz
-        MOV     BYTE PTR [READOP],0
+        jz FIRSTCLUSTER_ret
+        MOV     BYTE [SS:READOP],0
         invoke  HARDERR
         CMP     AL,1            ; Check for retry
         JZ      DREAD
         return                  ; Ignore otherwise
 RET41P: POP     DX
+RET41P_ret:
         return
-FATSecRd    ENDP
 
-SUBTTL DSKREAD -- PHYSICAL DISK READ
+;SUBTTL DSKREAD -- PHYSICAL DISK READ
 PAGE
-        procedure   DskRead,NEAR
+        procedure   DSKREAD,NEAR
 ASSUME  DS:NOTHING,ES:NOTHING
 
 ; Inputs:
@@ -639,14 +621,14 @@ ASSUME  DS:NOTHING,ES:NOTHING
 ; SI Destroyed, others preserved
 
         PUSH    CX
-        MOV     AH,ES:[BP.dpb_media]
-        MOV     AL,ES:[BP.dpb_UNIT]
+        MOV     AH,[ES:BP+dpb.dpb_media]
+        MOV     AL,[ES:BP+dpb.dpb_UNIT]
         PUSH    BX
         PUSH    ES
         invoke  SETREAD
         JMP     DODSKOP
 
-SUBTTL DWRITE -- SEE ABOUT WRITING
+;SUBTTL DWRITE -- SEE ABOUT WRITING
 PAGE
         entry   DWRITE
 ASSUME  DS:NOTHING,ES:NOTHING
@@ -662,14 +644,14 @@ ASSUME  DS:NOTHING,ES:NOTHING
 ; BP preserved. All other registers destroyed.
 
         CALL    DSKWRITE
-        retz
-        MOV     BYTE PTR [READOP],1
+        jz RET41P_ret
+        MOV     BYTE [SS:READOP],1
         invoke  HARDERR
         CMP     AL,1            ; Check for retry
         JZ      DWRITE
         return
 
-SUBTTL DSKWRITE -- PHYSICAL DISK WRITE
+;SUBTTL DSKWRITE -- PHYSICAL DISK WRITE
 PAGE
         entry   DSKWRITE
 ASSUME  DS:NOTHING,ES:NOTHING
@@ -690,8 +672,8 @@ ASSUME  DS:NOTHING,ES:NOTHING
 ; SI Destroyed, others preserved
 
         PUSH    CX
-        MOV     AH,ES:[BP.dpb_media]
-        MOV     AL,ES:[BP.dpb_UNIT]
+        MOV     AH,[ES:BP+dpb.dpb_media]
+        MOV     AL,[ES:BP+dpb.dpb_UNIT]
         PUSH    BX
         PUSH    ES
         invoke  SETWRITE
@@ -699,21 +681,20 @@ DODSKOP:
         MOV     CX,DS           ; Save DS
         POP     DS              ; DS:BP points to DPB
         PUSH    DS
-        LDS     SI,DS:[BP.dpb_driver_addr]
+        LDS     SI,[DS:BP+dpb.dpb_driver_addr]
         invoke  DEVIOCALL2
         MOV     DS,CX           ; Restore DS
         POP     ES              ; Restore ES
         POP     BX
-        MOV     CX,[CALLSCNT]   ; Number of sectors transferred
+        MOV     CX,[SS:CALLSCNT]   ; Number of sectors transferred
         POP     DI
         SUB     CX,DI
         NEG     CX              ; Number of sectors not transferred
-        MOV     AX,[DEVCALL.REQSTAT]
+        MOV     AX,[SS:DEVCALL.REQSTAT]
         TEST    AX,STERR
         return
-DskRead ENDP
 
-SUBTTL SETUP -- SETUP A DISK READ OR WRITE FROM USER
+;SUBTTL SETUP -- SETUP A DISK READ OR WRITE FROM USER
 PAGE
 ASSUME  DS:DOSGROUP,ES:NOTHING
 
@@ -746,19 +727,19 @@ ASSUME  DS:NOTHING,ES:NOTHING
         PUSH    AX
         MOV     AL,[DI]
         DEC     AL
-        MOV     BYTE PTR [THISDRV],AL
-        MOV     AL,[DI.fcb_DEVID]
-        MOV     SI,[DI.fcb_RECSIZ]
+        MOV     BYTE [SS:THISDRV],AL
+        MOV     AL,[DI+sys_fcb.fcb_DEVID]
+        MOV     SI,[DI+sys_fcb.fcb_RECSIZ]
         OR      SI,SI
         JNZ     HAVRECSIZ
         MOV     SI,128
-        MOV     [DI.fcb_RECSIZ],SI
+        MOV     [DI+sys_fcb.fcb_RECSIZ],SI
 HAVRECSIZ:
-        MOV     WORD PTR [THISFCB+2],DS
+        MOV     WORD [SS:THISFCB+2],DS
         PUSH    SS
         POP     DS              ; Set DS to DOSGROUP
 ASSUME  DS:DOSGROUP
-        MOV     WORD PTR [THISFCB],DI
+        MOV     WORD [THISFCB],DI
         OR      AL,AL           ; Is it a device?
         JNS     NOTDEVICE
         XOR     AL,AL           ; Fake in drive 0 so we can get BP
@@ -767,7 +748,7 @@ NOTDEVICE:
         POP     AX
         JNC     CheckRecLen
         XOR     CX,CX
-        MOV     BYTE PTR [DSKERR],4
+        MOV     BYTE [DSKERR],4
         POP     BX
         return
 
@@ -777,15 +758,15 @@ CheckRecLen:
         XOR     DH,DH           ; Ignore MSB if record >= 64 bytes
 SMALREC:
         MOV     [RECCNT],CX
-        MOV     WORD PTR [RECPOS],AX
-        MOV     WORD PTR [RECPOS+2],DX
-        MOV     BX,WORD PTR [DMAADD]
+        MOV     WORD [RECPOS],AX
+        MOV     WORD [RECPOS+2],DX
+        MOV     BX,WORD [DMAADD]
         MOV     [NEXTADD],BX
-        MOV     BYTE PTR [DSKERR],0
-        MOV     BYTE PTR [TRANS],0
+        MOV     BYTE [DSKERR],0
+        MOV     BYTE [TRANS],0
         MOV     BX,DX
         MUL     SI
-        MOV     WORD PTR [BYTPOS],AX
+        MOV     WORD [BYTPOS],AX
         PUSH    DX
         MOV     AX,BX
         MUL     SI
@@ -793,28 +774,28 @@ SMALREC:
         ADD     AX,BX
         ADC     DX,0            ; Ripple carry
         JNZ     EOFERR
-        MOV     WORD PTR [BYTPOS+2],AX
+        MOV     WORD [BYTPOS+2],AX
         MOV     DX,AX
-        MOV     AX,WORD PTR [BYTPOS]
-        MOV     BX,ES:[BP.dpb_sector_size]
+        MOV     AX,WORD [BYTPOS]
+        MOV     BX,[ES:BP+dpb.dpb_sector_size]
         CMP     DX,BX           ; See if divide will overflow
         JNC     EOFERR
         DIV     BX
         MOV     [SECPOS],AX
         MOV     [BYTSECPOS],DX
         MOV     DX,AX
-        AND     AL,ES:[BP.dpb_cluster_mask]
+        AND     AL,[ES:BP+dpb.dpb_cluster_mask]
         MOV     [SECCLUSPOS],AL
         MOV     AX,CX           ; Record count
-        MOV     CL,ES:[BP.dpb_cluster_shift]
+        MOV     CL,[ES:BP+dpb.dpb_cluster_shift]
         SHR     DX,CL
         MOV     [CLUSNUM],DX
         MUL     SI              ; Multiply by bytes per record
         MOV     CX,AX
-        ADD     AX,WORD PTR [DMAADD]     ; See if it will fit in one segment
+        ADD     AX,WORD [DMAADD]     ; See if it will fit in one segment
         ADC     DX,0
         JZ      OK              ; Must be less than 64K
-        MOV     AX,WORD PTR [DMAADD]
+        MOV     AX,WORD [DMAADD]
         NEG     AX              ; Amount of room left in segment
         JNZ     PARTSEG
         DEC     AX
@@ -823,24 +804,24 @@ PARTSEG:
         DIV     SI              ; How many records will fit?
         MOV     [RECCNT],AX
         MUL     SI              ; Translate that back into bytes
-        MOV     BYTE PTR [DSKERR],2      ; Flag that trimming took place
+        MOV     BYTE [DSKERR],2      ; Flag that trimming took place
         MOV     CX,AX
         JCXZ    NOROOM
 OK:
         LES     DI,[THISFCB]
-        MOV     BL,ES:[DI.fcb_DEVID]
+        MOV     BL,[ES:DI+sys_fcb.fcb_DEVID]
         return
 
 EOFERR:
-        MOV     BYTE PTR [DSKERR],1
+        MOV     BYTE [DSKERR],1
         XOR     CX,CX
 NOROOM:
         LES     DI,[THISFCB]
         POP     BX              ; Kill return address
+NOROOM_ret:
         return
-SETUP   ENDP
 
-SUBTTL BREAKDOWN -- CUT A USER READ OR WRITE INTO PIECES
+;SUBTTL BREAKDOWN -- CUT A USER READ OR WRITE INTO PIECES
 PAGE
         procedure   BREAKDOWN,near
 ASSUME  DS:DOSGROUP,ES:NOTHING
@@ -859,7 +840,7 @@ ASSUME  DS:DOSGROUP,ES:NOTHING
         MOV     BX,CX
         OR      AX,AX
         JZ      SAVFIR          ; Partial first sector?
-        SUB     AX,ES:[BP.dpb_sector_size]
+        SUB     AX,[ES:BP+dpb.dpb_sector_size]
         NEG     AX              ; Max number of bytes left in first sector
         SUB     BX,AX           ; Subtract from total length
         JAE     SAVFIR
@@ -869,20 +850,19 @@ SAVFIR:
         MOV     [BYTCNT1],AX
         MOV     AX,BX
         XOR     DX,DX
-        DIV     ES:[BP.dpb_sector_size]  ; How many whole sectors?
+        DIV     [ES:BP+dpb.dpb_sector_size]  ; How many whole sectors?
         MOV     [SECCNT],AX
         MOV     [BYTCNT2],DX    ; Bytes remaining for last sector
         OR      DX,[BYTCNT1]
-        retnz                   ; NOT (BYTCNT1 = BYTCNT2 = 0)
+        jnz NOROOM_ret                   ; NOT (BYTCNT1 = BYTCNT2 = 0)
         CMP     AX,1
-        retnz
-        MOV     AX,ES:[BP.dpb_sector_size]       ; Buffer EXACT one sector I/O
+        jnz NOROOM_ret
+        MOV     AX,[ES:BP+dpb.dpb_sector_size]       ; Buffer EXACT one sector I/O
         MOV     [BYTCNT2],AX
         MOV     [SECCNT],DX             ; DX = 0
         return
-BreakDown   ENDP
 
-SUBTTL DISKREAD -- PERFORM USER DISK READ
+;SUBTTL DISKREAD -- PERFORM USER DISK READ
 PAGE
         procedure   DISKREAD,NEAR
 ASSUME  DS:DOSGROUP,ES:NOTHING
@@ -897,10 +877,10 @@ ASSUME  DS:DOSGROUP,ES:NOTHING
 ;       ES:DI point to FCB
 ;       fcb_LSTCLUS, fcb_CLUSPOS fields in FCB set
 
-        MOV     AX,ES:WORD PTR [DI.fcb_FILSIZ]
-        MOV     BX,ES:WORD PTR [DI.fcb_FILSIZ+2]
-        SUB     AX,WORD PTR [BYTPOS]
-        SBB     BX,WORD PTR [BYTPOS+2]
+        MOV     AX,WORD [ES:DI+sys_fcb.fcb_FILSIZ]
+        MOV     BX,WORD [ES:DI+sys_fcb.fcb_FILSIZ+2]
+        SUB     AX,WORD [BYTPOS]
+        SBB     BX,WORD [BYTPOS+2]
         JB      RDERR
         JNZ     ENUF
         OR      AX,AX
@@ -932,7 +912,7 @@ RDMID:
         JZ      RDLASTJ
         invoke  NEXTSEC
         JC      SETFCBJ2
-        MOV     BYTE PTR [TRANS],1      ; A transfer is taking place
+        MOV     BYTE [TRANS],1      ; A transfer is taking place
 ONSEC:
         MOV     DL,[SECCLUSPOS]
         MOV     CX,[SECCNT]
@@ -942,7 +922,7 @@ RDLP:
         PUSH    DI
         PUSH    AX
         PUSH    BX
-        MOV     DS,WORD PTR [DMAADD+2]
+        MOV     DS,WORD [DMAADD+2]
 ASSUME  DS:NOTHING
         PUSH    DX
         PUSH    CX
@@ -950,17 +930,17 @@ ASSUME  DS:NOTHING
         POP     BX
         POP     DX
         ADD     BX,DX           ; Upper bound of read
-        MOV     AL,ES:[BP.dpb_drive]
+        MOV     AL,[ES:BP+dpb.dpb_drive]
         invoke  SETVISIT
 NXTBUF:                         ; Must see if one of these sectors is buffered
-        MOV     [DI.VISIT],1    ; Mark as visited
-        CMP     AL,[DI.BUFDRV]
+        MOV     [DI+BUFFINFO.VISIT],1    ; Mark as visited
+        CMP     AL,[DI+BUFFINFO.BUFDRV]
         JNZ     DONXTBUF        ; Not for this drive
-        CMP     [DI.BUFSECNO],DX
+        CMP     [DI+BUFFINFO.BUFSECNO],DX
         JC      DONXTBUF        ; Below first sector
-        CMP     [DI.BUFSECNO],BX
+        CMP     [DI+BUFFINFO.BUFSECNO],BX
         JNC     DONXTBUF        ; Above last sector
-        CMP     BYTE PTR [DI.BUFDIRTY],0
+        CMP     BYTE [DI+BUFFINFO.BUFDIRTY],0
         JZ      CLBUFF                  ; Buffer is clean, so OK
 ; A sector has been read in when a dirty copy of it is in a buffer
 ; The buffered sector must now be read into the right place
@@ -968,18 +948,18 @@ NXTBUF:                         ; Must see if one of these sectors is buffered
         PUSH    AX
         PUSH    DI              ; Save search environment
         PUSH    DX
-        SUB     DX,[DI.BUFSECNO]   ; How far into transfer?
+        SUB     DX,[DI+BUFFINFO.BUFSECNO]   ; How far into transfer?
         NEG     DX
         MOV     SI,DI
         MOV     DI,AX
         MOV     AX,DX
-        MOV     CX,ES:[BP.dpb_sector_size]
+        MOV     CX,[ES:BP+dpb.dpb_sector_size]
         MUL     CX
         ADD     DI,AX           ; Put the buffer here
         ADD     SI,BUFINSIZ
         SHR     CX,1
         PUSH    ES
-        MOV     ES,WORD PTR [DMAADD+2]
+        MOV     ES,WORD [SS:DMAADD+2]
         REP     MOVSW
         JNC     EVENMOV
         MOVSB
@@ -987,7 +967,7 @@ EVENMOV:
         POP     ES
         POP     DX
         POP     DI
-        MOV     AL,ES:[BP.dpb_drive]
+        MOV     AL,[ES:BP+dpb.dpb_drive]
 CLBUFF:
         invoke  SCANPLACE
 DONXTBUF:
@@ -1020,19 +1000,19 @@ RDLAST:
         LES     SI,[THISFCB]
         MOV     AX,[NEXTADD]
         MOV     DI,AX
-        SUB     AX,WORD PTR [DMAADD]     ; Number of bytes transfered
+        SUB     AX,WORD [DMAADD]     ; Number of bytes transfered
         XOR     DX,DX
-        MOV     CX,ES:[SI.fcb_RECSIZ]
+        MOV     CX,[ES:SI+sys_fcb.fcb_RECSIZ]
         DIV     CX              ; Number of records
         CMP     AX,[RECCNT]     ; Check if all records transferred
         JZ      FULLREC
-        MOV     BYTE PTR [DSKERR],1
+        MOV     BYTE [DSKERR],1
         OR      DX,DX
         JZ      FULLREC         ; If remainder 0, then full record transfered
-        MOV     BYTE PTR [DSKERR],3      ; Flag partial last record
+        MOV     BYTE [DSKERR],3      ; Flag partial last record
         SUB     CX,DX           ; Bytes left in last record
         PUSH    ES
-        MOV     ES,WORD PTR [DMAADD+2]
+        MOV     ES,WORD [DMAADD+2]
         XCHG    AX,BX           ; Save the record count temporarily
         XOR     AX,AX           ; Fill with zeros
         SHR     CX,1
@@ -1047,25 +1027,24 @@ FULLREC:
         MOV     CX,AX
         MOV     DI,SI           ; ES:DI point to FCB
 SETCLUS:
-        TEST    ES:[DI].fcb_DEVID,-1
+        TEST    [ES:DI+sys_fcb.fcb_DEVID],-1
         JS      ADDREC                  ; don't set clisters if device
         MOV     AX,[CLUSNUM]
-        AND     ES:[DI.fcb_LSTCLUS],0F000h  ; fcb_lstclus is packed with dir clus
-        OR      ES:[DI.fcb_LSTCLUS],AX      ; drop in the correct part of fcb_lstclus
+        AND     [ES:DI+sys_fcb.fcb_LSTCLUS],0F000h  ; fcb_lstclus is packed with dir clus
+        OR      [ES:DI+sys_fcb.fcb_LSTCLUS],AX      ; drop in the correct part of fcb_lstclus
         MOV     AX,[LASTPOS]
-        MOV     ES:[DI.fcb_CLUSPOS],AX
-        entry   AddRec
-        MOV     AX,WORD PTR [RECPOS]
-        MOV     DX,WORD PTR [RECPOS+2]
+        MOV     [ES:DI+sys_fcb.fcb_CLUSPOS],AX
+        entry   ADDREC
+        MOV     AX,WORD [RECPOS]
+        MOV     DX,WORD [RECPOS+2]
         JCXZ    RET28           ; If no records read, don't change position
         DEC     CX
         ADD     AX,CX           ; Update current record position
         ADC     DX,0
         INC     CX
 RET28:  return
-DISKREAD    ENDP
 
-SUBTTL DISKWRITE -- PERFORM USER DISK WRITE
+;SUBTTL DISKWRITE -- PERFORM USER DISK WRITE
 PAGE
         procedure   DISKWRITE,NEAR
 ASSUME  DS:DOSGROUP,ES:NOTHING
@@ -1081,30 +1060,30 @@ ASSUME  DS:DOSGROUP,ES:NOTHING
 ;       fcb_LSTCLUS, fcb_CLUSPOS fields in FCB set
 
         AND     BL,3FH          ; Mark file as dirty
-        MOV     ES:[DI.fcb_DEVID],BL
+        MOV     [ES:DI+sys_fcb.fcb_DEVID],BL
         LES     BP,[THISDPB]
         CALL    BREAKDOWN
-        MOV     AX,WORD PTR [BYTPOS]
-        MOV     DX,WORD PTR [BYTPOS+2]
+        MOV     AX,WORD [BYTPOS]
+        MOV     DX,WORD [BYTPOS+2]
         JCXZ    WRTEOFJ
         ADD     AX,CX
         ADC     DX,0            ; AX:DX=last byte accessed
-        DIV     ES:[BP.dpb_sector_size]  ; AX=last sector accessed
+        DIV     [ES:BP+dpb.dpb_sector_size]  ; AX=last sector accessed
         MOV     BX,AX           ; Save last full sector
         OR      DX,DX
         JNZ     CALCLUS
         DEC     AX              ; AX must be zero base indexed
 CALCLUS:
-        MOV     CL,ES:[BP.dpb_cluster_shift]
+        MOV     CL,[ES:BP+dpb.dpb_cluster_shift]
         SHR     AX,CL           ; Last cluster to be accessed
         PUSH    AX
         PUSH    DX              ; Save the size of the "tail"
         PUSH    ES
         LES     DI,[THISFCB]
-        MOV     AX,ES:WORD PTR [DI.fcb_FILSIZ]
-        MOV     DX,ES:WORD PTR [DI.fcb_FILSIZ+2]
+        MOV     AX,WORD [ES:DI+sys_fcb.fcb_FILSIZ]
+        MOV     DX,WORD [ES:DI+sys_fcb.fcb_FILSIZ+2]
         POP     ES
-        DIV     ES:[BP.dpb_sector_size]
+        DIV     [ES:BP+dpb.dpb_sector_size]
         MOV     CX,AX           ; Save last full sector of current file
         OR      DX,DX
         JZ      NORNDUP
@@ -1112,15 +1091,15 @@ CALCLUS:
 NORNDUP:
         MOV     [VALSEC],AX     ; Number of sectors that have been written
         XOR     AX,AX
-        MOV     WORD PTR [GROWCNT],AX
-        MOV     WORD PTR [GROWCNT+2],AX
+        MOV     WORD [GROWCNT],AX
+        MOV     WORD [GROWCNT+2],AX
         POP     AX
         SUB     BX,CX           ; Number of full sectors
         JB      NOGROW
         JZ      TESTTAIL
         MOV     CX,DX
         XCHG    AX,BX
-        MUL     ES:[BP.dpb_sector_size]  ; Bytes of full sector growth
+        MUL     [ES:BP+dpb.dpb_sector_size]  ; Bytes of full sector growth
         SUB     AX,CX           ; Take off current "tail"
         SBB     DX,0            ; 32-bit extension
         ADD     AX,BX           ; Add on new "tail"
@@ -1135,9 +1114,9 @@ HAVSTART:
         JNC     DOWRTJ
 WRTERR:
         XOR     CX,CX
-        MOV     BYTE PTR [DSKERR],1
-        MOV     AX,WORD PTR [RECPOS]
-        MOV     DX,WORD PTR [RECPOS+2]
+        MOV     BYTE [DSKERR],1
+        MOV     AX,WORD [RECPOS]
+        MOV     DX,WORD [RECPOS+2]
         LES     DI,[THISFCB]
         return
 
@@ -1151,8 +1130,8 @@ TESTTAIL:
         JBE     NOGROW
         XOR     DX,DX
 SETGRW:
-        MOV     WORD PTR [GROWCNT],AX
-        MOV     WORD PTR [GROWCNT+2],DX
+        MOV     WORD [GROWCNT],AX
+        MOV     WORD [GROWCNT+2],DX
 NOGROW:
         POP     AX
         MOV     CX,[CLUSNUM]    ; First cluster accessed
@@ -1187,7 +1166,7 @@ WRTMID:
         JZ      WRTLAST
         ADD     [SECPOS],AX
         invoke  NEXTSEC
-        MOV     BYTE PTR [TRANS],1       ; A transfer is taking place
+        MOV     BYTE [TRANS],1       ; A transfer is taking place
         MOV     DL,[SECCLUSPOS]
         MOV     BX,[CLUSNUM]
         MOV     CX,[SECCNT]
@@ -1197,27 +1176,27 @@ WRTLP:
         PUSH    AX
         PUSH    DX
         PUSH    BX
-        MOV     AL,ES:[BP.dpb_drive]
+        MOV     AL,[ES:BP+dpb.dpb_drive]
         MOV     BX,CX
         ADD     BX,DX           ; Upper bound of write
         invoke  SETVISIT
 ASSUME  DS:NOTHING
 NEXTBUFF:                       ; Search for buffers
-        MOV     [DI.VISIT],1    ; Mark as visited
-        CMP     AL,[DI.BUFDRV]
+        MOV     [DI+BUFFINFO.VISIT],1    ; Mark as visited
+        CMP     AL,[DI+BUFFINFO.BUFDRV]
         JNZ     DONEXTBUFF      ; Not for this drive
-        CMP     [DI.BUFSECNO],DX
+        CMP     [DI+BUFFINFO.BUFSECNO],DX
         JC      DONEXTBUFF      ; Buffer is not in range of write
-        CMP     [DI.BUFSECNO],BX
+        CMP     [DI+BUFFINFO.BUFSECNO],BX
         JNC     DONEXTBUFF      ; Buffer is not in range of write
-        MOV     WORD PTR [DI.BUFDRV],00FFH    ; Free the buffer, it is being over written
+        MOV     WORD [DI+BUFFINFO.BUFDRV],00FFH    ; Free the buffer, it is being over written
         invoke  SCANPLACE
 DONEXTBUFF:
         invoke  SKIPVISIT
         JNZ     NEXTBUFF
         POP     BX
         POP     DX
-        MOV     DS,WORD PTR [DMAADD+2]
+        MOV     DS,WORD [SS:DMAADD+2]
         CALL    DWRITE
         POP     CX
         POP     BX
@@ -1241,15 +1220,15 @@ WRTLAST:
         invoke  BUFWRT
 FINWRT:
         LES     DI,[THISFCB]
-        MOV     AX,WORD PTR [GROWCNT]
-        MOV     CX,WORD PTR [GROWCNT+2]
+        MOV     AX,WORD [GROWCNT]
+        MOV     CX,WORD [GROWCNT+2]
         OR      AX,AX
-        JNZ     UPDATE_size
+        JNZ     Update_size
         OR      CX,CX
         JZ      SAMSIZ
 Update_size:
-        ADD     WORD PTR ES:[DI.fcb_FILSIZ],AX
-        ADC     WORD PTR ES:[DI.fcb_FILSIZ+2],CX
+        ADD     WORD [ES:DI+sys_fcb.fcb_FILSIZ],AX
+        ADC     WORD [ES:DI+sys_fcb.fcb_FILSIZ+2],CX
 SAMSIZ:
         MOV     CX,[RECCNT]
         JMP     SETCLUS
@@ -1260,8 +1239,8 @@ WRTEOF:
         JZ      KILLFIL
         SUB     AX,1
         SBB     DX,0
-        DIV     ES:[BP.dpb_sector_size]
-        MOV     CL,ES:[BP.dpb_cluster_shift]
+        DIV     [ES:BP+dpb.dpb_sector_size]
+        MOV     CL,[ES:BP+dpb.dpb_cluster_shift]
         SHR     AX,CL
         MOV     CX,AX
         invoke  FNDCLUS
@@ -1270,10 +1249,10 @@ WRTEOF:
         JC      WRTERRJ
 UPDATE:
         LES     DI,[THISFCB]
-        MOV     AX,WORD PTR [BYTPOS]
-        MOV     ES:WORD PTR [DI.fcb_FILSIZ],AX
-        MOV     AX,WORD PTR [BYTPOS+2]
-        MOV     ES:WORD PTR [DI.fcb_FILSIZ+2],AX
+        MOV     AX,WORD [BYTPOS]
+        MOV     WORD [ES:DI+sys_fcb.fcb_FILSIZ],AX
+        MOV     AX,WORD [BYTPOS+2]
+        MOV     WORD [ES:DI+sys_fcb.fcb_FILSIZ+2],AX
         XOR     CX,CX
         JMP     ADDREC
 
@@ -1286,16 +1265,12 @@ KILLFIL:
         XOR     BX,BX
         PUSH    ES
         LES     DI,[THISFCB]
-        MOV     ES:[DI.fcb_CLUSPOS],BX
-        XCHG    BX,ES:[DI.fcb_FIRCLUS]
-        AND     ES:[DI.fcb_LSTCLUS],0F000H
+        MOV     [ES:DI+sys_fcb.fcb_CLUSPOS],BX
+        XCHG    BX,[ES:DI+sys_fcb.fcb_FIRCLUS]
+        AND     [ES:DI+sys_fcb.fcb_LSTCLUS],0F000H
         POP     ES
         OR      BX,BX
         JZ      UPDATE
         invoke  RELEASE
         JMP     SHORT UPDATE
-DISKWRITE   ENDP
 do_ext
-
-CODE    ENDS
-    END

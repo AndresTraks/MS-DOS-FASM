@@ -2,24 +2,9 @@
 ; Device call routines for MSDOS
 ;
 
-INCLUDE DOSSEG.ASM
-
-IFNDEF  KANJI
-KANJI   EQU     0       ;FALSE
-ENDIF
-
-CODE    SEGMENT BYTE PUBLIC  'CODE'
         ASSUME  SS:DOSGROUP,CS:DOSGROUP
 
-.xlist
-.xcref
-INCLUDE DOSSYM.ASM
-INCLUDE DEVSYM.ASM
-.cref
-.list
-
-TITLE   DEV - Device call routines
-NAME    Dev
+;TITLE   DEV - Device call routines
 
         i_need  IOXAD,DWORD
         i_need  IOSCNT,WORD
@@ -41,7 +26,7 @@ NAME    Dev
         i_need  DevCall,DWORD
         i_need  VerFlg,BYTE
 
-SUBTTL IOFUNC -- DO FUNCTION 1-12 I/O
+;SUBTTL IOFUNC -- DO FUNCTION 1-12 I/O
 PAGE
 IOFUNC_RETRY:
 ASSUME  DS:NOTHING,ES:NOTHING
@@ -77,13 +62,13 @@ ASSUME  DS:NOTHING,ES:NOTHING
 ;               Always ready
 ; AX altered, all other registers preserved
 
-        MOV     WORD PTR [IOXAD+2],SS
-        MOV     WORD PTR [IOXAD],OFFSET DOSGROUP:DEVIOBUF
-        MOV     WORD PTR [IOSCNT],1
-        MOV     WORD PTR [DEVIOBUF],AX
+        MOV     WORD [SS:IOXAD+2],SS
+        MOV     WORD [SS:IOXAD],DEVIOBUF
+        MOV     WORD [SS:IOSCNT],1
+        MOV     WORD [SS:DEVIOBUF],AX
 
 IOFUNC2:
-        TEST    [SI.fcb_DEVID],080H
+        TEST    [SI+sys_fcb.fcb_DEVID],080H
         JNZ     IOTODEV
         JMP     IOTOFILE
 
@@ -97,9 +82,9 @@ IOTODEV:
 ASSUME  DS:DOSGROUP
         XOR     BX,BX
         MOV     [IOCALL.REQSTAT],BX
-        MOV     BYTE PTR [IOMED],BL
+        MOV     BYTE [IOMED],BL
 
-        MOV     BX,OFFSET DOSGROUP:IOCALL
+        MOV     BX,IOCALL
 
         MOV     CX,(DEVRD SHL 8) OR DRDWRHL
         OR      AH,AH
@@ -124,7 +109,7 @@ DCALL:
         POP     DS
 ASSUME  DS:NOTHING
         CALL    DEVIOCALL
-        MOV     DI,[IOCALL.REQSTAT]
+        MOV     DI,[SS:IOCALL.REQSTAT]
         TEST    DI,STERR
         JZ      OKDEVIO
         MOV     AH,CL
@@ -134,23 +119,23 @@ ASSUME  DS:NOTHING
 ;Know user must have wanted ignore. Make sure device shows ready so
 ;that DOS doesn't get caught in a status loop when user simply wants
 ;to ignore the error.
-        AND     BYTE PTR [IOCALL.REQSTAT+1], NOT (STBUI SHR 8)
+        AND     BYTE [SS:IOCALL.REQSTAT+1], NOT (STBUI SHR 8)
 OKDEVIO:
         PUSH    SS
         POP     DS
 ASSUME  DS:DOSGROUP
         CMP     CH,DEVRDND
         JNZ     DNODRD
-        MOV     AL,BYTE PTR [IORCHR]
+        MOV     AL,BYTE [IORCHR]
         MOV     [DEVIOBUF],AL
 
-DNODRD: MOV     AH,BYTE PTR [IOCALL.REQSTAT+1]
+DNODRD: MOV     AH,BYTE [IOCALL.REQSTAT+1]
         NOT     AH                      ; Zero = busy, not zero = ready
         AND     AH,STBUI SHR 8
 
         invoke  restore_world
 ASSUME  DS:NOTHING
-        MOV     AX,WORD PTR [DEVIOBUF]
+        MOV     AX,WORD [SS:DEVIOBUF]
         return
 
 DCALLO:
@@ -168,63 +153,63 @@ ASSUME  DS:NOTHING
         return                  ; NON ZERO FLAG FOR OUTPUT STATUS
 
 IOIST:
-        PUSH    WORD PTR [SI.fcb_RR]        ; Save position
-        PUSH    WORD PTR [SI.fcb_RR+2]
+        PUSH    WORD [SI+sys_fcb.fcb_RR]        ; Save position
+        PUSH    WORD [SI+sys_fcb.fcb_RR+2]
         CALL    IOIN
-        POP     WORD PTR [SI.fcb_RR+2]      ; Restore position
-        POP     WORD PTR [SI.fcb_RR]
+        POP     WORD [SI+sys_fcb.fcb_RR+2]      ; Restore position
+        POP     WORD [SI+sys_fcb.fcb_RR]
         return
 
 IOUT:
         CALL    SETXADDR
-        invoke  STORE
+        invoke  _STORE
         invoke  FINNOSAV
         CALL    RESTXADDR       ; If you change this into a jmp don't come
+IOUT_ret:
         return                  ; crying to me when things don't work ARR
 
 IOIN:
         CALL    SETXADDR
-        invoke  LOAD
+        invoke  _LOAD
         PUSH    CX
         invoke  FINNOSAV
         POP     CX
         OR      CX,CX           ; Check EOF
         CALL    RESTXADDR
-        MOV     AL,[DEVIOBUF]   ; Get byte from trans addr
-        retnz
+        MOV     AL,[SS:DEVIOBUF]   ; Get byte from trans addr
+        jnz IOUT_ret
         MOV     AL,1AH          ; ^Z if EOF
         return
 
 SETXADDR:
-        POP     WORD PTR [CALLSCNT]     ; Return address
+        POP     WORD [SS:CALLSCNT]     ; Return address
         invoke  save_world
-        PUSH    WORD PTR [DMAADD]       ; Save Disk trans addr
-        PUSH    WORD PTR [DMAADD+2]
+        PUSH    WORD [SS:DMAADD]       ; Save Disk trans addr
+        PUSH    WORD [SS:DMAADD+2]
         PUSH    DS
         PUSH    SS
         POP     DS
 ASSUME  DS:DOSGROUP
-        MOV     CX,WORD PTR [IOXAD+2]
-        MOV     WORD PTR [DMAADD+2],CX
-        MOV     CX,WORD PTR [IOXAD]
-        MOV     WORD PTR [DMAADD],CX    ; Set byte trans addr
+        MOV     CX,WORD [IOXAD+2]
+        MOV     WORD [DMAADD+2],CX
+        MOV     CX,WORD [IOXAD]
+        MOV     WORD [DMAADD],CX    ; Set byte trans addr
         MOV     CX,[IOSCNT]             ; ioscnt specifies length of buffer
         POP     DS
 ASSUME  DS:NOTHING
-        MOV     [SI.fcb_RECSIZ],1           ; One byte per record
+        MOV     [SI+sys_fcb.fcb_RECSIZ],1           ; One byte per record
         MOV     DX,SI                   ; FCB to DS:DX
         invoke  GETRRPOS
         JMP     SHORT RESTRET           ; RETURN ADDRESS
 
 RESTXADDR:
-        POP     WORD PTR [CALLSCNT]     ; Return address
-        POP     WORD PTR [DMAADD+2]     ; Restore Disk trans addr
-        POP     WORD PTR [DMAADD]
+        POP     WORD [SS:CALLSCNT]     ; Return address
+        POP     WORD [SS:DMAADD+2]     ; Restore Disk trans addr
+        POP     WORD [SS:DMAADD]
         invoke  restore_world
-RESTRET:JMP     WORD PTR [CALLSCNT]      ; Return address
-IOFUNC  ENDP
+RESTRET:JMP     WORD [SS:CALLSCNT]      ; Return address
 
-SUBTTL DEVIOCALL, DEVIOCALL2 - CALL A DEVICE
+;SUBTTL DEVIOCALL, DEVIOCALL2 - CALL A DEVICE
 PAGE
         procedure   DEVIOCALL,NEAR
 ASSUME  DS:NOTHING,ES:NOTHING
@@ -238,21 +223,20 @@ ASSUME  DS:NOTHING,ES:NOTHING
 ;       None
 ; DS:SI,AX destroyed, others preserved
 
-        LDS     SI,DWORD PTR [SI.fcb_FIRCLUS]
+        LDS     SI,DWORD [SI+sys_fcb.fcb_FIRCLUS]
 
        entry   DEVIOCALL2
 ; As above only DS:SI points to device header on entry, and DS:SI is preserved
-        MOV     AX,[SI.SDEVSTRAT]
-        MOV     WORD PTR [CALLDEVAD],AX
-        MOV     WORD PTR [CALLDEVAD+2],DS
-        CALL    DWORD PTR [CALLDEVAD]
-        MOV     AX,[SI.SDEVINT]
-        MOV     WORD PTR [CALLDEVAD],AX
-        CALL    DWORD PTR [CALLDEVAD]
+        MOV     AX,[SI+SYSDEV.SDEVSTRAT]
+        MOV     WORD [SS:CALLDEVAD],AX
+        MOV     WORD [SS:CALLDEVAD+2],DS
+        CALL    DWORD [SS:CALLDEVAD]
+        MOV     AX,[SI+SYSDEV.SDEVINT]
+        MOV     WORD [SS:CALLDEVAD],AX
+        CALL    DWORD [SS:CALLDEVAD]
         return
-DEVIOCALL   ENDP
 
-SUBTTL DEVNAME - LOOK FOR NAME OF DEVICE
+;SUBTTL DEVNAME - LOOK FOR NAME OF DEVICE
 PAGE
         procedure   DEVNAME,NEAR
 ASSUME  DS:DOSGROUP,ES:DOSGROUP
@@ -276,29 +260,29 @@ ASSUME  DS:DOSGROUP,ES:DOSGROUP
         PUSH    CX
 
         IF      KANJI
-        PUSH    WORD PTR [NAME1]
+        PUSH    WORD [NAME1]
         CMP     [NAME1],5
         JNZ     NOKTR
         MOV     [NAME1],0E5H
 NOKTR:
-        ENDIF
+        END IF
 
-        TEST    BYTE PTR [ATTRIB],attr_volume_id ; If looking for VOL id don't find devs
+        TEST    BYTE [ATTRIB],attr_volume_id ; If looking for VOL id don't find devs
         JNZ     RET31
-        MOV     SI,OFFSET DOSGROUP:NULDEV
+        MOV     SI,NULDEV
 LOOKIO:
 ASSUME  DS:NOTHING
-        TEST    [SI.SDEVATT],DEVTYP
+        TEST    [SI+SYSDEV.SDEVATT],DEVTYP
         JZ      SKIPDEV                 ; Skip block devices
         PUSH    SI
-        ADD     SI,SDEVNAME
-        MOV     DI,OFFSET DOSGROUP:NAME1
+        ADD     SI,SYSDEV.SDEVNAME
+        MOV     DI,NAME1
         MOV     CX,4                    ; All devices are 8 letters
         REPE    CMPSW                   ; Check for name in list
         POP     SI
         JZ      IOCHK                   ; Found it?
 SKIPDEV:
-        LDS     SI,DWORD PTR [SI]       ; Get address of next device
+        LDS     SI,DWORD [SI]       ; Get address of next device
         CMP     SI,-1                   ; At end of list?
         JNZ     LOOKIO
 RET31:  STC                             ; Not found
@@ -307,8 +291,8 @@ RETNV:  PUSH    SS
 ASSUME  DS:DOSGROUP
 
         IF      KANJI
-        POP     WORD PTR [NAME1]
-        ENDIF
+        POP     WORD [NAME1]
+        END IF
 
         POP     CX
         POP     DI
@@ -317,15 +301,14 @@ ASSUME  DS:DOSGROUP
 
 IOCHK:
 ASSUME  DS:NOTHING
-        MOV     WORD PTR [DEVPT+2],DS         ; Save pointer to device
-        MOV     BH,BYTE PTR [SI.SDEVATT]
+        MOV     WORD [SS:DEVPT+2],DS         ; Save pointer to device
+        MOV     BH,BYTE [SI+SYSDEV.SDEVATT]
         OR      BH,0C0H
         AND     BH,NOT 020H             ;Clears Carry
-        MOV     WORD PTR [DEVPT],SI
+        MOV     WORD [SS:DEVPT],SI
         JMP     RETNV
-DevName ENDP
 
-        procedure   GetBP,NEAR
+        procedure   GETBP,NEAR
 ASSUME  DS:DOSGROUP,ES:NOTHING
 
 ; Inputs:
@@ -340,21 +323,20 @@ ASSUME  DS:DOSGROUP,ES:NOTHING
 
         LES     BP,[DPBHEAD]    ; Just in case drive isn't valid
         AND     AL,3FH          ; Mask out dirty and device bits
-        CMP     AL,BYTE PTR [NUMIO]
+        CMP     AL,BYTE [NUMIO]
         CMC
         JC      GOTDPB          ; Get drive A
 FNDDPB:
-        CMP     AL,ES:[BP.dpb_drive]
+        CMP     AL,[ES:BP+dpb.dpb_drive]
         JZ      GOTDPB          ; Carry is clear if jump executed
-        LES     BP,ES:[BP.dpb_next_dpb]
+        LES     BP,[ES:BP+dpb.dpb_next_dpb]
         JMP     SHORT FNDDPB
 GOTDPB:
-        MOV     WORD PTR [THISDPB],BP
-        MOV     WORD PTR [THISDPB+2],ES
+        MOV     WORD [THISDPB],BP
+        MOV     WORD [THISDPB+2],ES
         RET
-GetBP   ENDP
 
-SUBTTL SETREAD, SETWRITE -- SET UP HEADER BLOCK
+;SUBTTL SETREAD, SETWRITE -- SET UP HEADER BLOCK
 PAGE
         procedure   SETREAD,NEAR
 ASSUME  DS:NOTHING,ES:NOTHING
@@ -379,7 +361,7 @@ SETCALLHEAD:
         MOV     AL,DRDWRHL
         PUSH    SS
         POP     ES
-        MOV     DI,OFFSET DOSGROUP:DEVCALL
+        MOV     DI,DEVCALL
         STOSB                   ; length
         POP     AX
         STOSB                   ; Unit
@@ -406,7 +388,7 @@ SETCALLHEAD:
         XCHG    AX,CX
         XCHG    DX,CX
         POP     DI
-        MOV     BX,OFFSET DOSGROUP:DEVCALL
+        MOV     BX,DEVCALL
         RET
 
         entry   SETWRITE
@@ -428,11 +410,7 @@ ASSUME  DS:NOTHING,ES:NOTHING
         PUSH    CX
         PUSH    AX
         MOV     CL,DEVWRT
-        ADD     CL,[VERFLG]
+        ADD     CL,[SS:VERFLG]
         JMP     SHORT SETCALLHEAD
-SETREAD ENDP
 
 do_ext
-
-CODE    ENDS
-    END

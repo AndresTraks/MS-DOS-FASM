@@ -102,7 +102,7 @@ PAGE
 ; *************************************************************
 
 
-SUBTTL        EQUATES
+;SUBTTL        EQUATES
 PAGE
 ; Interrupt Entry Points:
 
@@ -121,10 +121,10 @@ ENTRYPOINTSEG   EQU     0CH
 MAXDIF          EQU     0FFFH
 SAVEXIT         EQU     10
 
-        INCLUDE DOSSYM.ASM
-        INCLUDE DEVSYM.ASM
+        INCLUDE 'DOSSYM_v211.ASM'
+        INCLUDE 'DEVSYM.ASM'
 
-SUBTTL ^C, terminate/abort/exit and Hard error actions
+;SUBTTL ^C, terminate/abort/exit and Hard error actions
 PAGE
 ;
 ; There are three kinds of context resets that can occur during normal DOS
@@ -160,37 +160,8 @@ PAGE
 ;           abort call.  This is reserved for knowledgeable system programs.
 ;           ANY DEVIATION FROM THIS WILL LEAD TO UNRELIABLE RESULTS.
 
-SUBTTL SEGMENT DECLARATIONS
-PAGE
-
-; The following are all of the segments used.  They are declared in the order
-; that they should be placed in the executable
-
-;
-; segment ordering for MSDOS
-;
-
-START           SEGMENT BYTE PUBLIC 'START'
-START           ENDS
-
-CONSTANTS       SEGMENT BYTE PUBLIC 'CONST'
-CONSTANTS       ENDS
-
-DATA            SEGMENT WORD PUBLIC 'DATA'
-DATA            ENDS
-
-CODE            SEGMENT BYTE PUBLIC 'CODE'
-CODE            ENDS
-
-LAST            SEGMENT BYTE PUBLIC 'LAST'
-LAST            ENDS
-
-DOSGROUP    GROUP   CODE,CONSTANTS,DATA,LAST
-
 ; The following segment is defined such that the data/const classes appear
 ; before the code class for ROMification
 
-START           SEGMENT BYTE PUBLIC 'START'
-                ASSUME  CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
+START:
         JMP     DOSINIT
-START           ENDS

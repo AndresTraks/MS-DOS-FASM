@@ -1,13 +1,19 @@
-SUBTTL DEVICE TABLE AND SRH DEFINITION
-PAGE
+;SUBTTL DEVICE TABLE AND SRH DEFINITION
+
 ; The device table list has the form:
-SYSDEV  STRUC
-SDEVNEXT        DD      ?       ;Pointer to next device header
-SDEVATT         DW      ?       ;Attributes of the device
-SDEVSTRAT       DW      ?       ;Strategy entry point
-SDEVINT         DW      ?       ;Interrupt entry point
-SDEVNAME        DB      8 DUP (?) ;Name of device (only first byte used for block)
-SYSDEV  ENDS
+STRUC SYSDEV
+{
+.SDEVNEXT        DD      ?       ;Pointer to next device header
+.SDEVATT         DW      ?       ;Attributes of the device
+.SDEVSTRAT       DW      ?       ;Strategy entry point
+.SDEVINT         DW      ?       ;Interrupt entry point
+.SDEVNAME        DB      8 DUP (?) ;Name of device (only first byte used for block)
+}
+
+virtual at 0
+  SYSDEV SYSDEV
+  sizeof.SYSDEV = $ - SYSDEV
+end virtual
 
 ;Attribute bit masks
 DEVTYP  EQU     8000H           ;Bit 15 - 1  if Char, 0 if block
@@ -20,13 +26,19 @@ ISCLOCK EQU     0008H           ;Bit 3 - This device is the clock device.
 ISIBM   EQU     0010H           ;Bit 4 - This device is special
 
 ;Static Reguest Header
-SRHEAD  STRUC
-REQLEN  DB      ?               ;Length in bytes of request block
-REQUNIT DB      ?               ;Device unit number
-REQFUNC DB      ?               ;Type of request
-REQSTAT DW      ?               ;Status Word
+STRUC SRHEAD
+{
+.REQLEN  DB      ?               ;Length in bytes of request block
+.REQUNIT DB      ?               ;Device unit number
+.REQFUNC DB      ?               ;Type of request
+.REQSTAT DW      ?               ;Status Word
         DB      8 DUP(?)        ;Reserved for queue links
-SRHEAD  ENDS
+}
+
+virtual at 0
+  SRHEAD SRHEAD
+  sizeof.SRHEAD = $ - SRHEAD
+end virtual
 
 ;Status word masks
 STERR   EQU     8000H           ;Bit 15 - Error

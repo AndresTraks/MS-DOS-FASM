@@ -1,4 +1,4 @@
-SUBTTL $exec - load/go a program
+;SUBTTL $exec - load/go a program
 PAGE
 ;
 ; Assembler usage:
@@ -74,7 +74,7 @@ PAGE
 IF IBM
 ZEXEC_DATA  SEGMENT PUBLIC BYTE
 ZERO =   $
-ENDIF
+END IF
 
 exec_blk            DD  ?
 exec_func           DB  ?
@@ -119,15 +119,14 @@ ZEXECDATAEND    LABEL   BYTE
         PUBLIC  ZEXECDATAEND
 ZEXEC_DATA  ENDS
 ZEXEC_CODE  SEGMENT PUBLIC PARA
-        PUBLIC  $EXEC
 ZERO =   $
-        procedure   $EXEC,FAR
+        procedure   _EXEC,FAR
         ASSUME  CS:EGROUP,SS:RESGROUP,ES:NOTHING,DS:NOTHING
-ENDIF
-IF NOT IBM
-        procedure   $Exec,NEAR
+END IF
+IF IBM = 0
+        procedure   _EXEC,NEAR
         ASSUME  DS:NOTHING, ES:NOTHING
-ENDIF
+END IF
 ;
 ; validate function
 ;
@@ -174,12 +173,12 @@ IF IBM
 
         CALL    get_user_stack
         ASSUME  DS:NOTHING
-        MOV     AX,[SI.user_AX]
-        MOV     BX,[SI.user_BX]
-        MOV     DX,[SI.user_DX]
-        MOV     ES,[SI.user_ES]
-        MOV     DS,[SI.user_DS]
-ENDIF
+        MOV     AX,[SI+user_environ.user_AX]
+        MOV     BX,[SI+user_environ.user_BX]
+        MOV     DX,[SI+user_environ.user_DX]
+        MOV     ES,[SI+user_environ.user_ES]
+        MOV     DS,[SI+user_environ.user_DS]
+END IF
 
         CMP     AL,3                    ; only 0, 1 or 3 are allowed
         JNA     exec_check_2
@@ -201,22 +200,22 @@ exec_check_2:
 IF IBM
         MOV     AX,(OPEN SHL 8) + 0
         INT     int_command
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         XOR     AL,AL                   ; open for reading
-        invoke  $OPEN                   ; is the file there?
-ENDIF
+        invoke  _OPEN                   ; is the file there?
+END IF
         JC      exec_ret_err
         MOV     [exec_fh],AX
         MOV     BX,AX
 IF IBM
         MOV     AX,(ioctl SHL 8)        ; get device information
         INT     int_command
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         XOR     AL,AL
-        invoke  $IOCTL
-ENDIF
+        invoke  _IOCTL
+END IF
         TEST    DL,devid_ISDEV
         JZ      exec_check_environ
         MOV     AL,exec_file_not_found
@@ -262,10 +261,10 @@ exec_check:
 IF IBM
         MOV     AH,ALLOC
         INT     int_command
-ENDIF
-IF NOT IBM
-        invoke  $ALLOC                  ; can we get the space?
-ENDIF
+END IF
+IF IBM = 0
+        invoke  _ALLOC                  ; can we get the space?
+END IF
         POP     DS
         POP     CX
         JNC     exec_save_environ
@@ -281,7 +280,7 @@ IF IBM
         CMP     BX,[exec_low_seg]
         POP     CX
         JA      exec_no_mem
-ENDIF
+END IF
         XOR     SI,SI
         XOR     DI,DI
         REP     MOVSB                   ; copy the environment
@@ -295,30 +294,30 @@ IF IBM
         PUSH    CS
         POP     DS                      ; and put it in DS:DX
         ASSUME  DS:EGROUP
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         PUSH    SS
         POP     DS                      ; and put it in DS:DX
         ASSUME  DS:DOSGROUP
-ENDIF
+END IF
         MOV     CX,exec_internal_buffer_size; header size
         MOV     BX,[exec_fh]            ; from the handle
 IF IBM
         MOV     DX,OFFSET EGROUP:exec_signature
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         MOV     DX,OFFSET DOSGROUP:exec_signature
-ENDIF
+END IF
         PUSH    ES
         PUSH    DS
         CALL    exec_dealloc
 IF IBM
         MOV     AH,READ
         INT     int_command
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         invoke  $READ
-ENDIF
+END IF
         CALL    exec_alloc
         POP     DS
         POP     ES
@@ -363,14 +362,14 @@ exec_save_start:
         MOV     [exec_rel_fac],AX
 IF IBM
         JMP     exec_find_res
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         JMP     SHORT exec_find_res
-ENDIF
+END IF
 
 exec_no_mem:
         MOV     AL,exec_not_enough_memory
-        JMP     SHORT exec_bomb             ; AX should be set by $ALLOC
+        JMP     SHORT exec_bomb             ; AX should be set by _ALLOC
 
 exec_bad_file:
         MOV     AL,exec_bad_format
@@ -383,30 +382,30 @@ exec_bomb:
 IF IBM
         MOV     AH,CLOSE
         INT     int_command
-ENDIF
-IF NOT IBM
-        invoke  $CLOSE
-ENDIF
+END IF
+IF IBM = 0
+        invoke  _CLOSE
+END IF
         POP     AX
         transfer    SYS_RET_ERR
 
 exec_allocate:
 IF IBM
         ASSUME  DS:EGROUP
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         ASSUME  DS:DOSGROUP
-ENDIF
+END IF
         PUSH    AX
         MOV     BX,0FFFFh               ; see how much room in arena
         PUSH    DS
 IF IBM
         MOV     AH,ALLOC
         INT     int_command
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         invoke  $ALLOC                  ; should have carry set and BX has max
-ENDIF
+END IF
         POP     DS
         POP     AX
         ADD     AX,10h                  ; room for header
@@ -436,10 +435,10 @@ exec_got_block:
 IF IBM
         MOV     AH,ALLOC
         INT     int_command
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         invoke  $ALLOC                  ; get the space
-ENDIF
+END IF
         POP     DS
         JC      exec_no_mem
         MOV     [exec_load_block],AX
@@ -478,7 +477,7 @@ exec_no_mem_try:
         JMP     exec_try_just_below
 exec_no_memj1:
         JMP     exec_no_mem
-ENDIF
+END IF
 
 ;
 ; Determine the location in the file of the beginning of the resident
@@ -501,11 +500,11 @@ exec_find_res:
 IF IBM
         MOV     AX,(LSEEK SHL 8) + 0
         INT     int_command
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         XOR     AL,AL
         invoke  $LSEEK                  ; seek to resident
-ENDIF
+END IF
         POP     DS
 
 exec_big_read:                          ; Read resident into memory
@@ -523,26 +522,25 @@ exec_read_ok:
         MOV     BX,[exec_fh]            ; handle in correct register
         PUSH    DS
         MOV     DS,[exec_dma]           ; Set up read buffer
-        ASSUME  DS:NOTHING
         XOR     DX,DX
         PUSH    CX                      ; save our count
         CALL    exec_dealloc
 IF IBM
         MOV     AH,READ
         INT     int_command
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         invoke  $READ                   ; WOMP!
-ENDIF
+END IF
         CALL    exec_alloc
         POP     CX                      ; get old count to verify
         POP     DS
 IF IBM
         ASSUME  DS:EGROUP
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         ASSUME  DS:DOSGROUP
-ENDIF
+END IF
         CMP     CX,AX                   ; did we read enough?
         POP     BX                      ; get paragraph count back
         JNZ     exec_do_reloc           ; and do reloc if no more to read
@@ -581,11 +579,11 @@ exec_do_reloc:
 IF IBM
         MOV     AX,(LSEEK SHL 8) + 0
         INT     int_command
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         XOR     AX,AX
         invoke  $LSEEK
-ENDIF
+END IF
         POP     DS
 
         JNC     exec_get_entries
@@ -596,14 +594,13 @@ exec_get_entries:
         MOV     DX,[exec_rle_count]     ; Number of entries left
 
 exec_read_reloc:
-        ASSUME  DS:NOTHING
         PUSH    DX
 IF IBM
         MOV     DX,OFFSET EGROUP:exec_signature
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         MOV     DX,OFFSET DOSGROUP:exec_signature
-ENDIF
+END IF
         MOV     CX,((exec_internal_buffer_size)/4)*4
         MOV     BX,[exec_fh]
         PUSH    DS
@@ -611,10 +608,10 @@ ENDIF
 IF IBM
         MOV     AH,READ
         INT     int_command
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         invoke  $READ
-ENDIF
+END IF
         CALL    exec_alloc
         POP     ES
         POP     DX
@@ -622,10 +619,10 @@ ENDIF
         MOV     CX,(exec_internal_buffer_size)/4
 IF IBM
         MOV     DI,OFFSET EGROUP:exec_signature   ; Pointer to byte location in header
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         MOV     DI,OFFSET DOSGROUP:exec_signature   ; Pointer to byte location in header
-ENDIF
+END IF
 ;
 ; Relocate a single address
 ;
@@ -679,22 +676,22 @@ exec_alloc_com_file:
 IF IBM
         MOV     AH,ALLOC
         INT     int_command
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         invoke  $ALLOC                  ; largest piece available as error
-ENDIF
+END IF
         OR      BX,BX
         JZ      exec_no_memj
         MOV     [exec_size],BX          ; save size of allocation block
 IF IBM
         MOV     AH,ALLOC
         INT     int_command
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         PUSH    BX
         invoke  $ALLOC                  ; largest piece available as error
         POP     BX                      ; get size of block...
-ENDIF
+END IF
         MOV     [exec_load_block],AX
         ADD     AX,10h                  ; increment for header
         MOV     [exec_dma],AX
@@ -712,7 +709,7 @@ IF IBM
         MOV     BX,CX
 
 exec_check_64k:
-ENDIF
+END IF
         CMP     BX,1000h                ; 64k or more?
         JAE     exec_64k                ; yes, read only 64k
         MOV     AX,BX                   ; convert size to bytes
@@ -731,11 +728,11 @@ exec_read_com:
 IF IBM
         MOV     AX,(LSEEK SHL 8) + 0
         INT     int_command
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         XOR     AX,AX                   ; seek relative to beginning
         invoke  $LSEEK                  ; back to beginning of file
-ENDIF
+END IF
         MOV     BX,[exec_fh]
         POP     CX                      ; number to read
         MOV     DS,[exec_dma]
@@ -745,10 +742,10 @@ ENDIF
 IF IBM
         MOV     AH,READ
         INT     int_command
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         invoke  $READ                   ; read in com file
-ENDIF
+END IF
         CALL    exec_alloc
         POP     SI                      ; get number of bytes to read
         CMP     AX,SI                   ; did we read them all?
@@ -756,10 +753,10 @@ IF IBM
         JNZ     exec_skip               ; exactly the wrong number... no memory
         JMP     exec_no_mem
 exec_skip:
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         JZ      exec_no_memj            ; exactly the wrong number... no memory
-ENDIF
+END IF
         TEST    BYTE PTR [exec_func],exec_func_overlay
         JNZ     exec_set_PDB            ; no starto, chumo!
         MOV     AX,[exec_DMA]
@@ -780,10 +777,10 @@ exec_set_PDB:
 IF IBM
         MOV     AH,CLOSE
         INT     int_command
-ENDIF
-IF NOT IBM
-        invoke  $CLOSE                  ; release the jfn
-ENDIF
+END IF
+IF IBM = 0
+        invoke  _CLOSE                  ; release the jfn
+END IF
         CALL    exec_alloc
         TEST    BYTE PTR [exec_func],exec_func_overlay
         JZ      exec_build_header
@@ -815,11 +812,11 @@ IF IBM
         INT     int_command
         MOV     ES,DX
         MOV     [CurrentPDB],DX
-ENDIF
-IF NOT IBM
+END IF
+IF IBM = 0
         MOV     BYTE PTR [CreatePDB], 0FFH  ; indicate a new process
-        invoke  $Dup_PDB                    ; ES is now PDB
-ENDIF
+        invoke  _Dup_PDB                    ; ES is now PDB
+END IF
         POP     DX
         PUSH    [exec_environ]
         POP     ES:[PDB_environ]
@@ -888,11 +885,11 @@ exec_set_return:
         MOV     DS,AX
         POP     DS:[addr_int_terminate] ; save them where we can get them later
         POP     DS:[addr_int_terminate+2]   ; when the child exits.
-IF NOT IBM
+IF IBM = 0
         MOV     WORD PTR [DMAADD],80h
         MOV     DS,[CurrentPDB]
         MOV     WORD PTR [DMAADD+2],DS
-ENDIF
+END IF
 IF IBM
         PUSH    DX
         PUSH    DS
@@ -902,7 +899,7 @@ IF IBM
         INT     int_command
         POP     DS
         POP     DX
-ENDIF
+END IF
         TEST    BYTE PTR [exec_func],exec_func_no_execute
         JZ      exec_go
 
@@ -924,14 +921,13 @@ ENDIF
 exec_go:
 IF IBM
         CALL    restore_ctrlc               ; restore value of ctrl-c checker
-ENDIF
+END IF
         LDS     SI,DWORD PTR [exec_init_IP] ; get entry point
         CLI
-IF NOT IBM
+IF IBM = 0
         MOV     BYTE PTR INDOS,0
-ENDIF
+END IF
         MOV     SS,[exec_init_SS]       ; set up user's stack
-        ASSUME  SS:NOTHING
         MOV     SP,[exec_init_SP]       ; and SP
         STI
         PUSH    DS                      ; fake long call to entry
@@ -941,9 +937,6 @@ ENDIF
         MOV     AX,BX                   ; set up proper AX
         procedure   exec_long_ret,FAR
         RET
-exec_long_ret   ENDP
-
-$Exec   ENDP
 
         procedure   exec_dealloc,near
         ASSUME      DS:NOTHING,ES:NOTHING
@@ -952,7 +945,6 @@ $Exec   ENDP
         CALL        exec_do_change_owner
         POP         BX
         return
-exec_dealloc  ENDP
 
         procedure   exec_alloc,near
         PUSH        BX
@@ -960,7 +952,6 @@ exec_dealloc  ENDP
         CALL        exec_do_change_owner
         POP         BX
         return
-exec_alloc  ENDP
 
         procedure   exec_do_change_owner,NEAR
         PUSH    DS
@@ -982,7 +973,6 @@ exec_alloc_done:
         POP     AX
         POP     DS
         RET
-exec_do_change_owner    ENDP
 
 IF IBM
 SYS_RET_ERR:
@@ -1013,7 +1003,6 @@ SYS_RET:
         ASSUME  DS:RESGROUP
         LDS     SI,DWORD PTR [user_SP]
         RET
-get_user_stack  ENDP
 ;
 ; restore value of the ctrl-c checker
 ;
@@ -1026,10 +1015,9 @@ get_user_stack  ENDP
         POP     DX
         POP     AX
         RET
-restore_ctrlc   ENDP
 
-ZEXECCODESIZE   EQU     $-ZERO
+ZEXECCODESIZE   =     $-ZERO
 ZEXECCODEEND    LABEL BYTE
         PUBLIC  ZEXECCODEEND
 ZEXEC_CODE      ENDS
-ENDIF
+END IF

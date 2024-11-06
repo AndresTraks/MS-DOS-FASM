@@ -1,124 +1,4 @@
-	INCLUDE	STDSW.ASM
-
-KANJI   EQU     FALSE
-
-Rainbow EQU FALSE
-
-        INCLUDE DOSSYM.ASM
-;
-; segment ordering for MSDOS
-;
-
-CONSTANTS       SEGMENT BYTE PUBLIC 'CONST'
-CONSTANTS       ENDS
-
-DATA            SEGMENT BYTE PUBLIC 'DATA'
-DATA            ENDS
-
-CODE            SEGMENT BYTE PUBLIC 'CODE'
-CODE            ENDS
-
-LAST            SEGMENT BYTE PUBLIC 'LAST'
-LAST            ENDS
-
-DOSGROUP    GROUP   CODE,CONSTANTS,DATA,LAST
-
-CONSTANTS       SEGMENT BYTE PUBLIC 'CONST'
-
-        PUBLIC  DIVMES
-DIVMES  DB      13,10,"Divide overflow",13,10
-
-        PUBLIC  DivMesLen
-DivMesLen   DB  $-DivMes        ; Length of the above message in bytes
-
-
-;
-; The next variable points to the country table for the current country
-;       ( the table returned by the AL=0 INTERNATIONAL call).
-;
-        PUBLIC  Current_Country
-
-        IF KANJI
-Current_Country DW      OFFSET DOSGROUP:JAPTABLE
-        ELSE
-Current_Country DW      OFFSET DOSGROUP:USTABLE
-        ENDIF
-
-;
-; The international tabel(s).
-; This is simply a sequence of tables of the following form:
-;
-;               BYTE  Size of this table excluding this byte and the next
-;               BYTE  Country code represented by this table
-;	                A sequence of n bytes, where n is the number specified
-;                       by the first byte above and is not > internat_block_max,
-;                       in the correct order for being returned by the
-;                       INTERNATIONAL call as follows:
-;		WORD	Date format 0=mdy, 1=dmy, 2=ymd
-;		5 BYTE	Currency symbol null terminated
-;		2 BYTE	thousands separator null terminated
-;		2 BYTE	Decimal point null terminated
-;		2 BYTE	Date separator null terminated
-;		2 BYTE	Time separator null terminated
-;		1 BYTE	Bit field.  Currency format.
-;			Bit 0.  =0 $ before #  =1 $ after #
-;			Bit 1.	no. of spaces between # and $ (0 or 1)
-;		1 BYTE	No. of significant decimal digits in currency
-;		1 BYTE	Bit field.  Time format.
-;			Bit 0.  =0 12 hour clock  =1 24 hour
-;		WORD	Segment offset for address of case conversion routine
-;		WORD	RESERVED.  Filled in by DOS.  Segment value for above routine
-;		2 BYTE	Data list separator null terminated.
-;                  NOTE: The segment part of the DWORD Map_call is set
-;                       by the INTERNATIONAL call. Do not try to initialize
-;                       it to anything meaningful.
-;
-; The list of tables is terminated by putting a byte of -1 after the last
-;       table (a table with length -1).
-
-        PUBLIC  international_table
-
-international_table LABEL       BYTE
-
-        IF KANJI
-                    DB  SIZE internat_block   ; Size in bytes of this table
-                    DB  81              ; Country code
-JAPTABLE internat_block <2,'\',0,0,0,0,',',0,'.',0,'-',0,':',0,0,0,1,OFFSET DOSGROUP:MAP_DCASE , 0,',',0>
-        ENDIF
-
-                    DB  SIZE internat_block   ; Size in bytes of this table
-                    DB  1               ; Country code
-USTABLE internat_block <0,'$',0,0,0,0,',',0,'.',0,'-',0,':',0,0,2,0,OFFSET DOSGROUP:MAP_DCASE,0,',',0>
-;	Tables for the IBM PC character set follow.  The values
-;	associated with some of the currency symbols may change with
-;	other character sets.  You may wish to add or delete country
-;	entries.  NOTE: It is not a mistake that the JAPANESE entry
-;	has different currency symbols for the KANJI and
-;	non-KANJI versions.
-
-IF	NOT	KANJI
-IF	IBM
-                    DB  SIZE internat_block   ; Size in bytes of this table
-                    DB  44              ; Country code
-UKTABLE internat_block <1,9Ch,0,0,0,0,',',0,'.',0,'-',0,':',0,0,2,0,OFFSET DOSGROUP:MAP_DCASE,0,',',0>
-                    DB  SIZE internat_block   ; Size in bytes of this table
-                    DB  49               ; Country code
-GRMTABLE internat_block <1,'D','M',0,0,0,'.',0,',',0,'.',0,'.',0,3,2,1,OFFSET DOSGROUP:MAP_DCASE,0,';',0>
-                    DB  SIZE internat_block   ; Size in bytes of this table
-                    DB  33               ; Country code
-FRNTABLE internat_block <1,'F',0,0,0,0,' ',0,',',0,'/',0,':',0,3,2,1,OFFSET DOSGROUP:MAP_DCASE,0,';',0>
-                    DB  SIZE internat_block   ; Size in bytes of this table
-                    DB  81              ; Country code
-JAPTABLE internat_block <2,9DH,0,0,0,0,',',0,'.',0,'-',0,':',0,0,0,1,OFFSET DOSGROUP:MAP_DCASE , 0,',',0>
-ENDIF
-ENDIF
-                    DB  -1              ; End of tables
-
-CONSTANTS       ENDS
-
-
-CODE            SEGMENT BYTE PUBLIC 'CODE'
-ASSUME  CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
+Rainbow EQU 0
 
 ;CASE MAPPER ROUTINE FOR 80H-FFH character range
 ;     ENTRY: AL = Character to map
@@ -127,8 +7,8 @@ ASSUME  CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 ; The routine should do nothing to chars below 80H.
 ;
 ; Example:
-       MAP_DCASE       PROC FAR
-IF	NOT	KANJI
+       MAP_DCASE:
+IF	KANJI = 0
 IF	IBM
                CMP     AL,80H
                JB      L_RET           ;Map no chars below 80H ever
@@ -139,37 +19,35 @@ IF	IBM
 		PUSH	BX
 		PUSH	CS		;Move to DS
 		POP	DS
-		MOV	BX,OFFSET DOSGROUP:TABLE
-		XLAT			;Get upper case character
+		MOV	BX,TABLE
+		XLATB			;Get upper case character
 		POP	BX
 		POP	DS
-ENDIF
-ENDIF
-       L_RET:  RET
-       MAP_DCASE ENDP
-IF	NOT KANJI
+END IF
+END IF
+       L_RET:  RETF
+
+IF	KANJI = 0
 IF	IBM
 TABLE:	DB	80H,9AH,"E","A",8EH,"A",8FH,80H
 	DB	"E","E","E","I","I","I",8EH,8FH
 	DB	90H,92H,92H,"O",99H,"O","U","U"
 	DB	"Y",99H,9AH,9BH,9CH,9DH,9EH,9FH
 	DB	"A","I","O","U",0A5H,0A5H,0A6H,0A7H
-ENDIF
-ENDIF
+END IF
+END IF
 
-SUBTTL EDIT FUNCTION ASSIGNMENTS AND HEADERS
-PAGE
+;SUBTTL EDIT FUNCTION ASSIGNMENTS AND HEADERS
 ; The following two tables implement the current buffered input editing
 ; routines.  The tables are pairwise associated in reverse order for ease
 ; in indexing.  That is; The first entry in ESCTAB corresponds to the last
 ; entry in ESCFUNC, and the last entry in ESCTAB to the first entry in ESCFUNC.
 
 
-        PUBLIC  ESCCHAR
 ESCCHAR DB      ESCCH                   ;Lead-in character for escape sequences
-        IF      NOT Rainbow
+        IF      Rainbow = 0
 ESCTAB:
-        IF      NOT IBM
+        IF      IBM = 0
         IF      WANG
         DB      0C0h                    ; ^Z inserter
         DB      0C1H                    ; Copy one char
@@ -183,7 +61,7 @@ ESCTAB:
         DB      0C6H                    ; Enter insert mode
         IF      NOT TOGLINS
         DB      0D6H                    ; Exit insert mode
-        ENDIF
+        END IF
         DB      0C6H                    ; Escape character
         DB      0C6H                    ; End of table
         ELSE
@@ -201,8 +79,8 @@ ESCTAB:
         DB      "Q"                     ; RED Exit insert mode
         DB      "R"                     ; GRAY Escape character
         DB      "R"                     ; End of table
-        ENDIF
-        ENDIF
+        END IF
+        END IF
         IF      IBM
         DB      64                      ; Ctrl-Z - F6
         DB      77                      ; Copy one char - -->
@@ -217,16 +95,16 @@ ESCTAB:
         DB      82                      ; Enter insert mode - INS (toggle)
         DB      65                      ; Escape character - F7
         DB      65                      ; End of table
-        ENDIF
+        END IF
 ESCEND:
 ESCTABLEN EQU   ESCEND-ESCTAB
 
-ESCFUNC LABEL   WORD
+ESCFUNC:
         short_addr  GETCH               ; Ignore the escape sequence
         short_addr  TWOESC
-        IF      NOT TOGLINS
+        IF      TOGLINS = 0
         short_addr  EXITINS
-        ENDIF
+        END IF
         short_addr  ENTERINS
         short_addr  BACKSP
         short_addr  REEDIT
@@ -239,9 +117,9 @@ ESCFUNC LABEL   WORD
 
         IF      IBM
         short_addr  COPYONE
-        ENDIF
+        END IF
         short_addr  CTRLZ
-        ENDIF
+        END IF
 
 ;
 ; OEMFunction key is expected to process a single function
@@ -268,43 +146,34 @@ ESCFUNC LABEL   WORD
 ; Registers that are allowed to be modified by this function are:
 ;           AX, CX, BP
 
-        PUBLIC OEMFunctionKey
-OEMFunctionKey  PROC    NEAR
+OEMFunctionKey:
         ASSUME  DS:NOTHING,ES:NOTHING,SS:DOSGROUP
-        invoke  $STD_CON_INPUT_NO_ECHO  ; Get the second byte of the sequence
+        invoke  _STD_CON_INPUT_NO_ECHO  ; Get the second byte of the sequence
 
-        IF NOT Rainbow
+        IF Rainbow = 0
         MOV     CL,ESCTABLEN            ; length of table for scan
         PUSH    DI                      ; save DI (cannot change it!)
-        MOV     DI,OFFSET DOSGROUP:ESCTAB   ; offset of second byte table
+        MOV     DI,ESCTAB   ; offset of second byte table
         REPNE   SCASB                   ; Look it up in the table
         POP     DI                      ; restore DI
         SHL     CX,1                    ; convert byte offset to word
         MOV     BP,CX                   ; move to indexable register
-        JMP     [BP+OFFSET DOSGROUP:ESCFUNC]    ; Go to the right routine
-        ENDIF
+        JMP     WORD[BP+ESCFUNC]    ; Go to the right routine
+        END IF
         IF Rainbow
-
-TransferIf  MACRO   value,address
-        local   a
-        CMP     AL,value
-        JNZ     a
-        transfer    address
-a:
-ENDM
 
         CMP     AL,'['                  ; is it second lead char
         JZ      EatParm                 ; yes, go walk tree
 GoGetCh:
-        transfer    GetCh               ; no, ignore sequence
+        transfer    GETCH               ; no, ignore sequence
 EatParm:
-        invoke  $STD_CON_INPUT_NO_ECHO  ; get argument
+        invoke  _STD_CON_INPUT_NO_ECHO  ; get argument
         CMP     AL,'A'                  ; is it alphabetic arg?
         JAE     EatAlpha                ; yes, go snarf one up
         XOR     BP,BP                   ; init digit counter
         JMP     InDigit                 ; jump into internal eat digit routine
 EatNum:
-        invoke  $STD_CON_INPUT_NO_ECHO  ; get next digit
+        invoke  _STD_CON_INPUT_NO_ECHO  ; get next digit
 InDigit:
         CMP     AL,'9'                  ; still a digit?
         JA      CheckNumEnd             ; no, go check for end char
@@ -322,31 +191,57 @@ CheckNumEnd:
         CMP     AL,7Eh                  ; is it end char ~
         JNZ     GoGetCh                 ; nope, ignore key sequence
         MOV     AX,BP
-        transferIf  1,SkipStr           ; FIND key
-        transferIf  2,EnterIns          ; INSERT HERE key
-        transferIf  3,SkipOne           ; REMOVE
-        transferIf  4,CopyStr           ; SELECT
-        transferIf  17,TwoEsc           ; INTERRUPT
-        transferIf  18,ReEdit           ; RESUME
-        transferIf  19,KilNew           ; CANCEL
-        transferIf  21,CtrlZ            ; EXIT
-        transferIf  29,CopyLin          ; DO
+        CMP     AL,1
+        JNZ     EnterIns_check
+        transfer     SkipStr            ; FIND key
+EnterIns_check:
+        CMP     AL,2
+        JNZ     SkipOne_check
+        transfer     EnterIns           ; INSERT HERE key
+SkipOne_check:
+        CMP     AL,3
+        JNZ     CopyStr_check
+        transfer     SkipOne            ; REMOVE
+CopyStr_check:
+        CMP     AL,4
+        JNZ     TwoEsc_check
+        transfer     COPYSTR            ; SELECT
+TwoEsc_check:
+        CMP     AL,17
+        JNZ     ReEdit_check
+        transfer     TwoEsc             ; INTERRUPT
+ReEdit_check:
+        CMP     AL,18
+        JNZ     KilNew_check
+        transfer     TwoEsc             ; RESUME
+KilNew_check:
+        CMP     AL,19
+        JNZ     CtrlZ_check
+        transfer     KilNew             ; CANCEL
+CtrlZ_check:
+        CMP     AL,21
+        JNZ     CopyLin_check
+        transfer     CtrlZ              ; EXIT
+CopyLin_check:
+        CMP     AL,29
+        JNZ     GoGetCh_jmp
+        transfer     CopyLin            ; DO
+GoGetCh_jmp:
         JMP     GoGetCh
 EatAlpha:
         CMP     AL,'O'                  ; is it O?
         JA      GoGetCh                 ; no, after assume bogus
         JZ      EatPQRS                 ; eat the rest of the bogus key
-        transferIf  'C',CopyOne         ; RIGHT
-        transferIf  'D',BackSp          ; LEFT
-        JMP     GoGetCh
+        CMP     AL,'C'
+        JNZ     BackSp_check
+        transfer     CopyOne            ; RIGHT
+BackSp_check:
+        CMP     AL,'D'
+        JNZ     GoGetCh_jmp
+        transfer     CopyOne                 ; RIGHT
 EatPQRS:
-        invoke  $STD_CON_INPUT_NO_ECHO  ; eat char after O
+        invoke  _STD_CON_INPUT_NO_ECHO  ; eat char after O
         JMP     GoGetCh
-        ENDIF
-
-OEMFunctionKey  ENDP
-
-CODE            ENDS
+        END IF
 
         do_ext
-        END

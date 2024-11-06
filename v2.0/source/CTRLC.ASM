@@ -2,17 +2,7 @@
 ; ^C status routines for MSDOS
 ;
 
-INCLUDE DOSSEG.ASM
-
-CODE    SEGMENT BYTE PUBLIC  'CODE'
         ASSUME  SS:DOSGROUP,CS:DOSGROUP
-
-.xlist
-.xcref
-INCLUDE DOSSYM.ASM
-INCLUDE DEVSYM.ASM
-.cref
-.list
 
         i_need  DevIOBuf,BYTE
         i_need  DidCTRLC,BYTE
@@ -40,13 +30,15 @@ INCLUDE DEVSYM.ASM
         i_need  DIVMES,BYTE
         i_need  DivMesLen,BYTE
 
-SUBTTL Checks for ^C in CON I/O
+;SUBTTL Checks for ^C in CON I/O
 PAGE
 ASSUME  DS:NOTHING,ES:NOTHING
 
-        procedure   DSKSTATCHK,NEAR ; Check for ^C if only one level in
-        CMP     BYTE PTR [INDOS],1
-        retnz                   ; Do NOTHING
+DSKSTATCHK: ; Check for ^C if only one level in
+        CMP     BYTE [SS:INDOS],1
+        jz DSKSTATCHK_noret
+        ret                   ; Do NOTHING
+DSKSTATCHK_noret:
         PUSH    CX
         PUSH    ES
         PUSH    BX
@@ -58,25 +50,25 @@ ASSUME  DS:NOTHING,ES:NOTHING
         POP     DS
 ASSUME  DS:DOSGROUP
         XOR     CX,CX
-        MOV     BYTE PTR [DSKSTCOM],DEVRDND
-        MOV     BYTE PTR [DSKSTCALL],DRDNDHL
+        MOV     BYTE [DSKSTCOM],DEVRDND
+        MOV     BYTE [DSKSTCALL],DRDNDHL
         MOV     [DSKSTST],CX
-        MOV     BX,OFFSET DOSGROUP:DSKSTCALL
+        MOV     BX,DSKSTCALL
         LDS     SI,[BCON]
 ASSUME  DS:NOTHING
         invoke  DEVIOCALL2
-        TEST    [DSKSTST],STBUI
+        TEST    [SS:DSKSTST],STBUI
         JNZ     ZRET                    ; No characters available
-        MOV     AL,BYTE PTR [DSKCHRET]
+        MOV     AL,BYTE [SS:DSKCHRET]
 DSK1:
         CMP     AL,"C"-"@"
         JNZ     RET36
-        MOV     BYTE PTR [DSKSTCOM],DEVRD
-        MOV     BYTE PTR [DSKSTCALL],DRDWRHL
-        MOV     BYTE PTR [DSKCHRET],CL
-        MOV     [DSKSTST],CX
+        MOV     BYTE [SS:DSKSTCOM],DEVRD
+        MOV     BYTE [SS:DSKSTCALL],DRDWRHL
+        MOV     BYTE [SS:DSKCHRET],CL
+        MOV     [SS:DSKSTST],CX
         INC     CX
-        MOV     [DSKSTCNT],CX
+        MOV     [SS:DSKSTCNT],CX
         invoke  DEVIOCALL2              ; Eat the ^C
         POP     SI
         POP     DS
@@ -99,27 +91,25 @@ NOSTOP:
         CMP     AL,"P"-"@"
         JZ      INCHK
 
-        IF      NOT TOGLPRN
+        IF      TOGLPRN = 0
         CMP     AL,"N"-"@"
         JZ      INCHK
-        ENDIF
+        END     IF
 
         CMP     AL,"C"-"@"
         JZ      INCHK
         return
-DSKSTATCHK  ENDP
 
         procedure   SPOOLINT,NEAR
         PUSHF
-        CMP     BYTE PTR [IDLEINT],0
+        CMP     BYTE [SS:IDLEINT],0
         JZ      POPFRET
-        CMP     BYTE PTR [ERRORMODE],0
+        CMP     BYTE [SS:ERRORMODE],0
         JNZ     POPFRET                 ;No spool ints in error mode
         INT     int_spooler
 POPFRET:
         POPF
 RET18:  return
-SPOOLINT    ENDP
 
         procedure   STATCHK,NEAR
 
@@ -140,7 +130,8 @@ SPOOLINT    ENDP
         JMP     SHORT PAUSOSTRT
 PRINTOFF:
 PRINTON:
-        NOT     BYTE PTR [PFLAG]
+        NOT     BYTE [SS:PFLAG]
+PRINTON_ret:
         return
 
 PAUSOLP:
@@ -159,13 +150,12 @@ INCHK:
         invoke  IOFUNC
         CMP     AL,'P'-'@'
         JZ      PRINTON
-        IF      NOT TOGLPRN
+        IF      TOGLPRN = 0
         CMP     AL,'N'-'@'
         JZ      PRINTOFF
-        ENDIF
+        END     IF
         CMP     AL,'C'-'@'
-        retnz
-STATCHK ENDP
+        jnz PRINTON_ret
 
         procedure   CNTCHAND,NEAR
 ; Ctrl-C handler.
@@ -183,7 +173,7 @@ STATCHK ENDP
         PUSH    SS
         POP     DS
 ASSUME  DS:DOSGROUP
-        CMP     BYTE PTR [CONSWAP],0
+        CMP     BYTE [CONSWAP],0
         JZ      NOSWAP
         invoke  SWAPBACK
 NOSWAP:
@@ -193,48 +183,45 @@ NOSWAP:
 ASSUME  SS:NOTHING
         invoke  restore_world       ; User registers now restored
 ASSUME  DS:NOTHING
-        MOV     BYTE PTR [INDOS],0  ; Go to known state
-        MOV     BYTE PTR [ERRORMODE],0
-        MOV     [ConC_spsave],SP    ; save his SP
+        MOV     BYTE [CS:INDOS],0  ; Go to known state
+        MOV     BYTE [CS:ERRORMODE],0
+        MOV     [CS:ConC_spsave],SP    ; save his SP
         INT     int_ctrl_c          ; Execute user Ctrl-C handler
-        MOV     [user_SS],AX        ; save the AX
+        MOV     [CS:user_SS],AX        ; save the AX
         PUSHF                       ; and the flags (maybe new call)
         POP     AX
-        CMP     SP,[ConC_spsave]
+        CMP     SP,[CS:ConC_spsave]
         JNZ     ctrlc_try_new       ; new syscall maybe?
 ctrlc_repeat:
-        MOV     AX,[user_SS]        ; no...
+        MOV     AX,[CS:user_SS]        ; no...
         transfer    COMMAND         ; Repeat command otherwise
 
 ctrlc_try_new:
-        SUB     [ConC_spsave],2     ; Are there flags on the stack?
-        CMP     SP,[ConC_spsave]
+        SUB     [CS:ConC_spsave],2     ; Are there flags on the stack?
+        CMP     SP,[CS:ConC_spsave]
         JZ      ctrlc_new           ; yes, new system call
 
 ctrlc_abort:
-        MOV     AX,(EXIT SHL 8) + 0
-        MOV     BYTE PTR [DidCTRLC],0FFh
+        MOV     AX,(Exit SHL 8) + 0
+        MOV     BYTE [CS:DidCTRLC],0FFh
 
         transfer    COMMAND         ; give up by faking $EXIT
 
 ctrlc_new:
         PUSH    AX
         POPF
-        POP     [user_SS]
+        POP     [CS:user_SS]
         JNC     ctrlc_repeat        ; repeat operation
         JMP     ctrlc_abort         ; indicate ^ced
 
-CNTCHAND ENDP
-
-SUBTTL DIVISION OVERFLOW INTERRUPT
+;SUBTTL DIVISION OVERFLOW INTERRUPT
 PAGE
 ; Default handler for division overflow trap
         procedure   DIVOV,NEAR
 ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
-        MOV     SI,OFFSET DOSGROUP:DIVMES
+        MOV     SI,DIVMES
         CALL    RealDivOv
         JMP     ctrlc_abort     ; Use Ctrl-C abort on divide overflow
-DIVOV   ENDP
 
 ;
 ; RealDivOv: perform actual divide overflow stuff.
@@ -248,25 +235,23 @@ DIVOV   ENDP
 
         PUSH    CS                  ; get DS addressability
         POP     DS
-ASSUME  DS:DOSGROUP
 
-        MOV     BYTE PTR [DskStCom],DevWrt
-        MOV     BYTE PTR [DskStCall],DRdWrHL
-        MOV     [DskSTST],0
+        MOV     BYTE [DSKSTCOM],DEVWRT
+        MOV     BYTE [DSKSTCALL],DRDWRHL
+        MOV     [DSKSTST],0
         MOV     BL,[DivMesLen]
         XOR     BH,BH
-        MOV     [DskStCnt],BX
-        MOV     BX,OFFSET DOSGROUP:DskStCall
-        MOV     WORD PTR [DskChRet+1],SI    ; transfer address (need an EQU)
+        MOV     [DSKSTCNT],BX
+        MOV     BX,DSKSTCALL
+        MOV     WORD [DSKCHRET+1],SI    ; transfer address (need an EQU)
         LDS     SI,[BCON]
 ASSUME  DS:NOTHING
         invoke  DEVIOCALL2
-        MOV     WORD PTR [DskChRet+1],OFFSET DOSGROUP:DevIOBuf
-        MOV     [DskStCnt],1
+        MOV     WORD [CS:DSKCHRET+1],DEVIOBUF
+        MOV     [CS:DSKSTCNT],1
         return
-RealDivOv   ENDP
 
-SUBTTL CHARHRD,HARDERR,ERROR -- HANDLE DISK ERRORS AND RETURN TO USER
+;SUBTTL CHARHRD,HARDERR,ERROR -- HANDLE DISK ERRORS AND RETURN TO USER
 PAGE
         procedure   CHARHARD,NEAR
 ASSUME  DS:NOTHING,ES:NOTHING,SS:DOSGROUP
@@ -274,17 +259,16 @@ ASSUME  DS:NOTHING,ES:NOTHING,SS:DOSGROUP
 ; Character device error handler
 ; Same function as HARDERR
 
-        MOV     WORD PTR [EXITHOLD+2],ES
-        MOV     WORD PTR [EXITHOLD],BP
+        MOV     WORD [SS:EXITHOLD+2],ES
+        MOV     WORD [SS:EXITHOLD],BP
         PUSH    SI
         AND     DI,STECODE
         MOV     BP,DS                   ;Device pointer is BP:SI
         CALL    FATALC
         POP     SI
         return
-CHARHARD    ENDP
 
-        procedure   HardErr,NEAR
+        procedure   HARDERR,NEAR
 ASSUME  DS:NOTHING,ES:NOTHING
 
 ; Hard disk error handler. Entry conditions:
@@ -301,65 +285,65 @@ ASSUME  DS:NOTHING,ES:NOTHING
         CMP     DI,WRECODE              ; Write Protect Error?
         JNZ     NOSETWRPERR
         PUSH    AX
-        MOV     AL,ES:[BP.dpb_drive]
-        MOV     BYTE PTR [WPERR],AL              ; Flag drive with WP error
+        MOV     AL,[ES:BP+dpb.dpb_drive]
+        MOV     BYTE [SS:WPERR],AL              ; Flag drive with WP error
         POP     AX
 NOSETWRPERR:
         SUB     AX,CX                   ; Number of sectors successfully transferred
         ADD     DX,AX                   ; First sector number to retry
         PUSH    DX
-        MUL     ES:[BP.dpb_sector_size]          ; Number of bytes transferred
+        MUL     [ES:BP+dpb.dpb_sector_size]          ; Number of bytes transferred
         POP     DX
         ADD     BX,AX                   ; First address for retry
         XOR     AH,AH                   ; Flag disk section in error
-        CMP     DX,ES:[BP.dpb_first_FAT]    ; In reserved area?
+        CMP     DX,[ES:BP+dpb.dpb_first_FAT]    ; In reserved area?
         JB      ERRINT
         INC     AH                      ; Flag for FAT
-        CMP     DX,ES:[BP.dpb_dir_sector]   ; In FAT?
+        CMP     DX,[ES:BP+dpb.dpb_dir_sector]   ; In FAT?
         JB      ERRINT
         INC     AH
-        CMP     DX,ES:[BP.dpb_first_sector]       ; In directory?
+        CMP     DX,[ES:BP+dpb.dpb_first_sector]       ; In directory?
         JB      ERRINT
         INC     AH                      ; Must be in data area
 ERRINT:
         SHL     AH,1                    ; Make room for read/write bit
-        OR      AH,BYTE PTR [READOP]
+        OR      AH,BYTE [SS:READOP]
         entry   FATAL
-        MOV     AL,ES:[BP.dpb_drive]      ; Get drive number
+        MOV     AL,[ES:BP+dpb.dpb_drive]      ; Get drive number
         entry   FATAL1
-        MOV     WORD PTR [EXITHOLD+2],ES
-        MOV     WORD PTR [EXITHOLD],BP  ; The only things we preserve
-        LES     SI,ES:[BP.dpb_driver_addr]
+        MOV     WORD [SS:EXITHOLD+2],ES
+        MOV     WORD [SS:EXITHOLD],BP  ; The only things we preserve
+        LES     SI,[ES:BP+dpb.dpb_driver_addr]
         MOV     BP,ES                   ; BP:SI points to the device involved
 FATALC:
-        CMP     BYTE PTR [ERRORMODE],0
+        CMP     BYTE [SS:ERRORMODE],0
         JNZ     SETIGN                  ; No INT 24s if already INT 24
-        MOV     [CONTSTK],SP
+        MOV     [SS:CONTSTK],SP
         PUSH    SS
         POP     ES
 ASSUME  ES:DOSGROUP
         CLI                             ; Prepare to play with stack
-        INC     BYTE PTR [ERRORMODE]    ; Flag INT 24 in progress
-        DEC     BYTE PTR [INDOS]        ; INT 24 handler might not return
-        MOV     SS,[user_SS]
+        INC     BYTE [SS:ERRORMODE]    ; Flag INT 24 in progress
+        DEC     BYTE [SS:INDOS]        ; INT 24 handler might not return
+        MOV     SS,[SS:user_SS]
 ASSUME  SS:NOTHING
-        MOV     SP,ES:[user_SP]         ; User stack pointer restored
+        MOV     SP,[ES:user_SP]         ; User stack pointer restored
         INT     int_fatal_abort         ; Fatal error interrupt vector, must preserve ES
-        MOV     ES:[user_SP],SP         ; restore our stack
-        MOV     ES:[user_SS],SS
+        MOV     [ES:user_SP],SP         ; restore our stack
+        MOV     [ES:user_SS],SS
         MOV     SP,ES
         MOV     SS,SP
 ASSUME  SS:DOSGROUP
-        MOV     SP,[CONTSTK]
-        INC     BYTE PTR [INDOS]        ; Back in the DOS
-        MOV     BYTE PTR [ERRORMODE],0  ; Back from INT 24
+        MOV     SP,[SS:CONTSTK]
+        INC     BYTE [SS:INDOS]        ; Back in the DOS
+        MOV     BYTE [SS:ERRORMODE],0  ; Back from INT 24
         STI
 IGNRET:
-        LES     BP,[EXITHOLD]
+        LES     BP,[SS:EXITHOLD]
 ASSUME  ES:NOTHING
         CMP     AL,2
         JZ      error_abort
-        MOV     BYTE PTR [WPERR],-1              ;Forget about WP error
+        MOV     BYTE [SS:WPERR],-1              ;Forget about WP error
         return
 
 SETIGN:
@@ -370,11 +354,11 @@ error_abort:
         PUSH    SS
         POP     DS
 ASSUME  DS:DOSGROUP
-        CMP     BYTE PTR [CONSWAP],0
+        CMP     BYTE [CONSWAP],0
         JZ      NOSWAP2
         invoke  SWAPBACK
 NOSWAP2:
-        MOV     BYTE PTR [exit_Type],Exit_hard_error
+        MOV     BYTE [exit_type],.Exit_Hard_Error
         MOV     DS,[CurrentPDB]
 ASSUME  DS:NOTHING
 
@@ -390,14 +374,14 @@ ASSUME  DS:NOTHING
         ASSUME  DS:NOTHING,ES:NOTHING
         PUSH    DS                      ; save PDB of process
 
-        MOV     AL,int_Terminate
-        invoke  $Get_interrupt_vector   ; and who to go to
-        MOV     WORD PTR [EXITHOLD+2],ES ; save return address
-        MOV     WORD PTR [EXITHOLD],BX
+        MOV     AL,int_terminate
+        invoke  _GET_INTERRUPT_VECTOR   ; and who to go to
+        MOV     WORD [SS:EXITHOLD+2],ES ; save return address
+        MOV     WORD [SS:EXITHOLD],BX
 
-        MOV     BX,[CurrentPDB]         ; get current process
+        MOV     BX,[SS:CurrentPDB]         ; get current process
         MOV     DS,BX                   ;
-        MOV     AX,DS:[PDB_Parent_PID]  ; get parent to return to
+        MOV     AX,[DS:Process_data_block.PDB_Parent_PID]  ; get parent to return to
         POP     CX
 ;
 ; AX = parentPDB, BX = CurrentPDB, CX = ThisPDB
@@ -409,7 +393,7 @@ ASSUME  DS:NOTHING
         CMP     BX,CX
         JNZ     reset_return            ; CurrentPDB <> ThisPDB
         PUSH    AX                      ; save parent
-        CMP     BYTE PTR [exit_type],Exit_keep_process
+        CMP     BYTE [SS:exit_type],.Exit_Keep_process
         JZ      reset_to_parent         ; keeping this process
 
         invoke  arena_free_process
@@ -421,12 +405,12 @@ reset_free_jfn:
         MOV     BX,CX
         PUSH    CX
         DEC     BX                      ; get jfn
-        invoke  $CLOSE                  ; close it, ignore return
+        invoke  _CLOSE                  ; close it, ignore return
         POP     CX
         LOOP    reset_free_jfn          ; and do 'em all
 
 reset_to_parent:
-        POP     [CurrentPDB]            ; set up process as parent
+        POP     [SS:CurrentPDB]            ; set up process as parent
 
 reset_return:                           ; come here for normal return
         PUSH    CS
@@ -436,15 +420,15 @@ reset_return:                           ; come here for normal return
         invoke  FLUSHBUF                ; make sure that everything is clean
 
         CLI
-        MOV     BYTE PTR [INDOS],0               ;Go to known state
-        MOV     BYTE PTR [WPERR],-1              ;Forget about WP error
+        MOV     BYTE [INDOS],0               ;Go to known state
+        MOV     BYTE [WPERR],-1              ;Forget about WP error
 ;
 ; Snake into multitasking... Get stack from CurrentPDB person
 ;
         MOV     DS,[CurrentPDB]
         ASSUME  DS:NOTHING
-        MOV     SS,WORD PTR DS:[PDB_user_stack+2]
-        MOV     SP,WORD PTR DS:[PDB_user_stack]
+        MOV     SS,WORD [DS:Process_data_block.PDB_User_stack+2]
+        MOV     SP,WORD [DS:Process_data_block.PDB_User_stack]
 
         ASSUME  SS:NOTHING
         invoke  restore_world
@@ -454,15 +438,11 @@ reset_return:                           ; come here for normal return
         POP     AX
         MOV     AX,0F202h               ; STI
         PUSH    AX
-        PUSH    WORD PTR [EXITHOLD+2]
-        PUSH    WORD PTR [EXITHOLD]
+        PUSH    WORD [CS:EXITHOLD+2]
+        PUSH    WORD [CS:EXITHOLD]
         STI
         IRET            ; Long return back to user terminate address
-HardErr ENDP
 
         ASSUME  SS:DOSGROUP
 
 do_ext
-
-CODE    ENDS
-    END

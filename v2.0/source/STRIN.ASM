@@ -1,4 +1,4 @@
-        procedure   $STD_CON_STRING_INPUT,NEAR   ;System call 10
+        procedure   _STD_CON_STRING_INPUT,NEAR   ;System call 10
 ASSUME  DS:NOTHING,ES:NOTHING
 
 ; Inputs:
@@ -19,7 +19,7 @@ ASSUME  DS:NOTHING,ES:NOTHING
         MOV     BH,CH           ;Init template counter
         CMP     AL,BL
         JBE     NOEDIT          ;If length of buffer inconsistent with contents
-        CMP     BYTE PTR [BX+SI],c_CR
+        CMP     BYTE [BX+SI],c_CR
         JZ      EDITON          ;If CR correctly placed EDIT is OK
 NOEDIT:
         MOV     BL,CH           ;Reset buffer
@@ -27,22 +27,22 @@ EDITON:
         MOV     DL,AL
         DEC     DX              ;DL is # of bytes we can put in the buffer
 NEWLIN:
-        MOV     AL,[CARPOS]
-        MOV     [STARTPOS],AL   ;Remember position in raw buffer
+        MOV     AL,[SS:CARPOS]
+        MOV     [SS:STARTPOS],AL   ;Remember position in raw buffer
         PUSH    SI
-        MOV     DI,OFFSET DOSGROUP:INBUF        ;Build the new line here
-        MOV     [INSMODE],CH    ;Insert mode off
+        MOV     DI,INBUF        ;Build the new line here
+        MOV     [SS:INSMODE],CH    ;Insert mode off
         MOV     BH,CH           ;No chars from template yet
         MOV     DH,CH           ;No chars to new line yet
-        invoke  $STD_CON_INPUT_NO_ECHO          ;Get first char
+        invoke  _STD_CON_INPUT_NO_ECHO          ;Get first char
         CMP     AL,c_LF         ;Linefeed
         JNZ     GOTCH           ;Filter out LF so < works
         entry   GETCH
-        invoke  $STD_CON_INPUT_NO_ECHO
+        invoke  _STD_CON_INPUT_NO_ECHO
 GOTCH:
         CMP     AL,"F"-"@"      ;Ignore ^F
         JZ      GETCH
-        CMP     AL,[ESCCHAR]
+        CMP     AL,[SS:ESCCHAR]
         JZ      ESC
         CMP     AL,c_DEL
         JZ      BACKSPJ
@@ -60,7 +60,7 @@ SAVCH:
         STOSB
         INC     DH              ;Got a char
         invoke  BUFOUT          ;Print control chars nicely
-        CMP     BYTE PTR [INSMODE],0
+        CMP     BYTE [SS:INSMODE],0
         JNZ     GETCH           ;In insert mode, get more chars
         CMP     BH,BL
         JAE     GETCH           ;We are out of chars in template
@@ -72,7 +72,7 @@ BACKSPJ: JMP    SHORT BACKSP
 
 BUFFUL:
         MOV     AL,7            ;Bell
-        invoke  OUT
+        invoke  _OUT
         JMP     SHORT GETCH
 
 ESC:
@@ -80,7 +80,7 @@ ESC:
 
 ENDLIN:
         STOSB                   ;Put the CR in the buffer
-        invoke  OUT             ;Echo it
+        invoke  _OUT            ;Echo it
         POP     DI              ;Get start of buffer
         MOV     [DI-1],DH       ;Tell user how many bytes
         INC     DH              ;DH is length including CR
@@ -89,7 +89,7 @@ COPYNEW:
         MOV     BX,DS
         MOV     ES,BX
         MOV     DS,BP
-        MOV     SI,OFFSET DOSGROUP:INBUF
+        MOV     SI,INBUF
         MOV     CL,DH
         REP     MOVSB           ;Copy final line to user buffer
         return                  ;All done
@@ -97,9 +97,9 @@ COPYNEW:
 ;Output a CRLF
         entry   CRLF
         MOV     AL,c_CR
-        invoke  OUT
+        invoke  _OUT
         MOV     AL,c_LF
-        JMP     OUT
+        JMP     _OUT
 
 ;Output a CRLF which is not terminate buffer
 PHYCRLF:
@@ -109,11 +109,11 @@ PHYCRLF:
 ;Zap the line without zapping the template
         entry   KILNEW
         MOV     AL,"\"
-        invoke  OUT             ;Print the CANCEL indicator
+        invoke  _OUT            ;Print the CANCEL indicator
         POP     SI              ;Remember start of edit buffer
 PUTNEW:
         invoke  CRLF            ;Go to next line on screen
-        MOV     AL,[STARTPOS]
+        MOV     AL,[SS:STARTPOS]
         invoke  TAB             ;Tab over
         JMP     NEWLIN          ;Start over again
 
@@ -122,14 +122,14 @@ PUTNEW:
         OR      DH,DH
         JZ      OLDBAK          ;No chars in line, do nothing to line
         CALL    BACKUP          ;Do the backup
-        MOV     AL,ES:[DI]      ;Get the deleted char
+        MOV     AL,[ES:DI]      ;Get the deleted char
         CMP     AL," "
         JAE     OLDBAK          ;Was a normal char
         CMP     AL,c_HT
         JZ      BAKTAB          ;Was a tab, fix up users display
         CALL    BACKMES         ;Was a control char, zap the '^'
 OLDBAK:
-        CMP     BYTE PTR [INSMODE],0
+        CMP     BYTE [SS:INSMODE],0
         JNZ     GETCH1          ;In insert mode, get more chars
         OR      BH,BH
         JZ      GETCH1          ;Not advanced in template, stay where we are
@@ -150,13 +150,13 @@ BAKTAB:
 FNDPOS:
         SCASB                   ;Look back
         JNA     CHKCNT
-        CMP     BYTE PTR ES:[DI+1],9
+        CMP     BYTE [ES:DI+1],9
         JZ      HAVTAB          ;Found a tab
         DEC     BL              ;Back one char if non tab control char
 CHKCNT:
         LOOP    FNDPOS
 FIGTAB:
-        SUB     BL,[STARTPOS]
+        SUB     BL,[SS:STARTPOS]
 HAVTAB:
         SUB     BL,DH
         ADD     CL,BL
@@ -175,15 +175,15 @@ BACKUP:
         DEC     DI
 BACKMES:
         MOV     AL,c_BS         ;Backspace
-        invoke  OUT
+        invoke  _OUT
         MOV     AL," "          ;Erase
-        invoke  OUT
+        invoke  _OUT
         MOV     AL,c_BS         ;Backspace
-        JMP     OUT             ;Done
+        JMP     _OUT             ;Done
 
 ;User really wants an ESC character in his line
-        entry   TwoEsc
-        MOV     AL,[ESCCHAR]
+        entry   TWOESC
+        MOV     AL,[SS:ESCCHAR]
         JMP     SAVCH
 
 ;Copy the rest of the template
@@ -192,7 +192,7 @@ BACKMES:
         SUB     CL,BH           ;Minus position in template, is number to move
         JMP     SHORT COPYEACH
 
-        entry   CopyStr
+        entry   COPYSTR
         invoke  FINDOLD         ;Find the char
         JMP     SHORT COPYEACH  ;Copy up to it
 
@@ -201,7 +201,7 @@ BACKMES:
         MOV     CL,1
 ;Copy CX chars from template to line
 COPYEACH:
-        MOV     BYTE PTR [INSMODE],0    ;All copies turn off insert mode
+        MOV     BYTE [SS:INSMODE],0    ;All copies turn off insert mode
         CMP     DH,DL
         JZ      GETCH2                  ;At end of line, can't do anything
         CMP     BH,BL
@@ -236,11 +236,11 @@ GETCH2:
 ;       Make sure nothing extra on stack when this routine
 ;       is called!!! (no PUSHes before calling it).
 FINDOLD:
-        invoke  $STD_CON_INPUT_NO_ECHO
-        CMP     AL,[ESCCHAR]            ; did he type a function key?
+        invoke  _STD_CON_INPUT_NO_ECHO
+        CMP     AL,[SS:ESCCHAR]            ; did he type a function key?
         JNZ     FindSetup               ; no, set up for scan
-        invoke  $STD_CON_INPUT_NO_ECHO  ; eat next char
-        JMP     NotFnd                  ; go try again
+        invoke  _STD_CON_INPUT_NO_ECHO  ; eat next char
+        JMP     NOTFND                  ; go try again
 FindSetup:
         MOV     CL,BL
         SUB     CL,BH           ;CX is number of chars to end of template
@@ -268,7 +268,7 @@ NOTFND:
 
         entry   REEDIT
         MOV     AL,"@"          ;Output re-edit character
-        invoke  OUT
+        invoke  _OUT
         POP     DI
         PUSH    DI
         PUSH    ES
@@ -282,11 +282,10 @@ NOTFND:
 
         entry   EXITINS
         entry   ENTERINS
-        NOT     BYTE PTR [INSMODE]
+        NOT     BYTE [SS:INSMODE]
         JMP     GETCH
 
 ;Put a real live ^Z in the buffer (embedded)
         entry   CTRLZ
         MOV     AL,"Z"-"@"
         JMP     SAVCH
-$STD_CON_STRING_INPUT   ENDP

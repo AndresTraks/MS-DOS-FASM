@@ -2,17 +2,8 @@
 ; buffer management for MSDOS
 ;
 
-INCLUDE DOSSEG.ASM
 
-CODE    SEGMENT BYTE PUBLIC  'CODE'
         ASSUME  SS:DOSGROUP,CS:DOSGROUP
-
-.xlist
-.xcref
-INCLUDE DOSSYM.ASM
-INCLUDE DEVSYM.ASM
-.cref
-.list
 
         i_need  BuffHead,DWORD
         i_need  PreRead,WORD
@@ -20,7 +11,7 @@ INCLUDE DEVSYM.ASM
         i_need  CurBuf,DWORD
         i_need  WPErr,BYTE
 
-SUBTTL SETVISIT,SKIPVISIT -- MANAGE BUFFER SCANS
+;SUBTTL SETVISIT,SKIPVISIT -- MANAGE BUFFER SCANS
 PAGE
         procedure   SETVISIT,near
 ASSUME  DS:NOTHING,ES:NOTHING
@@ -37,16 +28,17 @@ ASSUME  DS:NOTHING,ES:NOTHING
 ;       DS:DI Points to [BUFFHEAD]
 ; No other registers altered
 
-        LDS     DI,[BUFFHEAD]
+        LDS     DI,[SS:BUFFHEAD]
         PUSH    AX
         XOR     AX,AX
 SETLOOP:
-        MOV     [DI.VISIT],AL
-        LDS     DI,[DI.NEXTBUF]
+        MOV     [DI+BUFFINFO.VISIT],AL
+        LDS     DI,[DI+BUFFINFO.NEXTBUF]
         CMP     DI,-1
         JNZ     SETLOOP
-        LDS     DI,[BUFFHEAD]
+        LDS     DI,[SS:BUFFHEAD]
         POP     AX
+SETLOOP_ret:
         return
 
         entry   SKIPVISIT
@@ -62,18 +54,17 @@ ASSUME  DS:NOTHING,ES:NOTHING
 ; No other registers altered
 
         CMP     DI,-1
-        retz
-        CMP     [DI.VISIT],1
-        retnz
-        LDS     DI,[DI.NEXTBUF]
+        jz SETLOOP_ret
+        CMP     [DI+BUFFINFO.VISIT],1
+        jnz SETLOOP_ret
+        LDS     DI,[DI+BUFFINFO.NEXTBUF]
         JMP     SHORT SKIPVISIT
         return
-SetVisit    ENDP
 
 
-SUBTTL SCANPLACE, PLACEBUF -- PUT A BUFFER BACK IN THE POOL
+;SUBTTL SCANPLACE, PLACEBUF -- PUT A BUFFER BACK IN THE POOL
 PAGE
-        procedure   ScanPlace,near
+        procedure   SCANPLACE,near
 ASSUME  DS:NOTHING,ES:NOTHING
 
 ; Inputs:
@@ -85,14 +76,13 @@ ASSUME  DS:NOTHING,ES:NOTHING
 ; SI destroyed, other registers unchanged
 
         PUSH    ES
-        LES     SI,[DI.NEXTBUF]         ; Save scan location
+        LES     SI,[DI+BUFFINFO.NEXTBUF]         ; Save scan location
         CALL    PLACEBUF
         PUSH    ES
         POP     DS                      ; Restore scan location
         MOV     DI,SI
         POP     ES
         return
-ScanPlace   ENDP
 
 NRETJ:  JMP     SHORT NRET
 
@@ -115,45 +105,45 @@ ASSUME  DS:NOTHING,ES:NOTHING
 ; AH    -- Removed, Buf has been removed
 
         IF      IBM
-        IF      NOT IBM
+        IF      IBM = 0
         invoke  save_world
         XOR     AX,AX           ; Inserted = Removed = FALSE
-        LES     CX,[DI.NEXTBUF]
+        LES     CX,[DI+BUFFINFO.NEXTBUF]
         MOV     BP,ES           ; Pointsave = Buf.nextbuf
         MOV     SI,DS
         MOV     ES,SI           ; Buf is ES:DI
-        LDS     SI,[BUFFHEAD]   ; Curbuf = HEAD
+        LDS     SI,[SS:BUFFHEAD]   ; Curbuf = HEAD
         CALL    POINTCOMP       ; Buf == HEAD?
         JNZ     TNEWHEAD
         CMP     CX,-1           ; Buf is LAST?
         JZ      NRETJ           ; Only one buffer, nothing to do
-        MOV     WORD PTR [BUFFHEAD],CX
-        MOV     WORD PTR [BUFFHEAD+2],BP        ; HEAD = Pointsave
+        MOV     WORD [SS:BUFFHEAD],CX
+        MOV     WORD [SS:BUFFHEAD+2],BP        ; HEAD = Pointsave
         INC     AH              ; Removed = TRUE
         MOV     DS,BP
         MOV     SI,CX           ; Curbuf = HEAD
 TNEWHEAD:
-        MOV     BL,ES:[DI.BUFPRI]
+        MOV     BL,[ES:DI.BUFPRI]
         CMP     BL,[SI.BUFPRI]
         JGE     BUFLOOP
 NEWHEAD:                        ; If Buf.pri < HEAD.pri
-        MOV     WORD PTR ES:[DI.NEXTBUF],SI
-        MOV     WORD PTR ES:[DI.NEXTBUF+2],DS   ; Buf.nextbuf = HEAD
-        MOV     WORD PTR [BUFFHEAD],DI
-        MOV     WORD PTR [BUFFHEAD+2],ES        ; HEAD = Buf
+        MOV     WORD [ES:DI+BUFFINFO.NEXTBUF],SI
+        MOV     WORD [ES:DI+BUFFINFO.NEXTBUF+2],DS   ; Buf.nextbuf = HEAD
+        MOV     WORD [SS:BUFFHEAD],DI
+        MOV     WORD [SS:BUFFHEAD+2],ES        ; HEAD = Buf
         INC     AL                              ; Inserted = TRUE
         OR      AH,AH
         JNZ     NRET            ; If Removed == TRUE
 BUFLOOP:
         PUSH    DS
         PUSH    SI
-        LDS     SI,[SI.NEXTBUF]
+        LDS     SI,[SI+BUFFINFO.NEXTBUF]
         CALL    POINTCOMP
         POP     SI
         POP     DS
         JNZ     TESTINS
-        MOV     WORD PTR [SI.NEXTBUF],CX        ; If Curbuf.nextbuf == buf
-        MOV     WORD PTR [SI.NEXTBUF+2],BP      ; Curbuf.nextbuf = Pointsave
+        MOV     WORD [SI+BUFFINFO.NEXTBUF],CX        ; If Curbuf.nextbuf == buf
+        MOV     WORD [SI+BUFFINFO.NEXTBUF+2],BP      ; Curbuf.nextbuf = Pointsave
         INC     AH              ; Removed = TRUE
         OR      AL,AL
         JNZ     SHUFFLE         ; If Inserted == TRUE
@@ -161,83 +151,83 @@ TESTINS:
         OR      AL,AL
         JNZ     LOOKBUF
         PUSH    CX              ; If NOT Inserted
-        MOV     CL,ES:[DI.BUFPRI]
+        MOV     CL,[ES:DI.BUFPRI]
         CMP     CL,[SI.BUFPRI]
         POP     CX
         JGE     LOOKBUF
         PUSH    DS              ; If Buf.pri < Curbuf.pri
         MOV     DS,DX
-        MOV     WORD PTR [BX.NEXTBUF],DI
-        MOV     WORD PTR [BX.NEXTBUF+2],ES      ; Lastbuf.nextbuf = Buf
+        MOV     WORD [BX.NEXTBUF],DI
+        MOV     WORD [BX.NEXTBUF+2],ES      ; Lastbuf.nextbuf = Buf
         POP     DS
-        MOV     WORD PTR ES:[DI.NEXTBUF],SI
-        MOV     WORD PTR ES:[DI.NEXTBUF+2],DS   ; Buf.nextbuf = Curbuf
+        MOV     WORD [ES:DI+BUFFINFO.NEXTBUF],SI
+        MOV     WORD [ES:DI+BUFFINFO.NEXTBUF+2],DS   ; Buf.nextbuf = Curbuf
         INC     AL              ; Inserted = TRUE
         OR      AH,AH
         JNZ     SHUFFLE         ; If Removed == TRUE
 LOOKBUF:
         MOV     BX,SI
         MOV     DX,DS           ; Lastbuf = Curbuf
-        CMP     WORD PTR [SI.NEXTBUF],-1
+        CMP     WORD [SI+BUFFINFO.NEXTBUF],-1
         JZ      ISLAST
-        LDS     SI,[SI.NEXTBUF] ; Curbuf = Curbuf.nextbuf
+        LDS     SI,[SI+BUFFINFO.NEXTBUF] ; Curbuf = Curbuf.nextbuf
         JMP     SHORT BUFLOOP
 ISLAST:                 ; If Curbuf is LAST
-        MOV     WORD PTR [SI.NEXTBUF],DI
-        MOV     WORD PTR [SI.NEXTBUF+2],ES      ; Curbuf.nextbuf = Buf
-        MOV     WORD PTR ES:[DI.NEXTBUF],-1
-        MOV     WORD PTR ES:[DI.NEXTBUF+2],-1      ; Buf is LAST
+        MOV     WORD [SI+BUFFINFO.NEXTBUF],DI
+        MOV     WORD [SI+BUFFINFO.NEXTBUF+2],ES      ; Curbuf.nextbuf = Buf
+        MOV     WORD [ES:DI+BUFFINFO.NEXTBUF],-1
+        MOV     WORD [ES:DI+BUFFINFO.NEXTBUF+2],-1      ; Buf is LAST
 NRET:
         invoke  restore_world
         return
 
 SHUFFLE:
-        LDS     DI,[BUFFHEAD]
+        LDS     DI,[SS:BUFFHEAD]
 DECLOOP:
         CMP     [DI.BUFPRI],FREEPRI
         JZ      NODEC
         DEC     [DI.BUFPRI]
 NODEC:
-        LDS     DI,[DI.NEXTBUF]
+        LDS     DI,[DI+BUFFINFO.NEXTBUF]
         CMP     DI,-1
         JNZ     DECLOOP
         JMP     SHORT NRET
-        ENDIF
-        ENDIF
+        END     IF
+        END     IF
 
         invoke  save_world
-        LES     CX,[DI.NEXTBUF]
+        LES     CX,[DI+BUFFINFO.NEXTBUF]
         CMP     CX,-1           ; Buf is LAST?
         JZ      NRET            ; Buffer already last
         MOV     BP,ES           ; Pointsave = Buf.nextbuf
         PUSH    DS
         POP     ES              ; Buf is ES:DI
-        LDS     SI,[BUFFHEAD]   ; Curbuf = HEAD
+        LDS     SI,[SS:BUFFHEAD]   ; Curbuf = HEAD
         CALL    POINTCOMP       ; Buf == HEAD?
-        JNZ     BUFLOOP
-        MOV     WORD PTR [BUFFHEAD],CX
-        MOV     WORD PTR [BUFFHEAD+2],BP        ; HEAD = Pointsave
+        JNZ     BUFLOOP2
+        MOV     WORD [SS:BUFFHEAD],CX
+        MOV     WORD [SS:BUFFHEAD+2],BP        ; HEAD = Pointsave
         JMP     SHORT LOOKEND
 
-BUFLOOP:
+BUFLOOP2:
         PUSH    DS
         PUSH    SI
-        LDS     SI,[SI.NEXTBUF]
+        LDS     SI,[SI+BUFFINFO.NEXTBUF]
         CALL    POINTCOMP
         JZ      GOTTHEBUF
         POP     AX
         POP     AX
-        JMP     SHORT BUFLOOP
+        JMP     SHORT BUFLOOP2
 
 GOTTHEBUF:
         POP     SI
         POP     DS
-        MOV     WORD PTR [SI.NEXTBUF],CX        ; If Curbuf.nextbuf == buf
-        MOV     WORD PTR [SI.NEXTBUF+2],BP      ; Curbuf.nextbuf = Pointsave
+        MOV     WORD [SI+BUFFINFO.NEXTBUF],CX        ; If Curbuf.nextbuf == buf
+        MOV     WORD [SI+BUFFINFO.NEXTBUF+2],BP      ; Curbuf.nextbuf = Pointsave
 LOOKEND:
         PUSH    DS
         PUSH    SI
-        LDS     SI,[SI.NEXTBUF]
+        LDS     SI,[SI+BUFFINFO.NEXTBUF]
         CMP     SI,-1
         JZ      GOTHEEND
         POP     AX
@@ -247,15 +237,14 @@ LOOKEND:
 GOTHEEND:
         POP     SI
         POP     DS
-        MOV     WORD PTR [SI.NEXTBUF],DI
-        MOV     WORD PTR [SI.NEXTBUF+2],ES      ; Curbuf.nextbuf = Buf
-        MOV     WORD PTR ES:[DI.NEXTBUF],-1
-        MOV     WORD PTR ES:[DI.NEXTBUF+2],-1      ; Buf is LAST
+        MOV     WORD [SI+BUFFINFO.NEXTBUF],DI
+        MOV     WORD [SI+BUFFINFO.NEXTBUF+2],ES      ; Curbuf.nextbuf = Buf
+        MOV     WORD [ES:DI+BUFFINFO.NEXTBUF],-1
+        MOV     WORD [ES:DI+BUFFINFO.NEXTBUF+2],-1      ; Buf is LAST
 NRET:
         invoke  restore_world
+NRET_ret:
         return
-
-PLACEBUF    ENDP
 
         procedure   PLACEHEAD,NEAR
 ASSUME  DS:NOTHING,ES:NOTHING
@@ -265,15 +254,15 @@ ASSUME  DS:NOTHING,ES:NOTHING
         invoke  save_world
         PUSH    DS
         POP     ES
-        LDS     SI,[BUFFHEAD]
-        MOV     WORD PTR [BUFFHEAD],DI
-        MOV     WORD PTR [BUFFHEAD+2],ES
-        MOV     WORD PTR ES:[DI.NEXTBUF],SI
-        MOV     WORD PTR ES:[DI.NEXTBUF+2],DS
+        LDS     SI,[SS:BUFFHEAD]
+        MOV     WORD [SS:BUFFHEAD],DI
+        MOV     WORD [SS:BUFFHEAD+2],ES
+        MOV     WORD [ES:DI+BUFFINFO.NEXTBUF],SI
+        MOV     WORD [ES:DI+BUFFINFO.NEXTBUF+2],DS
 LOOKEND2:
         PUSH    DS
         PUSH    SI
-        LDS     SI,[SI.NEXTBUF]
+        LDS     SI,[SI+BUFFINFO.NEXTBUF]
         CALL    POINTCOMP
         JZ      GOTHEEND2
         POP     AX
@@ -283,15 +272,13 @@ LOOKEND2:
 GOTHEEND2:
         POP     SI
         POP     DS
-        MOV     WORD PTR [SI.NEXTBUF],-1
-        MOV     WORD PTR [SI.NEXTBUF+2],-1      ; Buf is LAST
+        MOV     WORD [SI+BUFFINFO.NEXTBUF],-1
+        MOV     WORD [SI+BUFFINFO.NEXTBUF+2],-1      ; Buf is LAST
         JMP     SHORT NRET
 
-PLACEHEAD   ENDP
-
-SUBTTL POINTCOMP -- 20 BIT POINTER COMPARE
+;SUBTTL POINTCOMP -- 20 BIT POINTER COMPARE
 PAGE
-        procedure   PointComp,NEAR
+        procedure   POINTCOMP,NEAR
 ASSUME  DS:NOTHING,ES:NOTHING
 
 ; Compare DS:SI to ES:DI (or DS:DI to ES:SI) for equality
@@ -299,7 +286,7 @@ ASSUME  DS:NOTHING,ES:NOTHING
 ; No Registers altered
 
         CMP     SI,DI
-        retnz
+        jnz NRET_ret
         PUSH    CX
         PUSH    DX
         MOV     CX,DS
@@ -308,9 +295,8 @@ ASSUME  DS:NOTHING,ES:NOTHING
         POP     DX
         POP     CX
         return
-PointComp   ENDP
 
-SUBTTL GETBUFFR -- GET A SECTOR INTO A BUFFER
+;SUBTTL GETBUFFR -- GET A SECTOR INTO A BUFFER
 PAGE
         procedure   GETBUFFR,NEAR
 ASSUME  DS:DOSGROUP,ES:NOTHING
@@ -331,29 +317,29 @@ ASSUME  DS:DOSGROUP,ES:NOTHING
         XOR     SI,SI
         entry   GETBUFFRB
         MOV     [PREREAD],AX
-        MOV     AL,ES:[BP.dpb_drive]
+        MOV     AL,[ES:BP+dpb.dpb_drive]
         LDS     DI,[LASTBUFFER]
 ASSUME  DS:NOTHING
         CMP     DI,-1                           ; Recency pointer valid?
         JZ      SKBUF                           ; No
-        CMP     DX,[DI.BUFSECNO]
+        CMP     DX,[DI+BUFFINFO.BUFSECNO]
         JNZ     SKBUF                           ; Wrong sector
-        CMP     AL,[DI.BUFDRV]
+        CMP     AL,[DI+BUFFINFO.BUFDRV]
         JNZ     SKBUF                           ; Wrong Drive
         JMP     SHORT JUSTBUF                   ; Just asked for same buffer
 SKBUF:
-        LDS     DI,[BUFFHEAD]
+        LDS     DI,[SS:BUFFHEAD]
 NXTBFF:
-        CMP     DX,[DI.BUFSECNO]
+        CMP     DX,[DI+BUFFINFO.BUFSECNO]
         JNZ     BUMP
-        CMP     AL,[DI.BUFDRV]
+        CMP     AL,[DI+BUFFINFO.BUFDRV]
         JNZ     BUMP
         JMP     SHORT SETINF
 BUMP:
-        LDS     DI,[DI.NEXTBUF]
+        LDS     DI,[DI+BUFFINFO.NEXTBUF]
         CMP     DI,-1
         JNZ     NXTBFF
-        LDS     DI,[BUFFHEAD]
+        LDS     DI,[SS:BUFFHEAD]
         PUSH    SI
         PUSH    DX
         PUSH    BP
@@ -364,9 +350,9 @@ BUMP:
         POP     DX
         POP     SI
 RDSEC:                          ; Read in the new sector
-        TEST    BYTE PTR [PREREAD],-1
+        TEST    BYTE [SS:PREREAD],-1
         JNZ     SETBUF
-        LEA     BX,[DI.BufInSiz]        ; Point at buffer
+        LEA     BX,[DI+BUFINSIZ]        ; Point at buffer
         MOV     CX,1
         PUSH    SI
         PUSH    DI
@@ -382,36 +368,35 @@ GOTTHESEC:
         POP     DI
         POP     SI
 SETBUF:
-        MOV     [DI.BUFSECNO],DX
-        MOV     WORD PTR [DI.BUFDRVDP],BP
-        MOV     WORD PTR [DI.BUFDRVDP+2],ES
+        MOV     [DI+BUFFINFO.BUFSECNO],DX
+        MOV     WORD [DI+BUFFINFO.BUFDRVDP],BP
+        MOV     WORD [DI+BUFFINFO.BUFDRVDP+2],ES
         XOR     AH,AH
-        MOV     AL,ES:[BP.dpb_drive]
-        MOV     WORD PTR [DI.BUFDRV],AX
+        MOV     AL,[ES:BP+dpb.dpb_drive]
+        MOV     WORD [DI+BUFFINFO.BUFDRV],AX
 SETINF:
         MOV     AX,1                            ; Default to not a FAT sector
         OR      SI,SI
         JZ      SETSTUFFOK
-        MOV     AL,ES:[BP.dpb_FAT_count]
-        MOV     AH,ES:[BP.dpb_FAT_size]
+        MOV     AL,[ES:BP+dpb.dpb_FAT_count]
+        MOV     AH,[ES:BP+dpb.dpb_FAT_size]
 SETSTUFFOK:
-        MOV     WORD PTR [DI.BUFWRTCNT],AX
+        MOV     WORD [DI+BUFFINFO.BUFWRTCNT],AX
         CALL    PLACEBUF
 JUSTBUF:
-        MOV     WORD PTR [CURBUF+2],DS
-        MOV     WORD PTR [LASTBUFFER+2],DS
+        MOV     WORD [SS:CURBUF+2],DS
+        MOV     WORD [SS:LASTBUFFER+2],DS
         PUSH    SS
         POP     DS
 ASSUME  DS:DOSGROUP
-        MOV     WORD PTR [CURBUF],DI
-        MOV     WORD PTR [LASTBUFFER],DI
+        MOV     WORD [CURBUF],DI
+        MOV     WORD [LASTBUFFER],DI
         return
-GETBUFFR    ENDP
 
 
-SUBTTL FLUSHBUF -- WRITE OUT DIRTY BUFFERS
+;SUBTTL FLUSHBUF -- WRITE OUT DIRTY BUFFERS
 PAGE
-        procedure   FlushBuf,NEAR
+        procedure   FLUSHBUF,NEAR
 ASSUME  DS:DOSGROUP,ES:NOTHING
 
 ; Input:
@@ -426,39 +411,39 @@ ASSUME  DS:DOSGROUP,ES:NOTHING
 ASSUME  DS:NOTHING
         MOV     AH,-1
 NXTBUFF:
-        CMP     [DI.BUFDRV],AH
+        CMP     [DI+BUFFINFO.BUFDRV],AH
         JZ      SKIPBFF                 ; Skip free buffers
         CMP     AH,AL
         JZ      DOBUFFER                ; Do all dirty buffers
-        CMP     AL,[DI.BUFDRV]
+        CMP     AL,[DI+BUFFINFO.BUFDRV]
         JNZ     SKIPBFF                 ; Buffer not for this unit
 DOBUFFER:
-        CMP     BYTE PTR [DI.BUFDIRTY],0
+        CMP     BYTE [DI+BUFFINFO.BUFDIRTY],0
         JZ      SKIPBFF                 ; Buffer not dirty
         PUSH    AX
-        PUSH    WORD PTR [DI.BUFDRV]
+        PUSH    WORD [DI+BUFFINFO.BUFDRV]
         CALL    BUFWRITE
         POP     AX
         XOR     AH,AH                   ; Buffer is clean
-        CMP     AL,BYTE PTR [WPERR]
+        CMP     AL,BYTE [SS:WPERR]
         JNZ     NOZAP
         MOV     AL,0FFH                 ; Invalidate buffer, it is inconsistent
 NOZAP:
-        MOV     WORD PTR [DI.BUFDRV],AX
+        MOV     WORD [DI+BUFFINFO.BUFDRV],AX
         POP     AX                      ; Search info
 SKIPBFF:
-        LDS     DI,[DI.NEXTBUF]
+        LDS     DI,[DI+BUFFINFO.NEXTBUF]
         CMP     DI,-1
         JNZ     NXTBUFF
         PUSH    SS
         POP     DS
+SKIPBFF_ret:
         return
-FlushBuf    ENDP
 
 
-SUBTTL BUFWRITE -- WRITE OUT A BUFFER IF DIRTY
+;SUBTTL BUFWRITE -- WRITE OUT A BUFFER IF DIRTY
 PAGE
-        procedure   BufWrite,NEAR
+        procedure   BUFWRITE,NEAR
 ASSUME  DS:NOTHING,ES:NOTHING
 
 ; Input:
@@ -470,17 +455,17 @@ ASSUME  DS:NOTHING,ES:NOTHING
 ; DS:DI Preserved, ALL others destroyed (ES too)
 
         MOV     AX,00FFH
-        XCHG    AX,WORD PTR [DI.BUFDRV] ; Free, in case write barfs
+        XCHG    AX,WORD [DI+BUFFINFO.BUFDRV] ; Free, in case write barfs
         CMP     AL,0FFH
-        retz                            ; Buffer is free.
+        jz SKIPBFF_ret                  ; Buffer is free.
         OR      AH,AH
-        retz                            ; Buffer is clean.
-        CMP     AL,BYTE PTR [WPERR]
-        retz                            ; If in WP error zap buffer
-        LES     BP,[DI.BUFDRVDP]
-        LEA     BX,[DI.BufInSiz]        ; Point at buffer
-        MOV     DX,[DI.BUFSECNO]
-        MOV     CX,WORD PTR [DI.BUFWRTCNT]
+        jz SKIPBFF_ret                  ; Buffer is clean.
+        CMP     AL,BYTE [SS:WPERR]
+        jz SKIPBFF_ret                  ; If in WP error zap buffer
+        LES     BP,[DI+BUFFINFO.BUFDRVDP]
+        LEA     BX,[DI+BUFINSIZ]        ; Point at buffer
+        MOV     DX,[DI+BUFFINFO.BUFSECNO]
+        MOV     CX,WORD [DI+BUFFINFO.BUFWRTCNT]
         MOV     AL,CH                   ; [DI.BUFWRTINC]
         XOR     CH,CH
         MOV     AH,CH
@@ -500,9 +485,5 @@ WRTAGAIN:
         LOOP    WRTAGAIN
         POP     DI
         return
-BufWrite    ENDP
 
 do_ext
-
-CODE    ENDS
-    END
