@@ -169,8 +169,8 @@ INIT:
 	IF	INTINP
 	CLI			; Set up keyboard interrupt vector.
 	IF	IBM
-	MOV	word[IVT_KEYBOARD_VECTOR],KBINT
-	MOV	[IVT_KEYBOARD_SEGMENT],CS
+	MOV	word[BP+IVT_KEYBOARD_VECTOR],KBINT
+	MOV	[BP+IVT_KEYBOARD_SEGMENT],CS
 	ELSE
 	MOV	word[BP+64H],KBINT
 	MOV	[BP+66H],CS
@@ -321,16 +321,21 @@ MONTAB  DB      31              ;January
         DB      31              ;December
 END	IF
 
+	IF	IBM
 BCD_TO_BIN:
 	PUSH	BX
+	PUSH	CX
 	MOV	BH,AL		; BH = ones digit
 	AND	BH,0Fh
-	SHR	AL,4		; AL = tens digit
+	MOV	CL,4		; AL = tens digit
+	SHR	AL,CL
 	MOV	AH,10		; AX = 10 * AL + BH
 	MUL	AH
 	ADD	AL,BH
+	POP	CX
 	POP	BX
 	RET
+	END	IF
 
 GETTIME:
 IF	IBM
@@ -366,9 +371,23 @@ IF	IBM
 	PUSH	DX
 	MUL	BX
 	POP	DX
-	SHR	BX,2		; Add leap years
-	ADD	AX,BX
 
+	PUSH	AX		; One day for every 29th of February gone
+	MOV	AX,BX		;  by: 1980, 1984, ... are leap years, so
+	ADD	AX,3		;  (years+3)/4 of them precede 1 January.
+	SHR	AX,1
+	SHR	AX,1
+	MOV	CX,AX
+	POP	AX
+	ADD	AX,CX
+
+	TEST	BL,3		; This year's 29th of February counts
+	JNZ	ADD_MONTHS	;  once March has been reached.
+	CMP	DH,2
+	JBE	ADD_MONTHS
+	INC	AX
+
+ADD_MONTHS:
 	XOR	CX,CX		; Add days for the months in the current year
 	XOR	BX,BX
 	DEC	DH			; 0-based month
@@ -382,6 +401,7 @@ ADD_MONTH_DAYS:
 
 ADD_DAYS:
 	AND	DX,0FFH			; Add current month days
+	DEC	DX			; Days are one-based, the count is not
 	ADD	AX,DX
 	MOV	BX,AX
 
@@ -439,6 +459,111 @@ STCBYTE:
 	RET
 END	IF
 
+IF	IBM
+;
+; Hand the new time and date to the real-time clock, so that they survive
+; the next call to GETTIME, which reads it back.
+;
+SETTIME:			; CX:DX = hours, minutes, seconds, 1/100.
+	PUSH	AX
+	PUSH	BX
+	PUSH	CX
+	PUSH	DX
+	MOV	AL,CH
+	CALL	BIN_TO_BCD
+	MOV	BH,AL		; BH = hours.
+	MOV	AL,CL
+	CALL	BIN_TO_BCD
+	MOV	BL,AL		; BL = minutes.
+	MOV	AL,DH
+	CALL	BIN_TO_BCD
+	MOV	DH,AL		; DH = seconds.
+	MOV	CX,BX
+	XOR	DL,DL		; Standard time, not daylight saving.
+	MOV	AH,3
+	INT	1AH
+	POP	DX
+	POP	CX
+	POP	BX
+	POP	AX
+	RETF
+
+SETDATE:			; AX = days since 1 January 1980.
+	PUSH	AX
+	PUSH	BX
+	PUSH	CX
+	PUSH	DX
+	XOR	CX,CX		; Count off whole years first.
+SETDATE_YEAR:
+	MOV	BX,365
+	TEST	CL,3		; 1980, 1984, ... are leap years.
+	JNZ	SETDATE_NOLEAP
+	INC	BX
+SETDATE_NOLEAP:
+	CMP	AX,BX
+	JB	SETDATE_MONTHS
+	SUB	AX,BX
+	INC	CX
+	JMP	SHORT SETDATE_YEAR
+
+SETDATE_MONTHS:
+	XOR	BX,BX		; Then whole months; BX counts from zero.
+	XOR	DX,DX
+SETDATE_NEXT:
+	MOV	DL,[CS:MONTAB+BX]
+	CMP	BL,1		; February is longer in a leap year.
+	JNE	SETDATE_LEN
+	TEST	CL,3
+	JNZ	SETDATE_LEN
+	INC	DX
+SETDATE_LEN:
+	CMP	AX,DX
+	JB	SETDATE_SPLIT
+	SUB	AX,DX
+	INC	BL
+	JMP	SHORT SETDATE_NEXT
+
+SETDATE_SPLIT:
+	INC	AL		; What is left is the day, counted from zero.
+	CALL	BIN_TO_BCD
+	MOV	[CS:RTCDAY],AL
+	MOV	AL,BL
+	INC	AL
+	CALL	BIN_TO_BCD
+	MOV	[CS:RTCMON],AL
+	MOV	AX,CX		; Split the year at the century.
+	ADD	AX,1980
+	MOV	BL,100
+	DIV	BL		; AL = century, AH = year within it.
+	MOV	[CS:RTCYR],AH
+	CALL	BIN_TO_BCD
+	MOV	CH,AL
+	MOV	AL,[CS:RTCYR]
+	CALL	BIN_TO_BCD
+	MOV	CL,AL
+	MOV	DH,[CS:RTCMON]
+	MOV	DL,[CS:RTCDAY]
+	MOV	AH,5
+	INT	1AH
+	POP	DX
+	POP	CX
+	POP	BX
+	POP	AX
+	RETF
+
+BIN_TO_BCD:			; AL = 0..99, returned as packed BCD.
+	PUSH	CX
+	AAM			; AH = tens digit, AL = ones digit.
+	MOV	CL,4
+	SHL	AH,CL
+	OR	AL,AH
+	POP	CX
+	RET
+
+RTCDAY	DB	0
+RTCMON	DB	0
+RTCYR	DB	0
+ELSE
 SETTIME:
 	PUSH	CX
 	PUSH	DX
@@ -494,6 +619,7 @@ POINTSTAT:
 	OUT	STCCOM,AL		;   so power-off glitches won't hurt
 	POP	AX
 	RETF
+END	IF
 ;
 ; ************ CONSOLE INPUT ************
 ;
@@ -1111,26 +1237,8 @@ MOTORSON:
 ;
 READ:
 	IF	IBM
-	PUSH	ES
-	PUSH	DS
-	POP	ES
-
-	PUSH	CX
-	PUSH	AX
-	MOV	AX,DX
-	MOV	CH,FLOPPY_SECTORS_PER_HEAD
-	DIV	CH
-	MOV	CL,AH
-	INC	CL		; sector
-	XOR	AH,AH
-	MOV	CH,FLOPPY_HEADS_PER_CYLINDER
-	DIV	CH
-	MOV	CH,AL	; cylinder
-	POP	DX
-	MOV	DH,AH	; head
-	POP	AX
-	MOV	AH,2
-	INT	13H
+	MOV	AH,2		; BIOS read sectors.
+	JMP	DISKIO
 	ELSE
 	CALL	SEEK		;Position head
 	JC	ERROR
@@ -1143,9 +1251,9 @@ RDLP:
 	INC	DH		;Next sector number
 	LOOP	RDLP		;Read each sector requested
 	CLC			; No errors.
+	POP	ES		; Restore ES register.
 	END	IF
 
-	POP	ES		; Restore ES register.
 	RETF
 ;
 ; Disk write function.
@@ -1153,28 +1261,8 @@ RDLP:
 ;
 WRITE:
 	IF	IBM
-	PUSH	ES
-	PUSH	DS
-	POP	ES
-
-	PUSH	CX
-	PUSH	AX
-	MOV	AX,DX
-	MOV	CH,FLOPPY_SECTORS_PER_HEAD
-	DIV	CH
-	MOV	CL,AH
-	INC	CL		; sector
-	XOR	AH,AH
-	MOV	CH,FLOPPY_HEADS_PER_CYLINDER
-	DIV	CH
-	MOV	CH,AL	; cylinder
-	POP	DX
-	MOV	DH,AH	; head
-	POP AX
-	MOV	AH,3
-	INT	13H
-
-	POP	ES
+	MOV	AH,3		; BIOS write sectors.
+	JMP	DISKIO
 ELSE
 	CALL	SEEK		;Position head
 	JC	ERROR
@@ -1188,6 +1276,120 @@ WRITERET:
 END	IF
 	RETF
 
+	IF	IBM
+;
+; Common disk transfer for the IBM Personal Computer.
+; AH = INT 13h function, other registers as for READ above.  The request is
+; split at track boundaries, because the BIOS cannot cross a cylinder, and
+; each piece is retried before the transfer is given up.
+;
+DISKIO:
+	PUSH	SI
+	PUSH	ES
+	PUSH	DS
+	POP	ES		; The BIOS transfers through ES:BX.
+	MOV	[CS:DISKFUN],AH
+	MOV	[CS:DISKDRV],AL
+	MOV	[CS:DISKSEC],DX
+	MOV	[CS:DISKCNT],CX	; CX itself is needed for the C/H/S.
+
+DISKIO_PIECE:
+	MOV	AX,[CS:DISKSEC]	; Logical sector to cylinder/head/sector.
+	XOR	DX,DX
+	DIV	word[CS:SECPERTRK]
+	MOV	SI,DX		; SI = zero-based sector within the track.
+	XOR	DX,DX
+	DIV	word[CS:NUMHEADS]
+	MOV	CH,AL		; CH = cylinder.
+	MOV	DH,DL		; DH = head.
+	MOV	DL,[CS:DISKDRV]
+	MOV	AX,SI
+	INC	AX
+	MOV	CL,AL		; CL = one-based sector.
+
+	MOV	AX,[CS:SECPERTRK]	; Never ask for more than the rest
+	SUB	AX,SI			;  of the track.
+	CMP	AX,[CS:DISKCNT]
+	JBE	DISKIO_START
+	MOV	AX,[CS:DISKCNT]
+DISKIO_START:
+	MOV	SI,AX		; SI = sectors in this piece.
+	MOV	byte[CS:DISKTRY],3
+DISKIO_AGAIN:
+	MOV	AX,SI
+	MOV	AH,[CS:DISKFUN]
+	INT	13H
+	JNC	DISKIO_NEXT
+	DEC	byte[CS:DISKTRY]
+	JZ	DISKIO_FAILED
+	PUSH	DX		; Recalibrate the drive and have another go.
+	XOR	AX,AX
+	INT	13H
+	POP	DX
+	JMP	SHORT DISKIO_AGAIN
+
+DISKIO_NEXT:
+	SUB	[CS:DISKCNT],SI	; Sectors still to go.
+	JZ	DISKIO_DONE
+	ADD	[CS:DISKSEC],SI	; Step past the piece just transferred.
+	MOV	AX,SI
+	MUL	word[CS:SECSIZE]
+	ADD	BX,AX
+	JMP	SHORT DISKIO_PIECE
+
+DISKIO_DONE:
+	XOR	CX,CX		; Nothing left to transfer.
+	POP	ES
+	POP	SI
+	CLC			; No errors.
+	RETF
+
+; CX is left holding the sectors still to go, the first of which failed,
+; and AL the MS-DOS error code; MS-DOS restores BX and DX itself.
+DISKIO_FAILED:
+	MOV	AL,12		; A "disk" error unless the table knows better.
+	MOV	SI,IBMERRTAB
+	MOV	CX,IBMERRLEN
+DISKIO_CODE:
+	CMP	AH,[CS:SI]
+	JE	DISKIO_GOTCODE
+	INC	SI
+	INC	SI
+	LOOP	DISKIO_CODE
+	JMP	SHORT DISKIO_BADEXIT
+DISKIO_GOTCODE:
+	MOV	AL,[CS:SI+1]
+DISKIO_BADEXIT:
+	MOV	CX,[CS:DISKCNT]
+	XOR	AH,AH
+	POP	ES
+	POP	SI
+	STC
+	RETF
+
+DISKFUN	  DB	0	; INT 13h function of the transfer in progress.
+DISKDRV	  DB	0	; BIOS drive number.
+DISKTRY	  DB	0	; Attempts left on the current piece.
+DISKSEC	  DW	0	; Logical sector of the current piece.
+DISKCNT	  DW	0	; Sectors still to transfer.
+SECPERTRK DW	FLOPPY_SECTORS_PER_HEAD
+NUMHEADS  DW	FLOPPY_HEADS_PER_CYLINDER
+SECSIZE	  DW	512
+
+IBMERRTAB:			; BIOS status to MS-DOS error code.
+	DB	03H,0		; Write protected
+	DB	80H,2		; Timeout, drive not ready
+	DB	0AAH,2		; Drive not ready
+	DB	10H,4		; Bad CRC
+	DB	40H,6		; Seek failed
+	DB	02H,8		; Address mark not found
+	DB	04H,8		; Sector not found
+	DB	0CCH,10		; Write fault
+	DB	20H,12		; Controller failure
+IBMERRLEN = ($-IBMERRTAB)/2
+	END	IF
+
+	IF	IBM	=	0
 POPESERROR:
 	POP	ES		; Restore ES register.
 ERROR:
@@ -1212,6 +1414,7 @@ ERRTAB:
 	DB	10H		;Sector not found
 	DB	20H		;Write fault
 	DB	7		;"Disk" error
+	END	IF
 ;
 ; Direct disk read and write from INT 37 and INT 38.  Subroutine GETIODRIVER
 ; calls DSKCHG to convert disk drive number to I/O driver number.

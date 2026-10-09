@@ -51,6 +51,7 @@ boot:
         cli
         xor bp, bp
         mov ss, bp
+        mov ds, bp      ; the BIOS does not promise DS = 0
         mov sp, IOSEG*16
         sti
         mov [drive], dl
