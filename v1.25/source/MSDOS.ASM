@@ -2740,7 +2740,7 @@ GETCH:
         CMP     AL,[CS:ESCCHAR]
         JZ      _ESC
         IF      IBM
-        CMP     AL,0xE
+        CMP     AL,8
         JZ      BACKSP
         ELSE
         CMP     AL,7FH

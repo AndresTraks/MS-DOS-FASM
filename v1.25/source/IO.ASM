@@ -692,6 +692,12 @@ IF	IBM
 	CMP	AL,80H		; Ignore all other break codes.
 	JAE	LEAVINT
 
+	CMP	AL,3BH		; F1 to F10 carry no character, so they go out
+	JB	KB_NOTFKEY	;  as extended keys.
+	CMP	AL,44H
+	JBE	KB_SEND_EXT
+KB_NOTFKEY:
+
 	PUSH	SI		; Load character map
 	MOV	SI,KB_MAP_SHIFT
 	TEST	[CS:KB_STATUS],KB_SHIFT
@@ -715,13 +721,27 @@ KB_HANDLE_KEYCODE:
 KB_SEND:
 	JMP	KBCHAR		; Queue it, flushing only on Ctrl-C/S/F.
 
-KB_EXTENDED_KEY:		; E0 pair: only the right Ctrl is of interest.
+KB_EXTENDED_KEY:		; E0 pair: the right Ctrl and the grey keys.
 	AND	[CS:KB_STATUS],NOT	KB_EXTENDED
 	CMP	AL,1DH
 	JE	KB_CTRL_DOWN
 	CMP	AL,9DH
 	JE	KB_CTRL_UP
-	JMP	LEAVINT
+	CMP	AL,1CH		; Keypad Enter is just a return.
+	JNE	KB_EXT_SLASH
+	MOV	AL,13
+	JMP	KBCHAR
+KB_EXT_SLASH:
+	CMP	AL,35H		; ... and keypad slash just a slash.
+	JNE	KB_EXT_PAD
+	MOV	AL,"/"
+	JMP	KBCHAR
+KB_EXT_PAD:			; The cursor pad, under the scan code its keypad
+	CMP	AL,47H		;  twin would carry; everything else is dropped.
+	JB	LEAVINT
+	CMP	AL,53H
+	JA	LEAVINT
+	JMP	KB_SEND_EXT
 
 KB_SET_EXTENDED:
 	OR	[CS:KB_STATUS],KB_EXTENDED
@@ -752,10 +772,10 @@ KB_STATUS DB 0
 
 KB_MAP:
 	DB 0
-	DB 0
+	DB 27		; Esc, which MSDOS.ASM takes as CANCEL
 	DB '1234567890-='
-	DB 0xe		; Backspace; MSDOS.ASM maps 0Eh, not 08h
-	DB 0
+	DB 8		; Backspace
+	DB 9		; Tab
 	DB 'qwertyuiop'
 	DB '[]'
 	DB 13
@@ -785,10 +805,10 @@ KB_MAP:
 
 KB_MAP_SHIFT:
 	DB 0
-	DB 0
+	DB 27		; Esc
 	DB '!@#$%^&*()_+'
-	DB 0xe
-	DB 0
+	DB 8		; Backspace
+	DB 9		; Tab
 	DB 'QWERTYUIOP'
 	DB '{}'
 	DB 13
@@ -818,6 +838,30 @@ ELSE
 	OUT	BASE+2,AL	;Send to slave
 	IN	AL,DATA		;Get the character
 END	IF
+
+; An extended key reaches the application as a zero followed by the scan code.
+; MS-DOS expects exactly that: ESCCH is 0 for IBM and its ESCTAB is a table of
+; scan codes, so its own line editing keys start working at the same time.
+KB_SEND_EXT:
+	PUSH	AX
+	XOR	AL,AL
+	CALL	KBPUT
+	POP	AX
+	CALL	KBPUT
+	JMP	LEAVINT
+
+; Append AL to the queue, dropping it if the queue is full.  SI is preserved.
+KBPUT:
+	PUSH	SI
+	MOV	SI,[CS:REAR]
+	CALL	INCQ
+	CMP	SI,[CS:FRONT]
+	JZ	KBPUT_FULL
+	MOV	[CS:SI],AL
+	MOV	[CS:REAR],SI
+KBPUT_FULL:
+	POP	SI
+	RET
 
 KBCHAR:
 	AND	AL,7FH
