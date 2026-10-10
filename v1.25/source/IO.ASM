@@ -77,7 +77,7 @@ BIOSSEG	=	60H		; I/O system segment.
 	ELSE
 BIOSSEG	=	40H		; I/O system segment.
 	END	IF
-BIOSLEN	EQU	2048		; Maximum length of I/O system.
+BIOSLEN	EQU	4096		; Maximum length of I/O system.
 DOSLEN	EQU	8192		; Maximum length of MS-DOS.
 QSIZE	EQU	80		; Input queue size.
 PBUFSIZ	EQU	128		; Size of print buffer
@@ -1280,8 +1280,10 @@ END	IF
 ;
 ; Common disk transfer for the IBM Personal Computer.
 ; AH = INT 13h function, other registers as for READ above.  The request is
-; split at track boundaries, because the BIOS cannot cross a cylinder, and
-; each piece is retried before the transfer is given up.
+; split at track boundaries, because the BIOS cannot cross a cylinder, and at
+; 64K physical pages, because the DMA controller cannot carry out of one; a
+; single sector that straddles a page goes through DISKBUF.  Each piece is
+; retried before the transfer is given up.
 ;
 DISKIO:
 	PUSH	SI
@@ -1314,12 +1316,51 @@ DISKIO_PIECE:
 	MOV	AX,[CS:DISKCNT]
 DISKIO_START:
 	MOV	SI,AX		; SI = sectors in this piece.
+
+; The BIOS transfers through the DMA controller, whose address counter cannot
+; carry out of a 64K physical page, so a piece may not straddle one either --
+; the BIOS rejects such a request with status 09H.  Shorten the piece to what
+; is left of the page; if that is under one sector, the sector itself straddles
+; the page and has to go through a buffer that does not.
+	MOV	byte[CS:DISKBNC],0
+	PUSH	AX
+	PUSH	CX
+	PUSH	DX
+	MOV	AX,ES
+	MOV	CL,4
+	SHL	AX,CL		; Low 16 bits of ES*16 ...
+	ADD	AX,BX		;  ... plus BX: the position within the page.
+	NEG	AX		; Bytes left in it; zero means a whole page.
+	JZ	DISKIO_PAGED
+	XOR	DX,DX
+	DIV	word[CS:SECSIZE]	; AX = whole sectors still inside the page.
+	OR	AX,AX
+	JZ	DISKIO_STRADDLE
+	CMP	AX,SI
+	JAE	DISKIO_PAGED
+	MOV	SI,AX
+DISKIO_PAGED:
+	POP	DX
+	POP	CX
+	POP	AX
+	JMP	SHORT DISKIO_TRY
+DISKIO_STRADDLE:
+	POP	DX
+	POP	CX
+	POP	AX
+	MOV	SI,1			; One sector, through DISKBUF.
+	MOV	byte[CS:DISKBNC],1
+
+DISKIO_TRY:
 	MOV	byte[CS:DISKTRY],3
 DISKIO_AGAIN:
+	CMP	byte[CS:DISKBNC],0
+	JNZ	DISKIO_VIABUF
 	MOV	AX,SI
 	MOV	AH,[CS:DISKFUN]
 	INT	13H
 	JNC	DISKIO_NEXT
+DISKIO_RETRY:
 	DEC	byte[CS:DISKTRY]
 	JZ	DISKIO_FAILED
 	PUSH	DX		; Recalibrate the drive and have another go.
@@ -1328,6 +1369,73 @@ DISKIO_AGAIN:
 	POP	DX
 	JMP	SHORT DISKIO_AGAIN
 
+; One sector, staged through DISKBUF so the BIOS never sees the straddle.
+DISKIO_VIABUF:
+	CMP	byte[CS:DISKFUN],3	; A write has to be staged first.
+	JNZ	DISKIO_VIARD
+	CALL	DISKIO_TOBUF
+DISKIO_VIARD:
+	PUSH	ES
+	PUSH	BX
+	PUSH	CS
+	POP	ES
+	MOV	BX,DISKBUF
+	MOV	AX,1
+	MOV	AH,[CS:DISKFUN]
+	INT	13H
+	POP	BX
+	POP	ES
+	JC	DISKIO_RETRY
+	CMP	byte[CS:DISKFUN],3
+	JZ	DISKIO_NEXT
+	CALL	DISKIO_FROMBUF		; A read is handed back out of it.
+	JMP	SHORT DISKIO_NEXT
+
+; ES:BX -> CS:DISKBUF, and back.  All registers preserved.
+DISKIO_TOBUF:
+	PUSHF
+	PUSH	SI
+	PUSH	DI
+	PUSH	CX
+	PUSH	DS
+	PUSH	ES
+	PUSH	ES
+	POP	DS
+	MOV	SI,BX
+	PUSH	CS
+	POP	ES
+	MOV	DI,DISKBUF
+	MOV	CX,[CS:SECSIZE]
+	CLD
+	REP	MOVSB
+	POP	ES
+	POP	DS
+	POP	CX
+	POP	DI
+	POP	SI
+	POPF
+	RET
+
+DISKIO_FROMBUF:
+	PUSHF
+	PUSH	SI
+	PUSH	DI
+	PUSH	CX
+	PUSH	DS
+	PUSH	CS
+	POP	DS
+	MOV	SI,DISKBUF
+	MOV	DI,BX
+	MOV	CX,[CS:SECSIZE]
+	CLD
+	REP	MOVSB
+	POP	DS
+	POP	CX
+	POP	DI
+	POP	SI
+	POPF
+	RET
+
 DISKIO_NEXT:
 	SUB	[CS:DISKCNT],SI	; Sectors still to go.
 	JZ	DISKIO_DONE
@@ -1335,7 +1443,7 @@ DISKIO_NEXT:
 	MOV	AX,SI
 	MUL	word[CS:SECSIZE]
 	ADD	BX,AX
-	JMP	SHORT DISKIO_PIECE
+	JMP	DISKIO_PIECE
 
 DISKIO_DONE:
 	XOR	CX,CX		; Nothing left to transfer.
@@ -1375,6 +1483,8 @@ DISKCNT	  DW	0	; Sectors still to transfer.
 SECPERTRK DW	FLOPPY_SECTORS_PER_HEAD
 NUMHEADS  DW	FLOPPY_HEADS_PER_CYLINDER
 SECSIZE	  DW	512
+DISKBNC	  DB	0	; Nonzero while a piece goes through DISKBUF.
+DISKBUF	  DB	512 dup(0)	; A sector that straddles a 64K DMA page.
 
 IBMERRTAB:			; BIOS status to MS-DOS error code.
 	DB	03H,0		; Write protected
