@@ -896,6 +896,7 @@ QFULL:
 STATUS:
 	PUSH	SI
 	IF	IBM
+	CALL	PRNPOLL		; Give the printer queue a chance to empty.
 	JMP	NOPRN
 	END	IF
 ;See if printer ready
@@ -1028,6 +1029,58 @@ OUTLP:
 	OUT	DATA,AL
 	END	IF
 	RETF
+
+; Hand one queued character to the BIOS printer service.  Without this the
+; queue is never emptied on an IBM, and PRINT, which spins here waiting for
+; room in it, stops the machine dead at the 129th character -- LPRINT of a
+; couple of lines is enough.
+;
+; With no printer fitted the character is thrown away instead.  Waiting for a
+; port that will never answer is the same hang by a longer road, and a machine
+; with nothing on LPT1 should lose its listing, not its mind.
+PRNPOLL:
+	PUSH	AX
+	PUSH	DX
+	PUSH	SI
+	MOV	SI,[CS:PFRONT]
+	CMP	SI,[CS:PREAR]	; Anything waiting?
+	JZ	PRNPX
+	PUSH	DS		; Is there an LPT1 at all?
+	MOV	AX,40H
+	MOV	DS,AX
+	MOV	AX,[8]
+	POP	DS
+	OR	AX,AX
+	JZ	PRNPTAKE	; No: take it off the queue and drop it.
+	XOR	DX,DX
+	MOV	AH,2		; Ask the printer how it is.
+	INT	17H
+	TEST	AH,80H		; Bit 7 set: not busy, send it.
+	JNZ	PRNPTAKE
+	TEST	AH,29H		; Out of paper, I/O error or timed out: drop it.
+	JNZ	PRNPTAKE
+	JMP	PRNPX		; Just busy; try again next time around.
+PRNPTAKE:
+	CALL	INCPQ
+	MOV	[CS:PFRONT],SI
+	MOV	AL,[CS:SI]
+	PUSH	AX		; Was there a printer to send it to?
+	PUSH	DS
+	MOV	AX,40H
+	MOV	DS,AX
+	MOV	AX,[8]
+	POP	DS
+	OR	AX,AX
+	POP	AX
+	JZ	PRNPX
+	XOR	DX,DX
+	XOR	AH,AH		; Print the character.
+	INT	17H
+PRNPX:
+	POP	SI
+	POP	DX
+	POP	AX
+	RET
 
 PRINT:
 	PUSH	SI
