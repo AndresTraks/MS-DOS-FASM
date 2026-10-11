@@ -124,6 +124,8 @@ KB_LSHIFT	=	1
 KB_CTRL		=	2
 KB_EXTENDED	=	4
 KB_RSHIFT	=	8
+KB_ALT		=	16
+KB_CAPS		=	32	; Caps Lock is a toggle, not a key being held.
 KB_SHIFT	=	KB_LSHIFT+KB_RSHIFT
 
 FLOPPY_SECTORS_PER_HEAD		=	18
@@ -689,6 +691,12 @@ IF	IBM
 	JE	KB_RSHIFT_DOWN
 	CMP	AL,0B6H
 	JE	KB_RSHIFT_UP
+	CMP	AL,38H
+	JE	KB_ALT_DOWN
+	CMP	AL,0B8H
+	JE	KB_ALT_UP
+	CMP	AL,3AH		; Caps Lock toggles on the make code; its break
+	JE	KB_CAPS_TOGGLE	;  code falls into the filter just below.
 	CMP	AL,80H		; Ignore all other break codes.
 	JAE	LEAVINT
 
@@ -697,6 +705,8 @@ IF	IBM
 	CMP	AL,44H
 	JBE	KB_SEND_EXT
 KB_NOTFKEY:
+	TEST	[CS:KB_STATUS],KB_ALT
+	JNZ	KB_ALT_KEY	; Alt makes an extended key of the letter keys.
 
 	PUSH	SI		; Load character map
 	MOV	SI,KB_MAP_SHIFT
@@ -714,12 +724,72 @@ KB_HANDLE_KEYCODE:
 	JZ	LEAVINT
 	CMP	AL,-1
 	JZ	LEAVINT
+
+	TEST	[CS:KB_STATUS],KB_CAPS
+	JZ	KB_NOTCAPS
+	CMP	AL,"a"		; Caps Lock inverts the shift state of the letter
+	JB	KB_CAPS_UPPER	;  keys and of nothing else, so it works on the
+	CMP	AL,"z"		;  character the map gave rather than on the scan
+	JA	KB_NOTCAPS	;  code.
+	SUB	AL,"a"-"A"
+	JMP	KB_NOTCAPS
+KB_CAPS_UPPER:
+	CMP	AL,"A"
+	JB	KB_NOTCAPS
+	CMP	AL,"Z"
+	JA	KB_NOTCAPS
+	ADD	AL,"a"-"A"
+KB_NOTCAPS:
+
 	TEST	[CS:KB_STATUS],KB_CTRL
 	JZ	KB_SEND
-	AND	AL,1FH		; Ctrl-<char> is the low five bits.
-	JZ	LEAVINT		; Ctrl with no control code.
+	CMP	AL,"@"		; Ctrl-<char> is the low five bits, but only for
+	JB	KB_CTRL_ODD	;  the keys that have a control code: the letters
+	CMP	AL,"_"		;  and the punctuation between @ and _.  Folding a
+	JA	KB_CTRL_ODD	;  digit the same way invents codes the BIOS never
+	AND	AL,1FH		;  reports, and GW-BASIC reads those as line
+	JZ	LEAVINT		;  editing keys -- Ctrl-5 arrived as ^U and
+	JMP	KB_SEND		;  deleted the line.
+KB_CTRL_ODD:
+	CMP	AL,"a"
+	JB	KB_CTRL_PUNCT
+	CMP	AL,"z"
+	JA	KB_CTRL_PUNCT
+	AND	AL,1FH
+	JMP	KB_SEND
+KB_CTRL_PUNCT:
+	CMP	AL,"6"		; The two keys the BIOS maps somewhere other than
+	JNE	KB_CTRL_MINUS	;  their low five bits.
+	MOV	AL,1EH
+	JMP	KB_SEND
+KB_CTRL_MINUS:
+	CMP	AL,"-"
+	JNE	KB_CTRL_OTHER
+	MOV	AL,1FH
+	JMP	KB_SEND
+KB_CTRL_OTHER:
+	CMP	AL,20H		; A control character is already itself, and the
+	JAE	LEAVINT		;  rest have no Ctrl code at all.
 KB_SEND:
 	JMP	KBCHAR		; Queue it, flushing only on Ctrl-C/S/F.
+
+; Alt+<letter> goes out as an extended key carrying the letter's own scan code.
+; That is what the BIOS reports, and what GW-BASIC's super-shift expansion
+; reads to turn Alt-A into AUTO.  No other Alt combination has a code here.
+KB_ALT_KEY:
+	CMP	AL,10H		; Q to P
+	JB	LEAVINT
+	CMP	AL,19H
+	JBE	KB_SEND_EXT
+	CMP	AL,1EH		; A to L
+	JB	LEAVINT
+	CMP	AL,26H
+	JBE	KB_SEND_EXT
+	CMP	AL,2CH		; Z to M
+	JB	LEAVINT
+	CMP	AL,32H
+	JBE	KB_SEND_EXT
+	JMP	LEAVINT
 
 KB_EXTENDED_KEY:		; E0 pair: the right Ctrl and the grey keys.
 	AND	[CS:KB_STATUS],NOT	KB_EXTENDED
@@ -727,6 +797,10 @@ KB_EXTENDED_KEY:		; E0 pair: the right Ctrl and the grey keys.
 	JE	KB_CTRL_DOWN
 	CMP	AL,9DH
 	JE	KB_CTRL_UP
+	CMP	AL,38H		; The right Alt is an Alt like any other.
+	JE	KB_ALT_DOWN
+	CMP	AL,0B8H
+	JE	KB_ALT_UP
 	CMP	AL,1CH		; Keypad Enter is just a return.
 	JNE	KB_EXT_SLASH
 	MOV	AL,13
@@ -741,7 +815,34 @@ KB_EXT_PAD:			; The cursor pad, under the scan code its keypad
 	JB	LEAVINT
 	CMP	AL,53H
 	JA	LEAVINT
+	TEST	[CS:KB_STATUS],KB_CTRL
+	JZ	KB_SEND_EXT
+	PUSH	SI		; Held with Ctrl, the pad keys that have a Ctrl
+	MOV	SI,KB_CTRL_PAD	;  scan code of their own report that instead,
+	XOR	AH,AH		;  as the BIOS does.  The rest the BIOS drops,
+	SUB	AL,47H		;  and so does this.
+	ADD	SI,AX
+	MOV	AL,[CS:SI]
+	POP	SI
+	CMP	AL,0
+	JZ	LEAVINT
 	JMP	KB_SEND_EXT
+
+; Ctrl scan codes for the cursor pad, 47H to 53H; zero where the BIOS has none.
+KB_CTRL_PAD:
+	DB	77H		; Ctrl-Home   clear screen
+	DB	0		;    Up
+	DB	84H		; Ctrl-PgUp
+	DB	0		;    keypad minus
+	DB	73H		; Ctrl-Left   back one word
+	DB	0		;    keypad 5
+	DB	74H		; Ctrl-Right  forward one word
+	DB	0		;    keypad plus
+	DB	75H		; Ctrl-End    erase to end of line
+	DB	0		;    Down
+	DB	76H		; Ctrl-PgDn
+	DB	0		;    Insert
+	DB	0		;    Delete
 
 KB_SET_EXTENDED:
 	OR	[CS:KB_STATUS],KB_EXTENDED
@@ -766,6 +867,17 @@ KB_RSHIFT_DOWN:
 	JMP	LEAVINT
 KB_RSHIFT_UP:
 	AND	[CS:KB_STATUS],NOT	KB_RSHIFT
+	JMP	LEAVINT
+
+KB_ALT_DOWN:
+	OR	[CS:KB_STATUS],KB_ALT
+	JMP	LEAVINT
+KB_ALT_UP:
+	AND	[CS:KB_STATUS],NOT	KB_ALT
+	JMP	LEAVINT
+
+KB_CAPS_TOGGLE:
+	XOR	[CS:KB_STATUS],KB_CAPS
 	JMP	LEAVINT
 
 KB_STATUS DB 0
@@ -798,7 +910,7 @@ KB_MAP:
 	DB '789-'
 	DB '456+'
 	DB '123'
-	DB '0,'
+	DB '0.'		; keypad Del is a full stop, as on the IBM keypad
 	DB 2 dup(-1)
 	DB 1 dup('\')
 	DB 41 dup(-1)
@@ -829,7 +941,7 @@ KB_MAP_SHIFT:
 	DB '789-'
 	DB '456+'
 	DB '123'
-	DB '0,'
+	DB '0.'
 	DB 2 dup(-1)
 	DB 1 dup('|')
 	DB 41 dup(-1)
