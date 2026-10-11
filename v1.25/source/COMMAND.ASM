@@ -379,7 +379,7 @@ CONPROC:
         MOV     [LTPA],CS
         END IF
 
-        IF      NOT HIGHMEM
+        IF      HIGHMEM = 0
         MOV     AX,CS
         ADD     AX,((RESCODESIZE+RESDATASIZE)+15)/16            ;Compute segment of TPA
         MOV     [LTPA],AX
@@ -424,9 +424,17 @@ CONPROC:
         CALL    DWORD [DS:INITADD]
 
         IF IBMVER
+        IF      HIGHMEM
+        PUSH    DS              ;HEADER is in the init portion, which is not
+        PUSH    CS              ; moved with the resident, so it has to be
+        POP     DS              ; printed from where it still is
+        END IF
         MOV     DX,HEADER
         MOV     AH,PRINTBUF
         INT     33
+        IF      HIGHMEM
+        POP     DS
+        END IF
         END IF
 
 DRV0:

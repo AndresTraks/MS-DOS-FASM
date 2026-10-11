@@ -13,8 +13,7 @@ cd v1.25
 To build v1.25 with IBM hardware support (configured by default in this repo):
 * set `IBM = 1` in IO.ASM instead of `SCP`,
 * set `IBM = TRUE` in STDDOS.ASM instead of `MSVER`,
-* set `IBMVER = TRUE` in COMMAND.ASM instead of `MSVER`,
-* set `HIGHMEM EQU FALSE` in COMMAND.ASM.
+* set `IBMVER = TRUE` in COMMAND.ASM instead of `MSVER`.
 
 # Changes
 v1.25
