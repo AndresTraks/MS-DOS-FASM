@@ -1,0 +1,25 @@
+#!/bin/sh
+set -e
+cd "$(dirname "$0")"
+
+if command -v fasm >/dev/null 2>&1; then
+    FASM=fasm
+elif command -v wine >/dev/null 2>&1; then
+    FASM="wine ../fasmw17332/FASM.EXE"
+    WINEDEBUG=${WINEDEBUG:--all}
+    export WINEDEBUG
+else
+    echo "Neither fasm nor wine found. Please install one of them." >&2
+    exit 1
+fi
+
+# MSDOS.ASM includes the modules DOSLINK used to hand to the linker, in that
+# order.
+$FASM source/MSDOS.ASM bin/MSDOS.SYS
+
+# IO.ASM is the IBM BIOS, and it assembles SYSINIT.ASM in behind itself, which
+# is what the original build did by linking SYSINIT.OBJ after the BIOS.
+# SKELIO.ASM, the skeleton Microsoft shipped, drives an Altos ACS-86C instead.
+$FASM source/IO.ASM bin/IO.SYS
+
+$FASM bootsect.asm bin/bootsect.bin

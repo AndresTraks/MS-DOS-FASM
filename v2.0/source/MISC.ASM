@@ -234,7 +234,7 @@ ASSUME  ES:DOSGROUP
         MOV     WORD [SS:THISDPB+2],ES
         invoke  SETDIRSRCH
         POP     AX
-        MOV     [ENTLAST],-1
+        MOV     [SS:ENTLAST],-1
         invoke  GETENT
         invoke  NEXTENT
         POP     ES

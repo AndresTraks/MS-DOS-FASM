@@ -564,6 +564,11 @@ STRUC Exec0
 .Exec0_6C_FCB    DD      ?               ; default fcb at 6C
 }
 
+virtual at 0
+  Exec0 Exec0
+  sizeof.Exec0 = $ - Exec0
+end virtual
+
 STRUC Exec1
 {
 .Exec1_environ   DW      ?               ; seg addr of environment

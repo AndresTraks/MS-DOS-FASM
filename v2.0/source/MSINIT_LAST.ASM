@@ -51,15 +51,15 @@ ASSUME  ES:DOSGROUP
         MOV     AX,DS
         STOSW
         OR      BYTE [SI+SYSDEV.SDEVATT],ISCIN OR ISCOUT
-        MOV     WORD [BCON],SI
-        MOV     WORD [BCON+2],DS
+        MOV     WORD [CS:BCON],SI
+        MOV     WORD [CS:BCON+2],DS
 CHAR_INIT_LOOP:
         LDS     SI,DWORD [SI]               ; AUX device
         CALL    CHARINIT
         TEST    BYTE [SI+SYSDEV.SDEVATT],ISCLOCK
         JZ      CHAR_INIT_LOOP
-        MOV     WORD [BCLOCK],SI
-        MOV     WORD [BCLOCK+2],DS
+        MOV     WORD [CS:BCLOCK],SI
+        MOV     WORD [CS:BCLOCK+2],DS
         MOV     BP,MEMSTRT      ; ES:BP points to DPB
 PERDRV:
         mov al, '4'
@@ -72,15 +72,15 @@ PERDRV:
         CALL    CHARINIT
         TEST    [SI+SYSDEV.SDEVATT],DEVTYP
         JNZ     PERDRV                          ; Skip any other character devs
-        MOV     CL,[CALLUNIT]
+        MOV     CL,[CS:CALLUNIT]
         XOR     CH,CH
         MOV     [SI+SYSDEV.SDEVNAME],CL                ; Number of units in name field
-        MOV     DL,[NUMIO]
+        MOV     DL,[CS:NUMIO]
         XOR     DH,DH
-        ADD     [NUMIO],CL
+        ADD     [CS:NUMIO],CL
         PUSH    DS
         PUSH    SI
-        LDS     BX,[CALLBPB]
+        LDS     BX,[CS:CALLBPB]
 PERUNIT:
         MOV     SI,[BX]                 ; DS:SI Points to BPB
         INC     BX
@@ -92,9 +92,9 @@ PERUNIT:
         PUSH    DX
         invoke  SETDPB
         MOV     AX,[ES:BP+dpb.dpb_sector_size]
-        CMP     AX,[MAXSEC]
+        CMP     AX,[CS:MAXSEC]
         JBE     NOTMAX
-        MOV     [MAXSEC],AX
+        MOV     [CS:MAXSEC],AX
 NOTMAX:
         POP     DX
         POP     CX
