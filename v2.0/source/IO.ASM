@@ -58,7 +58,8 @@ HDR_DSK: DW      -1,-1                   ; last in the list
         DW      2000h                   ; block device
         DW      STRATEGY
         DW      DSK_INT
-DRVMAX  DB      1                       ; one unit, drive A
+DRVMAX  DB      1                       ; units, as many as the ROM has;
+                                        ;  DSK_INIT asks and writes it here
         DB      7 dup (0)
 
 ; ---------------------------------------------------------------------------
@@ -612,7 +613,9 @@ BPB:    DW      BYTES_PER_SECTOR
         DB      0F0h                    ; media descriptor
         DW      9                       ; sectors per FAT
 
-BPBTAB: DW      BPB                     ; one per unit
+; One word per unit, as SYSINIT walks it two bytes at a time.  Both drives
+; on this machine are the same, so both point at the one block.
+BPBTAB: DW      BPB, BPB
 
 DSK_WRV:
 DSK_WRT:
@@ -622,8 +625,9 @@ DSK_RED:
         MOV     byte [CS:DSKOP],2       ; INT 13h read
 DSK_GO:
         ; AL = unit, CX = sectors, DX = first logical sector, ES:DI = buffer
-        OR      AL,AL
-        JNZ     DSK_UNIT
+        CMP     AL,[CS:DRVMAX]
+        JNB     DSK_UNIT
+        MOV     [CS:DSKDRV],AL          ; the ROM drive this request is for
         JCXZ    DSK_DONE
         MOV     [CS:DSKCNT],CX
         MOV     [CS:DSKSEC],DX
@@ -711,7 +715,7 @@ DSK_ONE0:
         DIV     BX                      ; AX = cylinder, DX = head
         MOV     CH,AL
         MOV     DH,DL
-        MOV     DL,0                    ; drive A
+        MOV     DL,[CS:DSKDRV]
         LES     BX,[CS:DSKBUF]
         CMP     byte [CS:DSKBNC],0
         JZ      DSK_ONE1
@@ -775,14 +779,31 @@ DSKSEC  DW      0
 DSKBUF  DD      0
 DSKERR  DB      0
 DSKBNC  DB      0                       ; this sector goes through DSKSBUF
+DSKDRV  DB      0                       ; the unit being worked on
 DSKSBUF DB      BYTES_PER_SECTOR dup (0)
 
 ; Initialise.  The packet wants the unit count, the address this driver ends
 ; at -- everything above it is free for DOS -- and a pointer to an array of
 ; BPB pointers, one per unit.
+; The count comes from the ROM's equipment word rather than being assumed:
+; bit 0 says whether there are any diskette drives at all, and bits 6 and 7
+; hold how many there are, less one.  A machine with one drive gets one, so
+; DOS is not left holding a B: that cannot be read.
 DSK_INIT:
+        INT     11h
+        MOV     BX,AX
+        MOV     AL,1
+        TEST    BL,1
+        JZ      DSK_I1
+        MOV     CL,6
+        SHR     BX,CL
+        AND     BL,3
+        MOV     AL,BL
+        INC     AL
+DSK_I1:
+        MOV     [CS:DRVMAX],AL
         LDS     BX,[CS:PTRSAV]
-        MOV     byte [BX+P_UNITS],1
+        MOV     [BX+P_UNITS],AL
         MOV     word [BX+P_BREAK],BIOSEND
         MOV     [BX+P_BREAK+2],CS
         MOV     word [BX+P_BPB],BPBTAB

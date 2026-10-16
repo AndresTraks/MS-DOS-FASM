@@ -29,6 +29,7 @@ RUN=45                  # seconds to let it run before taking the screen
 KEYSAT=30               # when to start sending keystrokes
 KEYS=                   # QEMU sendkey names, one a second
 EXTRA=                  # files to put on the image
+BIMAGE=                 # a second floppy, as drive B
 FETCH=                  # files to take off it afterwards
 EXPECT=                 # text that has to appear on the screen
 IMAGE=test.img
@@ -37,26 +38,28 @@ OUT=${TMPDIR:-/tmp}/runtest.$$
 usage() {
     cat >&2 <<USAGE
 usage: $0 [-t seconds] [-k "keys"] [-K seconds] [-f file] [-g name]
-          [-e text] batchfile
+          [-b image] [-e text] batchfile
 
   -t  how long to let it run, default $RUN; a MASM run wants 400
   -k  keystrokes to send, QEMU sendkey names: -k "ret ret ret"
   -K  when to start sending them, default $KEYSAT
   -f  a file to put on the image, repeatable
   -g  a file to take off the image into test-out/, repeatable
+  -b  an image to attach as the second floppy, which DOS sees as B:
   -e  text that must appear on the screen or in a file fetched with -g,
       repeatable; absent means fail
 USAGE
     exit 2
 }
 
-while getopts t:k:K:f:g:e: opt; do
+while getopts t:k:K:f:g:b:e: opt; do
     case $opt in
         t) RUN=$OPTARG ;;
         k) KEYS=$OPTARG ;;
         K) KEYSAT=$OPTARG ;;
         f) EXTRA="$EXTRA $OPTARG" ;;
         g) FETCH="$FETCH $OPTARG" ;;
+        b) BIMAGE=$OPTARG ;;
         e) EXPECT="$EXPECT
 $OPTARG" ;;
         *) usage ;;
@@ -80,6 +83,13 @@ cp msdos.img "$IMAGE"
 mcopy -o -i "$IMAGE" "$BATCH" ::AUTOEXEC.BAT
 for f in $EXTRA; do mcopy -o -i "$IMAGE" "$f" ::; done
 
+# Unquoted on purpose, as it is either two words or none.
+BOPT=
+if [ -n "$BIMAGE" ]; then
+    [ -f "$BIMAGE" ] || { echo "$0: no such image: $BIMAGE" >&2; exit 2; }
+    BOPT="-drive file=$BIMAGE,format=raw,if=floppy,index=1"
+fi
+
 mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
 
@@ -96,7 +106,8 @@ trap 'rm -rf "$OUT"' EXIT
     echo "pmemsave 0xb8000 4000 \"$OUT/screen.bin\""
     sleep 2
     echo quit
-} | "$QEMU" -rtc base=localtime -drive file="$IMAGE",format=raw,if=floppy \
+} | "$QEMU" -rtc base=localtime \
+            -drive file="$IMAGE",format=raw,if=floppy,index=0 $BOPT \
             -display none -monitor stdio >/dev/null 2>&1 || true
 
 [ -s "$OUT/screen.bin" ] || { echo "$0: the screen never came back; QEMU or the monitor failed" >&2; exit 1; }

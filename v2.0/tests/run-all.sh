@@ -36,6 +36,9 @@ run exec.bat     -t 50 -e "File not found" -e "Invalid number of parameters" \
 # say about why, so it is a script as well.
 ./tests/config.sh || fail=1
 
+# Makes a disk for the second drive first, so it is a script too.
+./tests/twodrive.sh || fail=1
+
 if [ $fail -eq 0 ]; then
     printf '\n======== all passed\n'
 else
