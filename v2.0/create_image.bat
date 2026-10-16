@@ -11,3 +11,23 @@ REM each from its first cluster onwards and assumes it is contiguous.
 REM COMMAND.COM is the one Microsoft shipped. The COMLINK sources for it are
 REM still MASM, so there is nothing of ours to put here yet.
 %IMGEN% -m -i bin\COMMAND.COM -f %IMAGE%
+
+REM The rest of the release's executables.  They are Microsoft's -- nothing
+REM here is built from source yet -- but they are what there is to run on the
+REM system, and all of them together take a sixth of the disk.
+%IMGEN% -m -i bin\CHKDSK.COM -f %IMAGE%
+%IMGEN% -m -i bin\CREF.EXE -f %IMAGE%
+%IMGEN% -m -i bin\DEBUG.COM -f %IMAGE%
+%IMGEN% -m -i bin\DISKCOPY.COM -f %IMAGE%
+%IMGEN% -m -i bin\EDLIN.COM -f %IMAGE%
+%IMGEN% -m -i bin\EXE2BIN.EXE -f %IMAGE%
+%IMGEN% -m -i bin\FC.EXE -f %IMAGE%
+%IMGEN% -m -i bin\FIND.EXE -f %IMAGE%
+%IMGEN% -m -i bin\LINK.EXE -f %IMAGE%
+%IMGEN% -m -i bin\MASM.EXE -f %IMAGE%
+%IMGEN% -m -i bin\MORE.COM -f %IMAGE%
+%IMGEN% -m -i bin\PRINT.COM -f %IMAGE%
+%IMGEN% -m -i bin\PROHST.EXE -f %IMAGE%
+%IMGEN% -m -i bin\RECOVER.COM -f %IMAGE%
+%IMGEN% -m -i bin\SORT.EXE -f %IMAGE%
+%IMGEN% -m -i bin\SYS.COM -f %IMAGE%
