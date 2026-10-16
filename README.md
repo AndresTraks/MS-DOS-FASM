@@ -21,6 +21,20 @@ v1.25
 * Added [boot sector](v1.25/bootsect.asm) that loads IO.SYS and MSDOS.SYS and passes control to IO.SYS.
 * Added IBM hardware support in IO.ASM: disk I/O via interrupt 13h, keyboard handling via interrupt 9h, time handling via interrupt 1Ah, text output via interrupt 10h.
 
+v2.0
+* Added FASM build scripts and a [boot sector](v2.0/bootsect.asm).
+* Added IBM hardware support in [IO.ASM](v2.0/source/IO.ASM): disk I/O via interrupt 13h, keyboard, clock and screen via the ROM BIOS. Added [DOSIO.ASM](v2.0/source/DOSIO.ASM), the character I/O module FOR IBM.
+* Added [PCLOCK_IBM.ASM](v2.0/source/PCLOCK_IBM.ASM), the clock module the PROFIL profiler needs on a PC.
+
+## Running PROFIL
+Build the profiler on the system itself and run it on a program:
+```
+MASM PCLOCKPC,PCLOCK,,;
+LINK PROFIL+PCLOCK,PROFIL,,;
+EXE2BIN PROFIL PROFIL.COM
+PROFIL EXE2BIN.EXE
+```
+
 # License
 All files within this repo are released under the [MIT License](https://en.wikipedia.org/wiki/MIT_License) as per the [LICENSE](LICENSE) file stored in the root of this repo.
 
