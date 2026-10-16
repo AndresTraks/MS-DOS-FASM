@@ -32,6 +32,10 @@ run exec.bat     -t 50 -e "File not found" -e "Invalid number of parameters" \
 # of this machine, so it is a script rather than a line here.
 ./tests/clock.sh || fail=1
 
+# Needs a driver built and two files on the image, and has a good deal to
+# say about why, so it is a script as well.
+./tests/config.sh || fail=1
+
 if [ $fail -eq 0 ]; then
     printf '\n======== all passed\n'
 else
