@@ -1,29 +1,24 @@
-TITLE   COMMAND Initialization messages
 
-        INCLUDE COMSW.ASM
 
-        INCLUDE IFEQU.ASM
 
-INIT    SEGMENT PUBLIC BYTE
 
-        PUBLIC  BADCOMLKMES
+if SEGSEL = S_INIT
 
-        PUBLIC  HEADER
-        IF      NOT IBM
+
+        IF IBM = 0
 HEADER  DB      13,10,"Command v. 2.11"
         IF      HIGHMEM
         DB      "H"
-        ENDIF
+        END IF
         DB      13,10,"$"
-        ENDIF
+        END IF
         IF IBM
 HEADER  DB      13,10,13,10,"TeleVideo Personal Computer DOS Vers. 2.11",13,10
         DB      "(C) Copyright TeleVideo Systems, Inc. 1983",13,10
 	DB	"(C) Copyright Microsoft Corp. 1981, 1982, 1983",13,10,"$"
-        ENDIF
+        END IF
 
 BADCOMLKMES DB  "Specified COMMAND search directory bad",13,10,"$"
 
-INIT    ENDS
+end if
 
-        END

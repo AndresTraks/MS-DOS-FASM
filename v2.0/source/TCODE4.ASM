@@ -1,62 +1,27 @@
-TITLE   PART4 - COMMAND Transient routines.
-
-        INCLUDE COMSW.ASM
-
-.xlist
-.xcref
-        INCLUDE DOSSYM.ASM
-        INCLUDE DEVSYM.ASM
-        INCLUDE COMSEG.ASM
-.list
-.cref
-
-        INCLUDE COMEQU.ASM
 
 
-DATARES SEGMENT PUBLIC
-        EXTRN   RESTDIR:BYTE
-DATARES ENDS
-
-TRANDATA        SEGMENT PUBLIC
-        EXTRN   BADDRV:BYTE,BADSWT:BYTE
-        EXTRN   BADDAT:BYTE,NEWDAT:BYTE,BADTIM:BYTE
-        EXTRN   DMES:BYTE,CURDAT_PRE:BYTE,CURDAT_MID:BYTE,CURDAT_POST:BYTE
-        EXTRN   RENERR:BYTE,VERMES_PRE:BYTE,VERMES_POST:BYTE
-        EXTRN   DIRHEAD_PRE:BYTE,DIRHEAD_POST:BYTE
-        EXTRN   ACRLF:BYTE,BADARGS:BYTE,NOTFND:BYTE
-        EXTRN   NEWTIM:BYTE,BADCD:BYTE,BADMKD:BYTE,CLSSTRING:BYTE
-        EXTRN   CURTIM_PRE:BYTE,CURTIM_POST:BYTE,PauseMes:BYTE
-        EXTRN   BADRMD:BYTE
-TRANDATA        ENDS
-
-TRANSPACE       SEGMENT PUBLIC
-        EXTRN   COMBUF:BYTE,DIRCHAR:BYTE,USERDIR1:BYTE
-        EXTRN   BYTCNT:WORD,CURDRV:BYTE,COMSW:WORD,ARGTS:WORD
-        EXTRN   LINCNT:BYTE,LINLEN:BYTE,FILECNT:WORD,CHARBUF:BYTE
-        EXTRN   DIRBUF:BYTE,BITS:WORD,PATHPOS:WORD
-        EXTRN   DESTISDIR:BYTE,DESTTAIL:WORD,DESTINFO:BYTE,FULLSCR:WORD
-        EXTRN   INTERNATVARS:BYTE,RESSEG:WORD,TPA:WORD
-TRANSPACE       ENDS
 
 
-TRANCODE        SEGMENT PUBLIC BYTE
+
+
+if SEGSEL = S_DATARES
+end if
+
+
+if SEGSEL = S_TRANDATA
+end if
+
+
+if SEGSEL = S_TRANSPACE
+end if
+
+
+
+if SEGSEL = S_TRANCODE
 ASSUME  CS:TRANGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
-        EXTRN   NOTEST2:NEAR,PRINTVOL:NEAR,Print_Date:NEAR
-        EXTRN   CERROR:NEAR,SWITCH:NEAR,PWD:NEAR,SETREST:NEAR,MESTRAN:NEAR
-        EXTRN   NOTFNDERR:NEAR,CHKCNT:NEAR,GETKEYSTROKE:NEAR
-        EXTRN   SETPATH:NEAR,PATHCRUNCH:NEAR,PRINT:NEAR,ZPRINT:NEAR
-        EXTRN   DISPSIZE:NEAR,OUT:NEAR,OUT2:NEAR,ERROR_PRINT:NEAR
-        EXTRN   SCANOFF:NEAR,OUTBYTE:NEAR,GETNUM:NEAR,ERROR_OUTPUT:NEAR
 
 
-        PUBLIC  PRINT_TIME,CATALOG
-        PUBLIC  BADCDERR,PRINT_VERSION,CLS,SAVUDIR,SAVUDIR1
-        PUBLIC  TYPEFIL,CRENAME,$RMDIR
-        PUBLIC  CTIME,$CHDIR,ONESPC,DATINIT
-        PUBLIC  $MKDIR,VERSION,RESTUDIR1
-        PUBLIC  RESTUDIR,CRLF2,ERASE
-        PUBLIC  volume,date,P_date,PAUSE
  
 
 CATALOG:
@@ -68,7 +33,7 @@ CATALOG:
         MOV     SI,81H
         CALL    SWITCH
         MOV     DI,FCB
-        MOV     AX,(PARSE_FILE_DESCRIPTOR SHL 8) OR 0DH          ; Parse with default name and extension
+        MOV     AX,(Parse_File_Descriptor SHL 8) OR 0DH          ; Parse with default name and extension
         INT     int_command
 
 ; Begin by processing any switches that may have been specified.
@@ -79,7 +44,7 @@ SETSWT:
         MOV     AX,[COMSW]              ; Get switches from command
         OR      AX,[ARGTS]              ; OR in switches from all of tail
         MOV     [BITS],AX
-        MOV     BYTE PTR[FULLSCR],LINPERPAG
+        MOV     byte[FULLSCR],LINPERPAG
         TEST    AL,1                    ; Look for W switch
         MOV     AL,NORMPERLIN
         JZ      DIR
@@ -88,8 +53,8 @@ DIR:
         MOV     [LINLEN],AL             ; Set number of entries per line
         MOV     [LINCNT],AL
         MOV     [FILECNT],0     ; Keep track of how many files found
-        MOV     DX,OFFSET TRANGROUP:DIRBUF      ; Set Disk transfer address
-        MOV     AH,SET_DMA
+        MOV     DX,DIRBUF      ; Set Disk transfer address
+        MOV     AH,Set_DMA
         INT     int_command
         CALL    PATHCRUNCH                      ; Get where we're going
         PUSHF
@@ -100,28 +65,28 @@ DIR:
 
 NOTEST:
         MOV     SI,FCB
-        MOV     DI,OFFSET TRANGROUP:DIRBUF
+        MOV     DI,DIRBUF
         MOV     DX,DI
         MOV     CX,12
         REP     MOVSB
-        MOV     AH,FCB_OPEN
+        MOV     AH,FCB_Open
         INT     int_command
-        MOV     DX,OFFSET TRANGROUP:DIRHEAD_PRE ; Print "Directory of"
+        MOV     DX,DIRHEAD_PRE ; Print "Directory of"
         PUSH    AX                              ; save return code
         CALL    PRINT
         CALL    PWD                             ; print the path
-        MOV     DX,OFFSET TRANGROUP:DIRHEAD_POST
+        MOV     DX,DIRHEAD_POST
         CALL    PRINT
         POP     AX
         OR      AL,AL
         JNZ     OKDODIR                         ; Go ahead and dir if open fail
-        TEST    [DIRBUF+fcb_DEVID],devid_device
+        TEST    [DIRBUF+sys_fcb.fcb_DEVID],devid_device
         JZ      OKDODIR
         JMP     NOTFNDERR                       ; Can't DIR a device
 OKDODIR:
-        MOV     AH,DIR_SEARCH_FIRST
-        MOV     BYTE PTR DS:[FCB-7],0FFH
-        MOV     BYTE PTR DS:[FCB-1],010H
+        MOV     AH,Dir_Search_First
+        MOV     byte [DS:FCB-7],0FFH
+        MOV     byte [DS:FCB-1],010H
         POPF
         JC      SHOWDIR                         ; Current dir
         JZ      DOFIRST                         ; FCB is *.*
@@ -131,9 +96,9 @@ OKDODIR:
         REP     STOSB           ; Remake default FCB
         MOV     SI,[DESTTAIL]
         MOV     DI,FCB
-        MOV     AX,(PARSE_FILE_DESCRIPTOR SHL 8) OR 0EH  ; Parse with default drive, name and extension
+        MOV     AX,(Parse_File_Descriptor SHL 8) OR 0EH  ; Parse with default drive, name and extension
         INT     int_command
-        MOV     AH,DIR_SEARCH_FIRST
+        MOV     AH,Dir_Search_First
 DOFIRST:
         MOV     DX,FCB-7
         INT     int_command
@@ -153,23 +118,23 @@ NEXENTJ:
         JMP    NEXENT
 AGAIN:
         INC     [FILECNT]       ; Keep track of how many we find
-        MOV     SI,OFFSET TRANGROUP:DIRBUF+8    ; SI -> information returned by sys call
+        MOV     SI,DIRBUF+8    ; SI -> information returned by sys call
         CALL    SHONAME
-        TEST    BYTE PTR[BITS],WSWITCH  ; W switch set?
+        TEST    byte[BITS],WSWITCH  ; W switch set?
         JNZ     NEXENTJ         ; If so, no size, date, or time
-        MOV     SI,OFFSET TRANGROUP:DIRBUF+8+dir_attr
-        TEST    BYTE PTR [SI],attr_directory
+        MOV     SI,DIRBUF+8+dir_entry.dir_attr
+        TEST    byte [SI],attr_directory
         JZ      FILEENT
-        MOV     DX,OFFSET TRANGROUP:DMES
+        MOV     DX,DMES
         CALL    PRINT
         JMP     SHORT NOFSIZ
 FILEENT:
         CALL    DISPSIZE        ; Print size of file
 NOFSIZ:
-        MOV     AX,WORD PTR [DIRBUF+8+dir_date]  ; Get date
+        MOV     AX,word [DIRBUF+8+dir_entry.dir_date]  ; Get date
         OR      AX,AX
         JZ      NEXENT          ; Skip if no date
-        MOV     DI,OFFSET TRANGROUP:CHARBUF
+        MOV     DI,CHARBUF
         PUSH    AX
         MOV     AX,"  "
         STOSW
@@ -191,7 +156,7 @@ NOFSIZ:
         SUB     CL,100
 MILLENIUM:
         CALL    DATE_CXDX
-        MOV     CX,WORD PTR[DIRBUF+8+dir_time]  ; Get time
+        MOV     CX,word[DIRBUF+8+dir_entry.dir_time]  ; Get time
         JCXZ    PRBUF           ; Time field present?
         MOV     AX,"  "
         STOSW
@@ -200,13 +165,13 @@ MILLENIUM:
         SHR     CX,1
         SHR     CL,1
         SHR     CL,1            ; Hours in CH, minutes in CL
-        MOV     BL,[INTERNATVARS.Time_24]
+        MOV     BL,[INTERNATVARS+internat_block_sizeof.Time_24]
         OR      BL,80H          ; Tell P_TIME called from DIR
         CALL    P_TIME          ; Don't care about DX, never used with DIR
 PRBUF:
         XOR     AX,AX
         STOSB
-        MOV     DX,OFFSET TRANGROUP:CHARBUF
+        MOV     DX,CHARBUF
         CALL    ZPRINT
 NEXENT:
         DEC     [LINCNT]
@@ -215,26 +180,26 @@ NEXLIN:
         MOV     AL,[LINLEN]
         MOV     [LINCNT],AL
         CALL    CRLF2
-        TEST    BYTE PTR[BITS],PSWITCH  ; P switch present?
+        TEST    byte[BITS],PSWITCH  ; P switch present?
         JZ      SCROLL          ; If not, just continue
-        DEC     BYTE PTR[FULLSCR]
+        DEC     byte[FULLSCR]
         JNZ     SCROLL
-        MOV     BYTE PTR[FULLSCR],LINPERPAG
-        MOV     DX,OFFSET TRANGROUP:PAUSEMES
+        MOV     byte[FULLSCR],LINPERPAG
+        MOV     DX,PAUSEMES
         CALL    PRINT
         CALL    GetKeystroke
         CALL    CRLF2
 SCROLL:
-        MOV     AH,DIR_SEARCH_NEXT
+        MOV     AH,Dir_Search_Next
         JMP     SHOWDIR
 
 SAMLIN:
         MOV     AL,9            ; Output a tab
-        CALL    OUT
+        CALL    OUT_
         JMP     SHORT SCROLL
 
 SHONAME:
-        MOV     DI,OFFSET TRANGROUP:CHARBUF
+        MOV     DI,CHARBUF
         MOV     CX,8
         REP     MOVSB
         MOV     AL," "
@@ -244,18 +209,18 @@ SHONAME:
         XOR     AX,AX
         STOSB
         PUSH    DX
-        MOV     DX,OFFSET TRANGROUP:CHARBUF
+        MOV     DX,CHARBUF
         CALL    ZPRINT
         POP     DX
         return
 
 ONESPC:
         MOV     AL," "
-        JMP     OUT
+        JMP     OUT_
 
 CRLF2:
         PUSH    DX
-        MOV     DX,OFFSET TRANGROUP:ACRLF
+        MOV     DX,ACRLF
 PR:
         PUSH    DS
         PUSH    CS
@@ -265,15 +230,15 @@ PR:
         POP     DX
         return
 
-PAUSE:
-        MOV     DX,OFFSET TRANGROUP:PAUSEMES
+PAUSE_:
+        MOV     DX,PAUSEMES
         CALL    ERROR_PRINT
         CALL    GetKeystroke
         CALL    CRLF2
         return
 
 ERASE:
-        MOV     DX,OFFSET TRANGROUP:BADARGS
+        MOV     DX,BADARGS
         MOV     SI,80H
         LODSB
         OR      AL,AL
@@ -288,7 +253,7 @@ ERA1:
         CMP     [DESTISDIR],0           ; No CHDIRs worked
         JZ      NOTEST2J                ; see if they should have
 BADCDERR:
-        MOV     DX,OFFSET TRANGROUP:BADCD
+        MOV     DX,BADCD
 ERRJ2:
         JMP     CERROR
 
@@ -306,18 +271,18 @@ NOTEST3:
         MOV     SI,[PATHPOS]
         MOV     DI,FCB+10H
         CALL    SCANOFF
-        MOV     AX,(PARSE_FILE_DESCRIPTOR SHL 8) OR 01H
+        MOV     AX,(Parse_File_Descriptor SHL 8) OR 01H
         INT     int_command
-        CMP     BYTE PTR DS:[FCB+10H+1]," "  ; Check if parameter exists
-        MOV     DX,OFFSET TRANGROUP:BADARGS
+        CMP     byte [DS:FCB+10H+1]," "  ; Check if parameter exists
+        MOV     DX,BADARGS
         JZ      ERRJ            ; Error if missing parameter
-        MOV     AH,FCB_RENAME
+        MOV     AH,FCB_Rename
         MOV     DX,FCB
         INT     int_command
         PUSH    AX
         CALL    RESTUDIR
         POP     AX
-        MOV     DX,OFFSET TRANGROUP:RENERR
+        MOV     DX,RENERR
         INC     AL
         retnz
 ERRJ:
@@ -332,9 +297,9 @@ TYPEFIL:
         jmp     NOARGERR        ; No args
 GOTTARG:
         CALL    SETPATH
-        MOV     AX,OPEN SHL 8
+        MOV     AX,Open SHL 8
         INT     int_command
-        MOV     DX,OFFSET TRANGROUP:NOTFND
+        MOV     DX,NOTFND
         JC      ERRJ
         MOV     BX,AX           ; Handle
         MOV     DS,[TPA]
@@ -342,13 +307,13 @@ GOTTARG:
 ASSUME  DS:NOTHING
 TYPELP:
         MOV     CX,[BYTCNT]
-        MOV     AH,READ
+        MOV     AH,Read
         INT     int_command
         MOV     CX,AX
         JCXZ    RET56
         PUSH    BX
         MOV     BX,1
-        MOV     AH,WRITE
+        MOV     AH,Write
         INT     int_command
         POP     BX
         JC      ERROR_OUTPUTJ
@@ -359,7 +324,7 @@ TYPELP:
         retz                            ; One less byte OK (^Z)
 ERROR_OUTPUTJ:
         MOV     BX,1
-        MOV     AX,IOCTL SHL 8
+        MOV     AX,IOCtl SHL 8
         INT     int_command
         TEST    DL,devid_ISDEV
         retnz                           ; If device, no error message
@@ -374,8 +339,8 @@ ASSUME  DS:RESGROUP
 ASSUME  DS:TRANGROUP
         retz
 RESTUDIR:
-        MOV     DX,OFFSET TRANGROUP:USERDIR1
-        MOV     AH,CHDIR
+        MOV     DX,USERDIR1
+        MOV     AH,CHDir
         INT     int_command             ; Restore users DIR
         XOR     AL,AL
         CALL    SETREST
@@ -386,7 +351,7 @@ RET56:
 VOLUME:
         mov     si,81H
         call    SCANOFF         ; Skip to first non-delim
-        CMP     BYTE PTR DS:[FCB],0     ;Default drive?
+        CMP     byte [DS:FCB],0     ;Default drive?
         JZ      CHECKNOARG              ;Yes
         INC     SI
         INC     SI      ;Skip over d:
@@ -398,7 +363,7 @@ CHECKNOARG:
         cmp     al,0DH
         JZ      OKVOLARG
 BADVOLARG:
-        MOV     DX,OFFSET TRANGROUP:BADDRV
+        MOV     DX,BADDRV
         JMP     CERROR
 
 OKVOLARG:
@@ -418,11 +383,11 @@ OKVOLARG:
         MOV     CX,11
         MOV     AL,'?'
         REP     STOSB
-        MOV     DX,OFFSET TRANGROUP:DIRBUF
-        MOV     AH,SET_DMA
+        MOV     DX,DIRBUF
+        MOV     AH,Set_DMA
         INT     int_command
         MOV     DX,FCB-7
-        MOV     AH,DIR_SEARCH_FIRST
+        MOV     AH,Dir_Search_First
         INT     int_command
         JMP     PRINTVOL
 
@@ -432,10 +397,10 @@ VERSION:
         JMP     CRLF2
 
 PRINT_VERSION:
-        MOV     DI,OFFSET TRANGROUP:CHARBUF
-        MOV     SI,OFFSET TRANGROUP:VERMES_PRE
+        MOV     DI,CHARBUF
+        MOV     SI,VERMES_PRE
         CALL    MESTRAN
-        MOV     AH,GET_VERSION
+        MOV     AH,Get_Version
         INT     int_command
         PUSH    AX
         XOR     AH,AH
@@ -460,11 +425,11 @@ PRINT_VERSION:
         MOV     CX,1010H
         MOV     DL,AL
         CALL    OUTBYTE
-        MOV     SI,OFFSET TRANGROUP:VERMES_POST
+        MOV     SI,VERMES_POST
         CALL    MESTRAN
         XOR     AX,AX
         STOSB
-        MOV     DX,OFFSET TRANGROUP:CHARBUF
+        MOV     DX,CHARBUF
         JMP     ZPRINT
 
 ASSUME  DS:TRANGROUP
@@ -472,16 +437,16 @@ ASSUME  DS:TRANGROUP
 CLS:
         IF      IBMVER
         MOV     BX,1
-        MOV     AX,IOCTL SHL 8
+        MOV     AX,IOCtl SHL 8
         INT     int_command
         TEST    DL,devid_ISDEV
         JZ      ANSICLS         ; If a file put out ANSI
         TEST    DL,devid_SPECIAL
         JZ      ANSICLS         ; If not special CON, do ANSI
-        MOV     AX,(GET_INTERRUPT_VECTOR SHL 8) OR 29H
+        MOV     AX,(Get_Interrupt_Vector SHL 8) OR 29H
         INT     int_command
         MOV     DX,ES
-        MOV     AX,(GET_INTERRUPT_VECTOR SHL 8) OR 20H
+        MOV     AX,(Get_Interrupt_Vector SHL 8) OR 20H
         INT     int_command
         MOV     AX,ES
         CMP     DX,AX
@@ -498,7 +463,7 @@ CLS:
         MOV     DH,23
         ELSE
         MOV     DH,25
-        ENDIF
+        END IF
 
         XOR     AX,AX
         MOV     CX,AX
@@ -507,7 +472,7 @@ CLS:
         MOV     BH,0
         ELSE
         MOV     BH,7
-        ENDIF
+        END IF
 
         MOV     AH,6
         INT     16
@@ -518,13 +483,13 @@ CLS:
         return
 
 ANSICLS:
-        ENDIF
+        END IF
 
-        MOV     SI,OFFSET TRANGROUP:CLSSTRING
+        MOV     SI,CLSSTRING
         LODSB
         MOV     CL,AL
         XOR     CH,CH
-        MOV     AH,RAW_CON_IO
+        MOV     AH,Raw_Con_IO
 CLRLOOP:
         LODSB
         MOV     DL,AL
@@ -532,10 +497,10 @@ CLRLOOP:
         LOOP    CLRLOOP
         return
 
-$CHDIR:
+_CHDIR:
         MOV     AX,[COMSW]
         OR      AX,[ARGTS]
-        MOV     DX,OFFSET TRANGROUP:BADSWT
+        MOV     DX,BADSWT
         JNZ     CERRORJ3
         mov     si,81H
         call    SCANOFF         ; Skip to first non-delim
@@ -551,25 +516,25 @@ REALCD:
         CALL    SETPATH
         TEST    [DESTINFO],2
         JNZ     BADCDERRJ
-        MOV     AH,CHDIR
+        MOV     AH,CHDir
         INT     int_command
         retnc
 BADCDERRJ:
         JMP  BADCDERR
 
-$MKDIR:
+_MKDIR:
         CALL    SETRMMK
         JNZ     BADMDERR
-        MOV     AH,MKDIR
+        MOV     AH,MKDir
         INT     int_command
         retnc
 BADMDERR:
-        MOV     DX,OFFSET TRANGROUP:BADMKD
+        MOV     DX,BADMKD
 CERRORJ3:
         JMP    CERROR
 
 NOARGERR:
-        MOV     DX,OFFSET TRANGROUP:BADARGS
+        MOV     DX,BADARGS
         JMP     SHORT CERRORJ3
 
 SETRMMK:
@@ -579,25 +544,25 @@ SETRMMK:
         jz      NOARGERR        ; No args
         MOV     AX,[COMSW]
         OR      AX,[ARGTS]
-        MOV     DX,OFFSET TRANGROUP:BADSWT
+        MOV     DX,BADSWT
         JNZ     CERRORJ3
         CALL    SETPATH
         TEST    [DESTINFO],2
         return
 
-$RMDIR:
+_RMDIR:
         CALL    SETRMMK
         JNZ     BADRDERR
-        MOV     AH,RMDIR
+        MOV     AH,RMDir
         INT     int_command
         retnc
 BADRDERR:
-        MOV     DX,OFFSET TRANGROUP:BADRMD
+        MOV     DX,BADRMD
         JMP     CERROR
 
 SAVUDIR:
 ; DL is drive number A=1
-        MOV     DI,OFFSET TRANGROUP:USERDIR1
+        MOV     DI,USERDIR1
 SAVUDIR1:
         MOV     AL,DL
         ADD     AL,'@'
@@ -614,7 +579,7 @@ GOTUDRV:
         POP     DS
 ASSUME  DS:NOTHING
         MOV     SI,DI
-        MOV     AH,CURRENT_DIR      ; Get the Directory Text
+        MOV     AH,Current_Dir      ; Get the Directory Text
         INT     int_command
         retc
         PUSH    CS
@@ -627,24 +592,23 @@ ASSUME  DS:TRANGROUP,ES:TRANGROUP
 ; Date and time are set during initialization and use
 ; this routines since they need to do a long return
 
-DATINIT PROC    FAR
+        procedure   DATINIT,FAR
         PUSH    ES
         PUSH    DS              ; Going to use the previous stack
         MOV     AX,CS           ; Set up the appropriate segment registers
         MOV     ES,AX
         MOV     DS,AX
-        MOV     DX,OFFSET TRANGROUP:INTERNATVARS        ;Set up internat vars
-        MOV     AX,INTERNATIONAL SHL 8
+        MOV     DX,INTERNATVARS        ;Set up internat vars
+        MOV     AX,International SHL 8
         INT     21H
-        MOV     WORD PTR DS:[81H],13    ; Want to prompt for date during initialization
+        MOV     word [DS:81H],13    ; Want to prompt for date during initialization
         MOV     [COMBUF],COMBUFLEN      ; Init COMBUF
-        MOV     WORD PTR [COMBUF+1],0D01H
+        MOV     word [COMBUF+1],0D01H
         CALL    DATE
         CALL    CTIME
         POP     DS
         POP     ES
-        RET
-DATINIT ENDP
+        RETF
 
 ; DATE - Gets and sets the time
 
@@ -658,7 +622,7 @@ P_DATE:
         XCHG    AL,AH
         XCHG    AX,DX
         MOV     BH,"0"-" "      ; Enable leading zero suppression
-        MOV     AX,WORD PTR [INTERNATVARS.Date_tim_format]
+        MOV     AX,word [INTERNATVARS+internat_block_sizeof.Date_tim_format]
         OR      AX,AX
         JZ      USPDAT
         DEC     AX
@@ -692,7 +656,7 @@ P_MON:
         return
 
 P_DSEP:
-        MOV     AL,BYTE PTR [INTERNATVARS.Date_sep]
+        MOV     AL,byte [INTERNATVARS+internat_block_sizeof.Date_sep]
         STOSB
         return
 
@@ -719,23 +683,23 @@ DATE:
         JMP     COMDAT
 
 PRMTDAT:
-        MOV     DX,OFFSET TRANGROUP:CURDAT_PRE
+        MOV     DX,CURDAT_PRE
         CALL    PRINT           ; Print "Current date is "
         CALL    PRINT_DATE
-        MOV     DX,OFFSET TRANGROUP:CURDAT_POST
+        MOV     DX,CURDAT_POST
         CALL    PRINT
 GETDAT:
-        MOV     DX,OFFSET TRANGROUP:NEWDAT
+        MOV     DX,NEWDAT
         CALL    ERROR_PRINT     ; Print "Enter new date: "
-        MOV     AH,STD_CON_STRING_INPUT
-        MOV     DX,OFFSET TRANGROUP:COMBUF
+        MOV     AH,Std_Con_String_Input
+        MOV     DX,COMBUF
         INT     int_command             ; Get input line
         CALL    CRLF2
-        MOV     SI,OFFSET TRANGROUP:COMBUF+2
-        CMP     BYTE PTR[SI],13 ; Check if new date entered
+        MOV     SI,COMBUF+2
+        CMP     byte[SI],13 ; Check if new date entered
         retz
 COMDAT:
-        MOV     AX,WORD PTR [INTERNATVARS.Date_tim_format]
+        MOV     AX,word [INTERNATVARS+internat_block_sizeof.Date_tim_format]
         OR      AX,AX
         JZ      USSDAT
         DEC     AX
@@ -754,7 +718,7 @@ DAT_SET:
         LODSB
         CMP     AL,13
         JNZ     DATERR
-        MOV     AH,SET_DATE
+        MOV     AH,Set_Date
         INT     int_command
         OR      AL,AL
         JNZ     DATERR
@@ -802,7 +766,7 @@ GET_YR:
         DEC     SI
         POPF
         JZ      BIAS
-        CMP     BYTE PTR[SI],13
+        CMP     byte[SI],13
         JZ      BIAS
         MOV     AL,100
         MUL     AH
@@ -823,11 +787,11 @@ BIAS:
         STC
         return
 YearOk: CLC
-        ENDIF
+        END IF
         return
 
 DATERR:
-        MOV     DX,OFFSET TRANGROUP:BADDAT
+        MOV     DX,BADDAT
         CALL    PRINT
         JMP     GETDAT
 
@@ -854,18 +818,18 @@ CTIME:
         JMP     COMTIM
 
 PRINT_TIME:
-        MOV     AH,GET_TIME
+        MOV     AH,Get_Time
         INT     int_command              ; Get time in CX:DX
         PUSH    DI
         PUSH    ES
         PUSH    CS
         POP     ES
-        MOV     DI,OFFSET TRANGROUP:CHARBUF
+        MOV     DI,CHARBUF
         MOV     BL,1            ; Always 24 hour time
         CALL    P_TIME
         XOR     AX,AX
         STOSB
-        MOV     DX,OFFSET TRANGROUP:CHARBUF
+        MOV     DX,CHARBUF
         CALL    ZPRINT
         POP     ES
         POP     DI
@@ -900,12 +864,12 @@ T24:
         CALL    P_TSEP
         MOV     AL,DH
         CALL    OUT2
-        IF NOT IBMJAPAN
+        IF IBMJAPAN = 0
         MOV     AL,"."
         STOSB
         MOV     AL,DL
         CALL    OUT2
-        ENDIF
+        END IF
 PAP:
         POP     BX
         TEST    BL,07FH         ; Ignore high bit
@@ -915,20 +879,20 @@ PAP:
         return
 
 P_TSEP:
-        MOV     AL,[INTERNATVARS.Time_sep]
+        MOV     AL,[INTERNATVARS+internat_block_sizeof.Time_sep]
         STOSB
         return
 
 
 PRMTTIM:
-        MOV     DX,OFFSET TRANGROUP:CURTIM_PRE
+        MOV     DX,CURTIM_PRE
         CALL    PRINT           ; Print "Current time is "
         CALL    PRINT_TIME
-        MOV     DX,OFFSET TRANGROUP:CURTIM_POST
+        MOV     DX,CURTIM_POST
         CALL    PRINT
 GETTIM:
         XOR     CX,CX           ; Initialize hours and minutes to zero
-        MOV     DX,OFFSET TRANGROUP:NEWTIM
+        MOV     DX,NEWTIM
         MOV     BX,".:"
         CALL    GETBUF
 COMTIM:
@@ -959,23 +923,23 @@ GOTSEC:
         CMP     AL,13
         JNZ     TIMERR
 SAVTIM:
-        MOV     AH,SET_TIME
+        MOV     AH,Set_Time
         INT     int_command
         OR      AL,AL
         retz                    ; Error in time?
 TIMERR:
-        MOV     DX,OFFSET TRANGROUP:BADTIM
+        MOV     DX,BADTIM
         CALL    PRINT           ; Print error message
         JMP     GETTIM          ; Try again
 
 GETBUF:
         CALL    ERROR_PRINT     ; Print "Enter new time: "
-        MOV     AH,STD_CON_STRING_INPUT
-        MOV     DX,OFFSET TRANGROUP:COMBUF
+        MOV     AH,Std_Con_String_Input
+        MOV     DX,COMBUF
         INT     int_command             ; Get input line
         CALL    CRLF2
-        MOV     SI,OFFSET TRANGROUP:COMBUF+2
-        CMP     BYTE PTR[SI],13 ; Check if new time entered
+        MOV     SI,COMBUF+2
+        CMP     byte[SI],13 ; Check if new time entered
         retz
 INLINE:
         CALL    GETNUM          ; Get one or two digit number
@@ -997,5 +961,4 @@ NEXT:
         return
 
 
-TRANCODE        ENDS
-                END
+end if

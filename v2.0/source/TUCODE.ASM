@@ -1,42 +1,25 @@
-TITLE   COMMAND Language midifiable Code Transient
 
 
-.xlist
-.xcref
-        INCLUDE DOSSYM.ASM
-        INCLUDE DEVSYM.ASM
-        INCLUDE COMSEG.ASM
-        INCLUDE COMSW.ASM
-.list
-.cref
 
-        INCLUDE COMEQU.ASM
 
-DATARES SEGMENT PUBLIC
-        EXTRN   ECHOFLAG:BYTE
-DATARES ENDS
 
-TRANDATA        SEGMENT PUBLIC
-        EXTRN   SUREMES:BYTE,NOTFND:BYTE,ECHOMES:BYTE,CTRLCMES:BYTE
-        EXTRN   ONMES:BYTE,OFFMES:BYTE,VERIMES:BYTE,BAD_ON_OFF:BYTE
-        EXTRN   VOLMES:BYTE,GOTVOL:BYTE,NOVOL:BYTE,WeekTab:BYTE
-        EXTRN   CurDat_Mid:BYTE
-TRANDATA        ENDS
+if SEGSEL = S_DATARES
+end if
 
-TRANSPACE       SEGMENT PUBLIC
-        EXTRN   RESSEG:WORD,CURDRV:BYTE,DIRBUF:BYTE,CHARBUF:BYTE
-TRANSPACE       ENDS
 
-TRANCODE        SEGMENT PUBLIC BYTE
+if SEGSEL = S_TRANDATA
+end if
 
-        EXTRN   PRINT:NEAR,SCANOFF:NEAR,CRLF2:NEAR,RESTUDIR:NEAR,CERROR:NEAR
-        EXTRN   CRPRINT:NEAR,OUT:NEAR,ZPRINT:NEAR
-        EXTRN   ERROR_PRINT:NEAR,MesTran:NEAR,P_Date:NEAR
+
+if SEGSEL = S_TRANSPACE
+end if
+
+
+if SEGSEL = S_TRANCODE
+
 
         IF      KANJI
-        EXTRN   TESTKANJ:NEAR
-        ENDIF
-        PUBLIC  NOTEST2,ECHO,CNTRLC,VERIFY,PRINTVOL,GetDate,PRINT_DATE
+        END IF
 
 ASSUME  CS:TRANGROUP,DS:TRANGROUP,ES:TRANGROUP,SS:NOTHING
 
@@ -55,12 +38,12 @@ ALLFIL:
         CMP     CX,0
         JNZ     NOPRMPT
 ASKAGN:
-        MOV     DX,OFFSET TRANGROUP:SUREMES ; "Are you sure (Y/N)?"
+        MOV     DX,SUREMES ; "Are you sure (Y/N)?"
         CALL    PRINT
         MOV     SI,80H
         MOV     DX,SI
-        MOV     WORD PTR [SI],120       ; zero length
-        MOV     AX,(STD_CON_INPUT_FLUSH SHL 8) OR STD_CON_STRING_INPUT
+        MOV     word [SI],120       ; zero length
+        MOV     AX,(Std_Con_Input_Flush SHL 8) OR Std_Con_String_Input
         INT     int_command
         LODSW
         OR      AH,AH
@@ -75,13 +58,13 @@ ASKAGN:
         POPF
         JNZ     ASKAGN
 NOPRMPT:
-        MOV     AH,FCB_DELETE
+        MOV     AH,FCB_Delete
         MOV     DX,FCB
         INT     int_command
         PUSH    AX
         CALL    RESTUDIR
         POP     AX
-        MOV     DX,OFFSET TRANGROUP:NOTFND
+        MOV     DX,NOTFND
         INC     AL
         JZ      CERRORJ
 RETERA:
@@ -106,7 +89,7 @@ ECH_OFF:
 
 ASSUME  DS:TRANGROUP
 DOEMES:
-        MOV     AL,BYTE PTR DS:[80H]
+        MOV     AL,byte [DS:80H]
         CMP     AL,2
         JB      PECHO                   ; Gota have at least 2 characters
         MOV     DX,82H                  ; Skip one char after "ECHO"
@@ -120,7 +103,7 @@ ASSUME  DS:RESGROUP
         PUSH    CS
         POP     DS
 ASSUME  DS:TRANGROUP
-        MOV     DX,OFFSET TRANGROUP:ECHOMES
+        MOV     DX,ECHOMES
         JMP     SHORT PYN
 
 
@@ -133,13 +116,13 @@ IsBlank:
         CALL    SCANOFF                 ; skip separators
         SUB     SI,81h                  ; number of characters advanced
         MOV     CX,SI                   ; put count in byte addressable spot
-        CMP     CL,DS:[80h]             ; compare with count
+        CMP     CL,[DS:80h]             ; compare with count
         return                          ; bye!
 
 ;The BREAK command
 CNTRLC:
         CALL    ON_OFF
-        MOV     AX,(SET_CTRL_C_TRAPPING SHL 8) OR 1
+        MOV     AX,(Set_CTRL_C_Trapping SHL 8) OR 1
         JC      PCNTRLC
         JNZ     CNTRLC_OFF
         MOV     DL,1
@@ -156,19 +139,19 @@ PCNTRLC:
         XOR     AL,AL
         INT     int_command
         MOV     BL,DL
-        MOV     DX,OFFSET TRANGROUP:CTRLCMES
+        MOV     DX,CTRLCMES
 PYN:
         CALL    PRINT
-        MOV     DX,OFFSET TRANGROUP:ONMES
+        MOV     DX,ONMES
         OR      BL,BL
         JNZ     PRINTVAL
-        MOV     DX,OFFSET TRANGROUP:OFFMES
+        MOV     DX,OFFMES
 PRINTVAL:
         JMP     PRINT
 
 VERIFY:
         CALL    ON_OFF
-        MOV     AX,(SET_VERIFY_ON_WRITE SHL 8) OR 1
+        MOV     AX,(Set_Verify_On_Write SHL 8) OR 1
         JC      PVERIFY
         JNZ     VER_OFF
         INT     int_command             ; Set verify
@@ -181,10 +164,10 @@ VER_OFF:
 PVERIFY:
         CALL    IsBlank                 ; is rest of line blank?
         JNZ     CERRORJ                 ; nope...
-        MOV     AH,GET_VERIFY_ON_WRITE
+        MOV     AH,Get_Verify_On_Write
         INT     int_command
         MOV     BL,AL
-        MOV     DX,OFFSET TRANGROUP:VERIMES
+        MOV     DX,VERIMES
         JMP     PYN
 
 ON_OFF:
@@ -209,7 +192,7 @@ OFFCHK:
         INC     AL                      ; Reset zero Carry clear from CMP
         RET
 BADONF:
-        MOV     DX,OFFSET TRANGROUP:BAD_ON_OFF
+        MOV     DX,BAD_ON_OFF
         STC
         RET
 
@@ -220,28 +203,28 @@ ASSUME  DS:TRANGROUP,ES:TRANGROUP
 
 PRINTVOL:
         PUSH    AX                      ; AX return from SEARCH_FIRST for VOL ID
-        MOV     DX,OFFSET TRANGROUP:VOLMES
+        MOV     DX,VOLMES
         CALL    PRINT
-        MOV     AL,DS:[FCB]
+        MOV     AL,[DS:FCB]
         ADD     AL,'@'
         CMP     AL,'@'
         JNZ     DRVOK
         MOV     AL,[CURDRV]
         ADD     AL,'A'
 DRVOK:
-        CALL    OUT
+        CALL    OUT_
         POP     AX
         OR      AL,AL
         JZ      GOODVOL
-        MOV     DX,OFFSET TRANGROUP:NOVOL
+        MOV     DX,NOVOL
         CALL    PRINT
         JMP     CRLF2
 GOODVOL:
-        MOV     DX,OFFSET TRANGROUP:GOTVOL
+        MOV     DX,GOTVOL
         CALL    PRINT
-        MOV     SI,OFFSET TRANGROUP:DIRBUF + 8
+        MOV     SI,DIRBUF + 8
         MOV     CX,11
-        MOV     DI,OFFSET TRANGROUP:CHARBUF
+        MOV     DI,CHARBUF
         MOV     DX,DI
         REP     MOVSB
         MOV     AX,0A0DH
@@ -257,19 +240,19 @@ PRINT_DATE:
         PUSH    DI
         PUSH    CS
         POP     ES
-        MOV     DI,OFFSET TRANGROUP:CHARBUF
-        MOV     AH,GET_DATE
+        MOV     DI,CHARBUF
+        MOV     AH,Get_Date
         INT     int_command             ; Get date in CX:DX
         CBW
         CALL    GetDate                 ; get date and put into DI
         MOV     AL," "
         STOSB
-        MOV     SI,OFFSET TRANGROUP:CURDAT_MID
+        MOV     SI,CURDAT_MID
         CALL    MESTRAN
         CALL    P_DATE
         XOR     AX,AX
         STOSB
-        MOV     DX,OFFSET TRANGROUP:CHARBUF
+        MOV     DX,CHARBUF
         CALL    ZPRINT
         POP     ES
         POP     DI
@@ -279,11 +262,10 @@ GetDate:
         MOV     SI,AX
         SHL     SI,1
         ADD     SI,AX           ; SI=AX*3
-        ADD     SI,OFFSET TRANGROUP:WEEKTAB
+        ADD     SI,WEEKTAB
         MOV     BX,CX
         MOV     CX,3
         REP     MOVSB
         return
 
-TRANCODE        ENDS
-        END
+end if

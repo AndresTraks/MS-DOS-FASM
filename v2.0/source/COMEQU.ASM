@@ -1,10 +1,8 @@
 ;*************************************
 ; COMMAND EQUs which are not switch dependant
 
-IFDEF   IBM
-        INCLUDE IFEQU.ASM
-ENDIF
-
+; "IFDEF IBM / INCLUDE IFEQU.ASM" was here.  IFEQU.ASM holds nothing but %OUT
+; lines announcing which switches were set, for the assembler's listing.
 
 SYM     EQU     ">"
 
@@ -17,13 +15,18 @@ DRVCHAR         EQU     ":"
 
 FCB     EQU     5CH
 
-VARSTRUC        STRUC
-ISDIR   DB      ?
-SIZ     DB      ?
-TTAIL   DW      ?
-INFO    DB      ?
-BUF     DB      DIRSTRLEN + 20 DUP (?)
-VARSTRUC        ENDS
+STRUC VARSTRUC
+{
+.ISDIR  DB      ?
+.SIZ    DB      ?
+.TTAIL  DW      ?
+.INFO   DB      ?
+.BUF    DB      DIRSTRLEN + 20 DUP (?)
+}
+virtual at 0
+  VARSTRUC VARSTRUC
+  sizeof.VARSTRUC = $ - VARSTRUC
+end virtual
 
 WSWITCH EQU     1               ; Wide display during DIR
 PSWITCH EQU     2               ; Pause (or Page) mode during DIR

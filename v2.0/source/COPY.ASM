@@ -1,63 +1,30 @@
-TITLE   COMMAND COPY routines.
 
-        INCLUDE COMSW.ASM
 
-.xlist
-.xcref
-        INCLUDE DOSSYM.ASM
-        INCLUDE DEVSYM.ASM
-        INCLUDE COMSEG.ASM
-.list
-.cref
 
-        INCLUDE COMEQU.ASM
 
-DATARES SEGMENT PUBLIC
-        EXTRN   VERVAL:WORD
-DATARES ENDS
 
-TRANDATA        SEGMENT PUBLIC
-        EXTRN   BADARGS:BYTE,BADCD:BYTE,BADSWT:BYTE,COPIED_PRE:BYTE
-        EXTRN   COPIED_POST:BYTE
-        EXTRN   INBDEV:BYTE,OVERWR:BYTE,FULDIR:BYTE,LOSTERR:BYTE
-        EXTRN   NOSPACE:BYTE,DEVWMES:BYTE,NOTFND:BYTE
-TRANDATA        ENDS
+if SEGSEL = S_DATARES
+end if
 
-TRANSPACE       SEGMENT PUBLIC
-        EXTRN   MELCOPY:BYTE,SRCPT:WORD,MELSTART:WORD,SCANBUF:BYTE
-        EXTRN   DESTFCB2:BYTE,SDIRBUF:BYTE,SRCTAIL:WORD,CFLAG:BYTE
-        EXTRN   NXTADD:WORD,DESTCLOSED:BYTE,ALLSWITCH:WORD,ARGC:BYTE
-        EXTRN   PLUS:BYTE,BINARY:BYTE,ASCII:BYTE,FILECNT:WORD
-        EXTRN   WRITTEN:BYTE,CONCAT:BYTE,DESTBUF:BYTE,SRCBUF:BYTE
-        EXTRN   SDIRBUF:BYTE,DIRBUF:BYTE,DESTFCB:BYTE,FRSTSRCH:BYTE
-        EXTRN   FIRSTDEST:BYTE,DESTISDIR:BYTE,DESTSWITCH:WORD,STARTEL:WORD
-        EXTRN   DESTTAIL:WORD,DESTSIZ:BYTE,DESTINFO:BYTE,INEXACT:BYTE
-        EXTRN   CURDRV:BYTE,DESTVARS:BYTE,RESSEG:WORD,SRCSIZ:BYTE
-        EXTRN   SRCINFO:BYTE,SRCVARS:BYTE,USERDIR1:BYTE,NOWRITE:BYTE
-        EXTRN   RDEOF:BYTE,SRCHAND:WORD,CPDATE:WORD,CPTIME:WORD
-        EXTRN   SRCISDEV:BYTE,BYTCNT:WORD,TPA:WORD,TERMREAD:BYTE
-        EXTRN   DESTHAND:WORD,DESTISDEV:BYTE,DIRCHAR:BYTE
-TRANSPACE       ENDS
+
+if SEGSEL = S_TRANDATA
+end if
+
+
+if SEGSEL = S_TRANSPACE
+end if
 
 
 ; **************************************************
 ; COPY CODE
 ;
 
-TRANCODE        SEGMENT PUBLIC BYTE
 
-        EXTRN   RESTUDIR:NEAR,CERROR:NEAR,SWITCH:NEAR,DISP32BITS:NEAR
-        EXTRN   PRINT:NEAR,TCOMMAND:NEAR,ZPRINT:NEAR,ONESPC:NEAR
-        EXTRN   RESTUDIR1:NEAR,FCB_TO_ASCZ:NEAR,CRLF2:NEAR,SAVUDIR1:NEAR
-        EXTRN   SETREST1:NEAR,BADCDERR:NEAR,STRCOMP:NEAR,DELIM:NEAR
-        EXTRN   UPCONV:NEAR,PATHCHRCMP:NEAR,SCANOFF:NEAR
+if SEGSEL = S_TRANCODE
 
-        EXTRN   CPARSE:NEAR
 
-        EXTRN   SEARCH:NEAR,SEARCHNEXT:NEAR,DOCOPY:NEAR,CLOSEDEST:NEAR
-        EXTRN   FLSHFIL:NEAR,SETASC:NEAR,BUILDNAME:NEAR,COPERR:NEAR
 
-        PUBLIC  COPY,BUILDPATH,COMPNAME,ENDCOPY
+
 
 
 ASSUME  CS:TRANGROUP,DS:TRANGROUP,ES:TRANGROUP,SS:NOTHING
@@ -73,7 +40,7 @@ CONTMEL:
         mov     si,[SRCPT]
         mov     bl,'+'
 SCANSRC2:
-        mov     di,OFFSET TRANGROUP:SCANBUF
+        mov     di,SCANBUF
         call    CPARSE
         test    bh,80H
         jz      NEXTMEL                 ; Go back to start
@@ -81,11 +48,11 @@ SCANSRC2:
         jnz     SCANSRC2                ; Yes
         call    SOURCEPROC
         call    RESTUDIR1
-        mov     di,OFFSET TRANGROUP:DESTFCB2
-        mov     ax,PARSE_FILE_DESCRIPTOR SHL 8
+        mov     di,DESTFCB2
+        mov     ax,Parse_File_Descriptor SHL 8
         INT     int_command
-        mov     bx,OFFSET TRANGROUP:SDIRBUF + 1
-        mov     si,OFFSET TRANGROUP:DESTFCB2 + 1
+        mov     bx,SDIRBUF + 1
+        mov     si,DESTFCB2 + 1
         mov     di,[SRCTAIL]
         call    BUILDNAME
         jmp     MELDO
@@ -118,12 +85,12 @@ ASSUME  DS:TRANGROUP,ES:TRANGROUP
         mov     [WRITTEN],al            ; Nothing written yet
         mov     [CONCAT],al             ; No concatination
         mov     [MELCOPY],al            ; Not a Mel Hallerman copy
-        mov     word ptr [SCANBUF],ax   ; Init buffer
-        mov     word ptr [DESTBUF],ax   ; Init buffer
-        mov     word ptr [SRCBUF],ax    ; Init buffer
-        mov     word ptr [SDIRBUF],ax   ; Init buffer
-        mov     word ptr [DIRBUF],ax    ; Init buffer
-        mov     word ptr [DESTFCB],ax   ; Init buffer
+        mov     word [SCANBUF],ax   ; Init buffer
+        mov     word [DESTBUF],ax   ; Init buffer
+        mov     word [SRCBUF],ax    ; Init buffer
+        mov     word [SDIRBUF],ax   ; Init buffer
+        mov     word [DIRBUF],ax    ; Init buffer
+        mov     word [DESTFCB],ax   ; Init buffer
         dec     ax
         mov     [FRSTSRCH],al           ; First search call
         mov     [FIRSTDEST],al          ; First time
@@ -132,7 +99,7 @@ ASSUME  DS:TRANGROUP,ES:TRANGROUP
         mov     bl,'+'                  ; include '+' as a delimiter
 DESTSCAN:
         xor     bp,bp                   ; no switches
-        mov     di,offset trangroup:SCANBUF
+        mov     di,SCANBUF
         call    CPARSE
         PUSHF                           ; save flags
         test    bh,80H                  ; A '+' argument?
@@ -154,9 +121,9 @@ TESTP2:
 GOTPLUS:
         push    SI
         mov     ax,[STARTEL]
-        mov     SI,offset trangroup:SCANBUF ; Adjust to copy
+        mov     SI,SCANBUF ; Adjust to copy
         sub     ax,SI
-        mov     DI,offset trangroup:DESTBUF
+        mov     DI,DESTBUF
         add     ax,DI
         mov     [DESTTAIL],AX
         mov     [DESTSIZ],cl            ; Save its size
@@ -173,7 +140,7 @@ CHECKDONE:
         shl     al,1
         shl     al,1
         mov     [INEXACT],al            ; CONCAT -> inexact copy
-        mov     dx,offset trangroup:BADARGS
+        mov     dx,BADARGS
         mov     al,[ARGC]
         or      al,al                   ; Good number of args?
         jz      CERROR4J                ; no, not enough
@@ -182,40 +149,40 @@ CHECKDONE:
 CERROR4J:
         jmp    CERROR                   ; no, too many
 ACOUNTOK:
-        mov     bp,offset trangroup:DESTVARS
+        mov     bp,DESTVARS
         cmp     al,1
         jnz     GOT2ARGS
         mov     al,[CURDRV]             ; Dest is default drive:*.*
         add     al,'A'
         mov     ah,':'
-        mov     [bp.SIZ],2
-        mov     di,offset trangroup:DESTBUF
+        mov     [bp+VARSTRUC.SIZ],2
+        mov     di,DESTBUF
         stosw
         mov     [DESTSWITCH],0          ; no switches on dest
-        mov     [bp.INFO],2             ; Flag dest is ambig
-        mov     [bp.ISDIR],0            ; Know destination specs file
+        mov     [bp+VARSTRUC.INFO],2             ; Flag dest is ambig
+        mov     [bp+VARSTRUC.ISDIR],0            ; Know destination specs file
         call    SETSTARS
 GOT2ARGS:
-        cmp     [bp.SIZ],2
+        cmp     [bp+VARSTRUC.SIZ],2
         jnz     NOTSHORTDEST
         cmp     [DESTBUF+1],':'
         jnz     NOTSHORTDEST            ; Two char file name
-        or      [bp.INFO],2             ; Know dest is d:
-        mov     di,offset trangroup:DESTBUF + 2
-        mov     [bp.ISDIR],0            ; Know destination specs file
+        or      [bp+VARSTRUC.INFO],2             ; Know dest is d:
+        mov     di,DESTBUF + 2
+        mov     [bp+VARSTRUC.ISDIR],0            ; Know destination specs file
         call    SETSTARS
 NOTSHORTDEST:
-        mov     di,[bp.TTAIL]
-        cmp     byte ptr [DI],0
+        mov     di,[bp+VARSTRUC.TTAIL]
+        cmp     byte [DI],0
         jnz     CHKSWTCHES
-        mov     dx,offset trangroup:BADCD
-        cmp     byte ptr [DI-2],':'
+        mov     dx,BADCD
+        cmp     byte [DI-2],':'
         jnz     CERROR4J               ; Trailing '/' error
-        mov     [bp.ISDIR],2           ; Know destination is d:/
-        or      [bp.INFO],6
+        mov     [bp+VARSTRUC.ISDIR],2           ; Know destination is d:/
+        or      [bp+VARSTRUC.INFO],6
         call    SETSTARS
 CHKSWTCHES:
-        mov     dx,offset trangroup:BADSWT
+        mov     dx,BADSWT
         mov     ax,[ALLSWITCH]
         cmp     ax,GOTSWITCH
         jz      CERROR4J                ; Switch specified which is not known
@@ -224,7 +191,7 @@ CHKSWTCHES:
 
         TEST    AX,VSWITCH              ; Verify requested?
         JZ      NOVERIF                 ; No
-        MOV     AH,GET_VERIFY_ON_WRITE
+        MOV     AH,Get_Verify_On_Write
         INT     int_command             ; Get current setting
         PUSH    DS
         MOV     DS,[RESSEG]
@@ -233,14 +200,14 @@ ASSUME  DS:RESGROUP
         MOV     [VERVAL],AX             ; Save current setting
         POP     DS
 ASSUME  DS:TRANGROUP
-        MOV     AX,(SET_VERIFY_ON_WRITE SHL 8) OR 1 ; Set verify
+        MOV     AX,(Set_Verify_On_Write SHL 8) OR 1 ; Set verify
         INT     int_command
 NOVERIF:
         xor     bp,bp                   ; no switches
         mov     si,81H
         mov     bl,'+'                  ; include '+' as a delimiter
 SCANFSRC:
-        mov     di,offset trangroup:SCANBUF
+        mov     di,SCANBUF
         call    CPARSE                  ; Parse first source name
         test    bh,1                    ; Switch?
         jnz     SCANFSRC                ; Yes, try again
@@ -253,9 +220,9 @@ SCANFSRC:
 NOSETCASC:
         push    SI
         mov     ax,[STARTEL]
-        mov     SI,offset trangroup:SCANBUF ; Adjust to copy
+        mov     SI,SCANBUF ; Adjust to copy
         sub     ax,SI
-        mov     DI,offset trangroup:SRCBUF
+        mov     DI,SRCBUF
         add     ax,DI
         mov     [SRCTAIL],AX
         mov     [SRCSIZ],cl             ; Save its size
@@ -273,30 +240,30 @@ NOSETCASC:
 ENDCOPY:
         CALL    CLOSEDEST
 ENDCOPY2:
-        MOV     DX,OFFSET TRANGROUP:COPIED_PRE
+        MOV     DX,COPIED_PRE
         CALL    PRINT
         MOV     SI,[FILECNT]
         XOR     DI,DI
         CALL    DISP32BITS
-        MOV     DX,OFFSET TRANGROUP:COPIED_POST
+        MOV     DX,COPIED_POST
         CALL    PRINT
         JMP     TCOMMAND                ; Stack could be messed up
 
 SRCNONEXIST:
         cmp     [CONCAT],0
         jnz     NEXTSRC                 ; If in concat mode, ignore error
-        mov     dx,offset trangroup:SRCBUF
-        call    zprint
+        mov     dx,SRCBUF
+        call    ZPRINT
         CALL    ONESPC
-        mov     dx,offset trangroup:NOTFND
+        mov     dx,NOTFND
         jmp     COPERR
 
 SOURCEPROC:
         push    SI
         mov     ax,[STARTEL]
-        mov     SI,offset trangroup:SCANBUF ; Adjust to copy
+        mov     SI,SCANBUF ; Adjust to copy
         sub     ax,SI
-        mov     DI,offset trangroup:SRCBUF
+        mov     DI,SRCBUF
         add     ax,DI
         mov     [SRCTAIL],AX
         mov     [SRCSIZ],cl             ; Save its size
@@ -317,8 +284,8 @@ FRSTSRC:
         mov     [DESTCLOSED],al         ; Not created -> not closed
 LEAVECFLAG:
         mov     [SRCPT],SI              ; remember where we are
-        mov     di,offset trangroup:USERDIR1
-        mov     bp,offset trangroup:SRCVARS
+        mov     di,USERDIR1
+        mov     bp,SRCVARS
         call    BUILDPATH               ; Figure out everything about the source
         mov     si,[SRCTAIL]            ; Create the search FCB
         return
@@ -333,9 +300,9 @@ MORECP:
         mov     si,[SRCPT]
         mov     bl,'+'                  ; include '+' as a delimiter
 SCANSRC:
-        mov     di,offset trangroup:SCANBUF
+        mov     di,SCANBUF
         call    CPARSE                  ; Parse first source name
-        JC      EndCopyJ2               ; if error, then end (trailing + case)
+        JC      ENDCOPYJ2               ; if error, then end (trailing + case)
         test    bh,80H
         jz      ENDCOPYJ2               ; If no '+' we're done
         test    bh,1                    ; Switch?
@@ -343,16 +310,16 @@ SCANSRC:
         call    SOURCEPROC
 FIRSTENT:
         mov     di,FCB
-        mov     ax,PARSE_FILE_DESCRIPTOR SHL 8
+        mov     ax,Parse_File_Descriptor SHL 8
         INT     int_command
-        mov     ax,word ptr [SRCBUF]    ; Get drive
+        mov     ax,word [SRCBUF]    ; Get drive
         cmp     ah,':'
         jz      DRVSPEC1
         mov     al,'@'
 DRVSPEC1:
         sub     al,'@'
-        mov     ds:[FCB],al
-        mov     ah,DIR_SEARCH_FIRST
+        mov     [ds:FCB],al
+        mov     ah,Dir_Search_First
         call    SEARCH
         pushf                           ; Save result of search
         call    RESTUDIR1               ; Restore users dir
@@ -366,14 +333,14 @@ NEXTAMBIG0:
         jz      NEXTAMBIG
 SETNMEL:
         mov     cx,12
-        mov     di,OFFSET TRANGROUP:SDIRBUF
-        mov     si,OFFSET TRANGROUP:DIRBUF
+        mov     di,SDIRBUF
+        mov     si,DIRBUF
         rep     movsb                   ; Save very first source name
 NEXTAMBIG:
         xor     al,al
         mov     [NOWRITE],al            ; Turn off NOWRITE
         mov     di,[SRCTAIL]
-        mov     si,offset trangroup:DIRBUF + 1
+        mov     si,DIRBUF + 1
         call    FCB_TO_ASCZ             ; SRCBUF has complete name
 MELDO:
         cmp     [CONCAT],0
@@ -381,7 +348,7 @@ MELDO:
         test    [SRCINFO],2             ; Show name if multi
         jz      DOREAD
 SHOWCPNAM:
-        mov     dx,offset trangroup:SRCBUF
+        mov     dx,SRCBUF
         call    ZPRINT
         call    CRLF2
 DOREAD:
@@ -412,24 +379,24 @@ NEXTSRCJ:
 
 
 BUILDPATH:
-        test    [BP.INFO],2
+        test    [BP+VARSTRUC.INFO],2
         jnz     NOTPFILE                ; If ambig don't bother with open
         mov     dx,bp
-        add     dx,BUF                  ; Set DX to spec
-        mov     ax,OPEN SHL 8
+        add     dx,VARSTRUC.BUF                  ; Set DX to spec
+        mov     ax,Open SHL 8
         INT     int_command
         jc      NOTPFILE
         mov     bx,ax                   ; Is pure file
-        mov     ax,IOCTL SHL 8
+        mov     ax,IOCtl SHL 8
         INT     int_command
-        mov     ah,CLOSE
+        mov     ah,Close
         INT     int_command
         test    dl,devid_ISDEV
         jnz     ISADEV                  ; If device, done
-        test    [BP.INFO],4
+        test    [BP+VARSTRUC.INFO],4
         jz      ISSIMPFILE              ; If no path seps, done
 NOTPFILE:
-        mov     dx,word ptr [BP.BUF]
+        mov     dx,word [BP+VARSTRUC.BUF]
         cmp     dh,':'
         jz      DRVSPEC5
         mov     dl,'@'
@@ -437,19 +404,19 @@ DRVSPEC5:
         sub     dl,'@'                  ; A = 1
         call    SAVUDIR1
         mov     dx,bp
-        add     dx,BUF                  ; Set DX for upcomming CHDIRs
-        mov     bh,[BP.INFO]
+        add     dx,VARSTRUC.BUF                  ; Set DX for upcomming CHDIRs
+        mov     bh,[BP+VARSTRUC.INFO]
         and     bh,6
         cmp     bh,6                    ; Ambig and path ?
         jnz     CHECKAMB                ; jmp if no
-        mov     si,[BP.TTAIL]
-        cmp     byte ptr [si-2],':'
+        mov     si,[BP+VARSTRUC.TTAIL]
+        cmp     byte [si-2],':'
         jnz     KNOWNOTSPEC
-        mov     [BP.ISDIR],2            ; Know is d:/file
+        mov     [BP+VARSTRUC.ISDIR],2            ; Know is d:/file
         jmp     short DOPCDJ
 
 KNOWNOTSPEC:
-        mov     [BP.ISDIR],1            ; Know is path/file
+        mov     [BP+VARSTRUC.ISDIR],1            ; Know is path/file
         dec     si                      ; Point to the /
 DOPCDJ:
         jmp     short DOPCD
@@ -459,12 +426,12 @@ CHECKAMB:
         jnz     CHECKCD
 ISSIMPFILE:
 ISADEV:
-        mov     [BP.ISDIR],0            ; Know is file since ambig but no path
+        mov     [BP+VARSTRUC.ISDIR],0            ; Know is file since ambig but no path
         return
 
 CHECKCD:
         call    SETREST1
-        mov     ah,CHDIR
+        mov     ah,CHDir
         INT     int_command
         jc      NOTPDIR
         mov     di,dx
@@ -474,37 +441,37 @@ CHECKCD:
         repne   scasb
         dec     di
         mov     al,[DIRCHAR]
-        mov     [bp.ISDIR],2            ; assume d:/file
+        mov     [bp+VARSTRUC.ISDIR],2            ; assume d:/file
         cmp     al,[di-1]
         jz      GOTSRCSLSH
         stosb
-        mov     [bp.ISDIR],1            ; know path/file
+        mov     [bp+VARSTRUC.ISDIR],1            ; know path/file
 GOTSRCSLSH:
-        or      [bp.INFO],6
+        or      [bp+VARSTRUC.INFO],6
         call    SETSTARS
         return
 
 
 NOTPDIR:
-        mov     [bp.ISDIR],0            ; assume pure file
-        mov     bh,[bp.INFO]
+        mov     [bp+VARSTRUC.ISDIR],0            ; assume pure file
+        mov     bh,[bp+VARSTRUC.INFO]
         test    bh,4
         retz                            ; Know pure file, no path seps
-        mov     [bp.ISDIR],2            ; assume d:/file
-        mov     si,[bp.TTAIL]
-        cmp     byte ptr [si],0
+        mov     [bp+VARSTRUC.ISDIR],2            ; assume d:/file
+        mov     si,[bp+VARSTRUC.TTAIL]
+        cmp     byte [si],0
         jz      BADCDERRJ2              ; Trailing '/'
-        cmp     byte ptr [si],'.'
+        cmp     byte [si],'.'
         jz      BADCDERRJ2              ; If . or .. pure cd should have worked
-        cmp     byte ptr [si-2],':'
+        cmp     byte [si-2],':'
         jz      DOPCD                   ; Know d:/file
-        mov     [bp.ISDIR],1            ; Know path/file
+        mov     [bp+VARSTRUC.ISDIR],1            ; Know path/file
         dec     si                      ; Point at last '/'
 DOPCD:
         xor     bl,bl
         xchg    bl,[SI]                 ; Stick in a NUL
         call    SETREST1
-        mov     ah,CHDIR
+        mov     ah,CHDir
         INT     int_command
         xchg    bl,[SI]
         retnc
@@ -512,8 +479,8 @@ BADCDERRJ2:
         JMP     BADCDERR
 
 SETSTARS:
-        mov     [bp.TTAIL],DI
-        add     [bp.SIZ],12
+        mov     [bp+VARSTRUC.TTAIL],DI
+        add     [bp+VARSTRUC.SIZ],12
         mov     ax,('.' SHL 8) OR '?'
         mov     cx,8
         rep     stosb
@@ -530,17 +497,17 @@ SETSTARS:
 COMPNAME:
         PUSH    CX
         PUSH    AX
-        MOV     si,offset trangroup:SRCBUF
-        MOV     di,offset trangroup:DESTBUF
+        MOV     si,SRCBUF
+        MOV     di,DESTBUF
         MOV     CL,[CURDRV]
         MOV     CH,CL
-        CMP     BYTE PTR [SI+1],':'
+        CMP     byte [SI+1],':'
         JNZ     NOSRCDRV
         LODSW
         SUB     AL,'A'
         MOV     CL,AL
 NOSRCDRV:
-        CMP     BYTE PTR [DI+1],':'
+        CMP     byte [DI+1],':'
         JNZ     NODSTDRV
         MOV     AL,[DI]
         INC     DI
@@ -573,6 +540,5 @@ RET81P:
         POP     CX
         return
 
-TRANCODE        ENDS
+end if
 
-        END

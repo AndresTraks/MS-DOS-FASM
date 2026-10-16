@@ -23,3 +23,9 @@ $FASM source/MSDOS.ASM bin/MSDOS.SYS
 $FASM source/IO.ASM bin/IO.SYS
 
 $FASM bootsect.asm bin/bootsect.bin
+
+# COMMAND.COM, from the sixteen modules COMLINK lists.  This is not on the
+# image yet: it boots and reaches its command dispatcher, but no internal
+# command matches, so create_image.sh still uses the one Microsoft shipped.
+# Built here regardless, so the conversion cannot quietly stop assembling.
+$FASM source/COMLINK.ASM bin/COMMANDF.COM

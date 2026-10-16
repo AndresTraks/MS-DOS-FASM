@@ -1,77 +1,50 @@
-TITLE   COMMAND Resident DATA
 
-        INCLUDE COMSW.ASM
-.xlist
-.xcref
-        INCLUDE COMSEG.ASM
-.list
-.cref
 
-        INCLUDE IFEQU.ASM
 
-CODERES SEGMENT PUBLIC
-        EXTRN   THEADFIX:NEAR,EXT_EXEC:NEAR,TREMCHECK:NEAR
-CODERES ENDS
 
-TRANCODE        SEGMENT PUBLIC
-        EXTRN   COMMAND:NEAR
-TRANCODE        ENDS
+if SEGSEL = S_CODERES
+end if
 
-ZEXEC_CODE      SEGMENT PUBLIC
-        IF      IBMVER
-        EXTRN   $EXEC:NEAR
-        ENDIF
-ZEXEC_CODE      ENDS
+
+if SEGSEL = S_TRANCODE
+end if
+
 
 
 ; Data for resident portion
 
-DATARES SEGMENT PUBLIC BYTE
 
-        PUBLIC  MESBAS,MESADD,MREAD,MWRITE,ERRMES,IOTYP,DRVNUM,DRVLET,NEWLIN
-        PUBLIC  DEVEMES,DEVENAM,REQUEST,CDEVAT,BADFAT,COMBAD,NEEDCOM,DRVMSG
-        PUBLIC  COMLET,DEFMSG,PROMPT,ENDBATMES,EXECEMES,EXEBAD,TOOBIG,NOCOM
-        PUBLIC  NOHANDMES,BMEMMES,HALTMES,FRETMES,RBADNAM,INT_2E_RET,SAVE_PDB
-        PUBLIC  PARENT,ERRCD_24,HANDLE01,LOADING,BATCH,BATLOC,COMSPEC,TRANS
-        PUBLIC  TRNSEG,COMDRV,BATBYT,MEMSIZ,SUM,EXTCOM,RETCODE,ECHOFLAG
-        PUBLIC  IO_SAVE,RESTDIR,PERMCOM,SINGLECOM,VERVAL,FORFLAG,UFORDRV
-        PUBLIC  FORSET,FORCOM,FORVAR,FORPTR,FORUFCB,FORFCB,RE_INSTR,RE_OUT_APP
-        PUBLIC  RE_OUTSTR,PIPEFLAG,PIPEFILES,PIPEPTR,PIPESTR,PIPE1,PIPE2
-        PUBLIC  INPIPEPTR,OUTPIPEPTR,EXEC_BLOCK,ENVIRSEG,COM_PTR,COM_FCB1
-        PUBLIC  COM_FCB2,PARMBUF,TRANVARS,MYSEG,LTPA,RSWITCHAR,RDIRCHAR
-        PUBLIC  MYSEG1,MYSEG2
-        PUBLIC  DATARESEND
+if SEGSEL = S_DATARES
+
 
         IF      IBMVER
-        PUBLIC  SYS_CALL,ZEXEC,EXESEG,USER_SP,USER_SS,EXESUM
-        ENDIF
+        END IF
 
-        ORG     0
 ZERO    =       $
-MESBAS  DW      OFFSET RESGROUP:ERR0
-        DW      OFFSET RESGROUP:ERR1
-        DW      OFFSET RESGROUP:ERR2
-        DW      OFFSET RESGROUP:ERR3
-        DW      OFFSET RESGROUP:ERR4
-        DW      OFFSET RESGROUP:ERR5
-        DW      OFFSET RESGROUP:ERR6
-        DW      OFFSET RESGROUP:ERR7
-        DW      OFFSET RESGROUP:ERR8
-        DW      OFFSET RESGROUP:ERR9
-        DW      OFFSET RESGROUP:ERR10
-        DW      OFFSET RESGROUP:ERR11
-        DW      OFFSET RESGROUP:ERR12
+MESBAS  DW      ERR0
+        DW      ERR1
+        DW      ERR2
+        DW      ERR3
+        DW      ERR4
+        DW      ERR5
+        DW      ERR6
+        DW      ERR7
+        DW      ERR8
+        DW      ERR9
+        DW      ERR10
+        DW      ERR11
+        DW      ERR12
 
-MESADD  DW      OFFSET RESGROUP:NEWLIN          ;"0"
-        DW      OFFSET RESGROUP:COM$1           ;"1"
-        DW      OFFSET RESGROUP:ERR3            ;"2"
-        DW      OFFSET RESGROUP:ALLOC$3         ;"3"
-        DW      OFFSET RESGROUP:FILE$4          ;"4"
-        DW      OFFSET RESGROUP:RROR$5          ;"5"
-        DW      OFFSET RESGROUP:CAN$6           ;"6"
-        DW      OFFSET RESGROUP:EMORY$7         ;"7"
-        DW      OFFSET RESGROUP:BAT$8           ;"8"
-        DW      OFFSET RESGROUP:INS$9           ;"9"
+MESADD  DW      NEWLIN          ;"0"
+        DW      COM$1           ;"1"
+        DW      ERR3            ;"2"
+        DW      Alloc$3         ;"3"
+        DW      FILE$4          ;"4"
+        DW      RROR$5          ;"5"
+        DW      CAN$6           ;"6"
+        DW      EMORY$7         ;"7"
+        DW      BAT$8           ;"8"
+        DW      INS$9           ;"9"
 
 ERR0    DB      "Write protec","t"+80h
 ERR1    DB      "Bad uni","t"+80h
@@ -97,7 +70,7 @@ DEVEMES DB      " device "
 DEVENAM DB      8 DUP (?)
         DB      13,10,"$"                       ;Must be $ terminated
 COM$1   DB      " COMMAN","D"+80h
-ALLOC$3 DB      " allocation"," "+80h
+Alloc$3 DB      " allocation"," "+80h
 FILE$4  DB      " file"," "+80h
 RROR$5  DB      "rror"," "+80h
 CAN$6   DB      "Cannot"," "+80h
@@ -133,7 +106,7 @@ LOADING DB      0
 BATCH   DW      0               ; Assume no batch mode initially
 BATLOC  DD      0               ; Position in batch file
 COMSPEC DB      40 DUP(0)
-TRANS   DW      OFFSET TRANGROUP:COMMAND
+TRANS   DW      COMMAND
 TRNSEG  DW      ?
 COMDRV  DB      ?               ; DRIVE SPEC TO LOAD AUTOEXEC AND COMMAND
 BATBYT  DB      ?
@@ -172,18 +145,18 @@ PIPEPTR DW      ?
 PIPESTR DB      129 DUP(?)
 PIPE1   DB      "_:/%PIPE1.$$$",0
 PIPE2   DB      "_:/%PIPE2.$$$",0
-INPIPEPTR DW    OFFSET RESGROUP:PIPE1
-OUTPIPEPTR DW   OFFSET RESGROUP:PIPE2
+INPIPEPTR DW    PIPE1
+OUTPIPEPTR DW   PIPE2
 
-EXEC_BLOCK LABEL BYTE           ; The data block for EXEC calls
+label EXEC_BLOCK byte           ; The data block for EXEC calls
 ENVIRSEG DW     ?
-COM_PTR LABEL   DWORD
+label COM_PTR dword
         DW      80H             ; Point at unformatted parameters
         DW      ?
-COM_FCB1 LABEL  DWORD
+label COM_FCB1 dword
         DW      5CH
         DW      ?
-COM_FCB2 LABEL  DWORD
+label COM_FCB2 dword
         DW      6CH
         DW      ?
 
@@ -191,25 +164,24 @@ PARMBUF DB      129 DUP (?)
 
 IF IBMVER
 SYS_CALL    DD  ?
-ZEXEC       DW  OFFSET ZEXEC_CODE:$EXEC
+ZEXEC       DW  _EXEC
 EXESEG      DW  ?
 USER_SP     DW  ?
 USER_SS     DW  ?
 EXESUM      DW  ?
-ENDIF
+END IF
 
-TRANVARS LABEL  BYTE            ; Variables passed to transient
-        DW      OFFSET RESGROUP:THEADFIX
+label TRANVARS byte            ; Variables passed to transient
+        DW      THEADFIX
 MYSEG   DW      0               ; Put our own segment here
 LTPA    DW      0               ; WILL STORE TPA SEGMENT HERE
 RSWITCHAR DB    "-"
 RDIRCHAR DB     "/"
-        DW      OFFSET RESGROUP:EXT_EXEC
+        DW      EXT_EXEC
 MYSEG1  DW      ?
-        DW      OFFSET RESGROUP:TREMCHECK
+        DW      TREMCHECK
 MYSEG2  DW      0
 
-DATARESEND      LABEL   BYTE
+label DATARESEND byte
 
-DATARES ENDS
-        END
+end if

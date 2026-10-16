@@ -1,33 +1,16 @@
-TITLE   COMMAND Language modifiable Code Resident
 
 
-.xlist
-.xcref
-        INCLUDE DOSSYM.ASM
-        INCLUDE DEVSYM.ASM
-        INCLUDE COMSEG.ASM
-        INCLUDE COMSW.ASM
-.list
-.cref
-
-        INCLUDE COMEQU.ASM
-
-DATARES SEGMENT PUBLIC
-        EXTRN   ENDBATMES:BYTE,BATCH:WORD,ECHOFLAG:BYTE,CDEVAT:BYTE
-        EXTRN   DEVENAM:BYTE,DRVLET:BYTE,MREAD:BYTE,MWRITE:BYTE,IOTYP:BYTE
-        EXTRN   ERRCD_24:WORD,MESBAS:BYTE,ERRMES:BYTE,DEVEMES:BYTE
-        EXTRN   DRVNUM:BYTE,LOADING:BYTE,REQUEST:BYTE,PIPEFLAG:BYTE
-        EXTRN   SINGLECOM:WORD,FORFLAG:BYTE,BADFAT:BYTE,NEWLIN:BYTE
-        EXTRN   MESADD:BYTE
-DATARES ENDS
 
 
-CODERES SEGMENT PUBLIC BYTE
 
-        EXTRN   SAVHAND:NEAR,RESTHAND:NEAR,CONTCTERM:NEAR
-        EXTRN   GETCOMDSK2:NEAR
+if SEGSEL = S_DATARES
+end if
 
-        PUBLIC  ASKEND,DSKERR,RPRINT
+
+
+if SEGSEL = S_CODERES
+
+
 
 ASSUME  CS:RESGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
@@ -38,9 +21,9 @@ ASSUME  DS:RESGROUP
 ASKEND:
         CALL    SAVHAND
 ASKEND2:
-        MOV     DX,OFFSET RESGROUP:ENDBATMES
+        MOV     DX,ENDBATMES
         CALL    RPRINT
-        MOV     AX,(STD_CON_INPUT_FLUSH SHL 8)+STD_CON_INPUT
+        MOV     AX,(Std_Con_Input_Flush SHL 8)+Std_Con_Input
         INT     int_command
         AND     AL,5FH
         CMP     AL,"N"
@@ -48,7 +31,7 @@ ASKEND2:
         CMP     AL,"Y"
         JNZ     ASKEND2
         MOV     ES,[BATCH]
-        MOV     AH,DEALLOC
+        MOV     AH,Dealloc
         INT     int_command
         MOV     [BATCH],0               ; Flag no batch AFTER DEALLOC in case
                                         ;   of ^C
@@ -73,13 +56,13 @@ ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
         PUSH    CX
         PUSH    AX
         MOV     DS,BP
-        MOV     AX,[SI.SDEVATT]
+        MOV     AX,[SI+SYSDEV.SDEVATT]
         MOV     [CDEVAT],AH
         PUSH    CS
         POP     ES
-        MOV     DI,OFFSET RESGROUP:DEVENAM
+        MOV     DI,DEVENAM
         MOV     CX,8
-        ADD     SI,SDEVNAME             ; Suck up device name (even on Block)
+        ADD     SI,SYSDEV.SDEVNAME             ; Suck up device name (even on Block)
         REP     MOVSB
         POP     AX
         POP     CX
@@ -102,15 +85,15 @@ ASSUME  DS:RESGROUP
         JNZ     NOHARDE
         JMP     FATERR
 NOHARDE:
-        MOV     SI,OFFSET RESGROUP:MREAD
+        MOV     SI,MREAD
         TEST    AH,1
         JZ      SAVMES
-        MOV     SI,OFFSET RESGROUP:MWRITE
+        MOV     SI,MWRITE
 SAVMES:
         LODSW
-        MOV     WORD PTR [IOTYP],AX
+        MOV     word [IOTYP],AX
         LODSW
-        MOV     WORD PTR [IOTYP+2],AX
+        MOV     word [IOTYP+2],AX
         AND     DI,0FFH
         CMP     DI,12
         JBE     HAVCOD
@@ -118,29 +101,29 @@ SAVMES:
 HAVCOD:
         MOV     [ERRCD_24],DI
         SHL     DI,1
-        MOV     DI,WORD PTR [DI+MESBAS] ; Get pointer to error message
+        MOV     DI,word [DI+MESBAS] ; Get pointer to error message
         XCHG    DI,DX           ; May need DX later
         CALL    RPRINT          ; Print error type
-        MOV     DX,OFFSET RESGROUP:ERRMES
+        MOV     DX,ERRMES
         CALL    RPRINT
         TEST    [CDEVAT],DEVTYP SHR 8
         JZ      BLKERR
-        MOV     DX,OFFSET RESGROUP:DEVEMES
-        MOV     AH,STD_CON_STRING_OUTPUT
+        MOV     DX,DEVEMES
+        MOV     AH,Std_Con_String_Output
         INT     int_command
         JMP     SHORT ASK       ; Don't ralph on COMMAND
 
 BLKERR:
-        MOV     DX,OFFSET RESGROUP:DRVNUM
+        MOV     DX,DRVNUM
         CALL    RPRINT
         CMP     [LOADING],0
         JZ      ASK
         CALL    RESTHAND
         JMP     GETCOMDSK2      ; If error loading COMMAND, re-prompt
 ASK:
-        MOV     DX,OFFSET RESGROUP:REQUEST
+        MOV     DX,REQUEST
         CALL    RPRINT
-        MOV     AX,(STD_CON_INPUT_FLUSH SHL 8)+STD_CON_INPUT
+        MOV     AX,(Std_Con_Input_Flush SHL 8)+Std_Con_Input
         INT     int_command             ; Get response
         CALL    CRLF
         OR      AL,20H          ; Convert to lower case
@@ -179,11 +162,11 @@ RESTHD:
         IRET
 
 FATERR:
-        MOV     DX,OFFSET RESGROUP:BADFAT
+        MOV     DX,BADFAT
         CALL    RPRINT
-        MOV     DX,OFFSET RESGROUP:ERRMES
+        MOV     DX,ERRMES
         CALL    RPRINT
-        MOV     DX,OFFSET RESGROUP:DRVNUM
+        MOV     DX,DRVNUM
         CALL    RPRINT
         MOV     AL,2            ; Abort
         JMP     RESTHD
@@ -195,7 +178,7 @@ FATERR:
 ASSUME DS:RESGROUP,SS:RESGROUP
 
 CRLF:
-        MOV     DX,OFFSET RESGROUP:NEWLIN
+        MOV     DX,NEWLIN
 
 RPRINT:
         PUSH    AX              ; Tokenized message printer
@@ -214,14 +197,14 @@ RPRINT1:
         SUB     AL,"0"
         CBW
         SHL     AX,1
-        MOV     BX,OFFSET RESGROUP:MESADD
+        MOV     BX,MESADD
         ADD     BX,AX
         MOV     DX,[BX]
         CALL    RPRINT
         JMP     SHORT RPRINT3
 RPRINT2:
         MOV     DL,AL
-        MOV     AH,STD_CON_OUTPUT
+        MOV     AH,Std_Con_Output
         INT     int_command
 RPRINT3:
         POP     AX
@@ -233,5 +216,4 @@ RPRINT3:
         POP     AX
         RET
 
-CODERES ENDS
-        END
+end if

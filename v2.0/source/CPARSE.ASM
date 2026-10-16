@@ -1,44 +1,28 @@
-TITLE   CPARSE
 
-        INCLUDE COMSW.ASM
 
-.xlist
-.xcref
-        INCLUDE DOSSYM.ASM
-        INCLUDE DEVSYM.ASM
-        INCLUDE COMSEG.ASM
-.list
-.cref
 
-        INCLUDE COMEQU.ASM
 
-DATARES SEGMENT PUBLIC
-DATARES ENDS
 
-TRANDATA        SEGMENT PUBLIC
-        EXTRN   BADCPMES:BYTE
-TRANDATA        ENDS
 
-TRANSPACE       SEGMENT PUBLIC
-        EXTRN   CURDRV:BYTE,ELPOS:BYTE,STARTEL:WORD
-        EXTRN   SKPDEL:BYTE,SWITCHAR:BYTE,ELCNT:BYTE
+if SEGSEL = S_TRANDATA
+end if
 
-TRANSPACE       ENDS
 
-TRANCODE        SEGMENT PUBLIC BYTE
+if SEGSEL = S_TRANSPACE
+
+end if
+
+
+if SEGSEL = S_TRANCODE
 
 ASSUME  CS:TRANGROUP,DS:TRANGROUP,ES:TRANGROUP
 
-        EXTRN   DELIM:NEAR,UPCONV:NEAR,PATHCHRCMP:NEAR
-        EXTRN   SWLIST:BYTE,BADCDERR:NEAR,SCANOFF:NEAR,CERROR:NEAR
 
         if  KANJI
-        EXTRN   TESTKANJ:NEAR
-        endif
+        END IF
 
-SWCOUNT EQU 5
+; SWCOUNT EQU 5   [dropped: measured where it is defined with $]
 
-        PUBLIC  CPARSE
 
 CPARSE:
 
@@ -99,9 +83,9 @@ moredelim:
 
 SCANCDONE:
 
-        IF      NOT KANJI
+        IF KANJI = 0
         call    UPCONV
-        ENDIF
+        END IF
 
         cmp     al,bl                   ; Special delimiter?
         jnz     nospec
@@ -117,12 +101,12 @@ ncperror:
         jne     na_switch               ; yes, process...
         jmp     a_switch
 na_switch:
-        cmp     byte ptr [si],':'
+        cmp     byte [si],':'
         jne     anum_chard              ; Drive not specified
 
         IF      KANJI
         call    UPCONV
-        ENDIF
+        END IF
 
         call    move_char
         lodsb                           ; Get the ':'
@@ -156,7 +140,7 @@ anum_char:
         jmp     short notspecial
 
 TESTDOT:
-        ENDIF
+        END IF
 
         cmp     al,'.'
         jnz     testquest
@@ -202,9 +186,9 @@ notspecial:
 anum_test:
         lodsb
 
-        IF      NOT KANJI
+        IF KANJI = 0
         call    UPCONV
-        ENDIF
+        END IF
 
         call    DELIM
         je      x_done
@@ -222,13 +206,13 @@ anum_test:
 FOO15:
         ELSE
         jne     anum_char
-        ENDIF
+        END IF
 
-        mov     byte ptr [si-1],' '     ; Change the trailing ':' to a space
+        mov     byte [si-1],' '     ; Change the trailing ':' to a space
         jmp     short x_done
 
 badperr2:
-        mov     dx,offset trangroup:BADCPMES
+        mov     dx,BADCPMES
         jmp     CERROR
 
 badperr:
@@ -260,7 +244,7 @@ a_switch:
         PUSH    CS
         POP     ES
 ASSUME  ES:TRANGROUP
-        MOV     DI,OFFSET TRANGROUP:SWLIST
+        MOV     DI,SWLIST
         MOV     CX,SWCOUNT
         REPNE   SCASB
         JNZ     out_tokenp
@@ -286,5 +270,4 @@ move_char:
         inc     [ELCNT]                 ; increment element count for * substi
         return
 
-TRANCODE        ENDS
-        END
+end if

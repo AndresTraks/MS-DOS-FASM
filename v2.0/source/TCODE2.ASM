@@ -1,61 +1,37 @@
-TITLE   PART2 - COMMAND Transient routines.
-
-        INCLUDE COMSW.ASM
-
-.xlist
-.xcref
-        INCLUDE DOSSYM.ASM
-        INCLUDE DEVSYM.ASM
-        INCLUDE COMSEG.ASM
-.list
-.cref
-
-        INCLUDE COMEQU.ASM
-
-CODERES SEGMENT PUBLIC
-        EXTRN   LODCOM1:NEAR
-CODERES ENDS
-
-DATARES SEGMENT PUBLIC
-        EXTRN   PARENT:WORD,IO_SAVE:WORD,PERMCOM:BYTE
-        EXTRN   PIPEFLAG:BYTE,ENVIRSEG:WORD
-        if      ibmver
-        EXTRN   SYS_CALL:DWORD
-        endif
-DATARES ENDS
-
-TRANDATA        SEGMENT PUBLIC
-
-        EXTRN   PATH_TEXT:BYTE,PROMPT_TEXT:BYTE
-        EXTRN   BADDEV:BYTE,SYNTMES:BYTE,ENVERR:BYTE
-TRANDATA        ENDS
-
-TRANSPACE       SEGMENT PUBLIC
-
-        EXTRN   CURDRV:BYTE,DIRCHAR:BYTE,PWDBUF:BYTE
-        EXTRN   INTERNATVARS:BYTE,RESSEG:WORD,TPA:WORD
-
-TRANSPACE       ENDS
 
 
-TRANCODE        SEGMENT PUBLIC BYTE
+
+
+
+if SEGSEL = S_CODERES
+end if
+
+
+if SEGSEL = S_DATARES
+        if      IBMVER
+        END IF
+end if
+
+
+if SEGSEL = S_TRANDATA
+
+end if
+
+
+if SEGSEL = S_TRANSPACE
+
+
+end if
+
+
+
+if SEGSEL = S_TRANCODE
 ASSUME  CS:TRANGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
-        EXTRN   CERROR:NEAR,ZPRINT:NEAR
-        EXTRN   CRLF2:NEAR,SCANOFF:NEAR,FREE_TPA:NEAR,ALLOC_TPA:NEAR
-        EXTRN   OUT:NEAR,DRVBAD:NEAR,SETPATH:NEAR,PRINT:NEAR
-        EXTRN   FCB_TO_ASCZ:NEAR
 
-        PUBLIC  PRINT_DRIVE,$EXIT,MOVE_NAME
-        PUBLIC  UPCONV,ADD_PROMPT,CTTY,PRINT_DEFAULT_DIRECTORY
-        PUBLIC  ADD_NAME_TO_ENVIRONMENT,PWD,SCAN_DOUBLE_NULL
-        PUBLIC  FIND_NAME_IN_ENVIRONMENT,STORE_CHAR
-        PUBLIC  FIND_PATH,DELETE_PATH,FIND_PROMPT
-        PUBLIC  SCASB2
 
         IF      KANJI
-        PUBLIC  TESTKANJ
-        ENDIF
+        END IF
 
 BREAK   <Environment utilities>
 ASSUME DS:TRANGROUP
@@ -91,7 +67,7 @@ EQLP:
         CMP     AL,"="          ;LOOK FOR = SIGN
         JNZ     EQLP            ;NOT THERE, GET NEXT CHAR
         INC     BL              ;OTHERWISE INCREMENT EQ COUNT
-        CMP     BYTE PTR [SI],13        ;LOOK FOR CR FOLLOWING = SIGN
+        CMP     byte [SI],13        ;LOOK FOR CR FOLLOWING = SIGN
         JNZ     EQLP
         INC     BH              ;SET BH=1 MEANS NO PARAMETERS
         JMP     EQLP            ;AND LOOK FOR MORE
@@ -99,12 +75,12 @@ QUEQ:
         POP     SI              ;RESTORE BEGINNING OF LINE
         DEC     BL              ;ZERO FLAG MEANS ONLY ONE EQ
         JZ      ONEQ            ;GOOD LINE
-        MOV     DX,OFFSET TRANGROUP:SYNTMES
+        MOV     DX,SYNTMES
         JMP     CERROR
 
 ONEQ:
         PUSH    BX
-        CALL    DELETE_NAME_IN_ENVIRONMENT
+        CALL    DELETE_NAME_IN_environment
         POP     BX
         DEC     BH
         retz
@@ -125,7 +101,7 @@ ASSUME  DS:RESGROUP
 ASSUME  DS:NOTHING
         XOR     SI,SI
 PENVLP:
-        CMP     BYTE PTR [SI],0
+        CMP     byte [SI],0
         retz
 
         MOV     DX,SI
@@ -139,11 +115,11 @@ PENVLP2:
 
 ASSUME  DS:TRANGROUP
 DELETE_PATH:
-        MOV     SI,OFFSET TRANGROUP:PATH_TEXT
+        MOV     SI,PATH_TEXT
         JMP     SHORT DELETE_NAME_IN_environment
 
 DELETE_PROMPT:
-        MOV     SI,OFFSET TRANGROUP:PROMPT_TEXT
+        MOV     SI,PROMPT_TEXT
 
 DELETE_NAME_IN_environment:
 ;
@@ -169,11 +145,11 @@ DEL1:
         return
 
 FIND_PATH:
-        MOV     SI,OFFSET TRANGROUP:PATH_TEXT
+        MOV     SI,PATH_TEXT
         JMP     SHORT FIND_NAME_IN_environment
 
 FIND_PROMPT:
-        MOV     SI,OFFSET TRANGROUP:PROMPT_TEXT
+        MOV     SI,PROMPT_TEXT
 
 FIND_NAME_IN_environment:
 ;
@@ -210,18 +186,18 @@ FIND11:
         LODSW
         INC     DI
         INC     DI
-        CMP     AX,ES:[DI-2]
+        CMP     AX,[ES:DI-2]
         JNZ     FIND12
         DEC     CX
         LOOP    FIND11
         JMP     SHORT FIND12
 
 NOTKANJ3:
-        ENDIF
+        END IF
 
         CALL    UPCONV
         INC     DI
-        CMP     AL,ES:[DI-1]
+        CMP     AL,[ES:DI-1]
         JNZ     FIND12
         LOOP    FIND11
 FIND12:
@@ -232,7 +208,7 @@ FIND12:
         PUSH    CX
         CALL    SCASB2                  ; SCAN FOR A NUL
         POP     CX
-        CMP     BYTE PTR ES:[DI],0
+        CMP     byte [ES:DI],0
         JNZ     FIND1
         STC                             ; INDICATE NOT FOUND
         return
@@ -256,7 +232,7 @@ COUNTX:
         return
 
 MOVE_NAME:
-        CMP     BYTE PTR DS:[SI],13
+        CMP     byte [DS:SI],13
         retz
         LODSB
 
@@ -269,7 +245,7 @@ MOVE_NAME:
         JMP     SHORT MOVE_NAME
 
 NOTKANJ1:
-        ENDIF
+        END IF
 
         CALL    UPCONV
         CALL    STORE_CHAR
@@ -294,7 +270,7 @@ ASSUME  ES:NOTHING
         XOR     DI,DI
 SDN1:
         CALL    SCASB2
-        CMP     BYTE PTR ES:[DI],0
+        CMP     byte [ES:DI],0
         JNZ     SDN1
         return
 
@@ -330,7 +306,7 @@ ISLEAD:
         INC     AX              ;Reset zero
         POP     AX
         return
-        ENDIF
+        END IF
 
 UPCONV:
         CMP     AL,"a"
@@ -339,7 +315,7 @@ UPCONV:
         JA      RET22C
         SUB     AL,20H          ; Lower-case changed to upper-case
 RET22C:
-        CALL    DWORD PTR CS:[INTERNATVARS.Map_call]
+        CALL    dword [CS:INTERNATVARS+internat_block_sizeof.Map_call]
         return
 ;
 ; STORE A CHAR IN environment, GROWING IT IF NECESSARY
@@ -362,7 +338,7 @@ STORE_CHAR:
         MOV     CL,4
         SHR     BX,CL           ; Convert back to paragraphs
         INC     BX              ; Try to grow environment by one para
-        MOV     AH,SETBLOCK
+        MOV     AH,Setblock
         INT     int_command
         PUSHF
         PUSH    ES
@@ -373,11 +349,11 @@ STORE_CHAR:
         POP     CX
         POP     AX
         JNC     STORE1
-        MOV     DX,OFFSET TRANGROUP:ENVERR
+        MOV     DX,ENVERR
         JMP     CERROR
 STORE1:
         STOSB
-        MOV     WORD PTR ES:[DI],0            ; NULL IS AT END
+        MOV     word [ES:DI],0            ; NULL IS AT END
         POP     BX
         POP     CX
         return
@@ -392,7 +368,7 @@ GETENVSIZ:
         MOV     AX,ES
         DEC     AX              ;Point at arena
         MOV     ES,AX
-        MOV     AX,ES:[arena_size]
+        MOV     AX,[ES:arena.arena_size]
         MOV     CL,4
         SHL     AX,CL           ;Convert to bytes
         MOV     CX,AX
@@ -401,10 +377,10 @@ GETENVSIZ:
         return
 
 PRINT_DRIVE:
-        MOV     AH,GET_DEFAULT_DRIVE
+        MOV     AH,Get_Default_Drive
         INT     int_command
         ADD     AL,"A"
-        JMP     OUT
+        JMP     OUT_
 
 ASSUME  DS:TRANGROUP,ES:TRANGROUP
 PWD:
@@ -413,9 +389,9 @@ PWD:
         return
 
 PRINT_DEFAULT_DIRECTORY:
-        MOV     BYTE PTR DS:[FCB],0
+        MOV     byte [DS:FCB],0
 PRINT_DIRECTORY:
-        MOV     DL,DS:[FCB]
+        MOV     DL,[DS:FCB]
         MOV     AL,DL
         ADD     AL,'@'
         CMP     AL,'@'
@@ -424,15 +400,15 @@ PRINT_DIRECTORY:
         INC     AL
 GOTDRIVE:
         PUSH    AX
-        MOV     SI,OFFSET TRANGROUP:PWDBUF+3
-        MOV     AH,CURRENT_DIR
+        MOV     SI,PWDBUF+3
+        MOV     AH,Current_Dir
         INT     int_command
         JNC     DPBISOK
         PUSH    CS
         POP     DS
         JMP     DRVBAD
 DPBISOK:
-        MOV     DI,OFFSET TRANGROUP:PWDBUF
+        MOV     DI,PWDBUF
         MOV     DX,DI
         POP     AX
         MOV     AH,DRVCHAR
@@ -441,81 +417,79 @@ DPBISOK:
         STOSB
         JMP     ZPRINT
 
-$EXIT:
+_EXIT:
         PUSH    ES
         MOV     ES,[RESSEG]
 ASSUME  ES:RESGROUP
         MOV     AX,[PARENT]
-        MOV     WORD PTR ES:[PDB_Parent_PID],AX
+        MOV     word [ES:Process_data_block.PDB_Parent_PID],AX
 
 IF IBM
         CMP     [PERMCOM],0
         JNZ     NORESETVEC      ;Don't reset the vector if a PERMCOM
-        LDS     DX,DWORD PTR ES:[SYS_CALL]
+        LDS     DX,dword [ES:SYS_CALL]
 ASSUME  DS:NOTHING
-        MOV     AX,(SET_INTERRUPT_VECTOR SHL 8) + INT_COMMAND
+        MOV     AX,(Set_Interrupt_Vector SHL 8) + int_command
         INT     int_command
 NORESETVEC:
-ENDIF
+END IF
 
         POP     ES
 ASSUME  ES:TRANGROUP
         MOV     ES,[TPA]
-        MOV     AH,DEALLOC
+        MOV     AH,Dealloc
         INT     int_command                             ; Now running in "free" space
-        MOV     AX,(EXIT SHL 8)
+        MOV     AX,(Exit SHL 8)
         INT     int_command
 
 CTTY:
         CALL    SETPATH         ; Get spec
-        MOV     AX,(OPEN SHL 8) OR 2    ; Read and write
+        MOV     AX,(Open SHL 8) OR 2    ; Read and write
         INT     int_command             ; Open new device
         JC      ISBADDEV
         MOV     BX,AX
-        MOV     AX,IOCTL SHL 8
+        MOV     AX,IOCtl SHL 8
         INT     int_command
         TEST    DL,80H
         JNZ     DEVISOK
-        MOV     AH,CLOSE       ; Close initial handle
+        MOV     AH,Close       ; Close initial handle
         INT     int_command
 ISBADDEV:
-        MOV     DX,OFFSET TRANGROUP:BADDEV
+        MOV     DX,BADDEV
         CALL    PRINT
         JMP     RESRET
 
 DEVISOK:
         XOR     DH,DH
         OR      DL,3            ; Make sure has CON attributes
-        MOV     AX,(IOCTL SHL 8) OR 1
+        MOV     AX,(IOCtl SHL 8) OR 1
         INT     int_command
         PUSH    BX                      ; Save handle
         MOV     CX,3
         XOR     BX,BX
 ICLLOOP:                                ; Close basic handles
-        MOV     AH,CLOSE
+        MOV     AH,Close
         INT     int_command
         INC     BX
         LOOP    ICLLOOP
         POP     BX              ; Get handle
-        MOV     AH,XDUP
+        MOV     AH,XDup
         INT     int_command             ; Dup it to 0
-        MOV     AH,XDUP
+        MOV     AH,XDup
         INT     int_command             ; Dup to 1
-        MOV     AH,XDUP
+        MOV     AH,XDup
         INT     int_command             ; Dup to 2
-        MOV     AH,CLOSE        ; Close initial handle
+        MOV     AH,Close        ; Close initial handle
         INT     int_command
 RESRET:
         MOV     DS,[RESSEG]
 ASSUME  DS:RESGROUP
         PUSH    DS
-        MOV     AX,WORD PTR DS:[PDB_JFN_Table]           ; Get new 0 and 1
+        MOV     AX,word [DS:Process_data_block.PDB_JFN_Table]           ; Get new 0 and 1
         MOV     [IO_SAVE],AX
-        MOV     AX,OFFSET RESGROUP:LODCOM1
+        MOV     AX,LODCOM1
         PUSH    AX
-ZMMMM   PROC FAR
-        RET                     ; Force header to be checked
-ZMMMM   ENDP
+        procedure   ZMMMM,FAR
+        RETF                     ; Force header to be checked
 
-TRANCODE        ENDS
-        END
+end if
