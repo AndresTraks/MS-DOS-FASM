@@ -8,6 +8,10 @@
 #       ./runtest.sh -t 420 -f big.dat -e "1 File(s) copied" tests/bigcopy.bat
 #
 # and compare test-out against big.dat with -g B.TMP.
+#
+# profil.bat is left out for the same reason: it assembles and links the
+# profiler on the system before it can run it, which takes about nine
+# minutes.  tests/profil.sh runs it and checks the .PRF that comes out.
 set -e
 cd "$(dirname "$0")/.."
 

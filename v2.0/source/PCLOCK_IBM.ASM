@@ -18,25 +18,41 @@
 ;
 ; This file is MASM, not FASM, unlike the rest of the sources here: it has to
 ; be joined to PROFIL.OBJ, and LINK takes OMF objects, which FASM does not
-; produce.  To build the profiler, on this very system once MASM.EXE and
+; produce.  Its lines have to stay CRLF terminated, as MASM 1.10 does not
+; take a bare LF and reports the whole file as syntax errors.
+;
+; To build the profiler, on this very system once MASM.EXE and
 ; LINK.EXE are on the disk beside it:
 ;
 ;       MASM PCLOCK,PCLOCK,,;
-;       LINK PROFIL PCLOCK
+;       LINK PROFIL+PCLOCK,PROFIL,,;
+;       EXE2BIN PROFIL PROFIL.COM
 ;
-; the second answering each prompt with the default, which leaves PROFIL.EXE.
-; Both have been run, on this DOS: MASM reports no warnings and no severe
-; errors and writes PCLOCK.OBJ with a full listing, and LINK joins that to
-; PROFIL.OBJ as a 2566 byte PROFIL.EXE needing no relocations, with nothing
-; left unresolved.
+; The last step is not optional.  PROFIL is a .COM program wearing an .EXE:
+; it is assembled ORG 100H with DS the same as CS and reads its argument from
+; the default FCB at 5CH, so it only works when DS is its own program header.
+; Run as PROFIL.EXE it is loaded 16 paragraphs above the header, DS:5CH lands
+; in the 256 byte hole at the front of its own image, and it opens whatever
+; garbage it finds there -- "File not found" every time.  Worse, it then quits
+; through INT 20h, and _ABORT takes the terminate addresses from CS:0A, which
+; is that same hole, so it fills vectors 22h, 23h and 24h with zeros and jumps
+; to 0000:0000.  LINK leaves the entry point at 0000:0100 and no relocations,
+; which is exactly what EXE2BIN wants to make a .COM of it.
 ;
 ; LINK does say "Warning: No STACK segment" and counts it as its one error.
 ; That is expected and not about this module: PROFIL sets SS and SP itself,
 ; which is why the header carries an SS:SP of 0000:0000.
 ;
-; Running PROFIL.EXE is untried.  The code below is good MASM and it
-; resolves, but whether it drives the counter and the 8259 correctly, and
-; so whether the PRF file comes out meaning anything, is not yet shown.
+; All of it has been run, on this DOS, by tests/profil.sh: MASM reports no
+; errors, LINK joins PCLOCK.OBJ to PROFIL.OBJ with nothing unresolved, EXE2BIN
+; turns the 2566 byte PROFIL.EXE into a 1798 byte PROFIL.COM, and profiling
+; EXE2BIN.EXE at a 100 microsecond sample interval writes an EXE2BIN.PRF with
+; samples in it.  How many depends on how fast the host emulating this
+; machine is; one run held 922 -- 56 in the I/O system, 842 in the DOS, 13
+; above the program and 11 in buckets 0 and 1.  So the counter runs at the
+; rate asked for, the interrupt arrives, LEAVE_INT's EOI lets the next one
+; through, and CLOCKOFF puts the clock back well enough that DOS carries on
+; afterwards.
 ;
 ; PROFILE.DOC describes what the profiler does, and PROHST reads the PRF
 ; file it writes.

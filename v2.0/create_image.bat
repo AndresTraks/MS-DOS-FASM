@@ -31,3 +31,14 @@ REM system, and all of them together take a sixth of the disk.
 %IMGEN% -m -i bin\RECOVER.COM -f %IMAGE%
 %IMGEN% -m -i bin\SORT.EXE -f %IMAGE%
 %IMGEN% -m -i bin\SYS.COM -f %IMAGE%
+
+REM The profiler, which is in pieces: PROFIL.OBJ is Microsoft's, assembled,
+REM and the clock module it wants is ours.  PCLOCK_IBM.ASM goes on as
+REM PCLOCKPC.ASM because PCLOCK.ASM is taken, by Microsoft's for the Seattle
+REM Computer Products machine, and because the name has to fit 8.3 for DOS to
+REM see it; fat_imgen copies a file under the name it already has, so it is
+REM copied aside first.  tests\profil.bat builds and runs it on the system.
+%IMGEN% -m -i bin\PROFIL.OBJ -f %IMAGE%
+COPY source\PCLOCK_IBM.ASM PCLOCKPC.ASM > NUL
+%IMGEN% -m -i PCLOCKPC.ASM -f %IMAGE%
+DEL PCLOCKPC.ASM

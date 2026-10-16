@@ -37,4 +37,12 @@ mcopy -i "$IMAGE" bin/RECOVER.COM ::
 mcopy -i "$IMAGE" bin/SORT.EXE ::
 mcopy -i "$IMAGE" bin/SYS.COM ::
 
+# The profiler, which is in pieces: PROFIL.OBJ is Microsoft's, assembled, and
+# the clock module it wants is ours.  PCLOCK_IBM.ASM goes on as PCLOCKPC.ASM
+# because PCLOCK.ASM is taken, by Microsoft's for the Seattle Computer
+# Products machine, and because the name has to fit 8.3 for DOS to see it.
+# tests/profil.bat builds and runs it on the system itself.
+mcopy -i "$IMAGE" bin/PROFIL.OBJ ::
+mcopy -i "$IMAGE" source/PCLOCK_IBM.ASM ::PCLOCKPC.ASM
+
 dd if=bin/bootsect.bin of="$IMAGE" bs=512 count=1 conv=notrunc status=none
