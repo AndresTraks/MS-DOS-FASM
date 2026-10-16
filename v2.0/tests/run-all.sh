@@ -28,6 +28,10 @@ run redirect.bat -t 45 -e "HELLO" -e "File not found" -e "DONE" -g D1.TXT
 run exec.bat     -t 50 -e "File not found" -e "Invalid number of parameters" \
                        -e "File name must be specified" -e "DONE"
 
+# Two boots of its own, and it has to compare what DOS says against the clock
+# of this machine, so it is a script rather than a line here.
+./tests/clock.sh || fail=1
+
 if [ $fail -eq 0 ]; then
     printf '\n======== all passed\n'
 else

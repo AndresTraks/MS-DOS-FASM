@@ -341,8 +341,8 @@ PRN_STA:
 
 ; ---------------------------------------------------------------------------
 ; The clock.  DOS reads and writes six bytes: days since 1-1-1980 as a word,
-; then minutes, hours, hundredths and seconds.  The ROM counts ticks since
-; midnight at 18.2 a second, and hands back a day-rollover flag.
+; then minutes, hours, hundredths and seconds.  The ROM's clock chip holds
+; the date and the time of day, to the second, as packed BCD.
 
 TIM_RED:
         CALL    TIM_FETCH
@@ -372,104 +372,209 @@ TIM_WRT:
         CALL    TIM_STORE
         JMP     EXIT
 
-; Read the ROM tick count into TIM_DAYS..TIM_SECS.
+; Read the date and time out of the ROM's clock, as v1.25 reads it: function
+; 4 for the date and function 2 for the time, packed BCD both, and carry set
+; if it cannot be read, in which case leave what we had.  The chip keeps the
+; time to the second and DOS wants hundredths as well, so those stay zero.
+;
+; DOS dates 1980 to 2099, and in that range a leap year is exactly one
+; divisible by four.
 TIM_FETCH:
         PUSH    AX
         PUSH    BX
         PUSH    CX
         PUSH    DX
-        XOR     AH,AH
-        INT     1Ah                     ; CX:DX = ticks, AL = day rollover
-        OR      AL,AL
-        JZ      TIM_F1
-        XOR     AH,AH
-        ADD     [CS:TIM_DAYS],AX        ; past midnight since we last looked
+        PUSH    SI
+        PUSH    DI
+        MOV     AH,4
+        INT     1Ah
+        JC      TIM_F9                  ; no clock to ask
+        MOV     AL,DH
+        CALL    TIM_BCD
+        MOV     BL,AL                   ; the month
+        MOV     AL,DL
+        CALL    TIM_BCD
+        MOV     BH,AL                   ; the day of the month
+        MOV     AL,CH
+        CALL    TIM_BCD
+        MOV     DX,100
+        MUL     DX                      ; the century, as a year
+        MOV     SI,AX
+        MOV     AL,CL
+        CALL    TIM_BCD
+        ADD     SI,AX                   ; SI = the year in full
+        MOV     DX,BX                   ; DL = month, DH = day
+        CMP     SI,1980
+        JB      TIM_F9                  ; before the epoch, nothing to say
+        CMP     DL,1
+        JB      TIM_F9
+        CMP     DL,12
+        JA      TIM_F9                  ; a clock talking nonsense
+        XOR     DI,DI
+        MOV     AX,1980
 TIM_F1:
-        MOV     AX,DX
-        MOV     DX,CX                   ; DX:AX = ticks
-        ; seconds = ticks * 10 / 182
-        MOV     BX,10
-        CALL    TIM_MUL32
-        MOV     BX,182
-        CALL    TIM_DIV32               ; DX:AX = seconds, BX = remainder
-        MOV     CX,AX                   ; low word is enough: 86400 fits
-        MOV     AX,CX
-        XOR     DX,DX
-        MOV     BX,60
-        DIV     BX
-        MOV     [CS:TIM_SECS],DL        ; seconds
-        XOR     DX,DX
-        DIV     BX
-        MOV     [CS:TIM_MINS],DL        ; minutes
-        MOV     [CS:TIM_HOUR],AL        ; hours
+        CMP     AX,SI
+        JNB     TIM_F2
+        ADD     DI,365
+        TEST    AL,3                    ; every fourth year in this range
+        JNZ     TIM_F1A
+        INC     DI
+TIM_F1A:
+        INC     AX
+        JMP     SHORT TIM_F1
+TIM_F2:
+        MOV     BL,DL
+        XOR     BH,BH
+        DEC     BX
+        SHL     BX,1
+        ADD     DI,[CS:TIM_MTAB+BX]     ; the months gone by this year
+        CMP     DL,2
+        JBE     TIM_F3
+        TEST    SI,3
+        JNZ     TIM_F3
+        INC     DI                      ; February had 29 days this year
+TIM_F3:
+        MOV     AL,DH                   ; the day of the month, counting from 1
+        XOR     AH,AH
+        DEC     AX
+        ADD     DI,AX
+        MOV     [CS:TIM_DAYS],DI
+        MOV     AH,2
+        INT     1Ah
+        JC      TIM_F9
+        MOV     AL,CH
+        CALL    TIM_BCD
+        MOV     [CS:TIM_HOUR],AL
+        MOV     AL,CL
+        CALL    TIM_BCD
+        MOV     [CS:TIM_MINS],AL
+        MOV     AL,DH
+        CALL    TIM_BCD
+        MOV     [CS:TIM_SECS],AL
         MOV     byte [CS:TIM_HUND],0
+TIM_F9:
+        POP     DI
+        POP     SI
         POP     DX
         POP     CX
         POP     BX
         POP     AX
         RET
 
-; Set the ROM tick count from TIM_DAYS..TIM_SECS.
+; Hand the date and time DOS has given us to the ROM's clock, so that reading
+; it back says the same thing and it survives into the next boot.
 TIM_STORE:
         PUSH    AX
         PUSH    BX
         PUSH    CX
         PUSH    DX
+        PUSH    SI
+        PUSH    DI
         MOV     AL,[CS:TIM_HOUR]
-        XOR     AH,AH
-        MOV     BX,60
-        MUL     BX
-        MOV     BL,[CS:TIM_MINS]
-        XOR     BH,BH
-        ADD     AX,BX
-        MOV     BX,60
-        MUL     BX                      ; DX:AX = seconds so far
-        MOV     BL,[CS:TIM_SECS]
-        XOR     BH,BH
-        ADD     AX,BX
-        ADC     DX,0
-        MOV     BX,182
-        CALL    TIM_MUL32
-        MOV     BX,10
-        CALL    TIM_DIV32               ; DX:AX = ticks
-        MOV     CX,DX
-        MOV     DX,AX
-        MOV     AH,1
+        CALL    TIM_BIN
+        MOV     BH,AL
+        MOV     AL,[CS:TIM_MINS]
+        CALL    TIM_BIN
+        MOV     BL,AL
+        MOV     AL,[CS:TIM_SECS]
+        CALL    TIM_BIN
+        MOV     DH,AL
+        MOV     CX,BX                   ; CH = hours, CL = minutes
+        XOR     DL,DL                   ; standard time, not daylight saving
+        MOV     AH,3
         INT     1Ah
+;
+; The date goes back the way it came in: count off the whole years, then the
+; whole months, and what is left over is the day.
+;
+        MOV     DI,[CS:TIM_DAYS]
+        XOR     SI,SI                   ; SI = years since 1980
+TIM_S1:
+        MOV     AX,365
+        TEST    SI,3
+        JNZ     TIM_S1A
+        INC     AX
+TIM_S1A:
+        CMP     DI,AX
+        JB      TIM_S2
+        SUB     DI,AX
+        INC     SI
+        JMP     SHORT TIM_S1
+TIM_S2:
+        MOV     BX,11*2                 ; the last month that starts this early
+TIM_S3:
+        MOV     AX,[CS:TIM_MTAB+BX]
+        CMP     BX,2*2
+        JB      TIM_S4                  ; January and February are before it
+        TEST    SI,3
+        JNZ     TIM_S4
+        INC     AX                      ; February had 29 days this year
+TIM_S4:
+        CMP     DI,AX
+        JNB     TIM_S5
+        SUB     BX,2
+        JMP     SHORT TIM_S3
+TIM_S5:
+        SUB     DI,AX                   ; DI = the day, counting from zero
+        SHR     BX,1
+        INC     BX                      ; BX = the month, counting from one
+        MOV     AX,SI
+        ADD     AX,1980
+        MOV     CL,100
+        DIV     CL                      ; AL = century, AH = year within it
+        PUSH    AX
+        CALL    TIM_BIN
+        MOV     CH,AL
+        POP     AX
+        MOV     AL,AH
+        CALL    TIM_BIN
+        MOV     CL,AL
+        MOV     AL,BL
+        CALL    TIM_BIN
+        MOV     DH,AL                   ; the month
+        MOV     AX,DI
+        INC     AL
+        CALL    TIM_BIN
+        MOV     DL,AL                   ; the day
+        MOV     AH,5
+        INT     1Ah
+        POP     DI
+        POP     SI
         POP     DX
         POP     CX
         POP     BX
         POP     AX
         RET
 
-; DX:AX = DX:AX * BX, 8086 has no 32-bit multiply.
-TIM_MUL32:
-        PUSH    SI
-        PUSH    AX
-        MOV     AX,DX
-        MUL     BX
-        MOV     SI,AX                   ; high half, overflow discarded
-        POP     AX
-        MUL     BX
-        ADD     DX,SI
-        POP     SI
+; AL = two packed BCD digits, back as AL = 0 to 99 with AH zero.  The shift
+; goes through CL because an 8086 cannot shift by an immediate count.
+TIM_BCD:
+        PUSH    BX
+        PUSH    CX
+        MOV     BL,AL
+        AND     BL,0Fh
+        MOV     CL,4
+        SHR     AL,CL
+        MOV     CL,10
+        MUL     CL
+        ADD     AL,BL
+        POP     CX
+        POP     BX
         RET
 
-; DX:AX = DX:AX / BX, remainder in BX.
-TIM_DIV32:
+; AL = 0 to 99, back as the two packed BCD digits the clock wants.
+TIM_BIN:
         PUSH    CX
-        MOV     CX,AX
-        MOV     AX,DX
-        XOR     DX,DX
-        DIV     BX                      ; high half
-        PUSH    AX
-        MOV     AX,CX
-        DIV     BX                      ; low half, DX carried in
-        MOV     BX,DX
-        POP     DX
+        AAM                             ; AH = tens, AL = ones
+        MOV     CL,4
+        SHL     AH,CL
+        OR      AL,AH
+        XOR     AH,AH
         POP     CX
         RET
 
+; Days before the first of each month, in a year that is not a leap year.
+TIM_MTAB DW     0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
 TIM_DAYS DW     0
 TIM_MINS DB     0
 TIM_HOUR DB     0

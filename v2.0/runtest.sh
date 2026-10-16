@@ -96,7 +96,7 @@ trap 'rm -rf "$OUT"' EXIT
     echo "pmemsave 0xb8000 4000 \"$OUT/screen.bin\""
     sleep 2
     echo quit
-} | "$QEMU" -drive file="$IMAGE",format=raw,if=floppy \
+} | "$QEMU" -rtc base=localtime -drive file="$IMAGE",format=raw,if=floppy \
             -display none -monitor stdio >/dev/null 2>&1 || true
 
 [ -s "$OUT/screen.bin" ] || { echo "$0: the screen never came back; QEMU or the monitor failed" >&2; exit 1; }

@@ -12,9 +12,9 @@
 ;
 ; The PC has one counter the profiler can use, 8253 counter 0, and the ROM is
 ; already using it for the time of day.  CLOCKON takes it over and CLOCKOFF
-; puts it back, both the divisor and the INT 8 vector, so the clock does not
-; keep time while a profile is running -- the time of day will be behind
-; afterwards by however long the run took.
+; puts it back, both the divisor and the INT 8 vector, so the ROM stops
+; counting ticks for as long as a profile runs, so anything reading INT 1Ah
+; function 0 sees time stand still, and stay that far behind afterwards.
 ;
 ; This file is MASM, not FASM, unlike the rest of the sources here: it has to
 ; be joined to PROFIL.OBJ, and LINK takes OMF objects, which FASM does not

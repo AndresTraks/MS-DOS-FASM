@@ -10,5 +10,5 @@ if ! command -v "$QEMU" >/dev/null 2>&1; then
     exit 1
 fi
 
-exec "$QEMU" -drive file=msdos.img,format=raw,if=floppy \
+exec "$QEMU" -rtc base=localtime -drive file=msdos.img,format=raw,if=floppy \
     -audiodev "${AUDIODEV:-pa}",id=snd0 -machine pc,pcspk-audiodev=snd0

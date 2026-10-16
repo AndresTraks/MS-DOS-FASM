@@ -6,5 +6,5 @@ CALL create_image.bat
 IF NOT EXIST %QEMU% (
     ECHO %QEMU% not found. Please install QEMU.
 ) ELSE (
-    %QEMU% -drive file=msdos.img,format=raw,if=floppy -audiodev dsound,id=snd0 -machine pc,pcspk-audiodev=snd0
+    %QEMU% -rtc base=localtime -drive file=msdos.img,format=raw,if=floppy -audiodev dsound,id=snd0 -machine pc,pcspk-audiodev=snd0
 )
