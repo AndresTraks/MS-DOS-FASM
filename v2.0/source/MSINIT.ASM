@@ -74,3 +74,9 @@ ASSUME  ES:DOSGROUP
         MOV     DI,SYSINITVAR
 
         RETF
+
+; In the original link this module sat in a data class with room reserved for
+; the whole uninitialized data area MSDATA.ASM lays over it -- the init code
+; only shares its first bytes.  Reserve the rest, or the DOS stacks and
+; buffers land on the code that follows.
+        db (INITBLOCK + UNINIT_SIZE - $) dup (0)

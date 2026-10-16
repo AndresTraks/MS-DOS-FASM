@@ -287,5 +287,10 @@ IOSTACK:
 
 NSS         DW      ?
 NSP         DW      ?
+UNINIT_END:
 
 end virtual
+
+; MSINIT.ASM reserves this much, so that the stacks and buffers above do
+; not come down on the code that follows them.
+UNINIT_SIZE = UNINIT_END - INITBLOCK

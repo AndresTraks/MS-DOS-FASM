@@ -130,44 +130,44 @@ INTBASE         EQU     4 * INTTAB
 ENTRYPOINT      EQU     INTBASE+40H
 
         IF      ALTVECT
-ALTTAB  EQU     0F0H
-ALTBASE EQU     4 * ALTTAB
+ALTTAB  =       0F0H
+ALTBASE =       4 * ALTTAB
         END     IF
 
 ;
 ; interrupt assignments
 ;
-        IF      NOT ALTVECT
-int_abort           EQU     INTTAB          ; abort process
-int_command         EQU     int_abort+1     ; call MSDOS
-int_terminate       EQU     int_abort+2     ; int to terminate address
-int_ctrl_c          EQU     int_abort+3     ; ^c trapper
-int_fatal_abort     EQU     int_abort+4     ; hard disk error
-int_disk_read       EQU     int_abort+5     ; logical sector disk read
-int_disk_write      EQU     int_abort+6     ; logical sector disk write
-int_keep_process    EQU     int_abort+7     ; terminate program and stay resident
+        IF      ALTVECT = 0
+int_abort           =       INTTAB          ; abort process
+int_command         =       int_abort+1     ; call MSDOS
+int_terminate       =       int_abort+2     ; int to terminate address
+int_ctrl_c          =       int_abort+3     ; ^c trapper
+int_fatal_abort     =       int_abort+4     ; hard disk error
+int_disk_read       =       int_abort+5     ; logical sector disk read
+int_disk_write      =       int_abort+6     ; logical sector disk write
+int_keep_process    =       int_abort+7     ; terminate program and stay resident
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
-int_spooler         EQU     int_abort+8     ; spooler call
-int_fastcon         EQU     int_abort+9     ; fast CON interrupt
+int_spooler         =       int_abort+8     ; spooler call
+int_fastcon         =       int_abort+9     ; fast CON interrupt
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
         ELSE
-int_abort           EQU     INTTAB          ; abort process
-int_command         EQU     int_abort+1     ; call MSDOS
-int_terminate       EQU     ALTTAB          ; int to terminate address
-int_ctrl_c          EQU     int_terminate+1 ; ^c trapper
-int_fatal_abort     EQU     int_terminate+2 ; hard disk error
-int_disk_read       EQU     int_abort+5     ; logical sector disk read
-int_disk_write      EQU     int_abort+6     ; logical sector disk write
-int_keep_process    EQU     int_abort+7     ; terminate program and stay resident
+int_abort           =       INTTAB          ; abort process
+int_command         =       int_abort+1     ; call MSDOS
+int_terminate       =       ALTTAB          ; int to terminate address
+int_ctrl_c          =       int_terminate+1 ; ^c trapper
+int_fatal_abort     =       int_terminate+2 ; hard disk error
+int_disk_read       =       int_abort+5     ; logical sector disk read
+int_disk_write      =       int_abort+6     ; logical sector disk write
+int_keep_process    =       int_abort+7     ; terminate program and stay resident
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
-int_spooler         EQU     int_terminate+3 ; spooler call
-int_fastcon         EQU     int_abort+9     ; fast CON interrupt
+int_spooler         =       int_terminate+3 ; spooler call
+int_fastcon         =       int_abort+9     ; fast CON interrupt
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;

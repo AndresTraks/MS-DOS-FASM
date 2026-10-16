@@ -131,6 +131,7 @@ DSK_INT:
         MOV     SI,DSKTBL
 
 DEV_ENTRY:
+        CLD                             ; DOS does not promise it clear
         PUSH    AX
         PUSH    CX
         PUSH    DX

@@ -113,7 +113,10 @@ macro makelab l,cc,ncc
 
 macro condret cc,ncc
 {
+    local skip
+    j#ncc   skip
     ret
+  skip:
 }
 
 BREAK <RETZ - return if zero, links up shortwise if necessary>

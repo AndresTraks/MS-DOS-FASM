@@ -12,9 +12,9 @@ HIGHMEM    EQU     FALSE
 KANJI      EQU     FALSE
 
         IF      IBMVER OR IBMJAPVER
-NOEXEC  EQU     TRUE
+NOEXEC  =       TRUE
         ELSE
-NOEXEC  EQU     FALSE
+NOEXEC  =       FALSE
         END IF
 
 ; Set to agree with those in DOST:MSHEAD.ASM, ALTVECT version only
@@ -49,8 +49,8 @@ end virtual
         INCLUDE 'DOSSYM.ASM'
         INCLUDE 'DEVSYM.ASM'
 
-        IF      NOT IBM
-        IF      NOT IBMJAPVER
+        IF      IBM = 0
+        IF      IBMJAPVER = 0
         ;EXTRN   RE_INIT:FAR
         END IF
         END IF
@@ -102,7 +102,7 @@ COMMAND_LINE            DB      2,0,"P" ; Default Command.com Args
                         DB      29 DUP (0)
 ZERO                    DB      0
 
-        IF      NOT NOEXEC
+        IF      NOEXEC = 0
 COMEXE:                                 ; EXEC0 <0,COMMAND_LINE,DEFAULT_DRIVE,ZERO>
         DW      0                       ; environment segment
         DW      COMMAND_LINE            ; command line, segment set at run time
@@ -220,7 +220,7 @@ SYSIN:
 
         ;ASSUME  SS:SYSINITSEG
 
-        IF      NOT ALTVECT
+        IF      ALTVECT = 0
         STI                             ; Leave INTs disabled for ALTVECT
         END IF
 label LOCSTACK byte
@@ -229,8 +229,8 @@ label LOCSTACK byte
         MOV     word [CS:DOSINFO+2],ES ; SAVE POINTER TO DOS INFO
         MOV     word [CS:DOSINFO],DI
 
-        IF      NOT IBM
-        IF      NOT IBMJAPVER
+        IF      IBM = 0
+        IF      IBMJAPVER = 0
         CALL    RE_INIT                 ; Re-call the BIOS
         END IF
         END IF
@@ -576,7 +576,7 @@ DOBUFF: CALL    ROUND
         MOV     BX,[BX+SYSINITVAR.MAXSEC]
         POP     DS
 
-        IF      NOT HIGHMEM
+        IF      HIGHMEM = 0
         ADD     BX,BUFINSIZ
         ADD     [CS:MEMLO],BX
         END IF
@@ -597,7 +597,7 @@ BUF1:   CALL    ROUND
         MOV     AH,SETBLOCK
         INT     21H                     ; GIVE THE REST BACK
 
-        IF      NOT HIGHMEM
+        IF      HIGHMEM = 0
         PUSH    ES
         MOV     AX,ES
         DEC     AX
@@ -619,7 +619,7 @@ BUF1:   CALL    ROUND
         MOV     [ES:arena.arena_owner],8      ; Set impossible owner
         POP     ES
 
-        IF      NOT NOEXEC
+        IF      NOEXEC = 0
         MOV     ES,[CS:AREA]
         MOV     AH,DEALLOC
         INT     21H
@@ -787,7 +787,7 @@ SIZEOK:
         MOV     word [CS:ENTRY_POINT+2],AX ; SET ENTRY POINT
 
 
-        IF      NOT NOEXEC
+        IF      NOEXEC = 0
         MOV     [CS:LDOFF],AX              ; SET LOAD OFFSET
         END IF
 
@@ -828,7 +828,7 @@ GOODLD: PUSH    ES                      ; INITIALIZE THE DEVICE
         PUSH    CS
         POP     DS
 
-        IF      NOT HIGHMEM
+        IF      HIGHMEM = 0
         MOV     AX,word [CS:BREAK_ADDR+2]  ; REMOVE THE INIT CODE
         CMP     AX,[CS:MEMORY_SIZE]
         JB      BREAKOK
@@ -866,7 +866,7 @@ ISBLOCK:
         OR      AL,AL
         JNZ     PERDRV
 
-        IF      NOT HIGHMEM
+        IF      HIGHMEM = 0
         MOV     [CS:MEMLO],0            ; ...ERASE THE DEVICE
         END IF
 
@@ -902,7 +902,7 @@ FOUNDPB:
         MOV     word [ES:BP+dpb.dpb_next_dpb+2],AX
         LES     BP,dword [CS:MEMLO]
 
-        IF      NOT HIGHMEM
+        IF      HIGHMEM = 0
         ADD     word [CS:MEMLO],DPBSIZ
         END IF
 
@@ -1219,7 +1219,7 @@ ISLEAD:
 
 ROUND:  MOV     AX,[CS:MEMLO]
 
-        IF      NOT HIGHMEM
+        IF      HIGHMEM = 0
         ADD     AX,15
         END IF
 

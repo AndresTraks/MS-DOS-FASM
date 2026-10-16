@@ -59,7 +59,7 @@ ESCTAB:
         DB      08BH                    ; Reedit line (new template)
         DB      0C3H                    ; Backspace
         DB      0C6H                    ; Enter insert mode
-        IF      NOT TOGLINS
+        IF      TOGLINS = 0
         DB      0D6H                    ; Exit insert mode
         END IF
         DB      0C6H                    ; Escape character

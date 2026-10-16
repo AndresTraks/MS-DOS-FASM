@@ -19,11 +19,6 @@ ASSUME  SS:DOSGROUP
         MOV     WORD [SS:DEVHEAD],SI   ; DS:SI Points to CONSOLE Device
         CALL    CHARINIT
 
-        mov al, '0'
-	MOV	AH,0EH
-	MOV	BH,0
-	INT	10H
-
         PUSH    SI
         ADD     SI,SYSDEV.SDEVNAME             ; Point to name
         PUSH    CS
@@ -62,10 +57,6 @@ CHAR_INIT_LOOP:
         MOV     WORD [CS:BCLOCK+2],DS
         MOV     BP,MEMSTRT      ; ES:BP points to DPB
 PERDRV:
-        mov al, '4'
-	MOV	AH,0EH
-	MOV	BH,0
-	INT	10H
         LDS     SI,DWORD [SI]               ; Next device
         CMP     SI,-1
         JZ      CONTINIT
@@ -90,7 +81,7 @@ PERUNIT:
         PUSH    BX
         PUSH    CX
         PUSH    DX
-        invoke  SETDPB
+        invoke  _SETDPB
         MOV     AX,[ES:BP+dpb.dpb_sector_size]
         CMP     AX,[CS:MAXSEC]
         JBE     NOTMAX
@@ -159,7 +150,7 @@ TRUEDPBAD:
         MOV     DX,CS           ; Program segment
         END     IF
 
-        IF      NOT HIGHMEM
+        IF      HIGHMEM = 0
         MOV     BP,CS
         END     IF
 
@@ -218,7 +209,7 @@ ASSUME  DS:NOTHING,ES:NOTHING
         MOV     WORD [DS:addr_int_keep_process],Stay_resident
         MOV     WORD [DS:addr_int_spooler],_IRET  ; Spooler
 
-        IF      NOT ALTVECT
+        IF      ALTVECT = 0
         MOV     CX,12
         XOR     AX,AX
         MOV     DI,2AH*4
