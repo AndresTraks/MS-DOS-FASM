@@ -31,13 +31,11 @@ PAGE
         MOV     [SS:exit_code],DX
         transfer    SYS_RET_OK
 
-IF IBM
-        procedure   _EXEC,NEAR
-        error   error_invalid_function
-END IF
-IF IBM = 0
+; The 2.0 release stubs EXEC out when IBM is set, which leaves COMMAND.COM
+; with no way to start a program: every external command answers EXEC
+; failure.  IBM's own 2.0 had an EXEC, from somewhere this tree does not
+; contain, so take the one it does -- EXEC.ASM, the Microsoft build's.
 INCLUDE 'EXEC.ASM'
-END IF
 
 ;SUBTTL Terminate and stay resident handler
 PAGE

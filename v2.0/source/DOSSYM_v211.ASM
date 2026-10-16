@@ -582,6 +582,11 @@ STRUC Exec0
 .Exec0_6C_FCB    DD      ?               ; default fcb at 6C
 }
 
+virtual at 0
+  Exec0 Exec0
+  sizeof.Exec0 = $ - Exec0
+end virtual
+
 STRUC Exec1
 {
 .Exec1_environ   DW      ?               ; seg addr of environment
@@ -594,11 +599,21 @@ STRUC Exec1
 .Exec1_CS        DW      ?               ; entry point CS
 }
 
+virtual at 0
+  Exec1 Exec1
+  sizeof.Exec1 = $ - Exec1
+end virtual
+
 STRUC Exec3
 {
 .Exec3_load_addr DW      ?               ; seg address of load point
 .Exec3_reloc_fac DW      ?               ; relocation factor
 }
+
+virtual at 0
+  Exec3 Exec3
+  sizeof.Exec3 = $ - Exec3
+end virtual
 
 ;
 ; Exit codes in upper byte

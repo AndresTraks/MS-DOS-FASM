@@ -522,8 +522,19 @@ DSK_GO:
         JCXZ    DSK_DONE
         MOV     [CS:DSKCNT],CX
         MOV     [CS:DSKSEC],DX
+        ; Normalise the buffer address, because the walk below moves it a
+        ; paragraph at a time rather than an offset at a time: DOS asks for
+        ; a whole run of contiguous clusters in one request, which can span
+        ; more than 64K, and adding 512 to the offset wraps it and reads
+        ; back over the start of the buffer.
+        MOV     AX,DI
+        MOV     CL,4
+        SHR     AX,CL
+        AND     DI,000Fh
         MOV     word [CS:DSKBUF],DI
-        MOV     word [CS:DSKBUF+2],ES
+        MOV     CX,ES
+        ADD     AX,CX
+        MOV     word [CS:DSKBUF+2],AX
 DSK_NEXT:
         CMP     word [CS:DSKCNT],0
         JZ      DSK_DONE
@@ -531,7 +542,7 @@ DSK_NEXT:
         JC      DSK_FAIL
         DEC     word [CS:DSKCNT]
         INC     word [CS:DSKSEC]
-        ADD     word [CS:DSKBUF],BYTES_PER_SECTOR
+        ADD     word [CS:DSKBUF+2],BYTES_PER_SECTOR/16
         JMP     SHORT DSK_NEXT
 DSK_DONE:
         JMP     EXIT
@@ -554,7 +565,36 @@ DSK_ONE:
         PUSH    BX
         PUSH    CX
         PUSH    DX
+        PUSH    SI
+        PUSH    DI
+        PUSH    DS
         PUSH    ES
+        ; Would this sector cross a 64K physical boundary?  The DMA
+        ; controller cannot carry into its page register, so the ROM will
+        ; not do such a transfer.  Going a sector at a time is not enough on
+        ; its own: the caller's buffer need not sit on a 512-byte boundary
+        ; within the page, and DOS hands over whatever address its buffer or
+        ; the program being loaded happens to be at.  Those sectors go
+        ; through DSKSBUF, which is low enough to be safe, and are copied.
+        LES     BX,[CS:DSKBUF]
+        MOV     AX,ES
+        MOV     CL,4
+        SHL     AX,CL                   ; low 16 bits of the physical address
+        ADD     AX,BX
+        MOV     byte [CS:DSKBNC],0
+        CMP     AX,10000h-BYTES_PER_SECTOR
+        JBE     DSK_ONE0
+        MOV     byte [CS:DSKBNC],1
+        CMP     byte [CS:DSKOP],3       ; a write has to be staged first
+        JNZ     DSK_ONE0
+        PUSH    CS
+        POP     ES
+        MOV     DI,DSKSBUF
+        LDS     SI,[CS:DSKBUF]
+        MOV     CX,BYTES_PER_SECTOR/2
+        CLD
+        REP     MOVSW
+DSK_ONE0:
         MOV     AX,[CS:DSKSEC]
         XOR     DX,DX
         MOV     BX,SECTORS_PER_TRACK
@@ -568,8 +608,15 @@ DSK_ONE:
         MOV     DH,DL
         MOV     DL,0                    ; drive A
         LES     BX,[CS:DSKBUF]
-        MOV     AL,1                    ; one sector at a time, so a transfer
-                                        ;  can never straddle a DMA page
+        CMP     byte [CS:DSKBNC],0
+        JZ      DSK_ONE1
+        PUSH    CS
+        POP     ES
+        MOV     BX,DSKSBUF
+DSK_ONE1:
+        MOV     AL,1                    ; one sector at a time, so that a
+                                        ;  short transfer leaves the rest of
+                                        ;  the request still to do
         MOV     AH,[CS:DSKOP]
         MOV     SI,3                    ; the ROM wants three tries
 DSK_TRY:
@@ -582,7 +629,7 @@ DSK_TRY:
         POP     CX
         POP     BX
         POP     AX
-        JNC     DSK_OK
+        JNC     DSK_GOOD
         MOV     [CS:DSKERR],AH
         PUSH    AX
         XOR     AX,AX
@@ -591,8 +638,26 @@ DSK_TRY:
         DEC     SI
         JNZ     DSK_TRY
         STC
+        JMP     SHORT DSK_OK
+DSK_GOOD:
+        CMP     byte [CS:DSKBNC],0      ; hand a bounced read on
+        JZ      DSK_CLR
+        CMP     byte [CS:DSKOP],3
+        JZ      DSK_CLR
+        PUSH    CS
+        POP     DS
+        MOV     SI,DSKSBUF
+        LES     DI,[CS:DSKBUF]
+        MOV     CX,BYTES_PER_SECTOR/2
+        CLD
+        REP     MOVSW
+DSK_CLR:
+        CLC                             ; the copy above dirties the flags
 DSK_OK:
         POP     ES
+        POP     DS
+        POP     DI
+        POP     SI
         POP     DX
         POP     CX
         POP     BX
@@ -604,6 +669,8 @@ DSKCNT  DW      0
 DSKSEC  DW      0
 DSKBUF  DD      0
 DSKERR  DB      0
+DSKBNC  DB      0                       ; this sector goes through DSKSBUF
+DSKSBUF DB      BYTES_PER_SECTOR dup (0)
 
 ; Initialise.  The packet wants the unit count, the address this driver ends
 ; at -- everything above it is free for DOS -- and a pointer to an array of
