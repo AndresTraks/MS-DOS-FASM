@@ -38,6 +38,14 @@ Two things that look like findings and are not:
     rather than by the directives turns 1 finding into 28, all but one of them
     imaginary; MASM believes the directives, and so does this.
 
+One thing that was a finding and did not look like one: this split its input
+on CRLF, and three of the modules -- MSCODE.ASM, EXEC.ASM, DOSIO.ASM -- have
+LF endings.  Each collapsed into a single line, no ASSUME was ever recognised
+in it, and the whole module went unexamined while the report said nothing was
+wrong.  MSCODE.ASM had the SET_CURRENT_PDB defect in it the whole time.  Split
+on any ending, and refuse a module that comes back as one line, so that a
+silent skip cannot be mistaken for a clean module again.
+
 Checked against the defect above: on the module as it stood before the fix it
 reports exactly the ten references that were wrong, and none after.
 
@@ -66,7 +74,7 @@ def modules(src):
 def data_labels(src):
     """Everything MSDATA.ASM defines storage for: the data segment's variables."""
     labels = set()
-    for line in read(os.path.join(src, "MSDATA.ASM")).split("\r\n"):
+    for line in read(os.path.join(src, "MSDATA.ASM")).splitlines():
         code = line.split(";")[0]
         m = (re.match(r"^\s*([A-Za-z_]\w*)\s+(?:DB|DW|DD)\b", code)
              or re.match(r"^([A-Za-z_]\w*):", code))
@@ -78,7 +86,12 @@ def data_labels(src):
 def scan(path, labels):
     ds_holds_data = True          # ASSUME at the top of each module says so
     findings = []
-    for n, line in enumerate(read(path).split("\r\n"), 1):
+    lines = read(path).splitlines()
+    if len(lines) < 2:
+        sys.exit("%s came back as %d line(s): the line endings are not what "
+                 "this expected, and the module would go unexamined."
+                 % (os.path.basename(path), len(lines)))
+    for n, line in enumerate(lines, 1):
         code = line.split(";")[0]
         assume = re.match(r"\s*;?ASSUME\s+(.*)", line, re.I)
         if assume:

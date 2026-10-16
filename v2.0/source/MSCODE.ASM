@@ -410,7 +410,7 @@ ASSUME  SS:DOSGROUP
 ;
         procedure   _SET_CURRENT_PDB,NEAR
         ASSUME  DS:NOTHING,SS:NOTHING
-        MOV     [CurrentPDB],BX
+        MOV     [SS:CurrentPDB],BX
         return
 
 ;
