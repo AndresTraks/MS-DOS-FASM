@@ -253,16 +253,28 @@ def struc_params():
 STRINGS = re.compile(r"'[^']*'|\"[^\"]*\"")
 
 
+def outside_strings(code, fn):
+    """Apply fn to the code, leaving anything in quotes alone."""
+    out, pos = [], 0
+    for s in STRINGS.finditer(code):
+        out.append(fn(code[pos:s.start()]))
+        out.append(s.group(0))
+        pos = s.end()
+    out.append(fn(code[pos:]))
+    return "".join(out)
+
+
+def rename_reserved(text):
+    """Names FASM will not let us use as labels."""
+    for name in RESERVED:
+        text = re.sub(r"\b%s\b" % name, name + "_", text)
+    return text
+
+
 def respell(code, canon, own, fields):
     """Header names in the case they are defined, and fields with their STRUC,
     leaving string literals alone."""
-    out, pos = [], 0
-    for s in STRINGS.finditer(code):
-        out.append(fix_words(code[pos:s.start()], canon, own, fields))
-        out.append(s.group(0))
-        pos = s.end()
-    out.append(fix_words(code[pos:], canon, own, fields))
-    return "".join(out)
+    return outside_strings(code, lambda t: fix_words(t, canon, own, fields))
 
 
 def fix_words(text, canon, own, fields):
@@ -376,8 +388,12 @@ def convert(line, state):
     if m:
         code = "%s = %s" % (m.group(1), m.group(2))
 
-    for name in RESERVED:
-        code = re.sub(r"\b%s\b" % name, name + "_", code)
+    # Outside string literals only.  COMTAB holds the names of the internal
+    # commands as text, and renaming the one in DB 6,"PAUSE" along with the
+    # label left a command called PAUSE_ -- and worse, a sixth character where
+    # the entry's flag byte belongs, which put every entry after it out of step
+    # and lost ECHO, GOTO, IF and the rest.
+    code = outside_strings(code, rename_reserved)
 
     code = respell(code, state["canon"], state["own"], state["fields"])
 

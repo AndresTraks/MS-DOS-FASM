@@ -190,7 +190,7 @@ GOTTHEENVIR:
 
         JNZ     IUSESLASH
 
-        MOV     [ES:ECOMSPEC-10H],'\'
+        MOV     [ES:(ECOMSPEC - SEGBASE_ENVIRONMENT)-10H],'\'
 IUSESLASH:
 
 IF IBMVER
@@ -229,7 +229,7 @@ END IF
         REP     MOVSB
 
         POP     DS
-        MOV     word [ES:ECOMSPEC-10H],AX
+        MOV     word [ES:(ECOMSPEC - SEGBASE_ENVIRONMENT)-10H],AX
 
 NOTWIDENV:
         CLD

@@ -55,7 +55,7 @@ ASSUME DS:TRANGROUP,ES:RESGROUP
         INT     int_command
         MOV     AH,Alloc
         INT     int_command
-        MOV     [LTPA],AX       ; Re-compute evrything
+        MOV     [ES:LTPA],AX       ; Re-compute evrything
         MOV     [TPA],AX
         MOV     BX,AX
         MOV     AX,CS
@@ -155,12 +155,12 @@ TRYGREATER:
         CMP     byte [SI],'>'
         JNZ     NOAPPND
         LODSB
-        INC     [RE_OUT_APP]            ; Flag >>
+        INC     [ES:RE_OUT_APP]            ; Flag >>
 NOAPPND:
         CALL    SCANOFF
         CMP     AL,0DH
         JNZ     GOTREOFIL
-        MOV     word [RE_OUTSTR],09H     ; Cause an error later
+        MOV     word [ES:RE_OUTSTR],09H     ; Cause an error later
         JMP     SHORT PRESCANEND
 GOTREOFIL:
         PUSH    DI
@@ -182,7 +182,7 @@ NOOUT:
         CALL    SCANOFF
         CMP     AL,0DH
         JNZ     GOTREIFIL
-        MOV     word [RE_INSTR],09H ; Cause an error later
+        MOV     word [ES:RE_INSTR],09H ; Cause an error later
         JMP     SHORT PRESCANEND
 GOTREIFIL:
         PUSH    DI
@@ -193,7 +193,7 @@ CHKPIPE:
         MOV     AH,AL
         CMP     AH,'|'
         JNZ     CONTPRESCAN
-        INC     [PIPEFLAG]
+        INC     [ES:PIPEFLAG]
         CALL    SCANOFF
         CMP     AL,0DH
         JZ      PIPEERRSYNJ5
@@ -221,10 +221,10 @@ CONTPRESCAN:
         INC     CL
         JMP     PRESCANLP
 PRESCANEND:
-        CMP     [PIPEFLAG],0
+        CMP     [ES:PIPEFLAG],0
         JZ      ISNOPIPE
         MOV     DI,PIPESTR
-        MOV     [PIPEPTR],DI
+        MOV     [ES:PIPEPTR],DI
         MOV     SI,COMBUF+2
         CALL    SCANOFF
 PIPESETLP:                      ; Transfer the pipe into the resident pipe buffer
@@ -234,7 +234,7 @@ PIPESETLP:                      ; Transfer the pipe into the resident pipe buffe
         JNZ     PIPESETLP
 ISNOPIPE:
         MOV     [COMBUF+1],CL
-        CMP     [PIPEFLAG],0
+        CMP     [ES:PIPEFLAG],0
         PUSH    CS
         POP     ES
         return
@@ -468,7 +468,7 @@ ASSUME  DS:RESGROUP
         ADC     word [BATLOC+2],0
         PUSH    BX
         MOV     DX,BATBYT
-        MOV     BX,[BATHAND]
+        MOV     BX,[ES:BATHAND]
         MOV     AH,Read
         MOV     CX,1
         INT     int_command              ; Get one more byte from batch file
@@ -910,9 +910,9 @@ ASSUME  DS:TRANGROUP
         MOV     ES,[RESSEG]
 ASSUME  ES:RESGROUP
         MOV     DX,NOSPACE
-        CMP     [PIPEFLAG],0
+        CMP     [ES:PIPEFLAG],0
         JZ      GO_TO_ERROR
-        MOV     [PIPEFLAG],0
+        MOV     [ES:PIPEFLAG],0
         MOV     DX,PIPEEMES
 GO_TO_ERROR:
         JMP     CERROR

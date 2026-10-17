@@ -124,7 +124,7 @@ IF IBMVER
 SYSCALL_:
         CMP     AH,Exec
         JZ      do_exec
-        JMP     dword [SYS_CALL]
+        JMP     dword [CS:SYS_CALL]
 
 do_exec:
         PUSH    ES
@@ -136,8 +136,8 @@ do_exec:
         PUSH    CX
         PUSH    BX
         PUSH    AX
-        MOV     [USER_SS],SS
-        MOV     [USER_SP],SP
+        MOV     [CS:USER_SS],SS
+        MOV     [CS:USER_SP],SP
 ;
 ; are we running on RSTACK already?
 ;
@@ -165,9 +165,9 @@ Get_mem:
         INT     int_command
         JC      execmer         ; Memory arenas probably trashed
         ADD     BX,AX
-        MOV     [MEMSIZ],BX
+        MOV     [SS:MEMSIZ],BX
         SUB     BX,CX
-        MOV     [EXESEG],BX     ; exec
+        MOV     [SS:EXESEG],BX     ; exec
         MOV     ES,AX
         MOV     AH,Dealloc
         INT     int_command
@@ -200,14 +200,14 @@ ASSUME  DS:NOTHING
         JNZ     execmer         ; Size matched
 
         CALL    EXECHK
-        CMP     DX,[EXESUM]
+        CMP     DX,[SS:EXESUM]
         JNZ     execmer
 HAVEXEC:
-        MOV     [LOADING],0             ; Flag to DSKERR
-        CALL    dword [ZEXEC]
+        MOV     [SS:LOADING],0             ; Flag to DSKERR
+        CALL    dword [SS:ZEXEC]
         JMP     SHORT execret
 execmer:
-        LDS     SI,dword [USER_SP]
+        LDS     SI,dword [SS:USER_SP]
         MOV     [SI+user_environ.user_AX],exec_not_enough_memory
         PUSH    [SI+user_environ.user_F]
         POPF
@@ -215,9 +215,9 @@ execmer:
         PUSHF
         POP     [SI+user_environ.user_F]
 execret:
-        MOV     SS,[USER_SS]
+        MOV     SS,[SS:USER_SS]
 ASSUME  SS:NOTHING
-        MOV     SP,[USER_SP]
+        MOV     SP,[CS:USER_SP]
         POP     AX              ; PUSH    ES
         POP     BX              ; PUSH    DS
         POP     CX              ; PUSH    BP
@@ -232,7 +232,7 @@ ASSUME  SS:NOTHING
 EXECHK:
 ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
         PUSH    DS
-        MOV     DS,[EXESEG]
+        MOV     DS,[CS:EXESEG]
         MOV     CX,ZEXECCODEEND
         XOR     SI,SI
         JMP     CHECK_SUM
@@ -276,7 +276,7 @@ EXT_EXEC:
 EXEC_WAIT:
         MOV     AH,Wait
         INT     int_command     ; Get the return code
-        MOV     [RETCODE],AX
+        MOV     [CS:RETCODE],AX
 NOEXEC:
         JMP     LODCOM
 
@@ -333,7 +333,7 @@ ASSUME  DS:NOTHING
         MOV     AX,(Set_Interrupt_Vector SHL 8) + int_command
         INT     int_command
 END IF
-        MOV     AX,[PARENT]
+        MOV     AX,[CS:PARENT]
         MOV     word [CS:Process_data_block.PDB_Parent_PID],AX
         MOV     AX,(Exit SHL 8)                 ; Return to lower level
         INT     int_command
@@ -359,8 +359,8 @@ GOTECODE:
 
 INT_2E:                         ; Magic command executer
 ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
-        POP     word [INT_2E_RET]
-        POP     word [INT_2E_RET+2]    ;Get return address
+        POP     word [CS:INT_2E_RET]
+        POP     word [CS:INT_2E_RET+2]    ;Get return address
         POP     AX              ;Chuck flags
         PUSH    CS
         POP     ES
@@ -369,15 +369,15 @@ ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
         REP     MOVSW
         MOV     AH,GET_CURRENT_PDB
         INT     int_command             ; Get user's header
-        MOV     [SAVE_PDB],BX
+        MOV     [CS:SAVE_PDB],BX
         MOV     AH,SET_CURRENT_PDB
         MOV     BX,CS
         INT     int_command             ; Current process is me
-        MOV     [SINGLECOM],81H
-        MOV     [EXTCOM],1      ; Make sure this case forced
+        MOV     [CS:SINGLECOM],81H
+        MOV     [CS:EXTCOM],1      ; Make sure this case forced
 
 LODCOM:                         ; Termination handler
-        CMP     [EXTCOM],0
+        CMP     [CS:EXTCOM],0
         JZ      LODCOM1         ; If internal, memory already allocated
         MOV     BX,0FFFFH
         MOV     AH,Alloc
@@ -404,10 +404,10 @@ MEMOK:
         MOV     AH,Alloc
         INT     int_command
         JC      BADMEMERRJ      ; Memory arenas probably trashed
-        MOV     [EXTCOM],0      ; Flag not to ALLOC again
-        MOV     [LTPA],AX       ; New TPA is base just allocated
+        MOV     [CS:EXTCOM],0      ; Flag not to ALLOC again
+        MOV     [CS:LTPA],AX       ; New TPA is base just allocated
         ADD     BX,AX
-        MOV     [MEMSIZ],BX
+        MOV     [CS:MEMSIZ],BX
 
         MOV     AX,TRANSPACEEND + 15
         MOV     CL,4
@@ -423,7 +423,7 @@ MEMOK:
         END IF
 
         SUB     BX,AX
-        MOV     [TRNSEG],BX     ; Transient starts here
+        MOV     [CS:TRNSEG],BX     ; Transient starts here
 LODCOM1:
         MOV     AX,CS
         MOV     SS,AX
@@ -576,7 +576,7 @@ ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
         INT     int_command             ; Get user's header
         MOV     DS,BX
         MOV     AX,word [DS:Process_data_block.PDB_JFN_Table]
-        MOV     [HANDLE01],AX           ; Save user's stdin, stdout
+        MOV     [CS:HANDLE01],AX           ; Save user's stdin, stdout
         MOV     AL,[DS:Process_data_block.PDB_JFN_Table+2]
         MOV     AH,AL
         MOV     word [DS:Process_data_block.PDB_JFN_Table],AX   ; Dup stderr

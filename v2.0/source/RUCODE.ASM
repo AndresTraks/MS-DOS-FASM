@@ -57,7 +57,7 @@ ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
         PUSH    AX
         MOV     DS,BP
         MOV     AX,[SI+SYSDEV.SDEVATT]
-        MOV     [CDEVAT],AH
+        MOV     [CS:CDEVAT],AH
         PUSH    CS
         POP     ES
         MOV     DI,DEVENAM

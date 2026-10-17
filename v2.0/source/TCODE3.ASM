@@ -66,12 +66,12 @@ ASSUME  ES:RESGROUP
 ASSUME  DS:TRANGROUP
         MOV     SI,DIRBUF
         MOV     DI,FORSET
-        MOV     [FORPTR],DI
+        MOV     [ES:FORPTR],DI
         LODSB                   ;Get drive spec
         ADD     AL,'@'
         CMP     AL,'@'
         JZ      NDRV8
-        CMP     [UFORDRV],0
+        CMP     [ES:UFORDRV],0
         JZ      NDRV8
         MOV     AH,':'
         STOSW
@@ -123,7 +123,7 @@ NOFORPARM:
         CMP     AL,0DH
         JNZ     TFORCOM
         DEC     CX
-        MOV     [COMBUF+1],CL
+        MOV     [ES:COMBUF+1],CL
         MOV     [FORPTR],DX     ; Point to next set element
         TEST    [ECHOFLAG],-1
         PUSH    CS
@@ -160,17 +160,17 @@ _FOR:
 ASSUME  ES:RESGROUP
         MOV     DI,FORSET
         XOR     AL,AL
-        MOV     [UFORDRV],AL
-        XCHG    AL,[FORFLAG]
+        MOV     [ES:UFORDRV],AL
+        XCHG    AL,[ES:FORFLAG]
         OR      AL,AL
         JNZ     FORNESTERR
-        MOV     [FORPTR],DI
-        MOV     [FORUFCB],-1
+        MOV     [ES:FORPTR],DI
+        MOV     [ES:FORUFCB],-1
         CALL    SCANOFF
         LODSW
         CMP     AL,'%'
         JNZ     FORERRORJ
-        MOV     [FORVAR],AH
+        MOV     [ES:FORVAR],AH
         CALL    SCANOFF
         CMP     AL,0DH
         JZ      FORERRORJ2
@@ -202,7 +202,7 @@ FORERRORJ2:
         CMP     AL,'?'
         JNZ     NOFORSCAN
 SETFORSCAN:
-        MOV     [FORUFCB],1
+        MOV     [ES:FORUFCB],1
 NOFORSCAN:
         CALL    DELIM
         JNZ     FORSETLP
@@ -235,12 +235,12 @@ FORCOMLP:
         STOSB
         CMP     AL,0DH
         JNZ     FORCOMLP
-        INC     [FORFLAG]
-        CMP     [SINGLECOM],-1
+        INC     [ES:FORFLAG]
+        CMP     [ES:SINGLECOM],-1
         JNZ     NOFORP
-        MOV     [SINGLECOM],0FF00H      ; Flag single command for
+        MOV     [ES:SINGLECOM],0FF00H      ; Flag single command for
 NOFORP:
-        CMP     [FORUFCB],1
+        CMP     [ES:FORUFCB],1
         retnz
         PUSH    ES
         POP     DS
@@ -443,7 +443,7 @@ ASSUME  DS:NOTHING,ES:NOTHING
         retz                            ; No new parm
         MOV     SI,[DI]
         MOV     word [DI],-1        ; Assume no parm
-        MOV     DS,[RESSEG]
+        MOV     DS,[CS:RESSEG]
 ASSUME  DS:RESGROUP
 SKIPCRLP:
         LODSB
@@ -474,7 +474,7 @@ ASSUME  DS:RESGROUP
 NOINC:
         SUB     CX,11
         NEG     CX
-        MOV     [GOTOLEN],CX
+        MOV     [ES:GOTOLEN],CX
         CALL    GETBATBYT
         CMP     AL,':'
         JZ      CHKLABEL
@@ -496,7 +496,7 @@ LABLKTST:
 
 CHKLABEL:
         MOV     DI,FCB+1
-        MOV     CX,[GOTOLEN]
+        MOV     CX,[ES:GOTOLEN]
 NEXTCHRLP:
         PUSH    CX
         CALL    GETBATBYT
@@ -541,7 +541,7 @@ ASSUME  DS:NOTHING
         JC      SETERRDL
         POP     DS
 ASSUME  DS:RESGROUP
-        MOV     [BATHAND],AX
+        MOV     [ES:BATHAND],AX
         MOV     BX,AX
         MOV     DX,word [BATLOC]
         MOV     CX,word [BATLOC+2]
@@ -572,7 +572,7 @@ ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
         PUSH    AX
         PUSH    BX
         PUSH    CX
-        MOV     DS,[RESSEG]
+        MOV     DS,[CS:RESSEG]
 ASSUME  DS:RESGROUP
         CMP     [PIPEFLAG],0
         JNZ     NOREDIR                 ; Don't muck up the pipe

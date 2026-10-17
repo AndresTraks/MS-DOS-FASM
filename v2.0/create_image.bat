@@ -8,9 +8,12 @@ REM each from its first cluster onwards and assumes it is contiguous.
 %IMGEN% -c -s bin\bootsect.bin -i bin\IO.SYS -f %IMAGE% -F
 %IMGEN% -m -i bin\MSDOS.SYS -f %IMAGE%
 
-REM COMMAND.COM is the one Microsoft shipped. The COMLINK sources for it are
-REM still MASM, so there is nothing of ours to put here yet.
-%IMGEN% -m -i bin\COMMAND.COM -f %IMAGE%
+REM COMMAND.COM is ours, from the sixteen modules COMLINK lists.  Microsoft's
+REM is kept in bin to compare against.  fat_imgen copies a file under the name
+REM it already has, so it is copied aside first.
+COPY bin\COMMANDF.COM COMMAND.COM > NUL
+%IMGEN% -m -i COMMAND.COM -f %IMAGE%
+DEL COMMAND.COM
 
 REM The rest of the release's executables.  They are Microsoft's -- nothing
 REM here is built from source yet -- but they are what there is to run on the

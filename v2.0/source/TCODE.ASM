@@ -42,7 +42,7 @@ SETDRV:
         MOV     AH,Set_Default_Drive
         INT     int_command
 TCOMMAND:
-        MOV     DS,[RESSEG]
+        MOV     DS,[CS:RESSEG]
 ASSUME  DS:RESGROUP
         MOV     AX,-1
         XCHG    AX,[VERVAL]
@@ -51,7 +51,7 @@ ASSUME  DS:RESGROUP
         MOV     AH,Set_Verify_On_Write  ; AL has correct value
         INT     int_command
 NOSETVER2:
-        CALL    dword [HEADCALL]; Make sure header fixed
+        CALL    dword [CS:HEADCALL]; Make sure header fixed
         XOR     BP,BP                   ; Flag transient not read
         CMP     [SINGLECOM],-1
         JNZ     COMMAND
@@ -68,15 +68,15 @@ ASSUME  SS:TRANGROUP
         MOV     SP,STACK_
         MOV     ES,AX
 ASSUME  ES:TRANGROUP
-        MOV     DS,[RESSEG]
+        MOV     DS,[SS:RESSEG]
 ASSUME  DS:RESGROUP
         STI
 
-        MOV     [UCOMBUF],COMBUFLEN     ; Init UCOMBUF
-        MOV     [COMBUF],COMBUFLEN      ; Init COMBUF (Autoexec doing DATE)
+        MOV     [SS:UCOMBUF],COMBUFLEN     ; Init UCOMBUF
+        MOV     [SS:COMBUF],COMBUFLEN      ; Init COMBUF (Autoexec doing DATE)
         OR      BP,BP                   ; See if just read
         JZ      TESTRDIR                ; Not read, check user directory
-        MOV     word [UCOMBUF+1],0D01H  ; Reset buffer
+        MOV     word [SS:UCOMBUF+1],0D01H  ; Reset buffer
         JMP     SHORT NOSETBUF
 TESTRDIR:
         CMP     [RESTDIR],0
@@ -125,7 +125,7 @@ ASSUME  DS:RESGROUP
 GETCOM:
         MOV     AH,Get_Default_Drive
         INT     int_command
-        MOV     [CURDRV],AL
+        MOV     [SS:CURDRV],AL
         TEST    [ECHOFLAG],-1
         JZ      NOPDRV                  ; No prompt if echo off
         CALL    SINGLETEST
@@ -281,7 +281,7 @@ RDPARM:
 
 PROMPTBAT:
         MOV     DX,NEEDBAT
-        CALL    dword [RCH_ADDR]
+        CALL    dword [SS:RCH_ADDR]
         JZ      ASKFORBAT               ; Media is removable
 NoAskForBat:
         MOV     ES,[BATCH]              ; Turn off batch
@@ -615,7 +615,7 @@ ASSUME  DS:NOTHING
         LODSB
 
         IF      KANJI
-        MOV     [KPARSE],0
+        MOV     [SS:KPARSE],0
         END IF
 
         OR      AL,AL
@@ -639,10 +639,10 @@ SKIPPathElem:
 
 OKPath:
         IF      KANJI
-        MOV     [KPARSE],0
+        MOV     [SS:KPARSE],0
         CALL    TESTKANJ
         JZ      NXTPTCHR
-        INC     [KPARSE]
+        INC     [SS:KPARSE]
         MOVSB
 NXTPTCHR:
         END IF
@@ -692,7 +692,7 @@ CDPATH:
         MOV     AH,CHDir
         INT     int_command
         MOV     [SI-1],BL       ; Fix the path string back up
-        MOV     DS,[RESSEG]
+        MOV     DS,[SS:RESSEG]
 ASSUME  DS:RESGROUP
         INC     [RESTDIR]       ; Say users dir needs restoring
         JNC     ResearchJ
@@ -709,20 +709,20 @@ ASSUME  ES:RESGROUP
 ;Since BATCH has lower precedence than PIPE or FOR. If a new BATCH file
 ;is being started it MUST be true that no FOR or PIPE is currently in
 ;progress.
-        MOV     [FORFLAG],0     ; Turn off for processing
-        MOV     [PIPEFLAG],0    ; Turn off any pipe
-        TEST    [BATCH],-1
+        MOV     [ES:FORFLAG],0     ; Turn off for processing
+        MOV     [ES:PIPEFLAG],0    ; Turn off any pipe
+        TEST    [ES:BATCH],-1
         JNZ     CHAINBAT        ; Don't need allocation if chaining
         CALL    FREE_TPA
 ASSUME  ES:RESGROUP
         MOV     BX,6            ; 64 + 32 bytes
         MOV     AH,Alloc
         INT     int_command             ; Suck up a little piece for batch processing
-        MOV     [BATCH],AX
+        MOV     [ES:BATCH],AX
         CALL    ALLOC_TPA
 CHAINBAT:
         PUSH    ES
-        MOV     ES,[BATCH]
+        MOV     ES,[ES:BATCH]
 ASSUME  ES:NOTHING
         MOV     DL,[DIRBUF]
         XOR     DI,DI
@@ -755,7 +755,7 @@ EACHPARM:
         JZ      HAVPARM
         JCXZ    MOVPARM                 ; Only first 10 parms get pointers
         PUSH    ES
-        MOV     ES,[BATCH]
+        MOV     ES,[ES:BATCH]
         MOV     [ES:BX],DI              ; Set pointer table to point to actual parameter
         POP     ES
         INC     BX
@@ -823,8 +823,8 @@ HAVEXP:
         INT     int_command                             ; Now running in "free" space
         MOV     ES,[RESSEG]
 ASSUME  ES:RESGROUP
-        INC     [EXTCOM]        ; Indicate external command
-        MOV     [RESTDIR],0     ; Since USERDIR1 is in transient, insure
+        INC     [ES:EXTCOM]        ; Indicate external command
+        MOV     [ES:RESTDIR],0     ; Since USERDIR1 is in transient, insure
                                 ;  this flag value for re-entry to COMMAND
         MOV     DI,FCB
         MOV     SI,DI
@@ -1008,7 +1008,7 @@ NOTKANJ5:
         JNZ     PIPECOMLP
         MOV     byte [ES:DI-1],0DH
         DEC     CX
-        MOV     [COMBUF+1],CL
+        MOV     [SS:COMBUF+1],CL
         DEC     SI
         MOV     [PIPEPTR],SI            ; On to next pipe element
         MOV     DX,[OUTPIPEPTR]
@@ -1027,7 +1027,7 @@ NOTKANJ5:
         JMP     SHORT PIPECOM
 
 LASTPIPE:
-        MOV     [COMBUF+1],CL
+        MOV     [SS:COMBUF+1],CL
         DEC     SI
         MOV     [PIPEPTR],SI    ; Point at the CR (anything not '|' will do)
         CALL    TESTDOREOUT     ; Set up the redirection if specified

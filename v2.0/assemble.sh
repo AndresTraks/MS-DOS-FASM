@@ -28,8 +28,8 @@ $FASM bootsect.asm bin/bootsect.bin
 # DEVICE= line.  Not on the image: tests/config.sh is what loads it.
 $FASM source/TESTDEV.ASM bin/TESTDEV.SYS
 
-# COMMAND.COM, from the sixteen modules COMLINK lists.  This is not on the
-# image yet: it boots and reaches its command dispatcher, but no internal
-# command matches, so create_image.sh still uses the one Microsoft shipped.
-# Built here regardless, so the conversion cannot quietly stop assembling.
+# COMMAND.COM, from the sixteen modules COMLINK lists.  Built under another
+# name so that Microsoft's, which the release shipped and which is useful to
+# compare against, stays where it is; create_image.sh puts this one on the
+# image as COMMAND.COM.
 $FASM source/COMLINK.ASM bin/COMMANDF.COM

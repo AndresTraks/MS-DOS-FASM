@@ -3,3 +3,4 @@ test.img
 test-out/
 COMMANDF.COM
 TESTDEV.SYS
+__pycache__/

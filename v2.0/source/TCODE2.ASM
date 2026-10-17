@@ -169,7 +169,7 @@ FIND:
         CALL    COUNT0                  ; CX = LENGTH OF NAME
         MOV     ES,[RESSEG]
 ASSUME  ES:RESGROUP
-        MOV     ES,[ENVIRSEG]
+        MOV     ES,[ES:ENVIRSEG]
 ASSUME  ES:NOTHING
         XOR     DI,DI
 FIND1:
@@ -265,7 +265,7 @@ GETARG:
 SCAN_DOUBLE_NULL:
         MOV     ES,[RESSEG]
 ASSUME  ES:RESGROUP
-        MOV     ES,[ENVIRSEG]
+        MOV     ES,[ES:ENVIRSEG]
 ASSUME  ES:NOTHING
         XOR     DI,DI
 SDN1:
@@ -421,11 +421,11 @@ _EXIT:
         PUSH    ES
         MOV     ES,[RESSEG]
 ASSUME  ES:RESGROUP
-        MOV     AX,[PARENT]
+        MOV     AX,[ES:PARENT]
         MOV     word [ES:Process_data_block.PDB_Parent_PID],AX
 
 IF IBM
-        CMP     [PERMCOM],0
+        CMP     [ES:PERMCOM],0
         JNZ     NORESETVEC      ;Don't reset the vector if a PERMCOM
         LDS     DX,dword [ES:SYS_CALL]
 ASSUME  DS:NOTHING
@@ -436,7 +436,7 @@ END IF
 
         POP     ES
 ASSUME  ES:TRANGROUP
-        MOV     ES,[TPA]
+        MOV     ES,[ES:TPA]
         MOV     AH,Dealloc
         INT     int_command                             ; Now running in "free" space
         MOV     AX,(Exit SHL 8)
@@ -482,7 +482,7 @@ ICLLOOP:                                ; Close basic handles
         MOV     AH,Close        ; Close initial handle
         INT     int_command
 RESRET:
-        MOV     DS,[RESSEG]
+        MOV     DS,[ES:RESSEG]
 ASSUME  DS:RESGROUP
         PUSH    DS
         MOV     AX,word [DS:Process_data_block.PDB_JFN_Table]           ; Get new 0 and 1

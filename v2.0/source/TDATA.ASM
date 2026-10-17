@@ -161,7 +161,7 @@ COMTAB  DB      4,"DIR",1               ; Table for internal command names
         DW      TCOMMAND
         DB      5,"COPY",1
         DW      COPY
-        DB      6,"PAUSE_",0
+        DB      6,"PAUSE",0
         DW      PAUSE_
         DB      5,"DATE",0
         DW      DATE

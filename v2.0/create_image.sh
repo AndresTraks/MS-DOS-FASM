@@ -13,9 +13,10 @@ mformat -C -f 1440 -i "$IMAGE" ::
 mcopy -i "$IMAGE" bin/IO.SYS ::
 mcopy -i "$IMAGE" bin/MSDOS.SYS ::
 
-# COMMAND.COM is the one Microsoft shipped. The COMLINK sources for it are
-# still MASM, so there is nothing of ours to put here yet.
-mcopy -i "$IMAGE" bin/COMMAND.COM ::
+# COMMAND.COM is ours, from the sixteen modules COMLINK lists.  Microsoft's
+# is kept in bin to compare against: boot with it by copying bin/COMMAND.COM
+# over the one on the image.
+mcopy -i "$IMAGE" bin/COMMANDF.COM ::COMMAND.COM
 
 # The rest of the release's executables.  They are Microsoft's -- nothing
 # here is built from source yet -- but they are what there is to run on the

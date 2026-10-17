@@ -41,25 +41,25 @@ CATALOG:
 ; found when the command line was parsed.
 
 SETSWT:
-        MOV     AX,[COMSW]              ; Get switches from command
-        OR      AX,[ARGTS]              ; OR in switches from all of tail
-        MOV     [BITS],AX
-        MOV     byte[FULLSCR],LINPERPAG
+        MOV     AX,[CS:COMSW]              ; Get switches from command
+        OR      AX,[CS:ARGTS]              ; OR in switches from all of tail
+        MOV     [CS:BITS],AX
+        MOV     byte[CS:FULLSCR],LINPERPAG
         TEST    AL,1                    ; Look for W switch
         MOV     AL,NORMPERLIN
         JZ      DIR
         MOV     AL,WIDEPERLIN
 DIR:
-        MOV     [LINLEN],AL             ; Set number of entries per line
-        MOV     [LINCNT],AL
-        MOV     [FILECNT],0     ; Keep track of how many files found
+        MOV     [CS:LINLEN],AL             ; Set number of entries per line
+        MOV     [CS:LINCNT],AL
+        MOV     [CS:FILECNT],0     ; Keep track of how many files found
         MOV     DX,DIRBUF      ; Set Disk transfer address
         MOV     AH,Set_DMA
         INT     int_command
         CALL    PATHCRUNCH                      ; Get where we're going
         PUSHF
         JNC     NOTEST
-        CMP     [DESTISDIR],0           ; No CHDIRs worked
+        CMP     [CS:DESTISDIR],0           ; No CHDIRs worked
         JZ      NOTEST                  ; see if they should have
         JMP     BADCDERR
 
@@ -80,7 +80,7 @@ NOTEST:
         POP     AX
         OR      AL,AL
         JNZ     OKDODIR                         ; Go ahead and dir if open fail
-        TEST    [DIRBUF+sys_fcb.fcb_DEVID],devid_device
+        TEST    [CS:DIRBUF+sys_fcb.fcb_DEVID],devid_device
         JZ      OKDODIR
         JMP     NOTFNDERR                       ; Can't DIR a device
 OKDODIR:
@@ -94,7 +94,7 @@ OKDODIR:
         MOV     DI,5DH
         MOV     CX,11
         REP     STOSB           ; Remake default FCB
-        MOV     SI,[DESTTAIL]
+        MOV     SI,[CS:DESTTAIL]
         MOV     DI,FCB
         MOV     AX,(Parse_File_Descriptor SHL 8) OR 0EH  ; Parse with default drive, name and extension
         INT     int_command
@@ -117,10 +117,10 @@ DIRSTART:
 NEXENTJ:
         JMP    NEXENT
 AGAIN:
-        INC     [FILECNT]       ; Keep track of how many we find
+        INC     [CS:FILECNT]       ; Keep track of how many we find
         MOV     SI,DIRBUF+8    ; SI -> information returned by sys call
         CALL    SHONAME
-        TEST    byte[BITS],WSWITCH  ; W switch set?
+        TEST    byte[CS:BITS],WSWITCH  ; W switch set?
         JNZ     NEXENTJ         ; If so, no size, date, or time
         MOV     SI,DIRBUF+8+dir_entry.dir_attr
         TEST    byte [SI],attr_directory
@@ -131,7 +131,7 @@ AGAIN:
 FILEENT:
         CALL    DISPSIZE        ; Print size of file
 NOFSIZ:
-        MOV     AX,word [DIRBUF+8+dir_entry.dir_date]  ; Get date
+        MOV     AX,word [CS:DIRBUF+8+dir_entry.dir_date]  ; Get date
         OR      AX,AX
         JZ      NEXENT          ; Skip if no date
         MOV     DI,CHARBUF
@@ -156,7 +156,7 @@ NOFSIZ:
         SUB     CL,100
 MILLENIUM:
         CALL    DATE_CXDX
-        MOV     CX,word[DIRBUF+8+dir_entry.dir_time]  ; Get time
+        MOV     CX,word[CS:DIRBUF+8+dir_entry.dir_time]  ; Get time
         JCXZ    PRBUF           ; Time field present?
         MOV     AX,"  "
         STOSW
@@ -174,17 +174,17 @@ PRBUF:
         MOV     DX,CHARBUF
         CALL    ZPRINT
 NEXENT:
-        DEC     [LINCNT]
+        DEC     [CS:LINCNT]
         JNZ     SAMLIN
 NEXLIN:
-        MOV     AL,[LINLEN]
-        MOV     [LINCNT],AL
+        MOV     AL,[CS:LINLEN]
+        MOV     [CS:LINCNT],AL
         CALL    CRLF2
-        TEST    byte[BITS],PSWITCH  ; P switch present?
+        TEST    byte[CS:BITS],PSWITCH  ; P switch present?
         JZ      SCROLL          ; If not, just continue
-        DEC     byte[FULLSCR]
+        DEC     byte[CS:FULLSCR]
         JNZ     SCROLL
-        MOV     byte[FULLSCR],LINPERPAG
+        MOV     byte[CS:FULLSCR],LINPERPAG
         MOV     DX,PAUSEMES
         CALL    PRINT
         CALL    GetKeystroke
@@ -250,7 +250,7 @@ ERASE:
 ERA1:
         CALL    PATHCRUNCH
         JNC     NOTEST2J
-        CMP     [DESTISDIR],0           ; No CHDIRs worked
+        CMP     [CS:DESTISDIR],0           ; No CHDIRs worked
         JZ      NOTEST2J                ; see if they should have
 BADCDERR:
         MOV     DX,BADCD
@@ -263,12 +263,12 @@ NOTEST2J:
 CRENAME:
         CALL    PATHCRUNCH
         JNC     NOTEST3
-        CMP     [DESTISDIR],0           ; No CHDIRs worked
+        CMP     [CS:DESTISDIR],0           ; No CHDIRs worked
         JZ      NOTEST3                 ; see if they should have
         JMP     BADCDERR
 
 NOTEST3:
-        MOV     SI,[PATHPOS]
+        MOV     SI,[CS:PATHPOS]
         MOV     DI,FCB+10H
         CALL    SCANOFF
         MOV     AX,(Parse_File_Descriptor SHL 8) OR 01H
@@ -306,7 +306,7 @@ GOTTARG:
         XOR     DX,DX
 ASSUME  DS:NOTHING
 TYPELP:
-        MOV     CX,[BYTCNT]
+        MOV     CX,[ES:BYTCNT]
         MOV     AH,Read
         INT     int_command
         MOV     CX,AX
@@ -332,7 +332,7 @@ ERROR_OUTPUTJ:
 
 RESTUDIR1:
         PUSH    DS
-        MOV     DS,[RESSEG]
+        MOV     DS,[ES:RESSEG]
 ASSUME  DS:RESGROUP
         CMP     [RESTDIR],0
         POP     DS
