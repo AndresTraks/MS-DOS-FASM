@@ -1,13 +1,10 @@
 #!/bin/sh
 # Run the quick tests.  Each line is one boot, so the lot takes a few minutes.
 #
-# BIGCOPY is left out: it copies 70K through a driver that goes a sector at a
-# time and takes several minutes on its own.  To run it:
-#
-#       python3 -c "open('big.dat','wb').write(bytes((i*7)&0xff for i in range(70000)))"
-#       ./runtest.sh -t 420 -f big.dat -e "1 File(s) copied" tests/bigcopy.bat
-#
-# and compare test-out against big.dat with -g B.TMP.
+# BIGCOPY used to be left out, taking several minutes to copy 70K through a
+# driver that went a sector at a time.  The driver now takes a whole track in
+# one call and the copy is down to about ten seconds, so it runs with the
+# rest; the file it copies is made here.
 #
 # profil.bat is left out for the same reason: it assembles and links the
 # profiler on the system before it can run it, which takes about nine
@@ -27,6 +24,15 @@ run internal.bat -t 45 -g LOG.TXT -e "1 File(s) copied" -e "<DIR>" -e "DONE"
 run redirect.bat -t 45 -e "HELLO" -e "File not found" -e "DONE" -g D1.TXT
 run exec.bat     -t 50 -e "File not found" -e "Invalid number of parameters" \
                        -e "File name must be specified" -e "DONE"
+
+python3 -c "open('big.dat','wb').write(bytes((i*7)&0xff for i in range(70000)))"
+run bigcopy.bat  -t 45 -f big.dat -g B.TMP -e "1 File(s) copied" -e "DONE"
+if cmp -s big.dat test-out/B.TMP; then
+    echo "ok      B.TMP came back byte for byte"
+else
+    echo "MISSING B.TMP does not match big.dat"
+    fail=1
+fi
 
 # Two boots of its own, and it has to compare what DOS says against the clock
 # of this machine, so it is a script rather than a line here.

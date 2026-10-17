@@ -647,11 +647,14 @@ DSK_GO:
 DSK_NEXT:
         CMP     word [CS:DSKCNT],0
         JZ      DSK_DONE
-        CALL    DSK_ONE
+        CALL    DSK_RUN
         JC      DSK_FAIL
-        DEC     word [CS:DSKCNT]
-        INC     word [CS:DSKSEC]
-        ADD     word [CS:DSKBUF+2],BYTES_PER_SECTOR/16
+        MOV     CX,[CS:DSKRUN]          ; what that call managed
+        SUB     [CS:DSKCNT],CX
+        ADD     [CS:DSKSEC],CX
+        MOV     AX,BYTES_PER_SECTOR/16
+        MUL     CX
+        ADD     word [CS:DSKBUF+2],AX
         JMP     SHORT DSK_NEXT
 DSK_DONE:
         JMP     DEV_DONE
@@ -668,34 +671,76 @@ DSK_FAIL:
         MOV     AL,[CS:DSKERR]
         JMP     ERR_EXIT
 
-; One sector, with the retries the ROM needs after a seek error.
-DSK_ONE:
+; As many sectors as one ROM call can take, with the retries it needs after a
+; seek error.  The count that went is left in DSKRUN.
+;
+; Two things limit a run.  The sectors have to be on one track, the ROM taking
+; a single CHS address; and the transfer must not cross a 64K physical
+; boundary, because the DMA controller cannot carry into its page register.
+; DOS asks for a whole run of contiguous clusters in one request, so this is
+; the difference between one call and eighteen -- which on a diskette is most
+; of the time the system spends.
+DSK_RUN:
         PUSH    AX
         PUSH    BX
         PUSH    CX
         PUSH    DX
         PUSH    SI
         PUSH    DI
+        PUSH    BP
         PUSH    DS
         PUSH    ES
-        ; Would this sector cross a 64K physical boundary?  The DMA
-        ; controller cannot carry into its page register, so the ROM will
-        ; not do such a transfer.  Going a sector at a time is not enough on
-        ; its own: the caller's buffer need not sit on a 512-byte boundary
-        ; within the page, and DOS hands over whatever address its buffer or
-        ; the program being loaded happens to be at.  Those sectors go
-        ; through DSKSBUF, which is low enough to be safe, and are copied.
+        MOV     byte [CS:DSKBNC],0
+        MOV     word [CS:DSKRUN],1
+;
+; Where this is on the disk, and how much of the track is left after it.
+;
+        MOV     AX,[CS:DSKSEC]
+        XOR     DX,DX
+        MOV     BX,SECTORS_PER_TRACK
+        DIV     BX                      ; AX = track*heads + head, DX = sector-1
+        XOR     CH,CH
+        MOV     CL,DL
+        INC     CL                      ; sectors count from one
+        MOV     BP,SECTORS_PER_TRACK+1
+        SUB     BP,CX                   ; sectors left on this track
+        XOR     DX,DX
+        MOV     BX,HEADS
+        DIV     BX                      ; AX = cylinder, DX = head
+        MOV     CH,AL
+        MOV     DH,DL
+        MOV     DL,[CS:DSKDRV]
+;
+; And how much of the DMA page is left.  A buffer sitting exactly on the
+; boundary has the whole of it, which is more than any run.
+;
         LES     BX,[CS:DSKBUF]
         MOV     AX,ES
+        PUSH    CX
         MOV     CL,4
-        SHL     AX,CL                   ; low 16 bits of the physical address
-        ADD     AX,BX
-        MOV     byte [CS:DSKBNC],0
-        CMP     AX,10000h-BYTES_PER_SECTOR
-        JBE     DSK_ONE0
+        SHL     AX,CL
+        ADD     AX,BX                   ; low 16 bits of the physical address
+        MOV     SI,0FFh
+        OR      AX,AX
+        JZ      DSK_R1
+        NEG     AX                      ; bytes left in the page
+        MOV     CL,9
+        SHR     AX,CL                   ; ... as whole sectors
+        MOV     SI,AX
+DSK_R1:
+        POP     CX
+        OR      SI,SI
+        JNZ     DSK_R2
+;
+; Not even one sector fits before the boundary, so that one goes through
+; DSKSBUF, which is low enough to be safe, and is copied either side.
+;
         MOV     byte [CS:DSKBNC],1
+        MOV     SI,1
         CMP     byte [CS:DSKOP],3       ; a write has to be staged first
-        JNZ     DSK_ONE0
+        JNZ     DSK_R2
+        PUSH    CX
+        PUSH    DX
         PUSH    CS
         POP     ES
         MOV     DI,DSKSBUF
@@ -703,32 +748,35 @@ DSK_ONE:
         MOV     CX,BYTES_PER_SECTOR/2
         CLD
         REP     MOVSW
-DSK_ONE0:
-        MOV     AX,[CS:DSKSEC]
-        XOR     DX,DX
-        MOV     BX,SECTORS_PER_TRACK
-        DIV     BX                      ; AX = track*heads + head, DX = sector-1
-        MOV     CL,DL
-        INC     CL                      ; sectors count from one
-        XOR     DX,DX
-        MOV     BX,HEADS
-        DIV     BX                      ; AX = cylinder, DX = head
-        MOV     CH,AL
-        MOV     DH,DL
-        MOV     DL,[CS:DSKDRV]
+        POP     DX
+        POP     CX
+        MOV     SI,1
+DSK_R2:
+;
+; The run is the smallest of what was asked for, what is left on the track and
+; what is left in the page.
+;
+        MOV     AX,[CS:DSKCNT]
+        CMP     AX,BP
+        JBE     DSK_R3
+        MOV     AX,BP
+DSK_R3:
+        CMP     AX,SI
+        JBE     DSK_R4
+        MOV     AX,SI
+DSK_R4:
+        MOV     [CS:DSKRUN],AX
         LES     BX,[CS:DSKBUF]
         CMP     byte [CS:DSKBNC],0
-        JZ      DSK_ONE1
+        JZ      DSK_R5
         PUSH    CS
         POP     ES
         MOV     BX,DSKSBUF
-DSK_ONE1:
-        MOV     AL,1                    ; one sector at a time, so that a
-                                        ;  short transfer leaves the rest of
-                                        ;  the request still to do
+DSK_R5:
         MOV     AH,[CS:DSKOP]
         MOV     SI,3                    ; the ROM wants three tries
 DSK_TRY:
+        MOV     AL,byte [CS:DSKRUN]
         PUSH    AX
         PUSH    BX
         PUSH    CX
@@ -765,6 +813,7 @@ DSK_CLR:
 DSK_OK:
         POP     ES
         POP     DS
+        POP     BP
         POP     DI
         POP     SI
         POP     DX
@@ -779,6 +828,7 @@ DSKSEC  DW      0
 DSKBUF  DD      0
 DSKERR  DB      0
 DSKBNC  DB      0                       ; this sector goes through DSKSBUF
+DSKRUN  DW      0                       ; sectors the last call took
 DSKDRV  DB      0                       ; the unit being worked on
 DSKSBUF DB      BYTES_PER_SECTOR dup (0)
 
