@@ -669,7 +669,36 @@ DSK_FAIL:
         PUSH    CS
         POP     DS
         MOV     AL,[CS:DSKERR]
+        CALL    DSK_CODE
         JMP     ERR_EXIT
+
+; AL = the status byte the ROM returned, back as the error code DOS expects.
+; The two have nothing to do with each other: DEVDRIV.DOC lists the codes a
+; driver may return and the DOS turns them into the message INT 24h puts on
+; the screen, so handing back the ROM's number unchanged named whatever
+; happened to collide with it -- 3 for a write-protected disk, which is
+; "unknown command", and 80h for a drive with no disk in it, which is not a
+; code at all.  Anything not listed here is a general failure, which is a
+; truthful answer.
+DSK_CODE:
+        PUSH    BX
+        PUSH    CX
+        MOV     BX,DSKMAP
+        MOV     CX,DSKMAPN
+DSK_C1:
+        CMP     AL,[CS:BX]
+        JZ      DSK_C2
+        INC     BX
+        INC     BX
+        LOOP    DSK_C1
+        MOV     AL,0Ch                  ; general failure
+        JMP     SHORT DSK_C3
+DSK_C2:
+        MOV     AL,[CS:BX+1]
+DSK_C3:
+        POP     CX
+        POP     BX
+        RET
 
 ; As many sectors as one ROM call can take, with the retries it needs after a
 ; seek error.  The count that went is left in DSKRUN.
@@ -829,6 +858,17 @@ DSKBUF  DD      0
 DSKERR  DB      0
 DSKBNC  DB      0                       ; this sector goes through DSKSBUF
 DSKRUN  DW      0                       ; sectors the last call took
+
+; What the ROM says, and what DOS calls it.
+DSKMAP  DB      03h, 0                  ; write protected
+        DB      80h, 2                  ; timed out, no disk in the drive
+        DB      01h, 3                  ; bad command
+        DB      10h, 4                  ; CRC error
+        DB      40h, 6                  ; seek failed
+        DB      06h, 7                  ; media changed
+        DB      02h, 8                  ; address mark not found
+        DB      04h, 8                  ; sector not found
+DSKMAPN = ($-DSKMAP)/2
 DSKDRV  DB      0                       ; the unit being worked on
 DSKSBUF DB      BYTES_PER_SECTOR dup (0)
 

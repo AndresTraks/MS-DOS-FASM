@@ -30,6 +30,7 @@ KEYSAT=30               # when to start sending keystrokes
 KEYS=                   # QEMU sendkey names, one a second
 EXTRA=                  # files to put on the image
 BIMAGE=                 # a second floppy, as drive B
+BRO=                    # ... with the write protect tab on
 FETCH=                  # files to take off it afterwards
 EXPECT=                 # text that has to appear on the screen
 IMAGE=test.img
@@ -38,7 +39,7 @@ OUT=${TMPDIR:-/tmp}/runtest.$$
 usage() {
     cat >&2 <<USAGE
 usage: $0 [-t seconds] [-k "keys"] [-K seconds] [-f file] [-g name]
-          [-b image] [-e text] batchfile
+          [-b image] [-r] [-e text] batchfile
 
   -t  how long to let it run, default $RUN; a MASM run wants 400
   -k  keystrokes to send, QEMU sendkey names: -k "ret ret ret"
@@ -46,13 +47,14 @@ usage: $0 [-t seconds] [-k "keys"] [-K seconds] [-f file] [-g name]
   -f  a file to put on the image, repeatable
   -g  a file to take off the image into test-out/, repeatable
   -b  an image to attach as the second floppy, which DOS sees as B:
+  -r  attach that one write protected, so writing it fails as it would
   -e  text that must appear on the screen or in a file fetched with -g,
       repeatable; absent means fail
 USAGE
     exit 2
 }
 
-while getopts t:k:K:f:g:b:e: opt; do
+while getopts t:k:K:f:g:b:re: opt; do
     case $opt in
         t) RUN=$OPTARG ;;
         k) KEYS=$OPTARG ;;
@@ -60,6 +62,7 @@ while getopts t:k:K:f:g:b:e: opt; do
         f) EXTRA="$EXTRA $OPTARG" ;;
         g) FETCH="$FETCH $OPTARG" ;;
         b) BIMAGE=$OPTARG ;;
+        r) BRO=,readonly=on ;;
         e) EXPECT="$EXPECT
 $OPTARG" ;;
         *) usage ;;
@@ -87,7 +90,7 @@ for f in $EXTRA; do mcopy -o -i "$IMAGE" "$f" ::; done
 BOPT=
 if [ -n "$BIMAGE" ]; then
     [ -f "$BIMAGE" ] || { echo "$0: no such image: $BIMAGE" >&2; exit 2; }
-    BOPT="-drive file=$BIMAGE,format=raw,if=floppy,index=1"
+    BOPT="-drive file=$BIMAGE,format=raw,if=floppy,index=1$BRO"
 fi
 
 mkdir -p "$OUT"

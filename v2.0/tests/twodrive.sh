@@ -1,5 +1,6 @@
 #!/bin/sh
-# Check that DOS has a second drive and can work both of them.
+# Check that DOS has a second drive, can work both of them, and says the right
+# thing when the one it is writing to is write protected.
 #
 # IO.ASM reported one unit and refused every other, so B: did not exist and
 # nothing two-drive -- DISKCOPY, COPY A: to B: -- had ever run.  The driver
@@ -36,4 +37,15 @@ else
     echo "MISSING BACK.TXT on drive B"
     rc=1
 fi
+
+# And with the tab on.  The driver used to hand the ROM's status byte back as
+# the DOS error code, which is a different set of numbers: a write-protected
+# disk returns 3 from the ROM, and 3 to the DOS is "Bad command", so that is
+# what it used to say.  The keystroke answers Abort at the prompt.
+printf '\n======== drive B write protected\n'
+if ./runtest.sh -t 40 -K 22 -k "a" -b "$BIMG" -r \
+                -e "Write protect error writing drive B" \
+                -e "DONE" tests/writeprot.bat
+then :; else rc=1; fi
+
 exit $rc
