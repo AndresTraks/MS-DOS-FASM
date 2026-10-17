@@ -66,24 +66,24 @@ DRVMAX  DB      1                       ; units, as many as the ROM has;
 ; Dispatch tables, indexed by the command byte of the request packet.
 
 DSKTBL: DW      DSK_INIT, MEDIAC, GET_BPB, CMDERR
-        DW      DSK_RED, BUS_EXIT, EXIT, EXIT
-        DW      DSK_WRT, DSK_WRV, EXIT, EXIT, EXIT
+        DW      DSK_RED, BUS_EXIT, DEV_DONE, DEV_DONE
+        DW      DSK_WRT, DSK_WRV, DEV_DONE, DEV_DONE, DEV_DONE
 
-CONTBL: DW      EXIT, EXIT, EXIT, CMDERR
-        DW      CON_READ, CON_RDND, EXIT, CON_FLSH
-        DW      CON_WRIT, CON_WRIT, CON_WRST, EXIT, EXIT
+CONTBL: DW      DEV_DONE, DEV_DONE, DEV_DONE, CMDERR
+        DW      CON_READ, CON_RDND, DEV_DONE, CON_FLSH
+        DW      CON_WRIT, CON_WRIT, CON_WRST, DEV_DONE, DEV_DONE
 
-AUXTBL: DW      EXIT, EXIT, EXIT, CMDERR
-        DW      AUX_READ, AUX_RDND, EXIT, EXIT
-        DW      AUX_WRIT, AUX_WRIT, AUX_WRST, EXIT, EXIT
+AUXTBL: DW      DEV_DONE, DEV_DONE, DEV_DONE, CMDERR
+        DW      AUX_READ, AUX_RDND, DEV_DONE, DEV_DONE
+        DW      AUX_WRIT, AUX_WRIT, AUX_WRST, DEV_DONE, DEV_DONE
 
-TIMTBL: DW      EXIT, EXIT, EXIT, CMDERR
-        DW      TIM_RED, BUS_EXIT, EXIT, EXIT
-        DW      TIM_WRT, TIM_WRT, EXIT, EXIT, EXIT
+TIMTBL: DW      DEV_DONE, DEV_DONE, DEV_DONE, CMDERR
+        DW      TIM_RED, BUS_EXIT, DEV_DONE, DEV_DONE
+        DW      TIM_WRT, TIM_WRT, DEV_DONE, DEV_DONE, DEV_DONE
 
-PRNTBL: DW      EXIT, EXIT, EXIT, CMDERR
-        DW      EXIT, BUS_EXIT, EXIT, EXIT
-        DW      PRN_WRT, PRN_WRT, PRN_STA, EXIT, EXIT
+PRNTBL: DW      DEV_DONE, DEV_DONE, DEV_DONE, CMDERR
+        DW      DEV_DONE, BUS_EXIT, DEV_DONE, DEV_DONE
+        DW      PRN_WRT, PRN_WRT, PRN_STA, DEV_DONE, DEV_DONE
 
 ; The request packet, as DEVSYM.ASM and SYSINIT's own PACKET lay it out.
 P_CMDLEN  equ     0
@@ -167,7 +167,7 @@ CMDERR: MOV     AL,3                    ; unknown command
 ERR_EXIT:
         MOV     AH,10000001b            ; error, and done
         JMP     SHORT EXIT1
-EXIT:        MOV     AH,00000001b            ; done
+DEV_DONE:        MOV     AH,00000001b            ; done
 EXIT1:  LDS     BX,[CS:PTRSAV]
         MOV     [BX+P_STATUS],AX
         POP     BX
@@ -193,7 +193,7 @@ CON_RD1:
         STOSB
         LOOP    CON_RD1
 CON_RDX:
-        JMP     EXIT
+        JMP     DEV_DONE
 
 ; One character.  A key with no ASCII arrives from the ROM as a zero and a
 ; scan code, which DOS reads as an escape sequence, so both bytes are passed
@@ -230,7 +230,7 @@ CON_RDN2:
         MOV     [BX+P_MEDIA],AL           ; the byte goes back in the packet
         PUSH    CS
         POP     DS
-        JMP     EXIT
+        JMP     DEV_DONE
 
 CON_FLSH:
         MOV     byte [CS:CON_PEND],0
@@ -242,7 +242,7 @@ CON_FL1:
         INT     16h
         JMP     SHORT CON_FL1
 CON_FL2:
-        JMP     EXIT
+        JMP     DEV_DONE
 
 CON_WRIT:                               ; ES:DI = CX characters to show
         JCXZ    CON_WRX
@@ -252,7 +252,7 @@ CON_WR1:
         CALL    CON_PUT
         LOOP    CON_WR1
 CON_WRX:
-        JMP     EXIT
+        JMP     DEV_DONE
 
 CON_PUT:
         PUSH    BX
@@ -263,7 +263,7 @@ CON_PUT:
         RET
 
 CON_WRST:
-        JMP     EXIT                    ; the screen is always ready
+        JMP     DEV_DONE                    ; the screen is always ready
 
 ; ---------------------------------------------------------------------------
 ; Serial and printer, through the ROM as well.
@@ -279,7 +279,7 @@ AUX_RD1:
         STOSB
         LOOP    AUX_RD1
 AUX_RDX:
-        JMP     EXIT
+        JMP     DEV_DONE
 
 AUX_RDND:
         PUSH    DX
@@ -298,7 +298,7 @@ AUX_RDND:
 
 AUX_CLR:
 AUX_WRST:
-        JMP     EXIT
+        JMP     DEV_DONE
 
 AUX_WRIT:
         JCXZ    AUX_WRX
@@ -312,7 +312,7 @@ AUX_WR1:
         POP     DX
         LOOP    AUX_WR1
 AUX_WRX:
-        JMP     EXIT
+        JMP     DEV_DONE
 
 PRN_WRT:
         JCXZ    PRN_WRX
@@ -328,7 +328,7 @@ PRN_WR1:
         JNZ     PRN_ERR
         LOOP    PRN_WR1
 PRN_WRX:
-        JMP     EXIT
+        JMP     DEV_DONE
 PRN_ERR:
         LDS     BX,[CS:PTRSAV]
         SUB     [BX+P_COUNT],CX           ; report what did go out
@@ -338,7 +338,7 @@ PRN_ERR:
         JMP     ERR_EXIT
 
 PRN_STA:
-        JMP     EXIT
+        JMP     DEV_DONE
 
 ; ---------------------------------------------------------------------------
 ; The clock.  DOS reads and writes six bytes: days since 1-1-1980 as a word,
@@ -354,7 +354,7 @@ TIM_RED:
         POP     DS
         REP     MOVSB
         POP     DS
-        JMP     EXIT
+        JMP     DEV_DONE
 
 TIM_WRT:
         PUSH    ES
@@ -371,7 +371,7 @@ TIM_WRT:
         PUSH    CS
         POP     DS
         CALL    TIM_STORE
-        JMP     EXIT
+        JMP     DEV_DONE
 
 ; Read the date and time out of the ROM's clock, as v1.25 reads it: function
 ; 4 for the date and function 2 for the time, packed BCD both, and carry set
@@ -593,7 +593,7 @@ MEDIAC:
         MOV     byte [BX+P_MEDIA+1],0
         PUSH    CS
         POP     DS
-        JMP     EXIT
+        JMP     DEV_DONE
 
 GET_BPB:
         LDS     BX,[CS:PTRSAV]
@@ -601,7 +601,7 @@ GET_BPB:
         MOV     [BX+P_BPB+2],CS
         PUSH    CS
         POP     DS
-        JMP     EXIT
+        JMP     DEV_DONE
 
 ; The BIOS parameter block for the image create_image.sh builds.
 BPB:    DW      BYTES_PER_SECTOR
@@ -654,7 +654,7 @@ DSK_NEXT:
         ADD     word [CS:DSKBUF+2],BYTES_PER_SECTOR/16
         JMP     SHORT DSK_NEXT
 DSK_DONE:
-        JMP     EXIT
+        JMP     DEV_DONE
 DSK_UNIT:
         MOV     AL,1                    ; unknown unit
         JMP     ERR_EXIT
@@ -810,7 +810,7 @@ DSK_I1:
         MOV     [BX+P_BPB+2],CS
         PUSH    CS
         POP     DS
-        JMP     EXIT
+        JMP     DEV_DONE
 
 label BIOSEND byte
 

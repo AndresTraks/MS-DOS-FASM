@@ -72,21 +72,28 @@ macro walk
 ; RESGROUP: CODERES, DATARES, ENVIRONMENT, INIT, TAIL.  CODERES leaves the
 ; first 100h for the program header, so the file begins at PROGSTART.
 org 100h
+; The original linker padded between segments with zeros, where FASM's align
+; lays down NOPs, so pad explicitly.
+macro parapad
+{
+        db      (16 - $ mod 16) mod 16 dup (0)
+}
+
 SEGBASE_CODERES = $
 SEGSEL = S_CODERES
         walk
 SEGBASE_DATARES = $
 SEGSEL = S_DATARES                      ; DATARES is byte aligned
         walk
-        align 16
+        parapad
 SEGBASE_ENVIRONMENT = $
 SEGSEL = S_ENVIRONMENT
         walk
-        align 16
+        parapad
 SEGBASE_INIT = $
 SEGSEL = S_INIT
         walk
-        align 16
+        parapad
 SEGBASE_TAIL = $
 SEGSEL = S_TAIL                         ; TRANSTART, and TRANGROUP:0000
         walk
