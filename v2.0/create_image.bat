@@ -35,6 +35,10 @@ REM system, and all of them together take a sixth of the disk.
 %IMGEN% -m -i bin\SORT.EXE -f %IMAGE%
 %IMGEN% -m -i bin\SYS.COM -f %IMAGE%
 
+REM FORMAT is ours and nobody else's: the release has the source but no
+REM FORMAT.COM to go with it.
+%IMGEN% -m -i bin\FORMAT.COM -f %IMAGE%
+
 REM The profiler, which is in pieces: PROFIL.OBJ is Microsoft's, assembled,
 REM and the clock module it wants is ours.  PCLOCK_IBM.ASM goes on as
 REM PCLOCKPC.ASM because PCLOCK.ASM is taken, by Microsoft's for the Seattle

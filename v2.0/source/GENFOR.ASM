@@ -1,15 +1,10 @@
 ; Generic FORMAT module for any ms-dos disk erases the directory,
 ; zeros FAT, and marks bad sectors
 
-        INCLUDE DOST:DOSSYM.ASM
 
-CODE    SEGMENT PUBLIC 'CODE'
 
         ASSUME  CS:CODE,DS:CODE,ES:CODE
 
-        PUBLIC  FATID,STARTSECTOR,SWITCHLIST,FREESPACE,FATSPACE
-        PUBLIC  INIT,DISKFORMAT,BADSECTOR,DONE,WRTFAT,HARDFLAG
-        EXTRN   SWITCHMAP:WORD,DRIVE:BYTE
 
 WRTFAT:
         MOV     AH,GET_DPB
@@ -23,7 +18,7 @@ WRTFAT:
         MOV     AX,[FATSTART]
         MOV     [COUNT],AX
 FATLOOP:
-        MOV     AL,BYTE PTR DRIVE
+        MOV     AL,byte [DRIVE]
         CBW
         MOV     CX,[FATSIZE]
         MOV     DX,[COUNT]
@@ -33,21 +28,21 @@ FATLOOP:
         JC      GORET
         MOV     CX,[FATSIZE]
         ADD     [COUNT],CX
-        DEC     BYTE PTR [CURCNT]
+        DEC     byte [CURCNT]
         JNZ     FATLOOP
         CLC                                     ;Good return
 GORET:
         RET
 
-FATSIZE     DW  ?
-FATSTART    DW  ?
-COUNT       DW  ?
-STARTSECTOR DW  ?
-SPC         DB  ?            ;SECTORS PER CLUSTER
-FATCNT      DB  ?            ;NUMBER OF FATS ON THIS DRIVE
-CURCNT      DB  ?
-DSKSIZE     DW  ?            ;NUMBER OF SECTORS ON THE DRIVE
-START       DW  0            ;CURRENT TEST SECTOR
+FATSIZE     DW      0
+FATSTART    DW      0
+COUNT       DW      0
+STARTSECTOR DW      0
+SPC         DB      0;SECTORS PER CLUSTER
+FATCNT      DB      0;NUMBER OF FATS ON THIS DRIVE
+CURCNT      DB      0
+DSKSIZE     DW      0;NUMBER OF SECTORS ON THE DRIVE
+GENSTART       DW  0            ;CURRENT TEST SECTOR
 
 INIT:
         MOV     AH,GET_DPB
@@ -93,31 +88,31 @@ DONE:
         RET
 
 BADSECTOR:
-        MOV     DX,[START]
+        MOV     DX,[GENSTART]
         CMP     DX,[DSKSIZE]
         JAE     DONE
 
         MOV     AL,[DRIVE]
         MOV     CL,[SPC]                 ;READ ONE ALLOCATIONS WORTH
         XOR     CH,CH
-        CMP     BYTE PTR [FIRSTFLAG],0
+        CMP     byte [FIRSTFLAG],0
         JZ      SETBX
         MOV     CX,[STARTSECTOR]         ;FIRST TIME THROUGH READ SYSTEM AREA
-        MOV     BYTE PTR [FIRSTFLAG],0
-        MOV     DX,[START]
+        MOV     byte [FIRSTFLAG],0
+        MOV     DX,[GENSTART]
 SETBX:  MOV     BX,[BUFFER]
         PUSH    CX
         INT     25H                     ;TRY TO READ
         POP     AX                      ;CLEAN UP STACK
         POP     CX
         JC      GOTBAD                  ;KEEP LOOKING FOR BADSECTORS
-        ADD     [START],CX
+        ADD     [GENSTART],CX
         JMP     BADSECTOR
 
 GOTBAD:
         MOV     AX,CX
-        MOV     BX,[START]
-        ADD     [START],AX              ;SET UP FOR NEXT CALL
+        MOV     BX,[GENSTART]
+        ADD     [GENSTART],AX              ;SET UP FOR NEXT CALL
         CLC
         RET
 
@@ -128,8 +123,6 @@ SWITCHLIST  DB  3,"OVS"
 BUFFER      DW  ENDLOC
 FREESPACE   DW  ENDLOC
 FATSPACE    DW  ENDLOC
-ENDLOC      LABEL   BYTE
+label ENDLOC byte
             DB      0FEH,0FFH,0FFH
 
-CODE    ENDS
-        END

@@ -28,6 +28,11 @@ $FASM bootsect.asm bin/bootsect.bin
 # DEVICE= line.  Not on the image: tests/config.sh is what loads it.
 $FASM source/TESTDEV.ASM bin/TESTDEV.SYS
 
+# FORMAT.COM, from FORMAT.ASM, the generic OEM module GENFOR.ASM and the
+# messages.  The release shipped no FORMAT.COM, so this is the only one
+# there is -- see FORLINK.ASM.
+$FASM source/FORLINK.ASM bin/FORMAT.COM
+
 # COMMAND.COM, from the sixteen modules COMLINK lists.  Built under another
 # name so that Microsoft's, which the release shipped and which is useful to
 # compare against, stays where it is; create_image.sh puts this one on the

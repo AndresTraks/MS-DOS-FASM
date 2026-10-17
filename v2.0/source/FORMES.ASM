@@ -1,31 +1,16 @@
-TITLE FORMAT Messages
 
-FALSE   EQU     0
-TRUE    EQU     NOT FALSE
+FALSE   =     0
+TRUE    =     -1
 
-IBMVER  EQU     FALSE
+IBMVER  =     FALSE
 
-.xlist
-.xcref
-        INCLUDE DOSSYM.ASM
-.cref
-.list
 
-CODE    SEGMENT PUBLIC 'CODE'
         ASSUME  CS:CODE,DS:CODE,ES:CODE
 
-        PUBLIC  BADVER,SNGMSG,SNGDRV,HRDMSG,HRDDRV,REPORT
-        PUBLIC  LABPRMT,TARGMSG,TARGDRV
-        PUBLIC  SYSTRAN,CRLFMSG,INVCHR,INVDRV,INVPAR
-        PUBLIC  SYSMSG,SYSDRV,FRMTERR,NOTSYS,NOUSE,MEMEX
-        PUBLIC  WAITYN
-        EXTRN   PRINT:NEAR,CRLF:NEAR,UNSCALE:NEAR,DISP32BITS:NEAR
-        EXTRN   FDSKSIZ:DWORD,SECSIZ:WORD,CLUSSIZ:WORD,SYSSIZ:DWORD
-        EXTRN   BADSIZ:DWORD
 
         ;Wait for "Y" or "N"
 WAITYN:
-        MOV     DX,OFFSET MORMSG        ;Point to the message
+        MOV     DX,MORMSG        ;Point to the message
         CALL    PRINT                   ;And print it
         MOV     AX,(STD_CON_INPUT_FLUSH SHL 8) OR STD_CON_INPUT
                                         ;Flush buffer and wait for keystroke
@@ -54,45 +39,45 @@ WAIT20: RET
 ;          and call PRINT.
 
 REPORT:
-        MOV     AX,WORD PTR FDSKSIZ
-        MUL     SECSIZ
-        MOV     CX,CLUSSIZ
+        MOV     AX,word [FDSKSIZ]
+        MUL     [SECSIZ]
+        MOV     CX,[CLUSSIZ]
         CALL    UNSCALE
-        MOV     WORD PTR FDSKSIZ,AX
-        MOV     WORD PTR FDSKSIZ+2,DX
+        MOV     word [FDSKSIZ],AX
+        MOV     word [FDSKSIZ+2],DX
         MOV     SI,AX
         MOV     DI,DX
-        MOV     BX,OFFSET DSKSPC
+        MOV     BX,DSKSPC
         CALL    DISP32BITS              ;Report total disk space
-        MOV     SI,WORD PTR SYSSIZ
-        MOV     DI,WORD PTR SYSSIZ+2
+        MOV     SI,word [SYSSIZ]
+        MOV     DI,word [SYSSIZ+2]
         CMP     SI,0
         JNZ     SHOWSYS
         CMP     DI,0
         JZ      CHKBAD
 SHOWSYS:
-        MOV     BX,OFFSET SYSSPC
+        MOV     BX,SYSSPC
         CALL    DISP32BITS              ;Report space used by system
 CHKBAD:
-        MOV     SI,WORD PTR BADSIZ
-        MOV     DI,WORD PTR BADSIZ+2
+        MOV     SI,word [BADSIZ]
+        MOV     DI,word [BADSIZ+2]
         CMP     SI,0
         JNZ     SHOWBAD
         CMP     DI,0
         JZ      SHOWDATA
 SHOWBAD:
-        MOV     BX,OFFSET BADSPC
+        MOV     BX,BADSPC
         CALL    DISP32BITS              ;Report space used by bad sectors
 SHOWDATA:
-        MOV     CX,WORD PTR FDSKSIZ
-        MOV     BX,WORD PTR FDSKSIZ+2
-        SUB     CX,WORD PTR BADSIZ
-        SBB     BX,WORD PTR BADSIZ+2
-        SUB     CX,WORD PTR SYSSIZ
-        SBB     BX,WORD PTR SYSSIZ+2
+        MOV     CX,word [FDSKSIZ]
+        MOV     BX,word [FDSKSIZ+2]
+        SUB     CX,word [BADSIZ]
+        SBB     BX,word [BADSIZ+2]
+        SUB     CX,word [SYSSIZ]
+        SBB     BX,word [SYSSIZ+2]
         MOV     SI,CX
         MOV     DI,BX
-        MOV     BX,OFFSET DATASPC
+        MOV     BX,DATASPC
         CALL    DISP32BITS              ;Report space left for user
         RET
 
@@ -124,12 +109,9 @@ BADSPC  DB      " bytes in bad sectors",13,10,"$"
 DATASPC DB      " bytes available on disk",13,10,13,10,"$"
 
         IF      IBMVER
-        PUBLIC  ASGERR
 ASGERR  DB      "Cannot format an ASSIGNed drive. $"
-        ENDIF
+        end if
 
 LABPRMT DB      "Volume label (11 characters, ENTER for none)? $"
 
 
-CODE    ENDS
-        END

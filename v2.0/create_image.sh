@@ -38,6 +38,10 @@ mcopy -i "$IMAGE" bin/RECOVER.COM ::
 mcopy -i "$IMAGE" bin/SORT.EXE ::
 mcopy -i "$IMAGE" bin/SYS.COM ::
 
+# FORMAT is ours and nobody else's: the release has the source but no
+# FORMAT.COM to go with it.
+mcopy -i "$IMAGE" bin/FORMAT.COM ::
+
 # The profiler, which is in pieces: PROFIL.OBJ is Microsoft's, assembled, and
 # the clock module it wants is ours.  PCLOCK_IBM.ASM goes on as PCLOCKPC.ASM
 # because PCLOCK.ASM is taken, by Microsoft's for the Seattle Computer

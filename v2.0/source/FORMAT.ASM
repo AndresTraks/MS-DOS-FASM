@@ -23,62 +23,55 @@
 ;REV 2.10
 ;               5/1/83 ARR Re-do to transfer system on small memory systems
 
-FALSE   EQU     0
-TRUE    EQU     NOT FALSE
+FALSE   =     0
+TRUE    =     -1
 
-IBMJAPVER EQU   FALSE           ; SET ONLY ONE SWITCH TO TRUE!
-IBMVER  EQU     FALSE
-MSVER   EQU     TRUE
+IBMJAPVER =   FALSE           ; SET ONLY ONE SWITCH TO TRUE!
+IBMVER  =     FALSE
+MSVER   =     TRUE
 
-KANJI   EQU     FALSE
+KANJI   =     FALSE
 
-        .xlist
-        INCLUDE DOSSYM.ASM
-        .list
+        INCLUDE 'DOSSYM.ASM'
 
 
 ;FORMAT Pre-defined switches
-SYSSW   EQU     1               ; System transfer
-VOLSW   EQU     2               ; Volume ID prompt
-OLDSW   EQU     4               ; E5 dir terminator
+SYSSW   =     1               ; System transfer
+VOLSW   =     2               ; Volume ID prompt
+OLDSW   =     4               ; E5 dir terminator
 
 
-DRNUM   EQU     5CH
+DRNUM   =     5CH
 
-RECLEN  EQU     fcb_RECSIZ+7
-RR      EQU     fcb_RR+7
+RECLEN  =     sys_fcb.fcb_RECSIZ+7
+RR      =     sys_fcb.fcb_RR+7
 
 ;Per system file data structure
 
-FILESTRUC       STRUC
-FILE_HANDLE     DW      ?               ; Source handle
-FILE_SIZEP      DW      ?               ; File size in para
-FILE_SIZEB      DD      ?               ; File size in bytes
-FILE_OFFSET     DD      ?               ; Offset in file (partial)
-FILE_START      DW      ?               ; Para number of start in buffer
-FILE_DATE       DW      ?               ; Date of file
-FILE_TIME       DW      ?               ; Time of file
-FILE_NAME       DB      ?               ; Start of name
-FILESTRUC       ENDS
+STRUC FILESTRUC
+{
+        .FILE_HANDLE    dw 0
+        .FILE_SIZEP     dw 0
+        .FILE_SIZEB     dd 0
+        .FILE_OFFSET    dd 0
+        .FILE_START     dw 0
+        .FILE_DATE      dw 0
+        .FILE_TIME      dw 0
+        .FILE_NAME      db 0
+}
 
-CODE    SEGMENT PUBLIC 'CODE'
+virtual at 0
+  FILESTRUC FILESTRUC
+  sizeof.FILESTRUC = $ - FILESTRUC
+end virtual
 
         ASSUME  CS:CODE,DS:CODE,ES:CODE
 
         ORG     100H
 
 ;For OEM module
-        PUBLIC          SWITCHMAP,DRIVE
-        EXTRN           HARDFLAG:BYTE          ;0 = REMOVABLE MEDIA
-        EXTRN           SWITCHLIST:BYTE,FATID:BYTE,FATSPACE:WORD
-        EXTRN           STARTSECTOR:WORD,FREESPACE:WORD,INIT:NEAR
-        EXTRN           DISKFORMAT:NEAR,BADSECTOR:NEAR,DONE:NEAR
-        EXTRN           WRTFAT:NEAR
 
 ;For FORMES module
-        EXTRN   WAITYN:NEAR,REPORT:NEAR
-        PUBLIC  PRINT,CRLF,DISP32BITS,UNSCALE,FDSKSIZ,SECSIZ,CLUSSIZ
-        PUBLIC  SYSSIZ,BADSIZ
 
 START:
         JMP     SHORT FSTRT
@@ -86,7 +79,7 @@ START:
 HEADER  DB      "Vers 2.10"
 
 FSTRT:
-        MOV     SP,OFFSET STACK         ;Use internal stack
+        MOV     SP,STACK_         ;Use internal stack
 
 ;Code to print header
 ;       PUSH    AX
@@ -94,7 +87,7 @@ FSTRT:
 ;       CALL    PRINT
 ;       POP     AX
 
-DOSVER_HIGH     EQU  020BH   ;2.11 in hex
+DOSVER_HIGH     =  020BH   ;2.11 in hex
         PUSH    AX              ;Save DRIVE validity info
         MOV     AH,GET_VERSION
         INT     21H
@@ -102,7 +95,7 @@ DOSVER_HIGH     EQU  020BH   ;2.11 in hex
         CMP     AX,DOSVER_HIGH
         JAE     OKDOS
 GOTBADDOS:
-        MOV     DX,OFFSET BADVER
+        MOV     DX,BADVER
         MOV     AH,STD_CON_STRING_OUTPUT
         INT     21H
         INT     20H
@@ -112,38 +105,38 @@ OKDOS:
         IF      IBMVER                  ; IBM WANTS TO CHECK FOR ASSIGN.COM
         XOR     AX,AX
         MOV     ES,AX
-        MOV     BX,ES:[4*21H]
-        MOV     ES,ES:[4*21H+2]
+        MOV     BX,[ES:4*21H]
+        MOV     ES,[ES:4*21H+2]
         CMP     BX,122H
         JNZ     NO_ASSIGN
-        CMP     ES:[109H],0807H
+        CMP     [ES:109H],0807H
         JNZ     NO_ASSIGN
-        CMP     ES:[103H],0201H
+        CMP     [ES:103H],0201H
         JNZ     RE_ASSIGN
-        CMP     ES:[105H],0403H
+        CMP     [ES:105H],0403H
         JNZ     RE_ASSIGN
-        CMP     ES:[107H],0605H
+        CMP     [ES:107H],0605H
         JZ      NO_ASSIGN
 RE_ASSIGN:
-        MOV     DX,OFFSET ASGERR
+        MOV     DX,ASGERR
         CALL    PRINT
         JMP     FEXIT2
 NO_ASSIGN:
         PUSH    CS
         POP     ES
-        ENDIF
+        end if
 
         POP     AX
 
         CMP     AL,0FFH                 ;See if invalid drive specified
         JNZ     DRVGD                   ;If not proceed
-        MOV     DX,OFFSET INVDRV        ;Invalid drive message
+        MOV     DX,INVDRV        ;Invalid drive message
         CALL    PRINT                   ;Print the message
         JMP     FEXIT2                  ;Exit
 DRVGD:
         MOV     AH,GET_DEFAULT_DRIVE    ;Must get the default drive
         INT     21H                     ;Default now in AL
-        MOV     DEFALT,AL               ;Save for later
+        MOV     [DEFALT],AL               ;Save for later
         ADD     AL,"A"
         MOV     [BIODRV],AL
         MOV     [DOSDRV],AL
@@ -153,13 +146,13 @@ DRVGD:
         LODSB                           ;Fetch drive designation
         OR      AL,AL                   ;See if specified
         JNZ     DRVSPEC                 ;If specfied proceed
-        MOV     AL,DEFALT
+        MOV     AL,[DEFALT]
         INC     AL
 DRVSPEC:
         DEC     AL                      ;Drive designator now correct
-        MOV     BYTE PTR DS:[DRNUM],AL  ;And updated
-        MOV     DRIVE,AL                ;Save copy
-        MOV     DX,OFFSET INT_23
+        MOV     byte [DS:DRNUM],AL  ;And updated
+        MOV     [DRIVE],AL                ;Save copy
+        MOV     DX,INT_23
         MOV     AH,SET_INTERRUPT_VECTOR
         MOV     AL,23H
         INT     21H                     ;Set ^C vector
@@ -181,9 +174,9 @@ NXTSWT:
         LODSB                           ;Get next character
         CMP     AL,":"                  ;Is it a drive specifier?
         JNZ     INVALID                 ;No -- invalid parameter
-        CMP     BYTE PTR DBLFLG,0       ;Is is the only drive specifier we've seen
+        CMP     byte [DBLFLG],0       ;Is is the only drive specifier we've seen
         JNZ     INVALID                 ;No -- invalid parameter
-        INC     BYTE PTR DBLFLG         ;Yes -- set the flag
+        INC     byte [DBLFLG]         ;Yes -- set the flag
         JMP     SHORT NXTSWT
 GETPARM:
         LODSB
@@ -192,11 +185,11 @@ GETPARM:
         JL      GETCHR                  ;Switch is a digit don't try to convert it
         AND     AL,0DFH
 GETCHR:
-        MOV     CL,SWITCHLIST           ;Number of legal switches
+        MOV     CL,[SWITCHLIST]           ;Number of legal switches
         OR      CL,CL                   ;If it's none we shouldn't be here
         JZ      INVALID                 ;Report the error
         MOV     CH,0
-        MOV     DI,1+OFFSET SWITCHLIST  ;Point to the legal switch characters
+        MOV     DI,1+SWITCHLIST  ;Point to the legal switch characters
         REPNE   SCASB
         JNZ     INVALID
         MOV     AX,1
@@ -205,7 +198,7 @@ GETCHR:
         JMP     SHORT NXTSWT            ;See if there are anymore
 
 INVALID:
-        MOV     DX,OFFSET INVPAR
+        MOV     DX,INVPAR
         CALL    PRINT
         JMP     FEXIT
 
@@ -219,7 +212,7 @@ SCANOFF:
         RET
 
 MEMERR:
-        MOV     DX,OFFSET MEMEX
+        MOV     DX,MEMEX
         CALL    PRINT
         JMP     FEXIT
 
@@ -232,10 +225,10 @@ SAVSWT:
         AND     BX,NOT SYSSW            ;TURN OFF /S
         OR      BX,00010000B            ;TURN ON  /8
 NOT_SW_B:
-        ENDIF
+        end if
 
-        MOV     SWITCHMAP,BX
-        TEST    SWITCHMAP,SYSSW
+        MOV     [SWITCHMAP],BX
+        TEST    [SWITCHMAP],SYSSW
         JZ      INITCALL
         CALL    SAVUDIRS
         MOV     BX,[FREESPACE]
@@ -256,7 +249,7 @@ NOT_SW_B:
         INT     21H
         JC      MEMERR                  ;No memory
         MOV     [MSTART],AX
-        MOV     DX,OFFSET SWTCH
+        MOV     DX,SWTCH
         MOV     AH,CHDIR
         INT     21H                     ;Go to root on default drive (source)
 
@@ -270,33 +263,33 @@ NEEDSYS:
 INITCALL:
         CALL    INIT                    ;Let OEM read any files before disk is changed
         JNC     SWITCHCHK
-        MOV     DX,OFFSET FRMTERR
+        MOV     DX,FRMTERR
         CALL    PRINT
         JMP     FEXIT
 
 SWITCHCHK:
-        MOV     DX,SWITCHMAP
-        MOV     SWITCHCOPY,DX
+        MOV     DX,[SWITCHMAP]
+        MOV     [SWITCHCOPY],DX
 
 SYSLOOP:
-        MOV     WORD PTR BADSIZ,0       ;Must intialize for each iteration
-        MOV     WORD PTR BADSIZ+2,0
-        MOV     WORD PTR SYSSIZ,0
-        MOV     WORD PTR SYSSIZ+2,0
-        MOV     BYTE PTR DBLFLG,0
-        MOV     BYTE PTR CLEARFLG,0
-        MOV     DX,SWITCHCOPY
-        MOV     SWITCHMAP,DX            ;Restore original Switches
-        MOV     AL,DRIVE                ;Fetch drive
+        MOV     word [BADSIZ],0       ;Must intialize for each iteration
+        MOV     word [BADSIZ+2],0
+        MOV     word [SYSSIZ],0
+        MOV     word [SYSSIZ+2],0
+        MOV     byte [DBLFLG],0
+        MOV     byte [CLEARFLG],0
+        MOV     DX,[SWITCHCOPY]
+        MOV     [SWITCHMAP],DX            ;Restore original Switches
+        MOV     AL,[DRIVE]                ;Fetch drive
         ADD     AL,"A"                  ;(AL)= ASCII designation
-        MOV     BYTE PTR SNGDRV,AL      ;Fill out the message
-        MOV     BYTE PTR TARGDRV,AL
-        MOV     BYTE PTR HRDDRV,AL
+        MOV     byte [SNGDRV],AL      ;Fill out the message
+        MOV     byte [TARGDRV],AL
+        MOV     byte [HRDDRV],AL
         CALL    DSKPRM                  ;Prompt for new disk
         CALL    DISKFORMAT              ;Format the disk
         JNC     GETTRK
 FRMTPROB:
-        MOV     DX,OFFSET FRMTERR
+        MOV     DX,FRMTERR
         CALL    PRINT
         JMP     SHORT SYSLOOP
 
@@ -310,58 +303,58 @@ GETTRK:
         JNZ     TRKFND                  ;No - check error conditions
         JMP     DRTFAT                  ;Yes
 TRKFND:
-        CMP     BX,STARTSECTOR          ;Are any sectors in the system area bad?
+        CMP     BX,[STARTSECTOR]          ;Are any sectors in the system area bad?
         JGE     CLRTEST
-        MOV     DX,OFFSET NOUSE         ;Can't build FATs of Directory
+        MOV     DX,NOUSE         ;Can't build FATs of Directory
         CALL    PRINT
         JMP     FRMTPROB                ;Bad disk -- try again
 CLRTEST:
-        MOV     SECTORS,AX              ;Save the number of sectors on the track
-        CMP     BYTE PTR CLEARFLG,0     ;Have we already cleared the FAT and DIR?
+        MOV     [SECTORS],AX              ;Save the number of sectors on the track
+        CMP     byte [CLEARFLG],0     ;Have we already cleared the FAT and DIR?
         JNZ     SYSTEST                 ;Yes - all set
-        INC     CLEARFLG                ;Set the flag
+        INC     [CLEARFLG]                ;Set the flag
         PUSH    BX
         CALL    CLEAR                   ;Fix-up fat and directory
         POP     BX
 SYSTEST:
-        TEST    SWITCHMAP,SYSSW         ;If system requested calculate size
+        TEST    [SWITCHMAP],SYSSW         ;If system requested calculate size
         JZ      BAD100
-        CMP     BYTE PTR DBLFLG,0       ;Have we already calculated System space?
+        CMP     byte [DBLFLG],0       ;Have we already calculated System space?
         JNZ     CMPTRKS                 ;Yes -- all ready for the compare
-        INC     BYTE PTR DBLFLG         ;No -- set the flag
+        INC     byte [DBLFLG]         ;No -- set the flag
         CALL    GETSIZE                 ;Calculate the system size
-        MOV     DX,WORD PTR SYSSIZ+2
-        MOV     AX,WORD PTR SYSSIZ
-        DIV     SECSIZ
-        ADD     AX,STARTSECTOR
-        MOV     SYSTRKS,AX              ;Space FAT,Dir,and system files require
+        MOV     DX,word [SYSSIZ+2]
+        MOV     AX,word [SYSSIZ]
+        DIV     [SECSIZ]
+        ADD     AX,[STARTSECTOR]
+        MOV     [SYSTRKS],AX              ;Space FAT,Dir,and system files require
 CMPTRKS:
-        CMP     BX,SYSTRKS
+        CMP     BX,[SYSTRKS]
         JG      BAD100
-        MOV     DX,OFFSET NOTSYS        ;Can't transfer a system
+        MOV     DX,NOTSYS        ;Can't transfer a system
         CALL    PRINT
-        AND     SWITCHMAP,NOT SYSSW     ;Turn off system transfer switch
-        MOV     WORD PTR SYSSIZ+2,0     ;No system to transfer
-        MOV     WORD PTR SYSSIZ,0       ;No system to transfer
+        AND     [SWITCHMAP],NOT SYSSW     ;Turn off system transfer switch
+        MOV     word [SYSSIZ+2],0     ;No system to transfer
+        MOV     word [SYSSIZ],0       ;No system to transfer
 BAD100:
 ; BX is the first bad sector #, SECTORS is the number of bad sectors starting
 ; at BX. This needs to be converted to clusters. The start sector number may
 ; need to be rounded down to a cluster boundry, the end sector may need to be
 ; rounded up to a cluster boundry. Know BX >= STARTSECTOR
-        SUB     BX,STARTSECTOR          ; BX is now DATA area relative
+        SUB     BX,[STARTSECTOR]          ; BX is now DATA area relative
         MOV     CX,BX
-        ADD     CX,SECTORS
+        ADD     CX,[SECTORS]
         DEC     CX                      ; CX is now the last bad sector #
         MOV     AX,BX
         XOR     DX,DX
-        DIV     CLUSSIZ
+        DIV     [CLUSSIZ]
         MOV     BX,AX                   ; BX is rounded down and converted
                                         ; to a cluster #. Where cluster 0 =
                                         ; first cluster of data. First bad
                                         ; Sector is in cluster BX.
         MOV     AX,CX
         XOR     DX,DX
-        DIV     CLUSSIZ
+        DIV     [CLUSSIZ]
         MOV     CX,AX                   ; CX is rounded up and converted to a
                                         ; to a cluster #. Where cluster 0 =
                                         ; first cluster of data. Last bad
@@ -371,8 +364,8 @@ BAD100:
         ADD     BX,2                    ; Bias start by correct amount since
                                         ; first cluster of data is really
                                         ; cluster 2.
-        MOV     AX,CLUSSIZ              ; Sectors/Cluster
-        MUL     SECSIZ                  ; Times Bytes/Sector
+        MOV     AX,[CLUSSIZ]              ; Sectors/Cluster
+        MUL     [SECSIZ]                  ; Times Bytes/Sector
         MOV     BP,AX                   ; = Bytes/Cluster
 
 ; Mark CX clusters bad starting at cluster BX
@@ -381,9 +374,9 @@ PACKIT:
         CALL    PACK                    ;Put it in the allocation map
         CMP     DX,DI                   ;Have we already marked it bad?
         JZ      BAD150                  ;if so, don't add it in
-        ADD     WORD PTR BADSIZ,BP      ;Add in number of bad bytes
+        ADD     word [BADSIZ],BP      ;Add in number of bad bytes
         JNB     BAD150
-        INC     WORD PTR BADSIZ+2
+        INC     word [BADSIZ+2]
 BAD150:
         INC     BX                      ;Next cluster
         LOOP    PACKIT                  ;Continue for # of clusters
@@ -403,10 +396,10 @@ PACK:
         PUSH    DX
         MOV     SI,BX
         SHR     BX,1
-        ADD     BX,FATSPACE
+        ADD     BX,[FATSPACE]
         ADD     BX,SI
         SHR     SI,1
-        MOV     SI,WORD PTR [BX]
+        MOV     SI,word [BX]
         MOV     DI,SI
         JNB     ALIGNED
         MOV     CL,4
@@ -420,43 +413,43 @@ ALIGNED:
 PACKIN:
         AND     DI,00FFFH               ;DI CONTAINS FORMER CONTENTS
         OR      SI,DX
-        MOV     WORD PTR[BX],SI
+        MOV     word [BX],SI
         POP     DX
         POP     CX
         POP     BX
         RET
 
 DRTFAT:
-        CMP     BYTE PTR CLEARFLG,0
+        CMP     byte [CLEARFLG],0
         JNZ     CLEARED
         CALL    CLEAR                   ;Clear the FAT and Dir
-        TEST    SWITCHMAP,SYSSW         ;If system requested, calculate size
+        TEST    [SWITCHMAP],SYSSW         ;If system requested, calculate size
         JZ      CLEARED
-        CMP     BYTE PTR DBLFLG,0       ;Have we already calculated System space?
+        CMP     byte [DBLFLG],0       ;Have we already calculated System space?
         JNZ     CLEARED                 ;Yes
-        INC     BYTE PTR DBLFLG         ;No -- set the flag
+        INC     byte [DBLFLG]         ;No -- set the flag
         CALL    GETSIZE                 ;Calculate the system size
 CLEARED:
         CALL    WRTFAT
         JNC     FATWRT
-        MOV     DX,OFFSET NOUSE
+        MOV     DX,NOUSE
         CALL    PRINT
         JMP     FRMTPROB
 
 FATWRT:
 
-        TEST    SWITCHMAP,SYSSW         ;System desired
+        TEST    [SWITCHMAP],SYSSW         ;System desired
         JZ      STATUS
         CALL    WRITEDOS                ;Write the BIOS & DOS
         JNC     SYSOK
-        MOV     DX,OFFSET NOTSYS        ;Can't transfer a system
+        MOV     DX,NOTSYS        ;Can't transfer a system
         CALL    PRINT
-        MOV     WORD PTR SYSSIZ+2,0     ;No system transfered
-        MOV     WORD PTR SYSSIZ,0       ;No system transfered
+        MOV     word [SYSSIZ+2],0     ;No system transfered
+        MOV     word [SYSSIZ],0       ;No system transfered
         JMP     SHORT STATUS
 
 SYSOK:
-        MOV     DX,OFFSET SYSTRAN
+        MOV     DX,SYSTRAN
         CALL    PRINT
 STATUS:
         CALL    CRLF
@@ -552,49 +545,49 @@ UNSCALE:
 ;   cluster boundries, Answer in SYSSIZ
 
 GETSIZE:
-        MOV     AX,WORD PTR BIOSSIZB              ;And calculate the system size
-        MOV     DX,WORD PTR BIOSSIZB+2
+        MOV     AX,word [BIOSSIZB]              ;And calculate the system size
+        MOV     DX,word [BIOSSIZB+2]
         CALL    FNDSIZ
-        MOV     AX,WORD PTR DOSSIZB
-        MOV     DX,WORD PTR DOSSIZB+2
+        MOV     AX,word [DOSSIZB]
+        MOV     DX,word [DOSSIZB+2]
         CALL    FNDSIZ
-        MOV     AX,WORD PTR COMSIZB
-        MOV     DX,WORD PTR COMSIZB+2
+        MOV     AX,word [COMSIZB]
+        MOV     DX,word [COMSIZB+2]
 
 ;Calculate the number of sectors used for the system
 FNDSIZ:
-        DIV     SECSIZ
+        DIV     [SECSIZ]
         OR      DX,DX
         JZ      FNDSIZ0
         INC     AX                      ; Round up to next sector
 FNDSIZ0:
         PUSH    AX
         XOR     DX,DX
-        DIV     CLUSSIZ
+        DIV     [CLUSSIZ]
         POP     AX
         OR      DX,DX
         JZ      ONCLUS
-        SUB     DX,CLUSSIZ
+        SUB     DX,[CLUSSIZ]
         NEG     DX
         ADD     AX,DX                   ; Round up sector count to cluster
                                         ;       boundry
 ONCLUS:
-        MUL     SECSIZ                  ; Turn it back into bytes
-        ADD     WORD PTR SYSSIZ,AX
-        ADC     WORD PTR SYSSIZ+2,DX
+        MUL     [SECSIZ]                  ; Turn it back into bytes
+        ADD     word [SYSSIZ],AX
+        ADC     word [SYSSIZ+2],DX
         RET
 
 PRINT:  MOV     AH,STD_CON_STRING_OUTPUT             ;Print msg pointed to by DX
         INT     21H
         RET
 
-MORE:   CMP     BYTE PTR [HARDFLAG],0   ;Check if removable media
+MORE:   CMP     byte [HARDFLAG],0   ;Check if removable media
         JNZ     FEXIT
         CALL    WAITYN                  ;Get yes or no response
         JB      FEXIT                   ;Exit if CF=1
         CALL    CRLF
 CRLF:
-        MOV     DX,OFFSET CRLFMSG
+        MOV     DX,CRLFMSG
         CALL    PRINT
         RET
 
@@ -610,9 +603,9 @@ SYSPRM:
         INT     21H                     ;Default now in AL
   IF IBMVER OR IBMJAPVER
         MOV     BX,AX
-  ENDIF
+  end if
         ADD     AL,41H                  ;Now in Ascii
-        MOV     SYSDRV,AL               ;Text now ok
+        MOV     [SYSDRV],AL               ;Text now ok
 
   IF IBMVER OR IBMJAPVER
         INT     11H                     ;Make sure drive has insertable media
@@ -626,31 +619,31 @@ NOTONEDRV:
         CMP     BL,AL
         JBE     ISFLOPPY
         MOV     AL,"A"
-        MOV     BYTE PTR [SYSDRV],AL
+        MOV     byte [SYSDRV],AL
         MOV     [BIODRV],AL
         MOV     [DOSDRV],AL
         MOV     [COMDRV],AL
 ISFLOPPY:
-  ENDIF
+  end if
 
-        MOV     DX,OFFSET SYSMSG
+        MOV     DX,SYSMSG
         CALL    PRINT                   ;Print first line
         CALL    WAITKY                  ;Wait for a key
         CALL    CRLF
         RET
 
 TARGPRM:
-        MOV     DX,OFFSET TARGMSG
+        MOV     DX,TARGMSG
         CALL    PRINT                   ;Print first line
         CALL    WAITKY                  ;Wait for a key
         CALL    CRLF
         RET
 
 DSKPRM:
-        MOV     DX,OFFSET SNGMSG        ;Point to the message
-        CMP     BYTE PTR [HARDFLAG],0   ;Check if removable media
+        MOV     DX,SNGMSG        ;Point to the message
+        CMP     byte [HARDFLAG],0   ;Check if removable media
         JZ      GOPRNIT
-        MOV     DX,OFFSET HRDMSG
+        MOV     DX,HRDMSG
 GOPRNIT:
         CALL    PRINT                   ;Print the message
         CALL    WAITKY                  ;Wait for space bar
@@ -667,33 +660,33 @@ WAITKY:
 
         return
 
-FDPB:   MOV     DL,DRIVE
+FDPB:   MOV     DL,[DRIVE]
         INC     DL
         MOV     AH,GET_DPB
         PUSH    DS
         INT     21H
         INC     AL
         JZ      DRVERR
-        MOV     DX,WORD PTR [BX+13]
+        MOV     DX,word [BX+13]
         DEC     DX
-        MOV     AL,BYTE PTR [BX+4]
+        MOV     AL,byte [BX+4]
         INC     AL
-        MOV     CX,WORD PTR [BX+2]
+        MOV     CX,word [BX+2]
         POP     DS
         RET
 DRVERR:
         POP     DS
-        MOV     DX,OFFSET INVDRV
+        MOV     DX,INVDRV
         JMP     PERROR
 
         ;Clear the FAT and directory and set Dirty byte in the FAT
 CLEAR:
-        MOV     AL,FATID
+        MOV     AL,[FATID]
         OR      AL,0F8H                 ;Make sure it's a legal value
         MOV     AH,0FFH
-        MOV     DI,FATSPACE
-        MOV     WORD PTR[DI],AX
-        MOV     BYTE PTR[DI+2],AH
+        MOV     DI,[FATSPACE]
+        MOV     word [DI],AX
+        MOV     byte [DI+2],AH
         MOV     AH,DISK_RESET
         INT     21H
         CALL    WRTFAT
@@ -705,23 +698,23 @@ CLEAR:
         MOV     AH,32H
         INT     21H
 
-        MOV     DPB_FIRST_ACCESS[BX],-1         ;FORCE MEDIA CHANGE
+        MOV     dpb.dpb_first_access[BX],-1         ;FORCE MEDIA CHANGE
         POP     DS
-        ENDIF
+        end if
 
         CALL    FDPB
-        MOV     WORD PTR FDSKSIZ,DX
-        MOV     SECSIZ,CX
+        MOV     word [FDSKSIZ],DX
+        MOV     [SECSIZ],CX
         MOV     AH,0
-        MOV     CLUSSIZ,AX
+        MOV     [CLUSSIZ],AX
         SHR     DX,1
         JNC     ROUNDED
         INC     DX
 ROUNDED:
-        ADD     DX,WORD PTR FDSKSIZ
+        ADD     DX,word [FDSKSIZ]
         XOR     AX,AX
         MOV     CX,DX
-        MOV     DI,FATSPACE
+        MOV     DI,[FATSPACE]
         ADD     DI,3
         REP     STOSB
         MOV     AH,DISK_RESET
@@ -730,41 +723,41 @@ ROUNDED:
         MOV     DL,[DRIVE]
         ADD     DL,'A'
         MOV     [ROOTSTR],DL
-        MOV     DX,OFFSET ROOTSTR
+        MOV     DX,ROOTSTR
         MOV     AH,CHDIR
         INT     21H                     ;Go to root on target drive
-        MOV     AL,DRIVE
+        MOV     AL,[DRIVE]
         INC     AL
-        MOV     ALLDRV,AL
+        MOV     [ALLDRV],AL
         MOV     AH,FCB_DELETE
-        MOV     DX,OFFSET ALLFILE
+        MOV     DX,ALLFILE
         INT     21H
 
-        TEST    SWITCHMAP,OLDSW         ;See if E5 terminated DIR requested
+        TEST    [SWITCHMAP],OLDSW         ;See if E5 terminated DIR requested
         JZ      RET25
-        MOV     AL,DRIVE
+        MOV     AL,[DRIVE]
         INC     AL
-        MOV     BYTE PTR CLEANFILE,AL              ;Get the drive
-        MOV     DX,OFFSET CLEANFILE
+        MOV     byte [CLEANFILE],AL              ;Get the drive
+        MOV     DX,CLEANFILE
         MOV     AH,FCB_CREATE
 MAKE_NEXT:
         INT     21H
         OR      AL,AL
         JNZ     DELETE_THEM
-        INC     BYTE PTR CLNNAM
-        CMP     BYTE PTR CLNNAM,"Z" + 1
+        INC     byte [CLNNAM]
+        CMP     byte [CLNNAM],"Z" + 1
         JNZ     MAKE_NEXT
-        MOV     BYTE PTR CLNNAM,"A"
-        INC     BYTE PTR CLNNAM + 1
-        CMP     BYTE PTR CLNNAM + 1,"Z" + 1
+        MOV     byte [CLNNAM],"A"
+        INC     byte [CLNNAM+1]
+        CMP     byte [CLNNAM+1],"Z" + 1
         JNZ     MAKE_NEXT
-        MOV     BYTE PTR CLNNAM + 1,"A"
-        INC     BYTE PTR CLNNAM + 2
+        MOV     byte [CLNNAM+1],"A"
+        INC     byte [CLNNAM+2]
         JMP     MAKE_NEXT
 
 DELETE_THEM:
-        MOV     WORD PTR CLNNAM,"??"
-        MOV     BYTE PTR CLNNAM + 2,"?"
+        MOV     word [CLNNAM],"??"
+        MOV     byte [CLNNAM+2],"?"
         MOV     AH,FCB_DELETE
         INT     21H
 RET25:
@@ -788,42 +781,42 @@ DOVOL:
         PUSH    DS
         POP     ES
 VOL_LOOP:
-        MOV     AL,DRIVE
+        MOV     AL,[DRIVE]
         INC     AL
-        MOV     DS:BYTE PTR[VOLFCB+7],AL
-        MOV     DX,OFFSET LABPRMT
+        MOV     byte [DS:VOLFCB+7],AL
+        MOV     DX,LABPRMT
         CALL    PRINT
-        MOV     DX,OFFSET INBUFF
+        MOV     DX,INBUFF
         MOV     AH,STD_CON_STRING_INPUT
         INT     21H
-        MOV     DX,OFFSET CRLFMSG
+        MOV     DX,CRLFMSG
         CALL    PRINT
-        MOV     DX,OFFSET CRLFMSG
+        MOV     DX,CRLFMSG
         CALL    PRINT
         MOV     CL,[INBUFF+1]
         OR      CL,CL
         JZ      VOLRET
         XOR     CH,CH
-        MOV     SI,OFFSET INBUFF+2
+        MOV     SI,INBUFF+2
         MOV     DI,SI
         ADD     DI,CX
         MOV     CX,11
         MOV     AL,' '
         REP     STOSB
         MOV     CX,5
-        MOV     DI,OFFSET VOLNAM
+        MOV     DI,VOLNAM
         REP     MOVSW
         MOVSB
-        MOV     DX,OFFSET VOLFCB
+        MOV     DX,VOLFCB
         MOV     AH,FCB_CREATE
         INT     21H
         OR      AL,AL
         JZ      GOOD_CREATE
-        MOV     DX,OFFSET INVCHR        ;PRINT INVALID CHARS MESSAGE
+        MOV     DX,INVCHR        ;PRINT INVALID CHARS MESSAGE
         CALL    PRINT
         JMP     VOL_LOOP
 GOOD_CREATE:
-        MOV     DX,OFFSET VOLFCB
+        MOV     DX,VOLFCB
         MOV     AH,FCB_CLOSE
         INT     21H
         CALL    CRLF
@@ -844,7 +837,7 @@ READDOS:
         RET
 
 RDFILS:
-        MOV     BYTE PTR [FILSTAT],0
+        MOV     byte [FILSTAT],0
         MOV     BX,[BIOSHandle]
         MOV     AX,[MSTART]
         MOV     DX,AX
@@ -854,7 +847,7 @@ RDFILS:
         ADD     AX,CX
         CMP     AX,DX
         JBE     GOTBIOS
-        MOV     BYTE PTR [FILSTAT],00000001B     ; Got part of BIOS
+        MOV     byte [FILSTAT],00000001B     ; Got part of BIOS
         MOV     SI,[MSIZE]
         XOR     DI,DI
         CALL    DISIX4
@@ -867,8 +860,8 @@ ASSUME  DS:CODE
         MOV     CX,DX
         MOV     AX,(LSEEK SHL 8) OR 1
         INT     21H
-        MOV     WORD PTR [BIOSOFFS],AX
-        MOV     WORD PTR [BIOSOFFS+2],DX
+        MOV     word [BIOSOFFS],AX
+        MOV     word [BIOSOFFS+2],DX
 FILESDONE:
         CLC
 CLSALL:
@@ -878,7 +871,7 @@ CLSALL:
         RET
 
 GOTBIOS:
-        MOV     BYTE PTR [FILSTAT],00000010B     ; Got all of BIOS
+        MOV     byte [FILSTAT],00000010B     ; Got all of BIOS
         LES     SI,[BIOSSIZB]
         MOV     DI,ES
         MOV     DS,[BIOSSTRT]
@@ -894,7 +887,7 @@ ASSUME  DS:CODE
         ADD     AX,CX
         CMP     AX,DX
         JBE     GOTDOS
-        OR      BYTE PTR [FILSTAT],00000100B     ; Got part of DOS
+        OR      byte [FILSTAT],00000100B     ; Got part of DOS
         SUB     DX,[DOSSTRT]
         MOV     SI,DX
         XOR     DI,DI
@@ -908,12 +901,12 @@ ASSUME  DS:CODE
         MOV     CX,DX
         MOV     AX,(LSEEK SHL 8) OR 1
         INT     21H
-        MOV     WORD PTR [DOSOFFS],AX
-        MOV     WORD PTR [DOSOFFS+2],DX
+        MOV     word [DOSOFFS],AX
+        MOV     word [DOSOFFS+2],DX
         JMP     FILESDONE
 
 GOTDOS:
-        OR      BYTE PTR [FILSTAT],00001000B     ; Got all of DOS
+        OR      byte [FILSTAT],00001000B     ; Got all of DOS
         LES     SI,[DOSSIZB]
         MOV     DI,ES
         MOV     DS,[DOSSTRT]
@@ -929,7 +922,7 @@ CLSALLJ: JC     CLSALL
         ADD     AX,CX
         CMP     AX,DX
         JBE     GOTCOM
-        OR      BYTE PTR [FILSTAT],00010000B     ; Got part of COMMAND
+        OR      byte [FILSTAT],00010000B     ; Got part of COMMAND
         SUB     DX,[COMSTRT]
         MOV     SI,DX
         XOR     DI,DI
@@ -943,12 +936,12 @@ ASSUME  DS:CODE
         MOV     CX,DX
         MOV     AX,(LSEEK SHL 8) OR 1
         INT     21H
-        MOV     WORD PTR [COMOFFS],AX
-        MOV     WORD PTR [COMOFFS+2],DX
+        MOV     word [COMOFFS],AX
+        MOV     word [COMOFFS+2],DX
         JMP     FILESDONE
 
 GOTCOM:
-        OR      BYTE PTR [FILSTAT],00100000B     ; Got all of COMMAND
+        OR      byte [FILSTAT],00100000B     ; Got all of COMMAND
         LES     SI,[COMSIZB]
         MOV     DI,ES
         MOV     DS,[COMSTRT]
@@ -962,7 +955,7 @@ ASSUME  DS:CODE
 
 WRITEDOS:
         MOV     CX,BIOSATT
-        MOV     DX,OFFSET BIOSFIL
+        MOV     DX,BIOSFIL
         LES     SI,[BIOSSIZB]
         MOV     DI,ES
         CALL    MAKEFIL
@@ -971,13 +964,13 @@ RET34:  RET
 
 GOTNBIO:
         MOV     [TempHandle],BX
-        TEST    BYTE PTR FILSTAT,00000010B
+        TEST    byte [FILSTAT],00000010B
         JNZ     GOTALLBIO
         LES     SI,[BIOSOFFS]
         MOV     DI,ES
-        MOV     WORD PTR [IOCNT],SI
-        MOV     WORD PTR [IOCNT+2],DI
-        MOV     BP,OFFSET BIOSData
+        MOV     word [IOCNT],SI
+        MOV     word [IOCNT+2],DI
+        MOV     BP,BIOSData
         CALL    GOTTARG
         JC      RET34
         JMP     SHORT BIOSDONE
@@ -991,11 +984,11 @@ ASSUME  DS:NOTHING
 ASSUME  DS:CODE
 BIOSDONE:
         MOV     BX,[TempHandle]
-        MOV     CX,BTIME
-        MOV     DX,BDATE
+        MOV     CX,[BTIME]
+        MOV     DX,[BDATE]
         CALL    CLOSETARG
         MOV     CX,DOSATT
-        MOV     DX,OFFSET DOSFIL
+        MOV     DX,DOSFIL
         LES     SI,[DOSSIZB]
         MOV     DI,ES
         CALL    MAKEFIL
@@ -1003,13 +996,13 @@ BIOSDONE:
 
 GOTNDOS:
         MOV     [TempHandle],BX
-        TEST    BYTE PTR FILSTAT,00001000B
+        TEST    byte [FILSTAT],00001000B
         JNZ     GOTALLDOS
-        MOV     BP,OFFSET DOSData
-        TEST    BYTE PTR FILSTAT,00000100B
+        MOV     BP,DOSData
+        TEST    byte [FILSTAT],00000100B
         JNZ     PARTDOS
-        MOV     WORD PTR [DOSOFFS],0
-        MOV     WORD PTR [DOSOFFS+2],0
+        MOV     word [DOSOFFS],0
+        MOV     word [DOSOFFS+2],0
         CALL    GETSYS3
 RET34J: JC      RET34
         JMP     SHORT DOSDONE
@@ -1017,8 +1010,8 @@ RET34J: JC      RET34
 PARTDOS:
         LES     SI,[DOSOFFS]
         MOV     DI,ES
-        MOV     WORD PTR [IOCNT],SI
-        MOV     WORD PTR [IOCNT+2],DI
+        MOV     word [IOCNT],SI
+        MOV     word [IOCNT+2],DI
         CALL    GOTTARG
         JC      RET34J
         JMP     SHORT DOSDONE
@@ -1032,11 +1025,11 @@ ASSUME  DS:NOTHING
 ASSUME  DS:CODE
 DOSDONE:
         MOV     BX,[TempHandle]
-        MOV     CX,DTIME
-        MOV     DX,DDATE
+        MOV     CX,[DTIME]
+        MOV     DX,[DDATE]
         CALL    CLOSETARG
         MOV     CX,COMATT
-        MOV     DX,OFFSET COMFIL
+        MOV     DX,COMFIL
         LES     SI,[COMSIZB]
         MOV     DI,ES
         CALL    MAKEFIL
@@ -1045,13 +1038,13 @@ RET35:  RET
 
 GOTNCOM:
         MOV     [TempHandle],BX
-        TEST    BYTE PTR FILSTAT,00100000B
+        TEST    byte [FILSTAT],00100000B
         JNZ     GOTALLCOM
-        MOV     BP,OFFSET COMData
-        TEST    BYTE PTR FILSTAT,00010000B
+        MOV     BP,COMData
+        TEST    byte [FILSTAT],00010000B
         JNZ     PARTCOM
-        MOV     WORD PTR [COMOFFS],0
-        MOV     WORD PTR [COMOFFS+2],0
+        MOV     word [COMOFFS],0
+        MOV     word [COMOFFS+2],0
         CALL    GETSYS3
         JC      RET35
         JMP     SHORT COMDONE
@@ -1059,8 +1052,8 @@ GOTNCOM:
 PARTCOM:
         LES     SI,[COMOFFS]
         MOV     DI,ES
-        MOV     WORD PTR [IOCNT],SI
-        MOV     WORD PTR [IOCNT+2],DI
+        MOV     word [IOCNT],SI
+        MOV     word [IOCNT+2],DI
         CALL    GOTTARG
         JC      RET35
         JMP     SHORT COMDONE
@@ -1074,10 +1067,10 @@ ASSUME  DS:NOTHING
 ASSUME  DS:CODE
 COMDONE:
         MOV     BX,[TempHandle]
-        MOV     CX,CTIME
-        MOV     DX,CDATE
+        MOV     CX,[CTIME]
+        MOV     DX,[CDATE]
         CALL    CLOSETARG
-        CMP     BYTE PTR [FILSTAT],00101010B
+        CMP     byte [FILSTAT],00101010B
         JZ      NOREDOS
 RDFRST2:
         CALL    READDOS                 ; Start back with BIOS
@@ -1101,12 +1094,12 @@ NOREDOS:
 
 MAKEFIL:
         MOV     BX,DX
-        PUSH    WORD PTR [BX]
-        MOV     AL,TARGDRV
+        PUSH    word [BX]
+        MOV     AL,[TARGDRV]
         MOV     [BX],AL
         MOV     AH,CREAT
         INT     21H
-        POP     WORD PTR [BX]
+        POP     word [BX]
         MOV     BX,AX
         JC      RET50
         MOV     CX,DI
@@ -1136,8 +1129,8 @@ CLOSETARG:
 
 SAVUDIRS:
         XOR     DL,DL
-        MOV     SI,OFFSET USERDIRS
-        MOV     BYTE PTR [SI],'\'
+        MOV     SI,USERDIRS
+        MOV     byte [SI],'\'
         INC     SI
         MOV     AH,CURRENT_DIR
         INT     21H
@@ -1145,9 +1138,9 @@ RET43:  RET
 
 
 RESTUDIR:
-        TEST    SWITCHMAP,SYSSW
+        TEST    [SWITCHMAP],SYSSW
         JZ      RET43
-        MOV     DX,OFFSET USERDIRS
+        MOV     DX,USERDIRS
         MOV     AH,CHDIR
         INT     21H             ; Restore users DIR
         RET
@@ -1176,9 +1169,9 @@ GOTTARG:
 ;Enter here if some of file is already in buffer, IOCNT must be set
 ; to size already in buffer.
         MOV     BX,[TempHandle]
-        MOV     SI,WORD PTR [IOCNT]
-        MOV     DI,WORD PTR [IOCNT+2]
-        MOV     DS,[BP.FILE_START]
+        MOV     SI,word [IOCNT]
+        MOV     DI,word [IOCNT+2]
+        MOV     DS,[BP+FILESTRUC.FILE_START]
 ASSUME  DS:NOTHING
         CALL    WRITEFILE               ; Write next part
 ASSUME  DS:CODE
@@ -1186,18 +1179,18 @@ ASSUME  DS:CODE
         RET
 
 TESTDONE:
-        LES     AX,[BP.FILE_OFFSET]
-        CMP     AX,WORD PTR [BP.FILE_SIZEB]
+        LES     AX,[BP+FILESTRUC.FILE_OFFSET]
+        CMP     AX,word [BP+FILESTRUC.FILE_SIZEB]
         JNZ     GETSYS3
         MOV     AX,ES
-        CMP     AX,WORD PTR [BP.FILE_SIZEB+2]
+        CMP     AX,word [BP+FILESTRUC.FILE_SIZEB+2]
         JNZ     GETSYS3
         RET                             ; Carry clear from CMP
 
 GETSYS3:
 ;Enter here if none of file is in buffer
         MOV     AX,[MSTART]             ; Furthur IO done starting here
-        MOV     [BP.FILE_START],AX
+        MOV     [BP+FILESTRUC.FILE_START],AX
         MOV     AL,[SYSDRV]
         CMP     AL,[TARGDRV]
         JNZ     TESTSYS
@@ -1208,14 +1201,14 @@ GSYS:
 TESTSYS:
         CALL    TESTSYSDISK
         JC      GSYS
-        MOV     BX,[BP.FILE_HANDLE]
-        LES     DX,[BP.FILE_OFFSET]
+        MOV     BX,[BP+FILESTRUC.FILE_HANDLE]
+        LES     DX,[BP+FILESTRUC.FILE_OFFSET]
         PUSH    DX
         MOV     CX,ES
         MOV     AX,LSEEK SHL 8
         INT     21H
         POP     DX
-        LES     SI,[BP.FILE_SIZEB]
+        LES     SI,[BP+FILESTRUC.FILE_SIZEB]
         MOV     DI,ES
         SUB     SI,DX
         SBB     DI,CX                   ; DI:SI is #bytes to go
@@ -1233,8 +1226,8 @@ TESTSYS:
         XOR     DI,DI
         CALL    DISIX4
 GOTSIZ2:
-        MOV     WORD PTR [IOCNT],SI
-        MOV     WORD PTR [IOCNT+2],DI
+        MOV     word [IOCNT],SI
+        MOV     word [IOCNT+2],DI
         MOV     DS,[MSTART]
 ASSUME  DS:NOTHING
         CALL    READFILE
@@ -1247,8 +1240,8 @@ GETOFFS:
         MOV     CX,DX
         MOV     AX,(LSEEK SHL 8) OR 1
         INT     21H
-        MOV     WORD PTR [BP.FILE_OFFSET],AX
-        MOV     WORD PTR [BP.FILE_OFFSET+2],DX
+        MOV     word [BP+FILESTRUC.FILE_OFFSET],AX
+        MOV     word [BP+FILESTRUC.FILE_OFFSET+2],DX
         CALL    CLSALL
         JMP     IOLOOP
 
@@ -1257,7 +1250,7 @@ GETOFFS:
 
 TESTSYSDISK:
         MOV     AX,OPEN SHL 8
-        MOV     DX,OFFSET BIOSFIL
+        MOV     DX,BIOSFIL
         INT     21H
         JNC     SETBIOS
 CRET12: STC
@@ -1279,12 +1272,12 @@ BIOSCLS:
 
 SETBIOSSIZ:
         MOV     [BIOSSIZP],AX
-        MOV     WORD PTR [BIOSSIZB],SI
-        MOV     WORD PTR [BIOSSIZB+2],DI
+        MOV     word [BIOSSIZB],SI
+        MOV     word [BIOSSIZB+2],DI
         MOV     [BDATE],DX
         MOV     [BTIME],CX
         MOV     AX,OPEN SHL 8
-        MOV     DX,OFFSET DOSFIL
+        MOV     DX,DOSFIL
         INT     21H
         JNC     DOSOPNOK
         JMP     BIOSCLS
@@ -1305,12 +1298,12 @@ DOSCLS:
 
 SETDOSSIZ:
         MOV     [DOSSIZP],AX
-        MOV     WORD PTR [DOSSIZB],SI
-        MOV     WORD PTR [DOSSIZB+2],DI
+        MOV     word [DOSSIZB],SI
+        MOV     word [DOSSIZB+2],DI
         MOV     [DDATE],DX
         MOV     [DTIME],CX
         MOV     AX,OPEN SHL 8
-        MOV     DX,OFFSET COMFIL
+        MOV     DX,COMFIL
         INT     21H
         JC      DOSCLS
         MOV     [COMHandle],AX
@@ -1328,8 +1321,8 @@ COMCLS:
 
 SETCOMSIZ:
         MOV     [COMSIZP],AX
-        MOV     WORD PTR [COMSIZB],SI
-        MOV     WORD PTR [COMSIZB+2],DI
+        MOV     word [COMSIZB],SI
+        MOV     word [COMSIZB+2],DI
         MOV     [CDATE],DX
         MOV     [CTIME],CX
         CLC
@@ -1497,18 +1490,18 @@ NORMALIZE:
         RET
 
 
-ROOTSTR DB      ?
+ROOTSTR DB      0
         DB      ":"
 SWTCH   DB      "/",0
 DBLFLG DB       0               ;Initialize flags to zero
 CLEARFLG DB     0
 DRIVE   DB      0
 DEFALT  DB      0               ;Default drive
-IOCNT   DD      ?
-MSTART  DW      ?               ; Start of sys file buffer (para#)
-MSIZE   DW      ?               ; Size of above in paragraphs
-TempHandle DW   ?
-FILSTAT DB      ?               ; In memory status of files
+IOCNT   DD      0
+MSTART  DW      0; Start of sys file buffer (para#)
+MSIZE   DW      0; Size of above in paragraphs
+TempHandle DW      0
+FILSTAT DB      0; In memory status of files
                                 ; XXXXXX00B BIOS not in
                                 ; XXXXXX01B BIOS partly in
                                 ; XXXXXX10B BIOS all in
@@ -1519,108 +1512,100 @@ FILSTAT DB      ?               ; In memory status of files
                                 ; XX01XXXXB COMMAND partly in
                                 ; XX10XXXXB COMMAND all in
 
-USERDIRS DB     DIRSTRLEN+3 DUP(?)      ; Storage for users current directory
+USERDIRS DB     DIRSTRLEN+3 dup (0)      ; Storage for users current directory
 
-BIOSData        LABEL   BYTE
+label BIOSData byte
 BIOSHandle      DW      0
 BIOSSIZP        DW      0
-BIOSSIZB        DD      ?
-BIOSOFFS        DD      ?
-BIOSSTRT        DW      ?
+BIOSSIZB        DD      0
+BIOSOFFS        DD      0
+BIOSSTRT        DW      0
 BDATE           DW      0               ;IO system date stored here
 BTIME           DW      0               ;IO system time stored here
 
-BIOSATT EQU     attr_hidden + attr_system + attr_read_only
-BIOSFIL LABEL   BYTE
-BIODRV  LABEL   BYTE
+BIOSATT =     attr_hidden + attr_system + attr_read_only
+label BIOSFIL byte
+label BIODRV byte
         DB      "X:\"
         IF IBMVER OR IBMJAPVER
         DB      "IBMBIO.COM"
-        ENDIF
+        end if
         IF MSVER
         DB      "IO.SYS"
-        ENDIF
+        end if
         DB      0
 
-DOSData         LABEL   BYTE
+label DOSData byte
 DOSHandle       DW      0
 DOSSIZP         DW      0
-DOSSIZB         DD      ?
-DOSOFFS         DD      ?
-DOSSTRT         DW      ?
+DOSSIZB         DD      0
+DOSOFFS         DD      0
+DOSSTRT         DW      0
 DDATE           DW      0               ;DOS date stored here
 DTIME           DW      0               ;DOS time
 
-DOSATT  EQU     attr_hidden + attr_system + attr_read_only
-DOSFIL  LABEL   BYTE
-DOSDRV  LABEL   BYTE
+DOSATT  =     attr_hidden + attr_system + attr_read_only
+label DOSFIL byte
+label DOSDRV byte
         DB      "X:\"
         IF IBMVER OR IBMJAPVER
         DB      "IBMDOS.COM"
-        ENDIF
+        end if
         IF MSVER
         DB      "MSDOS.SYS"
-        ENDIF
+        end if
         DB      0
 
-COMData         LABEL   BYTE
+label COMData byte
 COMHandle       DW      0
 COMSIZP         DW      0
-COMSIZB         DD      ?
-COMOFFS         DD      ?
-COMSTRT         DW      ?
+COMSIZB         DD      0
+COMOFFS         DD      0
+COMSTRT         DW      0
 CDATE           DW      0               ;Date of COMMAND
 CTIME           DW      0               ;Time of COMMAND
 
-COMATT  EQU     0
-COMFIL  LABEL   BYTE
-COMDRV  LABEL   BYTE
+COMATT  =     0
+label COMFIL byte
+label COMDRV byte
         DB      "X:\COMMAND.COM",0
 
 VOLFCB  DB      -1,0,0,0,0,0,8
         DB      0
 VOLNAM  DB      "           "
         DB      8
-        DB      26 DUP(?)
+        DB      26 dup (0)
 
 ALLFILE DB      -1,0,0,0,0,0,0FFH
 ALLDRV  DB      0,"???????????"
-        DB      26 DUP(?)
+        DB      26 dup (0)
 
 CLEANFILE DB    0
 CLNNAM  DB      "AAAFFFFFFOR"
-        DB      26 DUP(?)
+        DB      26 dup (0)
 
-SWITCHMAP DW    ?
-SWITCHCOPY DW   ?
-FAT     DW      ?
-        DW      ?
-CLUSSIZ DW      ?
-SECSIZ  DW      ?
-SYSSIZ  DD      ?
-FDSKSIZ DD      ?
-BADSIZ  DD      ?
-SYSTRKS DW      ?
-SECTORS DW      ?
+SWITCHMAP DW      0
+SWITCHCOPY DW      0
+FAT     DW      0
+        DW      0
+CLUSSIZ DW      0
+SECSIZ  DW      0
+SYSSIZ  DD      0
+FDSKSIZ DD      0
+BADSIZ  DD      0
+SYSTRKS DW      0
+SECTORS DW      0
 INBUFF  DB      80,0
-        DB      80 DUP(?)
+        DB      80 dup (0)
 
-        DB      100H DUP(?)
+        DB      100H dup (0)
 
-STACK   LABEL   BYTE
+label STACK_ byte
 
 ;For FORMES module
 
-        EXTRN   BADVER:BYTE,SNGMSG:BYTE,SNGDRV:BYTE,HRDMSG:BYTE,HRDDRV:BYTE
-        EXTRN   LABPRMT:BYTE,TARGMSG:BYTE,TARGDRV:BYTE
-        EXTRN   SYSTRAN:BYTE,CRLFMSG:BYTE,INVCHR:BYTE,INVDRV:BYTE
-        EXTRN   SYSMSG:BYTE,SYSDRV:BYTE,FRMTERR:BYTE,NOTSYS:BYTE
-        EXTRN   NOUSE:BYTE,MEMEX:BYTE,INVPAR:BYTE
 
         IF      IBMVER
-        EXTRN   ASGERR:BYTE
-        ENDIF
+        end if
 
-CODE    ENDS
 
-        END     START

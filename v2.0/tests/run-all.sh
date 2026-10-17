@@ -6,9 +6,11 @@
 # one call and the copy is down to about ten seconds, so it runs with the
 # rest; the file it copies is made here.
 #
-# profil.bat is left out for the same reason: it assembles and links the
-# profiler on the system before it can run it, which takes about nine
-# minutes.  tests/profil.sh runs it and checks the .PRF that comes out.
+# Two tests are left out for taking too long.  tests/profil.sh assembles and
+# links the profiler on the system before it can run it, about nine minutes,
+# and checks the .PRF that comes out.  tests/format.sh formats a disk with our
+# own FORMAT, about three, the bad sector scan reading every allocation unit
+# on it, and then uses the disk it made.
 set -e
 cd "$(dirname "$0")/.."
 
