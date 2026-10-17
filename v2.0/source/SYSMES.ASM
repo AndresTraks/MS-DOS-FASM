@@ -1,49 +1,43 @@
-   TITLE Message file for MS-DOS SYS Program
 
-FALSE   EQU     0
-TRUE    EQU     NOT FALSE
-
-        INCLUDE DOSSYM.ASM
-
-Message MACRO   label,text
-        PUBLIC  label,label&Len
-label       DB  text
-label&Len   DW  $-label
-ENDM
+FALSE   =     0
+TRUE    =     -1
 
 
-IBMJAPVER EQU   FALSE
+macro Message mname,text
+{
+mname       DB  text
+mname#Len   DW  $-mname
+}
 
-CONST   SEGMENT PUBLIC BYTE
+
+IBMJAPVER =   FALSE
+
+if SEGSEL = S_CONST
 
 ; only this message must be terminated with a $
-        PUBLIC  BadVer
 BADVER  DB      "Incorrect DOS version",13,10,"$"
 
         IF      IBMJAPVER
-        Message BadDisk,<"Destination disk cannot be booted">
-        ENDIF
+        Message BadDisk,"Destination disk cannot be booted"
+        end if
 
-        Message BadDrv,<"Invalid drive specification">
-        Message BadParm,<"Invalid parameter">
-        Message NoDest,<"No room for system on destination disk">
-        Message BadSiz,<"Incompatible system size">
-        Message Done,<"System transferred">
+        Message BadDrv,"Invalid drive specification"
+        Message BadParm,"Invalid parameter"
+        Message NoDest,"No room for system on destination disk"
+        Message BadSiz,"Incompatible system size"
+        Message Done,"System transferred"
 
-        PUBLIC  GetSys,SysDrv,GetSysLen
 GETSYS      DB      "Insert system disk in drive "
 SYSDRV      DB      "A",13,10
             DB      "and strike any key when ready",13,10
-GetSysLen   DW  GetSysLen-GetSys
+GetSysLen   DW  GetSysLen-GETSYS
 
-CONST   ENDS
+end if
 
-DATA    SEGMENT BYTE PUBLIC
-DATA    ENDS
+if SEGSEL = S_DATA
+end if
 
-CODE    SEGMENT
-DG      GROUP   CODE,CONST,DATA
+if SEGSEL = S_CODE
         ASSUME  CS:DG,DS:DG,ES:DG,SS:DG
 
-CODE    ENDS
-        END
+end if

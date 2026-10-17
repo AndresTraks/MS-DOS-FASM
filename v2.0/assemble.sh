@@ -33,6 +33,11 @@ $FASM source/TESTDEV.ASM bin/TESTDEV.SYS
 # there is -- see FORLINK.ASM.
 $FASM source/FORLINK.ASM bin/FORMAT.COM
 
+# SYS.COM, from SYS.ASM and its messages.  The release does ship one, but it
+# refuses to run on the version this DOS reports; built under another name so
+# that Microsoft's stays where it is -- see SYSLINK.ASM.
+$FASM source/SYSLINK.ASM bin/SYSF.COM
+
 # COMMAND.COM, from the sixteen modules COMLINK lists.  Built under another
 # name so that Microsoft's, which the release shipped and which is useful to
 # compare against, stays where it is; create_image.sh puts this one on the

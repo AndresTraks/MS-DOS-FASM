@@ -36,7 +36,8 @@ mcopy -i "$IMAGE" bin/PRINT.COM ::
 mcopy -i "$IMAGE" bin/PROHST.EXE ::
 mcopy -i "$IMAGE" bin/RECOVER.COM ::
 mcopy -i "$IMAGE" bin/SORT.EXE ::
-mcopy -i "$IMAGE" bin/SYS.COM ::
+# SYS is ours as well, the shipped one refusing this version.
+mcopy -i "$IMAGE" bin/SYSF.COM ::SYS.COM
 
 # FORMAT is ours and nobody else's: the release has the source but no
 # FORMAT.COM to go with it.

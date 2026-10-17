@@ -1,0 +1,4 @@
+ECHO ON
+SYS B:
+DIR B:
+ECHO DONE

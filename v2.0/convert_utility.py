@@ -1,30 +1,40 @@
 #!/usr/bin/env python3
-"""Convert FORMAT.ASM and GENFOR.ASM from MASM to FASM, in place.
+"""Convert one of the release's utilities from MASM to FASM, in place.
+
+    python3 convert_utility.py FORMAT
+    python3 convert_utility.py SYS
 
 FORMAT is the one utility in the release with no binary beside it: there is no
 FORMAT.COM in bin, so the only way to have a formatter on this system is to
-assemble the source.  It is a far smaller job than COMMAND was -- one segment,
-ORG 100H, DS and ES the same as CS throughout -- so this does the whole thing
-in a handful of passes rather than modelling groups and ASSUMEs.
+assemble the source.  SYS and CHKDSK do have binaries, but they were built for
+2.00 and refuse to run on 2.11, which is what this DOS reports; built from the
+source in this directory they accept it, the source itself saying 1.54 to 2.11.
 
-What it changes, and why FASM needs it:
+These are far smaller jobs than COMMAND was, so this works in passes rather
+than modelling groups and ASSUMEs:
 
-  * PUBLIC, EXTRN, SEGMENT, ENDS and the final END go: FORLINK.ASM assembles
-    both modules together, so there is nothing left to resolve between them.
+  * PUBLIC, EXTRN, SEGMENT, ENDS, GROUP and the final END go: the link file
+    assembles every module of a program together, so there is nothing left to
+    resolve between them.
   * WORD PTR and BYTE PTR become word and byte, OFFSET goes, NAME LABEL SIZE
     becomes label NAME size, and ENDIF becomes end if.
   * EQU becomes =.  In FASM, EQU is a preprocessor directive, so a name
-    defined with it inside an IF is defined either way; every one of FORMAT's
-    is a plain number, and = is what it means.  TRUE EQU NOT FALSE becomes
-    TRUE = -1, as FASM's NOT is bitwise and an OR of switches against -65536
-    is not what the switch tests expect.
+    defined with it inside an IF is defined either way; these are all plain
+    numbers, and = is what they mean.  TRUE EQU NOT FALSE becomes TRUE = -1,
+    as FASM's NOT is bitwise and an OR of switches against -65536 is not what
+    a switch test expects.
   * DW ? and DB n DUP (?) become zeros, which is what MASM reserved anyway.
-  * [BP.FILE_START] becomes [BP+FILESTRUC.FILE_START], and the STRUC itself
-    becomes a FASM struc with a virtual instance so the field names resolve.
+  * A bare variable name gets the brackets MASM did not need.  That pass runs
+    before OFFSET is taken off, so MOV AX,OFFSET FOO stays an address instead
+    of turning into a load from FOO.
+  * MASM makes a STRUC's field names offsets in their own right, so a field is
+    rewritten to hang off its structure as the converted DOSSYM.ASM has it.
 
-Run from the v2.0 directory.  It refuses a file it has already converted.
+A program whose segments are listed below is wrapped segment by segment in
+"if SEGSEL = S_<name>", the way COMMAND's modules are, and its link file sets
+SEGSEL and reads every module once per segment to lay them out in load order.
 
-    python3 convert_format.py
+It refuses a file it has already converted.
 """
 import os
 import re
@@ -32,7 +42,30 @@ import sys
 
 SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "source")
 # In the order FORLINK.ASM assembles them.
-MODULES = ("FORMAT.ASM", "FORMES.ASM", "GENFOR.ASM")
+# Per program: the modules in the order the link file assembles them, the
+# segments to wrap if there is more than one, the names FASM will not take as
+# labels, and locals that only stopped clashing because the modules used to be
+# assembled apart.
+PROGRAMS = {
+    "FORMAT": {
+        "modules": ("FORMAT.ASM", "FORMES.ASM", "GENFOR.ASM"),
+        "segments": (),
+        "group": "",
+        "reserved": ("STACK",),
+        "macros": {},
+        "renames": {"GENFOR.ASM": {"START": "GENSTART"}},
+    },
+    "SYS": {
+        "modules": ("SYS.ASM", "SYSMES.ASM"),
+        "segments": ("CODE", "CONST", "DATA"),
+        "group": "DG",
+        "reserved": (),
+        # "label" is a FASM directive, so the macro's parameter needs another
+        # name; the macro itself defines both NAME and NAMELen.
+        "renames": {"SYSMES.ASM": {"label": "mname"}},
+        "macros": {"MESSAGE": ("", "Len")},
+    },
+}
 STRINGS = re.compile(r"'[^']*'|\"[^\"]*\"")
 
 DROP = re.compile(r"""^\s*(
@@ -43,6 +76,7 @@ DROP = re.compile(r"""^\s*(
     | EXTRN\b
     | \w+\s+SEGMENT\b
     | \w+\s+ENDS\s*$
+    | \w+\s+GROUP\b
     | END(\s+(?!if\b|virtual\b|while\b|repeat\b|macro\b)\w+)?\s*$
     | INCLUDE\s+DOST:
 )""", re.I | re.X)
@@ -50,12 +84,14 @@ DROP = re.compile(r"""^\s*(
 # Names FASM will not take as labels.  Renamed outside string literals only:
 # COMMAND's command table holds its command names as text, and renaming one of
 # those along with the label broke the table.
-RESERVED = ("STACK",)
-
-# Locals that only stopped clashing because the modules were assembled apart:
-# FORMAT's entry point is START and GENFOR keeps its current test sector in a
-# word of the same name.
-RENAMES = {"GENFOR.ASM": {"START": "GENSTART"}}
+RESERVED = ()
+RENAMES = {}
+GROUP = ""
+MACROS = {}
+CANON = {}
+CANON_RE = None
+MODULES = ()
+SEGMENTS = ()
 
 FIELDS = {}
 LABELS = set()
@@ -113,6 +149,41 @@ NOTCODE = {"DB", "DW", "DD", "LABEL", "INCLUDE", "IF", "ELSE", "END", "STRUC",
            "REPEAT", "DISPLAY", "ERR", "WHILE"}
 
 
+def dossym_spellings(canon):
+    """DOSSYM.ASM's own names, which the utilities write in whatever case they
+    felt like: SYS.ASM asks for Write and DOSSYM defines WRITE."""
+    text = open(os.path.join(SRC, "DOSSYM.ASM"), newline="").read()
+    for raw in text.splitlines():
+        code = raw.split(";")[0]
+        for m in (re.match(r"^(\w+)\s+EQU\b", code, re.I),
+                  re.match(r"^(\w+)\s*=", code),
+                  re.match(r"^(\w+)\s+(?:DB|DW|DD)\b", code, re.I),
+                  re.match(r"^STRUC\s+(\w+)", code, re.I),
+                  re.match(r"^\s*label\s+(\w+)\s", code, re.I)):
+            if m:
+                canon.setdefault(m.group(1).upper(), m.group(1))
+    return canon
+
+
+def spellings(text, canon):
+    """MASM did not care about case and FASM does, so every name has to be
+    spelt the way it is defined: SYSMES.ASM's macro defines BadParm and
+    SYS.ASM asks for BADPARM."""
+    for raw in text.splitlines():
+        code = raw.split(";")[0]
+        for m in (re.match(r"^(\w+)\s+(?:DB|DW|DD)\b", code, re.I),
+                  re.match(r"^\s*label\s+(\w+)\s", code, re.I),
+                  re.match(r"^(\w+):", code)):
+            if m:
+                canon[m.group(1).upper()] = m.group(1)
+        for name, suffixes in MACROS.items():
+            m = re.match(r"^\s*%s\s+(\w+)\s*," % name, code, re.I)
+            if m:
+                for suffix in suffixes:
+                    canon[(m.group(1) + suffix).upper()] = m.group(1) + suffix
+    return canon
+
+
 def data_labels(text):
     """Everything the two modules reserve storage for.  MASM lets an
     instruction name one of these without brackets and resolves it to a memory
@@ -124,6 +195,14 @@ def data_labels(text):
              or re.match(r"^\s*label\s+(\w+)\s", code, re.I))
         if m:
             labels.add(m.group(1).upper())
+            continue
+        # A macro that defines storage, as SYSMES.ASM's Message defines both
+        # the text and a word holding its length.
+        for name, suffixes in MACROS.items():
+            m = re.match(r"^\s*%s\s+(\w+)\s*," % name, code, re.I)
+            if m:
+                for suffix in suffixes:
+                    labels.add((m.group(1) + suffix).upper())
     return labels
 
 
@@ -161,6 +240,9 @@ def one_operand(op, labels):
         mg = re.match(r"^(CS|DS|ES|SS):\s*(.*)$", core, re.I)
         if mg:
             seg, core, again = mg.group(1).upper() + ":", mg.group(2).strip(), True
+        mp = re.match(r"^\((.*)\)$", core)          # DS:(BYTE PTR 5DH)
+        if mp:
+            core, again = mp.group(1).strip(), True
 
     inner = None
     if core.startswith("[") and core.endswith("]"):
@@ -191,10 +273,18 @@ def line(code):
     def words(t):
         t = re.sub(r"\b(BYTE|WORD|DWORD)\s+PTR\b", lambda m: m.group(1).lower(), t, flags=re.I)
         t = re.sub(r"\bOFFSET\s+", "", t, flags=re.I)
+        # The group qualifier, as in OFFSET DG:BADVER.  Every segment of these
+        # programs is in the one group and the link file lays them out from a
+        # single origin, so a group-relative offset is what the label already
+        # is and the qualifier has nothing left to say.
+        if GROUP:
+            t = re.sub(r"\b%s:" % GROUP, "", t, flags=re.I)
         t = re.sub(r"\bENDIF\b", "end if", t, flags=re.I)
         # BP.FIELD, the only structure FORMAT addresses that way
         t = re.sub(r"\b(BP|BX|SI|DI)\.(\w+)\b",
                    lambda m: "%s+%s" % (m.group(1), FIELDS.get(m.group(2).upper(), m.group(2))), t)
+        if CANON_RE:
+            t = CANON_RE.sub(lambda m: CANON[m.group(1).upper()], t)
         if DOSFIELD_RE:
             t = DOSFIELD_RE.sub(lambda m: DOSFIELDS[m.group(1).upper()], t)
         t = re.sub(r"\bDUP\s*\(\s*\?\s*\)", "dup (0)", t, flags=re.I)
@@ -208,11 +298,41 @@ def line(code):
 def convert(text, renames, first=False):
     """first says this is the module that brings DOSSYM in: every module had
     its own INCLUDE of it, and including it twice redefines every structure."""
-    out = []
+    out, inmacro = [], []
     for raw in text.splitlines():
+        # Before anything else, so that a renamed macro parameter is renamed
+        # in the MACRO line too and not only in the body.
+        for was, now in renames.items():
+            raw = outside_strings(raw, lambda t, w=was, n=now:
+                                  re.sub(r"\b%s\b" % w, n, t))
+        if SEGMENTS:
+            m = re.match(r"^\s*(\w+)\s+SEGMENT\b", raw, re.I)
+            if m and m.group(1).upper() in SEGMENTS:
+                out.append("if SEGSEL = S_%s" % m.group(1).upper())
+                continue
+            m = re.match(r"^\s*(\w+)\s+ENDS\s*$", raw, re.I)
+            if m and m.group(1).upper() in SEGMENTS:
+                out.append("end if")
+                continue
+        m = re.match(r"^\s*(\w+)\s+MACRO\s*(.*?)\s*$", raw, re.I)
+        if m:
+            out.append("macro %s %s" % (m.group(1), m.group(2)))
+            out.append("{")
+            inmacro.append(True)
+            continue
+        if re.match(r"^\s*ENDM\s*$", raw, re.I):
+            out.append("}")
+            if inmacro:
+                inmacro.pop()
+            continue
+        if inmacro:
+            raw = raw.replace("&", "#")         # MASM pastes with &, FASM with #
+        raw = re.sub(r'<(\s*"[^"]*"\s*)>', r"\1", raw)    # <"text"> in a call
         if DROP.match(raw):
             continue
-        if not first and re.match(r"\s*INCLUDE\s+DOSSYM", raw, re.I):
+        # A segmented program has its modules read once per segment, so the
+        # link file brings DOSSYM in and none of the modules may.
+        if (SEGMENTS or not first) and re.match(r"\s*INCLUDE\s+DOSSYM", raw, re.I):
             continue
         body, sep, comment = raw.partition(";")
         if not body.strip():
@@ -231,20 +351,29 @@ def convert(text, renames, first=False):
                                       m.group(4), value, pad)
         # FASM wants the file name quoted
         body = re.sub(r"^(\s*)INCLUDE\s+([\w.]+)\s*$", r"\1INCLUDE '\2'", body, flags=re.I)
-        for was, now in renames.items():
-            body = outside_strings(body, lambda t, w=was, n=now:
-                                   re.sub(r"\b%s\b" % w, n, t))
         body = bracket(body, LABELS)
         body = line(body)
         out.append(body + sep + comment if sep else body)
     return "\n".join(out) + "\n"
 
 
-def main():
-    # The structures and the storage first, across all three modules at once:
-    # FORMAT names variables that FORMES defines, so the set of things that
-    # need brackets is only complete once every module has been read.
-    global LABELS, DOSFIELDS, DOSFIELD_RE
+def main(program):
+    # The structures and the storage first, across every module at once: one
+    # module names variables another defines, so the set of things that need
+    # brackets is only complete once all of them have been read.
+    global LABELS, DOSFIELDS, DOSFIELD_RE, MODULES, SEGMENTS, RESERVED, RENAMES
+    if program not in PROGRAMS:
+        sys.exit("usage: convert_utility.py %s" % " | ".join(sorted(PROGRAMS)))
+    spec = PROGRAMS[program]
+    MODULES, SEGMENTS = spec["modules"], tuple(spec["segments"])
+    RESERVED, RENAMES = spec["reserved"], spec["renames"]
+    global GROUP
+    GROUP = spec["group"]
+    global MACROS
+    MACROS = spec["macros"]
+    # A macro call is not an instruction, and its arguments are names rather
+    # than memory: bracketing them would pass [BadDrv] where BadDrv was meant.
+    NOTCODE.update(MACROS)
     DOSFIELDS = dossym_fields()
     DOSFIELD_RE = re.compile(r"(?<![.\w])(%s)\b"
                              % "|".join(sorted(DOSFIELDS, key=len, reverse=True)),
@@ -256,6 +385,15 @@ def main():
         if "end if" in text or "virtual at" in text:
             sys.exit("%s looks converted already; nothing done." % name)
         texts[name] = struc(text)
+    global CANON, CANON_RE
+    CANON = {}
+    dossym_spellings(CANON)
+    for text in texts.values():
+        spellings(text, CANON)
+    # Only the names that are written more than one way need rewriting, and
+    # leaving the rest alone keeps the diff to what actually changed.
+    CANON_RE = re.compile(r"(?<![.\w])(%s)\b"
+                          % "|".join(sorted(CANON, key=len, reverse=True)), re.I)
     LABELS = set()
     for name, text in texts.items():
         found = data_labels(text)
@@ -272,4 +410,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1].upper() if len(sys.argv) > 1 else "")

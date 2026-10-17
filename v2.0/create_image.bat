@@ -33,7 +33,10 @@ REM system, and all of them together take a sixth of the disk.
 %IMGEN% -m -i bin\PROHST.EXE -f %IMAGE%
 %IMGEN% -m -i bin\RECOVER.COM -f %IMAGE%
 %IMGEN% -m -i bin\SORT.EXE -f %IMAGE%
-%IMGEN% -m -i bin\SYS.COM -f %IMAGE%
+REM SYS is ours as well, the shipped one refusing this version.
+COPY bin\SYSF.COM SYS.COM > NUL
+%IMGEN% -m -i SYS.COM -f %IMAGE%
+DEL SYS.COM
 
 REM FORMAT is ours and nobody else's: the release has the source but no
 REM FORMAT.COM to go with it.

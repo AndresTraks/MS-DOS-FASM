@@ -47,6 +47,9 @@ fi
 # Makes a disk for the second drive first, so it is a script too.
 ./tests/twodrive.sh || fail=1
 
+# Makes a disk for SYS to write to, and checks what landed on it.
+./tests/sys.sh || fail=1
+
 if [ $fail -eq 0 ]; then
     printf '\n======== all passed\n'
 else
