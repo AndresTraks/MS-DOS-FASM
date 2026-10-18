@@ -50,6 +50,9 @@ fi
 # Makes a disk for SYS to write to, and checks what landed on it.
 ./tests/sys.sh || fail=1
 
+# Makes a disk for CHKDSK to report on, so its figures can be checked.
+./tests/chkdsk.sh || fail=1
+
 if [ $fail -eq 0 ]; then
     printf '\n======== all passed\n'
 else

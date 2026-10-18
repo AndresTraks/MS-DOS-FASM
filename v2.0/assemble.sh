@@ -33,6 +33,11 @@ $FASM source/TESTDEV.ASM bin/TESTDEV.SYS
 # there is -- see FORLINK.ASM.
 $FASM source/FORLINK.ASM bin/FORMAT.COM
 
+# CHKDSK.COM, from CHKDSK.ASM, the procedures and the messages.  The release
+# does ship one, but it was built for 2.00 and refuses the version this DOS
+# reports, so create_image.sh uses this one -- see CHKLINK.ASM.
+$FASM source/CHKLINK.ASM bin/CHKDSKF.COM
+
 # SYS.COM, from SYS.ASM and its messages.  The release does ship one, but it
 # refuses to run on the version this DOS reports; built under another name so
 # that Microsoft's stays where it is -- see SYSLINK.ASM.

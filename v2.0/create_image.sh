@@ -18,10 +18,13 @@ mcopy -i "$IMAGE" bin/MSDOS.SYS ::
 # over the one on the image.
 mcopy -i "$IMAGE" bin/COMMANDF.COM ::COMMAND.COM
 
-# The rest of the release's executables.  They are Microsoft's -- nothing
-# here is built from source yet -- but they are what there is to run on the
-# system, and all of them together take a sixth of the disk.
-mcopy -i "$IMAGE" bin/CHKDSK.COM ::
+# The rest of the executables.  Most are Microsoft's, the ones built from
+# source here saying so, and they are what there is to run on the system;
+# all of them together take a sixth of the disk.
+# CHKDSK is ours.  The one Microsoft shipped was built for 2.00 and answers
+# "Incorrect DOS version" to the 2.11 this DOS reports, the same as its SYS
+# -- see source/CHKLINK.ASM.
+mcopy -i "$IMAGE" bin/CHKDSKF.COM ::CHKDSK.COM
 mcopy -i "$IMAGE" bin/CREF.EXE ::
 mcopy -i "$IMAGE" bin/DEBUG.COM ::
 mcopy -i "$IMAGE" bin/DISKCOPY.COM ::

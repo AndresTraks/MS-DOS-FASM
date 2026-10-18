@@ -48,6 +48,7 @@ SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "source")
 # assembled apart.
 PROGRAMS = {
     "FORMAT": {
+        "dossym": "DOSSYM.ASM",
         "modules": ("FORMAT.ASM", "FORMES.ASM", "GENFOR.ASM"),
         "segments": (),
         "group": "",
@@ -55,7 +56,17 @@ PROGRAMS = {
         "macros": {},
         "renames": {"GENFOR.ASM": {"START": "GENSTART"}},
     },
+    "CHKDSK": {
+        "dossym": "DOSSYM_v211.ASM",
+        "modules": ("CHKDSK.ASM", "CHKPROC.ASM", "CHKMES.ASM"),
+        "segments": ("CODE", "CONST", "DATA"),
+        "group": "DG",
+        "reserved": (),
+        "renames": {},
+        "macros": {},
+    },
     "SYS": {
+        "dossym": "DOSSYM.ASM",
         "modules": ("SYS.ASM", "SYSMES.ASM"),
         "segments": ("CODE", "CONST", "DATA"),
         "group": "DG",
@@ -90,11 +101,15 @@ GROUP = ""
 MACROS = {}
 CANON = {}
 CANON_RE = None
+STRUCS = {}
+STRUC_PARAMS = {}
+DOSSYM = "DOSSYM.ASM"
 MODULES = ()
 SEGMENTS = ()
 
 FIELDS = {}
 LABELS = set()
+SIZES = {}
 DOSFIELDS = {}
 DOSFIELD_RE = None
 
@@ -103,7 +118,7 @@ def dossym_fields():
     """MASM makes a STRUC's field names offsets in their own right, so FORMAT
     writes fcb_RECSIZ+7 where the converted DOSSYM.ASM has the field hanging
     off an instance as sys_fcb.fcb_RECSIZ."""
-    text = open(os.path.join(SRC, "DOSSYM.ASM"), newline="").read()
+    text = open(os.path.join(SRC, DOSSYM), newline="").read()
     fields = {}
     for m in re.finditer(r"^STRUC\s+(\w+)\s*$(.*?)^\}", text, re.M | re.S | re.I):
         for f in re.finditer(r"^\.(\w+)\s", m.group(2), re.M):
@@ -123,23 +138,38 @@ def outside_strings(code, fn):
 
 def struc(text):
     """Turn the MASM STRUC into a FASM one, and remember its fields."""
+    while True:
+        text, done = one_struc(text)
+        if done:
+            return text
+
+
+def one_struc(text):
     m = re.search(r"^(\w+)\s+STRUC\s*$(.*?)^\1\s+ENDS\s*$", text, re.M | re.S | re.I)
     if not m:
-        return text
+        return text, True
     name, body = m.group(1), m.group(2)
+    STRUCS[name.upper()] = name
     lines = []
     for line in body.splitlines():
         f = re.match(r"\s*(\w+)\s+(DB|DW|DD)\b(.*)$", line, re.I)
         if f:
             FIELDS[f.group(1).upper()] = "%s.%s" % (name, f.group(1))
-            lines.append(".%-14s %s %s" % (f.group(1), f.group(2).lower(),
-                                           "0" if "?" in f.group(3) else f.group(3).strip()))
+            # A field reserving several bytes keeps its count: dropping it for
+            # a plain 0 would shift every field after it.
+            init = f.group(3)
+            if re.search(r"\bDUP\b", init, re.I):
+                init = re.sub(r"\bDUP\s*\(\s*\?\s*\)", "dup (0)", init,
+                              flags=re.I).strip()
+            else:
+                init = "0" if "?" in init else init.strip()
+            lines.append(".%-14s %s %s" % (f.group(1), f.group(2).lower(), init))
         elif line.strip():
             lines.append(line.rstrip())
     new = ["STRUC %s" % name, "{"] + ["        " + l for l in lines] + ["}", "",
            "virtual at 0", "  %s %s" % (name, name),
            "  sizeof.%s = $ - %s" % (name, name), "end virtual"]
-    return text[:m.start()] + "\n".join(new) + text[m.end():]
+    return text[:m.start()] + "\n".join(new) + text[m.end():], False
 
 
 # A label may sit in front of the instruction, as in "FDPB:   MOV DL,DRIVE".
@@ -152,7 +182,7 @@ NOTCODE = {"DB", "DW", "DD", "LABEL", "INCLUDE", "IF", "ELSE", "END", "STRUC",
 def dossym_spellings(canon):
     """DOSSYM.ASM's own names, which the utilities write in whatever case they
     felt like: SYS.ASM asks for Write and DOSSYM defines WRITE."""
-    text = open(os.path.join(SRC, "DOSSYM.ASM"), newline="").read()
+    text = open(os.path.join(SRC, DOSSYM), newline="").read()
     for raw in text.splitlines():
         code = raw.split(";")[0]
         for m in (re.match(r"^(\w+)\s+EQU\b", code, re.I),
@@ -162,6 +192,14 @@ def dossym_spellings(canon):
                   re.match(r"^\s*label\s+(\w+)\s", code, re.I)):
             if m:
                 canon.setdefault(m.group(1).upper(), m.group(1))
+        m = re.match(r"^STRUC\s+(\w+)(.*)$", code, re.I)
+        if m:
+            STRUCS.setdefault(m.group(1).upper(), m.group(1))
+            # A parameterised STRUC, as DOSSYM_v211.ASM writes internat_block:
+            # an instance of it has to be given a value for each parameter.
+            params = [x for x in m.group(2).split(",") if x.strip()]
+            if params:
+                STRUC_PARAMS[m.group(1).upper()] = len(params)
     return canon
 
 
@@ -195,6 +233,10 @@ def data_labels(text):
              or re.match(r"^\s*label\s+(\w+)\s", code, re.I))
         if m:
             labels.add(m.group(1).upper())
+            d = re.match(r"^\s*\w+\s+(DB|DW|DD)\b", code, re.I)
+            if d:
+                SIZES[m.group(1).upper()] = {"DB": "byte", "DW": "word",
+                                             "DD": "dword"}[d.group(1).upper()]
             continue
         # A macro that defines storage, as SYSMES.ASM's Message defines both
         # the text and a word holding its length.
@@ -266,6 +308,22 @@ def bracket(body, labels):
     if not m or m.group(2).upper() in NOTCODE:
         return body
     ops = [one_operand(op, labels) for op in split_operands(m.group(4))]
+
+    # PUSH and POP of memory: MASM took a word, FASM wants it said.
+    if m.group(2).upper() in ("PUSH", "POP"):
+        for i, op in enumerate(ops):
+            if re.fullmatch(r"\s*\[[^\]]+\]\s*", op):
+                ops[i] = op.replace("[", "word [", 1)
+
+    # MASM let a byte register meet a word variable and took the low byte of
+    # it -- CHKDSK does XCHG AL,ERRSUB where ERRSUB is a DW.  FASM wants the
+    # size said, so say it.
+    if any(re.fullmatch(r"\s*[ABCD][LH]\s*", op, re.I) for op in ops):
+        for i, op in enumerate(ops):
+            b = re.fullmatch(r"(\s*)\[(\w+)([^\]]*)\](\s*)", op)
+            if b and SIZES.get(b.group(2).upper(), "byte") != "byte":
+                ops[i] = "%sbyte [%s%s]%s" % (b.group(1), b.group(2),
+                                              b.group(3), b.group(4))
     return "%s%s%s%s" % (m.group(1), m.group(2), m.group(3), ",".join(ops))
 
 
@@ -273,6 +331,12 @@ def line(code):
     def words(t):
         t = re.sub(r"\b(BYTE|WORD|DWORD)\s+PTR\b", lambda m: m.group(1).lower(), t, flags=re.I)
         t = re.sub(r"\bOFFSET\s+", "", t, flags=re.I)
+        # MASM's SIZE operator on a structure, which the converted form of it
+        # states as sizeof.NAME beside the instance.
+        t = re.sub(r"\bSIZE\s+(\w+)\b",
+                   lambda m: ("sizeof.%s" % STRUCS[m.group(1).upper()]
+                              if m.group(1).upper() in STRUCS else m.group(0)), t,
+                   flags=re.I)
         # The group qualifier, as in OFFSET DG:BADVER.  Every segment of these
         # programs is in the one group and the link file lays them out from a
         # single origin, so a group-relative offset is what the label already
@@ -298,7 +362,7 @@ def line(code):
 def convert(text, renames, first=False):
     """first says this is the module that brings DOSSYM in: every module had
     its own INCLUDE of it, and including it twice redefines every structure."""
-    out, inmacro = [], []
+    out, inmacro, infar = [], [], []
     for raw in text.splitlines():
         # Before anything else, so that a renamed macro parameter is renamed
         # in the MACRO line too and not only in the body.
@@ -314,6 +378,20 @@ def convert(text, renames, first=False):
             if m and m.group(1).upper() in SEGMENTS:
                 out.append("end if")
                 continue
+        # A PROC is just a label, except that MASM assembles the RET of a FAR
+        # one as a far return.  CHKPROC's INT_24 depends on it: it pushes a
+        # frame and the far address of the handler and returns to that.
+        m = re.match(r"^(\s*)(\w+)\s+PROC\s*(NEAR|FAR)?\s*$", raw, re.I)
+        if m:
+            out.append("%s%s:" % (m.group(1), m.group(2)))
+            infar.append((m.group(3) or "NEAR").upper() == "FAR")
+            continue
+        if re.match(r"^\s*\w+\s+ENDP\s*$", raw, re.I):
+            if infar:
+                infar.pop()
+            continue
+        if infar and infar[-1]:
+            raw = re.sub(r"^(\s*)RET(\s*(;.*)?)$", r"\1RETF\2", raw, flags=re.I)
         m = re.match(r"^\s*(\w+)\s+MACRO\s*(.*?)\s*$", raw, re.I)
         if m:
             out.append("macro %s %s" % (m.group(1), m.group(2)))
@@ -328,6 +406,12 @@ def convert(text, renames, first=False):
         if inmacro:
             raw = raw.replace("&", "#")         # MASM pastes with &, FASM with #
         raw = re.sub(r'<(\s*"[^"]*"\s*)>', r"\1", raw)    # <"text"> in a call
+        # A structure instance: MASM takes the default values as <>, and FASM
+        # declares the instance as NAME STRUC and names its fields NAME.field.
+        m = re.match(r"^(\s*\w+\s+)(\w+)\s*<\s*>\s*$", raw)
+        if m:
+            n = STRUC_PARAMS.get(m.group(2).upper(), 0)
+            raw = m.group(1) + m.group(2) + (" " + ",".join("?" * n) if n else "")
         if DROP.match(raw):
             continue
         # A segmented program has its modules read once per segment, so the
@@ -369,15 +453,14 @@ def main(program):
     RESERVED, RENAMES = spec["reserved"], spec["renames"]
     global GROUP
     GROUP = spec["group"]
+    global DOSSYM
+    DOSSYM = spec["dossym"]
     global MACROS
     MACROS = spec["macros"]
     # A macro call is not an instruction, and its arguments are names rather
     # than memory: bracketing them would pass [BadDrv] where BadDrv was meant.
     NOTCODE.update(MACROS)
     DOSFIELDS = dossym_fields()
-    DOSFIELD_RE = re.compile(r"(?<![.\w])(%s)\b"
-                             % "|".join(sorted(DOSFIELDS, key=len, reverse=True)),
-                             re.I)
     texts = {}
     for name in MODULES:
         path = os.path.join(SRC, name)
@@ -385,6 +468,13 @@ def main(program):
         if "end if" in text or "virtual at" in text:
             sys.exit("%s looks converted already; nothing done." % name)
         texts[name] = struc(text)
+    # The program's own structures are read by now, and MASM makes their field
+    # names offsets in their own right as well, so they go in the same map.
+    DOSFIELDS.update(FIELDS)
+    DOSFIELD_RE = re.compile(r"(?<![.\w])(%s)\b"
+                             % "|".join(sorted(DOSFIELDS, key=len, reverse=True)),
+                             re.I)
+
     global CANON, CANON_RE
     CANON = {}
     dossym_spellings(CANON)

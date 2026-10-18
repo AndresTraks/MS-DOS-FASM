@@ -15,10 +15,15 @@ COPY bin\COMMANDF.COM COMMAND.COM > NUL
 %IMGEN% -m -i COMMAND.COM -f %IMAGE%
 DEL COMMAND.COM
 
-REM The rest of the release's executables.  They are Microsoft's -- nothing
-REM here is built from source yet -- but they are what there is to run on the
-REM system, and all of them together take a sixth of the disk.
-%IMGEN% -m -i bin\CHKDSK.COM -f %IMAGE%
+REM The rest of the executables.  Most are Microsoft's, the ones built from
+REM source here saying so, and they are what there is to run on the system;
+REM all of them together take a sixth of the disk.
+REM CHKDSK is ours.  The one Microsoft shipped was built for 2.00 and
+REM answers "Incorrect DOS version" to the 2.11 this DOS reports, the same
+REM as its SYS -- see source\CHKLINK.ASM.
+COPY bin\CHKDSKF.COM CHKDSK.COM > NUL
+%IMGEN% -m -i CHKDSK.COM -f %IMAGE%
+DEL CHKDSK.COM
 %IMGEN% -m -i bin\CREF.EXE -f %IMAGE%
 %IMGEN% -m -i bin\DEBUG.COM -f %IMAGE%
 %IMGEN% -m -i bin\DISKCOPY.COM -f %IMAGE%
