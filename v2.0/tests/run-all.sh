@@ -58,6 +58,10 @@ fi
 # through, so it needs both on the image and a script of its own.
 ./tests/more.sh || fail=1
 
+# Builds an .EXE for EXE2BIN to convert, runs the .COM that comes out, and
+# compares it with what Microsoft's EXE2BIN makes of the same file.
+./tests/exe2bin.sh || fail=1
+
 if [ $fail -eq 0 ]; then
     printf '\n======== all passed\n'
 else

@@ -29,7 +29,8 @@ mcopy -i "$IMAGE" bin/CREF.EXE ::
 mcopy -i "$IMAGE" bin/DEBUG.COM ::
 mcopy -i "$IMAGE" bin/DISKCOPY.COM ::
 mcopy -i "$IMAGE" bin/EDLIN.COM ::
-mcopy -i "$IMAGE" bin/EXE2BIN.EXE ::
+# EXE2BIN is ours, Microsoft's staying in bin to compare against.
+mcopy -i "$IMAGE" bin/EXE2BINF.EXE ::EXE2BIN.EXE
 mcopy -i "$IMAGE" bin/FC.EXE ::
 mcopy -i "$IMAGE" bin/FIND.EXE ::
 mcopy -i "$IMAGE" bin/LINK.EXE ::

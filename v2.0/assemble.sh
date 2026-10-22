@@ -38,6 +38,10 @@ $FASM source/FORLINK.ASM bin/FORMAT.COM
 # reports, so create_image.sh uses this one -- see CHKLINK.ASM.
 $FASM source/CHKLINK.ASM bin/CHKDSKF.COM
 
+# EXE2BIN.EXE, the only .EXE here: it has segments of its own rather than one
+# address space, so the link file is in FASM's MZ format -- see EXELINK.ASM.
+$FASM source/EXELINK.ASM bin/EXE2BINF.EXE
+
 # MORE.COM, from MORE.ASM and its messages.  The release ships one that runs
 # here, so this is ours only for the sake of building it -- see MORLINK.ASM.
 $FASM source/MORLINK.ASM bin/MOREF.COM

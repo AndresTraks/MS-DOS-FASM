@@ -51,7 +51,8 @@ reports exactly the ten references that were wrong, and none after.  The
 utility pass is checked the same way: strip the twenty-six overrides out of
 CHKDSK.ASM and CHKPROC.ASM again and it reports exactly those twenty-six,
 naming SS: for the ones in the data and CS: for the ones in the code, and
-nothing with them in place.
+nothing with them in place.  Take the ES: off EXE2BIN's store to PER1, where
+ES is the only register pointing at the data, and it names that one too.
 
 It runs three passes: the kernel against the data segment, COMMAND.COM
 against its three groups, and each utility against its own layout, which its
@@ -237,6 +238,13 @@ def command_scan(path, where):
 #   * one segment, as FORMAT has.  The link file simply includes the modules
 #     in order, every label is addressed the same way, and the segment is
 #     whatever the sources ASSUME CS to.
+#   * segments of its own, as EXE2BIN has, being the one .EXE here.  The link
+#     file is in FASM's MZ format and declares each segment with a segment
+#     directive, so there is no group and no register reaches more than the
+#     one segment it is assumed to.  The declarations also give the spelling
+#     the sources use, which is not the segment's own name: FASM keeps CODE,
+#     DATA and STACK for itself, so the conversion renamed them CODE_, DATA_
+#     and STACK_, and it is those an ASSUME names.
 #
 # Either way the rule is MASM's: a reference with no override is right only
 # when DS reaches the label, and where another register reaches it instead,
@@ -266,6 +274,15 @@ def utility_segments(src, link):
             re.finditer(r"^S_(\w+)\s*=", read(os.path.join(src, link)), re.M | re.I)]
 
 
+def utility_segment_spellings(src, link):
+    """How an MZ link file spells each segment it declares, by segment name."""
+    text = read(os.path.join(src, link))
+    if not re.search(r"^\s*format\s+MZ\b", text, re.M | re.I):
+        return {}
+    return {name.upper().rstrip("_"): name.upper() for name in
+            re.findall(r"^\s*segment\s+(\w+)", text, re.M | re.I)}
+
+
 def assumed_names(src, mods):
     """Every group or segment the modules ASSUME a register to."""
     names = set()
@@ -279,8 +296,12 @@ def assumed_names(src, mods):
     return names
 
 
-def utility_labels(src, mods, segs, group):
-    """Every label the program defines, and where it is addressed."""
+def utility_labels(src, mods, segs, want):
+    """Every label the program defines, its segment, and what must reach it.
+
+    want maps a segment to the name a register has to be assumed to for a
+    reference with no override to be right: the group where the segments
+    share one, the segment itself where they do not."""
     where = {}
     for name in mods:
         stack = []
@@ -292,11 +313,11 @@ def utility_labels(src, mods, segs, group):
                 if seg is None:
                     continue            # outside every segment: an equate
             else:
-                seg = group
+                seg = next(iter(want))
             code = line.split(";")[0]
             m = DEFINES.match(code) or DEFFASM.match(code) or DEFLABEL.match(line)
             if m:
-                where[m.group(1).upper()] = (seg, group)
+                where[m.group(1).upper()] = (seg, want.get(seg, seg))
     return where
 
 
@@ -335,14 +356,19 @@ def main():
     for link in utility_links(SRC):
         mods = utility_modules(SRC, link)
         segs = utility_segments(SRC, link)
-        names = assumed_names(SRC, mods)
-        rest = [n for n in names if n not in segs]
-        group = rest[0] if rest else (segs[0] if segs else "CODE")
-        where = utility_labels(SRC, mods, segs, group)
+        spelled = utility_segment_spellings(SRC, link)
+        if spelled:
+            want, title = spelled, "%s, its segments apart" % link
+        else:
+            names = assumed_names(SRC, mods)
+            rest = sorted(n for n in names if n not in segs)
+            group = rest[0] if rest else (segs[0] if segs else "CODE")
+            want = {seg: group for seg in (segs or [group])}
+            title = "%s, against %s" % (link, "the %s group" % group if segs
+                                        else "its one segment")
+        where = utility_labels(SRC, mods, segs, want)
         found = {n: command_scan(os.path.join(SRC, n), where) for n in mods}
-        total += report("%s, against %s" % (link, "the %s group" % group if segs
-                                            else "its one segment"),
-                        mods, found, len(where), "labels")
+        total += report(title, mods, found, len(where), "labels")
     return 1 if total else 0
 
 

@@ -56,6 +56,18 @@ PROGRAMS = {
         "macros": {},
         "renames": {"GENFOR.ASM": {"START": "GENSTART"}},
     },
+    "EXE2BIN": {
+        "dossym": "DOSSYM.ASM",
+        "modules": ("EXE2BIN.ASM", "EXEMES.ASM"),
+        # The only .EXE here, so the only one with segments of its own rather
+        # than one address space: FASM takes CODE, DATA and STACK for itself,
+        # hence the renaming, and the link file turns each into a real segment.
+        "segments": ("CODE", "DATA", "STACK", "ZLOAD"),
+        "group": "",
+        "reserved": ("CODE", "DATA", "STACK", "LOAD", "STORE"),
+        "renames": {},
+        "macros": {},
+    },
     "MORE": {
         "dossym": "DOSSYM.ASM",
         "modules": ("MORE.ASM", "MOREMES.ASM"),
@@ -387,6 +399,13 @@ def convert(text, renames, first=False):
             if m and m.group(1).upper() in SEGMENTS:
                 out.append("end if")
                 continue
+        # FASM's macro names are case sensitive, and the ASSUME the conversion
+        # leans on -- a macro that does nothing, MASM's being a directive --
+        # is spelled in capitals.  The sources are not consistent about it:
+        # EXE2BIN.ASM writes "assume es:data" half the time.
+        m = re.match(r"^(\s*)ASSUME\b(.*)$", raw, re.I)
+        if m:
+            raw = "%sASSUME%s" % (m.group(1), m.group(2))
         # A PROC is just a label, except that MASM assembles the RET of a FAR
         # one as a far return.  CHKPROC's INT_24 depends on it: it pushes a
         # frame and the far address of the handler and returns to that.

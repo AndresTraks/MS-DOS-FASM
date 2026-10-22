@@ -28,7 +28,10 @@ DEL CHKDSK.COM
 %IMGEN% -m -i bin\DEBUG.COM -f %IMAGE%
 %IMGEN% -m -i bin\DISKCOPY.COM -f %IMAGE%
 %IMGEN% -m -i bin\EDLIN.COM -f %IMAGE%
-%IMGEN% -m -i bin\EXE2BIN.EXE -f %IMAGE%
+REM EXE2BIN is ours, Microsoft's staying in bin to compare against.
+COPY bin\EXE2BINF.EXE EXE2BIN.EXE > NUL
+%IMGEN% -m -i EXE2BIN.EXE -f %IMAGE%
+DEL EXE2BIN.EXE
 %IMGEN% -m -i bin\FC.EXE -f %IMAGE%
 %IMGEN% -m -i bin\FIND.EXE -f %IMAGE%
 %IMGEN% -m -i bin\LINK.EXE -f %IMAGE%
