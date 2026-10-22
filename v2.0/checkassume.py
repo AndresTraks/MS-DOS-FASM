@@ -47,7 +47,15 @@ on any ending, and refuse a module that comes back as one line, so that a
 silent skip cannot be mistaken for a clean module again.
 
 Checked against the defect above: on the module as it stood before the fix it
-reports exactly the ten references that were wrong, and none after.
+reports exactly the ten references that were wrong, and none after.  The
+utility pass is checked the same way: strip the twenty-six overrides out of
+CHKDSK.ASM and CHKPROC.ASM again and it reports exactly those twenty-six,
+naming SS: for the ones in the data and CS: for the ones in the code, and
+nothing with them in place.
+
+It runs three passes: the kernel against the data segment, COMMAND.COM
+against its three groups, and each utility against its own layout, which its
+link file describes.
 
     python3 checkassume.py [source-directory]
 """
@@ -216,6 +224,82 @@ def command_scan(path, where):
     return findings
 
 
+# The utilities -- FORMAT, SYS and CHKDSK -- raise the same question again, and
+# the answer was worth having: one pass over CHKDSK found twenty-six references
+# that had lost an override, the decisive one storing the segment of a DPB over
+# CHKDSK's own variable.  Each is laid out one of two ways, and its link file
+# says which, so this pass reads the link files rather than a table that would
+# have to be kept in step with them:
+#
+#   * several segments in a group, as CHKDSK and SYS have.  The link file
+#     equates S_<name> for each and walks the modules once per segment, and a
+#     label's own segment is the block it is defined in, exactly as COMMAND's.
+#   * one segment, as FORMAT has.  The link file simply includes the modules
+#     in order, every label is addressed the same way, and the segment is
+#     whatever the sources ASSUME CS to.
+#
+# Either way the rule is MASM's: a reference with no override is right only
+# when DS reaches the label, and where another register reaches it instead,
+# that is where MASM put an override.
+
+SHARED = re.compile(r"^(DOSMAC|DOSSYM)", re.I)
+
+
+def utility_links(src):
+    """The link files, COMMAND's excepted: it has a pass of its own."""
+    return sorted(n for n in os.listdir(src)
+                  if re.match(r"(?!COM)\w+LINK\.ASM$", n, re.I))
+
+
+def utility_modules(src, link):
+    """The modules the link file reads, in order, its own headers aside."""
+    text = read(os.path.join(src, link))
+    body = re.search(r"macro\s+walk\b[^{]*\{(.*?)^\}", text, re.S | re.M | re.I)
+    names = re.findall(r"include\s+'([^']+)'", body.group(1) if body else text, re.I)
+    return [n for n in names if not SHARED.match(n)
+            and os.path.exists(os.path.join(src, n))]
+
+
+def utility_segments(src, link):
+    """The segments the link file walks, if it walks any."""
+    return [m.group(1).upper() for m in
+            re.finditer(r"^S_(\w+)\s*=", read(os.path.join(src, link)), re.M | re.I)]
+
+
+def assumed_names(src, mods):
+    """Every group or segment the modules ASSUME a register to."""
+    names = set()
+    for name in mods:
+        for line in read(os.path.join(src, name)).splitlines():
+            m = re.match(r"\s*;?ASSUME\s+(.*)", line, re.I)
+            if m:
+                names.update(g.upper() for _, g in
+                             re.findall(r"(CS|DS|ES|SS):\s*(\w+)", m.group(1), re.I)
+                             if g.upper() != "NOTHING")
+    return names
+
+
+def utility_labels(src, mods, segs, group):
+    """Every label the program defines, and where it is addressed."""
+    where = {}
+    for name in mods:
+        stack = []
+        for line in read(os.path.join(src, name)).splitlines():
+            if segs and segment_of(line, stack):
+                continue
+            if segs:
+                seg = next((s for s in reversed(stack) if s), None)
+                if seg is None:
+                    continue            # outside every segment: an equate
+            else:
+                seg = group
+            code = line.split(";")[0]
+            m = DEFINES.match(code) or DEFFASM.match(code) or DEFLABEL.match(line)
+            if m:
+                where[m.group(1).upper()] = (seg, group)
+    return where
+
+
 def report(title, mods, found, labels, what):
     total = sum(len(f) for f in found.values())
     print("=== %s" % title)
@@ -247,6 +331,18 @@ def main():
     found = {n: command_scan(os.path.join(SRC, n), where) for n in mods}
     total += report("COMMAND.COM, against its three groups", mods, found,
                     len(where), "labels")
+
+    for link in utility_links(SRC):
+        mods = utility_modules(SRC, link)
+        segs = utility_segments(SRC, link)
+        names = assumed_names(SRC, mods)
+        rest = [n for n in names if n not in segs]
+        group = rest[0] if rest else (segs[0] if segs else "CODE")
+        where = utility_labels(SRC, mods, segs, group)
+        found = {n: command_scan(os.path.join(SRC, n), where) for n in mods}
+        total += report("%s, against %s" % (link, "the %s group" % group if segs
+                                            else "its one segment"),
+                        mods, found, len(where), "labels")
     return 1 if total else 0
 
 
