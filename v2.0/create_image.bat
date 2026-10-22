@@ -33,7 +33,10 @@ DEL CHKDSK.COM
 %IMGEN% -m -i bin\FIND.EXE -f %IMAGE%
 %IMGEN% -m -i bin\LINK.EXE -f %IMAGE%
 %IMGEN% -m -i bin\MASM.EXE -f %IMAGE%
-%IMGEN% -m -i bin\MORE.COM -f %IMAGE%
+REM MORE is ours too, Microsoft's staying in bin to compare against.
+COPY bin\MOREF.COM MORE.COM > NUL
+%IMGEN% -m -i MORE.COM -f %IMAGE%
+DEL MORE.COM
 %IMGEN% -m -i bin\PRINT.COM -f %IMAGE%
 %IMGEN% -m -i bin\PROHST.EXE -f %IMAGE%
 %IMGEN% -m -i bin\RECOVER.COM -f %IMAGE%

@@ -34,7 +34,8 @@ mcopy -i "$IMAGE" bin/FC.EXE ::
 mcopy -i "$IMAGE" bin/FIND.EXE ::
 mcopy -i "$IMAGE" bin/LINK.EXE ::
 mcopy -i "$IMAGE" bin/MASM.EXE ::
-mcopy -i "$IMAGE" bin/MORE.COM ::
+# MORE is ours too, Microsoft's staying in bin to compare against.
+mcopy -i "$IMAGE" bin/MOREF.COM ::MORE.COM
 mcopy -i "$IMAGE" bin/PRINT.COM ::
 mcopy -i "$IMAGE" bin/PROHST.EXE ::
 mcopy -i "$IMAGE" bin/RECOVER.COM ::

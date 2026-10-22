@@ -56,6 +56,15 @@ PROGRAMS = {
         "macros": {},
         "renames": {"GENFOR.ASM": {"START": "GENSTART"}},
     },
+    "MORE": {
+        "dossym": "DOSSYM.ASM",
+        "modules": ("MORE.ASM", "MOREMES.ASM"),
+        "segments": (),
+        "group": "",
+        "reserved": (),
+        "renames": {},
+        "macros": {},
+    },
     "CHKDSK": {
         "dossym": "DOSSYM_v211.ASM",
         "modules": ("CHKDSK.ASM", "CHKPROC.ASM", "CHKMES.ASM"),

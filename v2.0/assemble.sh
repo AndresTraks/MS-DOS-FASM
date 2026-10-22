@@ -38,6 +38,10 @@ $FASM source/FORLINK.ASM bin/FORMAT.COM
 # reports, so create_image.sh uses this one -- see CHKLINK.ASM.
 $FASM source/CHKLINK.ASM bin/CHKDSKF.COM
 
+# MORE.COM, from MORE.ASM and its messages.  The release ships one that runs
+# here, so this is ours only for the sake of building it -- see MORLINK.ASM.
+$FASM source/MORLINK.ASM bin/MOREF.COM
+
 # SYS.COM, from SYS.ASM and its messages.  The release does ship one, but it
 # refuses to run on the version this DOS reports; built under another name so
 # that Microsoft's stays where it is -- see SYSLINK.ASM.

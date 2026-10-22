@@ -1,14 +1,12 @@
-        TITLE   MORE MS-DOS Paginate Filter
-FALSE   EQU     0
-TRUE    EQU     NOT FALSE
+FALSE   =     0
+TRUE    =     -1
 
-IBMVER  EQU     TRUE
-KANJI   EQU	FALSE
-MSVER   EQU     FALSE
+IBMVER  =     TRUE
+KANJI   =	FALSE
+MSVER   =     FALSE
 
-        INCLUDE DOSSYM.ASM
+        INCLUDE 'DOSSYM.ASM'
 
-CODE    SEGMENT PUBLIC
         ORG     100H
 ASSUME  CS:CODE,DS:CODE,ES:CODE,SS:CODE
 START:
@@ -18,7 +16,7 @@ START:
         XCHG    AH,AL                   ; Turn it around to AH.AL
         CMP     AX,200H
         JAE     OKDOS
-        MOV     DX,OFFSET BADVER
+        MOV     DX,BADVER
         MOV     AH,STD_CON_STRING_OUTPUT
         INT     21H
         INT     20H
@@ -26,16 +24,16 @@ OKDOS:
 
         IF      IBMVER
         IF      KANJI
-        MOV     BYTE PTR MAXROW,24
+        MOV     byte [MAXROW],24
         ELSE
-        MOV     BYTE PTR MAXROW,25
-        ENDIF
+        MOV     byte [MAXROW],25
+        end if
         MOV     AH,15
-        INT     16
-        MOV     MAXCOL,AH
-        ENDIF
+        INT     10H             ; 16 decimal, MASM's default radix
+        MOV     [MAXCOL],AH
+        end if
 
-        MOV     DX,OFFSET CRLFTXT       ; INITIALIZE CURSOR
+        MOV     DX,CRLFTXT       ; INITIALIZE CURSOR
         MOV     AH,STD_CON_STRING_OUTPUT
         INT     21H
 
@@ -53,7 +51,7 @@ OKDOS:
 
 ALOOP:
         CLD
-        MOV     DX,OFFSET BUFFER
+        MOV     DX,BUFFER
         MOV     CX,4096
         MOV     BX,BP
         MOV     AH,READ
@@ -70,58 +68,58 @@ TLOOP:
         JZ      DONE
         CMP     AL,13
         JNZ     NOTCR
-        MOV     BYTE PTR CURCOL,1
+        MOV     byte [CURCOL],1
         JMP     SHORT ISCNTRL
 
 NOTCR:  CMP     AL,10
         JNZ     NOTLF
-        INC     BYTE PTR CURROW
+        INC     byte [CURROW]
         JMP     SHORT ISCNTRL
 
 NOTLF:  CMP     AL,8
         JNZ     NOTBP
-        CMP     BYTE PTR CURCOL,1
+        CMP     byte [CURCOL],1
         JZ      ISCNTRL
-        DEC     BYTE PTR CURCOL
+        DEC     byte [CURCOL]
         JMP     SHORT ISCNTRL
 
 NOTBP:  CMP     AL,9
         JNZ     NOTTB
-        MOV     AH,CURCOL
+        MOV     AH,[CURCOL]
         ADD     AH,7
         AND     AH,11111000B
         INC     AH
-        MOV     CURCOL,AH
+        MOV     [CURCOL],AH
         JMP     SHORT ISCNTRL
 
 NOTTB:
         IF      MSVER                   ; IBM CONTROL CHARACTER PRINT
         CMP     AL,' '
         JB      ISCNTRL
-        ENDIF
+        end if
 
         IF      IBMVER
         CMP     AL,7                    ; ALL CHARACTERS PRINT BUT BELL
         JZ      ISCNTRL
-        ENDIF
+        end if
 
-        INC     BYTE PTR CURCOL
-        MOV     AH,CURCOL
-        CMP     AH,MAXCOL
+        INC     byte [CURCOL]
+        MOV     AH,[CURCOL]
+        CMP     AH,[MAXCOL]
         JBE     ISCNTRL
-        INC     BYTE PTR CURROW
-        MOV     BYTE PTR CURCOL,1
+        INC     byte [CURROW]
+        MOV     byte [CURCOL],1
 
 ISCNTRL:
         MOV     DL,AL
         MOV     AH,STD_CON_OUTPUT
         INT     21H
-        MOV     AH,CURROW
-        CMP     AH,MAXROW
+        MOV     AH,[CURROW]
+        CMP     AH,[MAXROW]
         JB      CHARLOOP
 
 ASKMORE:
-        MOV     DX,OFFSET MORETXT
+        MOV     DX,MORETXT
         MOV     AH,STD_CON_STRING_OUTPUT
         INT     21H                     ; ASK MORE?
 
@@ -129,12 +127,12 @@ ASKMORE:
         MOV     AL,STD_CON_INPUT
         INT     21H
 
-        MOV     DX,OFFSET CRLFTXT
+        MOV     DX,CRLFTXT
         MOV     AH,STD_CON_STRING_OUTPUT
         INT     21H
 
-        MOV     BYTE PTR CURCOL,1
-        MOV     BYTE PTR CURROW,1
+        MOV     byte [CURCOL],1
+        MOV     byte [CURROW],1
 
 CHARLOOP:
         DEC     CX
@@ -146,7 +144,4 @@ MAXROW  DB      24
 MAXCOL  DB      80
 CURROW  DB      1
 CURCOL  DB      1
-        EXTRN   MORETXT:BYTE,BADVER:BYTE,CRLFTXT:BYTE,BUFFER:BYTE
 
-CODE    ENDS
-        END     START

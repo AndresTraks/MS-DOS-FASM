@@ -54,6 +54,10 @@ fi
 # Makes a disk for CHKDSK to report on, so its figures can be checked.
 ./tests/chkdsk.sh || fail=1
 
+# Runs our MORE and Microsoft's over the same file and compares what came
+# through, so it needs both on the image and a script of its own.
+./tests/more.sh || fail=1
+
 if [ $fail -eq 0 ]; then
     printf '\n======== all passed\n'
 else
