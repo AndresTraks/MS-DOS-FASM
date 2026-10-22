@@ -81,11 +81,43 @@ INIT:
         MOV     AX,BX
         MUL     SI
         ADD     [FREESPACE],AX  ;AX = SIZE OF TEMP BUFFER
-DISKFORMAT:
 DONE:
         XOR     AX,AX
         CLC
         RET
+
+;Transfer the bootstrap loader, which is the one thing FORMAT.txt asks of
+;DISKFORMAT that the generic module does not do: it has no machine to write a
+;boot sector for, so it formats a disk nothing can boot.  This writes the one
+;bootsect.asm builds, the same image create_image.sh puts on the system disk,
+;and with it FORMAT /S makes a disk that boots -- the system transfer having
+;always copied IO.SYS, MSDOS.SYS and COMMAND.COM, with nothing to start them.
+;The BPB in it describes the 1440K diskette this system's driver reports, so
+;the disk now identifies itself rather than leaving every reader to guess --
+;with one disagreement to know about.  FORMAT writes the FAT ID as
+;[FATID] OR 0F8H, F8 to FF being the only media bytes there were, so the FAT
+;says F8 where this BPB says F0, which is the byte a 1440K diskette was given
+;three years after this FORMAT was written.  DOS reads neither, taking the
+;geometry from the driver, but a reader that compares the two will balk.
+
+DISKFORMAT:
+        PUSH    CS
+        POP     DS              ;INT 26H READS THE BUFFER THROUGH DS
+        MOV     AL,[DRIVE]
+        MOV     BX,BOOTSEC
+        MOV     CX,1
+        XOR     DX,DX           ;SECTOR 0
+        INT     26H
+        POP     AX              ;INT 26H LEAVES THE FLAGS BEHIND
+        JNC     DONE
+        STC                     ;FORMAT SAYS "Format failure"
+        RET
+
+;The image itself, assembled by bootsect.asm and read in here rather than
+;written out twice.  It has to sit below ENDLOC: FREESPACE starts there and
+;the system FORMAT transfers is read in over everything above it.
+BOOTSEC:
+        file '../bin/bootsect.bin'
 
 BADSECTOR:
         MOV     DX,[GENSTART]

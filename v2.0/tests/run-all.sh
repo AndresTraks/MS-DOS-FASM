@@ -6,11 +6,12 @@
 # one call and the copy is down to about ten seconds, so it runs with the
 # rest; the file it copies is made here.
 #
-# Two tests are left out for taking too long.  tests/profil.sh assembles and
+# Three tests are left out for taking too long.  tests/profil.sh assembles and
 # links the profiler on the system before it can run it, about nine minutes,
 # and checks the .PRF that comes out.  tests/format.sh formats a disk with our
 # own FORMAT, about three, the bad sector scan reading every allocation unit
-# on it, and then uses the disk it made.
+# on it, and then uses the disk it made.  tests/bootable.sh formats one too,
+# then puts the system on it with SYS and boots a machine from it.
 set -e
 cd "$(dirname "$0")/.."
 

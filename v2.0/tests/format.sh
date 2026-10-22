@@ -20,10 +20,12 @@
 # That is why this is not in run-all.sh.
 #
 # Note what is not here: nothing checks the disk from this end with mtools.
-# The generic OEM module writes no boot sector, so there is no BPB on the disk
-# to describe it -- DOS gets the geometry from the driver instead and does not
-# care, but mtools has to guess, and guesses 360K.  A disk formatted here is
-# good for this system and carries nothing to identify it to another.
+# GENFOR.ASM does write a boot sector now, so the disk carries a BPB that
+# describes it, but mtools still refuses it: FORMAT writes the FAT ID as
+# [FATID] OR 0F8H, F8 to FF being the only media bytes there were in 1983, so
+# the FAT says F8 where the BPB says F0 and a reader comparing the two balks.
+# DOS reads neither, taking the geometry from the driver.  tests/bootable.sh
+# checks a formatted disk sector by sector instead, and boots from it.
 set -e
 cd "$(dirname "$0")/.."
 

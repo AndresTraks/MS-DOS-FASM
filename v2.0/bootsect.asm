@@ -46,6 +46,14 @@ total_sectors           dw 80 * FLOPPY_HEADS_PER_CYLINDER * FLOPPY_SECTORS_PER_H
 media_descriptor        db 0xF0
 sectors_per_fat         dw FAT12_SECTORS_PER_FAT
 
+; The geometry, which DOS 2.00 neither writes nor reads -- it takes all of
+; this from the driver's own block, and the code below has it as equates --
+; but which anything else reading the disk needs, and finds here from DOS
+; 3.00 onwards.  Without them a reader has to guess the shape of the disk.
+sectors_per_track       dw FLOPPY_SECTORS_PER_HEAD
+heads                   dw FLOPPY_HEADS_PER_CYLINDER
+hidden_sectors          dw 0
+
 boot:
         cld
         cli
