@@ -31,8 +31,10 @@ mcopy -i "$IMAGE" bin/DISKCOPY.COM ::
 mcopy -i "$IMAGE" bin/EDLIN.COM ::
 # EXE2BIN is ours, Microsoft's staying in bin to compare against.
 mcopy -i "$IMAGE" bin/EXE2BINF.EXE ::EXE2BIN.EXE
-mcopy -i "$IMAGE" bin/FC.EXE ::
-mcopy -i "$IMAGE" bin/FIND.EXE ::
+# FC is ours, Microsoft's staying in bin to compare against.
+mcopy -i "$IMAGE" bin/FCF.EXE ::FC.EXE
+# FIND is ours, Microsoft's staying in bin to compare against.
+mcopy -i "$IMAGE" bin/FINDF.EXE ::FIND.EXE
 mcopy -i "$IMAGE" bin/LINK.EXE ::
 mcopy -i "$IMAGE" bin/MASM.EXE ::
 # MORE is ours too, Microsoft's staying in bin to compare against.
@@ -40,7 +42,8 @@ mcopy -i "$IMAGE" bin/MOREF.COM ::MORE.COM
 mcopy -i "$IMAGE" bin/PRINT.COM ::
 mcopy -i "$IMAGE" bin/PROHST.EXE ::
 mcopy -i "$IMAGE" bin/RECOVER.COM ::
-mcopy -i "$IMAGE" bin/SORT.EXE ::
+# SORT is ours, Microsoft's staying in bin to compare against.
+mcopy -i "$IMAGE" bin/SORTF.EXE ::SORT.EXE
 # SYS is ours as well, the shipped one refusing this version.
 mcopy -i "$IMAGE" bin/SYSF.COM ::SYS.COM
 

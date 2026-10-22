@@ -32,8 +32,14 @@ REM EXE2BIN is ours, Microsoft's staying in bin to compare against.
 COPY bin\EXE2BINF.EXE EXE2BIN.EXE > NUL
 %IMGEN% -m -i EXE2BIN.EXE -f %IMAGE%
 DEL EXE2BIN.EXE
-%IMGEN% -m -i bin\FC.EXE -f %IMAGE%
-%IMGEN% -m -i bin\FIND.EXE -f %IMAGE%
+REM FC is ours, Microsoft's staying in bin to compare against.
+COPY bin\FCF.EXE FC.EXE > NUL
+%IMGEN% -m -i FC.EXE -f %IMAGE%
+DEL FC.EXE
+REM FIND is ours, Microsoft's staying in bin to compare against.
+COPY bin\FINDF.EXE FIND.EXE > NUL
+%IMGEN% -m -i FIND.EXE -f %IMAGE%
+DEL FIND.EXE
 %IMGEN% -m -i bin\LINK.EXE -f %IMAGE%
 %IMGEN% -m -i bin\MASM.EXE -f %IMAGE%
 REM MORE is ours too, Microsoft's staying in bin to compare against.
@@ -43,7 +49,10 @@ DEL MORE.COM
 %IMGEN% -m -i bin\PRINT.COM -f %IMAGE%
 %IMGEN% -m -i bin\PROHST.EXE -f %IMAGE%
 %IMGEN% -m -i bin\RECOVER.COM -f %IMAGE%
-%IMGEN% -m -i bin\SORT.EXE -f %IMAGE%
+REM SORT is ours, Microsoft's staying in bin to compare against.
+COPY bin\SORTF.EXE SORT.EXE > NUL
+%IMGEN% -m -i SORT.EXE -f %IMAGE%
+DEL SORT.EXE
 REM SYS is ours as well, the shipped one refusing this version.
 COPY bin\SYSF.COM SYS.COM > NUL
 %IMGEN% -m -i SYS.COM -f %IMAGE%

@@ -1,4 +1,3 @@
-        title   File Compare Routine for MSDOS 2.0
 
 ;-----------------------------------------------------------------------;
 ; Revision History:                                                     ;
@@ -21,11 +20,11 @@
 ;                                                                       ;
 ;-----------------------------------------------------------------------;
 
-FALSE   equ     0
-TRUE    equ     0ffh
+FALSE   =     0
+TRUE    =     0ffh
 
 
-buf_size equ    4096                    ;buffer size
+buf_size =    4096                    ;buffer size
 
 
 ;-----------------------------------------------------------------------;
@@ -77,16 +76,15 @@ buf_size equ    4096                    ;buffer size
 ;-----------------------------------------------------------------------;
 
 
-        subttl  Debug Macros
-        page
 
-m_debug macro   str
+macro m_debug str
+{
         local   a,b
         jmp     short b
 a       db      str,0dh,0ah,"$"
 b:      pushf
         push    dx
-        mov     dx,offset code:a
+        mov     dx,a
         push    ds
         push    cs
         pop     ds
@@ -97,21 +95,22 @@ b:      pushf
         pop     ds
         pop     dx
         popf
-        endm
+}
 
 
-m_bname macro
+macro m_bname 
+{
         local   a0,a1,a2,b1,b2
         jmp     short a0
 b1      db      "------ buffer 1",0dh,0ah,"$"
 b2      db      "------ buffer 2",0dh,0ah,"$"
 a0:     pushf
         push    dx
-        cmp     bx,offset dg:buf1
+        cmp     bx,buf1
         je      a1
-        mov     dx,offset code:b2
+        mov     dx,b2
         jmp     short a2
-a1:     mov     dx,offset code:b1
+a1:     mov     dx,b1
 a2:     push    ds
         push    cs
         pop     ds
@@ -122,67 +121,57 @@ a2:     push    ds
         pop     ds
         pop     dx
         popf
-        endm
+}
 
 
-        page
 
-        .SALL
-        .XLIST
-        include dossym.asm
-        .LIST
 
-        subttl  General Definitions
-        page
 
-CR      equ     0dh
-LF      equ     0ah
+CR      =     0dh
+LF      =     0ah
 
 
 ;-----------------------------------------------------------------------;
 ;       Offsets to buffer structure
 ;       For text comparations:
 
-fname      equ  0               ;file name ptr
-fname_len  equ  2               ;file name length
-handle     equ  4               ;handle
-curr       equ  6               ;current line ptr
-lst_curr   equ  8               ;last current line ptr
-fst_sinc   equ  10              ;first line towards a sinc ptr
-fst_nosinc equ  12              ;first line out of sinc ptr
-dat_end    equ  14              ;ptr to last char of the buffer
-buf_end    equ  16              ;pointer to the end of the buffer
-buf        equ  18              ;pointer to the buffer
+fname      =  0               ;file name ptr
+fname_len  =  2               ;file name length
+handle     =  4               ;handle
+curr       =  6               ;current line ptr
+lst_curr   =  8               ;last current line ptr
+fst_sinc   =  10              ;first line towards a sinc ptr
+fst_nosinc =  12              ;first line out of sinc ptr
+dat_end    =  14              ;ptr to last char of the buffer
+buf_end    =  16              ;pointer to the end of the buffer
+buf        =  18              ;pointer to the buffer
 
 ;       For binary comparations:
 
-by_read    equ  6               ;bytes read into buffer
+by_read    =  6               ;bytes read into buffer
 
 ;-----------------------------------------------------------------------;
 
 
-code    segment word
-code    ends
+if SEGSEL = S_CODE
+end if
 
-const   segment public word
-const   ends
+if SEGSEL = S_CONST
+end if
 
-data    segment word
-data    ends
-
-dg      group   code,const,data
+if SEGSEL = S_DATA
+end if
 
 
-        subttl  Constants Area
-        page
 
-const   segment public word
+
+if SEGSEL = S_CONST
 
 make    db      "MAUlloa/Microsoft/V10"
 rev     db      "2"
 
 ;----- CAREFULL WITH PRESERVING THE ORDER OF THE TABLE -----
-opt_tbl equ     $                       ;option table
+opt_tbl =     $                       ;option table
 
 flg_b   db      FALSE
 flg_c   db      FALSE
@@ -210,11 +199,11 @@ bend    db      0                       ;binary end of file flag, 0= none yet,
 base    dd      0                       ;base address of files for binary
                                         ; comparations
 
-bhead_flg db    false                   ;true if heading for binary comp.
+bhead_flg db    FALSE                   ;true if heading for binary comp.
                                         ; has been printed already.
 
 ;-----------------------------------------------------------
-bp_buf  equ     $                       ;binary compare difference template
+bp_buf  =     $                       ;binary compare difference template
 
 bp_buf1 db      8 dup(' ')              ;file address
         db      3 dup(' ')
@@ -223,51 +212,36 @@ bp_buf2 db      2 dup(' ')              ;byte of file 1
 bp_buf3 db      2 dup(' ')              ;byte of file 1
         db      CR,LF
 
-bp_buf_len equ  $ - bp_buf              ;length of template
+bp_buf_len =  $ - bp_buf              ;length of template
 ;-----------------------------------------------------------
 
-        EXTRN   vers_err:byte,opt_err:byte,opt_e:byte,crlf:byte,opt_err_len:byte
-        EXTRN   bhead_len:byte
-        EXTRN   found_err_pre:byte,found_err_pre_len:byte
-        EXTRN   found_err_post:byte,found_err_post_len:byte
-        EXTRN   read_err_pre:byte,read_err_pre_len:byte
-        EXTRN   read_err_post:byte,read_err_post_len:byte
-        EXTRN   file_err:byte,file_err_len:byte
-        EXTRN   bf1ne:byte,bf1ne_len:byte,bf2ne:byte,bf2ne_len:byte,bhead:byte
-        EXTRN   int_err:byte,int_err_len:byte,dif_err:byte,dif_err_len:byte
-        EXTRN   args_err:byte,args_err_len:byte,fname_sep:byte,fname_sep_len:byte
-        EXTRN   diff_sep:byte,diff_sep_len:byte
 
-const   ends
+end if
 
 
 
-        subttl  Data Area
-        page
 
-data    segment word
+if SEGSEL = S_DATA
 
-com_buf db      128 dup(?)      ;command line buffer
+com_buf db      128 dup (0)      ;command line buffer
 
 ;----- Buffer structures
-buf1    dw      11 dup(?)
-buf2    dw      11 dup(?)
+buf1    dw      11 dup (0)
+buf2    dw      11 dup (0)
 
 ; two extra for guard in case of need to insert a CR,LF pair
-b1      db      buf_size dup(?)
-end_b1  db      2 dup(?)
-b2      db      buf_size dup(?)
-end_b2  db      2 dup(?)
+b1      db      buf_size dup (0)
+end_b1  db      2 dup (0)
+b2      db      buf_size dup (0)
+end_b2  db      2 dup (0)
 
-data    ends
+end if
 
 
 
-        subttl  MAIN Routine
-        page
 
-code    segment
-assume  cs:dg,ds:nothing,es:nothing,ss:stack
+if SEGSEL = S_CODE
+ASSUME  cs:dg,ds:nothing,es:nothing,ss:STACK_
 
 start:
         jmp     short FCSTRT
@@ -286,27 +260,26 @@ FCSTRT:
 ;       int     21h
 ;       POP     DS
 
-        mov     ah,get_version
+        mov     ah,GET_VERSION
         int     21h
         cmp     al,2
         jge     vers_ok
-        mov     dx,offset dg:vers_err
-        mov     ah,std_con_string_output
+        mov     dx,vers_err
+        mov     ah,STD_CON_STRING_OUTPUT
         int     21h
         push    es                      ;bad vers, exit a la 1.x
         xor     ax,ax
         push    ax
 
-badvex  proc    far
-        ret
-badvex  endp
+badvex:
+        RETF
 
 
 vers_ok:
         push    cs
         pop     es
 
-assume  es:dg
+ASSUME  es:dg
 
 ;-----------------------------------------------------------------------;
 ;       Copy command line
@@ -317,35 +290,35 @@ assume  es:dg
         mov     cl,al
         xor     ch,ch
         inc     cx                      ;include the CR
-        mov     di,offset dg:com_buf
+        mov     di,com_buf
         cld
         rep     movsb
 
         push    cs
         pop     ds
 
-assume  ds:dg
+ASSUME  ds:dg
 
 
 
 ;-----------------------------------------------------------------------;
 ;       Initialize buffer structures
 
-        mov     bx,offset dg:buf1
-        mov     word ptr [bx].buf,offset dg:b1
-        mov     word ptr [bx].buf_end,offset dg:end_b1
-        mov     bx,offset dg:buf2
-        mov     word ptr [bx].buf,offset dg:b2
-        mov     word ptr [bx].buf_end,offset dg:end_b2
+        mov     bx,buf1
+        mov     word [bx+buf],b1
+        mov     word [bx+buf_end],end_b1
+        mov     bx,buf2
+        mov     word [bx+buf],b2
+        mov     word [bx+buf_end],end_b2
 
 
 ;-----------------------------------------------------------------------;
 ;       Process options
 
-        mov     ah,char_oper
+        mov     ah,CHAR_OPER
         mov     al,0
         int     21h                     ;get switch character
-        mov     si,offset dg:com_buf
+        mov     si,com_buf
 
 cont_opt:
         call    kill_bl
@@ -355,7 +328,7 @@ cont_opt:
         cld
         lodsb                           ;get option
         call    make_caps               ;capitalize option
-        mov     bx,offset dg:opt_tbl
+        mov     bx,opt_tbl
 
         cmp     al,'B'
         je      b_opt
@@ -377,8 +350,8 @@ cont_opt:
 bad_opt:                                ;a bad option:
         push    dx                      ; save switch character
         mov     [opt_e],al              ; option in error
-        mov     dx,offset dg:opt_err
-        mov     cl,opt_err_len
+        mov     dx,opt_err
+        mov     cl,[opt_err_len]
         call    prt_err                 ; print error message
         pop     dx
         jmp     short cont_opt          ; process rest of options
@@ -399,13 +372,13 @@ w_opt:
         mov     di,3
 
 opt_dispatch:
-        mov     byte ptr dg:[bx+di],TRUE        ;set the corresponding flag
+        mov     byte [bx+di],TRUE        ;set the corresponding flag
         jmp     short cont_opt
 
 
 bad_args:
-        mov     dx,offset dg:args_err
-        mov     cl,args_err_len
+        mov     dx,args_err
+        mov     cl,[args_err_len]
         jmp     an_err
 
 
@@ -417,16 +390,16 @@ get_file:
         dec     si                      ;adjust pointer
         call    find_nonb               ;find first non blank in com. buffer
         jc      bad_args                ;file (or files) missing
-        mov     byte ptr [di],0         ;nul terminate
+        mov     byte [di],0         ;nul terminate
         mov     dx,si                   ;pointer to file name
-        mov     bx,offset dg:buf1
-        mov     word ptr [bx].fname,dx          ;save pointer to file name
-        mov     word ptr [bx].fname_len,cx      ;file name length
-        mov     ah,open
+        mov     bx,buf1
+        mov     word [bx+fname],dx          ;save pointer to file name
+        mov     word [bx+fname_len],cx      ;file name length
+        mov     ah,OPEN
         mov     al,0                    ;open for reading
         int     21h
         jc      bad_file
-        mov     word ptr [bx].handle,ax         ;save the handle
+        mov     word [bx+handle],ax         ;save the handle
 
         mov     si,di
         inc     si                      ;point past the nul
@@ -434,38 +407,38 @@ get_file:
         jc      bad_args                ;a CR found: file name missing
         dec     si                      ;adjust pointer
         call    find_nonb
-        mov     byte ptr [di],0         ;nul terminate the file name
+        mov     byte [di],0         ;nul terminate the file name
         mov     dx,si
-        mov     bx,offset dg:buf2
-        mov     word ptr [bx].fname,dx          ;save pointer to file name
-        mov     word ptr [bx].fname_len,cx      ;file name length
-        mov     ah,open
+        mov     bx,buf2
+        mov     word [bx+fname],dx          ;save pointer to file name
+        mov     word [bx+fname_len],cx      ;file name length
+        mov     ah,OPEN
         mov     al,0                    ;open for reading
         int     21h
         jc      bad_file
-        mov     word ptr [bx].handle,ax         ;save the handle
+        mov     word [bx+handle],ax         ;save the handle
         jmp     short go_compare
 
 bad_file:
         cmp     ax,error_file_not_found
         je      sj01
-        mov     dx,offset dg:int_err
-        mov     cl,int_err_len
+        mov     dx,int_err
+        mov     cl,[int_err_len]
         jmp     short an_err
 sj01:
         push    cx                      ;save file name length
-        mov     dx,offset dg:found_err_pre
-        mov     cl,found_err_pre_len
+        mov     dx,found_err_pre
+        mov     cl,[found_err_pre_len]
         call    prt_err
         pop     cx
         mov     dx,si                   ;pointer to file name length
         call    prt_err
-        mov     dx,offset dg:found_err_post
-        mov     cl,found_err_post_len
+        mov     dx,found_err_post
+        mov     cl,[found_err_post_len]
 an_err:
         call    prt_err
         mov     al,-1                   ;return an error code
-        mov     ah,exit
+        mov     ah,EXIT
         int     21h
 
 
@@ -474,13 +447,11 @@ an_err:
 ;               CHECK COMPARE MODE
 
 go_compare:
-        cmp     [flg_b],true            ;do we do a binary comparation?
+        cmp     [flg_b],TRUE            ;do we do a binary comparation?
         je      bin_compare
         jmp     txt_compare
 
 
-        subttl  Binary Compare Routine
-        page
 
 ;-----------------------------------------------------------------------;
 ;       COMPARE BUFFERS IN BINARY MODE
@@ -489,20 +460,20 @@ bin_compare:
 
 ;----- Fill in the buffers
 
-        mov     bx,offset dg:buf1       ;pointer to buffer structure
-        mov     dx,word ptr[bx].buf     ;pointer to buffer
+        mov     bx,buf1       ;pointer to buffer structure
+        mov     dx,word[bx+buf]     ;pointer to buffer
         mov     si,dx                   ;save for latter comparation
         call    read_dat                ;read into buffer
         jc      bad_datj                ;an error
-        mov     word ptr[bx].by_read,AX    ;save ammount read
+        mov     word[bx+by_read],AX    ;save ammount read
         push    ax                      ;save for now
 
-        mov     bx,offset dg:buf2       ;pointer to buffer structure
-        mov     dx,word ptr[bx].buf     ;pointer to buffer
+        mov     bx,buf2       ;pointer to buffer structure
+        mov     dx,word[bx+buf]     ;pointer to buffer
         mov     di,dx                   ;save for comparation
         call    read_dat                ;read into buffer
 bad_datj: jc    bad_dat                 ;an error
-        mov     word ptr[bx].by_read,AX    ;save ammount read
+        mov     word[bx+by_read],AX    ;save ammount read
 
         pop     cx                      ;restore byte count of buffer1
         cmp     ax,cx                   ;compare byte counts
@@ -523,12 +494,12 @@ morein_b1:
 ;----- Compare data in buffers
 
 go_bcomp:
-        mov     ax,word ptr [base]      ;load base addrs. to AX,BX pair
-        mov     bx,word ptr [base+2]
+        mov     ax,word [base]      ;load base addrs. to AX,BX pair
+        mov     bx,word [base+2]
         add     bx,cx                   ;add to base num. of bytes to
         adc     ax,0                    ; compare.
-        mov     word ptr [base],ax      ;save total
-        mov     word ptr [base+2],bx
+        mov     word [base],ax      ;save total
+        mov     word [base+2],bx
 
 next_bcomp:
         cld
@@ -555,13 +526,13 @@ end_check:
         je      bnot_yet                ;no, read in more data
         cmp     [bend],1                ;yes, was it file 1?
         je      bf1_ended               ;yes, data left in file 2
-        mov     dx,offset dg:bf1ne
-        mov     cl,bf1ne_len
+        mov     dx,bf1ne
+        mov     cl,[bf1ne_len]
         jmp     short bend_mes
 
 bf1_ended:
-        mov     dx,offset dg:bf2ne
-        mov     cl,bf2ne_len
+        mov     dx,bf2ne
+        mov     cl,[bf2ne_len]
 
 bend_mes:
         xor     ch,ch
@@ -570,32 +541,30 @@ bend_mes:
 
 
 
-        subttl  Text Compare Routine
-        page
 
 ;-----------------------------------------------------------------------;
 ;               Fill in the buffers
 
 bad_dat:
-        mov     dx,offset dg:file_err
-        mov     cl,file_err_len
+        mov     dx,file_err
+        mov     cl,[file_err_len]
         jmp     an_err
 
 
 txt_compare:
 
-        mov     bx,offset dg:buf1
-        mov     dx,word ptr [bx].buf
-        mov     word ptr [bx].fst_nosinc,dx
-        mov     word ptr [bx].curr,dx
+        mov     bx,buf1
+        mov     dx,word [bx+buf]
+        mov     word [bx+fst_nosinc],dx
+        mov     word [bx+curr],dx
 
         call    fill_buffer
         jc      bad_dat
 
-        mov     bx,offset dg:buf2
-        mov     dx,word ptr [bx].buf
-        mov     word ptr [bx].fst_nosinc,dx
-        mov     word ptr [bx].curr,dx
+        mov     bx,buf2
+        mov     dx,word [bx+buf]
+        mov     word [bx+fst_nosinc],dx
+        mov     word [bx+curr],dx
 
         call    fill_buffer
         jc      bad_dat
@@ -609,21 +578,21 @@ another_line:
         jc      sj02                    ;a match
         jmp     no_match                ;no match, continue....
 sj02:
-        cmp     byte ptr[sinc],true     ;are we in SINC?
+        cmp     byte [sinc],TRUE     ;are we in SINC?
         je      sj04
         mov     ax,[mtch_cntr]
         or      ax,ax                   ;first line of a possible SINC?
         jnz     sj03
-        mov     bx,offset dg:buf1
-        mov     word ptr [bx].fst_sinc,si       ;yes, save curr line buffer 1
-        mov     bx,offset dg:buf2
-        mov     word ptr [bx].fst_sinc,di       ;save curr line buffer 2
+        mov     bx,buf1
+        mov     word [bx+fst_sinc],si       ;yes, save curr line buffer 1
+        mov     bx,buf2
+        mov     word [bx+fst_sinc],di       ;save curr line buffer 2
 sj03:
         inc     ax                      ;increment match counter
         mov     [mtch_cntr],ax          ;save number of matches
-        cmp     m_num,ax                ;enough lines matched for a SINC?
+        cmp     [m_num],ax                ;enough lines matched for a SINC?
         jne     sj04                    ;not yet, match some more
-        mov     [sinc],true             ;yes, flag we are now in sinc
+        mov     [sinc],TRUE             ;yes, flag we are now in sinc
         call    print_diff              ;print mismatched lines
 
 
@@ -632,18 +601,18 @@ sj03:
 ;       Advance current line pointer in both buffers
 
 sj04:
-        mov     bx,offset dg:buf1
+        mov     bx,buf1
         call    adv_b
         jnc     sj05
         jmp     no_more1
 sj05:
-        mov     word ptr[bx].curr,si
-        mov     bx,offset dg:buf2
+        mov     word[bx+curr],si
+        mov     bx,buf2
         call    adv_b
         jnc     sj051
         jmp     no_more2
 sj051:
-        mov     word ptr[bx].curr,si
+        mov     word[bx+curr],si
         jmp     another_line            ;continue matching
 
 
@@ -652,58 +621,58 @@ sj051:
 ;               Process a mismatch
 
 no_match:
-        cmp     [sinc],true             ;are we in SINC?
+        cmp     [sinc],TRUE             ;are we in SINC?
         jne     sj06
-        mov     [sinc],false            ;not any more....
-        mov     bx,offset dg:buf1
-        mov     word ptr [bx].fst_nosinc,si     ;save current lines
-        mov     word ptr [bx].lst_curr,si
-        mov     bx,offset dg:buf2
-        mov     word ptr [bx].fst_nosinc,di
-        mov     word ptr [bx].lst_curr,di
+        mov     [sinc],FALSE            ;not any more....
+        mov     bx,buf1
+        mov     word [bx+fst_nosinc],si     ;save current lines
+        mov     word [bx+lst_curr],si
+        mov     bx,buf2
+        mov     word [bx+fst_nosinc],di
+        mov     word [bx+lst_curr],di
 sj06:
         mov     [mtch_cntr],0           ;reset match counter
-        cmp     [mode],true
+        cmp     [mode],TRUE
         je      sj09
 
 ;----- MODE A -----
-        mov     bx,offset dg:buf2
+        mov     bx,buf2
         call    adv_b                   ;get next line in buffer (or file)
         jc      sj08                    ;no more lines in buffer
 sj07:
-        mov     word ptr [bx].curr,si
+        mov     word [bx+curr],si
         jmp     another_line
 sj08:
-        mov     [mode],true             ;change mode
-        mov     si,word ptr [bx].lst_curr
-        mov     word ptr [bx].curr,si
-        mov     bx,offset dg:buf1
-        mov     si,word ptr [bx].lst_curr
-        mov     word ptr [bx].curr,si
+        mov     [mode],TRUE             ;change mode
+        mov     si,word [bx+lst_curr]
+        mov     word [bx+curr],si
+        mov     bx,buf1
+        mov     si,word [bx+lst_curr]
+        mov     word [bx+curr],si
         call    adv_b                   ;get next line
         jc      no_more1                ;no more lines fit in buffer 1
-        mov     word ptr [bx].lst_curr,si
+        mov     word [bx+lst_curr],si
         jmp     short sj10
 
 ;----- MODE B -----
 sj09:
-        mov     bx,offset dg:buf1
+        mov     bx,buf1
         call    adv_b                   ;get next line in buffer (or file)
         jc      sj11                    ;no more lines in buffer
 sj10:
-        mov     word ptr [bx].curr,si
+        mov     word [bx+curr],si
         jmp     another_line
 
 sj11:
-        mov     [mode],false
-        mov     si,word ptr [bx].lst_curr
-        mov     word ptr [bx].curr,si
-        mov     bx,offset dg:buf2
-        mov     si,word ptr [bx].lst_curr
-        mov     word ptr [bx].curr,si
+        mov     [mode],FALSE
+        mov     si,word [bx+lst_curr]
+        mov     word [bx+curr],si
+        mov     bx,buf2
+        mov     si,word [bx+lst_curr]
+        mov     word [bx+curr],si
         call    adv_b                   ;get next line
         jc      no_more2                ;no more lines fit in buffer 2
-        mov     word ptr [bx].lst_curr,si
+        mov     word [bx+lst_curr],si
         jmp     sj07
 
 
@@ -716,20 +685,20 @@ no_more1:
         jz      xj1
         jmp     dif_files               ;no, difference was too big
 xj1:
-        cmp     [sinc],true             ;file1 ended, are we in SINC?
+        cmp     [sinc],TRUE             ;file1 ended, are we in SINC?
         je      xj3
         jmp     no_sinc
 xj3:
-        mov     bx,offset dg:buf2
+        mov     bx,buf2
         call    adv_b                   ;advance current line in buf2
         jnc     xj5
         jmp     go_quit                 ;file2 ended too, terminate prog.
 xj5:
 
 ;----- File 1 ended but NOT file 2
-        mov     bx,offset dg:buf1
+        mov     bx,buf1
         call    print_head
-        mov     bx,offset dg:buf2
+        mov     bx,buf2
         call    print_head
         call    print_all               ;print the rest of file2
         jmp     go_quit
@@ -740,31 +709,31 @@ no_more2:
         jz      xj2
         jmp     dif_files               ;no, difference was too big
 xj2:
-        cmp     [sinc],true             ;file1 ended, are we in SINC?
+        cmp     [sinc],TRUE             ;file1 ended, are we in SINC?
         je      xj4
         jmp     no_sinc
 xj4:
-        mov     bx,offset dg:buf1
+        mov     bx,buf1
         call    adv_b                   ;advance current line in buf2
         jnc     xj6
         jmp     go_quit                 ;file2 ended too, terminate prog.
 xj6:
 
 ;----- File 2 ended but NOT file 1
-        mov     bx,offset dg:buf1
+        mov     bx,buf1
         call    print_head
         call    print_all               ;print the rest of file1
-        mov     bx,offset dg:buf2
+        mov     bx,buf2
         call    print_head
         jmp     go_quit
 
 
 
 no_sinc:
-        mov     bx,offset dg:buf1
+        mov     bx,buf1
         call    print_head
         call    print_all
-        mov     bx,offset dg:buf2
+        mov     bx,buf2
         call    print_head
         call    print_all
         jmp     go_quit
@@ -772,18 +741,16 @@ no_sinc:
 
 
 dif_files:
-        mov     dx,offset dg:dif_err
-        mov     cl,dif_err_len
+        mov     dx,dif_err
+        mov     cl,[dif_err_len]
         jmp     an_err
 
 go_quit:
         mov     al,0
-        mov     ah,exit
+        mov     ah,EXIT
         int     21h
 
 
-        subttl  Subroutines: make caps
-        page
 
 ;-----------------------------------------------------------------------;
 ;       CAPIALIZES THE CHARACTER IN AL                                  ;
@@ -805,8 +772,6 @@ make_caps:
 sa1:    ret
 
 
-        subttl  Subroutines: kill_bl
-        page
 
 ;-----------------------------------------------------------------------;
 ;            Get rid of blanks in command line.                         ;
@@ -838,8 +803,6 @@ sb1:    lodsb                           ;get rid of blanks
 sb2:    ret
 
 
-        subttl  Subroutines: find_nonb
-        page
 
 ;-----------------------------------------------------------------------;
 ;       Find the first non-blank in a line                              ;
@@ -884,8 +847,6 @@ sc3:
         ret
 
 
-        subttl  Subroutines: prt_bdif
-        page
 
 ;-----------------------------------------------------------------------;
 ;       Print a binary difference                                       ;
@@ -901,19 +862,19 @@ sc3:
 ;       called from bin_compare                                         ;
 ;-----------------------------------------------------------------------;
 prt_bdif:
-        cmp     [bhead_flg],true        ;have we peinted head yet?
+        cmp     [bhead_flg],TRUE        ;have we peinted head yet?
         je      bhead_ok
-        mov     [bhead_flg],true        ;no, set flag
+        mov     [bhead_flg],TRUE        ;no, set flag
         push    ax                      ;print heading
-        mov     dx,offset dg:bhead
-        mov     cl,bhead_len
+        mov     dx,bhead
+        mov     cl,[bhead_len]
         xor     ch,ch
         call    prout
         pop     ax
 
 bhead_ok:
         mov     dx,di                   ;conver file address
-        mov     di,offset dg:bp_buf1
+        mov     di,bp_buf1
         push    ax
         mov     al,ah
         call    bin2hex
@@ -924,26 +885,24 @@ bhead_ok:
         mov     al,bl
         call    bin2hex
 
-        mov     di,offset dg:bp_buf2    ;convert byte from file 1
-        mov     al, byte ptr[si-1]
+        mov     di,bp_buf2    ;convert byte from file 1
+        mov     al, byte [si-1]
         call    bin2hex
 
-        mov     di,offset dg:bp_buf3    ;convert byte from file 2
+        mov     di,bp_buf3    ;convert byte from file 2
         push    si
         mov     si,dx
-        mov     al, byte ptr[si-1]
+        mov     al, byte [si-1]
         pop     si
         call    bin2hex
 
         mov     di,dx                   ;print result
-        mov     dx,offset dg:bp_buf
+        mov     dx,bp_buf
         mov     cx,bp_buf_len
         call    prout
         ret
 
 
-        subttl  Subroutines: bin2hex
-        page
 
 ;-----------------------------------------------------------------------;
 ;               Binary to ASCII hex conversion                          ;
@@ -980,8 +939,6 @@ put_hex:
         ret
 
 
-        subttl  Subroutines: go_match
-        page
 
 ;-----------------------------------------------------------------------;
 ;               Match current lines                                     ;
@@ -998,14 +955,14 @@ put_hex:
 ;       Called from txt_compare                                         ;
 ;-----------------------------------------------------------------------;
 go_match:
-        mov     bx,offset dg:buf1
-        mov     si,word ptr[bx].curr
+        mov     bx,buf1
+        mov     si,word[bx+curr]
         push    si
         mov     bp,si                   ;save line pointer
         call    find_eol
         mov     dx,cx                   ;save length of line
-        mov     bx,offset dg:buf2
-        mov     si,word ptr[bx].curr
+        mov     bx,buf2
+        mov     si,word[bx+curr]
         push    si
         mov     di,si
         call    find_eol
@@ -1019,9 +976,9 @@ go_match:
         pop     cx                      ;restore the length
         jz      sd4                     ;they match
 sd1:
-        cmp     [flg_w],true            ;do we ignore multiple whites?
+        cmp     [flg_w],TRUE            ;do we ignore multiple whites?
         je      ib_compare              ;yes, go compare
-        cmp     [flg_c],true            ;do we ignore case differences?
+        cmp     [flg_c],TRUE            ;do we ignore case differences?
         je      ic_compare              ;yes, go compare
 sd3:
         clc                             ;they don't match
@@ -1034,7 +991,6 @@ sd5:
         ret
 
 
-        page
 
 ;-----------------------------------------------------------------------;
 ;       Compare ignoring case differences.
@@ -1045,10 +1001,10 @@ ic_compare:
         push    si                      ;re-save pointers
         push    di
 sd8:
-        mov     al,byte ptr [si]        ;get next char. of first line
+        mov     al,byte [si]        ;get next char. of first line
         call    make_caps
         mov     bl,al                   ;save capitalized char
-        mov     al,byte ptr [di]        ;get next chra. of second line
+        mov     al,byte [di]        ;get next chra. of second line
         call    make_caps
         cmp     al,bl
         jne     sd3                     ;they do not match....
@@ -1058,31 +1014,30 @@ sd8:
         jmp     short sd4               ;they match
 
 
-        page
 
 ;-----------------------------------------------------------------------;
 ;       Compare compressing whites and ignoring case differences if
 ; desired too.
 
 ib_compare:
-        mov     [ib_first1],true        ;we start by the first char in the
-        mov     [ib_first2],true        ; in the lines.
+        mov     [ib_first1],TRUE        ;we start by the first char in the
+        mov     [ib_first2],TRUE        ; in the lines.
         pop     di                      ;get pointer to lines
         pop     si
         push    si                      ;re-save pointers
         push    di
 sd9:
-        mov     al,byte ptr [si]        ;get next char. of first line
+        mov     al,byte [si]        ;get next char. of first line
         call    isa_white               ;is it a white?
         jnc     sd12                    ;no, compare....
 sd10:
-        mov     al,byte ptr [si+1]      ;peek to next,
+        mov     al,byte [si+1]      ;peek to next,
         call    isa_white               ; it is a white too?
         jnc     sd11
         inc     si                      ; yes,
         jmp     short sd10              ; compress all whites to a blank
 sd11:
-        cmp     [ib_first1],true        ;is this the first char. of the line?
+        cmp     [ib_first1],TRUE        ;is this the first char. of the line?
         jne     sd111                   ;no, it stays a white
         inc     si                      ;ignore the white
         jmp     short sd12
@@ -1095,26 +1050,26 @@ sd112:
         mov     al,' '                  ;no more whites found
 
 sd12:
-        cmp     [ib_first1],true        ;is this the first char. of the line?
+        cmp     [ib_first1],TRUE        ;is this the first char. of the line?
         jne     sd121                   ;no, continue
-        mov     [ib_first1],false       ;yes, reset the flag
+        mov     [ib_first1],FALSE       ;yes, reset the flag
 sd121:
-        cmp     [flg_c],true            ;do we ignore case?
+        cmp     [flg_c],TRUE            ;do we ignore case?
         jne     sd122                   ;no,....
         call    make_caps
 sd122:
         mov     bl,al                   ;save char
-        mov     al,byte ptr [di]        ;get next chra. of second line
+        mov     al,byte [di]        ;get next chra. of second line
         call    isa_white
         jnc     sd15
 sd13:
-        mov     al,byte ptr [di+1]      ;peek to next as before
+        mov     al,byte [di+1]      ;peek to next as before
         call    isa_white
         jnc     sd14
         inc     di
         jmp     short sd13
 sd14:
-        cmp     [ib_first2],true        ;is this the first char. of the line?
+        cmp     [ib_first2],TRUE        ;is this the first char. of the line?
         jne     sd141                   ;no, it stays a white
         inc     di                      ;ignore the white
         jmp     short sd15
@@ -1127,11 +1082,11 @@ sd142:
         mov     al,' '
 
 sd15:
-        cmp     [ib_first2],true        ;is this the first char. of the line?
+        cmp     [ib_first2],TRUE        ;is this the first char. of the line?
         jne     sd151                   ;no, continue
-        mov     [ib_first2],false       ;yes, reset the flag
+        mov     [ib_first2],FALSE       ;yes, reset the flag
 sd151:
-        cmp     [flg_c],true            ;do we ignore case?
+        cmp     [flg_c],TRUE            ;do we ignore case?
         jne     sd152                   ;no,....
         call    make_caps
 sd152:
@@ -1160,7 +1115,6 @@ sdx1:
         ret
 
 
-        page
 
 ;-----------------------------------------------------------------------;
 find_eol:
@@ -1176,8 +1130,6 @@ sd7:
         ret
 
 
-        subttl  Subroutines: adv_b
-        page
 
 ;-----------------------------------------------------------------------;
 ;               Get the next line in the buffer                         ;
@@ -1213,8 +1165,6 @@ se0:
         ret
 
 
-        subttl  Subroutines: get_nextl
-        page
 
 ;-----------------------------------------------------------------------;
 ;               Returns the next line in a buffer                       ;
@@ -1234,9 +1184,9 @@ se0:
 ;       Called from adv_b and print_diff (in the case of get_next)      ;
 ;-----------------------------------------------------------------------;
 get_nextl:
-        mov     si,word ptr [bx].curr
+        mov     si,word [bx+curr]
 get_next:
-        mov     cx,word ptr [bx].dat_end
+        mov     cx,word [bx+dat_end]
         sub     cx,si
         mov     di,si
         mov     al,LF
@@ -1252,8 +1202,6 @@ se2:
         ret
 
 
-        subttl  Subroutines: refill
-        page
 
 ;-----------------------------------------------------------------------;
 ;               Refill a buffer                                         ;
@@ -1296,15 +1244,15 @@ refill:
 
 ;----- Calculate ammount to move & pointer relocation factor.
 
-        cmp     [sinc],true
+        cmp     [sinc],TRUE
         jne     sf1
-        mov     si,word ptr [bx].curr
+        mov     si,word [bx+curr]
         jmp     short sf2
 sf1:
-        mov     si,word ptr [bx].fst_nosinc
+        mov     si,word [bx+fst_nosinc]
 sf2:
-        mov     di,word ptr [bx].buf
-        mov     cx,word ptr [bx].dat_end
+        mov     di,word [bx+buf]
+        mov     cx,word [bx+dat_end]
 
         mov     dx,si                   ;calculate pointer relocation factor
         sub     dx,di                   ;DX = factor
@@ -1319,14 +1267,14 @@ sf2:
 
 ;----- Relocate pointers
 
-        sub     word ptr [bx].curr,dx
-        sub     word ptr [bx].lst_curr,dx
-        sub     word ptr [bx].fst_sinc,dx
-        sub     word ptr [bx].fst_nosinc,dx
-        sub     word ptr [bx].dat_end,dx
+        sub     word [bx+curr],dx
+        sub     word [bx+lst_curr],dx
+        sub     word [bx+fst_sinc],dx
+        sub     word [bx+fst_nosinc],dx
+        sub     word [bx+dat_end],dx
 
 sf3:
-        mov     dx,word ptr [bx].dat_end
+        mov     dx,word [bx+dat_end]
         inc     dx                              ;empty part starts here
 
 ;----- fill the buffer
@@ -1335,8 +1283,6 @@ sf3:
         ret
 
 
-        subttl  Subroutines: fill_buffer
-        page
 
 ;-----------------------------------------------------------------------;
 ;               Fill the data buffers                                   ;
@@ -1376,7 +1322,7 @@ fill_buffer:
         neg     dx
         mov     cx,-1
         mov     al,1                    ;seek from current position
-        mov     ah,lseek
+        mov     ah,LSEEK
         int     21h
         jc      bad_read                ;error mesage (BX already in stack)
 
@@ -1386,20 +1332,20 @@ sg1:
         jz      no_room
 
         pop     bx
-        mov     word ptr [bx].dat_end,bp
+        mov     word [bx+dat_end],bp
         clc
         ret
 
 bad_read:
-        mov     dx,offset dg:read_err_pre
-        mov     cl,read_err_pre_len
+        mov     dx,read_err_pre
+        mov     cl,[read_err_pre_len]
         call    prt_err                 ;print error message
         pop     bx
-        mov     dx,word ptr[bx].fname
-        mov     cx,word ptr[bx].fname_len
+        mov     dx,word[bx+fname]
+        mov     cx,word[bx+fname_len]
         call    prt_err                 ;print file name
-        mov     dx,offset dg:read_err_post
-        mov     cl,read_err_post_len
+        mov     dx,read_err_post
+        mov     cl,[read_err_post_len]
         jmp     an_err
 
 no_room:
@@ -1414,8 +1360,6 @@ sg2:
         ret
 
 
-        subttl  Subroutines: read_dat
-        page
 
 ;-----------------------------------------------------------------------;
 ;                                                                       ;
@@ -1432,16 +1376,14 @@ sg2:
 ;       Called from fill_buffer, print_all and bin_compare              ;
 ;-----------------------------------------------------------------------;
 read_dat:
-        mov     cx,word ptr [bx].buf_end
-        mov     bx,word ptr [bx].handle
+        mov     cx,word [bx+buf_end]
+        mov     bx,word [bx+handle]
         sub     cx,dx                   ;ammount to read to buff1
-        mov     ah,read
+        mov     ah,READ
         int     21h
         ret
 
 
-        subttl  Subroutines: nor_buf
-        page
 
 ;-----------------------------------------------------------------------;
 ;       Normalize buffers so they do not have partially full            ;
@@ -1474,19 +1416,19 @@ nor_buf:
         dec     di                      ;points to last char in buffer
         cmp     ax,cx                   ;were all chars. requested read?
         je      sm7                     ;yes, buffer full
-        cmp     byte ptr[di],1ah        ;terminated with a ^Z ?
+        cmp     byte [di],1ah        ;terminated with a ^Z ?
         jne     sm1
         dec     di                      ;point to previous character
         dec     ax                      ;decrement character count
-sm1:    cmp     byte ptr[di],lf         ;is last char a LF?
+sm1:    cmp     byte [di],LF         ;is last char a LF?
         je      sm6
-        cmp     byte ptr[di],cr         ;is it a CR then?
+        cmp     byte [di],CR         ;is it a CR then?
         je      sm5
         add     ax,2                    ;two more chars in buffer
         inc     di
-sm2:    mov     byte ptr[di],cr
+sm2:    mov     byte [di],CR
 sm3:    inc     di
-        mov     byte ptr[di],lf
+        mov     byte [di],LF
 sm4:    mov     cx,ax                   ;new character count
         mov     dx,di                   ;pointer to last char
         xor     ax,ax                   ;seek = 0
@@ -1497,7 +1439,7 @@ sm5:
         jmp     short   sm3
 
 sm6:
-        cmp     byte ptr[di-1],cr       ;is previous char a CR?
+        cmp     byte [di-1],CR       ;is previous char a CR?
         je      sm4
         inc     ax                      ;no, one more char in buffer
         jmp     short sm2
@@ -1522,8 +1464,6 @@ bad_line:                               ;full line not possible, return
 
 
 
-        subttl  Subroutines: print_diff
-        page
 
 ;-----------------------------------------------------------------------;
 ;               print the difference between buffers                    ;
@@ -1538,31 +1478,29 @@ bad_line:                               ;full line not possible, return
 ;       Called from txt_compare                                         ;
 ;-----------------------------------------------------------------------;
 print_diff:
-        mov     bx,offset dg:buf1
+        mov     bx,buf1
         call    print_head              ;print heading for file 1
-        mov     dx,word ptr [bx].fst_nosinc
-        mov     si,word ptr [bx].fst_sinc
+        mov     dx,word [bx+fst_nosinc]
+        mov     si,word [bx+fst_sinc]
         call    get_next                ;get pointer to next line
         mov     cx,si
         sub     cx,dx                   ;get character count
         call    prout
-        mov     bx,offset dg:buf2
+        mov     bx,buf2
         call    print_head              ;print heading for file 1
-        mov     dx,word ptr [bx].fst_nosinc
-        mov     si,word ptr [bx].fst_sinc
+        mov     dx,word [bx+fst_nosinc]
+        mov     si,word [bx+fst_sinc]
         call    get_next                ;get pointer to next line
         mov     cx,si
         sub     cx,dx                   ;get character count
         call    prout
-        mov     dx,offset dg:diff_sep
-        mov     cl,diff_sep_len
+        mov     dx,diff_sep
+        mov     cl,[diff_sep_len]
         xor     ch,ch
         call    prout                   ;print difference separator
         ret
 
 
-        subttl  Subroutines: print_head
-        page
 
 ;-----------------------------------------------------------------------;
 ;               Print heading for difference                            ;
@@ -1576,21 +1514,19 @@ print_diff:
 ;       Called from txt_compare and print_diff                          ;
 ;-----------------------------------------------------------------------;
 print_head:
-        mov     dx,offset dg:fname_sep
-        mov     cl,fname_sep_len
+        mov     dx,fname_sep
+        mov     cl,[fname_sep_len]
         xor     ch,ch
         call    prout
-        mov     dx,word ptr [bx].fname
-        mov     cx,word ptr [bx].fname_len
+        mov     dx,word [bx+fname]
+        mov     cx,word [bx+fname_len]
         call    prout
-        mov     dx,offset dg:CRLF
+        mov     dx,crlf
         mov     cx,2
         call    prout
         ret
 
 
-        subttl  Subroutines: print_all
-        page
 
 ;-----------------------------------------------------------------------;
 ;               Print the rest of a file                                ;
@@ -1608,14 +1544,14 @@ print_head:
 ;       Called from txt_compare                                         ;
 ;-----------------------------------------------------------------------;
 print_all:
-        cmp     [sinc],true             ;are we in SINC?
+        cmp     [sinc],TRUE             ;are we in SINC?
         jne     so1
-        mov     dx,word ptr [bx].curr
+        mov     dx,word [bx+curr]
         jmp     short so2
 so1:
-        mov     dx,word ptr [bx].fst_nosinc
+        mov     dx,word [bx+fst_nosinc]
 so2:
-        mov     cx,word ptr [bx].dat_end
+        mov     cx,word [bx+dat_end]
         inc     cx
 
 prt_again:
@@ -1624,7 +1560,7 @@ prt_again:
 
 ;----- Read more data to the buffer
         push    bx                      ;save pointer to buffer struct
-        mov     dx,word ptr [bx].buf
+        mov     dx,word [bx+buf]
         call    read_dat
         jnc     so3
         jmp     bad_read                ;print error (BX in stack)
@@ -1635,12 +1571,10 @@ so3:
         ret
 so4:
         pop     bx
-        mov     cx,word ptr [bx].buf_end
+        mov     cx,word [bx+buf_end]
         jmp     short prt_again         ;print next buffer full
 
 
-        subttl  Subroutines: prout and prt_err
-        page
 
 ;-----------------------------------------------------------------------;
 ;                                                                       ;
@@ -1648,7 +1582,7 @@ so4:
 prout:
         push    bx
         mov     bx,stdout
-        mov     ah,write
+        mov     ah,WRITE
         int     21h
         pop     bx
         ret
@@ -1662,22 +1596,20 @@ prt_err:
         xor     ch,ch
         jcxz    retpbx
         mov     bx,stderr
-        mov     ah,write
+        mov     ah,WRITE
         int     21h
 retpbx:
         pop     bx
         ret
 
-code    ends
-
-        page
+end if
 
 
-stack   segment stack
 
-        dw      128 dup(?)
+if SEGSEL = S_STACK
 
-stack   ends
+        dw      128 dup (0)
+
+end if
 
 
-        end     start

@@ -22,7 +22,7 @@ conversion kept as comments, and report every reference to a variable of the
 data segment made while DS is assumed to be pointing elsewhere.  Each one is a
 place where MASM put an override and the conversion did not.
 
-Two things that look like findings and are not:
+Three things that look like findings and are not:
 
   * "context DS" is a macro, PUSH SS / POP DS, so it puts the data segment
     back into DS even though no ASSUME says so.
@@ -37,6 +37,14 @@ Two things that look like findings and are not:
     was during the load.  The load itself is fine.  Judging by the loads
     rather than by the directives turns 1 finding into 28, all but one of them
     imaginary; MASM believes the directives, and so does this.
+
+  * an override the source wrote itself.  FIND.ASM says "assume ds:nothing"
+    at the top and then writes "mov cx,ds:file_name_len" thirteen times.  The
+    ASSUME is stale, but MASM emitted the DS: prefix the line asked for and
+    FASM emits the same one, so there is nothing the conversion could have
+    changed; FIND's output is Microsoft's byte for byte.  Those are listed as
+    notes under the findings, because the disagreement is worth seeing and is
+    not a fault.
 
 One thing that was a finding and did not look like one: this split its input
 on CRLF, and three of the modules -- MSCODE.ASM, EXEC.ASM, DOSIO.ASM -- have
@@ -214,14 +222,21 @@ def command_scan(path, where):
             seg, want = where[label]
             reaches = lambda r: assume[r] in (want, seg)
             if prefix:
+                # An override the source wrote itself is the programmer's
+                # assertion about where the register points, and MASM emitted
+                # the same prefix FASM does, so the conversion cannot have
+                # changed its meaning.  Worth saying where the ASSUME
+                # disagrees -- FIND.ASM overrides DS thirteen times under
+                # "assume ds:nothing" -- but it is a note, not a finding.
                 if not reaches(prefix):
                     findings.append((n, label, want, "%s: is %s" %
-                                     (prefix, assume[prefix] or "NOTHING"), line))
+                                     (prefix, assume[prefix] or "NOTHING"),
+                                     line, True))
             elif not reaches("DS"):
                 reach = [r for r in ("DS", "SS", "ES", "CS") if reaches(r)]
                 findings.append((n, label, want,
                                  "MASM would use %s:" % reach[0] if reach
-                                 else "nothing reaches it", line))
+                                 else "nothing reaches it", line, False))
     return findings
 
 
@@ -322,18 +337,26 @@ def utility_labels(src, mods, segs, want):
 
 
 def report(title, mods, found, labels, what):
-    total = sum(len(f) for f in found.values())
+    """Findings, then the notes: the source's own overrides that its ASSUME
+    does not agree with, which the conversion kept as written."""
+    total = sum(sum(0 if f[5] else 1 for f in fs) for fs in found.values())
+    notes = sum(sum(1 if f[5] else 0 for f in fs) for fs in found.values())
     print("=== %s" % title)
-    for name in mods:
-        if found.get(name):
-            print("%s:" % name)
-            for finding in found[name]:
-                n, label, want, why = finding[0], finding[1], finding[2], finding[3]
-                print("  %5d  %-16s %-10s %-22s %s"
-                      % (n, label, want, why, finding[4].strip()))
-    print("%d module%s, %d %s, %d reference%s missing a segment override\n"
+    for note in (False, True):
+        if note and notes:
+            print("  the source overrides a register its ASSUME says points "
+                  "elsewhere, kept as written:")
+        for name in mods:
+            rows = [f for f in found.get(name, []) if f[5] == note]
+            if rows:
+                print("%s:" % name)
+                for n, label, want, why, text, _ in rows:
+                    print("  %5d  %-16s %-10s %-22s %s"
+                          % (n, label, want, why, text.strip()))
+    print("%d module%s, %d %s, %d reference%s missing a segment override%s\n"
           % (len(mods), "" if len(mods) == 1 else "s", labels, what,
-             total, "" if total == 1 else "s"))
+             total, "" if total == 1 else "s",
+             ", %d noted" % notes if notes else ""))
     return total
 
 
@@ -342,7 +365,7 @@ def main():
     mods = modules(SRC)
     found = {n: scan(os.path.join(SRC, n), labels) for n in mods}
     total = report("the kernel, against the data segment", mods,
-                   {n: [(a, b, "DOSGROUP", "DS is NOTHING", c)
+                   {n: [(a, b, "DOSGROUP", "DS is NOTHING", c, False)
                         for a, b, c in f] for n, f in found.items()},
                    len(labels), "data labels")
 
@@ -357,7 +380,12 @@ def main():
         mods = utility_modules(SRC, link)
         segs = utility_segments(SRC, link)
         spelled = utility_segment_spellings(SRC, link)
-        if spelled:
+        # An MZ link file whose segments are declared one for one stands its
+        # segments apart; one that declares a single segment holding all of
+        # them has put them in a group, as SORT's DG, and the group is what
+        # has to be reached.  Both are .EXEs, so the format alone does not
+        # say which.
+        if spelled and all(seg in spelled for seg in segs):
             want, title = spelled, "%s, its segments apart" % link
         else:
             names = assumed_names(SRC, mods)

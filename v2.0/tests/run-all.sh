@@ -62,6 +62,17 @@ fi
 # compares it with what Microsoft's EXE2BIN makes of the same file.
 ./tests/exe2bin.sh || fail=1
 
+# Searches one file five ways with our FIND and with Microsoft's, and compares
+# the two transcripts.
+./tests/find.sh || fail=1
+
+# Sorts one file three ways with our SORT and with Microsoft's, and compares.
+./tests/sort.sh || fail=1
+
+# Compares files four ways with our FC and with Microsoft's, and compares what
+# the two of them said.
+./tests/fc.sh || fail=1
+
 if [ $fail -eq 0 ]; then
     printf '\n======== all passed\n'
 else

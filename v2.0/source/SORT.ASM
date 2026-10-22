@@ -1,4 +1,3 @@
-TITLE   SORT FILTER FOR MS-DOS
 ;
 ; Sort  /R /+n
 ; /R -> reverse sort
@@ -12,55 +11,49 @@ TITLE   SORT FILTER FOR MS-DOS
 ;                       Fix CR-LF line termination bug
 ;                       Comment the Damn source
 ;
-FALSE   EQU     0
-TRUE    EQU     NOT FALSE
+false   =     0
+true    =     -1
 
 ;NOTE:	"internat" must be false if KANJI version
-internat	equ	true
+internat	=	true
 ;NOTE:	see above
 
-.xlist
-.xcref
-        INCLUDE DOSSYM.ASM
-.cref
-.list
 
-sys     MACRO   name                    ; system call macro
+macro sys name                    ; system call macro
+{
         MOV     AH,name
         INT     21h
-        ENDM
-save    MACRO   reglist                 ; push those registers
-IRP reg,<reglist>
+}
+macro save [reg] ; push those registers
+{
+forward
         PUSH    reg
-ENDM
-ENDM
-restore MACRO   reglist                 ; pop those registers
-IRP reg,<reglist>
+}
+macro restore_ [reg] ; pop those registers
+{
+forward
         POP     reg
-ENDM
-ENDM
+}
 
-MAXREC  EQU     256                     ; MAXIMUM NUL RECORD SIZE
+MAXREC  =     256                     ; MAXIMUM NUL RECORD SIZE
 
-SPACE   EQU     0                       ; Offset zero in the allocated block
-BUFFER  EQU     MAXREC                  ; Offset MAXREC in the allocated block
-
-SUBTTL  Segments used in load order
+SPACE   =     0                       ; Offset zero in the allocated block
+BUFFER  =     MAXREC                  ; Offset MAXREC in the allocated block
 
 
-CODE    SEGMENT
-CODE    ENDS
 
-CONST   SEGMENT PUBLIC BYTE
-CONST   ENDS
+if SEGSEL = S_CODE
+end if
 
-CSTACK  SEGMENT STACK
+if SEGSEL = S_CONST
+end if
+
+if SEGSEL = S_CSTACK
         DB 128 DUP (0)                  ; initial stack to be clear
-CSTACK  ENDS
+end if
 
-DG      GROUP   CODE,CONST,CSTACK
 
-CODE    SEGMENT
+if SEGSEL = S_CODE
 ASSUME  CS:DG,DS:NOTHING,ES:NOTHING,SS:CSTACK
 
 COLUMN  DW      0                       ; COLUMN TO USE FOR KEY + 1
@@ -74,22 +67,21 @@ SORT:
         XCHG    AH,AL                   ; Turn it around to AH.AL
         CMP     AX,200H                 ; Version 2.00 only
         JAE     OKDOS                   ; Success
-        MOV     DX,OFFSET DG:BADVER     ; Get error message
+        MOV     DX,BADVER     ; Get error message
         PUSH    CS                      ; Get DS addressability
         POP     DS
         sys     STD_CON_STRING_OUTPUT   ; Send to STDOUT
         PUSH    ES                      ; long segment
-        PUSH    COLUMN                  ; offset zero
-LONG_RET    PROC    FAR
-        RET                             ; long return to OS
-LONG_RET    ENDP
+        PUSH    word [CS:COLUMN]                  ; offset zero
+LONG_RET:
+        RETF                             ; long return to OS
 ;
 ; get proper switch character
 ;
 OKDOS:
         MOV     AL,0                    ; Get current switch character
         sys     CHAR_OPER
-        MOV     SWITCH,DL
+        MOV     [CS:SWITCH],DL
 ;
 ; parse command line
 ;
@@ -100,7 +92,7 @@ OKDOS:
         MOV     CL,AL                   ; CX = length of command line
 SWITCH_LOOP:
         CALL    GET_CHAR                ; get a character
-        CMP     AL,SWITCH               ; beginning of switch?
+        CMP     AL,[CS:SWITCH]               ; beginning of switch?
         JNZ     SWITCH_LOOP             ; No, get next character
         CALL    GET_CHAR                ; get 1st char of switch
         CMP     AL,'+'                  ; Column to sort?
@@ -108,10 +100,10 @@ SWITCH_LOOP:
         OR      AL,20h                  ; convert to lower case
         CMP     AL,'r'                  ; Reverse sort?
         JNZ     SWITCH_LOOP             ; No, get next switch
-        MOV     CS:CODE_PATCH,72h       ; sleaze JAE into JB
+        MOV     [CS:CODE_PATCH],72h       ; sleaze JAE into JB
         JMP     SWITCH_LOOP             ; get next switch
 SWITCH_NUMBER:
-        MOV     COLUMN,0                ; start off at 0
+        MOV     [CS:COLUMN],0                ; start off at 0
 SWITCH_NEXT_NUMBER:
         CALL    GET_CHAR                ; get supposed digit
         SUB     AL,'0'                  ; convert to number
@@ -121,9 +113,9 @@ SWITCH_NEXT_NUMBER:
         CBW                             ; make it a full word
         MOV     BX,AX                   ; save byte away
         MOV     AX,10                   ; decimal number system
-        MUL     COLUMN                  ; take previous result
+        MUL     [CS:COLUMN]                  ; take previous result
         ADD     AX,BX                   ; add in low order digit
-        MOV     COLUMN,AX               ; save away value
+        MOV     [CS:COLUMN],AX               ; save away value
         JMP     SWITCH_NEXT_NUMBER      ; get next character
 GET_CHAR:
         JCXZ    END_GET                 ; End of line
@@ -136,10 +128,10 @@ END_GET:
 ; set up column for proper sort offset
 ;
 END_SWITCH:
-        ADD     COLUMN,2
-        CMP     COLUMN,2
+        ADD     [CS:COLUMN],2
+        CMP     [CS:COLUMN],2
         JZ      GOT_COL
-        DEC     COLUMN
+        DEC     [CS:COLUMN]
 
 ;
 ; Get sorting area, no more than 64K
@@ -182,7 +174,7 @@ SORTL:
         JNZ     SORTL                   ; there were chars read. go read again
         JMP     SHORT SIZOK             ; trim last ^Z terminated record
 SIZERR:
-        MOV     SI,OFFSET DG:ERRMSG     ; not enough memory error
+        MOV     SI,ERRMSG     ; not enough memory error
 ERROR_EXIT:
         PUSH    CS                      ; DS addressability
         POP     DS
@@ -209,15 +201,15 @@ SIZOK:
 NoBack:
         SUB     BX,CX                   ; sub from endpointer the number left
         SUB     BX,2                    ; Hope for a CR LF at end
-        CMP     WORD PTR [BX],0A0Dh     ; Was there one there?
+        CMP     word [BX],0A0Dh     ; Was there one there?
         JZ      GOTEND                  ; yep, here is the end
         ADD     BX,2                    ; nope, bump back to SCASB spot
-        CMP     BYTE PTR [BX],AL        ; Was there ^Z there?
+        CMP     byte [BX],AL        ; Was there ^Z there?
         JZ      GOTEND                  ; yep, chop it
         INC     BX                      ; Nope, skip last char
 GOTEND:
         MOV     BP,BX                   ; BP = filesize-2(CRLF)+temp buffer+2
-        MOV     WORD PTR DS:[BP],0      ; 0 at end of the file
+        MOV     word [DS:BP],0      ; 0 at end of the file
 ;
 ;  We now turn the entire buffer into a linked list of chains by
 ;  replacing CRLFs with the length of the following line (with 2 for CRLF)
@@ -232,21 +224,21 @@ REPLACE_LOOP:
 REPLACE_SCAN:
         REPNZ   SCASB                   ; look for CR
         JNZ     REPLACE_SKIP            ; count exhausted
-        CMP     BYTE PTR [DI],10        ; LF there?
+        CMP     byte [DI],10        ; LF there?
         JNZ     REPLACE_SCAN            ; nope, continue scanning
 REPLACE_SKIP:
         MOV     AX,DI                   ; AX to point after CR
         DEC     AX                      ; AX to point to CR
-        save    <AX>                    ; save pointer
+        save    AX                    ; save pointer
         SUB     AX,BX                   ; AX is length of line found
         MOV     [BX],AX                 ; stuff it in previous link
-        restore <BX>                    ; get pointer to next
+        restore_ BX                    ; get pointer to next
         INC     DI                      ; skip LF???
         JCXZ    END_REPLACE_LOOP        ; no more to scan -> go sort
         JMP     REPLACE_LOOP            ; look for next
 
 END_REPLACE_LOOP:
-        MOV     WORD PTR [BX],0         ; terminate file with nul
+        MOV     word [BX],0         ; terminate file with nul
         LEA     BP,[BX+2]               ; remember the null line at end
         MOV     DI,BUFFER               ; DI is start of unsorted section
 
@@ -256,7 +248,7 @@ END_REPLACE_LOOP:
 OUTER_SORT_LOOP:
         MOV     BX,DI                   ; BX is start of unsorted section
         MOV     SI,BX                   ; SI is scanning place link
-        CMP     WORD PTR [BX],0         ; are we at the end of the buffer?
+        CMP     word [BX],0         ; are we at the end of the buffer?
         JNZ     INNER_SORT_LOOP         ; No, do inner process
         JMP     END_OUTER_SORT_LOOP     ; yes, go dump out
 
@@ -269,15 +261,15 @@ INNER_SORT_LOOP:
         MOV     AX,[SI]                 ; get length of comparison guy
         OR      AX,AX                   ; test for end of buffer
         JZ      END_INNER_SORT_LOOP     ; if zero then figure out insertion
-        save    <SI,DI>                 ; save SI,DI
+        save    SI,DI                 ; save SI,DI
         MOV     DI,BX                   ; DI = pointer to tester link
-        SUB     AX,COLUMN               ; adjust length for column
+        SUB     AX,[CS:COLUMN]               ; adjust length for column
         JA      AXOK                    ; more chars in tester than column?
         MOV     SI,SPACE                ; point SI to blank area
         MOV     AX,MAXREC               ; make AX be max length
 AXOK:
         MOV     DX,[DI]                 ; get length of best guy
-        SUB     DX,COLUMN               ; adjust length for column
+        SUB     DX,[CS:COLUMN]               ; adjust length for column
         JA      DXOK                    ; there are more chars after column
         MOV     DI,SPACE                ; point air to a space
         MOV     DX,MAXREC               ; really big record
@@ -287,34 +279,34 @@ DXOK:
         JB      SMALL                   ; nope, leace CX alone
         MOV     CX,DX                   ; DX is shorter, put length in CX
 SMALL:
-        ADD     DI,COLUMN               ; offset into record
-        ADD     SI,COLUMN               ; offset into other record
+        ADD     DI,[CS:COLUMN]               ; offset into record
+        ADD     SI,[CS:COLUMN]               ; offset into other record
 if	not	internat
         REPZ    CMPSB                   ; compare every one
-	endif
+	end if
 if	internat
 	push	bx
 	push	ax
-	mov	bx,offset dg:table
+	mov	bx,table
 tloop:	lodsb
-	xlat	byte ptr cs:[bx]
+	xlat	byte [CS:bx]
 	mov	ah,al
-	mov	al,es:[di]
+	mov	al,[ES:di]
 	inc	di
-	xlat	byte ptr cs:[bx]
+	xlat	byte [CS:bx]
 	cmp	ah,al
 	loopz	tloop
 	pop	ax
 	pop	bx
-	endif
-        restore <DI,SI>                 ; get head pointers back
+	end if
+        restore_ DI,SI                 ; get head pointers back
         JNZ     TESTED_NOT_EQUAL        ; didn't exhaust counter, conditions set
         CMP     AX,DX                   ; check string lengths
 TESTED_NOT_EQUAL:
 ;
 ; note! jae is patched to a jbe if file is to be sorted in reverse!
 ;
-CODE_PATCH LABEL BYTE
+label CODE_PATCH byte
         JAE     INNER_SORT_LOOP         ; if this one wasn't better then go again
         MOV     BX,SI                   ; it was better, save header
         JMP     INNER_SORT_LOOP         ; and scan again
@@ -331,7 +323,7 @@ END_INNER_SORT_LOOP:
 ; make room for line at destination
 ;
         MOV     DX,[SI]                 ; get length of line
-        save    <SI,DI>                 ; save positions of people
+        save    SI,DI                 ; save positions of people
         STD                             ; go right to left
         MOV     CX,BP                   ; get end of file pointer
         SUB     CX,DI                   ; get length from destination to end
@@ -341,20 +333,20 @@ END_INNER_SORT_LOOP:
         ADD     DI,DX                   ; DI points to new end of file
         REP     MOVSB                   ; blam. Move every one up
         CLD                             ; back left to right
-        restore <DI,SI>                 ; get old source and destination
+        restore_ DI,SI                 ; get old source and destination
 ;
 ;  MOVE NEW LINE INTO PLACE
 ;
-        save    <DI>                    ; save destination
+        save    DI                    ; save destination
         ADD     SI,DX                   ; adjust for previous movement
-        save    <SI>                    ; save this value
+        save    SI                    ; save this value
         MOV     CX,DX                   ; get number to move
         REP     MOVSB                   ; blam. move the new line in
-        restore <SI,DI>                 ; get back destination and new source
+        restore_ SI,DI                 ; get back destination and new source
 ;
 ;  DELETE LINE FROM OLD PLACE
 ;
-        save    <DI>                    ; save destination
+        save    DI                    ; save destination
         MOV     CX,BP                   ; pointer to end
         ADD     CX,DX                   ; remember bump
         SUB     CX,SI                   ; get count of bytes to move
@@ -363,8 +355,8 @@ END_INNER_SORT_LOOP:
         MOV     DI,SI                   ; new destination of move
         ADD     SI,DX                   ; offset of block
         REP     MOVSW                   ; blam, squeeze out the space
-        restore <DI>                    ; get back original destination
-        MOV     WORD PTR DS:[BP-2],0    ; remake the end of file mark
+        restore_ DI                    ; get back original destination
+        MOV     word [DS:BP-2],0    ; remake the end of file mark
 
 END_INSERT:
         ADD     DI,[DI]                 ; link to next guy
@@ -379,7 +371,7 @@ END_OUTER_SORT_LOOP:
 INSERT_LOOP:
         ADD     DI,CX                   ; point to next length
         MOV     CX,[DI]                 ; get length
-        MOV     WORD PTR [DI],0A0DH     ; replace length with CRLF
+        MOV     word [DI],0A0DH     ; replace length with CRLF
         CMP     CX,0                    ; check for end of file
         JNZ     INSERT_LOOP             ; nope, try again
 
@@ -393,25 +385,20 @@ WRITE_FILE:
         CMP     AX,CX                   ; did we write what was expected?
         JZ      WRTOK                   ; yes, say bye bye
 BADWRT:
-        MOV     SI,OFFSET dg:ERRMSG2    ; strange write error
+        MOV     SI,ERRMSG2    ; strange write error
         JMP     ERROR_EXIT              ; bye bye
 WRTOK:
         XOR     AL,AL                   ; perfect return (by convention)
         sys     EXIT                    ; bye!
 
-CODE    ENDS
+end if
 
-CONST   SEGMENT PUBLIC BYTE
-        EXTRN   BADVER:BYTE,ERRMSG:BYTE,ERRMSG2:BYTE
+if SEGSEL = S_CONST
 if	internat
-	extrn	table:byte
-	endif
-CONST   ENDS
+	end if
+end if
 
-SUBTTL  Initialized Data
-PAGE
-CSTACK   SEGMENT STACK
+if SEGSEL = S_CSTACK
          DB      96 dup (0)
-CSTACK   ENDS
+end if
 
-        END     SORT

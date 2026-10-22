@@ -56,6 +56,46 @@ PROGRAMS = {
         "macros": {},
         "renames": {"GENFOR.ASM": {"START": "GENSTART"}},
     },
+    "FC": {
+        # Lays out like SORT: code, const and data in the group dg, with a
+        # stack segment of its own outside it.  It does include DOSSYM, in
+        # lower case -- "include dossym.asm" -- which is easy to miss.
+        "dossym": "DOSSYM.ASM",
+        "modules": ("FC.ASM", "FCMES.ASM"),
+        "segments": ("CODE", "CONST", "DATA", "STACK"),
+        "group": "DG",
+        "reserved": ("CODE", "DATA", "STACK"),
+        "renames": {},
+        "macros": {},
+    },
+    "SORT": {
+        "dossym": "DOSSYM.ASM",
+        "modules": ("SORT.ASM", "SORTMES.ASM"),
+        # Three macros of its own, none of which defines storage, so they are
+        # named here only to mark their calls as not being instructions.
+        "macros": {"sys": (), "save": (), "restore": ()},
+        # CODE, CONST and CSTACK in one group, as CHKDSK's three are, so the
+        # walk lays them out in one FASM segment and the offsets come out
+        # group relative by themselves.  An .EXE all the same, for the stack.
+        "segments": ("CODE", "CONST", "CSTACK"),
+        "group": "DG",
+        # FASM's restore directive, which SORT.ASM uses as a macro name: a
+        # collision in the macros rather than the labels, where the others
+        # have been.
+        "reserved": ("restore",),
+        "renames": {},
+    },
+    "FIND": {
+        # The one program here that includes no DOSSYM: its equates are its
+        # own.  Two segments, code and a stack, so it is an .EXE as well.
+        "dossym": "",
+        "modules": ("FIND.ASM", "FINDMES.ASM"),
+        "segments": ("CODE", "STACK"),
+        "group": "",
+        "reserved": ("CODE", "STACK"),
+        "renames": {},
+        "macros": {},
+    },
     "EXE2BIN": {
         "dossym": "DOSSYM.ASM",
         "modules": ("EXE2BIN.ASM", "EXEMES.ASM"),
@@ -101,7 +141,8 @@ PROGRAMS = {
 STRINGS = re.compile(r"'[^']*'|\"[^\"]*\"")
 
 DROP = re.compile(r"""^\s*(
-      \.(xlist|list|radix|xcref|cref)\b
+      \.(xlist|list|radix|xcref|cref
+         |sall|lall|xall|sfcond|lfcond|tfcond)\b
     | (PAGE|SUBTTL|TITLE)\b
     | %OUT\b
     | PUBLIC\b
@@ -139,6 +180,8 @@ def dossym_fields():
     """MASM makes a STRUC's field names offsets in their own right, so FORMAT
     writes fcb_RECSIZ+7 where the converted DOSSYM.ASM has the field hanging
     off an instance as sys_fcb.fcb_RECSIZ."""
+    if not DOSSYM:
+        return {}               # FIND includes nothing: its equates are its own
     text = open(os.path.join(SRC, DOSSYM), newline="").read()
     fields = {}
     for m in re.finditer(r"^STRUC\s+(\w+)\s*$(.*?)^\}", text, re.M | re.S | re.I):
@@ -155,6 +198,30 @@ def outside_strings(code, fn):
         pos = s.end()
     out.append(fn(code[pos:]))
     return "".join(out)
+
+
+# MASM's way of writing a macro that takes a list: the macro takes one
+# parameter and an IRP inside it walks the list, with an ENDM of its own
+# before the macro's.  SORT.ASM has two, save and restore.  FASM says the
+# same thing with a variadic parameter and forward, so the shape is rewritten
+# whole rather than line by line -- the two ENDMs would otherwise both become
+# a closing brace and leave the IRP standing in the body.
+# The CR of a CRLF file counts as neither space nor tab, so every line end
+# here has to allow for it: these sources are not all one or the other.
+IRPMACRO = re.compile(r"^(\w+)[ \t]+MACRO[ \t]+(\w+)[ \t]*(;[^\n]*?)?\r?\n"
+                      r"[ \t]*IRP[ \t]+(\w+)[ \t]*,[ \t]*<[ \t]*\2[ \t]*>[^\n]*\n"
+                      r"(.*?)"
+                      r"^[ \t]*ENDM[^\n]*\n"
+                      r"^[ \t]*ENDM[ \t\r]*$", re.M | re.S | re.I)
+
+
+def irp_macros(text):
+    """Turn MASM's MACRO-around-an-IRP into FASM's variadic macro."""
+    nl = "\r\n" if "\r\n" in text else "\n"
+    return IRPMACRO.sub(lambda m: "macro %s [%s]%s%s{%sforward%s%s}"
+                        % (m.group(1), m.group(4),
+                           " " + m.group(3).strip() if m.group(3) else "",
+                           nl, nl, nl, m.group(5)), text)
 
 
 def struc(text):
@@ -197,12 +264,18 @@ def one_struc(text):
 MNEMONIC = re.compile(r"^((?:\w+:)?\s+)([A-Za-z][\w]*)(\s+)(\S.*)$")
 NOTCODE = {"DB", "DW", "DD", "LABEL", "INCLUDE", "IF", "ELSE", "END", "STRUC",
            "VIRTUAL", "ORG", "MACRO", "ASSUME", "EQU", "REPT", "IRP", "ENDM",
-           "REPEAT", "DISPLAY", "ERR", "WHILE"}
+           "REPEAT", "DISPLAY", "ERR", "WHILE",
+           # A macro's LOCAL names are names, not memory: FC's m_bname
+           # declares b1 and b2 local and defines them in the same breath, and
+           # bracketing them in the declaration is not what it meant.
+           "LOCAL"}
 
 
 def dossym_spellings(canon):
     """DOSSYM.ASM's own names, which the utilities write in whatever case they
     felt like: SYS.ASM asks for Write and DOSSYM defines WRITE."""
+    if not DOSSYM:
+        return          # FIND includes nothing, so it spells nothing two ways
     text = open(os.path.join(SRC, DOSSYM), newline="").read()
     for raw in text.splitlines():
         code = raw.split(";")[0]
@@ -227,10 +300,17 @@ def dossym_spellings(canon):
 def spellings(text, canon):
     """MASM did not care about case and FASM does, so every name has to be
     spelt the way it is defined: SYSMES.ASM's macro defines BadParm and
-    SYS.ASM asks for BADPARM."""
+    SYS.ASM asks for BADPARM.
+
+    Equates as well as storage, which they were left out of at first.  Two
+    modules of one program can define the same name in different cases --
+    SORT.ASM writes TRUE and SORTMES.ASM writes true -- and whichever of them
+    is read last decides, so that the uses and the definition agree."""
     for raw in text.splitlines():
         code = raw.split(";")[0]
         for m in (re.match(r"^(\w+)\s+(?:DB|DW|DD)\b", code, re.I),
+                  re.match(r"^(\w+)\s+EQU\b", code, re.I),
+                  re.match(r"^(\w+)\s*=", code),
                   re.match(r"^\s*label\s+(\w+)\s", code, re.I),
                   re.match(r"^(\w+):", code)):
             if m:
@@ -364,10 +444,25 @@ def line(code):
         # is and the qualifier has nothing left to say.
         if GROUP:
             t = re.sub(r"\b%s:" % GROUP, "", t, flags=re.I)
+            # The group's first segment shares its base, so a qualifier
+            # naming it says nothing either: FC writes "offset code:b2" and
+            # code is the first of dg.  Only the first, deliberately -- a
+            # qualifier naming any of the others would mean an offset counted
+            # from somewhere else, and it is better that FASM refuse the line
+            # than that this quietly drop the difference.
+            if SEGMENTS:
+                t = re.sub(r"\b%s_?:" % SEGMENTS[0], "", t, flags=re.I)
         t = re.sub(r"\bENDIF\b", "end if", t, flags=re.I)
-        # BP.FIELD, the only structure FORMAT addresses that way
+        # BP.FIELD, the way FORMAT addresses a structure, and [BX].FIELD,
+        # the way FC does it throughout: "mov word [bx].buf,b1" means
+        # [bx+buf], buf being an equate rather than a structure field -- FC
+        # declares no structure at all and counts its offsets out by hand.
         t = re.sub(r"\b(BP|BX|SI|DI)\.(\w+)\b",
                    lambda m: "%s+%s" % (m.group(1), FIELDS.get(m.group(2).upper(), m.group(2))), t)
+        t = re.sub(r"\[\s*(BP|BX|SI|DI)\s*\]\s*\.(\w+)\b",
+                   lambda m: "[%s+%s]" % (m.group(1),
+                                          FIELDS.get(m.group(2).upper(), m.group(2))),
+                   t, flags=re.I)
         if CANON_RE:
             t = CANON_RE.sub(lambda m: CANON[m.group(1).upper()], t)
         if DOSFIELD_RE:
@@ -409,12 +504,15 @@ def convert(text, renames, first=False):
         # A PROC is just a label, except that MASM assembles the RET of a FAR
         # one as a far return.  CHKPROC's INT_24 depends on it: it pushes a
         # frame and the far address of the handler and returns to that.
-        m = re.match(r"^(\s*)(\w+)\s+PROC\s*(NEAR|FAR)?\s*$", raw, re.I)
+        # The comment after it is not decoration in every source: FIND has
+        # "badfart proc far ;(what a hack!!)", and without the comment allowed
+        # for here the line went through as an instruction and FASM refused it.
+        m = re.match(r"^(\s*)(\w+)\s+PROC\s*(NEAR|FAR)?\s*(;.*)?$", raw, re.I)
         if m:
-            out.append("%s%s:" % (m.group(1), m.group(2)))
+            out.append("%s%s:%s" % (m.group(1), m.group(2), m.group(4) or ""))
             infar.append((m.group(3) or "NEAR").upper() == "FAR")
             continue
-        if re.match(r"^\s*\w+\s+ENDP\s*$", raw, re.I):
+        if re.match(r"^\s*\w+\s+ENDP\s*(;.*)?$", raw, re.I):
             if infar:
                 infar.pop()
             continue
@@ -434,6 +532,12 @@ def convert(text, renames, first=False):
         if inmacro:
             raw = raw.replace("&", "#")         # MASM pastes with &, FASM with #
         raw = re.sub(r'<(\s*"[^"]*"\s*)>', r"\1", raw)    # <"text"> in a call
+        # MASM hands a macro its list in angle brackets, FASM plainly:
+        # SORT.ASM writes save <SI,DI> and restore <DI,SI>.
+        m = re.match(r"^(\s*)(\w+)(\s+)<([^>\"]*)>(\s*(?:;.*)?)$", raw)
+        if m and m.group(2).upper() in {k.upper() for k in MACROS}:
+            raw = "".join((m.group(1), m.group(2), m.group(3),
+                           m.group(4).strip(), m.group(5)))
         # A structure instance: MASM takes the default values as <>, and FASM
         # declares the instance as NAME STRUC and names its fields NAME.field.
         m = re.match(r"^(\s*\w+\s+)(\w+)\s*<\s*>\s*$", raw)
@@ -495,13 +599,15 @@ def main(program):
         text = open(path, newline="").read()
         if "end if" in text or "virtual at" in text:
             sys.exit("%s looks converted already; nothing done." % name)
-        texts[name] = struc(text)
+        texts[name] = struc(irp_macros(text))
     # The program's own structures are read by now, and MASM makes their field
     # names offsets in their own right as well, so they go in the same map.
     DOSFIELDS.update(FIELDS)
+    # None rather than a pattern of nothing, which would match everywhere:
+    # FIND includes no DOSSYM and so has no fields to rewrite.
     DOSFIELD_RE = re.compile(r"(?<![.\w])(%s)\b"
                              % "|".join(sorted(DOSFIELDS, key=len, reverse=True)),
-                             re.I)
+                             re.I) if DOSFIELDS else None
 
     global CANON, CANON_RE
     CANON = {}
@@ -511,7 +617,8 @@ def main(program):
     # Only the names that are written more than one way need rewriting, and
     # leaving the rest alone keeps the diff to what actually changed.
     CANON_RE = re.compile(r"(?<![.\w])(%s)\b"
-                          % "|".join(sorted(CANON, key=len, reverse=True)), re.I)
+                          % "|".join(sorted(CANON, key=len, reverse=True)),
+                          re.I) if CANON else None
     LABELS = set()
     for name, text in texts.items():
         found = data_labels(text)

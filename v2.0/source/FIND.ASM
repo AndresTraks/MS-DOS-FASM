@@ -1,4 +1,3 @@
-      title   MSDOS V2.0  FIND
 
 ;--------------------------------------------------------------------;
 ; Revision History:                                                  ;
@@ -42,10 +41,10 @@
 ;                                                                    ;
 ;--------------------------------------------------------------------;
 
-FALSE   equ     0
-TRUE    equ     NOT FALSE
+FALSE   =     0
+TRUE    =     -1
 
-KANJI   equ     FALSE                   ;set to true is kanji vers.
+KANJI   =     FALSE                   ;set to true is kanji vers.
 
 ;--------------------------------------------------------------------;
 ;       FIND program following the standart UNIX operation.          ;
@@ -81,35 +80,35 @@ KANJI   equ     FALSE                   ;set to true is kanji vers.
 ;       errors are reported when reading from Standart Input.        ;
 ;--------------------------------------------------------------------;
 
-code    segment public
-assume  cs:code,ss:code,ds:nothing,es:nothing
+if SEGSEL = S_CODE
+ASSUME  cs:CODE_,ss:CODE_,ds:nothing,es:nothing
 
 
-CR      equ     0dh                     ;A Carriage Return
-LF      equ     0ah                     ;A Line Feed
-quote_char equ  22h                     ;A double quote character
+CR      =     0dh                     ;A Carriage Return
+LF      =     0ah                     ;A Line Feed
+quote_char =  22h                     ;A double quote character
 
 
-buffer_size equ 4096                    ;file buffer size
-st_buf_size equ 128                     ;string arg. buffer size
-fname_buf_size equ 64                   ;file name buffer size
+buffer_size = 4096                    ;file buffer size
+st_buf_size = 128                     ;string arg. buffer size
+fname_buf_size = 64                   ;file name buffer size
 
 
 ;----- DOS EQUATES --------------------------------------------------;
-std_in  equ     0                       ;STD input handle
-std_out equ     1                       ;STD output handle
-std_err equ     2                       ;STD error handle
-dos_ent equ     21h                     ;DOS entry point
+std_in  =     0                       ;STD input handle
+std_out =     1                       ;STD output handle
+std_err =     2                       ;STD error handle
+dos_ent =     21h                     ;DOS entry point
 
-std_con_string_output equ 9
-get_version equ 48
-char_oper equ   55                      ;get configuration parameters
-open    equ     61                      ;DOS std open code
-close   equ     62                      ;DOS std close code
-read    equ     63                      ;DOS std read code
-write   equ     64                      ;DOS std write code
-lseek   equ     66                      ;DOS file seek
-exit    equ     76                      ;DOS process exit code
+std_con_string_output = 9
+get_version = 48
+char_oper =   55                      ;get configuration parameters
+open    =     61                      ;DOS std open code
+close   =     62                      ;DOS std close code
+read    =     63                      ;DOS std read code
+write   =     64                      ;DOS std write code
+lseek   =     66                      ;DOS file seek
+exit    =     76                      ;DOS process exit code
 
 
 ;----- Misc  Data -----------------------------------------------;
@@ -155,23 +154,22 @@ start:
         jge     vers_ok
         push    cs
         pop     ds
-        mov     dx,offset bad_vers
+        mov     dx,bad_vers
         mov     ah,std_con_string_output
         int     21h
         push    es              ;bad vers, exit a la 1.x
         xor     ax,ax
         push    ax
 
-badfart proc    far             ;(what a hack!!)
-        ret
-badfart endp
+badfart:;(what a hack!!)
+        RETF
 
 vers_ok:
 
         push    cs                      ;load ES to the right area,
         pop     es                      ; for use with DI register
 
-assume  es:code
+ASSUME  es:CODE_
 
 ;--------------------------------------------------------------------;
 
@@ -181,8 +179,8 @@ assume  es:code
         or      bx,bx                   ;A CR found?
         jz      find_opt                ;no, first find the options
 args_missing:
-        mov     dx,offset errmsg1       ;empty command line, no args: error.
-        mov     cl,cs:errlen1
+        mov     dx,errmsg1       ;empty command line, no args: error.
+        mov     cl,[CS:errlen1]
         call    prt_err
         mov     al,2                    ;error code for exit
         jmp     done
@@ -211,7 +209,7 @@ another_opt:
         cmp     al,CR                   ;a CR?
         je      args_missing            ;yes, error...
         call    make_caps               ;Capitalize the character
-        mov     bx,offset opt_tbl       ;pointer to option flag table
+        mov     bx,opt_tbl       ;pointer to option flag table
 
         cmp     al,'V'                  ;the v option?
         je      opt_v
@@ -220,11 +218,11 @@ another_opt:
         cmp     al,'N'                  ;the n option?
         je      opt_n
 
-        mov     cs:errmsg5_opt,al       ;save the option
-        mov     dx,offset errmsg5       ;unknown option: error
-        mov     cl,cs:errlen5
+        mov     [CS:errmsg5_opt],al       ;save the option
+        mov     dx,errmsg5       ;unknown option: error
+        mov     cl,[CS:errlen5]
         call    prt_err
-        mov     dx,offset crlf          ;print a CRLF
+        mov     dx,crlf          ;print a CRLF
         mov     cx,2
         call    prt_err
         jmp     another_opt             ;process next option
@@ -241,7 +239,7 @@ opt_n:
         mov     di,2
 
 opt_dispatch:
-        mov     es:byte ptr[bx+di],0ffh ;set the corresponding flag
+        mov     byte [ES:bx+di],0ffh ;set the corresponding flag
         jmp     another_opt             ;process the rest of the options
 
 cont_scan:
@@ -256,7 +254,7 @@ cont_scan:
 find_str:
         cmp     al,quote_char           ;string should start with a
         jnz     bad_str_err             ; quote character, if not: error.
-        mov     di,offset st_buffer     ;String argument buffer addrss.
+        mov     di,st_buffer     ;String argument buffer addrss.
         xor     cx,cx                   ;Clear to keep string length.
 
 move_str:
@@ -264,8 +262,8 @@ move_str:
         cmp     al,CR                   ;if a CR is found in the string
         jnz     str_ok                  ; then it's a bad string
 bad_str_err:
-        mov     dx,offset errmsg2       ;bad string error message
-        mov     cl,cs:errlen2
+        mov     dx,errmsg2       ;bad string error message
+        mov     cl,[CS:errlen2]
         call    prt_err                 ;print the error.
         mov     al,2
         jmp     done
@@ -277,7 +275,7 @@ str_ok:
         cmp     al,quote_char           ;another quote character?
         je      move_char               ;yes, move it to the buffer
         dec     si                      ;no, adjust the pointer
-        mov     es:st_length,cx         ;store the string length
+        mov     [ES:st_length],cx         ;store the string length
         or      cx,cx                   ;Is the string empty?
         jnz     other_args              ;no: get the rest of the args.
         mov     al,1                    ;empty: no matches(!?)
@@ -303,7 +301,7 @@ other_args:                             ;Process the rest of the command
 
 further_args:
         call    clr_cntrs               ;set all counters to zero
-        mov     di,offset file_name_buf ;Set pointer to the name buffer
+        mov     di,file_name_buf ;Set pointer to the name buffer
         xor     cx,cx                   ;zero file name length
 move_fname:
         lodsb
@@ -316,17 +314,17 @@ move_fname:
         jmp     move_fname
 done_move:
         dec     si                      ;Adjust pointer for next round.
-        mov     es:byte ptr[di],00h     ;File names are null terminated
+        mov     byte [ES:di],00h     ;File names are null terminated
         push    si                      ;Save SI to continue com. line scan.
         push    ds                      ;Save DS register contents for
                                         ; later because it points to the
                                         ; rest of the arguments.
-        mov     es:file_name_len,cx     ;save the name length
+        mov     [ES:file_name_len],cx     ;save the name length
 
 ;----- OPEN FILE FOR READING ----------------------------------------;
         push    cs                      ;Load new DS with CS
         pop     ds
-        mov     dx,offset file_name_buf ;addrss. of the file name
+        mov     dx,file_name_buf ;addrss. of the file name
         mov     ah,open
         mov     al,0                    ;file open for reading
         int     dos_ent                 ;call the DOS
@@ -336,19 +334,19 @@ done_move:
 ;----- PRINT FILE NAME ----------------------------------------------;
 say_name:
         push    ax                      ;save file handle
-        mov     dx,offset heading
-        mov     cl,cs:heading_len
+        mov     dx,heading
+        mov     cl,[CS:heading_len]
         xor     ch,ch
         call    prout
 
-        mov     dx,offset file_name_buf
-        mov     cx,ds:file_name_len
+        mov     dx,file_name_buf
+        mov     cx,[DS:file_name_len]
         call    prout
 
-        cmp     ds:c_flg,0ffh           ;count only flag set?
+        cmp     [DS:c_flg],0ffh           ;count only flag set?
         je      xx1
 
-        mov     dx,offset crlf
+        mov     dx,crlf
         mov     cx,2
         call    prout
 
@@ -359,7 +357,7 @@ xx1:
 fill:
         mov     bx,ax                   ;retrieve handle
 refill:
-        mov     dx,offset buffer        ;data buffer addrss.
+        mov     dx,buffer        ;data buffer addrss.
         mov     cx,buffer_size
         mov     ah,read
         int     dos_ent
@@ -368,7 +366,7 @@ refill:
 no_read_error:
         or      ax,ax                   ;if ax=0 then all done
         jnz     go_match
-        cmp     ds:c_flg,0ffh           ;count only flag set?
+        cmp     [DS:c_flg],0ffh           ;count only flag set?
         jne     sj2
         call    print_count
 sj2:
@@ -391,23 +389,23 @@ regular:
 
 go_match:
         push    bx                      ;save the file handle
-        mov     bp,offset buffer        ;ptr to first line of file
+        mov     bp,buffer        ;ptr to first line of file
         mov     di,ax                   ;dispalcement from beg of buffer
 
         cmp     ax,buffer_size-1        ;last line of the file?
         jg      no_last_line            ;if yes, add a CRLF just in case
         mov     bx,bp
-        cmp     byte ptr[bx+di-1],LF    ;finished with a LF?
+        cmp     byte [bx+di-1],LF    ;finished with a LF?
         je      no_last_line            ;yes, it's an OK line.
-        mov     byte ptr[bx+di],CR      ;put a CR at the end of the data
+        mov     byte [bx+di],CR      ;put a CR at the end of the data
         inc     di
-        mov     byte ptr[bx+di],LF      ;put a LF ...
+        mov     byte [bx+di],LF      ;put a LF ...
         inc     di
 
 no_last_line:
         push    di                      ;save the # of chars. in the buffer
         push    bp
-        mov     dx,ds:st_length         ;length of the string arg.
+        mov     dx,[DS:st_length]         ;length of the string arg.
         dec     dx                      ;adjust for later use
         jmp     short try_again
 
@@ -427,7 +425,7 @@ more_stuff_o:
 ; plus, DX has the adjusted length of the string argument.
 
 try_again:
-        inc     ds:line_cntr            ;increment line counter
+        inc     [DS:line_cntr]            ;increment line counter
         pop     bp                      ;addrs. of next line in the buffer
         mov     di,bp                   ;points to beg. of a line
         pop     cx                      ;get # of chars left in the buffer
@@ -462,7 +460,7 @@ lop:
         pop     dx
         push    dx
         inc     dx                      ;different algorithm!
-        mov     si,offset st_buffer     ;pointer to beg. of string argument
+        mov     si,st_buffer     ;pointer to beg. of string argument
 
 comp_next_char:
         push    di
@@ -473,7 +471,7 @@ comp_next_char:
         lodsw
         cmp     cx,1                    ; Can not compare a two byte char
         jz      try_again_opt1          ; if there is only one available
-        cmp     ax,word ptr [di]
+        cmp     ax,word [di]
         jz      kmatch1
         call    next_kchar              ;no match, advance di to next kanji
         jc      try_again_opt1          ;not enough chars left in line
@@ -481,7 +479,7 @@ comp_next_char:
 
 nopre:
         lodsb
-        cmp     al,byte ptr [di]
+        cmp     al,byte [di]
         jz      kmatch
         call    next_kchar              ;no match, advance di to next kanji
         jc      try_again_opt1          ;not enough chars left in line
@@ -507,7 +505,7 @@ a_matchk:
 
 ELSE
 
-        mov     si,offset st_buffer     ;pointer to beg. of string argument
+        mov     si,st_buffer     ;pointer to beg. of string argument
         lodsb                           ;get first character of the str. arg.
         repnz   scasb                   ;search for a match in current line
         jnz     try_again_opt           ;no match, try the next line
@@ -529,15 +527,15 @@ ELSE
 a_match:
         pop     ax                      ;adjust stack
         pop     ax
-ENDIF
+end if
 
-        cmp     ds:v_flg,0ffh           ;is flag set?
+        cmp     [DS:v_flg],0ffh           ;is flag set?
         jne     prt_line                ;no, print the line
         jmp     try_again
 
 ;----- NO MATCH: CHECK FOR THE v OPTION -----------------------------;
 try_again_opt:
-        cmp     ds:v_flg,0ffh           ;is flag set?
+        cmp     [DS:v_flg],0ffh           ;is flag set?
         jne     try_again               ;no goto next line
 
 ;----- PRINT THE LINE WITH THE MATCH --------------------------------;
@@ -549,14 +547,14 @@ try_again_opt:
 ;the string argument.
 
 prt_line:
-        cmp     ds:c_flg,0ffh           ;is count only flag set?
+        cmp     [DS:c_flg],0ffh           ;is count only flag set?
         jne     no_c_flg
-        inc     ds:mtch_cntr            ;yes, increment counter
+        inc     [DS:mtch_cntr]            ;yes, increment counter
         jmp     try_again
 
 no_c_flg:
         push    dx                      ;save the adjusted string arg. length
-        cmp     ds:n_flg,0ffh           ;is line number flag set?
+        cmp     [DS:n_flg],0ffh           ;is line number flag set?
         jne     no_n_flg
         call    prt_lcntr
 no_n_flg:
@@ -597,21 +595,21 @@ read_error:
         je      foo                     ;if so: all done, exit
         mov     ah,close                ;close the file
         int     dos_ent
-        mov     dx,offset errmsg4_pre   ;read error
-        mov     cl,cs:errlen4_pre
+        mov     dx,errmsg4_pre   ;read error
+        mov     cl,[CS:errlen4_pre]
         call    prt_file_name           ;print the file name in error
-        mov     dx,offset errmsg4_post  ;read error
-        mov     cl,cs:errlen4_post
+        mov     dx,errmsg4_post  ;read error
+        mov     cl,[CS:errlen4_post]
         jmp     r_error
 
 ;----- PRINT ERRORS -------------------------------------------------;
 open_error:
-        mov     dx,offset errmsg3_pre    ;error in open operation
-        mov     cl,cs:errlen3_pre
+        mov     dx,errmsg3_pre    ;error in open operation
+        mov     cl,[CS:errlen3_pre]
         call    prt_err_2               ;print error message
         call    prt_file_name           ;print the file name in error
-        mov     dx,offset errmsg3_post  ;error in open operation
-        mov     cl,cs:errlen3_post
+        mov     dx,errmsg3_post  ;error in open operation
+        mov     cl,[CS:errlen3_post]
 r_error:
         call    prt_err_2               ;print error message
 
@@ -667,8 +665,8 @@ no_cr:
 ;               Clear Counters                                       ;
 ;--------------------------------------------------------------------;
 clr_cntrs:
-        mov     byte ptr es:mtch_cntr,0
-        mov     byte ptr es:line_cntr,0
+        mov     byte [ES:mtch_cntr],0
+        mov     byte [ES:line_cntr],0
         ret
 
 ;--------------------------------------------------------------------;
@@ -681,16 +679,16 @@ print_count:
         cmp     bx,std_in               ;using std_in?
         jz      sj3                     ;if so do not print file name
 
-        mov     dx,offset colon
+        mov     dx,colon
         mov     cx,2
         call    prout                   ;print colon
 sj3:
-        mov     ax,ds:mtch_cntr
-        mov     di,offset n2_buf        ;buffer for characters
+        mov     ax,[DS:mtch_cntr]
+        mov     di,n2_buf        ;buffer for characters
         call    bin2asc                 ;convert to ascii
-        mov     dx,offset n2_buf
+        mov     dx,n2_buf
         call    prout                   ;print the number
-        mov     dx,offset crlf
+        mov     dx,crlf
         mov     cx,2
         call    prout                   ;print an end of line
         pop     bx
@@ -705,13 +703,13 @@ sj3:
 prt_lcntr:
         push    bx
         push    dx
-        mov     ax,ds:line_cntr
-        mov     di,offset n2_buf
+        mov     ax,[DS:line_cntr]
+        mov     di,n2_buf
         call    bin2asc
-        mov     byte ptr[di],"]"
+        mov     byte [di],"]"
         inc     cx
         inc     cx
-        mov     dx,offset n1_buf
+        mov     dx,n1_buf
         call    prout
         pop     dx
         pop     bx
@@ -775,8 +773,8 @@ deposit:
 ;       DX, CX, BX and AX                                            ;
 ;--------------------------------------------------------------------;
 prt_file_name:
-        mov     dx,offset file_name_buf ;print the file name
-        mov     cx,ds:file_name_len     ;retrive file name length
+        mov     dx,file_name_buf ;print the file name
+        mov     cx,[DS:file_name_len]     ;retrive file name length
         jmp     short prt_err_2
 
 
@@ -872,7 +870,7 @@ no_kleft:
 ;                                                                    ;
 ;--------------------------------------------------------------------;
 is_prefix:
-        mov     al,byte ptr [di]
+        mov     al,byte [di]
         cmp     al,81h
         jb      nok
         cmp     al,0a0h
@@ -888,44 +886,36 @@ isk:
         stc
         ret
 
-ENDIF
+end if
 
 
 ;----- PATCH AREA ---------------------------------------------------;
 
-patch_area      dw      100h dup(?)
+patch_area      dw      100h dup (0)
 
 
 
 ;----- BUFFER AREA --------------------------------------------------;
 st_length dw    0                       ;String argumnet length
-st_buffer db    st_buf_size dup(?)      ;String argument buffer
+st_buffer db    st_buf_size dup (0)      ;String argument buffer
 
 file_name_len dw 0                      ;File name length
-file_name_buf db fname_buf_size+1 dup(?)  ;File name buffer,(allow for
+file_name_buf db fname_buf_size+1 dup (0)  ;File name buffer,(allow for
                                         ; null at the end).
 
-buffer  db      buffer_size+1 dup(?)    ;file buffer, the last byte is
+buffer  db      buffer_size+1 dup (0)    ;file buffer, the last byte is
                                         ;a guard in case of forced insertion
                                         ;of a CRLF pair.
 
 ;----- ERROR MESSAGES -----------------------------------------------;
-        EXTRN   bad_vers:byte,crlf:byte,errmsg1:byte,errlen1:byte,errmsg2:byte
-        EXTRN   errmsg3_pre:byte,errlen3_pre:byte
-        EXTRN   errmsg3_post:byte,errlen3_post:byte
-        EXTRN   errmsg4_pre:byte,errlen4_pre:byte
-        EXTRN   errmsg4_post:byte,errlen4_post:byte
-        EXTRN   heading:byte,heading_len:byte,errlen2:byte
-        EXTRN   errmsg5:byte,errmsg5_opt:byte,errlen5:byte
-code    ends
+end if
 
 
 ;----- STACK AREA ---------------------------------------------------;
-stack   segment stack
+if SEGSEL = S_STACK
 
         dw      64 dup(?,?)
-stack_top equ   $
+stack_top =   $
 
-stack   ends
+end if
 
-        end     start
