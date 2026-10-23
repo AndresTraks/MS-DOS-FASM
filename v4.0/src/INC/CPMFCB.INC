@@ -38,32 +38,41 @@
 ;       +---------------------------+
 ;
 
-sys_fcb     STRUC
-fcb_drive   DB      ?
-fcb_name    DB      8 DUP (?)
-fcb_ext     DB      3 DUP (?)
-fcb_EXTENT  DW      ?
-fcb_RECSIZ  DW      ?                   ; Size of record (user settable)
-fcb_FILSIZ  DW      ?                   ; Size of file in bytes; used with the
+STRUC sys_fcb
+{
+.fcb_drive   DB      0
+.fcb_name    DB      8 dup (0)
+.fcb_ext     DB      3 dup (0)
+.fcb_EXTENT  DW      0
+.fcb_RECSIZ  DW      0                   ; Size of record (user settable)
+.fcb_FILSIZ  DW      0                   ; Size of file in bytes; used with the
                                         ; following word
-fcb_DRVBP   DW      ?                   ; BP for SEARCH FIRST and SEARCH NEXT
-fcb_FDATE   DW      ?                   ; Date of last writing
-fcb_FTIME   DW      ?                   ; Time of last writing
+.fcb_DRVBP   DW      0                   ; BP for SEARCH FIRST and SEARCH NEXT
+.fcb_FDATE   DW      0                   ; Date of last writing
+.fcb_FTIME   DW      0                   ; Time of last writing
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
-fcb_reserved DB      8 DUP (?)           ; RESERVED
+.fcb_reserved DB      8 dup (0)           ; RESERVED
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
-fcb_NR      DB      ?                   ; Next record
-fcb_RR      DB      4 DUP (?)           ; Random record
-sys_fcb     ENDS
+.fcb_NR      DB      0                   ; Next record
+.fcb_RR      DB      4 dup (0)           ; Random record
+}
+match =sys_fcb_LAID_OUT, sys_fcb_LAID_OUT
+{
+    sys_fcb_LAID_OUT equ 1
+    virtual at 0
+      sys_fcb sys_fcb
+      sizeof.sys_fcb = $ - sys_fcb
+    end virtual
+}
 
-FILDIRENT       = fcb_FILSIZ            ; Used only by SEARCH FIRST and SEARCH
+FILDIRENT       = sys_fcb.fcb_FILSIZ; Used only by SEARCH FIRST and SEARCH
                                         ; NEXT
 
-fcb_sfn         EQU     BYTE PTR fcb_reserved
+fcb_sfn         EQU     sys_fcb.fcb_reserved
 
 ; Note that fcb_net_handle, fcb_nsl_drive, fcb_nsld_drive and fcb_l_drive
 ; all must point to the same byte.  Otherwise, the FCBRegen will fail.
@@ -77,32 +86,32 @@ fcb_sfn         EQU     BYTE PTR fcb_reserved
 ;
 ; Network FCB
 ;
-fcb_net_drive   EQU     BYTE PTR fcb_reserved+1
-fcb_net_handle  EQU     WORD PTR fcb_reserved+2
-fcb_netID       EQU     DWORD PTR fcb_reserved+4
+fcb_net_drive   EQU     sys_fcb.fcb_reserved+1
+fcb_net_handle  EQU     sys_fcb.fcb_reserved+2
+fcb_netID       EQU     sys_fcb.fcb_reserved+4
 
 ;
 ; No sharing local file FCB
 ;
-fcb_nsl_drive   EQU     BYTE PTR fcb_reserved+1
-fcb_nsl_bits    EQU     BYTE PTR fcb_reserved+2
-fcb_nsl_firclus EQU     WORD PTR fcb_reserved+3
-fcb_nsl_dirsec  EQU     WORD PTR fcb_reserved+5
-fcb_nsl_dirpos  EQU     BYTE PTR fcb_reserved+7
+fcb_nsl_drive   EQU     sys_fcb.fcb_reserved+1
+fcb_nsl_bits    EQU     sys_fcb.fcb_reserved+2
+fcb_nsl_firclus EQU     sys_fcb.fcb_reserved+3
+fcb_nsl_dirsec  EQU     sys_fcb.fcb_reserved+5
+fcb_nsl_dirpos  EQU     sys_fcb.fcb_reserved+7
 
 ;
 ; No sharing local device FCB
 ;
-fcb_nsld_drive  EQU     BYTE PTR fcb_reserved+1
-fcb_nsld_drvptr EQU     DWORD PTR fcb_reserved+2
+fcb_nsld_drive  EQU     sys_fcb.fcb_reserved+1
+fcb_nsld_drvptr EQU     sys_fcb.fcb_reserved+2
 
 ;
 ; Sharing local FCB
 ;
-fcb_l_drive     EQU     BYTE PTR fcb_reserved+1
-fcb_l_firclus   EQU     WORD PTR fcb_reserved+2
-fcb_l_mfs       EQU     WORD PTR fcb_reserved+4
-fcb_l_attr      EQU     BYTE PTR fcb_reserved+6
+fcb_l_drive     EQU     sys_fcb.fcb_reserved+1
+fcb_l_firclus   EQU     sys_fcb.fcb_reserved+2
+fcb_l_mfs       EQU     sys_fcb.fcb_reserved+4
+fcb_l_attr      EQU     sys_fcb.fcb_reserved+6
 
 ;
 ; Bogusness:  the four cases are:
@@ -122,4 +131,3 @@ FCBSHARE    EQU 0C0h
 ; FCBSPECIAL must be able to mask off both net and share
 FCBSPECIAL  EQU 080h
 FCBMASK     EQU 0C0h
-

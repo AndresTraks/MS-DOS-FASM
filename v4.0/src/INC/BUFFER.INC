@@ -39,7 +39,7 @@ match =BUFFINFO_LAID_OUT, BUFFINFO_LAID_OUT
     end virtual
 }
 
-buf_offset	EQU	DWORD PTR buf_sector
+buf_offset	EQU	BUFFINFO.buf_sector
 					;For bit 7 = 1, this is the byte
 					;offset of the start of the buffer in
 					;the file pointed to by buf_ID.  Thus

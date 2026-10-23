@@ -46,11 +46,19 @@ ext_nexists_create  EQU 10H
 
 
 
-ext_open_parm	   struc
-ext_set_list	    dd ?
-ext_num_of_parm     dw ?
-ext_open_parm	   ends
+STRUC ext_open_parm
+{
+.ext_set_list	    dd 0
+.ext_num_of_parm     dw 0
+}
+match =ext_open_parm_LAID_OUT, ext_open_parm_LAID_OUT
+{
+    ext_open_parm_LAID_OUT equ 1
+    virtual at 0
+      ext_open_parm ext_open_parm
+      sizeof.ext_open_parm = $ - ext_open_parm
+    end virtual
+}
 
 
 
-

@@ -5,18 +5,16 @@ TRUE	    EQU 0FFFFh
 FALSE	    EQU 0
 
 Installed   = TRUE
-IFNDEF	DEBUG
-    DEBUG	= FALSE
-ENDIF
+; fasm's = is an assembly-time constant and DEFINED looks forward as well
+; as back, so the question is asked of the preprocessor instead.
+match =DEBUG, DEBUG { DEBUG	= FALSE }
 
-include dbcs.sw
-include dosmac.INC
-
-include VERSIONA.INC
-
-IF2
-    %OUT    DOSSYM in Pass 2
-ENDIF
+include 'DBCS.SW'
+include 'DOSMAC.INC'
+include 'VERSIONA.INC'
+;IF2
+;    %OUT    DOSSYM in Pass 2
+;end if
 
 BREAK <Control character definitions>
 
@@ -48,34 +46,38 @@ BREAK <Read This and Weep>
 ;									   ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 
-include bpb.INC
-
-include buffer.INC
-
+include 'BPB.INC'
+include 'BUFFER.INC'
 BREAK <User stack inside of system call and SysVars>
 ; Location of user registers relative user stack pointer
 
-user_environ	STRUC
-user_AX     DW	    ?
-user_BX     DW	    ?
-user_CX     DW	    ?
-user_DX     DW	    ?
-user_SI     DW	    ?
-user_DI     DW	    ?
-user_BP     DW	    ?
-user_DS     DW	    ?
-user_ES     DW	    ?
-user_IP     DW	    ?
-user_CS     DW	    ?
-user_F	    DW	    ?
-user_environ	ENDS
+STRUC user_environ
+{
+.user_AX     DW	    0
+.user_BX     DW	    0
+.user_CX     DW	    0
+.user_DX     DW	    0
+.user_SI     DW	    0
+.user_DI     DW	    0
+.user_BP     DW	    0
+.user_DS     DW	    0
+.user_ES     DW	    0
+.user_IP     DW	    0
+.user_CS     DW	    0
+.user_F	    DW	    0
+}
+match =user_environ_LAID_OUT, user_environ_LAID_OUT
+{
+    user_environ_LAID_OUT equ 1
+    virtual at 0
+      user_environ user_environ
+      sizeof.user_environ = $ - user_environ
+    end virtual
+}
 
-include sysvar.INC
-
-include vector.INC
-
-include mult.INC
-
+include 'SYSVAR.INC'
+include 'VECTOR.INC'
+include 'MULT.INC'
 BREAK <Disk map>
 ;  MSDOS partitions the disk into 4 sections:
 ;
@@ -98,8 +100,7 @@ BREAK <Disk map>
 ; All partition boundaries are sector boundaries.  The size of the FAT is
 ; adjusted to maximize the file space addressable.
 
-include dirent.INC
-
+include 'DIRENT.INC'
 BREAK <File allocation Table information>
 ;
 ; The File Allocation Table uses a 12-bit entry for each allocation unit on
@@ -122,36 +123,22 @@ BREAK <File allocation Table information>
 ; number is selected so that disk checking programs know what to do (ie.  a
 ; cluster with entry FF7H which is not in a chain is not an error).
 
-include dpb.INC
-
-include curdir.INC
-
-include cpmfcb.INC
-
-include find.INC
-
-include pdb.INC
-
-include exe.INC
-
-include sf.INC
-
-include arena.INC
-
-include intnat.INC
-
-include mi.INC
-
+include 'DPB.INC'
+include 'CURDIR.INC'
+include 'CPMFCB.INC'
+include 'FIND.INC'
+include 'PDB.INC'
+include 'EXE.INC'
+include 'SF.INC'
+include 'ARENA.INC'
+include 'INTNAT.INC'
+include 'MI.INC'
 fChk	equ 1
 fDelim	equ 2
 fSpChk	equ 4
 fFCB	equ 8
 
-include filemode.INC
-
-include error.INC
-
-include syscall.INC
-
+include 'FILEMODE.INC'
+include 'ERROR.INC'
+include 'SYSCALL.INC'
 SUBTTL
-

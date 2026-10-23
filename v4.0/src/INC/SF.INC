@@ -101,11 +101,11 @@ match =sf_entry_LAID_OUT, sf_entry_LAID_OUT
     end virtual
 }
 
-sf_fsda 	EQU	BYTE PTR sf_cluspos	     ;DOS 4.00
-sf_serial_ID	EQU	WORD PTR sf_firclus	     ;DOS 4.00
-sf_netid	EQU	BYTE PTR sf_cluspos
-sf_OpenAge	EQU	WORD PTR sf_position+2
-sf_LRU		EQU	WORD PTR sf_position
+sf_fsda 	EQU	sf_entry.sf_cluspos;DOS 4.00
+sf_serial_ID	EQU	sf_entry.sf_firclus;DOS 4.00
+sf_netid	EQU	sf_entry.sf_cluspos
+sf_OpenAge	EQU	sf_entry.sf_position+2
+sf_LRU		EQU	sf_entry.sf_position
 
 sf_default_number   EQU     5h
 
