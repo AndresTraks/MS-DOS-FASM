@@ -1,0 +1,4 @@
+ECHO ON
+MSRECOV B: < crn.txt
+DIR B:
+ECHO DONE

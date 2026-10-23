@@ -1,4 +1,3 @@
-        title   EDLIN for MSDOS 2.0
 
 ;-----------------------------------------------------------------------;
 ;               REVISION HISTORY:                                       ;
@@ -91,51 +90,39 @@
 ;-----------------------------------------------------------------------;
 
 
-FALSE   EQU     0
-TRUE    EQU     NOT FALSE
+FALSE   =     0
+TRUE    =     -1
 
-KANJI   EQU     FALSE
+KANJI   =     FALSE
 
-roprot  equ     true            ;set to TRUE if protection to r/o files
+roprot  =     TRUE            ;set to TRUE if protection to r/o files
                                 ; desired.
-FCB     EQU     5CH
+FCB     =     5CH
 
-Comand_Line_Length equ 128
-quote_char equ  16h             ;quote character = ^V
-
-
-PAGE
-
-        .xlist
-        INCLUDE DOSSYM.ASM
-        .list
+Comand_Line_Length = 128
+quote_char =  16h             ;quote character = ^V
 
 
-SUBTTL  Contants and Data areas
-PAGE
 
-PROMPT  EQU     "*"
-STKSIZ  EQU     80H
 
-CODE    SEGMENT PUBLIC
-CODE    ENDS
 
-CONST   SEGMENT PUBLIC WORD
-CONST   ENDS
 
-DATA    SEGMENT PUBLIC WORD
-DATA    ENDS
+PROMPT  =     "*"
+STKSIZ  =     80H
 
-DG      GROUP   CODE,CONST,DATA
+if SEGSEL = S_CODE
+end if
 
-CONST   SEGMENT PUBLIC WORD
+if SEGSEL = S_CONST
+end if
 
-        EXTRN   BADDRV:BYTE,NDNAME:BYTE,bad_vers_err:BYTE,opt_err:BYTE
-        EXTRN   NOBAK:BYTE,BADCOM:BYTE,NEWFIL:BYTE,DEST:BYTE,MRGERR:BYTE
-        EXTRN   NODIR:BYTE,DSKFUL:BYTE,MEMFUL:BYTE,FILENM:BYTE
-        EXTRN   NOSUCH:BYTE,TOOLNG:BYTE,EOF:BYTE,ro_err:byte,bcreat:byte
+if SEGSEL = S_DATA
+end if
 
-        PUBLIC  TXT1,TXT2,FUDGE,USERDIR,HARDCH
+
+if SEGSEL = S_CONST
+
+
 
 BAK     DB      "BAK"
 
@@ -144,13 +131,13 @@ rev     db      "14"
 
         if      roprot                  ;***** R/O *****
 roflag  db      0                       ; =1 if file is r/o
-        endif
+        end if
 
 fourth  db      0                       ;fourth parameter flag
 
 loadmod db      0                       ;Load mode flag, 0 = ^Z marks the
                                         ; end of a file, 1 = viceversa.
-hardch  dd      ?
+hardch  dd      0
 
 the_root db     0                       ;root directory flag
 
@@ -163,22 +150,19 @@ optchar db      "-"
 dirchar db      "/",0
 
 userdir db      "/",0
-        db      (dirstrlen) dup(0)
+        db      (DIRSTRLEN) dup(0)
 
 fname_buffer db Comand_Line_Length dup(0)
 ;-----------------------------------------------------------------------;
 
-TXT1    DB      0,80H DUP (?)
-TXT2    DB      0,80H DUP (?)
+TXT1    DB      0,80H dup (0)
+TXT2    DB      0,80H dup (0)
 DELFLG  DB      0
 
-CONST   ENDS
+end if
 
-DATA    SEGMENT PUBLIC WORD
+if SEGSEL = S_DATA
 
-        PUBLIC  QFLG,FCB2,OLDLEN,PARAM1,PARAM2,OLDDAT,SRCHFLG
-        PUBLIC  COMLINE,NEWLEN,SRCHMOD,CURRENT,LSTFND,NUMPOS
-        PUBLIC  LSTNUM,SRCHCNT,POINTER,START,ENDTXT,USER_DRIVE
 
 ;-----------------------------------------------------------------------;
 ;    Be carefull when adding parameters, they have to follow the
@@ -188,89 +172,81 @@ DATA    SEGMENT PUBLIC WORD
 ; count parameter, and known to be the fourth entry in the table
 ; so it receives special treatment. (See GETNUM)
 
-PARAM1  DW      1 DUP (?)
-PARAM2  DW      1 DUP (?)
-PARAM3  DW      1 DUP (?)
-PARAM4  DW      1 DUP (?)
+PARAM1  DW      1 dup (0)
+PARAM2  DW      1 dup (0)
+PARAM3  DW      1 dup (0)
+PARAM4  DW      1 dup (0)
 
 ;-----------------------------------------------------------------------;
 
-PTR_1   DW      1 DUP (?)
-PTR_2   DW      1 DUP (?)
-PTR_3   DW      1 DUP (?)
-COPYSIZ DW      1 DUP (?)
-OLDLEN  DW      1 DUP (?)
-NEWLEN  DW      1 DUP (?)
-LSTFND  DW      1 DUP (?)
-LSTNUM  DW      1 DUP (?)
-NUMPOS  DW      1 DUP (?)
-SRCHCNT DW      1 DUP (?)
-CURRENT DW      1 DUP (?)
-POINTER DW      1 DUP (?)
-ONE4TH  DW      1 DUP (?)
-THREE4TH DW     1 DUP (?)
-LAST    DW      1 DUP (?)
-ENDTXT  DW      1 DUP (?)
-COMLINE DW      1 DUP (?)
-LASTLIN DW      1 DUP (?)
-COMBUF  DB      82H DUP (?)
-EDITBUF DB      258 DUP (?)
-EOL     DB      1 DUP (?)
-FCB2    DB      37 DUP (?)
-FCB3    DB      37 DUP (?)
-fake_fcb db     37 dup (?)              ;fake for size figuring
-QFLG    DB      1 DUP (?)
-HAVEOF  DB      1 DUP (?)
-ENDING  DB      1 DUP (?)
-SRCHFLG DB      1 DUP (?)
-amnt_req dw     1 dup (?)               ;ammount of bytes requested to read
-olddat  db      1 dup (?)               ;Used in replace and search,
+PTR_1   DW      1 dup (0)
+PTR_2   DW      1 dup (0)
+PTR_3   DW      1 dup (0)
+COPYSIZ DW      1 dup (0)
+OLDLEN  DW      1 dup (0)
+NEWLEN  DW      1 dup (0)
+LSTFND  DW      1 dup (0)
+LSTNUM  DW      1 dup (0)
+NUMPOS  DW      1 dup (0)
+SRCHCNT DW      1 dup (0)
+CURRENT DW      1 dup (0)
+POINTER DW      1 dup (0)
+ONE4TH  DW      1 dup (0)
+THREE4TH DW     1 dup (0)
+LAST    DW      1 dup (0)
+ENDTXT  DW      1 dup (0)
+COMLINE DW      1 dup (0)
+LASTLIN DW      1 dup (0)
+COMBUF  DB      82H dup (0)
+EDITBUF DB      258 dup (0)
+EOL     DB      1 dup (0)
+FCB2    DB      37 dup (0)
+FCB3    DB      37 dup (0)
+fake_fcb db     37 dup (0)              ;fake for size figuring
+QFLG    DB      1 dup (0)
+HAVEOF  DB      1 dup (0)
+ENDING  DB      1 dup (0)
+SRCHFLG DB      1 dup (0)
+amnt_req dw     1 dup (0)               ;ammount of bytes requested to read
+olddat  db      1 dup (0)               ;Used in replace and search,
                                         ; replace by old data flag (1=yes)
-srchmod db      1 dup (?)               ;Search mode: 1=from current+1 to
+srchmod db      1 dup (0)               ;Search mode: 1=from current+1 to
                                         ; end of buffer, 0=from beg. of
                                         ; buffer to the end (old way).
-MOVFLG  DB      1 DUP (?)
-        DB      STKSIZ DUP (?)
+MOVFLG  DB      1 dup (0)
+        DB      STKSIZ dup (0)
 
-STACK   LABEL   BYTE
-START   LABEL   WORD
+label STACK_ byte
+label START word
 
-DATA    ENDS
+end if
 
-SUBTTL  Main Body
-PAGE
 
-CODE SEGMENT PUBLIC
+if SEGSEL = S_CODE
 
 ASSUME  CS:DG,DS:DG,SS:DG,ES:DG
 
-        EXTRN   QUIT:NEAR,QUERY:NEAR,FNDFIRST:NEAR,FNDNEXT:NEAR
-        EXTRN   UNQUOTE:NEAR,LF:NEAR,CRLF:NEAR,OUT:NEAR
-        EXTRN   REST_DIR:NEAR,KILL_BL:NEAR,INT_24:NEAR
-        EXTRN   FINDLIN:NEAR,SHOWNUM:NEAR,SCANLN:NEAR
 
-        if  Kanji
-        EXTRN   TESTKANJ:NEAR
-        endif
+        if  KANJI
+        end if
 
-        PUBLIC  CHKRANGE
 
         ORG     100H
 
 EDLIN:
         JMP     SIMPED
 
-edl_pad db      0e00h dup (?)
+edl_pad db      0e00h dup (0)
 
 HEADER  DB      "Vers 2.14"
 
 NONAME:
-        MOV     DX,OFFSET DG:NDNAME
+        MOV     DX,NDNAME
 ERRJ:   JMP     xERROR
 
 SIMPED:
-        MOV     BYTE PTR [ENDING],0
-        MOV     SP,OFFSET DG:STACK
+        MOV     byte [ENDING],0
+        MOV     SP,STACK_
 
 ;Code to print header
 ;       PUSH    AX
@@ -281,19 +257,19 @@ SIMPED:
 
 ;----- Check Version Number --------------------------------------------;
         push    ax
-        mov     ah,Get_Version
+        mov     ah,GET_VERSION
         int     21h
         cmp     al,2
         jae     vers_ok                         ; version >= 2, enter editor
-        mov     dx,offset dg:bad_vers_err
-        jmp     short errj
+        mov     dx,bad_vers_err
+        jmp     short ERRJ
 ;-----------------------------------------------------------------------;
 
 vers_ok:
 
 ;----- Process Pathnames -----------------------------------------------;
 
-        mov     ax,(char_oper shl 8)    ;get switch character
+        mov     ax,(CHAR_OPER shl 8)    ;get switch character
         int     21h
         cmp     dl,"/"
         jnz     slashok                 ;if not / , then not PC
@@ -306,9 +282,9 @@ slashok:
 
         call    kill_bl
         cmp     al,13                   ;A carriage return?
-        je      noname                  ;yes, file name missing
+        je      NONAME                  ;yes, file name missing
 
-        mov     di,offset dg:fname_buffer
+        mov     di,fname_buffer
         xor     cx,cx                   ;zero pathname length
 
 next_char:
@@ -335,35 +311,35 @@ an_option:
         je      b_opt
         cmp     al,'b'
         je      b_opt
-        mov     dx,offset dg:opt_err    ;bad option specified
-        jmp     xerror
+        mov     dx,opt_err    ;bad option specified
+        jmp     xERROR
 
 b_opt:
         mov     [loadmod],1
 
 name_copied:
-        mov     byte ptr dg:[di],0      ;nul terminate the pathname
+        mov     byte [di],0      ;nul terminate the pathname
 
         if      roprot                  ;***** R/O *****
 ;----- Check that file is not R/O --------------------------------------;
         push    cx                      ;save character count
-        mov     dx,offset dg:fname_buffer
+        mov     dx,fname_buffer
         mov     al,0                    ;get attributes
-        mov     ah,chmod
+        mov     ah,CHMOD
         int     21h
         jc      attr_are_ok
         and     cl,00000001b            ;mask all but: r/o
         jz      attr_are_ok             ;if all = 0 then file ok to edit,
-        mov     dg:[roflag],01h         ;otherwise: Error (GONG!!!)
+        mov     [roflag],01h         ;otherwise: Error (GONG!!!)
 attr_are_ok:
         pop     cx                      ;restore character count
-        endif
+        end if
 
 ;----- Scan for directory ----------------------------------------------;
         dec     di                      ;adjust to the end of the pathname
 
         IF      KANJI
-        mov     dx,offset dg: fname_buffer
+        mov     dx, fname_buffer
         PUSH    DX
         PUSH    DI
         MOV     BX,DI
@@ -379,7 +355,7 @@ DELLOOP:
         JMP     DELLOOP
 
 NOTKANJ11:
-        cmp     al,dg:[dirchar]
+        cmp     al,[dirchar]
         JNZ     DELLOOP
         MOV     DX,DI           ;Point to char after '/'
         DEC     DX
@@ -399,16 +375,16 @@ GOTDELE:
         CALL    TESTKANJ
         JNZ     same_dirj
         XCHG    AH,AL
-        cmp     al,dg:[dirchar]
+        cmp     al,[dirchar]
         jz      sj1             ;One character directory
 same_dirj:
         ELSE
-        mov     al,dg:[dirchar]         ;get directory separator character
+        mov     al,[dirchar]         ;get directory separator character
         std                             ;scan backwards
         repnz   scasb                   ;(cx has the pathname length)
         cld                             ;reset direction, just in case
         jz      sj1
-        ENDIF
+        end if
 
         jmp     same_dir                ;no dir separator char. found, the
                                         ; file is in the current directory
@@ -417,52 +393,52 @@ same_dirj:
 
 sj1:
         jcxz    sj2                     ;no more chars left, it refers to root
-        cmp     byte ptr [di],':'       ;is the prvious character a disk def?
+        cmp     byte [di],':'       ;is the prvious character a disk def?
         jne     not_root
 sj2:
-        mov     dg:[the_root],01h       ;file is in the root
+        mov     [the_root],01h       ;file is in the root
 not_root:
         inc     di                      ;point to dir separator char.
         mov     al,0
         stosb                           ;nul terminate directory name
         pop     ax
         push    di                      ;save pointer to file name
-        mov     dg:[fudge],01h          ;remember that the current directory
+        mov     [fudge],01h          ;remember that the current directory
                                         ; has been changed.
 
 ;----- Save current directory for exit ---------------------------------;
-        mov     ah,get_default_drive    ;save current drive
+        mov     ah,GET_DEFAULT_DRIVE    ;save current drive
         int     21h
-        mov     dg:[user_drive],al
+        mov     [user_drive],al
 
-        mov     dl,byte ptr ds:[fcb]    ;get specified drive if any
+        mov     dl,byte [DS:FCB]    ;get specified drive if any
         or      dl,dl                   ;default disk?
         jz      same_drive
         dec     dl                      ;adjust to real drive (a=0,b=1,...)
-        mov     ah,set_default_drive    ;change disks
+        mov     ah,SET_DEFAULT_DRIVE    ;change disks
         int     21h
         cmp     al,-1                   ;error?
         jne     same_drive
-        mov     dx,offset dg:baddrv
-        jmp     xerror
+        mov     dx,BADDRV
+        jmp     xERROR
 
 same_drive:
-        mov     ah,get_default_dpb
+        mov     ah,GET_DEFAULT_DPB
         int     21h
 
-assume  ds:nothing
+ASSUME  ds:nothing
 
         cmp     al,-1                   ;bad drive? (should always be ok)
         jne     drvisok
-        mov     dx,offset dg:baddrv
-        jmp     xerror
+        mov     dx,BADDRV
+        jmp     xERROR
 
 drvisok:
-        cmp     [bx.dpb_current_dir],0
+        cmp     [bx+dpb.dpb_current_dir],0
         je      curr_is_root
         mov     si,bx
-        add     si,dpb_dir_text
-        mov     di,offset dg:userdir + 1
+        add     si,dpb.dpb_dir_text
+        mov     di,userdir + 1
 
 dir_save_loop:
         lodsb
@@ -474,38 +450,38 @@ curr_is_root:
         push    cs
         pop     ds
 
-assume  ds:dg
+ASSUME  ds:dg
 
 
 ;----- Change directories ----------------------------------------------;
         cmp     [the_root],01h
-        mov     dx,offset dg:[dirchar]         ;assume the root
+        mov     dx,dirchar         ;assume the root
         je      sj3
-        mov     dx,offset dg:[fname_buffer]
+        mov     dx,fname_buffer
 sj3:
-        mov     ah,chdir                        ;change directory
+        mov     ah,CHDIR                        ;change directory
         int     21h
-        mov     dx,offset dg:baddrv
+        mov     dx,BADDRV
         jnc     no_errors
-        jmp     xerror
+        jmp     xERROR
 no_errors:
 
 ;----- Set Up int 24 intercept -----------------------------------------;
 
-        mov     ax,(get_interrupt_vector shl 8) or 24h
+        mov     ax,(GET_INTERRUPT_VECTOR shl 8) or 24h
         int     21h
-        mov     word ptr [hardch],bx
-        mov     word ptr [hardch+2],es
-        mov     ax,(set_interrupt_vector shl 8) or 24h
-        mov     dx,offset dg:int_24
+        mov     word [hardch],bx
+        mov     word [hardch+2],es
+        mov     ax,(SET_INTERRUPT_VECTOR shl 8) or 24h
+        mov     dx,int_24
         int     21h
         push    cs
         pop     es
 
 ;----- Parse filename to FCB -------------------------------------------;
         pop     si
-        mov     di,fcb
-        mov     ax,(parse_file_descriptor shl 8) or 1
+        mov     di,FCB
+        mov     ax,(PARSE_FILE_DESCRIPTOR shl 8) or 1
         int     21h
         push    ax
 
@@ -514,15 +490,15 @@ no_errors:
 same_dir:
         pop     ax
         OR      AL,AL
-        MOV     DX,OFFSET DG:BADDRV
+        MOV     DX,BADDRV
         jz      sj4
-        jmp     xerror
+        jmp     xERROR
 sj4:
-        CMP     BYTE PTR DS:[FCB+1]," "
+        CMP     byte [DS:FCB+1]," "
         jnz     sj5
-        jmp     noname
+        jmp     NONAME
 sj5:
-        MOV     SI,OFFSET DG:BAK
+        MOV     SI,BAK
         MOV     DI,FCB+9
         MOV     CX,3
         ;File must not have .BAK extension
@@ -537,29 +513,29 @@ sj5:
         JZ      HAVFIL
 
 ;----- Check that file is not a directory ------------
-        mov     ah,fcb_create
-        mov     dx,fcb
+        mov     ah,FCB_CREATE
+        mov     dx,FCB
         int     21h
         or      al,al
         jz      sj50                    ;no error found
-        mov     dx,offset dg:bcreat     ;creation error
-        jmp     xerror
+        mov     dx,bcreat     ;creation error
+        jmp     xERROR
 sj50:
-        mov     ah,fcb_close            ;no error, close the file
-        mov     dx,fcb
+        mov     ah,FCB_CLOSE            ;no error, close the file
+        mov     dx,FCB
         int     21h
-        mov     ah,fcb_delete           ;delete the file
-        mov     dx,fcb
+        mov     ah,FCB_DELETE           ;delete the file
+        mov     dx,FCB
         int     21h
 
 ;-----------------------------------------------------
 
-        MOV     DX,OFFSET DG:NEWFIL
+        MOV     DX,NEWFIL
         MOV     AH,STD_CON_STRING_OUTPUT
         INT     21H
 HAVFIL:
         MOV     SI,FCB
-        MOV     DI,OFFSET DG:FCB2
+        MOV     DI,FCB2
         MOV     CX,9
         REP     MOVSB
         MOV     AL,"$"
@@ -568,47 +544,47 @@ HAVFIL:
         STOSB
 MAKFIL:
         ;Create .$$$ file to make sure directory has room
-        MOV     DX,OFFSET DG:FCB2
+        MOV     DX,FCB2
         MOV     AH,FCB_CREATE
         INT     21H
         OR      AL,AL
         JZ      SETUP
-        CMP     BYTE PTR [DELFLG],0
+        CMP     byte [DELFLG],0
         JNZ     NOROOM
         CALL    DELBAK
         JMP     MAKFIL
 NOROOM:
-        MOV     DX,OFFSET DG:NODIR
+        MOV     DX,NODIR
         JMP     xERROR
 NOTBAK:
-        MOV     DX,OFFSET DG:NOBAK
+        MOV     DX,NOBAK
         JMP     xERROR
 SETUP:
         XOR     AX,AX
-        MOV     WORD PTR DS:[FCB+fcb_RR],AX         ;Set RR field to zero
-        MOV     WORD PTR DS:[FCB+fcb_RR+2],AX
-        MOV     WORD PTR [FCB2+fcb_RR],AX
-        MOV     WORD PTR [FCB2+fcb_RR+2],AX
+        MOV     word [DS:FCB+sys_fcb.fcb_RR],AX         ;Set RR field to zero
+        MOV     word [DS:FCB+sys_fcb.fcb_RR+2],AX
+        MOV     word [FCB2+sys_fcb.fcb_RR],AX
+        MOV     word [FCB2+sys_fcb.fcb_RR+2],AX
         INC     AX
-        MOV     WORD PTR DS:[FCB+fcb_RECSIZ],AX         ;Set record length to 1
-        MOV     WORD PTR [FCB2+fcb_RECSIZ],AX
-        MOV     DX,OFFSET DG:START
+        MOV     word [DS:FCB+sys_fcb.fcb_RECSIZ],AX         ;Set record length to 1
+        MOV     word [FCB2+sys_fcb.fcb_RECSIZ],AX
+        MOV     DX,START
         MOV     DI,DX
         MOV     AH,SET_DMA
         INT     21H
-        MOV     CX,DS:[6]
+        MOV     CX,[DS:6]
         DEC     CX
         MOV     [LAST],CX
-        TEST    BYTE PTR [HAVEOF],-1
+        TEST    byte [HAVEOF],-1
         JNZ     SAVEND
-        SUB     CX,OFFSET DG:START      ;Available memory
+        SUB     CX,START      ;Available memory
         SHR     CX,1            ;1/2 of available memory
         MOV     AX,CX
         SHR     CX,1            ;1/4 of available memory
         MOV     [ONE4TH],CX     ;Save amount of 1/4 full
         ADD     CX,AX           ;3/4 of available memory
         MOV     DX,CX
-        ADD     DX,OFFSET DG:START
+        ADD     DX,START
         MOV     [THREE4TH],DX   ;Save pointer to 3/4 full
         ;Read in input file
         MOV     DX,FCB
@@ -619,39 +595,39 @@ SETUP:
         ADD     DI,CX           ;Point to last byte
 SAVEND:
         CLD
-        MOV     BYTE PTR [DI],1AH
+        MOV     byte [DI],1AH
         MOV     [ENDTXT],DI
-        MOV     BYTE PTR [COMBUF],128
-        MOV     BYTE PTR [EDITBUF],255
-        MOV     BYTE PTR [EOL],10
-        MOV     [POINTER],OFFSET DG:START
+        MOV     byte [COMBUF],128
+        MOV     byte [EDITBUF],255
+        MOV     byte [EOL],10
+        MOV     [POINTER],START
         MOV     [CURRENT],1
         MOV     [PARAM1],1
-        TEST    BYTE PTR [HAVEOF],-1
+        TEST    byte [HAVEOF],-1
         JNZ     COMMAND
         CALL    APPEND
 
 COMMAND:
-        MOV     SP, OFFSET DG:STACK
+        MOV     SP, STACK_
         MOV     AX,(SET_INTERRUPT_VECTOR SHL 8) OR 23H
-        MOV     DX,OFFSET DG:ABORTCOM
+        MOV     DX,ABORTCOM
         INT     21H
         MOV     AL,PROMPT
-        CALL    OUT
-        MOV     DX,OFFSET DG:COMBUF
+        CALL    OUT_
+        MOV     DX,COMBUF
         MOV     AH,STD_CON_STRING_INPUT
         INT     21H
-        MOV     [COMLINE],OFFSET DG:COMBUF + 2
+        MOV     [COMLINE],COMBUF + 2
         MOV     AL,10
-        CALL    OUT
+        CALL    OUT_
 PARSE:
         MOV     [PARAM2],0
         MOV     [PARAM3],0
         MOV     [PARAM4],0
         mov     [fourth],0              ;reset the fourth parameter flag
-        MOV     BYTE PTR [QFLG],0
+        MOV     byte [QFLG],0
         MOV     SI,[COMLINE]
-        MOV     BP,OFFSET DG:PARAM1
+        MOV     BP,PARAM1
         XOR     DI,DI
 CHKLP:
         CALL    GETNUM
@@ -676,7 +652,7 @@ DISPATCH:
         JBE     UPCASE
         AND     AL,5FH
 UPCASE:
-        MOV     DI,OFFSET DG:COMTAB
+        MOV     DI,COMTAB
         MOV     CX,NUMCOM
         REPNE   SCASB
         JNZ     COMERR
@@ -692,12 +668,12 @@ PARMOK:
         if      roprot                          ;***** R/O *****
         cmp     [roflag],01                     ;file r/o?
         jne     paramok2
-        cmp     byte ptr [bx+rotable],01        ;operation allowed?
+        cmp     byte [bx+ROTABLE],01        ;operation allowed?
         je      paramok2
-        mov     dx,offset dg:ro_err             ;error
-        jmp     short comerr1
+        mov     dx,ro_err             ;error
+        jmp     short COMERR1
 paramok2:
-        endif
+        end if
 
         SHL     BX,1
         CALL    [BX+TABLE]
@@ -733,7 +709,7 @@ CHKRANGE:
         CMP     BX,[PARAM2]
         JBE     RET1
 COMERR:
-        MOV     DX,OFFSET DG:BADCOM
+        MOV     DX,BADCOM
 COMERR1:
         MOV     AH,STD_CON_STRING_OUTPUT
         INT     21H
@@ -812,12 +788,12 @@ sk2:
         RET
 
 comerra:
-        jmp     comerr
+        jmp     COMERR
 
 
 COMTAB  DB      "QTCMWASRDLPIE;",13
 
-NUMCOM  EQU     $-COMTAB
+NUMCOM  =     $-COMTAB
 
 ;-----------------------------------------------------------------------;
 ;       Carefull changing the order of the next two tables. They are
@@ -827,7 +803,7 @@ TABLE   DW      NOCOM   ;No command--edit line
         DW      NOCOM
         DW      ENDED
         DW      INSERT
-        DW      PAGE
+        DW      PAGE_
         DW      LIST
         DW      DELETE
         dw      replac_from_curr        ;replace from current+1 line
@@ -839,10 +815,10 @@ TABLE   DW      NOCOM   ;No command--edit line
         DW      MERGE
 
         if      roprot                  ;***** R/O *****
-        DW      QUIT1
+        DW      quit1
         else
         DW      QUIT
-        endif
+        end if
 
         if      roprot                  ;***** R/O *****
 ;-----------------------------------------------------------------------;
@@ -866,13 +842,13 @@ ROTABLE db      0               ;NOCOM
         db      1               ;QUIT
 
 ;-----------------------------------------------------------------------;
-        endif
+        end if
 
         if      roprot                  ;***** R/O *****
 quit1:
         cmp     [roflag],01             ;are we in r/o mode?
         jne     q3                      ;no query....
-        MOV     DX,OFFSET DG:FCB2       ;yes, quit without query.
+        MOV     DX,FCB2       ;yes, quit without query.
         MOV     AH,FCB_CLOSE
         INT     21H
         MOV     AH,FCB_DELETE
@@ -880,15 +856,15 @@ quit1:
         call    rest_dir                ;restore directory if needed
         INT     20H
 q3:
-        call    quit
-        endif
+        call    QUIT
+        end if
 
 SCANEOF:
         cmp     [loadmod],0
         je      sj52
 
 ;----- Load till physical end of file
-        cmp     cx,word ptr[amnt_req]
+        cmp     cx,word [amnt_req]
         jb      sj51
         xor     al,al
         inc     al              ;reset zero flag
@@ -898,7 +874,7 @@ sj51:
         push    di              ;get rid of any ^Z at the end of the file
         add     di,cx
         dec     di              ;points to last char
-        cmp     byte ptr [di],1ah
+        cmp     byte [di],1ah
         pop     di
         jne     sj51b
         dec     cx
@@ -941,14 +917,14 @@ check_end:
         push    di                      ;save pointer to buffer
         add     di,cx                   ;points to one past end on text
         dec     di                      ;points to last character
-        cmp     di,offset dg:start
+        cmp     di,START
         je      check_no
-        cmp     byte ptr[di],0ah        ;is a LF the last character?
+        cmp     byte [di],0ah        ;is a LF the last character?
         je      check_done              ;yes, exit
 check_no:
-        mov     byte ptr[di+1],0dh      ;no, put a CR
+        mov     byte [di+1],0dh      ;no, put a CR
         inc     cx                      ;one more char in text
-        mov     byte ptr[di+2],0ah      ;put a LF
+        mov     byte [di+2],0ah      ;put a LF
         inc     cx                      ;another character at the end
 check_done:
         pop     di
@@ -961,7 +937,7 @@ not_end:
 NOMOREJ:JMP     NOMORE
 
 APPEND:
-        TEST    BYTE PTR [HAVEOF],-1
+        TEST    byte [HAVEOF],-1
         JNZ     NOMOREJ
         MOV     DX,[ENDTXT]
         CMP     [PARAM1],0      ;See if parameter is missing
@@ -975,7 +951,7 @@ PARMAPP:
         MOV     CX,[LAST]
         SUB     CX,DX           ;Amount of memory available
         jnz     sj53
-        jmp     memerr
+        jmp     MEMERR
 sj53:
         MOV     DX,FCB
         mov     [amnt_req],cx   ;save ammount of chars requested
@@ -985,7 +961,7 @@ sj53:
         PUSH    CX              ;Save actual byte count
         CALL    SCANEOF
         JNZ     NOTEND
-        MOV     BYTE PTR [HAVEOF],1     ;Set flag if 1AH found in file
+        MOV     byte [HAVEOF],1     ;Set flag if 1AH found in file
 NOTEND:
         XOR     DX,DX
         MOV     BX,[PARAM1]
@@ -1013,25 +989,25 @@ COUNTLN:
         CLD
 FULLN:
         POP     CX                              ;Actual amount read
-        MOV     WORD PTR [DI],1AH               ;Place EOF after last line
+        MOV     word [DI],1AH               ;Place EOF after last line
         SUB     CX,DI
         XCHG    DI,[ENDTXT]
         ADD     DI,CX                           ;Amount of file read but not used
-        SUB     WORD PTR DS:[FCB+fcb_RR],DI         ;Adjust RR field in case end of file
-        SBB     WORD PTR DS:[FCB+fcb_RR+2],0           ;   was not reached
+        SUB     word [DS:FCB+sys_fcb.fcb_RR],DI         ;Adjust RR field in case end of file
+        SBB     word [DS:FCB+sys_fcb.fcb_RR+2],0           ;   was not reached
         CMP     BX,DX
         JNZ     EOFCHK
-        MOV     BYTE PTR [HAVEOF],0
+        MOV     byte [HAVEOF],0
         RET
 NOMORE:
-        MOV     DX,OFFSET DG:EOF
+        MOV     DX,EOF
         MOV     AH,STD_CON_STRING_OUTPUT
         INT     21H
 RET3:   RET
 EOFCHK:
-        TEST    BYTE PTR [HAVEOF],-1
+        TEST    byte [HAVEOF],-1
         JNZ     NOMORE
-        TEST    BYTE PTR [ENDING],-1
+        TEST    byte [ENDING],-1
         JNZ     RET3            ;Suppress memory error during End
         JMP     MEMERR
 
@@ -1043,7 +1019,7 @@ EWRITE:
         MOV     DI,[ENDTXT]
         SUB     DI,CX           ;Write everything in front of here
         JBE     RET3
-        CMP     DI,OFFSET DG:START      ;See if there's anything to write
+        CMP     DI,START      ;See if there's anything to write
         JBE     RET3
         XOR     DX,DX
         MOV     BX,1            ;Look for one more line
@@ -1053,7 +1029,7 @@ WRT:
         INC     BX
         CALL    FINDLIN
 WRTADD:
-        CMP     BYTE PTR [DELFLG],0
+        CMP     byte [DELFLG],0
         JNZ     WRTADD1
         PUSH    DI
         CALL    DELBAK                  ;Want to delete the .BAK file
@@ -1061,18 +1037,18 @@ WRTADD:
         POP     DI
 WRTADD1:
         MOV     CX,DI
-        MOV     DX,OFFSET DG:START
+        MOV     DX,START
         SUB     CX,DX                   ;Amount to write
         JZ      RET3
         MOV     AH,SET_DMA
         INT     21H
-        MOV     DX,OFFSET DG:FCB2
+        MOV     DX,FCB2
         MOV     AH,FCB_RANDOM_WRITE_BLOCK
         INT     21H
         OR      AL,AL
         JNZ     WRTERR
         MOV     SI,DI
-        MOV     DI,OFFSET DG:START
+        MOV     DI,START
         MOV     [POINTER],DI
         MOV     CX,[ENDTXT]
         SUB     CX,SI
@@ -1086,7 +1062,7 @@ WRTADD1:
 WRTERR:
         MOV     AH,FCB_CLOSE
         INT     21H
-        MOV     DX,OFFSET DG:DSKFUL
+        MOV     DX,DSKFUL
 xERROR:
         MOV     AH,STD_CON_STRING_OUTPUT
         INT     21H
@@ -1095,50 +1071,50 @@ xERROR:
 ;-----------------------------------------------------------------------
         INT     32
 
-RET$5:  RET
+ret_5:  RET
 
-PAGE:
+PAGE_:
         xor     bx,bx           ;get last line in the buffer
-        call    findlin
-        mov     [lastlin],dx
+        call    FINDLIN
+        mov     [LASTLIN],dx
 
-        mov     bx,[param1]
+        mov     bx,[PARAM1]
         or      bx,bx           ;was it specified?
         jnz     frstok          ;yes, use it
-        mov     bx,[current]
+        mov     bx,[CURRENT]
         cmp     bx,1            ;if current line =1 start from there
         je      frstok
         inc     bx              ;start from current+1 line
 frstok:
-        cmp     bx,[lastlin]    ;check that we are in the buffer
-        ja      ret$5           ;if not just quit
+        cmp     bx,[LASTLIN]    ;check that we are in the buffer
+        ja      ret_5           ;if not just quit
 infile:
-        mov     dx,[param2]
+        mov     dx,[PARAM2]
         or      dx,dx           ;was param2 specified?
         jnz     scndok          ;yes,....
         mov     dx,bx           ;no, take the end line to be the
         add     dx,22           ;  start line + 23
 scndok:
         inc     dx
-        cmp     dx,[lastlin]    ;check that we are in the buffer
+        cmp     dx,[LASTLIN]    ;check that we are in the buffer
         jbe     infile2
-        mov     dx,[lastlin]    ;we are not, take the last line as end
+        mov     dx,[LASTLIN]    ;we are not, take the last line as end
 infile2:
         cmp     dx,bx           ;is param1 < param2 ?
-        jbe     ret$5           ;yes, no backwards listing, quit
+        jbe     ret_5           ;yes, no backwards listing, quit
         push    dx              ;save the end line
         push    bx              ;save start line
         mov     bx,dx           ;set the current line
         dec     bx
-        call    findlin
-        mov     [pointer],di
-        mov     [current],dx
+        call    FINDLIN
+        mov     [POINTER],di
+        mov     [CURRENT],dx
         pop     bx              ;restore start line
-        call    findlin         ;get pointer to start line
+        call    FINDLIN         ;get pointer to start line
         mov     si,di           ;save pointer
         pop     di              ;get end line
         sub     di,bx           ;number of lines
-        jmp     short display
+        jmp     short DISPLAY_
 
 
 LIST:
@@ -1156,15 +1132,15 @@ CHKP2:
         MOV     DI,[PARAM2]
         INC     DI
         SUB     DI,BX
-        JA      DISPLAY
+        JA      DISPLAY_
         MOV     DI,23
-        JMP     SHORT DISPLAY
+        JMP     SHORT DISPLAY_
 
 
 DISPONE:
         MOV     DI,1
 
-DISPLAY:
+DISPLAY_:
 
 ; Inputs:
 ;       BX = Line number
@@ -1197,11 +1173,11 @@ OUTLN:
         JZ      SEND
         PUSH    AX
         MOV     AL,"^"
-        CALL    OUT
+        CALL    OUT_
         POP     AX
         OR      AL,40H
 SEND:
-        CALL    OUT
+        CALL    OUT_
         CMP     AL,10
         LOOPNZ  OUTLN
         JCXZ    RET7
@@ -1212,7 +1188,7 @@ SEND:
 RET7:   RET
 
 LOADBUF:
-        MOV     DI,2 + OFFSET DG:EDITBUF
+        MOV     DI,2 + EDITBUF
         MOV     CX,255
         MOV     DX,-1
 LOADLP:
@@ -1235,13 +1211,13 @@ TRUNCLP:
 NOTFNDJ:JMP     NOTFND
 
 replac_from_curr:
-        mov     byte ptr [srchmod],1   ;search from curr+1 line
+        mov     byte [srchmod],1   ;search from curr+1 line
         jmp     short sj6
 
 REPLAC:
-        mov     byte ptr [srchmod],0   ;search from beg of buffer
+        mov     byte [srchmod],0   ;search from beg of buffer
 sj6:
-        MOV     BYTE PTR [SRCHFLG],0
+        MOV     byte [SRCHFLG],0
         CALL    FNDFIRST
         JNZ     NOTFNDJ
 REPLP:
@@ -1262,7 +1238,7 @@ REPLP:
         DEC     CX
         CALL    OUTCNT          ;Output first part of line
         PUSH    SI
-        MOV     SI,1+ OFFSET DG:TXT2
+        MOV     SI,1+ TXT2
         MOV     CX,[NEWLEN]
         CALL    OUTCNT          ;Output change
         POP     SI
@@ -1275,7 +1251,7 @@ REPLP:
         CALL    PUTCURS
         MOV     DI,[LSTFND]
         DEC     DI
-        MOV     SI,1+ OFFSET DG:TXT2
+        MOV     SI,1+ TXT2
         MOV     DX,[OLDLEN]
         MOV     CX,[NEWLEN]
         DEC     CX
@@ -1297,23 +1273,23 @@ OUTCNT:
         JCXZ    RET8
 OUTLP:
         LODSB
-        CALL    OUT
+        CALL    OUT_
         DEC     DX
         LOOP    OUTLP
 RET8:   RET
 
 TOOLONG:
-        MOV     DX,OFFSET DG:TOOLNG
+        MOV     DX,TOOLNG
         JMP     SHORT PERR
 
 search_from_curr:
-        mov     byte ptr [srchmod],1   ;search from curr+1 line
+        mov     byte [srchmod],1   ;search from curr+1 line
         jmp     short sj7
 
 SEARCH:
-        mov     byte ptr [srchmod],0   ;search from beg of buffer
+        mov     byte [srchmod],0   ;search from beg of buffer
 sj7:
-        MOV     BYTE PTR [SRCHFLG],1
+        MOV     byte [SRCHFLG],1
         CALL    FNDFIRST
         JNZ     NOTFND
 SRCH:
@@ -1334,7 +1310,7 @@ SRCH:
         CALL    FNDNEXT
         JZ      SRCH
 NOTFND:
-        MOV     DX,OFFSET DG:NOSUCH
+        MOV     DX,NOSUCH
 PERR:
         MOV     AH,STD_CON_STRING_OUTPUT
         INT     21H
@@ -1370,7 +1346,7 @@ DELFIN2:
         POP     DI
         SUB     DX,DI
         JBE     COMERRJ
-        POP     [CURRENT]
+        POP     word [CURRENT]
         MOV     [POINTER],DI
         XOR     CX,CX
         JMP     SHORT REPLACE
@@ -1402,15 +1378,15 @@ sj12:
         CALL    DISPONE
         CALL    SHOWNUM
         MOV     AH,STD_CON_STRING_INPUT           ;Get input buffer
-        MOV     DX,OFFSET DG:EDITBUF
+        MOV     DX,EDITBUF
         INT     21H
         MOV     AL,10
-        CALL    OUT
+        CALL    OUT_
         MOV     CL,[EDITBUF+1]
         MOV     CH,0
         JCXZ    RET12
         MOV     DX,[OLDLEN]
-        MOV     SI,2 + OFFSET DG:EDITBUF
+        MOV     SI,2 + EDITBUF
 ;-----------------------------------------------------------------------
         call    unquote                 ;scan for quote chars if any
 ;-----------------------------------------------------------------------
@@ -1462,26 +1438,26 @@ COPYIN:
 RET12:  RET
 
 MEMERR:
-        MOV     DX,OFFSET DG:MEMFUL
+        MOV     DX,MEMFUL
         MOV     AH,STD_CON_STRING_OUTPUT
         INT     21H
         JMP     COMMAND
 
 MOVERR:
-        MOV     DX,OFFSET DG:BADCOM
+        MOV     DX,BADCOM
 ERRORJ:
         JMP     COMERR
 
 MOVE:
-        MOV     BYTE PTR [MOVFLG],1
+        MOV     byte [MOVFLG],1
         JMP     SHORT BLKMOVE
 COPY:
-        MOV     BYTE PTR [MOVFLG],0
+        MOV     byte [MOVFLG],0
 
 BLKMOVE:
         MOV     BX,[PARAM3]             ;Third parameter must be specified
         OR      BX,BX
-        MOV     DX,OFFSET DG:DEST
+        MOV     DX,DEST
         JZ      ERRORJ
         MOV     BX,[PARAM1]             ;Get the first parameter
         OR      BX,BX                   ;Not specified?
@@ -1568,7 +1544,7 @@ COPY_TEXT_1:
         MOV     CX,[COPYSIZ]
         JMP     SHORT COPY_TEXT_1
 MOV_CHK:
-        CMP     BYTE PTR[MOVFLG],0
+        CMP     byte [MOVFLG],0
         JZ      COPY_DONE
         MOV     DI,[PTR_1]
         MOV     SI,[PTR_2]
@@ -1620,20 +1596,20 @@ NAMERR:
 
 MERGE:
         MOV     AX,(PARSE_FILE_DESCRIPTOR SHL 8) OR 1
-        MOV     DI,OFFSET DG:FCB3
+        MOV     DI,FCB3
         INT     21H
         OR      AL,AL
-        MOV     DX,OFFSET DG:BADDRV
+        MOV     DX,BADDRV
         JNZ     NAMERR
         MOV     [COMLINE],SI
-        MOV     DX,OFFSET DG:FCB3
+        MOV     DX,FCB3
         MOV     AH,FCB_OPEN
         INT     21H
         OR      AL,AL
-        MOV     DX,OFFSET DG:FILENM
+        MOV     DX,FILENM
         JNZ     NAMERR
         MOV     AX,(SET_INTERRUPT_VECTOR SHL 8) OR 23H
-        MOV     DX,OFFSET DG:ABORTMERGE
+        MOV     DX,ABORTMERGE
         INT     21H
         MOV     BX,[PARAM1]
         OR      BX,BX
@@ -1650,31 +1626,31 @@ MRG:
         MOV     AH,SET_DMA
         INT     21H
         XOR     AX,AX
-        MOV     WORD PTR DS:[FCB3+fcb_RR],AX
-        MOV     WORD PTR DS:[FCB3+fcb_RR+2],AX
+        MOV     word [DS:FCB3+sys_fcb.fcb_RR],AX
+        MOV     word [DS:FCB3+sys_fcb.fcb_RR+2],AX
         INC     AX
-        MOV     WORD PTR DS:[FCB3+fcb_RECSIZ],AX
-        MOV     DX,OFFSET DG:FCB3
+        MOV     word [DS:FCB3+sys_fcb.fcb_RECSIZ],AX
+        MOV     DX,FCB3
         MOV     CX,[ENDTXT]
         SUB     CX,[POINTER]
         MOV     AH,FCB_RANDOM_READ_BLOCK
         INT     21H
         CMP     AL,1
         JZ      FILEMRG
-        MOV     DX,OFFSET DG:MRGERR
+        MOV     DX,MRGERR
         MOV     AH,STD_CON_STRING_OUTPUT
         INT     21H
         MOV     CX,[POINTER]
-        JMP     SHORT RESTORE
+        JMP     SHORT RESTORE_
 FILEMRG:
         ADD     CX,[POINTER]
         MOV     SI,CX
         DEC     SI
         LODSB
         CMP     AL,1AH
-        JNZ     RESTORE
+        JNZ     RESTORE_
         DEC     CX
-RESTORE:
+RESTORE_:
         MOV     DI,CX
         MOV     SI,[ENDTXT]
         INC     SI
@@ -1682,11 +1658,11 @@ RESTORE:
         SUB     CX,SI
         REP     MOVSB
         MOV     [ENDTXT],DI
-        MOV     BYTE PTR [DI],1AH
-        MOV     DX,OFFSET DG:FCB3
+        MOV     byte [DI],1AH
+        MOV     DX,FCB3
         MOV     AH,FCB_CLOSE
         INT     21H
-        MOV     DX,OFFSET DG:START
+        MOV     DX,START
         MOV     AH,SET_DMA
         INT     21H
         RET
@@ -1694,14 +1670,14 @@ RESTORE:
 
 INSERT:
         MOV     AX,(SET_INTERRUPT_VECTOR SHL 8) OR 23H        ;Set vector 23H
-        MOV     DX,OFFSET DG:ABORTINS
+        MOV     DX,ABORTINS
         INT     21H
         MOV     BX,[PARAM1]
         OR      BX,BX
-        JNZ     INS
+        JNZ     INS_
         MOV     BX,[CURRENT]
         CALL    CHKRANGE
-INS:
+INS_:
         CALL    FINDLIN
         MOV     BX,DX
         MOV     DX,[LAST]
@@ -1709,12 +1685,12 @@ INS:
 INLP:
         CALL    SETPTS                  ;Update the pointers into file
         CALL    SHOWNUM
-        MOV     DX,OFFSET DG:EDITBUF
+        MOV     DX,EDITBUF
         MOV     AH,STD_CON_STRING_INPUT
         INT     21H
         CALL    LF
-        MOV     SI,2 + OFFSET DG:EDITBUF
-        CMP     BYTE PTR [SI],1AH
+        MOV     SI,2 + EDITBUF
+        CMP     byte [SI],1AH
         JZ      ENDINS
 ;-----------------------------------------------------------------------
         call    unquote                 ;scan for quote chars if any
@@ -1739,7 +1715,7 @@ MEMOK:
         JMP     SHORT INLP
 
 ABORTMERGE:
-        MOV     DX,OFFSET DG:START
+        MOV     DX,START
         MOV     AH,SET_DMA
         INT     21H
 
@@ -1748,7 +1724,7 @@ ABORTINS:
         MOV     DS,AX
         MOV     ES,AX
         MOV     SS,AX
-        MOV     SP,OFFSET DG:STACK
+        MOV     SP,STACK_
         STI
         CALL    CRLF
         CALL    ENDINS
@@ -1769,7 +1745,7 @@ END_INS:
         DEC     DI
         MOV     [ENDTXT],DI
         MOV     AX,(SET_INTERRUPT_VECTOR SHL 8) OR 23H
-        MOV     DX,OFFSET DG:ABORTCOM
+        MOV     DX,ABORTCOM
         INT     21H
         RET
 
@@ -1778,38 +1754,38 @@ FILLBUF:
         CALL    APPEND
 ENDED:
 ;Write text out to .$$$ file
-        MOV     BYTE PTR [ENDING],1     ;Suppress memory errors
+        MOV     byte [ENDING],1     ;Suppress memory errors
         MOV     BX,-1           ;Write max. no of lines
         CALL    WRT
-        TEST    BYTE PTR [HAVEOF],-1
+        TEST    byte [HAVEOF],-1
         JZ      FILLBUF
         MOV     DX,[ENDTXT]
         MOV     AH,SET_DMA
         INT     21H
         MOV     CX,1
-        MOV     DX,OFFSET DG:FCB2
+        MOV     DX,FCB2
         MOV     AH,FCB_RANDOM_WRITE_BLOCK
         INT     21H              ;Write end-of-file byte
 ;Close .$$$ file
         MOV     AH,FCB_CLOSE
         INT     21H
         MOV     SI,FCB
-        LEA     DI,[SI+fcb_FILSIZ]
+        LEA     DI,[SI+sys_fcb.fcb_FILSIZ]
         MOV     DX,SI
         MOV     CX,9
         REP     MOVSB
-        MOV     SI,OFFSET DG:BAK
+        MOV     SI,BAK
         MOVSW
         MOVSB
 ;Rename original file .BAK
         MOV     AH,FCB_RENAME
         INT     21H
         MOV     SI,FCB
-        MOV     DI,OFFSET DG:FCB2 + fcb_FILSIZ
+        MOV     DI,FCB2 + sys_fcb.fcb_FILSIZ
         MOV     CX,6
         REP     MOVSW
 ;Rename .$$$ file to original name
-        MOV     DX,OFFSET DG:FCB2
+        MOV     DX,FCB2
         INT     21H
         call    rest_dir                ;restore directory if needed
         INT     20H
@@ -1819,27 +1795,26 @@ ABORTCOM:
         MOV     DS,AX
         MOV     ES,AX
         MOV     SS,AX
-        MOV     SP,OFFSET DG:STACK
+        MOV     SP,STACK_
         STI
         CALL    CRLF
         JMP     COMMAND
 
 DELBAK:
-        MOV     BYTE PTR [DELFLG],1
-        MOV     DI,9+OFFSET DG:FCB2
-        MOV     SI,OFFSET DG:BAK
+        MOV     byte [DELFLG],1
+        MOV     DI,9+FCB2
+        MOV     SI,BAK
         MOVSW
         MOVSB
         ;Delete old backup file (.BAK)
         MOV     AH,FCB_DELETE
-        MOV     DX,OFFSET DG:FCB2
+        MOV     DX,FCB2
         INT     21H
-        MOV     DI,9+OFFSET DG:FCB2
+        MOV     DI,9+FCB2
         MOV     AL,"$"
         STOSB
         STOSB
         STOSB
         RET
 
-CODE    ENDS
-        END     EDLIN
+end if

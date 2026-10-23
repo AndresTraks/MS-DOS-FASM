@@ -1,0 +1,4 @@
+ECHO ON
+RECOVER B: < crn.txt
+DIR B:
+ECHO DONE

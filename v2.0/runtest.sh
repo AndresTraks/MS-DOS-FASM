@@ -31,6 +31,7 @@ KEYS=                   # QEMU sendkey names, one a second
 EXTRA=                  # files to put on the image
 BIMAGE=                 # a second floppy, as drive B
 BRO=                    # ... with the write protect tab on
+LPT=                    # a file to catch what goes to the printer
 FETCH=                  # files to take off it afterwards
 EXPECT=                 # text that has to appear on the screen
 IMAGE=test.img
@@ -48,13 +49,14 @@ usage: $0 [-t seconds] [-k "keys"] [-K seconds] [-f file] [-g name]
   -g  a file to take off the image into test-out/, repeatable
   -b  an image to attach as the second floppy, which DOS sees as B:
   -r  attach that one write protected, so writing it fails as it would
+  -P  a file to point the parallel port at, for what a program prints
   -e  text that must appear on the screen or in a file fetched with -g,
       repeatable; absent means fail
 USAGE
     exit 2
 }
 
-while getopts t:k:K:f:g:b:re: opt; do
+while getopts t:k:K:f:g:b:rP:e: opt; do
     case $opt in
         t) RUN=$OPTARG ;;
         k) KEYS=$OPTARG ;;
@@ -62,6 +64,7 @@ while getopts t:k:K:f:g:b:re: opt; do
         f) EXTRA="$EXTRA $OPTARG" ;;
         g) FETCH="$FETCH $OPTARG" ;;
         b) BIMAGE=$OPTARG ;;
+        P) LPT=$OPTARG ;;
         r) BRO=,readonly=on ;;
         e) EXPECT="$EXPECT
 $OPTARG" ;;
@@ -86,11 +89,16 @@ cp msdos.img "$IMAGE"
 mcopy -o -i "$IMAGE" "$BATCH" ::AUTOEXEC.BAT
 for f in $EXTRA; do mcopy -o -i "$IMAGE" "$f" ::; done
 
-# Unquoted on purpose, as it is either two words or none.
+# Unquoted on purpose, as these are either whole options or nothing.
 BOPT=
 if [ -n "$BIMAGE" ]; then
     [ -f "$BIMAGE" ] || { echo "$0: no such image: $BIMAGE" >&2; exit 2; }
     BOPT="-drive file=$BIMAGE,format=raw,if=floppy,index=1$BRO"
+fi
+POPT=
+if [ -n "$LPT" ]; then
+    : > "$LPT"
+    POPT="-parallel file:$LPT"
 fi
 
 mkdir -p "$OUT"
@@ -110,7 +118,7 @@ trap 'rm -rf "$OUT"' EXIT
     sleep 2
     echo quit
 } | "$QEMU" -rtc base=localtime \
-            -drive file="$IMAGE",format=raw,if=floppy,index=0 $BOPT \
+            -drive file="$IMAGE",format=raw,if=floppy,index=0 $BOPT $POPT \
             -display none -monitor stdio >/dev/null 2>&1 || true
 
 [ -s "$OUT/screen.bin" ] || { echo "$0: the screen never came back; QEMU or the monitor failed" >&2; exit 1; }

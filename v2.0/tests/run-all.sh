@@ -1,5 +1,7 @@
 #!/bin/sh
-# Run the quick tests.  Each line is one boot, so the lot takes a few minutes.
+# Run the quick tests.  Each line is one boot, and there are enough of them
+# now, with the utilities each checked against the binary it replaces, that
+# the lot takes about a quarter of an hour.
 #
 # BIGCOPY used to be left out, taking several minutes to copy 70K through a
 # driver that went a sector at a time.  The driver now takes a whole track in
@@ -72,6 +74,18 @@ fi
 # Compares files four ways with our FC and with Microsoft's, and compares what
 # the two of them said.
 ./tests/fc.sh || fail=1
+
+# Copies the whole system disk to a second floppy with our DISKCOPY, 2880
+# sectors each way through the driver, and checks the copy from this end.
+./tests/diskcopy.sh || fail=1
+
+# Rebuilds a disk's directory from its FAT with our RECOVER and with
+# Microsoft's, two boots, and compares the disks they left behind.
+./tests/recover.sh || fail=1
+
+# Edits a file with our EDLIN and with Microsoft's, driven by a script of
+# editor commands, and compares the files and the transcripts.
+./tests/edlin.sh || fail=1
 
 if [ $fail -eq 0 ]; then
     printf '\n======== all passed\n'

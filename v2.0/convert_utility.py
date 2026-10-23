@@ -56,6 +56,70 @@ PROGRAMS = {
         "macros": {},
         "renames": {"GENFOR.ASM": {"START": "GENSTART"}},
     },
+    "PRINT": {
+        # The 2.11 variant of the two the release ships, and the only one that
+        # would run here: PRINT.ASM accepts up to 2.00 and this DOS reports
+        # 2.11.  They differ in four lines -- that version bound, the IBM and
+        # MSVER switches, and the path on the DOSSYM include.
+        "dossym": "DOSSYM.ASM",
+        "modules": ("PRINT_v211.ASM",),
+        "segments": ("CODE", "DATA"),
+        "group": "DG",
+        "reserved": ("MATCH",),         # FASM's match directive
+        "renames": {},
+        "macros": {},
+    },
+    "EDLIN": {
+        # Three modules in the order CHKDSK's three go in: the program, its
+        # procedures, its messages.  Three segments in a group and ORG 100H.
+        "dossym": "DOSSYM.ASM",
+        "modules": ("EDLIN.ASM", "EDLPROC.ASM", "EDLMES.ASM"),
+        "segments": ("CODE", "CONST", "DATA"),
+        "group": "DG",
+        # DISPLAY, RESTORE and STACK are FASM directives; OUT and INS are
+        # instructions, INS one of the ones the 80186 added that FASM knows
+        # and MASM 1.x did not.  All five are labels in this source.
+        # PAGE as well, which is a label here and a macro in DOSMAC, that
+        # being MASM's listing directive the conversion keeps as a no-op.
+        "reserved": ("DISPLAY", "RESTORE", "STACK", "OUT", "INS", "PAGE"),
+        # RET1 and RET9 are each defined in two of the modules: local returns
+        # that never met while MASM assembled the modules apart.
+        # And ret$5, MASM taking a $ in a name where FASM reads it as the
+        # current address.  The only one in the release's sources, and the
+        # source spells it RET$5 where it defines it and ret$5 where it jumps
+        # to it, which is why the rename has to be case blind as MASM was.
+        "renames": {"EDLIN.ASM": {"ret$5": "ret_5"},
+                    "EDLPROC.ASM": {"RET1": "PROCRET1"},
+                    "EDLMES.ASM": {"RET9": "MESRET9"}},
+        "macros": {},
+    },
+    "RECOVER": {
+        # DISKCOPY's shape again: three segments in a group, ORG 100H, a .COM.
+        "dossym": "DOSSYM.ASM",
+        "modules": ("RECOVER.ASM", "RECMES.ASM"),
+        "segments": ("CODE", "CONST", "DATA"),
+        "group": "DG",
+        "reserved": ("load",),          # FASM's load directive
+        # Both modules have a local called pret, the RET they jump to after
+        # printing.  MASM assembled them apart and neither was PUBLIC, so
+        # neither knew of the other; assembled together they collide.  The
+        # equates they both declare -- bdos, boot, aread, awrite, cr, lf,
+        # true, false -- agree to the value and redefine harmlessly.
+        "renames": {"RECMES.ASM": {"pret": "mespret"}},
+        "macros": {},
+    },
+    "DISKCOPY": {
+        # CHKDSK's shape exactly: three segments in a group and ORG 100H, so
+        # a .COM rather than an .EXE, and nothing of its own to declare.
+        "dossym": "DOSSYM.ASM",
+        "modules": ("DISKCOPY.ASM", "DISKMES.ASM"),
+        "segments": ("CODE", "CONST", "DATA"),
+        "group": "DG",
+        # Its main loop is called loop, which is an instruction here.
+        "reserved": ("loop",),
+        "renames": {},
+        "macros": {},
+    },
     "FC": {
         # Lays out like SORT: code, const and data in the group dg, with a
         # stack segment of its own outside it.  It does include DOSSYM, in
@@ -143,7 +207,16 @@ STRINGS = re.compile(r"'[^']*'|\"[^\"]*\"")
 DROP = re.compile(r"""^\s*(
       \.(xlist|list|radix|xcref|cref
          |sall|lall|xall|sfcond|lfcond|tfcond)\b
-    | (PAGE|SUBTTL|TITLE)\b
+    | (PAGE|SUBTTL|TITLE)\b(?!:)         # not a label of that name: EDLIN
+                                       # has one called PAGE, and dropping
+                                       # its definition left every reference
+                                       # to it undefined
+    | ORG\s+0\s*$                       # the data segment restating where it
+                                       # starts, as PRINT's does.  Segment
+                                       # offsets are the segment's own in
+                                       # MASM; flattened into one address
+                                       # space an ORG 0 would wind the
+                                       # counter back over the code
     | %OUT\b
     | PUBLIC\b
     | EXTRN\b
@@ -260,8 +333,11 @@ def one_struc(text):
     return text[:m.start()] + "\n".join(new) + text[m.end():], False
 
 
-# A label may sit in front of the instruction, as in "FDPB:   MOV DL,DRIVE".
-MNEMONIC = re.compile(r"^((?:\w+:)?\s+)([A-Za-z][\w]*)(\s+)(\S.*)$")
+# A label may sit in front of the instruction, as in "FDPB:   MOV DL,DRIVE",
+# and need not leave a space after the colon: RECOVER writes "recfil0:mov
+# lastfat,1", which went unrecognised and so unbracketed while the same
+# variable was bracketed everywhere else.
+MNEMONIC = re.compile(r"^((?:\w+:\s*|\s+))([A-Za-z][\w]*)(\s+)(\S.*)$")
 NOTCODE = {"DB", "DW", "DD", "LABEL", "INCLUDE", "IF", "ELSE", "END", "STRUC",
            "VIRTUAL", "ORG", "MACRO", "ASSUME", "EQU", "REPT", "IRP", "ENDM",
            "REPEAT", "DISPLAY", "ERR", "WHILE",
@@ -311,6 +387,10 @@ def spellings(text, canon):
         for m in (re.match(r"^(\w+)\s+(?:DB|DW|DD)\b", code, re.I),
                   re.match(r"^(\w+)\s+EQU\b", code, re.I),
                   re.match(r"^(\w+)\s*=", code),
+                  # MASM's NAME LABEL SIZE as well as the converted form:
+                  # EDLIN declares START LABEL WORD and then asks for
+                  # "offset dg:start" in lower case half a dozen lines later.
+                  re.match(r"^(\w+)\s+LABEL\b", code, re.I),
                   re.match(r"^\s*label\s+(\w+)\s", code, re.I),
                   re.match(r"^(\w+):", code)):
             if m:
@@ -431,6 +511,12 @@ def bracket(body, labels):
 def line(code):
     def words(t):
         t = re.sub(r"\b(BYTE|WORD|DWORD)\s+PTR\b", lambda m: m.group(1).lower(), t, flags=re.I)
+        # OFFSET names an address, so where the source bracketed the name
+        # inside it the brackets go with the OFFSET: RECOVER writes
+        # "mov dx,offset dg: [dirchar]", and left bracketed that is a word
+        # load from a byte.
+        t = re.sub(r"\bOFFSET\s+((?:\w+\s*:\s*)?)\[\s*([^\]]+?)\s*\]",
+                   lambda m: m.group(1) + m.group(2), t, flags=re.I)
         t = re.sub(r"\bOFFSET\s+", "", t, flags=re.I)
         # MASM's SIZE operator on a structure, which the converted form of it
         # states as sizeof.NAME beside the instance.
@@ -457,8 +543,29 @@ def line(code):
         # the way FC does it throughout: "mov word [bx].buf,b1" means
         # [bx+buf], buf being an equate rather than a structure field -- FC
         # declares no structure at all and counts its offsets out by hand.
+        # In either case: FORMAT writes BP.FIELD and RECOVER writes
+        # bx.dpb_current_dir, and without re.I the lower case one went
+        # through as a symbol with a dot in the middle of it.
         t = re.sub(r"\b(BP|BX|SI|DI)\.(\w+)\b",
-                   lambda m: "%s+%s" % (m.group(1), FIELDS.get(m.group(2).upper(), m.group(2))), t)
+                   lambda m: "%s+%s" % (m.group(1), FIELDS.get(m.group(2).upper(), m.group(2))),
+                   t, flags=re.I)
+        # MASM adds two index registers by writing them as two brackets:
+        # RECOVER has "mov bx,word [bx][si]", which is [bx+si].
+        t = re.sub(r"\]\s*\[", "+", t)
+        # A field applied to a variable rather than to a register: PRINT
+        # writes LISTFCB.fcb_DEVID for the device bits of the FCB it keeps at
+        # LISTFCB.  The field is an offset, so the two add -- but only where
+        # the name is a variable and the field a known one, or this would
+        # rewrite the sys_fcb.fcb_DEVID the field itself has become.
+        def var_field(m, _f=None):
+            name, field = m.group(1), m.group(2).upper()
+            if name.upper() in STRUCS:
+                return m.group(0)
+            for table in (FIELDS, DOSFIELDS):
+                if field in table:
+                    return "%s+%s" % (name, table[field])
+            return m.group(0)
+        t = re.sub(r"\b([A-Za-z_]\w*)\.(\w+)\b", var_field, t)
         t = re.sub(r"\[\s*(BP|BX|SI|DI)\s*\]\s*\.(\w+)\b",
                    lambda m: "[%s+%s]" % (m.group(1),
                                           FIELDS.get(m.group(2).upper(), m.group(2))),
@@ -483,8 +590,11 @@ def convert(text, renames, first=False):
         # Before anything else, so that a renamed macro parameter is renamed
         # in the MACRO line too and not only in the body.
         for was, now in renames.items():
-            raw = outside_strings(raw, lambda t, w=was, n=now:
-                                  re.sub(r"\b%s\b" % w, n, t))
+            # In either case, MASM's names being case blind: EDLIN defines
+            # RET$5 and jumps to ret$5, and renaming only what matched
+            # exactly left the definition behind under its old name.
+            raw = outside_strings(raw, lambda t, w=re.escape(was), n=now:
+                                  re.sub(r"\b%s\b" % w, n, t, flags=re.I))
         if SEGMENTS:
             m = re.match(r"^\s*(\w+)\s+SEGMENT\b", raw, re.I)
             if m and m.group(1).upper() in SEGMENTS:

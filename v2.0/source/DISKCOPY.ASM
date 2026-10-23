@@ -1,4 +1,3 @@
-        TITLE   DISKCOPY MSDOS Disk Copier
 ;----------------------------------------------------------
 ;
 ;       Diskcopy - Program to copy entire diskettes
@@ -12,35 +11,31 @@
 ; Rev 1.20
 ;               Read in > 64K hunks
 
-FALSE   EQU     0
-TRUE    EQU     NOT FALSE
+FALSE   =     0
+TRUE    =     -1
 
 
-bdos    equ     21h
-boot    equ     20h
-aread   equ     25h
-awrite  equ     26h
+bdos    =     21h
+boot    =     20h
+aread   =     25h
+awrite  =     26h
 
-        INCLUDE DOSSYM.ASM
 
-fcb     equ     5ch
+fcb     =     5ch
 
-CODE    SEGMENT PUBLIC
-CODE    ENDS
+if SEGSEL = S_CODE
+end if
 
-CONST   SEGMENT PUBLIC BYTE
-CONST   ENDS
+if SEGSEL = S_CONST
+end if
 
-DATA    SEGMENT PUBLIC BYTE
-DATA    ENDS
+if SEGSEL = S_DATA
+end if
 
-DG      GROUP   CODE,CONST,DATA
 
-CODE  segment PUBLIC
-        assume  cs:DG,ds:DG,es:DG,ss:DG
+if SEGSEL = S_CODE
+        ASSUME  cs:DG,ds:DG,es:DG,ss:DG
 
-        EXTRN   dskrd:NEAR,dskwrt:NEAR,promptyn:NEAR
-        PUBLIC  PRINT,PCRLF,ASKANOTHER,sec64k,secsiz
 
         org     100h
 
@@ -60,12 +55,12 @@ media   db      0
 buffer  dw      0
 bufsiz  dw      0
 
-pcrlf:  mov     dx,OFFSET DG: crlf
+pcrlf:  mov     dx, crlf
 print:  mov     ah,STD_CON_STRING_OUTPUT
         int     bdos
 pret:   ret
 
-getkey: mov     dx,OFFSET DG: keymsg
+getkey: mov     dx, keymsg
         call    print
         mov     ah,12                   ;wait for key press
         mov     al,1
@@ -78,15 +73,15 @@ getdpb: push    ds
         inc     dl
         mov     ah,GET_DPB
         int     bdos
-        mov     al,[bx+dpb_cluster_mask]
+        mov     al,[bx+dpb.dpb_cluster_mask]
         cbw
         inc     ax
-        mov     cx,[bx+dpb_max_cluster]
+        mov     cx,[bx+dpb.dpb_max_cluster]
         dec     cx
         mul     cx
-        add     ax,[bx+dpb_first_sector]
-        mov     cx,[bx+dpb_sector_size]
-        mov     bl,[bx+dpb_media]
+        add     ax,[bx+dpb.dpb_first_sector]
+        mov     cx,[bx+dpb.dpb_sector_size]
+        mov     bl,[bx+dpb.dpb_media]
         pop     ds
         ret
 
@@ -122,7 +117,7 @@ disk_entry:
 ;       CALL    print
 ;       POP     AX
 
-        mov     dx,OFFSET DG: drverr1
+        mov     dx, drverr1
         inc     al
         jz      printerr
         inc     ah
@@ -140,19 +135,19 @@ disk_entry:
         mov     ah,DISK_RESET
         int     bdos                    ;empty buffer queue
 
-        mov     bx,OFFSET DG:progsiz + 15
+        mov     bx,progsiz + 15
         shr     bx,1
         shr     bx,1
         shr     bx,1
         shr     bx,1
-        mov     ah,setblock
+        mov     ah,SETBLOCK
         int     21h                     ;give back extra memory
 
         mov     bx,0FFFFh               ;ask for Biggest hunk
-        mov     ah,alloc
+        mov     ah,ALLOC
         int     21h
         jnc     gotmem
-        mov     ah,alloc
+        mov     ah,ALLOC
         int     21h
 gotmem:
         mov     [buffer],ax
@@ -162,9 +157,9 @@ copyagn:
         mov     [start],0               ;Initialize start sector
         call    compare
         jz      onedrv1
-        mov     dx,OFFSET DG: srcmsg
+        mov     dx, srcmsg
         call    print
-onedrv1:mov     dx,OFFSET DG: fdstmsg
+onedrv1:mov     dx, fdstmsg
         call    print
         call    getkey
 
@@ -176,13 +171,13 @@ onedrv1:mov     dx,OFFSET DG: fdstmsg
 
         call    compare
         jnz     twodrv1
-        mov     dx,OFFSET DG: srcmsg
+        mov     dx, srcmsg
         call    print
         call    getkey
 
 twodrv1:mov     dl,[source]
         call    getdpb
-        mov     dx,OFFSET DG: drverr3
+        mov     dx, drverr3
         cmp     [media],bl              ;make sure media and sizes match
         jnz     errv
         cmp     [count],ax
@@ -204,11 +199,11 @@ sizeok:
         mov     [passcnt],ax    ;set number of sectors per pass
 
         call    compare         ;print copying....
-        jz      loop
-        mov     dx,OFFSET DG: cpymsg
+        jz      loop_
+        mov     dx, cpymsg
         call    print
 
-loop:   push    ds
+loop_:   push    ds
 
         mov     al,[source]
         xor     bx,bx
@@ -226,7 +221,7 @@ countok:mov     dx,[start]
 
         call    compare
         jnz     twodrv2
-        mov     dx,OFFSET DG: dstmsg
+        mov     dx, dstmsg
         call    print
         call    getkey
 
@@ -243,44 +238,39 @@ twodrv2:mov     al,[dest]
         jbe     quitcopy
 
         call    compare
-        jnz     loop
-        mov     dx,OFFSET DG: srcmsg
+        jnz     loop_
+        mov     dx, srcmsg
         call    print
         call    getkey
-        jmp     loop
+        jmp     loop_
 
 quitcopy:
         mov     ah,DISK_RESET
         int     bdos                    ;empty buffer queue
-        mov     dx,OFFSET DG: goodmsg
+        mov     dx, goodmsg
         call    compare
         jnz     twodrv3
-        mov     dx,OFFSET DG: good1
+        mov     dx, good1
 
 ASKANOTHER:
 twodrv3:call    print
-        mov     dx,OFFSET DG:anoprompt
+        mov     dx,anoprompt
         call    promptyn
         jnz     alldone
         jmp     copyagn
 alldone:
         int     boot            ;home, james...
 
-CODE    ENDS
+end if
 
-CONST   SEGMENT PUBLIC BYTE
+if SEGSEL = S_CONST
 
-        EXTRN   fdstmsg:BYTE,dstmsg:BYTE,fdstlet:BYTE,dstlet:BYTE
-        EXTRN   cpymsg:BYTE,good1:BYTE,goodmsg:BYTE,srcmsg:BYTE,srclet:BYTE
-        EXTRN   keymsg:BYTE,drverr1:BYTE,drverr3:BYTE,crlf:BYTE
-        EXTRN   anoprompt:BYTE
 
         db      ' MICROSOFT - PETERS '
-CONST   ENDS
+end if
 
-DATA    SEGMENT BYTE
+if SEGSEL = S_DATA
 
-progsiz LABEL   BYTE
+label progsiz byte
 
-DATA    ends
-        end     diskcopy
+end if

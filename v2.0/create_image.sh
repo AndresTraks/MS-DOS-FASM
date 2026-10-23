@@ -27,8 +27,10 @@ mcopy -i "$IMAGE" bin/COMMANDF.COM ::COMMAND.COM
 mcopy -i "$IMAGE" bin/CHKDSKF.COM ::CHKDSK.COM
 mcopy -i "$IMAGE" bin/CREF.EXE ::
 mcopy -i "$IMAGE" bin/DEBUG.COM ::
-mcopy -i "$IMAGE" bin/DISKCOPY.COM ::
-mcopy -i "$IMAGE" bin/EDLIN.COM ::
+# DISKCOPY is ours, Microsoft's staying in bin to compare against.
+mcopy -i "$IMAGE" bin/DISKCOPF.COM ::DISKCOPY.COM
+# EDLIN is ours, Microsoft's staying in bin to compare against.
+mcopy -i "$IMAGE" bin/EDLINF.COM ::EDLIN.COM
 # EXE2BIN is ours, Microsoft's staying in bin to compare against.
 mcopy -i "$IMAGE" bin/EXE2BINF.EXE ::EXE2BIN.EXE
 # FC is ours, Microsoft's staying in bin to compare against.
@@ -39,9 +41,14 @@ mcopy -i "$IMAGE" bin/LINK.EXE ::
 mcopy -i "$IMAGE" bin/MASM.EXE ::
 # MORE is ours too, Microsoft's staying in bin to compare against.
 mcopy -i "$IMAGE" bin/MOREF.COM ::MORE.COM
+# PRINT is the one Microsoft shipped, which answers "Incorrect DOS
+# version" here -- it was built from the source that accepts up to 2.00.
+# Ours is built from the 2.11 source and installs, but is not fit to use
+# yet; see source/PRTLINK.ASM.
 mcopy -i "$IMAGE" bin/PRINT.COM ::
 mcopy -i "$IMAGE" bin/PROHST.EXE ::
-mcopy -i "$IMAGE" bin/RECOVER.COM ::
+# RECOVER is ours, Microsoft's staying in bin to compare against.
+mcopy -i "$IMAGE" bin/RECOVEF.COM ::RECOVER.COM
 # SORT is ours, Microsoft's staying in bin to compare against.
 mcopy -i "$IMAGE" bin/SORTF.EXE ::SORT.EXE
 # SYS is ours as well, the shipped one refusing this version.

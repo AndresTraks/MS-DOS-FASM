@@ -26,8 +26,14 @@ COPY bin\CHKDSKF.COM CHKDSK.COM > NUL
 DEL CHKDSK.COM
 %IMGEN% -m -i bin\CREF.EXE -f %IMAGE%
 %IMGEN% -m -i bin\DEBUG.COM -f %IMAGE%
-%IMGEN% -m -i bin\DISKCOPY.COM -f %IMAGE%
-%IMGEN% -m -i bin\EDLIN.COM -f %IMAGE%
+REM DISKCOPY is ours, Microsoft's staying in bin to compare against.
+COPY bin\DISKCOPF.COM DISKCOPY.COM > NUL
+%IMGEN% -m -i DISKCOPY.COM -f %IMAGE%
+DEL DISKCOPY.COM
+REM EDLIN is ours, Microsoft's staying in bin to compare against.
+COPY bin\EDLINF.COM EDLIN.COM > NUL
+%IMGEN% -m -i EDLIN.COM -f %IMAGE%
+DEL EDLIN.COM
 REM EXE2BIN is ours, Microsoft's staying in bin to compare against.
 COPY bin\EXE2BINF.EXE EXE2BIN.EXE > NUL
 %IMGEN% -m -i EXE2BIN.EXE -f %IMAGE%
@@ -46,9 +52,14 @@ REM MORE is ours too, Microsoft's staying in bin to compare against.
 COPY bin\MOREF.COM MORE.COM > NUL
 %IMGEN% -m -i MORE.COM -f %IMAGE%
 DEL MORE.COM
+REM PRINT is Microsoft's, which refuses this version; ours installs but
+REM is not fit to use yet -- see source\PRTLINK.ASM.
 %IMGEN% -m -i bin\PRINT.COM -f %IMAGE%
 %IMGEN% -m -i bin\PROHST.EXE -f %IMAGE%
-%IMGEN% -m -i bin\RECOVER.COM -f %IMAGE%
+REM RECOVER is ours, Microsoft's staying in bin to compare against.
+COPY bin\RECOVEF.COM RECOVER.COM > NUL
+%IMGEN% -m -i RECOVER.COM -f %IMAGE%
+DEL RECOVER.COM
 REM SORT is ours, Microsoft's staying in bin to compare against.
 COPY bin\SORTF.EXE SORT.EXE > NUL
 %IMGEN% -m -i SORT.EXE -f %IMAGE%

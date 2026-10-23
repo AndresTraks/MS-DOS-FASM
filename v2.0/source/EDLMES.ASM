@@ -1,4 +1,3 @@
-        title   EDLIN Messages
 
 ;-----------------------------------------------------------------------;
 ;                                                                       ;
@@ -7,36 +6,29 @@
 ;                                                                       ;
 ;-----------------------------------------------------------------------;
 
-FALSE   EQU     0
-TRUE    EQU     NOT FALSE
+FALSE   =     0
+TRUE    =     -1
 
 
-        .xlist
-        INCLUDE DOSSYM.ASM
-        .list
 
 
-CODE    SEGMENT PUBLIC BYTE
-CODE    ENDS
+if SEGSEL = S_CODE
+end if
 
-CONST   SEGMENT PUBLIC BYTE
-CONST   ENDS
+if SEGSEL = S_CONST
+end if
 
-DATA    SEGMENT PUBLIC BYTE
-        EXTRN   QFLG:BYTE,FCB2:BYTE
-DATA    ENDS
+if SEGSEL = S_DATA
+end if
 
-DG      GROUP   CODE,CONST,DATA
 
-CODE SEGMENT PUBLIC BYTE
+if SEGSEL = S_CODE
 
 ASSUME  CS:DG,DS:DG,SS:DG,ES:DG
 
-        PUBLIC  QUIT,QUERY
-        EXTRN   rest_dir:NEAR,CRLF:NEAR
 
 QUIT:
-        MOV     DX,OFFSET DG:QMES
+        MOV     DX,QMES
         MOV     AH,STD_CON_STRING_OUTPUT
         INT     21H
         MOV     AX,(STD_CON_INPUT_FLUSH SHL 8) OR STD_CON_INPUT
@@ -46,7 +38,7 @@ QUIT:
         JZ      NOCRLF
         JMP     CRLF
 NOCRLF:
-        MOV     DX,OFFSET DG:FCB2
+        MOV     DX,FCB2
         MOV     AH,FCB_CLOSE
         INT     21H
         MOV     AH,FCB_DELETE
@@ -55,9 +47,9 @@ NOCRLF:
         INT     20H
 
 QUERY:
-        TEST    BYTE PTR [QFLG],-1
-        JZ      RET9
-        MOV     DX,OFFSET DG:ASK
+        TEST    byte [QFLG],-1
+        JZ      MESRET9
+        MOV     DX,ASK
         MOV     AH,STD_CON_STRING_OUTPUT
         INT     21H
         MOV     AX,(STD_CON_INPUT_FLUSH SHL 8) OR STD_CON_INPUT
@@ -66,19 +58,16 @@ QUERY:
         CALL    CRLF
         POP     AX
         CMP     AL,13           ;Carriage return means yes
-        JZ      RET9
+        JZ      MESRET9
         CMP     AL,"Y"
-        JZ      RET9
+        JZ      MESRET9
         CMP     AL,"y"
-RET9:   RET
+MESRET9:   RET
 
-CODE    ENDS
+end if
 
-CONST   SEGMENT PUBLIC BYTE
+if SEGSEL = S_CONST
 
-        PUBLIC  BADDRV,NDNAME,bad_vers_err,opt_err,NOBAK
-        PUBLIC  NODIR,DSKFUL,MEMFUL,FILENM,BADCOM,NEWFIL
-        PUBLIC  NOSUCH,TOOLNG,EOF,DEST,MRGERR,ro_err,bcreat
 
 BADDRV  DB      "Invalid drive or file name$"
 NDNAME  DB      "File name must be specified$"
@@ -103,5 +92,4 @@ QMES    DB      "Abort edit (Y/N)? $"
 DEST    DB      "Must specify destination line number",13,10,"$"
 MRGERR  DB      "Not enough room to merge the entire file",13,10,"$"
 
-CONST   ENDS
-        END
+end if

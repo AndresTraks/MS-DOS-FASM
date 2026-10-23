@@ -1,53 +1,44 @@
-        TITLE   DISKCOPY Messages
 
-FALSE   EQU     0
-TRUE    EQU     NOT FALSE
+FALSE   =     0
+TRUE    =     -1
 
 
-.xlist
-.xcref
-        INCLUDE DOSSYM.ASM
-.cref
-.list
 
 ;
-bdos    equ     21h
-boot    equ     20h
-aread   equ     25h
-awrite  equ     26h
+bdos    =     21h
+boot    =     20h
+aread   =     25h
+awrite  =     26h
 
-cr      equ     0dh
-lf      equ     0ah
+cr      =     0dh
+lf      =     0ah
 ;
 
-CODE    SEGMENT PUBLIC BYTE
-CODE    ENDS
+if SEGSEL = S_CODE
+end if
 
-CONST   SEGMENT PUBLIC BYTE
-CONST   ENDS
+if SEGSEL = S_CONST
+end if
 
-DATA    SEGMENT PUBLIC BYTE
-DATA    ENDS
+if SEGSEL = S_DATA
+end if
 
-DG      GROUP   CODE,CONST,DATA
 
-CODE  SEGMENT PUBLIC BYTE
-        assume  cs:DG,ds:DG,es:DG,ss:DG
+if SEGSEL = S_CODE
+        ASSUME  cs:DG,ds:DG,es:DG,ss:DG
 
-        EXTRN   PRINT:NEAR,PCRLF:NEAR,ASKANOTHER:NEAR,sec64k:WORD,secsiz:WORD
-        PUBLIC  dskrd,dskwrt,promptyn
 
 promptyn:
 ;Prompt message in DX
 ;Prompt user for Y or N answer. Zero set if Y
-        CALL    PRINT
+        CALL    print
 PAGAIN:
-        MOV     DX,OFFSET DG:YES_NO
-        CALL    PRINT
+        MOV     DX,YES_NO
+        CALL    print
         MOV     AX,(STD_CON_INPUT_FLUSH SHL 8)+STD_CON_INPUT
         INT     21H
         PUSH    AX
-        CALL    PCRLF
+        CALL    pcrlf
         POP     AX
         OR      AL,20H          ;Convert to lower case
         CMP     AL,'y'
@@ -61,12 +52,12 @@ GOTANS:
         RET
 
 hecode  db      0
-tcount  dw      ?
+tcount  dw      0
 
 dskrd:
-        mov     byte ptr cs:[drvlet],"A"
-        add     cs:[drvlet],al
-        mov     cs:[tcount],cx
+        mov     byte [CS:DRVLET],"A"
+        add     [CS:DRVLET],al
+        mov     [CS:tcount],cx
         push    ds
         push    cx
         push    dx
@@ -74,14 +65,14 @@ nxtrd:
         push    ax
         push    bx
         push    dx
-        mov     cx,cs:[sec64k]
-        cmp     cx,cs:[tcount]
+        mov     cx,[CS:sec64k]
+        cmp     cx,[CS:tcount]
         jbe     gotrcnt
-        mov     cx,cs:[tcount]
+        mov     cx,[CS:tcount]
 gotrcnt:
         push    cx
         int     aread
-        mov     cs:[hecode],al
+        mov     [CS:hecode],al
         inc     sp
         inc     sp      ;clean up stack
         pop     cx
@@ -89,16 +80,16 @@ gotrcnt:
         pop     bx
         pop     ax
         jnc     rdok
-        mov     si,OFFSET DG: reading
-        call    dskerr
+        mov     si, READING
+        call    DSKERR
         jz      nxtrd   ;Repeat this 64K read
 rdok:
-        sub     cs:[tcount],cx
+        sub     [CS:tcount],cx
         jbe     dskret
         add     dx,cx
         push    dx
         push    ax
-        mov     ax,cs:[secsiz]
+        mov     ax,[CS:secsiz]
         mul     cx          ;ax byte count of transfer (know transfer <= 64K)
         or      dl,dl
         jnz     exact64
@@ -130,9 +121,9 @@ dskret:
 
 
 dskwrt:
-        mov     byte ptr cs:[drvlet],"A"
-        add     cs:[drvlet],al
-        mov     cs:[tcount],cx
+        mov     byte [CS:DRVLET],"A"
+        add     [CS:DRVLET],al
+        mov     [CS:tcount],cx
         push    ds
         push    cx
         push    dx
@@ -140,14 +131,14 @@ nxtwrt:
         push    ax
         push    bx
         push    dx
-        mov     cx,cs:[sec64k]
-        cmp     cx,cs:[tcount]
+        mov     cx,[CS:sec64k]
+        cmp     cx,[CS:tcount]
         jbe     gotwcnt
-        mov     cx,cs:[tcount]
+        mov     cx,[CS:tcount]
 gotwcnt:
         push    cx
         int     awrite
-        mov     cs:[hecode],al
+        mov     [CS:hecode],al
         inc     sp
         inc     sp      ;clean up stack
         pop     cx
@@ -155,16 +146,16 @@ gotwcnt:
         pop     bx
         pop     ax
         jnc     wrtok
-        mov     si,OFFSET DG: writing
-        call    dskerr
+        mov     si, WRITING
+        call    DSKERR
         jz      nxtwrt  ;Repeat this 64K write
 wrtok:
-        sub     cs:[tcount],cx
+        sub     [CS:tcount],cx
         jbe     dskret
         add     dx,cx
         push    dx
         push    ax
-        mov     ax,cs:[secsiz]
+        mov     ax,[CS:secsiz]
         mul     cx          ;ax byte count of transfer (know transfer <= 64K)
         or      dl,dl
         jnz     exact64w
@@ -198,9 +189,9 @@ DSKERR:
         PUSH    DX
         PUSH    DI
         PUSH    ES
-        CALL    PCRLF
-        CALL    PCRLF
-        MOV     AL,[HECODE]
+        CALL    pcrlf
+        CALL    pcrlf
+        MOV     AL,[hecode]
         CMP     AL,12
         JBE     HAVCOD
         MOV     AL,12
@@ -208,23 +199,23 @@ HAVCOD:
         XOR     AH,AH
         MOV     DI,AX
         SHL     DI,1
-        MOV     DX,WORD PTR [DI+MESBAS] ; Get pointer to error message
-        CALL    PRINT          ; Print error type
-        MOV     DX,OFFSET DG: ERRMES
-        CALL    PRINT
+        MOV     DX,word [DI+MESBAS] ; Get pointer to error message
+        CALL    print          ; Print error type
+        MOV     DX, ERRMES
+        CALL    print
         MOV     DX,SI
-        CALL    PRINT
-        MOV     DX,OFFSET DG: DRVMES
-        CALL    PRINT
+        CALL    print
+        MOV     DX, DRVMES
+        CALL    print
 ASK:
-        MOV     DX,OFFSET DG: REQUEST
-        CALL    PRINT
+        MOV     DX, REQUEST
+        CALL    print
         MOV     AX,(STD_CON_INPUT_FLUSH SHL 8)+STD_CON_INPUT
         INT     21H             ; Get response
         OR      AL,20H          ; Convert to lower case
         PUSH    AX
-        CALL    PCRLF
-        CALL    PCRLF
+        CALL    pcrlf
+        CALL    pcrlf
         POP     AX
         CMP     AL,"i"          ; Ignore?
         JZ      EEXITNZ
@@ -239,7 +230,7 @@ ASK:
         mov     ss,ax
         mov     sp,100h         ; Reset stack
         STI
-        MOV     DX,OFFSET DG:ABMES
+        MOV     DX,ABMES
         JMP     ASKANOTHER
 
 EEXITNZ:
@@ -255,26 +246,24 @@ EEXIT:
         RET
 
 
-CODE  ENDS
+end if
 
-CONST   SEGMENT PUBLIC BYTE
+if SEGSEL = S_CONST
 
-        PUBLIC  cpymsg,good1,goodmsg,srcmsg,srclet,dstmsg,dstlet
-        PUBLIC  keymsg,drverr1,drverr3,crlf,fdstmsg,fdstlet,anoprompt
 
-MESBAS  DW      OFFSET DG: ERR0
-        DW      OFFSET DG: ERR1
-        DW      OFFSET DG: ERR2
-        DW      OFFSET DG: ERR3
-        DW      OFFSET DG: ERR4
-        DW      OFFSET DG: ERR5
-        DW      OFFSET DG: ERR6
-        DW      OFFSET DG: ERR7
-        DW      OFFSET DG: ERR8
-        DW      OFFSET DG: ERR9
-        DW      OFFSET DG: ERR10
-        DW      OFFSET DG: ERR11
-        DW      OFFSET DG: ERR12
+MESBAS  DW       ERR0
+        DW       ERR1
+        DW       ERR2
+        DW       ERR3
+        DW       ERR4
+        DW       ERR5
+        DW       ERR6
+        DW       ERR7
+        DW       ERR8
+        DW       ERR9
+        DW       ERR10
+        DW       ERR11
+        DW       ERR12
 
 READING DB      "read$"
 WRITING DB      "writ$"
@@ -315,5 +304,4 @@ drverr3 db      cr,lf,cr,lf,'Source and target disks are not the'
         db      cr,lf,'  same format. Cannot do the copy.'
 crlf    db      cr,lf,'$'
 
-CONST   ENDS
-        END
+end if

@@ -1,44 +1,34 @@
-TITLE   RECOVER Messages
-FALSE   EQU     0
-TRUE    EQU     NOT FALSE
+FALSE   =     0
+TRUE    =     -1
 
 
-bdos    equ     21h
-boot    equ     20h
-aread   equ     25h
-awrite  equ     26h
+bdos    =     21h
+boot    =     20h
+aread   =     25h
+awrite  =     26h
 
 
-.xlist
-.xcref
-        INCLUDE DOSSYM.ASM
 ;The DOST: prefix is a DEC TOPS/20 directory prefix. Remove it for
 ;   assembly in MS-DOS assembly environments using MASM. The DOSSYM.ASM
 ;   file must exist though, it is included with OEM distribution.
-.cref
-.list
 
-code    segment public
-code    ends
+if SEGSEL = S_CODE
+end if
 
-const   segment public byte
-const   ends
+if SEGSEL = S_CONST
+end if
 
-data    segment public byte
-        EXTRN   filsiz:WORD
-data    ends
+if SEGSEL = S_DATA
+end if
 
 
-dg      group   code,const,data
 
-cr      equ     0dh
-lf      equ     0ah
+cr      =     0dh
+lf      =     0ah
 
-code    segment public byte
-        assume  cs:dg,ds:dg,es:dg,ss:dg
+if SEGSEL = S_CODE
+        ASSUME  cs:dg,ds:dg,es:dg,ss:dg
 
-        EXTRN   PCRLF:NEAR,PRINT:NEAR,INT_23:NEAR,CONVERT:NEAR
-        PUBLIC  dskwrt,dskrd,DSKERR,report
 
 hecode  db      0
 
@@ -54,12 +44,12 @@ dskwrt: push    ax
         pop     cx
         pop     bx
         pop     ax
-        jnc     pret
-        mov     si,offset dg: writing
-        call    dskerr
+        jnc     mespret
+        mov     si, WRITING
+        call    DSKERR
         jz      dskwrt
         clc
-pret:   ret
+mespret:   ret
 
 dskrd:  push    ax
         push    bx
@@ -73,9 +63,9 @@ dskrd:  push    ax
         pop     cx
         pop     bx
         pop     ax
-        jnc     pret
-        mov     si,offset dg: reading
-        call    dskerr
+        jnc     mespret
+        mov     si, READING
+        call    DSKERR
         jz      dskrd
         clc
         ret
@@ -87,8 +77,8 @@ DSKERR:
         PUSH    DX
         PUSH    DI
         PUSH    ES
-        CALL    PCRLF
-        MOV     AL,[HECODE]
+        CALL    pcrlf
+        MOV     AL,[hecode]
         CMP     AL,12
         JBE     HAVCOD
         MOV     AL,12
@@ -96,21 +86,21 @@ HAVCOD:
         XOR     AH,AH
         MOV     DI,AX
         SHL     DI,1
-        MOV     DX,WORD PTR [DI+MESBAS] ; Get pointer to error message
-        CALL    PRINT          ; Print error type
-        MOV     DX,OFFSET DG:ERRMES
-        CALL    PRINT
+        MOV     DX,word [DI+MESBAS] ; Get pointer to error message
+        CALL    print          ; Print error type
+        MOV     DX,ERRMES
+        CALL    print
         MOV     DX,SI
-        CALL    PRINT
-        MOV     DX,OFFSET DG:DRVMES
-        CALL    PRINT
+        CALL    print
+        MOV     DX,DRVMES
+        CALL    print
 ASK:
-        MOV     DX,OFFSET DG:REQUEST
-        CALL    PRINT
+        MOV     DX,REQUEST
+        CALL    print
         MOV     AX,(STD_CON_INPUT_FLUSH SHL 8)+STD_CON_INPUT
         INT     21H             ; Get response
         PUSH    AX
-        CALL    PCRLF
+        CALL    pcrlf
         POP     AX
         OR      AL,20H          ; Convert to lower case
         CMP     AL,"i"          ; Ignore?
@@ -119,7 +109,7 @@ ASK:
         JZ      EEXIT
         CMP     AL,"a"          ; Abort?
         JNZ     ASK
-        JMP     INT_23
+        JMP     int_23
 
 EEXITNZ:
         OR      AL,AL           ; Resets zero flag
@@ -143,35 +133,33 @@ EEXIT:
 report:
         mov     si,[di+16]      ;Get the XXX value
         mov     di,[di+18]
-        mov     bx,offset dg: ofmsg
+        mov     bx, ofmsg
         call    convert         ;Print "XXX of "  (DI:SI followed by message
                                 ;                  pointed to by BX)
-        mov     si,filsiz       ;Get the YYY value
-        mov     di,filsiz+2
-        mov     bx,offset dg: endmsg
+        mov     si,[filsiz]       ;Get the YYY value
+        mov     di,[filsiz+2]
+        mov     bx, endmsg
         call    convert         ;Print "YYY bytes recovered CR LF"
         ret
 
-code    ends
+end if
 
-const   segment public byte
+if SEGSEL = S_CONST
 
-        PUBLIC  BADVER,askmsg,drvlet,DRVLET1,dirmsg,recmsg_pre
-        PUBLIC  crlf,drverr,baddrv,opnerr,recmsg_post
 
-MESBAS  DW      OFFSET DG:ERR0
-        DW      OFFSET DG:ERR1
-        DW      OFFSET DG:ERR2
-        DW      OFFSET DG:ERR3
-        DW      OFFSET DG:ERR4
-        DW      OFFSET DG:ERR5
-        DW      OFFSET DG:ERR6
-        DW      OFFSET DG:ERR7
-        DW      OFFSET DG:ERR8
-        DW      OFFSET DG:ERR9
-        DW      OFFSET DG:ERR10
-        DW      OFFSET DG:ERR11
-        DW      OFFSET DG:ERR12
+MESBAS  DW      ERR0
+        DW      ERR1
+        DW      ERR2
+        DW      ERR3
+        DW      ERR4
+        DW      ERR5
+        DW      ERR6
+        DW      ERR7
+        DW      ERR8
+        DW      ERR9
+        DW      ERR10
+        DW      ERR11
+        DW      ERR12
 
 READING DB      "read$"
 WRITING DB      "writ$"
@@ -215,5 +203,4 @@ baddrv  db      'Invalid drive or file name$'
 opnerr  db      'File not found$'
 
 
-const   ends
-        end
+end if

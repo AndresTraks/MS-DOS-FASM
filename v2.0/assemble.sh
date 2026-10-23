@@ -38,6 +38,22 @@ $FASM source/FORLINK.ASM bin/FORMAT.COM
 # reports, so create_image.sh uses this one -- see CHKLINK.ASM.
 $FASM source/CHKLINK.ASM bin/CHKDSKF.COM
 
+# PRINT.COM, from PRINT_v211.ASM.  Built so the conversion cannot quietly
+# stop assembling; it is not on the image yet -- see PRTLINK.ASM.
+$FASM source/PRTLINK.ASM bin/PRINTF.COM
+
+# EDLIN.COM, from EDLIN.ASM, the procedures and the messages -- the biggest
+# of the utilities, and the same shape as the rest; see EDLLINK.ASM.
+$FASM source/EDLLINK.ASM bin/EDLINF.COM
+
+# RECOVER.COM, from RECOVER.ASM and its messages.  The same shape again --
+# see RECLINK.ASM.
+$FASM source/RECLINK.ASM bin/RECOVEF.COM
+
+# DISKCOPY.COM, from DISKCOPY.ASM and its messages.  CHKDSK's shape, three
+# segments in a group and ORG 100H -- see DSKLINK.ASM.
+$FASM source/DSKLINK.ASM bin/DISKCOPF.COM
+
 # FC.EXE, laid out like SORT: a group of three segments and a stack outside
 # it -- see FCLINK.ASM.
 $FASM source/FCLINK.ASM bin/FCF.EXE

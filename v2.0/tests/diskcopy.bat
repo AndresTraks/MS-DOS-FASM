@@ -1,0 +1,3 @@
+ECHO ON
+DISKCOPY A: B: < crn.txt
+ECHO DONE
