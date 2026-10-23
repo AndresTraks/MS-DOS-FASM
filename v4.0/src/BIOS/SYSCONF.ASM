@@ -1,7 +1,7 @@
 	PAGE	,132		       ;
 ;	SCCSID = @(#)sysconf.asm       0.0 86/10/20
 TITLE	BIOS SYSTEM INITIALIZATION
-%OUT ...SYSCONF
+;%OUT ...SYSCONF
 
 ;==============================================================================
 ;REVISION HISTORY:
@@ -47,9 +47,9 @@ TITLE	BIOS SYSTEM INITIALIZATION
 
 TRUE	    EQU 0FFFFh
 FALSE	    EQU 0
-LF	equ	10
-CR	equ	13
-TAB	equ	 9
+LF	=	10
+CR	=	13
+TAB	=	 9
 SEMICOLON equ	';'
 
 IBMVER	   EQU	   TRUE
@@ -74,29 +74,29 @@ NOT_IFS 	      equ   11111110b
 
 DEFAULT_FILENUM = 8
 ;
-	IF	IBMJAPVER
+	if	IBMJAPVER
 NOEXEC	EQU	TRUE
-	ELSE
+	else
 NOEXEC	EQU	FALSE
-	ENDIF
+	end if
 
 DOSSIZE EQU	0A000H
 ;dossize equ	 0C000H 	;J.K. for the debugging version of IBMDOS.
 
-.xlist
+;.xlist
 ;	INCLUDE dossym.INC
-	include smdossym.inc	;J.K. Reduced version of DOSSYM.INC
-	INCLUDE devsym.INC
-	include ioctl.INC
-	include BIOSTRUC.INC
-	include smifssym.inc	;AN000; Reduced version of IFSSYM.INC.
-	include DEVMARK.inc	;AN004;
-	include version.inc
-.list
+	INCLUDE '../INC/SMDOSSYM.INC'	;J.K. Reduced version of DOSSYM.INC
+	INCLUDE '../INC/DEVSYM.INC'
+	INCLUDE '../INC/IOCtl.INC'
+	INCLUDE 'BIOSTRUC.INC'
+	INCLUDE '../INC/SMIFSSYM.INC'	;AN000; Reduced version of IFSSYM.INC.
+	INCLUDE 'DEVMARK.INC'	;AN004;
+	INCLUDE '../INC/VERSION.INC'
+;.list
 
-	IF	NOT IBMJAPVER
-	EXTRN	RE_INIT:FAR
-	ENDIF
+	if	NOT IBMJAPVER
+;	EXTRN	RE_INIT:FAR
+	end if
 
 ;
 
@@ -107,63 +107,63 @@ MULTRK_ON	EQU	10000000B	;User spcified Mutitrack=on, or System turns
 MULTRK_OFF1	EQU	00000000B	;initial value. No "Multitrack=" command entered.
 MULTRK_OFF2	EQU	00000001B	;User specified Multitrack=off.
 
-CODE segment public 'code'
-	EXTRN	MulTrk_flag:word	;AN002;
-	extrn	KEYRD_Func:byte 	;AN019;
-	extrn	KEYSTS_Func:byte	;AN019;
-CODE ends
+;CODE segment public 'code'
+;	EXTRN	MulTrk_Flag:word	;AN002;
+;	extrn	KEYRD_Func:byte 	;AN019;
+;	extrn	KEYSTS_Func:byte	;AN019;
+;CODE ends
 ;J.K. 6/29/87 End of Multi-track definition.
 
-SYSINITSEG	SEGMENT PUBLIC 'SYSTEM_INIT'
+;SYSINITSEG	SEGMENT PUBLIC 'SYSTEM_INIT'
 
-ASSUME	CS:SYSINITSEG,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;ASSUME	CS:SYSINITSEG,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
-	EXTRN	BADOPM:BYTE,CRLFM:BYTE,BADCOM:BYTE,BADMEM:BYTE,BADBLOCK:BYTE
-	EXTRN	BADSIZ_PRE:BYTE,BADLD_PRE:BYTE
+;	EXTRN	BADOPM:BYTE,CRLFM:BYTE,BADCOM:BYTE,BADMEM:BYTE,BADBLOCK:BYTE
+;	EXTRN	BADSIZ_PRE:BYTE,BADLD_PRE:BYTE
 ;	 EXTRN	 BADSIZ_POST:BYTE,BADLD_POST:BYTE
-	EXTRN	BADSTACK:BYTE,BADCOUNTRYCOM:BYTE
-	EXTRN	SYSSIZE:BYTE,BADCOUNTRY:BYTE,INSUFMEMORY:BYTE
-	EXTRN	CONDEV:BYTE,AUXDEV:BYTE,PRNDEV:BYTE,COMMND:BYTE,CONFIG:BYTE
-	EXTRN	Cntry_Drv:BYTE,Cntry_Root:BYTE,Cntry_Path:BYTE
-	EXTRN	DeviceParameters:byte
-	EXTRN	MEMORY_SIZE:word
-	EXTRN	BUFFERS:word
-	EXTRN	FILES:byte,NUM_CDS:byte
-	EXTRN	DOSINFO:dword,ENTRY_POINT:dword
-	EXTRN	FCBS:byte,KEEP:byte
-	EXTRN	CONFBOT:word,ALLOCLIM:word,COMMAND_LINE:byte
-	EXTRN	ZERO:byte,SEPCHR:byte
-	EXTRN	COUNT:word,CHRPTR:word,CNTRYFILEHANDLE:word
-	EXTRN	MEMLO:word,MEMHI:word,PRMBLK:word,LDOFF:word
-	EXTRN	PACKET:byte,UNITCOUNT:byte,BREAK_ADDR:dword
-	EXTRN	BPB_ADDR:dword,DRIVENUMBER:byte,SYSI_COUNTRY:dword
-	extrn	Config_Size:word		;AN000;
-	extrn	Install_Flag:word		;AN000;
-	extrn	BadOrder:byte			;AN000;
-	extrn	Errorcmd:byte			;AN000;
-	extrn	LineCount:word			;AN000;
-	extrn	ShowCount:byte			;AN000;
-	extrn	Buffer_LineNum:word		;AN000;
-	extrn	IFS_Flag:word			;AN000;
-	extrn	IFS_RH:byte			;AN000;
-	extrn	H_Buffers:word			;AN000;
-	extrn	Buffer_Slash_X:byte		;AN000;AN025;
-	extrn	Badparm:byte			;AN007;
-	extrn	ConfigMsgFlag:Word		;AN015;
-	extrn	Org_Count:Word			;AN018;
-	extrn	Multi_Pass_Id:byte		;AN026;
+;	EXTRN	BADSTACK:BYTE,BADCOUNTRYCOM:BYTE
+;	EXTRN	SYSSIZE:BYTE,BADCOUNTRY:BYTE,INSUFMEMORY:BYTE
+;	EXTRN	CONDEV:BYTE,AUXDEV:BYTE,PRNDEV:BYTE,COMMND:BYTE,CONFIG:BYTE
+;	EXTRN	CNTRY_DRV:BYTE,CNTRY_ROOT:BYTE,CNTRY_PATH:BYTE
+;	EXTRN	DeviceParameters:byte
+;	EXTRN	MEMORY_SIZE:word
+;	EXTRN	BUFFERS:word
+;	EXTRN	FILES:byte,NUM_CDS:byte
+;	EXTRN	DOSINFO:dword,ENTRY_POINT:dword
+;	EXTRN	FCBS:byte,Keep:byte
+;	EXTRN	CONFBOT:word,ALLOCLIM:word,COMMAND_LINE:byte
+;	EXTRN	ZERO:byte,SepChr:byte
+;	EXTRN	COUNT:word,CHRPTR:word,CntryFilehandle:word
+;	EXTRN	MEMLO:word,MEMHI:word,PRMBLK:word,LDOFF:word
+;	EXTRN	PACKET:byte,UNITCOUNT:byte,BREAK_ADDR:dword
+;	EXTRN	BPB_ADDR:dword,DriveNumber:byte,SYSI_Country:dword
+;	extrn	Config_Size:word		;AN000;
+;	extrn	Install_Flag:word		;AN000;
+;	extrn	BadOrder:byte			;AN000;
+;	extrn	Errorcmd:byte			;AN000;
+;	extrn	LineCount:word			;AN000;
+;	extrn	ShowCount:byte			;AN000;
+;	extrn	Buffer_LineNum:word		;AN000;
+;	extrn	IFS_Flag:word			;AN000;
+;	extrn	IFS_RH:byte			;AN000;
+;	extrn	H_Buffers:word			;AN000;
+;	extrn	Buffer_Slash_X:byte		;AN000;AN025;
+;	extrn	Badparm:byte			;AN007;
+;	extrn	ConfigMsgFlag:Word		;AN015;
+;	extrn	Org_Count:Word			;AN018;
+;	extrn	Multi_Pass_Id:byte		;AN026;
 
-	EXTRN	MEM_ERR:NEAR,SetDOSCountryInfo:NEAR
-	EXTRN	PARAROUND:NEAR,TEMPCDS:NEAR
-	EXTRN	Set_Country_Path:NEAR,Move_ASCIIZ:NEAR,DELIM:NEAR
-	EXTRN	BADFIL:NEAR,ROUND:NEAR
-	extrn	Do_Install_Exec:NEAR		;AN018;
-	extrn	SetDevMark:NEAR 		;AN030;
+;	EXTRN	MEM_ERR:NEAR,SetDOSCountryInfo:NEAR
+;	EXTRN	ParaRound:NEAR,TEMPCDS:NEAR
+;	EXTRN	SET_COUNTRY_PATH:NEAR,MOVE_ASCIIZ:NEAR,DELIM:NEAR
+;	EXTRN	BADFIL:NEAR,ROUND:NEAR
+;	extrn	Do_Install_Exec:NEAR		;AN018;
+;	extrn	SetDevMark:NEAR 		;AN030;
 
 ;AN016; Undo the extended attribute handling
 ;	 extrn	 Get_Ext_Attribute:near 	 ;AN009;
 
-	IF	STACKSW
+	if	STACKSW
 
 ; Internal Stack Parameters
 	EntrySize		equ	8
@@ -176,26 +176,26 @@ ASSUME	CS:SYSINITSEG,DS:NOTHING,ES:NOTHING,SS:NOTHING
 	DefaultSize		equ	128
 	MaxSize 		equ	512
 
-	extrn  stack_count:word
-	extrn  stack_size:word
-	extrn  stack_addr:dword
+;	extrn  STACK_COUNT:word
+;	extrn  STACK_SIZE:word
+;	extrn  STACK_ADDR:dword
 
-	ENDIF
+	end if
 
-	PUBLIC DOCONF
-	PUBLIC GETCHR
-	public Multi_Pass		;AN018;AN026;
+;	PUBLIC DOCONF
+;	PUBLIC GETCHR
+;	public Multi_Pass		;AN018;AN026;
 
-	public	MultDeviceFlag
+;	public	MultDeviceFlag
 MultDeviceFlag	db	0		;AN001;
-	public	DevMark_Addr
+;	public	DevMark_Addr
 DevMark_Addr	dw	?		;AN004;Segment address for DEVMARK.
-	public	SetDevMarkFlag
+;	public	SetDevMarkFlag
 SetDevMarkFlag	    db	    0		;AN004;Flag used for DEVMARK
 
 EMS_Stub_Installed  db	    0		;AN030;
 
-Badparm_Ptr	label	dword
+Badparm_Ptr:
 Badparm_Off	dw	0		;AN007;
 Badparm_Seg	dw	0		;AN007;
 
@@ -208,21 +208,21 @@ XMAEM_file	db	'XMAEM.SYS',0	;AN029;
 ;Take care of Config.sys file.
 ;SYSTEM parser data and code.
 ;******************************************************************************
-.xlist
-	include PSOPTION.INC			;Parsing options for SYSCONF.
-	include PARSE.ASM			;together with PSDATA.INC
-.list
+;.xlist
+	INCLUDE 'PSOPTION.INC'			;Parsing options for SYSCONF.
+	INCLUDE '../INC/PARSE.ASM'			;together with PSDATA.INC
+;.list
 ;Control block definitions for PARSER.
 ;---------------------------------------------------
 ; BUFFER = [n | n,m] {/E}
 
-Buf_Parms	label	byte	;AN000;
+Buf_Parms:;AN000;
 	dw	Buf_Parmsx	;AN000;
 	db	1		;AN000; An extra delimeter list
 	db	1		;AN000; length is 1
 	db	SEMICOLON	;AN000;
 
-Buf_Parmsx	label	byte	;AN000;
+Buf_Parmsx:;AN000;
 	db	1,2		;AN000; Min 1, Max 2 positional
 	dw	Buf_Pos1	;AN000;
 	dw	Buf_Pos2	;AN000;
@@ -230,39 +230,39 @@ Buf_Parmsx	label	byte	;AN000;
 	dw	SW_X_Ctrl	;AN000;AN025; /X control
 	db	0		;AN000; no keywords
 
-Buf_Pos1	label	word	;AN000;
+Buf_Pos1:;AN000;
 	dw	8000h		;AN000; Numeric value
 	dw	0		;AN000; no function
 	dw	Result_Val	;AN000; Result value buffer
 	dw	Buf_Range_1	;AN000; value list
 	db	0		;AN000; no switches/keywords
 
-Buf_Range_1	label	byte	;AN000; value definition
+Buf_Range_1:;AN000; value definition
 	db	1		;AN000; range definition
 	db	1		;AN000; 1 definition of range
 	db	1		;AN000; item tag for this range
 	dd	1,10000 	;AN000; from 1 to 10000
 
-Buf_Pos2	label	word	;AN000;
+Buf_Pos2:;AN000;
 	dw	8001h		;AN000; Numeric value, Optional
 	dw	0		;AN000; no function
 	dw	Result_Val	;AN000; Result value buffer
 	dw	Buf_Range_2	;AN000; value list
 	db	0		;AN000; no switches/keywords
 
-Buf_Range_2	label	byte	;AN000; value definition
+Buf_Range_2:;AN000; value definition
 	db	1		;AN000; range definition
 	db	1		;AN000; 1 definition of range
 	db	1		;AN000; item tag for this range
 	dd	0,8		;AN000; from 0 to 8.
 
-SW_X_Ctrl	label	word	;AN000;AN025;
+SW_X_Ctrl:;AN000;AN025;
 	dw	0		;AN000; no matching flag
 	dw	0		;AN000; no function
 	dw	Result_Val	;AN000; return value
 	dw	NoVal		;AN000; no value definition
 	db	1		;AN000; # of switches
-Switch_X	label	byte	;AN000;AN025;
+Switch_X:;AN000;AN025;
 	db	'/X',0		;AN000;AN025;
 ;local variables
 P_Buffers	dw     0	;AN000;
@@ -273,37 +273,37 @@ Buffer_Pre_Scan  db    0	;AN030;
 ;Common definitions -------------
 NoVal	db	0		;AN000;
 
-Result_Val	label	byte	;AN000;
+Result_Val:;AN000;
 	db	?		;AN000; type returned
 	db	?		;AN000; item tag returned
 	dw	?		;AN000; ES:offset of the switch defined
-RV_Byte 	label	byte	;AN000;
-RV_Dword	label	dword	;AN000;
+RV_Byte:;AN000;
+RV_Dword:;AN000;
 	dd	?		;AN000; value if number, or seg:offset to string.
 ;--------------------------------
 
 ; BREAK = [ ON | OFF ]
 
-Brk_Parms	label	byte	;AN000;
+Brk_Parms:;AN000;
 	dw	Brk_Parmsx	;AN000;
 	db	1		;AN000; An extra delimeter list
 	db	1		;AN000; length is 1
 	db	SEMICOLON	;AN000;
 
-Brk_Parmsx	label	byte	;AN000;
+Brk_Parmsx:;AN000;
 	db	1,1		;AN000; Min 1, Max 1 positional
 	dw	Brk_Pos 	;AN000;
 	db	0		;AN000; no switches
 	db	0		;AN000; no keywords
 
-Brk_Pos 	label	word	;AN000;
+Brk_Pos:;AN000;
 	dw	2000h		;AN000; Simple string
 	dw	0		;AN000; No functions
 	dw	Result_Val	;AN000;
 	dw	On_Off_String	;AN000; ON,OFF string descriptions
 	db	0		;AN000; no keyword/switch synonyms
 
-On_Off_String	label	byte	;AN000;
+On_Off_String:;AN000;
 	db	3		;AN000; signals that there is a string choice
 	db	0		;AN000; no range definition
 	db	0		;AN000; no numeric values choice
@@ -324,13 +324,13 @@ P_Ctrl_Break	db	0	;AN000; local variable
 ; or
 ; COUNTRY = n,,path
 
-Cntry_Parms	label	byte	;AN000;
+Cntry_Parms:;AN000;
 	dw	Cntry_Parmsx	;AN000;
 	db	1		;AN000; An extra delimeter list
 	db	1		;AN000; length is 1
 	db	SEMICOLON	;AN000;
 
-Cntry_Parmsx	label	byte	;AN000;
+Cntry_Parmsx:;AN000;
 	db	1,3		;AN000; Min 1, Max 3 positional
 	dw	Cntry_Pos1	;AN000;
 	dw	Cntry_Pos2	;AN000;
@@ -338,27 +338,27 @@ Cntry_Parmsx	label	byte	;AN000;
 	db	0		;AN000; no switches
 	db	0		;AN000; no keywords
 
-Cntry_Pos1	label	word	;AN000; control definition for positional 1
+Cntry_Pos1:;AN000; control definition for positional 1
 	dw	8000h		;AN000; Numeric value
 	dw	0		;AN000; no functions
 	dw	Result_Val	;AN000;
 	dw	Cntry_Codepage_Range  ;AN000; country id code range description
 	db	0		;AN000; no switch/keyword synonyms
 
-Cntry_Codepage_Range  label   byte  ;AN000;
+Cntry_Codepage_Range:;AN000;
 	db	1		;AN000; # of value definitions
 	db	1		;AN000; # of ranges
 	db	1		;AN000; Tag for this range
 	dd	1,999		;AN000;
 
-Cntry_Pos2	label	word	;AN000; control definition for positional 2
+Cntry_Pos2:;AN000; control definition for positional 2
 	dw	8001h		;AN000; Numeric value, optional
 	dw	0		;AN000; no functions
 	dw	Result_Val	;AN000;
 	dw	Cntry_Codepage_Range  ;AN000; code page range descriptions.
 	db	0		;AN000; no switch/keyword synonyms
 
-Cntry_Pos3	label	word	;AN000; control definition for positional 3
+Cntry_Pos3:;AN000; control definition for positional 3
 	dw	0201h		;AN000; File spec, optional
 	dw	0		;AN000; No functions. Don't need to CAP.
 	dw	Result_Val	;AN000;
@@ -373,26 +373,26 @@ P_Code_Page	dw	0	;AN000;
 
 ; FILES = n
 
-Files_Parms	label	byte	;AN000;
+Files_Parms:;AN000;
 	dw	Files_Parmsx	;AN000;
 	db	1		;AN000; An extra delimeter list
 	db	1		;AN000; length is 1
 	db	SEMICOLON	;AN000;
 
-Files_Parmsx	label	byte	;AN000;
+Files_Parmsx:;AN000;
 	db	1,1		;AN000; Min 1, Max 1 positional
 	dw	Files_Pos	;AN000;
 	db	0		;AN000; no switches
 	db	0		;AN000; no keywords
 
-Files_Pos	label	byte	;AN000;
+Files_Pos:;AN000;
 	dw	8000h		;AN000; Numeric value
 	dw	0		;AN000; no functions
 	dw	Result_Val	;AN000;
 	dw	Files_Range	;AN000; Files range description
 	db	0		;AN000; no switch/keyword synonyms
 
-Files_Range	label	byte	;AN000;
+Files_Range:;AN000;
 	db	1		;AN000; # of value definitions
 	db	1		;AN000; # of ranges
 	db	1		;AN000; Tag for this range
@@ -404,40 +404,40 @@ P_Files db	0		;AN000;
 
 ; FCBS = n,m
 
-FCBS_Parms	label	byte	;AN000;
+FCBS_Parms:;AN000;
 	dw	FCBS_Parmsx	;AN000;
 	db	1		;AN000; An extra delimeter list
 	db	1		;AN000; length is 1
 	db	SEMICOLON	;AN000;
 
-FCBS_Parmsx	label	byte	;AN000;
+FCBS_Parmsx:;AN000;
 	db	2,2		;AN000; Min 2, Max 2 positional
 	dw	FCBS_Pos_1	;AN000;
 	dw	FCBS_Pos_2	;AN000;
 	db	0		;AN000; no switches
 	db	0		;AN000; no keywords
 
-FCBS_Pos_1	label	byte	;AN000;
+FCBS_Pos_1:;AN000;
 	dw	8000h		;AN000; Numeric value
 	dw	0		;AN000; no functions
 	dw	Result_Val	;AN000;
 	dw	FCBS_Range	;AN000; FCBS range descriptions
 	db	0		;AN000; no switch/keyword synonyms
 
-FCBS_Range	label	byte	;AN000;
+FCBS_Range:;AN000;
 	db	1		;AN000; # of value definitions
 	db	1		;AN000; # of ranges
 	db	1		;AN000; Tag for this range
 	dd	1,255		;AN000;
 
-FCBS_Pos_2	label	byte	;AN000;
+FCBS_Pos_2:;AN000;
 	dw	8000h		;AN000; Numeric value
 	dw	0		;AN000; no functions
 	dw	Result_Val	;AN000;
 	dw	FCBS_Keep_Range ;AN000; FCBS KEEP range descriptions
 	db	0		;AN000; no switch/keyword synonyms
 
-FCBS_Keep_Range label	byte	;AN000;
+FCBS_Keep_Range:;AN000;
 	db	1		;AN000; # of value definitions
 	db	1		;AN000; # of ranges
 	db	1		;AN000; Tag for this range
@@ -450,19 +450,19 @@ P_Keep	db	0		;AN000;
 
 ; LASTDRIVE = x
 
-LDRV_Parms	label	byte	;AN000;
+LDRV_Parms:;AN000;
 	dw	LDRV_Parmsx	;AN000;
 	db	1		;AN000; An extra delimeter list
 	db	1		;AN000; length is 1
 	db	SEMICOLON	;AN000;
 
-LDRV_Parmsx	label	byte	;AN000;
+LDRV_Parmsx:;AN000;
 	db	1,1		;AN000; Min 1, Max 1 positional
 	dw	LDRV_Pos	;AN000;
 	db	0		;AN000; no switches
 	db	0		;AN000; no keywords
 
-LDRV_Pos	label	byte	;AN000;
+LDRV_Pos:;AN000;
 	dw	0110h		;AN000; Drive only, Ignore colon.
 	dw	0010h		;AN000; Remove colon at end
 	dw	Result_Val	;AN000;
@@ -475,40 +475,40 @@ P_Ldrv	db	0		;AN000;
 
 ; STACKS = n,m
 
-STKS_Parms	label	byte	;AN000;
+STKS_Parms:;AN000;
 	dw	STKS_Parmsx	;AN000;
 	db	1		;AN000; An extra delimeter list
 	db	1		;AN000; length is 1
 	db	SEMICOLON	;AN000;
 
-STKS_Parmsx	label	byte	;AN000;
+STKS_Parmsx:;AN000;
 	db	2,2		;AN000; Min 2, Max 2 positional
 	dw	STKS_Pos_1	;AN000;
 	dw	STKS_Pos_2	;AN000;
 	db	0		;AN000; no switches
 	db	0		;AN000; no keywords
 
-STKS_Pos_1	label	byte	;AN000;
+STKS_Pos_1:;AN000;
 	dw	8000h		;AN000; Numeric value
 	dw	0		;AN000; no functions
 	dw	Result_Val	;AN000;
 	dw	STKS_Range	;AN000; number of stack range descriptions
 	db	0		;AN000; no switch/keyword synonyms
 
-STKS_Range	label	byte	;AN000;
+STKS_Range:;AN000;
 	db	1		;AN000; # of value definitions
 	db	1		;AN000; # of ranges
 	db	1		;AN000; Tag for this range
 	dd	0,64		;AN000;
 
-STKS_Pos_2	label	byte	;AN000;
+STKS_Pos_2:;AN000;
 	dw	8000h		;AN000; Numeric value
 	dw	0		;AN000; no functions
 	dw	Result_Val	;AN000;
 	dw	STK_SIZE_Range	;AN000; stack size range descriptions
 	db	0		;AN000; no switch/keyword synonyms
 
-STK_SIZE_Range label   byte	;AN000;
+STK_SIZE_Range:;AN000;
 	db	1		;AN000; # of value definitions
 	db	1		;AN000; # of ranges
 	db	1		;AN000; Tag for this range
@@ -521,19 +521,19 @@ P_Stack_Size	dw	0	;AN000;
 
 ; MULTITRACK = [ ON | OFF ]
 
-MTrk_Parms	label	byte	;AN002;
+MTrk_Parms:;AN002;
 	dw	MTrk_Parmsx	;AN002;
 	db	1		;AN002; An extra delimeter list
 	db	1		;AN002; length is 1
 	db	SEMICOLON	;AN002;
 
-MTrk_Parmsx	label	byte	;AN002;
+MTrk_Parmsx:;AN002;
 	db	1,1		;AN002; Min 1, Max 1 positional
 	dw	MTrk_Pos	;AN002;
 	db	0		;AN002; no switches
 	db	0		;AN002; no keywords
 
-MTrk_Pos	label	word	;AN002;
+MTrk_Pos:;AN002;
 	dw	2000h		;AN002; Simple string
 	dw	0		;AN002; No functions
 	dw	Result_Val	;AN002;
@@ -546,19 +546,19 @@ P_Mtrk	db	0		;AN002;
 
 ; CPSW = [ ON | OFF ]
 
-CPSW_Parms	label	byte	;AN002;
+CPSW_Parms:;AN002;
 	dw	CPSW_Parmsx	;AN002;
 	db	1		;AN002; An extra delimeter list
 	db	1		;AN002; length is 1
 	db	SEMICOLON	;AN002;
 
-CPSW_Parmsx	label	byte	;AN002;
+CPSW_Parmsx:;AN002;
 	db	1,1		;AN002; Min 1, Max 1 positional
 	dw	CPSW_Pos	;AN002;
 	db	0		;AN002; no switches
 	db	0		;AN002; no keywords
 
-CPSW_Pos	label	word	;AN002;
+CPSW_Pos:;AN002;
 	dw	2000h		;AN002; Simple string
 	dw	0		;AN002; No functions
 	dw	Result_Val	;AN002;
@@ -571,25 +571,25 @@ P_CPSW	db	0		;AN002;
 ;--------------------------------
 ; SWITCHES=/K
 
-Swit_Parms	label	byte	;AN019;
+Swit_Parms:;AN019;
 	dw	Swit_Parmsx	;AN019;
 	db	1		;AN019; An extra delimeter list
 	db	1		;AN019; length is 1
 	db	SEMICOLON	;AN019;
 
-Swit_Parmsx	label	byte	;AN019;
+Swit_Parmsx:;AN019;
 	db	0,0		;AN019; No positionals
 	db	1		;AN019; 1 switch for now.
 	dw	Swit_K_Ctrl	;AN019; /K control
 	db	0		;AN019; no keywords
 
-Swit_K_Ctrl	label	word	;AN019;
+Swit_K_Ctrl:;AN019;
 	dw	0		;AN019; no matching flag
 	dw	0		;AN019; no function
 	dw	Result_Val	;AN019; return value
 	dw	NoVal		;AN019; no value definition
 	db	1		;AN019; # of switches
-Swit_K		label	byte	;AN019;
+Swit_K:;AN019;
 	db	'/K',0		;AN019;
 ;local variables
 P_Swit_K	db     0	;AN019;
@@ -599,46 +599,46 @@ P_Swit_K	db     0	;AN019;
 DOCONF:
 	PUSH	CS
 	POP	DS
-	ASSUME	DS:SYSINITSEG
+;	ASSUME	DS:SYSINITSEG
 
-	MOV	AX,(CHAR_OPER SHL 8)	;GET SWITCH CHARACTER
+	MOV	AX,(Char_Oper SHL 8)	;GET SWITCH CHARACTER
 	INT	21H
 	MOV	[COMMAND_LINE+1],DL	; Set in default command line
 
-	MOV	DX,OFFSET CONFIG	;NOW POINTING TO FILE DESCRIPTION
-	MOV	AX,OPEN SHL 8		;OPEN FILE "CONFIG.SYS"
+	MOV	DX,CONFIG	;NOW POINTING TO FILE DESCRIPTION
+	MOV	AX,Open SHL 8		;OPEN FILE "CONFIG.SYS"
 	STC				;IN CASE OF INT 24
 	INT	21H			;FUNCTION REQUEST
 ;	 JC	 ENDCONF		 ;Wasn't there, or couldn't open (sickness)
 	jc	No_Config_sys		;AN028;
 	JMP	NOPROB			;PROBLEM WITH OPEN
 No_Config_sys:				;AN028;
-	mov	Multi_Pass_Id, 11	;AN028; set it to unreasonable number
+	mov	[Multi_Pass_Id], 11	;AN028; set it to unreasonable number
 ENDCONF:
 	return
 
 
-BADOP:	MOV	DX,OFFSET BADOPM	;WANT TO PRINT COMMAND ERROR "Unrecognized command..."
+BADOP:	MOV	DX,BADOPM	;WANT TO PRINT COMMAND ERROR "Unrecognized command..."
 	invoke	PRINT
 	call	Error_Line		;show "Error in CONFIG.SYS ..." .
 	JMP	COFF
 
-Badop_p 	proc	near		;AN000;
+Badop_p:				;AN000;
 ;Same thing as BADOP, but will make sure to set DS register back to SYSINITSEG
 ;and return back to the calller.
 	push	cs
 	pop	ds			;set ds to CONFIGSYS seg.
-	mov	dx, offset badopm
+	mov	dx, BADOPM
 	invoke	PRINT
 	call	Error_Line
 	ret
-Badop_p 	endp
+;Badop_p 	endp
 
-Badparm_p	proc	near		;AN007;
+Badparm_p:				;AN007;
 ;Show "Bad command or parameters - xxxxxx"
 ;In Badparm_seg, Badparm_off -> xxxxx
 ;
-	cmp	cs:Buffer_Pre_Scan, 1	;AN030; Pre scanning Buffers ... /X?
+	cmp	[cs:Buffer_Pre_Scan], 1	;AN030; Pre scanning Buffers ... /X?
 	je	BadParmp_Ret		;AN030;  then do not show any message.
 	push	ds			;AN007;
 	push	dx			;AN007;
@@ -646,19 +646,19 @@ Badparm_p	proc	near		;AN007;
 
 	push	cs			;AN007;
 	pop	ds			;AN007;
-	mov	dx, offset Badparm	;AN007;
+	mov	dx, BadParm	;AN007;
 	invoke	PRINT			;AN007;"Bad command or parameters - "
-	lds	si, Badparm_ptr 	;AN007;
+	lds	si, [Badparm_Ptr] 	;AN007;
 Badparm_Prt:				;AN007;print "xxxx" until CR.
-	mov	dl, byte ptr [si]	;AN007;
-	mov	ah,STD_CON_OUTPUT	;AN007;
+	mov	dl, byte [si]	;AN007;
+	mov	ah,Std_Con_Output	;AN007;
 	int	21h			;AN007;
 	inc	si			;AN007;
 	cmp	dl, CR			;AN007;
 	jne	Badparm_Prt		;AN007;
 	push	cs			;AN007;
 	pop	ds			;AN007;
-	mov	dx, offset CRLFM	;AN007;
+	mov	dx, CRLFM	;AN007;
 	invoke	PRINT			;AN007;
 	call	Error_Line		;AN007;
 	pop	si			;AN007;
@@ -666,35 +666,35 @@ Badparm_Prt:				;AN007;print "xxxx" until CR.
 	pop	ds			;AN007;
 BadParmp_Ret:				;AN030;
 	ret				;AN007;
-Badparm_p	endp
+;Badparm_p	endp
 
 NOPROB: 				;GET FILE SIZE (NOTE < 64K!!)
 	MOV	BX,AX
 	XOR	CX,CX
 	XOR	DX,DX
-	MOV	AX,(LSEEK SHL 8) OR 2
+	MOV	AX,(LSeek SHL 8) OR 2
 	INT	21H
-	MOV	[COUNT],AX
+	MOV	[COUNT_SYSINIT],AX
 	XOR	DX,DX
-	MOV	AX,LSEEK SHL 8		;Reset pointer to beginning of file
+	MOV	AX,LSeek SHL 8		;Reset pointer to beginning of file
 	INT	21H
 ;	 MOV	 DX,CS
-	mov	dx, [ConfBot]		;AN022;Use current CONFBOT value
-	MOV	AX,[COUNT]
-	mov	[config_size], ax	;save the size of config.sys file.
+	mov	dx, [CONFBOT]		;AN022;Use current CONFBOT value
+	MOV	AX,[COUNT_SYSINIT]
+	mov	[Config_Size], ax	;save the size of config.sys file.
 	call	ParaRound
 	SUB	DX,AX
 	SUB	DX,11H			;ROOM FOR HEADER
 	MOV	[CONFBOT],DX		; Config starts here. New CONBOT value.
 	CALL	TEMPCDS 		; Finally get CDS to "safe" location
-ASSUME	DS:NOTHING,ES:NOTHING
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 	MOV	DX,[CONFBOT]
 	MOV	DS,DX
 	MOV	ES,DX
 	XOR	DX,DX
-	MOV	CX,[COUNT]
-	MOV	AH,READ
+	MOV	CX,[COUNT_SYSINIT]
+	MOV	AH,Read
 	STC				;IN CASE OF INT 24
 	INT	21H			;Function request
 	PUSHF
@@ -720,7 +720,7 @@ PutEOL:
 	MOV	AL,LF
 	STOSB				; LF
 	SUB	DI,DX			; difference moved
-	MOV	Count,DI		; new count
+	MOV	[COUNT_SYSINIT],DI		; new count
 ;
 ; Restore registers
 ;
@@ -728,9 +728,9 @@ PutEOL:
 
 	PUSH	CS
 	POP	DS
-ASSUME	DS:SYSINITSEG
+;ASSUME	DS:SYSINITSEG
 	PUSH	AX
-	MOV	AH,CLOSE
+	MOV	AH,Close
 	INT	21H
 	POP	AX
 	POPF
@@ -738,24 +738,24 @@ ASSUME	DS:SYSINITSEG
 	CMP	CX,AX
 	JZ	GETCOM			;COULDN'T READ THE FILE
 CONFERR:
-	MOV	DX,OFFSET CONFIG	;WANT TO PRINT CONFIG ERROR
+	MOV	DX,CONFIG	;WANT TO PRINT CONFIG ERROR
 	CALL	BADFIL
 ENDCONV:JMP	ENDCONF
 
 Multi_Pass:				;AN018;AN026; called to execute IFS=,  INSTALL= commands
 	push	cs			;AN018;
 	pop	ds			;AN018;
-	cmp	Multi_Pass_id, 10	;J.K.
-	jae	Endconv 		;J.K. Do nothing. Just return.
-	push	Confbot 		;AN018;
+	cmp	[Multi_Pass_Id], 10	;J.K.
+	jae	ENDCONV 		;J.K. Do nothing. Just return.
+	push	[CONFBOT] 		;AN018;
 	pop	es			;AN018; ES -> Confbot
-	mov	si, Org_Count		;AN018;
-	mov	Count, si		;AN018; set Count
+	mov	si, [Org_Count]		;AN018;
+	mov	[COUNT_SYSINIT], si		;AN018; set Count
 	xor	si,si			;AN018;
-	mov	Chrptr, si		;AN018; reset Chrptr, LineCount
-	mov	LineCount, si		;AN018;
-	call	GetChr			;AN018;
-	jmp	Conflp			;AN018;
+	mov	[CHRPTR], si		;AN018; reset Chrptr, LineCount
+	mov	[LineCount], si		;AN018;
+	call	GETCHR			;AN018;
+	jmp	CONFLP			;AN018;
 GETCOM:
 	invoke	ORGANIZE		;ORGANIZE THE FILE
 	CALL	GETCHR
@@ -764,21 +764,21 @@ CONFLP: JC	ENDCONV
 	call	Reset_DOS_Version	;AN024;AN026; Still need to reset version even IBMDOS handles this through
 					; function 4Bh call, since IBMDOS does not know when Load/Overlay call finishes.
 
-IF	NOT BUFFERFLAG
-	call	EMS_Stub_handler	;AN030;
-ENDIF
+if	NOT BUFFERFLAG
+	call	EMS_Stub_Handler	;AN030;
+end if
 
-	inc	LineCount		;AN000; Increase LineCount.
-	mov	Buffer_Pre_Scan, 0	;AN030; Reset Buffer_Pre_Scan.
-	mov	MultDeviceFlag,0	;AN001; Reset MultDeviceFlag.
-	mov	SetDevMarkFlag,0	;AN004; Reset SetDevMarkFlag.
+	inc	[LineCount]		;AN000; Increase LineCount.
+	mov	[Buffer_Pre_Scan], 0	;AN030; Reset Buffer_Pre_Scan.
+	mov	[MultDeviceFlag],0	;AN001; Reset MultDeviceFlag.
+	mov	[SetDevMarkFlag],0	;AN004; Reset SetDevMarkFlag.
 	cmp	al, LF			;AN000; LineFeed?
 	je	Blank_Line		;AN000;  then ignore this line.
 	MOV	AH,AL
 	CALL	GETCHR
-	jnc	TryI			;AN000;
-	cmp	Multi_Pass_ID, 2	;AN026;
-	jae	Endconv 		;AN026;Do not show Badop again for multi_pass.
+	jnc	TRYI			;AN000;
+	cmp	[Multi_Pass_Id], 2	;AN026;
+	jae	ENDCONV 		;AN026;Do not show Badop again for multi_pass.
 	JMP	BADOP
 
 COFF:	PUSH	CS
@@ -786,7 +786,7 @@ COFF:	PUSH	CS
 	invoke	NEWLINE
 	JMP	CONFLP
 Blank_Line:				;AN000;
-	call	Getchr			;AN000;
+	call	GETCHR			;AN000;
 	jmp	CONFLP			;AN000;
 
 COFF_P:
@@ -804,40 +804,40 @@ COFF_P:
 ;INSTALL command
 ;------------------------------------------------------------------------------
 TRYI:
-	cmp	Multi_Pass_Id, 0		;AN029; the initial pass for XMAEM.SYS
+	cmp	[Multi_Pass_Id], 0		;AN029; the initial pass for XMAEM.SYS
 	je	Multi_Try_XMAEM 		;AN029;     and BUFFERS= ... /X pre scan.
-	cmp	Multi_Pass_Id, 2		;AN026; the second pass for IFS= ?
+	cmp	[Multi_Pass_Id], 2		;AN026; the second pass for IFS= ?
 	je	Multi_Try_J			;AN026;
-	cmp	Multi_Pass_Id, 3		;AN026; the third pass for INSTALL= ?
+	cmp	[Multi_Pass_Id], 3		;AN026; the third pass for INSTALL= ?
 	je	Multi_Try_I			;AN026;
 	cmp	ah, 'I' 			;AN018; INSTALL= command?
 	jne	TryB				;AN018; the first pass is for normal operation.
-	or	Install_Flag, HAVE_INSTALL_CMD	;AN018; Set the flag
-	jmp	coff				;AN018; and handles the next command
+	or	[Install_Flag], HAVE_INSTALL_CMD	;AN018; Set the flag
+	jmp	COFF				;AN018; and handles the next command
 
 Multi_Try_XMAEM:				;AN029;
 	cmp	ah, 'D' 			;AN029; device= command?
 	jne	Multi_Try_Buff			;AN029; no skip it.
 	call	Chk_XMAEM			;AN029; is it for XMAEM.SYS?
-	jnz	Multi_Pass_FIlter		;AN029; no skip it.
-	mov	byte ptr es:[si-1], 0FFh	;AN029; mark this command as a Null command for the next pass.
-	jmp	TryDJ				;AN029; execute this command.
+	jnz	Multi_Pass_Filter		;AN029; no skip it.
+	mov	byte [es:si-1], 0FFh	;AN029; mark this command as a Null command for the next pass.
+	jmp	TRYDJ				;AN029; execute this command.
 Multi_Try_Buff: 				;AN030;
 	cmp	ah, 'B' 			;AN030; Buffers= command?
 	jne	Multi_Pass_Filter		;AN030;
-	mov	Buffer_Pre_Scan, 1		;AN030; Set Buffer_Pre_Scan
+	mov	[Buffer_Pre_Scan], 1		;AN030; Set Buffer_Pre_Scan
 	jmp	TryB				;AN030; TryB will set P_Buffer_Slash_X to non-zero value.
 
 Multi_Try_J:					;AN026;
 	cmp	ah, 'J' 			;AN026; IFS= command?
 	jne	Multi_Pass_Filter		;AN026; No. Ignore this.
-	jmp	GotJ				;AN026; Handles IFS= command.
+	jmp	GOTJ				;AN026; Handles IFS= command.
 
 Multi_Try_I:					;AN026;
 	cmp	ah, 'I' 			;AN026; INSTALL= command?
 	jne	Multi_Pass_Filter		;AN026; No. Ignore this.
 	call	Do_Install_Exec 		;Install it.
-	jmp	Coff				;to handle next Install= command.
+	jmp	COFF				;to handle next Install= command.
 
 Multi_Pass_Filter:				;AN023;AN026;
 	cmp	ah, 'Y' 			;AN023; Comment?
@@ -847,14 +847,14 @@ Multi_Pass_Filter:				;AN023;AN026;
 	cmp	ah, '0' 			;AN023; REM?
 	jne	Multi_Pass_Coff 		;AN023; ignore the rest of the commands.
 Multi_Pass_Adjust:				;AN023; These commands need to
-	dec	Chrptr				;AN023;  adjust chrptr, count
-	inc	Count				;AN023;  for NEWLINE proc.
+	dec	[CHRPTR]				;AN023;  adjust chrptr, count
+	inc	[COUNT_SYSINIT]				;AN023;  for NEWLINE proc.
 Multi_Pass_Coff:				;AN023;
-	jmp	Coff				;AN018; To handle next INSTALL= commands.
+	jmp	COFF				;AN018; To handle next INSTALL= commands.
 
 ;------------------------------------------------------------------------------
 
-Sysinit_Parse	proc
+Sysinit_Parse:
 ;Set up registers for SysParse
 ;In)	ES:SI -> command line in  CONFBOT
 ;	DI -> offset of the parse control defintion.
@@ -882,28 +882,28 @@ Sysinit_Parse	proc
 	push	cs
 	pop	es			;now ES:DI -> control definition
 
-	mov	cs:Badparm_Seg,ds	;AN007;Save the pointer to the parm
-	mov	cs:Badparm_Off,si	;AN007; we are about to parse for Badparm msg.
+	mov	[cs:Badparm_Seg],ds	;AN007;Save the pointer to the parm
+	mov	[cs:Badparm_Off],si	;AN007; we are about to parse for Badparm msg.
 	mov	dx, 0
 	call	SysParse
-	cmp	ax, $P_NO_ERROR 	;no error
+	cmp	ax, P_No_Error 	;no error
 ;	$IF	E,OR
-	JE $$LL1
-	cmp	ax, $P_RC_EOL		;or the end of line?
+	JE SCF_LL1
+	cmp	ax, P_RC_EOL		;or the end of line?
 ;	$IF	E
-	JNE $$IF1
-$$LL1:
+	JNE SCF_IF1
+SCF_LL1:
 		clc
 ;	$ELSE
-	JMP SHORT $$EN1
-$$IF1:
+	JMP SHORT SCF_EN1
+SCF_IF1:
 		stc
 ;	$ENDIF
-$$EN1:
+SCF_EN1:
 	pop	ds
 	pop	es			;restore es,ds
 	ret
-Sysinit_Parse	endp
+;Sysinit_Parse	endp
 
 ;------------------------------------------------------------------------------
 ; Buffer command
@@ -929,11 +929,11 @@ Sysinit_Parse	endp
 ;	While (End of command line)					       *
 ;	{ Sysinit_parse;						       *
 ;	  if (no error) then						       *
-;	       if (Result_Val.$P_SYNONYM_ptr == Slash_E) then /*Not a switch   *
+;	       if (Result_Val.P_SYNONYM_ptr == Slash_E) then /*Not a switch   *
 ;		    Buffer_Slash_X = 1					       *
 ;	       else if	 (CX == 1) then 	    /* first positional */     *
-;			  Buffers = Result_Val.$P_Picked_Val;		       *
-;		    else  H_Buffers = Result_Val.$P_Picked_Val; 	       *
+;			  Buffers = Result_Val.P_Picked_Val;		       *
+;		    else  H_Buffers = Result_Val.P_Picked_Val; 	       *
 ;	  else	{Show Error message;Error Exit} 			       *
 ;	};								       *
 ;	If (Buffer_Slash_X is off & Buffers > 99) then Show_Error;	       *
@@ -954,70 +954,70 @@ Sysinit_Parse	endp
 TryB:
 	CMP	AH,'B'
 	JNZ	TryC
-	mov	P_Buffer_Slash_X, 0	;AN000;AN025;
-	mov	di, offset Buf_Parms	;AN000;
+	mov	[P_Buffer_Slash_X], 0	;AN000;AN025;
+	mov	di, Buf_Parms	;AN000;
 	xor	cx, cx			;AN000;
 	mov	dx, cx			;AN000;
 
 ;	$SEARCH 			;AN000;
-$$DO4:
+SCF_DO4:
 	    call   Sysinit_Parse	;AN000;
 ;	$EXITIF    C			;AN000; Parse Error,
-	JNC $$IF4
+	JNC SCF_IF4
 	    call   Badparm_p		;AN007;   and Show messages and end the search loop.
 ;	$ORELSE 			;AN000;
-	JMP SHORT $$SR4
-$$IF4:
-	    cmp    ax, $P_RC_EOL	;AN000; End of Line?
+	JMP SHORT SCF_SR4
+SCF_IF4:
+	    cmp    ax, P_RC_EOL	;AN000; End of Line?
 ;	$LEAVE	   E			;AN000;  then jmp to $Endloop for semantic check.
-	JE $$EN4
-	    cmp    Result_Val.$P_SYNONYM_PTR, offset Switch_X ;AN000;AN025;
+	JE SCF_EN4
+	    cmp    [Result_Val+P_Result_Blk.P_SYNONYM_Ptr], Switch_X ;AN000;AN025;
 ;	    $IF    E					      ;AN000;
-	    JNE $$IF8
-		mov	P_Buffer_Slash_X, 1		      ;AN000;AN025; set the flag
+	    JNE SCF_IF8
+		mov	[P_Buffer_Slash_X], 1		      ;AN000;AN025; set the flag
 ;	    $ELSE					      ;AN000;
-	    JMP SHORT $$EN8
-$$IF8:
-		mov	ax, word ptr Result_Val.$P_PICKED_VAL ;AN000;
+	    JMP SHORT SCF_EN8
+SCF_IF8:
+		mov	ax, word [Result_Val+P_Result_Blk.P_Picked_Val] ;AN000;
 		cmp	cx, 1				      ;AN000;
 ;		$IF	E				      ;AN000;
-		JNE $$IF10
-		    mov    P_Buffers, ax		      ;AN000;
+		JNE SCF_IF10
+		    mov    [P_Buffers], ax		      ;AN000;
 ;		$ELSE					      ;AN000;
-		JMP SHORT $$EN10
-$$IF10:
-		    mov    P_H_Buffers, ax		      ;AN000;
+		JMP SHORT SCF_EN10
+SCF_IF10:
+		    mov    [P_H_Buffers], ax		      ;AN000;
 ;		$ENDIF					      ;AN000;
-$$EN10:
+SCF_EN10:
 ;	    $ENDIF					      ;AN000;
-$$EN8:
+SCF_EN8:
 ;	$ENDLOOP			;AN000;
-	JMP SHORT $$DO4
-$$EN4:
-	    cmp     P_Buffers, 99	;AN000;
+	JMP SHORT SCF_DO4
+SCF_EN4:
+	    cmp     [P_Buffers], 99	;AN000;
 ;	    $IF     A,AND		;AN000;
-	    JNA $$IF15
-	    cmp     P_Buffer_Slash_X, 0 ;AN000;AN025;
+	    JNA SCF_IF15
+	    cmp     [P_Buffer_Slash_X], 0 ;AN000;AN025;
 ;	    $IF     E			;AN000;
-	    JNE $$IF15
+	    JNE SCF_IF15
 		 call	Badparm_p	;AN000;
-		 mov	P_H_Buffers, 0	;AN000;
+		 mov	[P_H_Buffers], 0	;AN000;
 ;	    $ELSE			;AN000;
-	    JMP SHORT $$EN15
-$$IF15:
-		 mov	ax, P_Buffers	;AN000; We don't have any problem.
-		 mov	Buffers, ax	;AN000; Now, let's set it really.
-		 mov	ax, P_H_Buffers ;AN000;
-		 mov	H_Buffers, ax	;AN000;
-		 mov	al, P_Buffer_Slash_X  ;AN000;AN025;
-		 mov	Buffer_Slash_X, al    ;AN000;AN025;
-		 mov	ax, LineCount	      ;AN000;
-		 mov	Buffer_LineNum, ax    ;AN000; Save the line number for the future use.
+	    JMP SHORT SCF_EN15
+SCF_IF15:
+		 mov	ax, [P_Buffers]	;AN000; We don't have any problem.
+		 mov	[BUFFERS], ax	;AN000; Now, let's set it really.
+		 mov	ax, [P_H_Buffers] ;AN000;
+		 mov	[H_Buffers], ax	;AN000;
+		 mov	al, [P_Buffer_Slash_X]  ;AN000;AN025;
+		 mov	[Buffer_Slash_X], al    ;AN000;AN025;
+		 mov	ax, [LineCount]	      ;AN000;
+		 mov	[Buffer_LineNum], ax    ;AN000; Save the line number for the future use.
 ;	    $ENDIF			;AN000;
-$$EN15:
+SCF_EN15:
 ;	$ENDSRCH			;AN000;
-$$SR4:
-	jmp	Coff
+SCF_SR4:
+	jmp	COFF
 
 ;------------------------------------------------------------------------------
 ; Break command
@@ -1040,7 +1040,7 @@ $$SR4:
 ;	While (End of command line)					       *
 ;	{ Sysinit_Parse;						       *
 ;	  if (no error) then						       *
-;	       if (Result_Val.$P_Item_Tag == 1) then	  /*ON		 */    *
+;	       if (Result_Val.P_Item_Tag == 1) then	  /*ON		 */    *
 ;		   Set P_Ctrl_Break, on;				       *
 ;	       else					  /*OFF 	 */    *
 ;		   Set P_Ctrl_Break, off;				       *
@@ -1076,42 +1076,42 @@ $$SR4:
 ;
 TryC:
 	CMP	AH,'C'
-	JNZ	TRYM
-	mov	di, offset Brk_Parms	;AN000;
+	JNZ	TryM
+	mov	di, Brk_Parms	;AN000;
 	xor	cx,cx			;AN000;
 	mov	dx,cx			;AN000;
 ;	$SEARCH 			;AN000;
-$$DO19:
+SCF_DO19:
 	    call   Sysinit_Parse	;AN000;
 ;	$EXITIF    C			;AN000; Parse error
-	JNC $$IF19
+	JNC SCF_IF19
 	    call   Badparm_p		;AN007;  Show message and end the serach loop.
 ;	$ORELSE 			;AN000;
-	JMP SHORT $$SR19
-$$IF19:
-	    cmp    ax, $P_RC_EOL	;AN000; End of Line?
+	JMP SHORT SCF_SR19
+SCF_IF19:
+	    cmp    ax, P_RC_EOL	;AN000; End of Line?
 ;	$LEAVE	   E			;AN000;  then end the $ENDLOOP
-	JE $$EN19
-	    cmp    Result_Val.$P_ITEM_TAG, 1	 ;AN000;
+	JE SCF_EN19
+	    cmp    [Result_Val+P_Result_Blk.P_Item_Tag], 1	 ;AN000;
 ;	    $IF    E				 ;AN000;
-	    JNE $$IF23
-	       mov    P_Ctrl_Break, 1		 ;AN000; Turn it on
+	    JNE SCF_IF23
+	       mov    [P_Ctrl_Break], 1		 ;AN000; Turn it on
 ;	    $ELSE				 ;AN000;
-	    JMP SHORT $$EN23
-$$IF23:
-	       mov    P_Ctrl_Break, 0		 ;AN000; Turn it off
+	    JMP SHORT SCF_EN23
+SCF_IF23:
+	       mov    [P_Ctrl_Break], 0		 ;AN000; Turn it off
 ;	    $ENDIF				 ;AN000;
-$$EN23:
+SCF_EN23:
 ;	$ENDLOOP			   ;AN000; we actually set the ctrl break
-	JMP SHORT $$DO19
-$$EN19:
-	    mov    ah, SET_CTRL_C_TRAPPING ;AN000; if we don't have any parse error.
+	JMP SHORT SCF_DO19
+SCF_EN19:
+	    mov    ah, Set_CTRL_C_Trapping ;AN000; if we don't have any parse error.
 	    mov    al, 1		   ;AN000;
-	    mov    dl, P_Ctrl_Break	   ;AN000;
+	    mov    dl, [P_Ctrl_Break]	   ;AN000;
 	    Int    21h			   ;AN000;
 ;	$ENDSRCH			   ;AN000;
-$$SR19:
-	jmp	Coff
+SCF_SR19:
+	jmp	COFF
 
 ;------------------------------------------------------------------------------
 ; MultiTrack command
@@ -1134,7 +1134,7 @@ $$SR19:
 ;	While (End of command line)					       *
 ;	{ Sysinit_Parse;						       *
 ;	  if (no error) then						       *
-;	       if (Result_Val.$P_Item_Tag == 1) then	  /*ON		 */    *
+;	       if (Result_Val.P_Item_Tag == 1) then	  /*ON		 */    *
 ;		   Set P_Mtrk, on;					       *
 ;	       else					  /*OFF 	 */    *
 ;		   Set P_Mtrk, off;					       *
@@ -1148,54 +1148,54 @@ $$SR19:
 ;********************************************************************************
 TryM:					;AN002;
 	CMP	AH,'M'			;AN002;
-	JNZ	TRYW			;AN002;
-	mov	di, offset Mtrk_Parms	;AN002;
+	JNZ	TryW			;AN002;
+	mov	di, MTrk_Parms	;AN002;
 	xor	cx,cx			;AN002;
 	mov	dx,cx			;AN002;
 ;	$SEARCH 			;AN002;
-$$DO28:
+SCF_DO28:
 	    call   Sysinit_Parse	;AN002;
 ;	$EXITIF    C			;AN002; Parse error
-	JNC $$IF28
+	JNC SCF_IF28
 	    call   Badparm_p		;AN007;  Show message and end the serach loop.
 ;	$ORELSE 			;AN002;
-	JMP SHORT $$SR28
-$$IF28:
-	    cmp    ax, $P_RC_EOL	;AN002; End of Line?
+	JMP SHORT SCF_SR28
+SCF_IF28:
+	    cmp    ax, P_RC_EOL	;AN002; End of Line?
 ;	$LEAVE	   E			;AN002;  then end the $ENDLOOP
-	JE $$EN28
-	    cmp    Result_Val.$P_ITEM_TAG, 1	 ;AN002;
+	JE SCF_EN28
+	    cmp    [Result_Val+P_Result_Blk.P_Item_Tag], 1	 ;AN002;
 ;	    $IF    E				 ;AN002;
-	    JNE $$IF32
-	       mov    P_Mtrk, 1 		 ;AN002; Turn it on temporarily.
+	    JNE SCF_IF32
+	       mov    [P_Mtrk], 1 		 ;AN002; Turn it on temporarily.
 ;	    $ELSE				 ;AN002;
-	    JMP SHORT $$EN32
-$$IF32:
-	       mov    P_Mtrk, 0 		 ;AN002; Turn it off temporarily.
+	    JMP SHORT SCF_EN32
+SCF_IF32:
+	       mov    [P_Mtrk], 0 		 ;AN002; Turn it off temporarily.
 ;	    $ENDIF				 ;AN002;
-$$EN32:
+SCF_EN32:
 ;	$ENDLOOP			;AN002; we actually set the MulTrk_Flag here.
-	JMP SHORT $$DO28
-$$EN28:
+	JMP SHORT SCF_DO28
+SCF_EN28:
 	    push   ds			;AN002;
-	    mov    ax, Code		;AN002;
+	    mov    ax, CODE		;AN002;
 	    mov    ds, ax		;AN002;
-	    assume ds:Code
-	    cmp    P_Mtrk, 0		;AN002;
+;	    assume ds:Code
+	    cmp    [P_Mtrk], 0		;AN002;
 ;	    $IF    E			;AN002;
-	    JNE $$IF36
-	       mov    MulTrk_Flag, MULTRK_OFF2	  ;AN002; 0001h
+	    JNE SCF_IF36
+	       mov    [MulTrk_Flag], MULTRK_OFF2	  ;AN002; 0001h
 ;	    $ELSE				  ;AN002;
-	    JMP SHORT $$EN36
-$$IF36:
-	       mov    MulTrk_Flag, MULTRK_ON	  ;AN002; 8000h
+	    JMP SHORT SCF_EN36
+SCF_IF36:
+	       mov    [MulTrk_Flag], MULTRK_ON	  ;AN002; 8000h
 ;	    $ENDIF			;AN002;
-$$EN36:
+SCF_EN36:
 	    pop    ds			;AN002;
-	    assume ds:SYSINITSEG
+;	    assume ds:SYSINITSEG
 ;	$ENDSRCH			;AN002;
-$$SR28:
-	jmp	Coff			;AN002;
+SCF_SR28:
+	jmp	COFF			;AN002;
 
 ;------------------------------------------------------------------------------
 ; CPSW command
@@ -1218,7 +1218,7 @@ $$SR28:
 ;	While (End of command line)					       *
 ;	{ Sysinit_Parse;						       *
 ;	  if (no error) then						       *
-;	       if (Result_Val.$P_Item_Tag == 1) then	  /*ON		 */    *
+;	       if (Result_Val.P_Item_Tag == 1) then	  /*ON		 */    *
 ;		   Set P_CPSW, on;					       *
 ;	       else					  /*OFF 	 */    *
 ;		   Set P_CPSW, off;					       *
@@ -1232,57 +1232,57 @@ $$SR28:
 TryW:					;AN002;
 	CMP	AH,'W'			;AN002;
 	JNZ	TRYDJ			;AN002;
-	mov	di, offset CPSW_Parms	;AN002;
+	mov	di, CPSW_Parms	;AN002;
 	xor	cx,cx			;AN002;
 	mov	dx,cx			;AN002;
 ;	$SEARCH 			;AN002;
-$$DO40:
+SCF_DO40:
 	    call   Sysinit_Parse	;AN002;
 ;	$EXITIF    C			;AN002; Parse error
-	JNC $$IF40
+	JNC SCF_IF40
 	    call   Badparm_p		;AN007;  Show message and end the serach loop.
 ;	$ORELSE 			;AN002;
-	JMP SHORT $$SR40
-$$IF40:
-	    cmp    ax, $P_RC_EOL	;AN002; End of Line?
+	JMP SHORT SCF_SR40
+SCF_IF40:
+	    cmp    ax, P_RC_EOL	;AN002; End of Line?
 ;	$LEAVE	   E			;AN002;  then end the $ENDLOOP
-	JE $$EN40
-	    cmp    Result_Val.$P_ITEM_TAG, 1	 ;AN002;
+	JE SCF_EN40
+	    cmp    [Result_Val+P_Result_Blk.P_Item_Tag], 1	 ;AN002;
 ;	    $IF    E				 ;AN002;
-	    JNE $$IF44
-	       mov    P_CPSW, 1 		 ;AN002; Turn it on temporarily.
+	    JNE SCF_IF44
+	       mov    [P_CPSW], 1 		 ;AN002; Turn it on temporarily.
 ;	    $ELSE				 ;AN002;
-	    JMP SHORT $$EN44
-$$IF44:
-	       mov    P_CPSW, 0 		 ;AN002; Turn it off temporarily.
+	    JMP SHORT SCF_EN44
+SCF_IF44:
+	       mov    [P_CPSW], 0 		 ;AN002; Turn it off temporarily.
 ;	    $ENDIF				 ;AN002;
-$$EN44:
+SCF_EN44:
 ;	$ENDLOOP			;AN002; we actually set the MulTrk_Flag here.
-	JMP SHORT $$DO40
-$$EN40:
-	    mov    ah, SET_CTRL_C_TRAPPING ;AN000; The same function number as Ctrl_Break
+	JMP SHORT SCF_DO40
+SCF_EN40:
+	    mov    ah, Set_CTRL_C_Trapping ;AN000; The same function number as Ctrl_Break
 	    mov    al, 4		   ;AN000; Set CPSW state function
-	    mov    dl, P_CPSW		   ;AN000; 0=off, 1=on
+	    mov    dl, [P_CPSW]		   ;AN000; 0=off, 1=on
 	    Int    21h			   ;AN000;
 ;	$ENDSRCH			;AN002;
-$$SR40:
-	jmp	Coff			;AN002;
+SCF_SR40:
+	jmp	COFF			;AN002;
 
 ;------------------------------------------------------------------------------
 ; Device command
 ;------------------------------------------------------------------------------
 TRYDJ:
-	and	cs:IFS_Flag, NOT_IFS	;AN000; Reset the flag
+	and	[cs:IFS_Flag], NOT_IFS	;AN000; Reset the flag
 	CMP	AH,'D'
 	JZ	GOTDJ
 	CMP	AH,'J'
 	jz	GOTJ
 	JMP	TRYQ
 GOTJ:					;AN000; IFS= command.
-	or	cs:[IFS_Flag], IS_IFS	;AN000; set the flag.
-	cmp	Multi_Pass_Id, 2	;second pass?
+	or	[cs:IFS_Flag], IS_IFS	;AN000; set the flag.
+	cmp	[Multi_Pass_Id], 2	;second pass?
 	je	GOTDJ			;then proceed
-	jmp	Coff			;else ignore this until the second pass.
+	jmp	COFF			;else ignore this until the second pass.
 
 ;	 jmp	 GOTDJ_Cont
 ;GOTD:
@@ -1295,12 +1295,12 @@ GOTDJ:
 	MOV	BX,CS			;DEVICE= or IFS= command.
 	MOV	DS,BX
 
-	MOV	WORD PTR [BPB_ADDR],SI
-	MOV	WORD PTR [BPB_ADDR+2],ES
+	MOV	word [BPB_ADDR],SI
+	MOV	word [BPB_ADDR+2],ES
 
 ;J.K. In case it is for IFS=, then set the parameter pointer.
-	mov	word ptr [ifs_rh.IFSR_PARMS@], SI   ;AN000; for IFS
-	mov	word ptr [ifs_rh.IFSR_PARMS@+2], ES ;AN000;
+	mov	word [IFS_RH+IFSR_PARMS@], SI   ;AN000; for IFS
+	mov	word [IFS_RH+IFSR_PARMS@+2], ES ;AN000;
 
 	CALL	ROUND
 ;J.K. Set up the DEVMARK entries here for MEM command.
@@ -1311,23 +1311,23 @@ GOTDJ:
 					;Don't forget decrease MEMHI
 					; with an unsuccessful process of this file!!.
 	XOR	AX,AX
-	MOV	WORD PTR [ENTRY_POINT],AX
+	MOV	word [ENTRY_POINT],AX
 	MOV	AX,[MEMHI]
-	MOV	WORD PTR [ENTRY_POINT+2],AX	;SET ENTRY POINT
+	MOV	word [ENTRY_POINT+2],AX	;SET ENTRY POINT
 
-	IF	NOT NOEXEC
+	if	NOT NOEXEC
 	MOV	[LDOFF],AX		;SET LOAD OFFSET
-	ENDIF
+	end if
 
 	PUSH	ES
 	POP	DS
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 	MOV	DX,SI			;DS:DX POINTS TO FILE NAME
 
-	IF	NOEXEC
-	LES	BX,DWORD PTR CS:[MEMLO]
+	if	NOEXEC
+	LES	BX,dword [cs:MEMLO]
 	CALL	LDFIL			;LOAD IN THE DEVICE DRIVER
-	ELSE
+	else
 ; We are going to open the cdevice driver and size it as is done
 ;  in LDFIL. The reason we must do this is that EXEC does NO checking
 ;  for us. We must make sure there is room to load the device without
@@ -1336,7 +1336,7 @@ ASSUME	DS:NOTHING
 ;  it does its sizing based on the assumption that the file being loaded
 ;  is a .COM file. It is close enough to correctness to be usable.
 	MOV	ES,AX			;ES:0 is LOAD addr
-	MOV	AX,OPEN SHL 8		;OPEN THE FILE
+	MOV	AX,Open SHL 8		;OPEN THE FILE
 	STC				;IN CASE OF INT 24
 	INT	21H
 	JC	BADLDRESET
@@ -1361,11 +1361,11 @@ ASSUME	DS:NOTHING
 	PUSH	DX			; Save pointer to name
 	XOR	CX,CX
 	XOR	DX,DX
-	MOV	AX,(LSEEK SHL 8) OR 2
+	MOV	AX,(LSeek SHL 8) OR 2
 	STC				;IN CASE OF INT 24
 	INT	21H			; Get file size in DX:AX
 	JNC	GO_AHEAD_LOAD
-	MOV	AH,CLOSE		; Close file
+	MOV	AH,Close		; Close file
 	INT	21H
 	POP	DX			; Clean stack
 	STC				; Close may clear carry
@@ -1384,37 +1384,37 @@ GO_AHEAD_LOAD:
 	MOV	CX,ES			; CX:0 is xaddr
 	ADD	CX,AX			; New device will take up to here
 	JC	MEM_ERRJY		; WOW!!!!
-	CMP	CX,CS:[ALLOCLIM]
+	CMP	CX,[cs:ALLOCLIM]
 	JB	OKLDX
 MEM_ERRJY:
 	JMP	MEM_ERR
 
 OKLDX:
 	POP	DX			; Recover name pointer
-	MOV	AH,CLOSE		; Close file
+	MOV	AH,Close		; Close file
 	INT	21H
 	MOV	BX,CS
 	MOV	ES,BX
-	MOV	BX,OFFSET PRMBLK	;ES:BX POINTS TO PARAMETERS
+	MOV	BX,PRMBLK	;ES:BX POINTS TO PARAMETERS
 	MOV	AL,3
-	MOV	AH,EXEC
+	MOV	AH,Exec
 	STC				;IN CASE OF INT 24
 	INT	21H			;LOAD IN THE DEVICE DRIVER
-	ENDIF
+	end if
 
 BADLDRESET:
 	PUSH	DS
 	POP	ES			;ES:SI BACK TO CONFIG.SYS
 	PUSH	CS
 	POP	DS			;DS BACK TO SYSINIT
-ASSUME	DS:SYSINITSEG
+;ASSUME	DS:SYSINITSEG
 	JNC	GOODLD
 BADBRK:
-	test	cs:[SetDevMarkFlag],SETBRKDONE ;AN004;If already Set_Break is done,
+	test	[cs:SetDevMarkFlag],SETBRKDONE ;AN004;If already Set_Break is done,
 	jnz	Skip0_ResetMEMHI	;AN004; then do not
-	dec	cs:[MEMHI]		   ;AN004;Adjust MEMHI by a paragrah of DEVMARK.
+	dec	[cs:MEMHI]		   ;AN004;Adjust MEMHI by a paragrah of DEVMARK.
 Skip0_ResetMEMHI:
-	cmp	byte ptr es:[si], CR	;file name is CR? (Somebody entered "device=" without filename)
+	cmp	byte [es:si], CR	;file name is CR? (Somebody entered "device=" without filename)
 	jne	BADBRK_1
 	jmp	BADOP			;show "Unrecognized command in CONFIG.SYS"
 BADBRK_1:
@@ -1423,35 +1423,35 @@ BADBRK_1:
 
 GOODLD:
 ;J.K. If it is IFS=, then we should set IFS_DOSCALL@ field in IFSHEADER.
-	test	cs:[IFS_Flag], IS_IFS		;AN000;
+	test	[cs:IFS_Flag], IS_IFS		;AN000;
 	jz	Skip_IFSHEADER_Set		;AN000;
 	push	es				;AN000;
 	push	di				;AN000;
 	push	ds				;AN000;
-	mov	bx, word ptr cs:[ENTRY_POINT+2] ;AN000;
+	mov	bx, word [cs:ENTRY_POINT+2] ;AN000;
 	mov	ds, bx				;AN000; DS:0 will be the header
-	les	di, cs:[DosInfo]		;AN000;
-	mov	bx, word ptr es:[di.SYSI_IFS_DOSCALL@]	 ;AN000;
-	mov	word ptr ds:[IFS_DOSCALL@], bx		 ;AN000;
-	mov	bx, word ptr es:[di.SYSI_IFS_DOSCALL@]+2 ;AN000;
-	mov	word ptr ds:[IFS_DOSCALL@]+2, bx	 ;AN000;
+	les	di, [cs:DOSINFO]		;AN000;
+	mov	bx, word [es:di+SYSI_IFS_DOSCALL@]	 ;AN000;
+	mov	word [IFS_DOSCALL@], bx		 ;AN000;
+	mov	bx, word [es:di+SYSI_IFS_DOSCALL@+2] ;AN000;
+	mov	word [IFS_DOSCALL@+2], bx	 ;AN000;
 	pop	ds				;AN000;
 	pop	di				;AN000;
 	pop	es				;AN000;
 Skip_IFSHEADER_Set:				;AN000;
 	SaveReg <ES,SI> 		;INITIALIZE THE DEVICE
 ;	 call	 Chk_IBMCACHE		 ;AN024 IBMCACHE.SYS problem.;AN026;IBMDOS will handles this thru 4Bh call.
-Restore:MOV	BL,ES:[SI]		;   while ((c=*p) != 0)
+Restore_:MOV	BL,[es:SI]		;   while ((c=*p) != 0)  -- fasm keeps RESTORE
 	OR	BL,BL
 	JZ	Got
 	INC	SI			;	p++;
-	JMP	Restore
-Got:	MOV	BYTE PTR ES:[SI],' '	;   *p = ' ';
+	JMP	Restore_
+Got:	MOV	byte [es:SI],' '	;   *p = ' ';
 	SaveReg <ES,SI>
 	PUSH	CS
 	POP	ES
 
-	test	cs:[IFS_Flag], IS_IFS	;AN000;
+	test	[cs:IFS_Flag], IS_IFS	;AN000;
 	jz	Got_Device_Com		;AN000;
 	mov	bx, IFS_CALL@		;AN000; offset from the start of IFSHEADER
 	call	CallIFS 		;AN000;
@@ -1459,11 +1459,11 @@ Got:	MOV	BYTE PTR ES:[SI],' '	;   *p = ' ';
 Got_Device_Com:
 	push	ds			;AN017;
 	push	si			;AN017;
-	lds	si, cs:[ENTRY_POINT]	;AN017; Peeks the header attribute
-	test	word ptr ds:[si.SDEVATT], DEVTYP  ;AN017;Block device driver?
+	lds	si, [cs:ENTRY_POINT]	;AN017; Peeks the header attribute
+	test	word [si+SYSDEV.SDEVATT], DEVTYP  ;AN017;Block device driver?
 	jnz	Got_Device_Com_Cont		  ;AN017;No.
-	lds	si, cs:[DOSINFO]	;AN017; DS:SI -> SYS_VAR
-	cmp	ds:[si.SYSI_NUMIO], 26	;AN017; No more than 26 drive number
+	lds	si, [cs:DOSINFO]	;AN017; DS:SI -> SYS_VAR
+	cmp	[si+SysInitVars.SYSI_NUMIO], 26	;AN017; No more than 26 drive number
 	jb	Got_Device_Com_Cont	;AN017;
 	pop	si			;AN017;
 	pop	ds			;AN017;
@@ -1473,41 +1473,41 @@ Got_Device_Com:
 Got_Device_Com_Cont:			;AN017;
 	pop	si			;AN017;
 	pop	ds			;AN017;
-	MOV	BX,SDEVSTRAT
+	MOV	BX,SYSDEV.SDEVSTRAT
 	invoke	CALLDEV 		;   CallDev (SDevStrat);
-	MOV	BX,SDEVINT
+	MOV	BX,SYSDEV.SDEVINT
 	invoke	CALLDEV 		;   CallDev (SDevInt);
 End_Init_Call:
 	RestoreReg  <SI,DS>
-	MOV	BYTE PTR [SI],0 	;   *p = 0;
+	MOV	byte [SI],0 	;   *p = 0;
 
 	PUSH	CS
 	POP	DS
 
 	test	[IFS_Flag], IS_IFS	;AN000;
 	jz	Was_Device_Com		;AN000;
-	cmp	[ifs_rh.IFSR_RETCODE], 0 ;AN000; Was a success ?
-	jne	Erase_Dev_do		;AN000;
+	cmp	[IFS_RH+IFSRH.IFSR_RETCODE], 0 ;AN000; Was a success ?
+	jne	ERASE_DEV_do		;AN000;
 	pop	si			;AN000; restore es:si to clean up the
 	pop	es			;AN000; stack for Set_Break call.
-	mov	ax, word ptr [Entry_Point+2]	   ;AN000; Get the loaded segment
-	add	ax, word ptr [ifs_rh.IFSR_RESSIZE] ;AN000;
-	mov	word ptr [Break_addr], 0	   ;AN000;
-	mov	word ptr [Break_addr+2], ax	   ;AN000;
-	or	cs:[SetDevMarkFlag], FOR_DEVMARK       ;AN004;
-	invoke	Set_Break		;AN000; Will also check the memory size too.
+	mov	ax, word [ENTRY_POINT+2]	   ;AN000; Get the loaded segment
+	add	ax, word [IFS_RH+IFSR_RESSIZE] ;AN000;
+	mov	word [BREAK_ADDR], 0	   ;AN000;
+	mov	word [BREAK_ADDR+2], ax	   ;AN000;
+	or	[cs:SetDevMarkFlag], FOR_DEVMARK       ;AN004;
+	invoke	SET_BREAK		;AN000; Will also check the memory size too.
 	push	es			;AN000; Save it again, in case, for Erase_Dev_Do.
 	push	si			;AN000;
-	jc	Erase_Dev_do		;AN000;
+	jc	ERASE_DEV_do		;AN000;
 Link_IFS:				;AN000;
-	les	di, cs:[dosinfo]	;AN000;
-	mov	cx, word ptr es:[di.SYSI_IFS]	;AN000; save old pointer
-	mov	dx, word ptr es:[di.SYSI_IFS+2] ;AN000;
-	lds	si, cs:[Entry_Point]		;AN000;
-	mov	word ptr es:[di.SYSI_IFS],si	;AN000;
-	mov	word ptr es:[di.SYSI_IFS+2], ds ;AN000;
-	mov	word ptr ds:[si], cx		;AN000; We don't permit multiple IFSs.
-	mov	word ptr ds:[si+2], dx		;AN000;
+	les	di, [cs:DOSINFO]	;AN000;
+	mov	cx, word [es:di+SysInitVars.SYSI_IFS]	;AN000; save old pointer
+	mov	dx, word [es:di+SysInitVars.SYSI_IFS+2] ;AN000;
+	lds	si, [cs:ENTRY_POINT]		;AN000;
+	mov	word [es:di+SysInitVars.SYSI_IFS],si	;AN000;
+	mov	word [es:di+SysInitVars.SYSI_IFS+2], ds ;AN000;
+	mov	word [si], cx		;AN000; We don't permit multiple IFSs.
+	mov	word [si+2], dx		;AN000;
 	pop	si			;AN000; Restore es:si for the next command.
 	pop	es			;AN000;
 ;	 mov	 cs:[IFS_Flag], HAD_IFS  ;AN014; Set the flag.
@@ -1522,15 +1522,15 @@ ERASE_DEV_do:				;AC000;; Modified to show message "Error in CONFIG.SYS..."
 	jnz	Skip1_ResetMEMHI	;AN004; then do not
 	dec	[MEMHI] 		;AN004;Adjust MEMHI by a paragrah of DEVMARK.
 Skip1_ResetMEMHI:
-	cmp	ConfigMsgFlag, 0	;AN015;
+	cmp	[ConfigMsgFlag], 0	;AN015;
 	je	No_Error_Line_Msg	;AN015;
 	call	Error_Line		;AN021; No "Error in CONFIG.SYS" msg for device driver. DCR D493
-	mov	ConfigMsgFlag, 0	;AN015;AN021;Set the default value again.
+	mov	[ConfigMsgFlag], 0	;AN015;AN021;Set the default value again.
 No_Error_Line_Msg:			;AN015;
-	JMP	Coff
+	JMP	COFF
 
 Was_Device_Com: 			;AN000;
-	MOV	AX,WORD PTR [BREAK_ADDR+2]
+	MOV	AX,word [BREAK_ADDR+2]
 	CMP	AX,[MEMORY_SIZE]
 	JB	BREAKOK
 	POP	SI
@@ -1540,29 +1540,29 @@ Was_Device_Com: 			;AN000;
 BREAKOK:
 	LDS	DX,[ENTRY_POINT]	;SET DS:DX TO HEADER
 	MOV	SI,DX
-	ADD	SI,SDEVATT		;DS:SI POINTS TO ATTRIBUTES
-	LES	DI,CS:[DOSINFO] 	;ES:DI POINT TO DOS INFO
-	MOV	AX,DS:[SI]		;GET ATTRIBUTES
+	ADD	SI,SYSDEV.SDEVATT		;DS:SI POINTS TO ATTRIBUTES
+	LES	DI,[cs:DOSINFO] 	;ES:DI POINT TO DOS INFO
+	MOV	AX,[SI]		;GET ATTRIBUTES
 	TEST	AX,DEVTYP		;TEST IF BLOCK DEV
 	JZ	ISBLOCK
-	or	cs:[SetDevMarkFlag],FOR_DEVMARK ;AN004;
-	invoke	Set_Break		; Go ahead and alloc mem for device
-	jc	Erase_Dev_do		;device driver's Init routien failed.
+	or	[cs:SetDevMarkFlag],FOR_DEVMARK ;AN004;
+	invoke	SET_BREAK		; Go ahead and alloc mem for device
+	jc	ERASE_DEV_do		;device driver's Init routien failed.
 	TEST	AX,ISCIN		;IS IT A CONSOLE IN?
 	JZ	TRYCLK
-	MOV	WORD PTR ES:[DI.SYSI_CON],DX
-	MOV	WORD PTR ES:[DI.SYSI_CON+2],DS
+	MOV	word [es:DI+SysInitVars.SYSI_CON],DX
+	MOV	word [es:DI+SysInitVars.SYSI_CON+2],DS
 
 TRYCLK: TEST	AX,ISCLOCK		;IS IT A CLOCK DEVICE?
 	JZ	GOLINK
-	MOV	WORD PTR ES:[DI+SYSI_CLOCK],DX
-	MOV	WORD PTR ES:[DI+SYSI_CLOCK+2],DS
+	MOV	word [es:DI+SysInitVars.SYSI_CLOCK],DX
+	MOV	word [es:DI+SysInitVars.SYSI_CLOCK+2],DS
 GOLINK: JMP	LINKIT
 
 ISBLOCK:
-	MOV	AL,CS:[UNITCOUNT]	;IF NO UNITS FOUND, erase the device
+	MOV	AL,[cs:UNITCOUNT]	;IF NO UNITS FOUND, erase the device
 	OR	AL,AL
-	jz	Erase_Dev_do
+	jz	ERASE_DEV_do
 ;	 JNZ	 PERDRV
 ;	 MOV	 AX, -1
 ;	 JMP	 ENDDEV
@@ -1571,7 +1571,7 @@ PERDRV:
 	CBW				; WARNING NO DEVICE > 127 UNITS
 	MOV	CX,AX
 	MOV	DH,AH
-	MOV	DL,ES:[DI.SYSI_NUMIO]	;GET NUMBER OF DEVICES
+	MOV	DL,[es:DI+SysInitVars.SYSI_NUMIO]	;GET NUMBER OF DEVICES
 	MOV	AH,DL
 	ADD	AH,AL			; Check for too many devices
 	CMP	AH,26			; 'A' - 'Z' is 26 devices
@@ -1579,53 +1579,53 @@ PERDRV:
 BadNumBlock:				;AN017;
 	PUSH	CS
 	POP	DS
-	MOV	DX,OFFSET BADBLOCK
+	MOV	DX,BADBLOCK
 	invoke	PRINT
 	JMP	ERASE_DEV_do
 
 OK_BLOCK:
-	or	cs:[SetDevMarkFlag],FOR_DEVMARK ;AN004;
+	or	[cs:SetDevMarkFlag],FOR_DEVMARK ;AN004;
 	invoke	SET_BREAK		; Alloc the device
-	ADD	ES:[DI.SYSI_NUMIO],AL	;UPDATE THE AMOUNT
-	ADD	CS:DriveNumber,AL	; remember amount for next device
-	LDS	BX,CS:[BPB_ADDR]	;POINT TO BPB ARRAY
+	ADD	[es:DI+SysInitVars.SYSI_NUMIO],AL	;UPDATE THE AMOUNT
+	ADD	[cs:DriveNumber],AL	; remember amount for next device
+	LDS	BX,[cs:BPB_ADDR]	;POINT TO BPB ARRAY
 PERUNIT:
-	LES	BP,CS:[DOSINFO]
-	LES	BP,DWORD PTR ES:[BP.SYSI_DPB]	;GET FIRST DPB
+	LES	BP,[cs:DOSINFO]
+	LES	BP,dword [es:BP+SysInitVars.SYSI_DPB]	;GET FIRST DPB
 
-SCANDPB:CMP	WORD PTR ES:[BP.DPB_NEXT_DPB],-1
+SCANDPB:CMP	word [es:BP+dpb.dpb_next_dpb],-1
 	JZ	FOUNDPB
-	LES	BP,ES:[BP.DPB_NEXT_DPB]
+	LES	BP,[es:BP+dpb.dpb_next_dpb]
 	JMP	SCANDPB
 FOUNDPB:
-	MOV	AX,CS:[MEMLO]
-	MOV	WORD PTR ES:[BP.DPB_NEXT_DPB],AX
-	MOV	AX,CS:[MEMHI]
-	MOV	WORD PTR ES:[BP.DPB_NEXT_DPB+2],AX
-	LES	BP,DWORD PTR CS:[MEMLO]
-	ADD	WORD PTR CS:[MEMLO],DPBSIZ
-	or	cs:[SetDevMarkFlag], FOR_DEVMARK       ;AN004;Add DPB area for this unit
+	MOV	AX,[cs:MEMLO]
+	MOV	word [es:BP+dpb.dpb_next_dpb],AX
+	MOV	AX,[cs:MEMHI]
+	MOV	word [es:BP+dpb.dpb_next_dpb+2],AX
+	LES	BP,dword [cs:MEMLO]
+	ADD	word [cs:MEMLO],DPBSIZ
+	or	[cs:SetDevMarkFlag], FOR_DEVMARK       ;AN004;Add DPB area for this unit
 	CALL	ROUND			;Check for alloc error
-	MOV	WORD PTR ES:[BP.DPB_NEXT_DPB],-1
-	MOV	ES:[BP.DPB_FIRST_ACCESS],-1
+	MOV	word [es:BP+dpb.dpb_next_dpb],-1
+	MOV	[es:BP+dpb.dpb_first_access],-1
 
 	MOV	SI,[BX] 		;DS:SI POINTS TO BPB
 	INC	BX
 	INC	BX			;POINT TO NEXT GUY
-	MOV	WORD PTR ES:[BP.DPB_DRIVE],DX
-	MOV	AH,SETDPB		;HIDDEN SYSTEM CALL
+	MOV	word [es:BP+dpb.dpb_drive],DX
+	MOV	AH,SetDPB		;HIDDEN SYSTEM CALL
 	INT	21H
-	MOV	AX,ES:[BP.DPB_SECTOR_SIZE]
+	MOV	AX,[es:BP+dpb.dpb_sector_size]
 	PUSH	ES
-	LES	DI,CS:[DOSINFO] 	;ES:DI POINT TO DOS INFO
-	CMP	AX,ES:[DI.SYSI_MAXSEC]
+	LES	DI,[cs:DOSINFO] 	;ES:DI POINT TO DOS INFO
+	CMP	AX,[es:DI+SysInitVars.SYSI_MAXSEC]
 	POP	ES
 	ja	Bad_BPB_Size_Sector
 	PUSH	DS
 	PUSH	DX
-	LDS	DX,CS:[ENTRY_POINT]
-	MOV	WORD PTR ES:[BP.DPB_DRIVER_ADDR],DX
-	MOV	WORD PTR ES:[BP.DPB_DRIVER_ADDR+2],DS
+	LDS	DX,[cs:ENTRY_POINT]
+	MOV	word [es:BP+dpb.dpb_driver_addr],DX
+	MOV	word [es:BP+dpb.dpb_driver_addr+2],DS
 	POP	DX
 	POP	DS
 	INC	DX
@@ -1636,34 +1636,34 @@ FOUNDPB:
 	CALL	TEMPCDS 		; Set CDS for new drives
 
 LINKIT:
-	LES	DI,CS:[DOSINFO] 	;ES:DI = DOS TABLE
-	MOV	CX,WORD PTR ES:[DI.SYSI_DEV]	;DX:CX = HEAD OF LIST
-	MOV	DX,WORD PTR ES:[DI.SYSI_DEV+2]
+	LES	DI,[cs:DOSINFO] 	;ES:DI = DOS TABLE
+	MOV	CX,word [es:DI+SysInitVars.SYSI_DEV]	;DX:CX = HEAD OF LIST
+	MOV	DX,word [es:DI+SysInitVars.SYSI_DEV+2]
 
-	LDS	SI,CS:[ENTRY_POINT]	;DS:SI = DEVICE LOCATION
-	MOV	WORD PTR ES:[DI.SYSI_DEV],SI	;SET HEAD OF LIST IN DOS
-	MOV	WORD PTR ES:[DI.SYSI_DEV+2],DS
-	MOV	AX,DS:[SI]		;GET POINTER TO NEXT DEVICE
-	MOV	WORD PTR CS:[ENTRY_POINT],AX	;AND SAVE IT
+	LDS	SI,[cs:ENTRY_POINT]	;DS:SI = DEVICE LOCATION
+	MOV	word [es:DI+SysInitVars.SYSI_DEV],SI	;SET HEAD OF LIST IN DOS
+	MOV	word [es:DI+SysInitVars.SYSI_DEV+2],DS
+	MOV	AX,[SI]		;GET POINTER TO NEXT DEVICE
+	MOV	word [cs:ENTRY_POINT],AX	;AND SAVE IT
 
-	MOV	WORD PTR DS:[SI],CX	;LINK IN THE DRIVER
-	MOV	WORD PTR DS:[SI+2],DX
+	MOV	word [SI],CX	;LINK IN THE DRIVER
+	MOV	word [SI+2],DX
 ENDDEV:
 	POP	SI
 	POP	ES
 	INC	AX			;AX = FFFF (no more devs if YES)?
 	JZ	COFFJ3
-	inc	cs:MultDeviceFlag	;AN001; Possibly multiple device driver.
+	inc	[cs:MultDeviceFlag]	;AN001; Possibly multiple device driver.
 	JMP	GOODLD			;OTHERWISE PRETEND WE LOADED IT IN
-COFFJ3: mov	cs:MultDeviceFlag, 0	;AN001; Reset the flag
+COFFJ3: mov	[cs:MultDeviceFlag], 0	;AN001; Reset the flag
 	JMP	COFF
 
 Bad_BPB_Size_Sector:
 	POP	SI
 	POP	ES
-	MOV	DX,OFFSET BADSIZ_PRE
+	MOV	DX,BADSIZ_PRE
 ;	 MOV	 BX,OFFSET BADSIZ_POST
-	mov	bx, offset CRLFM	;AN???;
+	mov	bx, CRLFM	;AN???;
 	invoke	PRNERR
 	test	[SetDevMarkFlag],SETBRKDONE ;AN004;If already Set_Break is done,
 	jnz	Skip2_ResetMEMHI	;AN004; then do not
@@ -1773,135 +1773,135 @@ TRYQ_CONT:
 ;	 push	 dx			 ;save DX
 ;	 mov	 dx, offset CNTRY_DRV	 ;Now DS:DX -> CNTRY_DRV
 
-	mov	Cntry_Drv, 0		;AN000; Reset the drive,path to default value.
-	mov	P_Code_Page,0		;AN000;
-	mov	di, offset Cntry_Parms	;AN000;
+	mov	[CNTRY_DRV], 0		;AN000; Reset the drive,path to default value.
+	mov	[P_Code_Page],0		;AN000;
+	mov	di, Cntry_Parms	;AN000;
 	xor	cx,cx			;AN000;
 	mov	dx,cx			;AN000;
 ;	$SEARCH 			;AN000;
-$$DO49:
+SCF_DO49:
 	    call   Sysinit_Parse	;AN000;
 ;	$EXITIF    C			;AN000; Parse error, check the error code and
-	JNC $$IF49
+	JNC SCF_IF49
 	    call   Cntry_Error		;AN000;  Show message and end the serach loop.
-	    mov    P_Cntry_Code, -1	;AN000; Signals that parse error.
+	    mov    [P_Cntry_Code], -1	;AN000; Signals that parse error.
 ;	$ORELSE 			;AN000;
-	JMP SHORT $$SR49
-$$IF49:
-	    cmp    ax, $P_RC_EOL	;AN000; End of Line?
+	JMP SHORT SCF_SR49
+SCF_IF49:
+	    cmp    ax, P_RC_EOL	;AN000; End of Line?
 ;	$LEAVE	   E			;AN000;  then end the $SEARCH LOOP
-	JE $$EN49
-	    cmp    Result_Val.$P_TYPE, $P_NUMBER		;AN000; Numeric?
+	JE SCF_EN49
+	    cmp    [Result_Val+P_Result_Blk.P_Type], P_Number		;AN000; Numeric?
 ;	    $IF    E						;AN000;
-	    JNE $$IF53
-		   mov	  ax, word ptr Result_Val.$P_PICKED_VAL ;AN000;
+	    JNE SCF_IF53
+		   mov	  ax, word [Result_Val+P_Result_Blk.P_Picked_Val] ;AN000;
 		   cmp	    cx, 1				;AN000;
 ;		   $IF	 E					;AN000;
-		   JNE $$IF54
-			 mov   P_Cntry_Code, ax 		;AN000;
+		   JNE SCF_IF54
+			 mov   [P_Cntry_Code], ax 		;AN000;
 ;		   $ELSE					;AN000;
-		   JMP SHORT $$EN54
-$$IF54:
-			 mov   P_Code_Page, ax			;AN000;
+		   JMP SHORT SCF_EN54
+SCF_IF54:
+			 mov   [P_Code_Page], ax			;AN000;
 ;		   $ENDIF					;AN000;
-$$EN54:
+SCF_EN54:
 ;	    $ELSE				;AN000; Path entered.
-	    JMP SHORT $$EN53
-$$IF53:
+	    JMP SHORT SCF_EN53
+SCF_IF53:
 		   push ds			;AN000;
 		   push es			;AN000;
 		   push si			;AN000;
 		   push di			;AN000;
 		   push cs			;AN000;
 		   pop	es			;AN000;
-		   lds	si, RV_Dword		;AN000; Move the path to known place.
-		   mov	di, offset CNTRY_Drv	;AN000;
-		   call Move_ASCIIZ		;AN000;
+		   lds	si, [RV_Dword]		;AN000; Move the path to known place.
+		   mov	di, CNTRY_DRV	;AN000;
+		   call MOVE_ASCIIZ		;AN000;
 		   pop	di			;AN000;
 		   pop	si			;AN000;
 		   pop	es			;AN000;
 		   pop	ds			;AN000;
 ;	    $ENDIF				;AN000;
-$$EN53:
+SCF_EN53:
 ;	$ENDLOOP
-	JMP SHORT $$DO49
-$$EN49:
+	JMP SHORT SCF_DO49
+SCF_EN49:
 ;	$ENDSRCH				;AN000;
-$$SR49:
-	cmp	P_Cntry_Code, -1		;AN000; Had a parse error?
+SCF_SR49:
+	cmp	[P_Cntry_Code], -1		;AN000; Had a parse error?
 	jne	TRYQ_OPEN			;AN000;
-	jmp	Coff				;AN000;
+	jmp	COFF				;AN000;
 
 TryQBad:				;"Invalid country code or code page"
        STC
-       MOV     DX,OFFSET BADCOUNTRY
+       MOV     DX,BADCOUNTRY
        jmp     TryQChkErr
 
 TRYQ_OPEN:
-	cmp	CNTRY_Drv, 0		;AC000;
+	cmp	[CNTRY_DRV], 0		;AC000;
 	je	TRYQ_Def		;AC000;
-	mov	dx, offset CNTRY_Drv	;AC000;
+	mov	dx, CNTRY_DRV	;AC000;
 	jmp	TryQ_Openit		;AC000;
 TRYQ_Def:				;AC000;
-	mov	dx, offset CNTRY_Root	;AC000;
+	mov	dx, CNTRY_ROOT	;AC000;
 TryQ_Openit:
 	mov	ax, 3d00h		;open a file
 	stc
 	int	21h
 	jc	TryQFileBad		;open failure
 
-	mov	cs:CntryFileHandle, ax	;save file handle
+	mov	[cs:CntryFilehandle], ax	;save file handle
 	mov	bx, ax
-	mov	ax, cs:P_Cntry_Code	   ;AN000;
-	mov	dx, cs:P_Code_Page	   ;AN000; Now, AX=country id, bx=filehandle
+	mov	ax, [cs:P_Cntry_Code]	   ;AN000;
+	mov	dx, [cs:P_Code_Page]	   ;AN000; Now, AX=country id, bx=filehandle
 ;	 xchg	 ax, bx 		 ;now, AX = country id, BX = file handle
-	mov	cx, cs:[MEMHI]
+	mov	cx, [cs:MEMHI]
 	add	cx, 128 		;I need 2K buffer to handle COUNTRY.SYS
-	cmp	cx, cs:[ALLOCLIM]
+	cmp	cx, [cs:ALLOCLIM]
 	ja	TryQMemory		;cannot allocate the buffer for country.sys
 
-	mov	si, offset CNTRY_DRV	;DS:SI -> CNTRY_DRV
-	cmp	byte ptr [si],0 	;default path?
+	mov	si, CNTRY_DRV	;DS:SI -> CNTRY_DRV
+	cmp	byte [si],0 	;default path?
 	jne	TRYQ_Set_for_DOS
 	inc	si
 	inc	si			;DS:SI -> CNTRY_ROOT
 TRYQ_Set_for_DOS:
-	les	di, cs:SYSI_Country	;ES:DI -> country info tab in DOS
+	les	di, [cs:SYSI_Country]	;ES:DI -> country info tab in DOS
 	push	di			;save di
-	add	di, ccPath_CountrySys
+	add	di, DOS_country_cdpg_info.ccPath_CountrySys
 	call	MOVE_ASCIIZ		;Set the path to COUNTRY.SYS in DOS.
 	pop	di			;ES:DI -> country info tab again.
-	mov	cx, cs:[MEMHI]
+	mov	cx, [cs:MEMHI]
 	mov	ds, cx
 	xor	si, si			;DS:SI -> 2K buffer to be used.
 	call	SetDOSCountryInfo	;now do the job!!!
-	jnc	TryQchkERR		;read error or could not find country,code page combination
+	jnc	TryQChkErr		;read error or could not find country,code page combination
 	cmp	cx, -1			;Could not find matching country_id,code page?
 	je	TryQBad 		;then "Invalid country code or code page"
 TryQFileBad:
 	push	cs			;AN000;
 	pop	es			;AN000;
-	cmp	cs:CNTRY_DRV,0		;Is the default file used?
+	cmp	[cs:CNTRY_DRV],0		;Is the default file used?
 	je	TryQDefBad
 ;	 mov	 si, cs:[CONFBOT]
 ;	 mov	 es, si
 ;	 mov	 si, cs:[CHRPTR]
 ;	 dec	 si			 ;ES:SI -> path in CONFBOT
-	mov	si, offset CNTRY_Drv
+	mov	si, CNTRY_DRV
 	jmp	short TryQBADLOAD
 TryQDefBad:				;Default file has been used.
 ;	 push	 cs
 ;	 pop	 es
-	mov	si, offset CNTRY_ROOT	;ES:SI -> \COUNTRY.SYS in SYSINIT_SEG
+	mov	si, CNTRY_ROOT	;ES:SI -> \COUNTRY.SYS in SYSINIT_SEG
 TryQBADLOAD:
 	call	BADLOAD 		;DS will be restored to SYSINIT_SEG
-	mov	cx, cs:[CONFBOT]
+	mov	cx, [cs:CONFBOT]
 	mov	es, cx			;Restore ES -> CONFBOT.
 	jmp	short CoffJ4
 TryQMemory:
-	MOV	DX,OFFSET INSUFMEMORY
+	MOV	DX,INSUFMEMORY
 TryQChkErr:
-	mov	cx, cs:[CONFBOT]
+	mov	cx, [cs:CONFBOT]
 	mov	es, cx			;restore ES -> CONFBOT seg
 	push	cs
 	pop	ds			;retore DS to SYSINIT_SEG
@@ -1909,12 +1909,12 @@ TryQChkErr:
 	invoke	PRINT			;else show error message
 	call	Error_Line		;AN000;
 CoffJ4:
-	mov	bx, CntryFileHandle
+	mov	bx, [CntryFilehandle]
 	mov	ah, 3eh
 	int	21h			;close a file. Don't care even if it fails.
 	JMP	COFF
 
-Cntry_Error	proc	near
+Cntry_Error:
 ;Function: Show "Invalid country code or code page" messages, or
 ;		"Error in COUNTRY command" depending on the error code
 ;		in AX returned by SYSPARSE;
@@ -1923,20 +1923,20 @@ Cntry_Error	proc	near
 ;	ES - CONFBOT
 ;Out:	Show message.  DX destroyed.
 
-	cmp	ax, $P_OUT_OF_RANGE
+	cmp	ax, P_Out_Of_Range
 ;	$IF	E
-	JNE $$IF61
-	     mov	dx, offset BadCountry ;"Invalid country code or code page"
+	JNE SCF_IF61
+	     mov	dx, BADCOUNTRY ;"Invalid country code or code page"
 ;	$ELSE
-	JMP SHORT $$EN61
-$$IF61:
-	     mov	dx, offset BadCountryCom ;"Error in CONTRY command"
+	JMP SHORT SCF_EN61
+SCF_IF61:
+	     mov	dx, BADCOUNTRYCOM ;"Error in CONTRY command"
 ;	$ENDIF
-$$EN61:
-	invoke	Print
+SCF_EN61:
+	invoke	PRINT
 	call	Error_Line
 	ret
-Cntry_Error	endp
+;Cntry_Error	endp
 
 ;------------------------------------------------------------------------------
 ; Files command
@@ -1958,7 +1958,7 @@ Cntry_Error	endp
 ;	While (End of command line)					       *
 ;	{ Sysinit_parse;						       *
 ;	  if (no error) then						       *
-;	     Files = Result_Val.$P_Picked_Val				       *
+;	     Files = Result_Val.P_Picked_Val				       *
 ;	  else								       *
 ;	     Error Exit;						       *
 ;	};								       *
@@ -1978,32 +1978,32 @@ TRYF:
 ;CoffJ5: JMP	 COFF
 ;TryFBad:JMP	 BadOp
 
-	mov	di, offset Files_Parms	;AN000;
+	mov	di, Files_Parms	;AN000;
 	xor	cx, cx			;AN000;
 	mov	dx, cx			;AN000;
 
 ;	$SEARCH 			;AN000;
-$$DO64:
+SCF_DO64:
 	    call   Sysinit_Parse	;AN000;
 ;	$EXITIF    C			;AN000; Parse Error,
-	JNC $$IF64
+	JNC SCF_IF64
 	    call   Badparm_p		;AN007;   and Show messages and end the search loop.
 ;	$ORELSE 			;AN000;
-	JMP SHORT $$SR64
-$$IF64:
-	    cmp    ax, $P_RC_EOL	;AN000; End of Line?
+	JMP SHORT SCF_SR64
+SCF_IF64:
+	    cmp    ax, P_RC_EOL	;AN000; End of Line?
 ;	$LEAVE	   E			;AN000;  then end the $ENDLOOP
-	JE $$EN64
-	    mov    al, byte ptr Result_Val.$P_PICKED_VAL ;AN000;
-	    mov    P_Files, al		;AN000; Save it temporarily
+	JE SCF_EN64
+	    mov    al, byte [Result_Val+P_Result_Blk.P_Picked_Val] ;AN000;
+	    mov    [P_Files], al		;AN000; Save it temporarily
 ;	$ENDLOOP			;AN000;
-	JMP SHORT $$DO64
-$$EN64:
-	    mov    al, P_Files		;AN000;
-	    mov    Files, al		;AN000; No error. Really set the value now.
+	JMP SHORT SCF_DO64
+SCF_EN64:
+	    mov    al, [P_Files]		;AN000;
+	    mov    [FILES], al		;AN000; No error. Really set the value now.
 ;	$ENDSRCH			;AN000;
-$$SR64:
-	jmp	Coff
+SCF_SR64:
+	jmp	COFF
 
 ;------------------------------------------------------------------------------
 ; LastDrive command
@@ -2046,34 +2046,34 @@ TRYL:
 ;CoffJ6: JMP	 COFF
 ;TryLBad:JMP	 BadOp
 
-	mov	di, offset LDRV_Parms	;AN000;
+	mov	di, LDRV_Parms	;AN000;
 	xor	cx, cx			;AN000;
 	mov	dx, cx			;AN000;
 
 ;	$SEARCH 			;AN000;
-$$DO70:
+SCF_DO70:
 	    call   Sysinit_Parse	;AN000;
 ;	$EXITIF    C			;AN000; Parse Error,
-	JNC $$IF70
+	JNC SCF_IF70
 	    call   Badparm_p		;AN007;   and Show messages and end the search loop.
 ;	$ORELSE 			;AN000;
-	JMP SHORT $$SR70
-$$IF70:
-	    cmp    ax, $P_RC_EOL	;AN000; End of Line?
+	JMP SHORT SCF_SR70
+SCF_IF70:
+	    cmp    ax, P_RC_EOL	;AN000; End of Line?
 ;	$LEAVE	   E			;AN000;  then end the $ENDLOOP
-	JE $$EN70
-	    mov    al, RV_Byte		;AN000; Pick up the drive number
-	    mov    P_Ldrv, al		;AN000; Save it temporarily
+	JE SCF_EN70
+	    mov    al, [RV_Byte]		;AN000; Pick up the drive number
+	    mov    [P_Ldrv], al		;AN000; Save it temporarily
 ;	$ENDLOOP			;AN000;
-	JMP SHORT $$DO70
-$$EN70:
-	    mov    al, P_Ldrv		;AN000;
+	JMP SHORT SCF_DO70
+SCF_EN70:
+	    mov    al, [P_Ldrv]		;AN000;
 ;	    sub    al, 'A'		;AN000; Convert it to drive number
 ;	    inc    al			;AN000; make it to be a number of drives.
-	    mov    Num_CDS, al		;AN000; No error. Really set the value now.
+	    mov    [NUM_CDS], al		;AN000; No error. Really set the value now.
 ;	$ENDSRCH			;AN000;
-$$SR70:
-	jmp	Coff
+SCF_SR70:
+	jmp	COFF
 
 
 ;-------------------------------------------------------------------------------
@@ -2082,13 +2082,13 @@ $$SR70:
 TRYP:
 	CMP	AH,'P'
 	JNZ	TRYK
-	invoke	PARSELINE
+	invoke	ParseLine
 	JC	TryPBad
-	invoke	SETPARMS
+	invoke	SetParms
 	INVOKE	DIDDLEBACK
 	jc	TryPBad
 	JMP	COFF
-TryPBad:jmp	Badop
+TryPBad:jmp	BADOP
 ;-------------------------------------------------------------------------------
 ; Setting Internal Stack Parameters
 ; STACKS=M,N where
@@ -2123,9 +2123,9 @@ TryPBad:jmp	Badop
 ;	{ Sysinit_Parse;						       *
 ;	  if (no error) then						       *
 ;	     { if (CX == 1) then /* first positional = stack count */	       *
-;		   P_Stack_Count = Result_Val.$P_Picked_Val;		       *
+;		   P_Stack_Count = Result_Val.P_Picked_Val;		       *
 ;	       if (CX == 2) then /* second positional = stack size */	       *
-;		   P_Stack_Size = Result_Val.$P_Picked_Val;		       *
+;		   P_Stack_Size = Result_Val.P_Picked_Val;		       *
 ;	     }								       *
 ;	  else	/*Error exit*/						       *
 ;	     Error Exit;						       *
@@ -2140,7 +2140,7 @@ TRYK:
 	JE	Do_TryK
 	jmp	TRYS
 
-		IF	STACKSW
+		if	STACKSW
 
 ;	 MOV	 SepChr,','
 ;	 INVOKE  GetNum 		 ; Get number of stacks
@@ -2185,85 +2185,85 @@ TRYK:
 ;	 JMP	 COFF
 
 Do_TryK:
-	mov	di, offset STKS_Parms	;AN000;
+	mov	di, STKS_Parms	;AN000;
 	xor	cx, cx			;AN000;
 	mov	dx, cx			;AN000;
 
 ;	$SEARCH 			;AN000;
-$$DO76:
+SCF_DO76:
 	    call   Sysinit_Parse	;AN000;
 ;	$EXITIF    C			;AN000; Parse Error,
-	JNC $$IF76
-	    mov    dx, offset BadStack	;AN000; "Invalid stack parameter"
-	    call   Print		;AN000;   and Show messages and end the search loop.
+	JNC SCF_IF76
+	    mov    dx, BADSTACK	;AN000; "Invalid stack parameter"
+	    call   PRINT		;AN000;   and Show messages and end the search loop.
 	    call   Error_Line		;AN006;
 ;	$ORELSE 			;AN000;
-	JMP SHORT $$SR76
-$$IF76:
-	    cmp    ax, $P_RC_EOL	;AN000; End of Line?
+	JMP SHORT SCF_SR76
+SCF_IF76:
+	    cmp    ax, P_RC_EOL	;AN000; End of Line?
 ;	$LEAVE	   E			;AN000;  then end the $ENDLOOP
-	JE $$EN76
-	    mov    ax, word ptr Result_Val.$P_PICKED_VAL   ;AN000;
+	JE SCF_EN76
+	    mov    ax, word [Result_Val+P_Result_Blk.P_Picked_Val]   ;AN000;
 	    cmp    cx, 1				   ;AN000;
 ;	    $IF    E					   ;AN000;
-	    JNE $$IF80
-		 mov   P_Stack_Count, ax		   ;AN000;
+	    JNE SCF_IF80
+		 mov   [P_Stack_Count], ax		   ;AN000;
 ;	    $ELSE					   ;AN000;
-	    JMP SHORT $$EN80
-$$IF80:
-		 mov   P_Stack_Size, ax 		   ;AN000;
+	    JMP SHORT SCF_EN80
+SCF_IF80:
+		 mov   [P_Stack_Size], ax 		   ;AN000;
 ;	    $ENDIF					   ;AN000;
-$$EN80:
+SCF_EN80:
 ;	$ENDLOOP					   ;AN000;
-	JMP SHORT $$DO76
-$$EN76:
-	    cmp    P_Stack_Count, 0			   ;AN000;
+	JMP SHORT SCF_DO76
+SCF_EN76:
+	    cmp    [P_Stack_Count], 0			   ;AN000;
 ;	    $IF    NE					   ;AN000;
-	    JE $$IF84
-		 cmp	P_Stack_Count, MINCOUNT 	   ;AN000;
+	    JE SCF_IF84
+		 cmp	[P_Stack_Count], MinCount 	   ;AN000;
 ;		 $IF	B,OR				   ;AN000;
-		 JB $$LL85
-		 cmp	P_Stack_Size, MINSIZE		   ;AN000;
+		 JB SCF_LL85
+		 cmp	[P_Stack_Size], MinSize		   ;AN000;
 ;		 $IF	B				   ;AN000;
-		 JNB $$IF85
-$$LL85:
-			mov  P_Stack_Count, -1		   ;AN000; Invalid
+		 JNB SCF_IF85
+SCF_LL85:
+			mov  [P_Stack_Count], -1		   ;AN000; Invalid
 ;		 $ENDIF 				   ;AN000;
-$$IF85:
+SCF_IF85:
 ;	    $ELSE					   ;AN000;
-	    JMP SHORT $$EN84
-$$IF84:
-		 cmp	P_Stack_Size, 0 		   ;AN000;
+	    JMP SHORT SCF_EN84
+SCF_IF84:
+		 cmp	[P_Stack_Size], 0 		   ;AN000;
 ;		 $IF	NE				   ;AN000;
-		 JE $$IF88
-			mov  P_Stack_Count, -1		   ;AN000; Invalid
+		 JE SCF_IF88
+			mov  [P_Stack_Count], -1		   ;AN000; Invalid
 ;		 $ENDIF 				   ;AN000;
-$$IF88:
+SCF_IF88:
 ;	    $ENDIF					   ;AN000;
-$$EN84:
-	    cmp  P_Stack_Count, -1			   ;AN000; Invalid?
+SCF_EN84:
+	    cmp  [P_Stack_Count], -1			   ;AN000; Invalid?
 ;	    $IF  E					   ;AN000;
-	    JNE $$IF91
-		 mov	Stack_Count, DEFAULTCOUNT	   ;AN000;Reset to default value.
-		 mov	Stack_Size, DEFAULTSIZE 	   ;AN000;
-		 mov	word ptr STACK_ADDR, 0		   ;AN000;
-		 mov	dx, offset BadStack		   ;AN000;
-		 call	Print				   ;AN000;
+	    JNE SCF_IF91
+		 mov	[STACK_COUNT], DefaultCount	   ;AN000;Reset to default value.
+		 mov	[STACK_SIZE], DefaultSize 	   ;AN000;
+		 mov	word [STACK_ADDR], 0		   ;AN000;
+		 mov	dx, BADSTACK		   ;AN000;
+		 call	PRINT				   ;AN000;
 		 call	Error_Line			   ;AN006;
 ;	    $ELSE					   ;AN000;
-	    JMP SHORT $$EN91
-$$IF91:
-		 mov	ax, P_Stack_Count		   ;AN000;
-		 mov	Stack_Count, ax 		   ;AN000;
-		 mov	ax, P_Stack_Size		   ;AN000;
-		 mov	Stack_Size, ax			   ;AN000;
-		 mov	word ptr Stack_Addr, -1 	   ;AN000;STACKS= been accepted.
+	    JMP SHORT SCF_EN91
+SCF_IF91:
+		 mov	ax, [P_Stack_Count]		   ;AN000;
+		 mov	[STACK_COUNT], ax 		   ;AN000;
+		 mov	ax, [P_Stack_Size]		   ;AN000;
+		 mov	[STACK_SIZE], ax			   ;AN000;
+		 mov	word [STACK_ADDR], -1 	   ;AN000;STACKS= been accepted.
 ;	    $ENDIF					   ;AN000;
-$$EN91:
+SCF_EN91:
 ;	$ENDSRCH					   ;AN000;
-$$SR76:
-	jmp	Coff
-		ENDIF
+SCF_SR76:
+	jmp	COFF
+		end if
 ;------------------------------------------------------------------------------
 ; Switch command		;No longer supported.
 ;------------------------------------------------------------------------------
@@ -2297,7 +2297,7 @@ TRYS:
 	CMP	AH,'S'
 	JNZ	TRYX
 	MOV	[COMMAND_LINE+1],0
-	MOV	DI,OFFSET COMMND + 1
+	MOV	DI,COMMND + 1
 	MOV	[DI-1],AL
 STORESHELL:
 	CALL	GETCHR
@@ -2310,7 +2310,7 @@ STORESHELL:
 	JMP	STORESHELL
 
 ENDSH:
-	MOV	BYTE PTR [DI],0
+	MOV	byte [DI],0
 	CALL	GETCHR
 	CMP	AL,LF
 	JNZ	CONV
@@ -2318,8 +2318,8 @@ ENDSH:
 CONV:	JMP	CONFLP
 
 GETSHPARMS:
-	MOV	BYTE PTR [DI],0
-	MOV	DI,OFFSET COMMAND_LINE+1
+	MOV	byte [DI],0
+	MOV	DI,COMMAND_LINE+1
 PARMLOOP:
 	CALL	GETCHR
 	CMP	AL," "
@@ -2349,9 +2349,9 @@ PARMLOOP:
 ;	{ SYSPARSE;							       *
 ;	  if (no error) then						       *
 ;	     { if (CX == 1) then /* first positional = FCBS */		       *
-;		   FCBS = Result_Val.$P_Picked_Val;			       *
+;		   FCBS = Result_Val.P_Picked_Val;			       *
 ;	       if (CX == 2) then /* second positional = KEEP */ 	       *
-;		   KEEP = Result_Val.$P_Picked_Val;			       *
+;		   KEEP = Result_Val.P_Picked_Val;			       *
 ;	     }								       *
 ;	  else	/*Error exit*/						       *
 ;	     Error Exit;						       *
@@ -2381,54 +2381,54 @@ TRYX:
 ;	 JMP	 COFF
 ;TryXBad:JMP	 BadOp
 
-	mov	di, offset FCBS_Parms	;AN000;
+	mov	di, FCBS_Parms	;AN000;
 	xor	cx, cx			;AN000;
 	mov	dx, cx			;AN000;
 
 ;	$SEARCH 			;AN000;
-$$DO95:
+SCF_DO95:
 	    call   Sysinit_Parse	;AN000;
 ;	$EXITIF    C			;AN000; Parse Error,
-	JNC $$IF95
+	JNC SCF_IF95
 	    call   Badparm_p		;AN007;   and Show messages and end the search loop.
 ;	$ORELSE 			;AN000;
-	JMP SHORT $$SR95
-$$IF95:
-	    cmp    ax, $P_RC_EOL	;AN000; End of Line?
+	JMP SHORT SCF_SR95
+SCF_IF95:
+	    cmp    ax, P_RC_EOL	;AN000; End of Line?
 ;	$LEAVE	   E			;AN000;  then end the $ENDLOOP
-	JE $$EN95
-	    mov    al, byte ptr Result_Val.$P_PICKED_VAL  ;AN000;
+	JE SCF_EN95
+	    mov    al, byte [Result_Val+P_Result_Blk.P_Picked_Val]  ;AN000;
 	    cmp    cx, 1		;AN000; The first positional?
 ;	    $IF    E			;AN000;
-	    JNE $$IF99
-		mov   P_Fcbs, al	;AN000;
+	    JNE SCF_IF99
+		mov   [P_Fcbs], al	;AN000;
 ;	    $ELSE			;AN000;
-	    JMP SHORT $$EN99
-$$IF99:
-		mov   P_Keep, al	;AN000;
+	    JMP SHORT SCF_EN99
+SCF_IF99:
+		mov   [P_Keep], al	;AN000;
 ;	    $ENDIF			;AN000;
-$$EN99:
+SCF_EN99:
 ;	$ENDLOOP			;AN000;
-	JMP SHORT $$DO95
-$$EN95:
-	    mov    al, P_Fcbs		;AN005;make sure P_Fcbs >= P_Keep
-	    cmp    al, P_Keep		;AN005;
+	JMP SHORT SCF_DO95
+SCF_EN95:
+	    mov    al, [P_Fcbs]		;AN005;make sure P_Fcbs >= P_Keep
+	    cmp    al, [P_Keep]		;AN005;
 ;	    $IF    B			;AN005;
-	    JNB $$IF103
+	    JNB SCF_IF103
 ;		 call  Badop_p		 ;AN005;
 		call  Badparm_p 	;AN011;show "Bad parameter -" msg.
-		mov   P_Keep, 0 	;AN005;
+		mov   [P_Keep], 0 	;AN005;
 ;	    $ELSE			;AN005;
-	    JMP SHORT $$EN103
-$$IF103:
-		mov    Fcbs, al 	    ;AN000; No error. Really set the value now.
-		mov    al, P_Keep	    ;AN000;
-		mov    Keep, al 	    ;AN000;
+	    JMP SHORT SCF_EN103
+SCF_IF103:
+		mov    [FCBS], al 	    ;AN000; No error. Really set the value now.
+		mov    al, [P_Keep]	    ;AN000;
+		mov    [Keep], al 	    ;AN000;
 ;	    $ENDIF			;AN005;
-$$EN103:
+SCF_EN103:
 ;	$ENDSRCH			;AN000;
-$$SR95:
-	jmp	Coff
+SCF_SR95:
+	jmp	COFF
 
 ;------------------------------------------------------------------------------
 ; Comment= Do nothing. Just decrese CHRPTR, and increase COUNT for correct
@@ -2438,8 +2438,8 @@ TRYY:					;AN000;
 	cmp	ah, 'Y' 		;AN000;
 	jne	Try0			;AN000;
 DoNothing:
-	dec	CHRPTR			;AN000;
-	inc	COUNT			;AN000;
+	dec	[CHRPTR]			;AN000;
+	inc	[COUNT_SYSINIT]			;AN000;
 	jmp	COFF			;AN000;
 
 ;------------------------------------------------------------------------------
@@ -2472,7 +2472,7 @@ Try0:					;AN003;do nothing with this line.
 ;	While (End of command line)					       *
 ;	{ Sysinit_parse;						       *
 ;	  if (no error) then						       *
-;	       if (Result_Val.$P_SYNONYM_ptr == Swit_K) then		       *
+;	       if (Result_Val.P_SYNONYM_ptr == Swit_K) then		       *
 ;		    P_Swit_K = 1					       *
 ;	       endif							       *
 ;	  else {Show Error message;Error Exit}				       *
@@ -2482,49 +2482,49 @@ Try0:					;AN003;do nothing with this line.
 ;*******************************************************************************
 
 	cmp	ah, '1' 		;AN019;Switches= command entered?
-	jne	Tryz			;AN019;
+	jne	TRYZ			;AN019;
 
-	mov	di, offset Swit_Parms	;AN019;
+	mov	di, Swit_Parms	;AN019;
 	xor	cx, cx			;AN019;
 	mov	dx, cx			;AN019;
 
 ;	$SEARCH 			;AN019;
-$$DO107:
+SCF_DO107:
 	    call   Sysinit_Parse	;AN019;
 ;	$EXITIF    C			;AN019; Parse Error,
-	JNC $$IF107
+	JNC SCF_IF107
 	    call   Badparm_p		;AN019;   and Show messages and end the search loop.
 ;	$ORELSE 			;AN019;
-	JMP SHORT $$SR107
-$$IF107:
-	    cmp    ax, $P_RC_EOL	;AN019; End of Line?
+	JMP SHORT SCF_SR107
+SCF_IF107:
+	    cmp    ax, P_RC_EOL	;AN019; End of Line?
 ;	$LEAVE	   E			;AN019;  then jmp to $Endloop for semantic check.
-	JE $$EN107
-	    cmp    Result_Val.$P_SYNONYM_PTR, offset Swit_K   ;AN019;
+	JE SCF_EN107
+	    cmp    [Result_Val+P_Result_Blk.P_SYNONYM_Ptr], Swit_K   ;AN019;
 ;	    $IF    E					      ;AN019;
-	    JNE $$IF111
-		mov	P_Swit_K, 1			      ;AN019; set the flag
+	    JNE SCF_IF111
+		mov	[P_Swit_K], 1			      ;AN019; set the flag
 ;	    $ENDIF					      ;AN019;
-$$IF111:
+SCF_IF111:
 ;	$ENDLOOP			;AN019;
-	JMP SHORT $$DO107
-$$EN107:
-	    cmp    P_Swit_K, 1		;AN019;If /K entered,
+	JMP SHORT SCF_DO107
+SCF_EN107:
+	    cmp    [P_Swit_K], 1		;AN019;If /K entered,
 	    push   ds			;AN019;
-	    mov    ax, Code		;AN019;
+	    mov    ax, CODE		;AN019;
 	    mov    ds, ax		;AN019;
-	    assume ds:Code		;AN019;
+;	    assume ds:Code		;AN019;
 ;	    $IF    E			;AN019;
-	    JNE $$IF114
-	       mov    KEYRD_Func, 0	;AN019;Use the conventional keyboard functions
-	       mov    KEYSTS_Func, 1	;AN019;
+	    JNE SCF_IF114
+	       mov    [KEYRD_Func], 0	;AN019;Use the conventional keyboard functions
+	       mov    [KEYSTS_Func], 1	;AN019;
 ;	    $ENDIF			;AN019;
-$$IF114:
+SCF_IF114:
 	    pop    ds			;AN019;
-	    assume ds:SYSINITSEG	;AN019;
+;	    assume ds:SYSINITSEG	;AN019;
 ;	$ENDSRCH			;AN019;
-$$SR107:
-	jmp	Coff			;AN019;
+SCF_SR107:
+	jmp	COFF			;AN019;
 
 ;------------------------------------------------------------------------------
 ; Bogus command
@@ -2532,8 +2532,8 @@ $$SR107:
 TRYZ:
 	cmp	ah, 0FFh		;AN029;
 	je	TryFF			;AN029;
-	dec	CHRPTR
-	inc	COUNT
+	dec	[CHRPTR]
+	inc	[COUNT_SYSINIT]
 	JMP	BADOP
 
 ;------------------------------------------------------------------------------
@@ -2544,12 +2544,12 @@ TryFF:					;AN029;Skip this command.
 
 GETCHR:
 	PUSH	CX
-	MOV	CX,COUNT
+	MOV	CX,[COUNT_SYSINIT]
 	JCXZ	NOCHAR
-	MOV	SI,CHRPTR
-	MOV	AL,ES:[SI]
-	DEC	COUNT
-	INC	CHRPTR
+	MOV	SI,[CHRPTR]
+	MOV	AL,[es:SI]
+	DEC	[COUNT_SYSINIT]
+	INC	[CHRPTR]
 	CLC
 GET_RET:
 	POP	CX
@@ -2557,26 +2557,26 @@ GET_RET:
 NOCHAR: STC
 	JMP	SHORT GET_RET
 
-Incorrect_Order proc	near		;AN000;
+Incorrect_Order:				;AN000;
 ;Show "Incorrect order in CONFIG.SYS ..." message.
-	mov	dx, offset BADORDER	;AN000;
-	call	print			;AN000;
+	mov	dx, BADORDER	;AN000;
+	call	PRINT			;AN000;
 	call	ShowLineNum		;AN000;
 	ret				;AN000;
-Incorrect_Order endp			;AN000;
+;Incorrect_Order endp			;AN000;
 ;
-	public	Error_Line
-Error_Line	proc	near		;AN000;
+;	public	Error_Line
+Error_Line:				;AN000;
 ;Show "Error in CONFIG.SYS ..." message.
 	push	cs			;AN000;
 	pop	ds			;AN000;
-	mov	dx, offset ErrorCmd	;AN000;
-	call	print			;AN000;
+	mov	dx, ERRORCMD	;AN000;
+	call	PRINT			;AN000;
 	call	ShowLineNum		;AN000;
 	ret				;AN000;
-Error_Line	endp			;AN000;
+;Error_Line	endp			;AN000;
 ;
-ShowLineNum	proc	near		;AN000;
+ShowLineNum:				;AN000;
 ;J.K. Convert the binary LineCount to Decimal ASCII string in ShowCount
 ;and Display Showcount at the current curser position.
 ;In.) LineCount
@@ -2598,9 +2598,9 @@ ShowLineNum	proc	near		;AN000;
 ;	 stosb				 ;lenght of ShowCount is 5.
 ;	 dec	 di			 ;let DI points to the least significant ASCII field.
 
-	mov	di, offset ShowCount+4	;AN000; DI -> the least significant decimal field.
+	mov	di, ShowCount+4	;AN000; DI -> the least significant decimal field.
 	mov	cx, 10			;AN000; decimal devide factor
-	mov	ax, cs:LineCount	;AN000;
+	mov	ax, [cs:LineCount]	;AN000;
 SLN_Loop:				;AN000;
 	cmp	ax, 10			;AN000; < 10?
 	jb	SLN_Last		;AN000;
@@ -2614,15 +2614,15 @@ SLN_Last:				;AN000;
 	or	al, 30h 		;AN000;
 	mov	[di],al 		;AN000;
 	mov	dx, di			;AN000;
-	call	print			;AN000; show it.
+	call	PRINT			;AN000; show it.
 	pop	di			;AN000;
 	pop	ds			;AN000;
 	pop	es			;AN000;
 	ret				;AN000;
-ShowLineNum	endp			;AN000;
+;ShowLineNum	endp			;AN000;
 
 
-CallIFS proc	near			;AN000;
+CallIFS:				;AN000;
 ;*******************************************************************************
 ; Function: Interface to IFS call. This procedure will call IFS_CALL@	       *
 ;									       *
@@ -2635,20 +2635,20 @@ CallIFS proc	near			;AN000;
 ; Output:   Nothing							       *
 ;*******************************************************************************
 	push	ax				;AN000;
-	mov	ds, word ptr cs:[Entry_Point+2] ;AN000;
-	add	bx, word ptr cs:[Entry_Point]	;AN000; DS:[BX] = Real IFS_CALL@ addr.
-	mov	ax, ds:[bx]			;AN000; save it
-	push	word ptr cs:[Entry_Point]	;AN000; save Entry point offset
-	mov	word ptr cs:[Entry_Point], ax	;AN000; set for the call
-	mov	bx, offset IFS_RH		;AN000; Now, ES:BX -> Request packet
-	call	cs:[Entry_Point]		;AN000; Far call
-	pop	word ptr cs:[Entry_Point]	;AN000; Restore Entry point offset
+	mov	ds, word [cs:ENTRY_POINT+2] ;AN000;
+	add	bx, word [cs:ENTRY_POINT]	;AN000; DS:[BX] = Real IFS_CALL@ addr.
+	mov	ax, [bx]			;AN000; save it
+	push	word [cs:ENTRY_POINT]	;AN000; save Entry point offset
+	mov	word [cs:ENTRY_POINT], ax	;AN000; set for the call
+	mov	bx, IFS_RH		;AN000; Now, ES:BX -> Request packet
+	call	dword [cs:ENTRY_POINT]		;AN000; Far call
+	pop	word [cs:ENTRY_POINT]	;AN000; Restore Entry point offset
 	pop	ax				;AN000;
 	ret					;AN000;
-CallIFS endp					;AN000;
+;CallIFS endp					;AN000;
 
 
-Set_DevMark	proc	near			;AN004;
+Set_DevMark:				;AN004;
 ;*******************************************************************************
 ; Function: Set a paragraph of informations infront of a Device file or        *
 ;	    an IFS file to be loaded for MEM command.			       *
@@ -2672,9 +2672,9 @@ Set_DevMark	proc	near			;AN004;
 	push	es			;AN004;
 	push	di			;AN004;
 
-	mov	di, cs:[MEMHI]		;AN004;
+	mov	di, [cs:MEMHI]		;AN004;
 	mov	ds, di			;AN004;
-	assume	ds:nothing		;AN004;
+;	assume	ds:nothing		;AN004;
 	mov	[DevMark_Addr], di	;AN004; save the DEVMARK address for the future.
 	test	[IFS_Flag], IS_IFS	;AN004;
 	jnz	SDVMK_IFS		;AN004;
@@ -2683,9 +2683,9 @@ Set_DevMark	proc	near			;AN004;
 SDVMK_IFS:
 	mov	al, DEVMARK_IFS 	;AN004; ='I'
 SDVMK_ID:				;AN004;
-	mov	ds:[DEVMARK_ID], al	;AN004;
+	mov	[DEVMARK.DEVMARK_ID], al	;AN004;
 	inc	di			;AN008;
-	mov	ds:[DEVMARK_SEG], di	;AN008;
+	mov	[DEVMARK.DEVMARK_SEG], di	;AN008;
 	xor	al,al			;AN004;
 	push	si			;AN004;
 	pop	di			;AN004; now es:si = es:di = [path]filename,0
@@ -2693,7 +2693,7 @@ SDVMK_ID:				;AN004;
 	repnz	scasb			;AN004; find 0
 	dec	di			;AN020; Now es:di-> 0
 SDVMK_Backward: 			;AN004; find the pointer to the start of the filename.
-	mov	al, byte ptr es:[di]	;AN004;;AN020;We do this by check es:di backward until
+	mov	al, byte [es:di]	;AN004;;AN020;We do this by check es:di backward until
 	cmp	al, '\' 		;AN004;;AN020; DI = SI or DI -> '\' or DI -> ':'.
 	je	SDVMK_GotFile		;AN004;;AN020;
 	cmp	al, ':' 		;AN004;
@@ -2701,7 +2701,7 @@ SDVMK_Backward: 			;AN004; find the pointer to the start of the filename.
 	cmp	di, si			;AN004;
 	je	SDVMK_FilePtr		;AN004;
 	dec	di			;AN004;
-	jmp	SDVMK_BackWard		;AN004;
+	jmp	SDVMK_Backward		;AN004;
 SDVMK_GotFile:				;AN004;
 	inc	di			;AN004;
 SDVMK_FilePtr:				;AN004; now es:di -> start of file name
@@ -2711,7 +2711,7 @@ SDVMK_FilePtr:				;AN004; now es:di -> start of file name
 	push	es			;AN004;
 	pop	ds			;AN004;
 	pop	es			;AN004; now, ds:si -> start of filename
-	mov	di, DEVMARK_FILENAME	;AN004;
+	mov	di, DEVMARK.DEVMARK_FILENAME	;AN004;
 	push	di			;AN004;
 	mov	al, ' ' 		;AN004;
 	mov	cx, 8			;AN004;
@@ -2732,9 +2732,9 @@ SDVMK_Done:				;AN004;
 	pop	si			;AN004;
 	pop	ds			;AN004;
 	ret				;AN004;
-Set_DevMark	endp			;AN004;
+;Set_DevMark	endp			;AN004;
 
-Chk_XMAEM	proc	near		;AN029;
+Chk_XMAEM:				;AN029;
 ;Function: Check XMAEM.SYS file name.
 ;In: ES:SI -> path, filename, 0
 ;out: if XMAEM.SYS, then zero flag set.
@@ -2746,15 +2746,15 @@ Chk_XMAEM	proc	near		;AN029;
 	push	cx			;AN029;
 	mov	di, si			;AN029;save current starting pointer
 CX_Cmp: 				;AN029;
-	cmp	byte ptr es:[si], 0	;AN029;
+	cmp	byte [es:si], 0	;AN029;
 	je	CX_Endfile		;AN029;
 	inc	si			;AN029;
 	jmp	CX_Cmp			;AN029;
 CX_Endfile:				;AN029;
 	dec	si			;AN029;
-	cmp	byte ptr es:[si], '\'	;AN029;
+	cmp	byte [es:si], '\'	;AN029;
 	je	CX_Got_Tail		;AN029;
-	cmp	byte ptr es:[si], ':'	;AN029;
+	cmp	byte [es:si], ':'	;AN029;
 	je	CX_Got_Tail		;AN029;
 	cmp	di, si			;AN029;
 	je	CX_Got_Tail0		;AN029;
@@ -2767,7 +2767,7 @@ CX_Got_Tail0:				;AN029;
 	push	si			;AN029;
 	pop	di			;AN029;now es:di -> filename,0
 	mov	cx, 9			;AN029;
-	mov	si, offset XMAEM_File	;AN029;ds:si -> XMAEM.SYS,0
+	mov	si, XMAEM_file	;AN029;ds:si -> XMAEM.SYS,0
 	repe	cmpsb			;AN029;
 CX_Ret: 				;AN029;
 	pop	cx			;AN029;
@@ -2776,7 +2776,7 @@ CX_Ret: 				;AN029;
 	pop	si			;AN029;
 	pop	es			;AN029;
 	ret				;AN029;
-Chk_XMAEM	endp
+;Chk_XMAEM	endp
 
 ;Chk_IBMCACHE	 proc	 near		 ;AN024;AN026; Don't need this any more.
 					 ; IBMDOS is going to handle this through 4Bh call.
@@ -2835,7 +2835,7 @@ Chk_XMAEM	endp
 ;Chk_IBMCACHE	 endp
 ;
 
-Reset_DOS_Version	proc	near	;AN024;
+Reset_DOS_Version:				;AN024;
 ;Function: issue AX=122Fh, DX=0, INT 2fh to restore the DOS version.
 	push	ax			;AN024;
 	push	dx			;AN024;
@@ -2845,7 +2845,7 @@ Reset_DOS_Version	proc	near	;AN024;
 	pop	dx			;AN024;
 	pop	ax			;AN024;
 	ret				;AN024;
-Reset_DOS_Version	endp
+;Reset_DOS_Version	endp
 
 
 ;Int 2F EMS handler + Int 67h handler for EMS
@@ -2875,7 +2875,7 @@ Reset_DOS_Version	endp
 
 ;Int_2F_Handler  proc			 ;traps Int_2f and checks for EMS	 ;an000; dms;
 
-EMS_STUB_START label byte		;AN030;J.K.
+EMS_STUB_START:;AN030;J.K.
 ;Dummy DEVICE HEADER for other dummy	;AN031; Symphony assumes int 67h handler seg as a device driver!
 	DD	-1			;AN031;becomes pointer to next device header
 	DW	0C040H			;AN031;attribute (character device)
@@ -2890,32 +2890,32 @@ IntV2FS DW	?			;AN030;;segment 			       ;an000; dms;
 OLDINT67_VECTOR equ $-EMS_STUB_START	;AN030;J.K.
 OldInt67	dd	?		;AN030;; save pointer to old INT 67 handler here
 
-IF	BUFFERFLAG
+if	BUFFERFLAG
 
 LOCKFLAG	equ $-EMS_STUB_START
 LOCK_FLAG	db  ?
 
-ELSE
+else
 
 EMSPAGE_CNT	equ	$-EMS_STUB_START ;AN030;J.K.
 EMSPageCount	dw	?		;AN030;; save count of EMS mappable pages here
 
-EMSReservedArray_X label word		;AN030;;J.K. For initialization routine
+EMSReservedArray_X:;AN030;;J.K. For initialization routine
 EMSRESERVEDARRAY equ $-EMS_STUB_START	;AN030;;J.K.
 		 dw	0ffffh,0ffffh	;AN030;; array of reserved pages
 		 dw	0ffffh,0ffffh	;AN030;; phys_page_segment, phys_page_number * 2 entries
-MappableArray_X label  word		;AN030;;J.K. for initialization routine
+MappableArray_X:;AN030;;J.K. for initialization routine
 MAPPABLEARRAY	equ  $-EMS_STUB_START	;AN030;;J.K.
 		dw	64 dup (0,0)	;AN030;; table to get addresses from old INT 67 handler
 
-ENDIF
+end if
 					; 64 entries * 2 words
 NEWEMS2F_OFF	equ	$-EMS_STUB_START;AN030;
 Int_2F_EMS:				;AN030;;J.K. Name changed.
 	cmp	ah,1Bh			;AN030;;AN032;2Fh trap for Mappable Phys. Add. Array ;an000; dms;
 	je	Int_2F_EMS_MINE 	;AN030;;This one we want		       ;an000; dms;
 
-	jmp	dword ptr cs:IntV2F	;AN030;;go to old interrupt handler	       ;an000; dms;
+	jmp	dword [cs:INTV2F]	;AN030;;go to old interrupt handler	       ;an000; dms;
 
 Int_2F_EMS_MINE:			;AN030;
 	or	al, al			;AN030;;J.K. Installation check?
@@ -2925,18 +2925,18 @@ Int_2F_EMS_MINE:			;AN030;
 
 Int_2F_5800_Func:			;AN030;
 
-IF	BUFFERFLAG
+if	BUFFERFLAG
 ;	int	3
 	cmp	di, 80h
 	jne	st_flag
-	mov	byte ptr cs:LOCKFLAG, 0
-	jmp	Int_2f_5800_Good_Exit
+	mov	byte [cs:LOCKFLAG], 0
+	jmp	Int_2F_5800_Good_Exit
 st_flag:
 	cmp	di, 81h
-	jne	Int_2f_5800_Err_Exit
-	mov	byte ptr cs:LOCKFLAG, 1
-	jmp	Int_2f_5800_Good_Exit
-ELSE
+	jne	Int_2F_5800_Err_Exit
+	mov	byte [cs:LOCKFLAG], 1
+	jmp	Int_2F_5800_Good_Exit
+else
 
 	push	si			;AN030;;				       ;an000; dms;
 
@@ -2946,11 +2946,11 @@ ELSE
 	cmp	di,0feh 		;AN030;;VDISK or FASTOPEN request?	       ;an000; dms;
 	jne	Int_2F_5800_Buff_Ck	;AN030;;no - check for buffers		       ;an000; dms;
 
-	cmp	word ptr cs:[si],0ffffh  ;AN030;;valid entry?				;an000; dms;
+	cmp	word [cs:si],0ffffh  ;AN030;;valid entry?				;an000; dms;
 	je	Int_2F_5800_Err_Exit	;AN030;;no - exit			       ;an000; dms;
 
-	mov	es,word ptr cs:[si]	;AN030;;get segment value		       ;an000; dms;
-	mov	di,word ptr cs:[si+2]	;AN030;;get physical page value 	       ;an000; dms;
+	mov	es,word [cs:si]	;AN030;;get segment value		       ;an000; dms;
+	mov	di,word [cs:si+2]	;AN030;;get physical page value 	       ;an000; dms;
 	jmp	Int_2F_5800_Good_Exit	;AN030;;exit routine			       ;an000; dms;
 
 Int_2F_5800_Buff_Ck:			;AN030;
@@ -2960,13 +2960,13 @@ Int_2F_5800_Buff_Ck:			;AN030;
 
 	add	si,4			;AN030;;point to second element in array       ;an000; dms;
 
-	cmp	word ptr cs:[si],0ffffh  ;AN034;;valid entry?				;an000; dms;
+	cmp	word [cs:si],0ffffh  ;AN034;;valid entry?				;an000; dms;
 	je	Int_2F_5800_Err_Exit	;AN034;;no - exit			       ;an000; dms;
 
-	mov	es,word ptr cs:[si]	;AN030;;get segment value		       ;an000; dms;
-	mov	di,word ptr cs:[si+2]	;AN030;;get physical page value 	       ;an000; dms;
+	mov	es,word [cs:si]	;AN030;;get segment value		       ;an000; dms;
+	mov	di,word [cs:si+2]	;AN030;;get physical page value 	       ;an000; dms;
 
-ENDIF
+end if
 
 Int_2F_5800_Good_Exit:			;AN030;
 
@@ -2980,9 +2980,9 @@ Int_2F_5800_Err_Exit:			;AN030;
 Int_2F_Exit:				;AN030;
 
 
-IF	NOT BUFFERFLAG
+if	NOT BUFFERFLAG
 	pop	si			;AN030;;restore regs			       ;an000; dms;
-ENDIF
+end if
 	iret				;AN030;;return to caller		       ;an000; dms;
 
 
@@ -3002,28 +3002,28 @@ ENDIF
 ;	5/10/88 for DOS 4.0.
 ;-------------------------------------------------------------------
 
-IF	NOT BUFFERFLAG
+if	NOT BUFFERFLAG
 
 GetMappableArray equ	58h		; INT 67 function code for Get Mappable Array
 GetPageFrame	equ	41h		; function code for getting the page frame address
 null		equ	0		; zero value
 I67Error8F	equ	8fh		;AN031;; invalid sub-function error
 
-ENDIF
+end if
 
 ;-------------------------------------------------------------------
 NEW67_OFFSET	equ	$-EMS_STUB_START	;J.K.
 Int67Filter:				;AN030;
 
-IF	BUFFERFLAG
+if	BUFFERFLAG
 ;	int	3
-	cmp	byte ptr cs:LOCKFLAG, 1
+	cmp	byte [cs:LOCKFLAG], 1
 	jne	PassThru
 	mov	ah, 80h
 	stc
 	iret
-ELSE
-	cmp	ah,GETMAPPABLEARRAY	;AN030;; is this the INT 67 call we are interested in?
+else
+	cmp	ah,GetMappableArray	;AN030;; is this the INT 67 call we are interested in?
 	jne	PassThru		;AN030;; no, pass it to old INT 67 handler
 					;AN030;; yes ...
 	cmp	al,0			;AN031;; AL=0 return count and table
@@ -3037,7 +3037,7 @@ ELSE
 
 	sti				;AN031;; turn interrupts on
 
-	mov	cx,word ptr cs:EMSPAGE_CNT    ;AN031;J.K. get number of mappable pages in fake table
+	mov	cx,word [cs:EMSPAGE_CNT]    ;AN031;J.K. get number of mappable pages in fake table
 	xor	ah,ah			;AN031;; good return code
 	iret
 
@@ -3059,7 +3059,7 @@ I67Fcn0:				;AN031
 	push	di			;AN030;
 	push	si			;AN030;
 
-	mov	cx,word ptr cs:EMSPAGE_CNT    ;AN030;J.K. get number of mappable pages in fake table
+	mov	cx,word [cs:EMSPAGE_CNT]    ;AN030;J.K. get number of mappable pages in fake table
 	shl	cx,1			;AN030;; count * 2 = number of words to copy
 
 	push	cs			;AN030;; point DS:SI to fake table
@@ -3070,7 +3070,7 @@ I67Fcn0:				;AN031
 	rep	movsw			;AN030;; copy CX words from DS:SI to ES:DI
 
 	xor	ah,ah			;AN030;; good return code
-	mov	cx,word ptr cs:EMSPAGE_CNT ;AN030;; page count returned to user in CX
+	mov	cx,word [cs:EMSPAGE_CNT] ;AN030;; page count returned to user in CX
 
 
 	pop	si			;AN030;; restore some regs
@@ -3079,7 +3079,7 @@ I67Fcn0:				;AN031
 
 	iret				;AN030;; end of INT 67 filter routine
 
-ENDIF
+end if
 
 ;-------------------------------------------------------------------
 ;
@@ -3088,14 +3088,14 @@ ENDIF
 ;-------------------------------------------------------------------
 
 PassThru:
-	jmp	dword ptr cs:OldINT67_VECTOR ;AN030;;J.K. jump to old INT 67 handler
+	jmp	dword [cs:OLDINT67_VECTOR] ;AN030;;J.K. jump to old INT 67 handler
 					; (IRET will return to calling program)
 
 
-EMS_STUB_END	label	byte		;AN030;
+EMS_STUB_END:;AN030;
 ;-------------------------------------------------------------------
 
-IF	NOT BUFFERFLAG
+if	NOT BUFFERFLAG
 ;-------------------------------------------------------------------
 ;
 ;	Int67FilterInit - This routine is called to initialize the INT 67
@@ -3109,7 +3109,7 @@ Int67FilterInit:			;AN030;
 
 	push	cs			;AN030;; make ES:DI point to our array
 	pop	es			;AN030;
-	mov	di,offset MappableArray_X   ;AN030;
+	mov	di,MappableArray_X   ;AN030;
 
 ;	 call	 dword ptr cs:OldInt67	    ; get mappable array from EMS DD
 
@@ -3128,19 +3128,19 @@ Int67FilterInit:			;AN030;
 
 	call	GetHighestPage		;AN030;; get highest entry from table
 
-	mov	EMSReservedArray_X+4,bx   ;AN030;; phys_page_segment
-	mov	EMSReservedArray_X+6,ax   ;AN030;; phys_page_number
+	mov	[EMSReservedArray_X+4],bx   ;AN030;; phys_page_segment
+	mov	[EMSReservedArray_X+6],ax   ;AN030;; phys_page_number
 
 	cmp	cx,0			;AN033;; are the any pages left?
 	je	NoMoreEMSPages		;AN033;; no, don't bother looking any more
 
 	call	GetHighestPage		;AN030;; get next highest entry from table
 
-	mov	EMSReservedArray_X+0,bx   ;AN030;; phys_page_segment
-	mov	EMSReservedArray_X+2,ax   ;AN030;; phys_page_number
+	mov	[EMSReservedArray_X+0],bx   ;AN030;; phys_page_segment
+	mov	[EMSReservedArray_X+2],ax   ;AN030;; phys_page_number
 
 NoMoreEMSPages: 			;AN033;;
-	mov	EMSPageCount,cx 	;AN030;; save new page count for INT 67 filter
+	mov	[EMSPageCount],cx 	;AN030;; save new page count for INT 67 filter
 
 	pop	di
 	pop	es
@@ -3164,14 +3164,14 @@ GetHighestPage:
 	push	di			;AN030;; save pointer
 
 PageScanLoop:				;AN030;
-	cmp	ax,ES:[di+2]		;AN030;; get phys_page_number
+	cmp	ax,[es:di+2]		;AN030;; get phys_page_number
 	ja	LookAtNextPage		;AN030;; this one is lower than the one we are holding
 
-	cmp	es:[di], 0a000h 	; Only reserve pages in memory above 640K..
+	cmp	[es:di], 0a000h 	; Only reserve pages in memory above 640K..
 	jb	LookAtNextPage		; fix for ps2emm and m20emm with motherboard
 					; disabled. 7/25/88. HKN.
 
-	mov	ax,ES:[di+2]		;AN030;; this one is higher, make it new candidate
+	mov	ax,[es:di+2]		;AN030;; this one is higher, make it new candidate
 	mov	bx,di			;AN030;; pointer to new candidate page, used to zero
 					; it later so we don't get the same one again
 	mov	dx,cx			;AN030;; save count where we found candidate
@@ -3189,7 +3189,7 @@ LookAtNextPage: 			;AN030;
 ;------------------------
 FoundOne:				;AN030;
 	cmp	ax,3			;AN030;; could the one we found be part of a page frame
-	ja	NotFrame		;AN030;; no, carry on
+	ja	Notframe		;AN030;; no, carry on
 
 ;	yes, find out if it is part of frame
 
@@ -3201,7 +3201,7 @@ FoundOne:				;AN030;
 	or	ah,ah			;an030;;dms; error?
 	pop	bx			;an030;;dms; restore bx
 	pop	ax			;AN030;; restore phys page number
-	jnz	NotFrame		;AN030;; no frame available, carry on
+	jnz	Notframe		;AN030;; no frame available, carry on
 
 ;	there is a frame, this page is part of frame, so return -1's
 
@@ -3228,16 +3228,16 @@ Notframe:				;AN030;
 
 	mov	di,bx			;AN030;; make ES:DI point to highest page table entry
 
-	mov	bx,ES:[di]		;AN030;; get segment address of page
+	mov	bx,[es:di]		;AN030;; get segment address of page
 
 	mov	cx,dx			;AN030;; get count from candidate page
 
 	push ax 			;AN030;
 PackLoop:				;AN030;
-	mov	ax, es:[di+4]		;AN030;
-	mov	es:[di+0], ax		;AN030;
-	mov	ax, es:[di+6]		;AN030;
-	mov	es:[di+2], ax		;AN030;
+	mov	ax, [es:di+4]		;AN030;
+	mov	[es:di+0], ax		;AN030;
+	mov	ax, [es:di+6]		;AN030;
+	mov	[es:di+2], ax		;AN030;
 	add	di, 4			;AN030;
 	loop	PackLoop		;AN030;; do it until done
 	pop  ax 			;AN030;
@@ -3252,7 +3252,7 @@ GHPExit:				;AN030;
 
 	ret				;AN030;; return to caller
 
-ENDIF
+end if
 
 ;=========================================================================
 ; EMS_Install_Check	: THIS MODULE DETERMINES WHETHER OR NOT EMS IS
@@ -3267,14 +3267,14 @@ ENDIF
 ;	Date	: 5/6/88
 ;=========================================================================
 
-EMS_Install_Check	proc	near	;AN030;; check if EMS is installed	       ;an000; dms;
+EMS_Install_Check:				;AN030;; check if EMS is installed	       ;an000; dms;
 
 	push	ax			;AN030;; save regs			       ;an000; dms;
 
 	push	ds			;AN030;; save ds			       ;an000; dms;
 	xor	ax,ax			;AN030;; set ax to 0			       ;an000; dms;
 	mov	ds,ax			;AN030;; set ds to 0			       ;an000; dms;
-	cmp	ds:word ptr[067h*4+0],0 ;AN030;; see if int 67h is there	       ;an000; dms;
+	cmp	word [067h*4+0],0 ;AN030;; see if int 67h is there	       ;an000; dms;
 	pop	ds			;AN030;; restore ds			       ;an000; dms;
 	je	EMS_Install_Ck_Err_Exit ;AN030;; exit routine - EMS not loaded	       ;an000; dms;
 
@@ -3303,9 +3303,9 @@ EMS_Install_Ck_Exit:			;AN030;
 
 	ret				;AN030;; return to caller		       ;an000; dms;
 
-EMS_Install_Check	endp		;					;an000; dms;
+;EMS_Install_Check	endp		;					;an000; dms;
 
-EMS_Stub_Handler	proc	near	;AN030;
+EMS_Stub_Handler:				;AN030;
 ;At the request of Architecture Group, this logic is implemented.
 ;Function: If (Buffer_Slash_X <> 0 and EMS_Stub_Installed == 0),
 ;	    then { call Chk_EMS;
@@ -3320,11 +3320,11 @@ EMS_Stub_Handler	proc	near	;AN030;
 	push	di			;AN030;
 	push	ax			;AN030;
 	push	cx			;AN030;
-	cmp	EMS_Stub_Installed, 0	;AN030;
+	cmp	[EMS_Stub_Installed], 0	;AN030;
 	je	EMS_Stub_X		;AN030;
 	jmp	EMS_SH_Ret		;AN030;
 EMS_Stub_X:				;AN030;
-	cmp	Buffer_Slash_X, 0	;AN030;
+	cmp	[Buffer_Slash_X], 0	;AN030;
 	je     EMS_SH_Ret		;AN030;
 	call	EMS_Install_Check	;AN030;
 	jc	EMS_SH_Ret		;AN030;
@@ -3333,47 +3333,47 @@ EMS_Stub_Do:
 	push	es			;AN030;
 	xor	ax,ax			;AN030;save current Int 2fh, 67h vectors.
 	mov	es, ax			;AN030;
-	mov	ax, word ptr es:[2fh*4] ;AN030;
-	mov	IntV2FO, ax		;AN030;
-	mov	ax, word ptr es:[2fh*4+2]	;AN030;
-	mov	IntV2FS, ax			;AN030;
-	mov	ax, word ptr es:[67h*4] 	;AN030;
-	mov	word ptr cs:[OldInt67], ax	;AN030;
-	mov	ax, word ptr es:[67h*4+2]	;AN030;
-	mov	word ptr cs:[OldInt67+2], ax	;AN030;
+	mov	ax, word [es:2fh*4] ;AN030;
+	mov	[IntV2FO], ax		;AN030;
+	mov	ax, word [es:2fh*4+2]	;AN030;
+	mov	[IntV2FS], ax			;AN030;
+	mov	ax, word [es:67h*4] 	;AN030;
+	mov	word [cs:OldInt67], ax	;AN030;
+	mov	ax, word [es:67h*4+2]	;AN030;
+	mov	word [cs:OldInt67+2], ax	;AN030;
 	pop	es				;AN030;
 
-IF	NOT BUFFERFLAG
+if	NOT BUFFERFLAG
 ;initalize tables in INT 67h handler
 	call	Int67FilterInit 		;AN030;
 	cmp	ax, 0ffffh			; if the page found was part of a lim 4.0 page frame
-	je	EMS_SH_ret			;	do not install stub.  7/24/88. HKN
-ENDIF
-	call	Round				;AN030;
+	je	EMS_SH_Ret			;	do not install stub.  7/24/88. HKN
+end if
+	call	ROUND				;AN030;
 	mov	ax, DEVMARK_EMS_STUB		;AN030;
 	call	SetDevMark			;AN030;
-	mov	ax, [memhi]			;AN030;
+	mov	ax, [MEMHI]			;AN030;
 	mov	es, ax				;AN030;
-	assume	es:nothing			;AN030;
+;	assume	es:nothing			;AN030;
 	xor	di, di				;AN030;
 	push	cs				;AN030;
 	pop	ds				;AN030;
-	mov	cx, offset EMS_STUB_END 	;AN030;
-	mov	si, offset EMS_STUB_START	;AN030;
+	mov	cx, EMS_STUB_END 	;AN030;
+	mov	si, EMS_STUB_START	;AN030;
 	sub	cx, si				;AN030;cx = size in byte
-	mov	[memlo], cx			;AN030;
+	mov	[MEMLO], cx			;AN030;
 	rep	movsb				;AN030;
 	or	[SetDevMarkFlag], FOR_DEVMARK	;AN030;set the devmark_size for MEM command.
-	call	Round				;AN030;and get the next [memhi] avaiable.
-	mov	EMS_Stub_Installed, 1		;AN030;
+	call	ROUND				;AN030;and get the next [memhi] avaiable.
+	mov	[EMS_Stub_Installed], 1		;AN030;
 
 	xor	ax, ax				;AN030;
 	mov	ds, ax				;AN030;
 	cli					;AN030;
-	mov	word ptr ds:[2Fh*4],NEWEMS2F_OFF;AN030;set the new int 2fh, 67h vectors.
-	mov	word ptr ds:[2Fh*4+2], es	;AN030;
-	mov	word ptr ds:[67h*4],NEW67_OFFSET;AN030;
-	mov	word ptr ds:[67h*4+2], es	;AN030;
+	mov	word [2Fh*4],NEWEMS2F_OFF;AN030;set the new int 2fh, 67h vectors.
+	mov	word [2Fh*4+2], es	;AN030;
+	mov	word [67h*4],NEW67_OFFSET;AN030;
+	mov	word [67h*4+2], es	;AN030;
 	sti					;AN030;
 EMS_SH_Ret:					;AN030;
 	pop	cx				;AN030;
@@ -3384,9 +3384,8 @@ EMS_SH_Ret:					;AN030;
 	pop	es				;AN030;
 	ret					;AN030;
 
-EMS_Stub_Handler	endp			;AN030;
+;EMS_Stub_Handler	endp			;AN030;
 
 
-SYSINITSEG	ENDS
-	END
-
+;SYSINITSEG	ENDS
+;	END

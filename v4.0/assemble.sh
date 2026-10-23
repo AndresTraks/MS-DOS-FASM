@@ -37,3 +37,10 @@ python3 buildmsg.py src/BIOS/MSBIO.SKL >/dev/null
 # read the rest of the BIOS in, so IO.SYS need not be contiguous past its
 # first cluster.  tests/msload.sh checks that it still fits in three.
 $FASM src/BIOS/MSLOAD.ASM bin/MSLOAD.COM
+
+# The BIOS proper: thirteen modules in two segments -- see MSBIOLNK.ASM.
+$FASM src/BIOS/MSBIOLNK.ASM bin/MSBIO.BIN
+
+# IO.SYS is the two of them, one after the other, which is what the original
+# build did with "copy /b msload.com+msbio.bin io.sys".
+cat bin/MSLOAD.COM bin/MSBIO.BIN > bin/IO.SYS

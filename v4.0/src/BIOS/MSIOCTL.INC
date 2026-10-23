@@ -3,7 +3,7 @@
 ; the rest -- have lost their leading $: fasm keeps every name that starts
 ; with one for itself.  A $ inside a name it takes as it comes, which is
 ; what DSK$READ and the other entry points are made of.
-	INCLUDE '../INC/IOCTL.INC'
+	INCLUDE '../INC/IOCtl.INC'
 ;	$SALUT $ioctl$
 
 ;==============================================================================
@@ -138,7 +138,7 @@ TEMPDPT 	DD	-1
 ;
 ;	PUBLIC GENERIC$IOCTL
 GENERIC$IOCTL:
-	MESSAGE FTESTDISK,<"GENERIC IOCTL",CR,LF>
+	MESSAGE FTESTDISK,<"GENERIC IOCtl",CR,LF>
 	LES	BX,[cs:PTRSAV]		; ES:BX POINTS TO REQUEST HEADER.
 	CALL	SETDRIVE		; DS:DI POINTS TO BDS FOR DRIVE.
 ;

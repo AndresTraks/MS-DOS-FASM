@@ -23,8 +23,8 @@ STRUC BPB_TYPE
 .SECNUM	DW	0
 .FATID	DB	0
 .FATSIZE DW	0
-.SLIM	DW	0
-.HLIM	DW	0
+.slim	DW	0
+.hlim	DW	0
 .HIDDEN_L  DW	  0
 .HIDDEN_H  dw	  0			;J.K.
 .SECNUM_L  dw	  0			;J.K.

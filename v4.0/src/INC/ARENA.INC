@@ -7,13 +7,22 @@ BREAK <Memory arena structure>
 ;
 ; arena item
 ;
-arena	STRUC
-arena_signature     DB	?		; 4D for valid item, 5A for last item
-arena_owner	    DW	?		; owner of arena item
-arena_size	    DW	?		; size in paragraphs of item
-arena_reserved	    DB	3 DUP(?)	; reserved
-arena_name	    DB	8 DUP(?)	; owner file name
-arena	ENDS
+STRUC arena
+{
+.arena_signature     DB	0		; 4D for valid item, 5A for last item
+.arena_owner	    DW	0		; owner of arena item
+.arena_size	    DW	0		; size in paragraphs of item
+.arena_reserved	    DB	3 dup(0)	; reserved
+.arena_name	    DB	8 dup(0)	; owner file name
+}
+match =arena_LAID_OUT, arena_LAID_OUT
+{
+    arena_LAID_OUT equ 1
+    virtual at 0
+      arena arena
+      sizeof.arena = $ - arena
+    end virtual
+}
 
 ;
 ; CAUTION: The routines in ALLOC.ASM rely on the fact that arena_signature
@@ -27,4 +36,3 @@ arena_signature_end	EQU 5Ah 	; valid signature, last block in arena
 ;									   ;
 ;	     C	A  V  E  A  T	  P  R	O  G  R  A  M  M  E  R		   ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
-

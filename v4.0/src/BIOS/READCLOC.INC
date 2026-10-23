@@ -119,7 +119,7 @@ oktime:
 	message FTESTINIT,<cr,lf>
 ; get time in ticks in CX:DX
 	CALL	word [cs:TimeToTicks] 	;3.30
-	message FTESTINIT,<"Conv Time   ">
+	message FTESTINIT,<"CONV Time   ">
 	mnum	FTESTINIT,cx
 	message FTESTINIT,<"  ">
 	mnum	FTESTINIT,dx

@@ -1,7 +1,7 @@
 	PAGE	,132			;
 ;	SCCSID = @(#)sysinit1.asm	1.7 85/10/24
 TITLE	BIOS SYSTEM INITIALIZATION
-%OUT ...SYSINIT1
+;%OUT ...SYSINIT1
 ;==============================================================================
 ;REVISION HISTORY:
 ;AN000 - New for DOS Version 4.00 - J.K.
@@ -42,9 +42,9 @@ TITLE	BIOS SYSTEM INITIALIZATION
 
 TRUE	    EQU 0FFFFh
 FALSE	    EQU 0
-CR	    equ 13
-LF	    equ 10
-TAB	    equ  9
+CR	    = 13
+LF	    = 10
+TAB	    =  9
 
 IBMVER	   EQU	   TRUE
 IBM	   EQU	   IBMVER
@@ -57,43 +57,43 @@ MYCDS_SIZE equ	   88			;J.K. Size of Curdir_List. If it is not
 					;the same, then will generate compile error.
 
 ;
-	IF	IBMJAPVER
+	if	IBMJAPVER
 NOEXEC	EQU	TRUE
-	ELSE
+	else
 NOEXEC	EQU	FALSE
-	ENDIF
+	end if
 
 DOSSIZE EQU	0A000H
 ;dossize equ	 0C000H 	;J.K. for the debugging version of IBMDOS.
 
-.xlist
+;.xlist
 ;	INCLUDE dossym.INC
-	include smdossym.inc	;J.K. Reduced version of DOSSYM.INC
-	INCLUDE devsym.INC
-	include ioctl.INC
-	include BIOSTRUC.INC
-	include smifssym.inc		;AN000;
-	include defems.inc		;AN010;
-	include DEVMARK.inc		;AN005;
-	include cputype.inc
+	INCLUDE '../INC/SMDOSSYM.INC'	;J.K. Reduced version of DOSSYM.INC
+	INCLUDE '../INC/DEVSYM.INC'
+	INCLUDE '../INC/IOCtl.INC'
+	INCLUDE 'BIOSTRUC.INC'
+	INCLUDE '../INC/SMIFSSYM.INC'		;AN000;
+	INCLUDE 'DEFEMS.INC'		;AN010;
+	INCLUDE 'DEVMARK.INC'		;AN005;
+	INCLUDE '../INC/CPUTYPE.INC'
 
-	include version.inc
+	INCLUDE '../INC/VERSION.INC'
 
-.list
+;.list
 
 ;AN000 J.K. If MYCDS_SIZE <> CURDIRLEN, then force a compilatiaon error.
-	if	MYCDS_SIZE NE CURDIRLEN
-	   %OUT  !!! SYSINIT1 COMPILATION FAILED. DIFFERENT CDS SIZE !!!
-	   .ERRE   MYCDS_SIZE EQ CURDIRLEN
-	endif
+	if	MYCDS_SIZE <> curdirLen
+	   display "!!! SYSINIT1 COMPILATION FAILED. DIFFERENT CDS SIZE !!!",13,10
+	   err
+	end if
 
-	IF	NOT IBMJAPVER
-	EXTRN	RE_INIT:FAR
-	ENDIF
+	if	NOT IBMJAPVER
+;	EXTRN	RE_INIT:FAR
+	end if
 
 ;---------------------------------------
 ;Equates for Main stack and stack Initialization program
-	IF	STACKSW
+	if	STACKSW
 
 EntrySize		equ	8
 
@@ -105,11 +105,11 @@ MinSize 		equ	32
 DefaultSize		equ	128
 MaxSize 		equ	512
 
-AllocByte		equ	es:byte ptr [bp+0]
-IntLevel		equ	es:byte ptr [bp+1]
-SavedSP 		equ	es:word ptr [bp+2]
-SavedSS 		equ	es:word ptr [bp+4]
-NewSP			equ	es:word ptr [bp+6]
+AllocByte		equ	byte [es:bp+0]
+IntLevel		equ	byte [es:bp+1]
+SavedSP 		equ	word [es:bp+2]
+SavedSS 		equ	word [es:bp+4]
+NewSP			equ	word [es:bp+6]
 Free			equ	0
 allocated		equ	1
 overflowed		equ	2
@@ -117,14 +117,14 @@ clobbered		equ	3
 
 
 ;External variables in IBMBIO for INT19h handling rouitne. J.K. 10/23/86
-CODE segment public 'code'
-	EXTRN	Int19sem:byte
+;CODE segment public 'code'
+;	EXTRN	Int19sem:byte
 
-	IRP	AA,<02,08,09,0A,0B,0C,0D,0E,70,72,73,74,76,77>
-		EXTRN Int19OLD&AA:dword
-	ENDM
-CODE ends
-	ENDIF
+;	IRP	AA,<02,08,09,0A,0B,0C,0D,0E,70,72,73,74,76,77>
+;		EXTRN Int19OLD&AA:dword
+;	ENDM
+;CODE ends
+	end if
 ;---------------------------------------
 ;J.K. 6/29/87 External variable defined in IBMBIO module for Multi-track
 MULTRK_ON	EQU	10000000B	;User spcified Mutitrack=on, or System turns
@@ -133,106 +133,106 @@ MULTRK_ON	EQU	10000000B	;User spcified Mutitrack=on, or System turns
 MULTRK_OFF1	EQU	00000000B	;initial value. No "Multitrack=" command entered.
 MULTRK_OFF2	EQU	00000001B	;User specified Multitrack=off.
 
-CODE segment public 'code'
-	EXTRN	MulTrk_flag:word	;AN002;
-CODE ends
+;CODE segment public 'code'
+;	EXTRN	MulTrk_flag:word	;AN002;
+;CODE ends
 ;J.K. 6/29/87 End of Multi-track definition.
 
-SYSINITSEG	SEGMENT PUBLIC 'SYSTEM_INIT'
+;SYSINITSEG	SEGMENT PUBLIC 'SYSTEM_INIT'
 
-ASSUME	CS:SYSINITSEG,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;ASSUME	CS:SYSINITSEG,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
-	EXTRN	BADCOM:BYTE
-	EXTRN	SYSSIZE:BYTE
-	EXTRN	CONDEV:BYTE,AUXDEV:BYTE,PRNDEV:BYTE,COMMND:BYTE
-	extrn	DeviceParameters:byte
-	extrn	DevMark_Addr:word
-	extrn	SetDevMarkFlag:byte
-	extrn	PathString:byte 			;AN021;
-	extrn	LShare:byte				;AN021;
-	extrn	ShareWarnMsg:byte			;AN021;
+;	EXTRN	BADCOM:BYTE
+;	EXTRN	SYSSIZE:BYTE
+;	EXTRN	CONDEV:BYTE,AUXDEV:BYTE,PRNDEV:BYTE,COMMND:BYTE
+;	extrn	DeviceParameters:byte
+;	extrn	DevMark_Addr:word
+;	extrn	SetDevMarkFlag:byte
+;	extrn	PathString:byte 			;AN021;
+;	extrn	LShare:byte				;AN021;
+;	extrn	ShareWarnMsg:byte			;AN021;
 
-	EXTRN	INT24:NEAR,MEM_ERR:NEAR
-	EXTRN	DOCONF:NEAR
-	extrn	Multi_Pass:NEAR 			;AN024;
-	extrn	BadLoad:near
-	extrn	Error_Line:near
+;	EXTRN	INT24:NEAR,MEM_ERR:NEAR
+;	EXTRN	DOCONF:NEAR
+;	extrn	Multi_Pass:NEAR 			;AN024;
+;	extrn	BadLoad:near
+;	extrn	Error_Line:near
 
-	PUBLIC	CURRENT_DOS_LOCATION
-	PUBLIC	FINAL_DOS_LOCATION
-	PUBLIC	DEVICE_LIST
-	PUBLIC	SYSI_COUNTRY
-	PUBLIC	MEMORY_SIZE
-	PUBLIC	DEFAULT_DRIVE
-	PUBLIC	BUFFERS
-	PUBLIC	FILES
-	PUBLIC	NUM_CDS
-	PUBLIC	SYSINIT
-	PUBLIC	CNTRYFILEHANDLE
-	PUBLIC	COMMAND_LINE
-	public	Big_Media_Flag				;AN021;Set by IBMINIT
+;	PUBLIC	CURRENT_DOS_LOCATION
+;	PUBLIC	FINAL_DOS_LOCATION
+;	PUBLIC	DEVICE_LIST
+;	PUBLIC	SYSI_COUNTRY
+;	PUBLIC	MEMORY_SIZE
+;	PUBLIC	DEFAULT_DRIVE
+;	PUBLIC	BUFFERS
+;	PUBLIC	FILES
+;	PUBLIC	NUM_CDS
+;	PUBLIC	SYSINIT
+;	PUBLIC	CNTRYFILEHANDLE
+;	PUBLIC	COMMAND_LINE
+;	public	Big_Media_Flag				;AN021;Set by IBMINIT
 
-	IF	STACKSW
+	if	STACKSW
  ;Internal Stack Information
-	PUBLIC	STACK_COUNT
-	PUBLIC	STACK_SIZE
-	PUBLIC	STACK_ADDR
-	ENDIF
+;	PUBLIC	STACK_COUNT
+;	PUBLIC	STACK_SIZE
+;	PUBLIC	STACK_ADDR
+	end if
 
-	PUBLIC dosinfo,entry_point
-	PUBLIC fcbs,keep
-	PUBLIC confbot,alloclim
-	PUBLIC zero,sepchr,STALL
-	PUBLIC count,chrptr,org_count
-	PUBLIC bufptr,memlo,prmblk,memhi
-	PUBLIC ldoff,area,PACKET,UNITCOUNT
-	PUBLIC BREAK_ADDR,BPB_ADDR,drivenumber
-	public Config_Size
-	public Install_Flag
-	public COM_Level
-	public CMMT
-	public CMMT1
-	public CMMT2
-	public Cmd_Indicator
-	public LineCount
-	public ShowCount
-	public Buffer_LineNum
-	public DoNotShowNum
-	public IFS_Flag
-	public IFS_RH
-	public H_Buffers
-	public Buffer_Slash_X			;AN023;
-	public ConfigMsgFlag			;AN014;
-	public Do_Install_Exec			;AN019;
-	public Multi_Pass_Id			;AN024;
+;	PUBLIC dosinfo,entry_point
+;	PUBLIC fcbs,keep
+;	PUBLIC confbot,alloclim
+;	PUBLIC zero,sepchr,STALL
+;	PUBLIC count,chrptr,org_count
+;	PUBLIC bufptr,memlo,prmblk,memhi
+;	PUBLIC ldoff,area,PACKET,UNITCOUNT
+;	PUBLIC BREAK_ADDR,BPB_ADDR,drivenumber
+;	public Config_Size
+;	public Install_Flag
+;	public COM_Level
+;	public CMMT
+;	public CMMT1
+;	public CMMT2
+;	public Cmd_Indicator
+;	public LineCount
+;	public ShowCount
+;	public Buffer_LineNum
+;	public DoNotShowNum
+;	public IFS_Flag
+;	public IFS_RH
+;	public H_Buffers
+;	public Buffer_Slash_X			;AN023;
+;	public ConfigMsgFlag			;AN014;
+;	public Do_Install_Exec			;AN019;
+;	public Multi_Pass_Id			;AN024;
 
 
 ;
 SYSINIT$:
-	IF	STACKSW
-.SALL
-	  include MSSTACK.INC		;Main stack program and data definitions
+	if	STACKSW
+;.SALL
+	  INCLUDE 'MSSTACK.INC'		;Main stack program and data definitions
 ;	  include STKMES.INC		;Fatal stack error message
-	  include MSBIO.CL5		;Fatal stack error message
-.XALL
-	    public Endstackcode
-Endstackcode	label byte
-	ENDIF
+	  INCLUDE 'MSBIO.CL5'		;Fatal stack error message
+;.XALL
+;	    public Endstackcode
+Endstackcode:
+	end if
 
 ;
 SYSINIT:
-	JMP	GOINIT
-DOSINFO 		LABEL	DWORD
+	JMP	GOINIT_SYSINIT
+DOSINFO:
 			DW	0000
 CURRENT_DOS_LOCATION	DW	0000
 
-MSDOS			LABEL	DWORD
-ENTRY_POINT		LABEL	DWORD
+MSDOS:
+ENTRY_POINT:
 			DW	0000
 FINAL_DOS_LOCATION	DW	0000
 DEVICE_LIST		DD	00000000
 
-SYSI_Country		LABEL	DWORD		;J.K. 5/29/86 Pointer to
+SYSI_Country:;J.K. 5/29/86 Pointer to
 			DW	0000		;country table in DOS
 			DW	0000
 
@@ -241,11 +241,11 @@ Fake_Floppy_Drv 	db	0		;AN001;Set to 1 if this machine
 Big_Media_Flag		db	0		;AN021;Set by IBMINIT if > 32 MB fixed media exist.
 ;
 ;Variables for Stack Initialization Program.
-	IF	STACKSW
+	if	STACKSW
 STACK_COUNT		DW	DefaultCount
 STACK_SIZE		DW	DefaultSize
 STACK_ADDR		DD	00000000
-	ENDIF
+	end if
 ; various default values
 
 MEMORY_SIZE		DW	0001
@@ -260,14 +260,14 @@ MaxNumBuf1		db     15	;AN026;Num of buffers in a bucket group 1.
 MaxNumBuf2		db     15	;AN026;Num of buffers in a possible bucket group 2.
 NthBuck 		db	0	;AN026; 1st bucket group = 1st bucket through Nth Bucket. The rest = second group
 
-IF	BUFFERFLAG
+if	BUFFERFLAG
 
 FIRST_PAGE		DW	0, 0
 LAST_PAGE		DW	0, 0
 NPA640			DW	0
 EMS_SAVE_BUF		DB	0,0,0,0,0,0,0,0,0,0,0,0
 
-ENDIF
+end if
 
 FILES			DB	8	; enough files for pipe
 FCBS			DB	4	; performance for recycling
@@ -297,9 +297,9 @@ EMS_State_Buf		dd	0	;AN010;
 BUF_PREV_OFF		dw	0	;AN020;
 EMS_Buf_First		dw	0	;AN020;
 
-	IF	NOT NOEXEC
-COMEXE	EXEC0 <0,COMMAND_LINE,DEFAULT_DRIVE,ZERO>
-	ENDIF
+	if	NOT NOEXEC
+COMEXE	Exec0 0,COMMAND_LINE,DEFAULT_DRIVE,ZERO
+	end if
 
 ;------------------------------------------------------------------
 ;J.K.  2/23/87 ;variables for INSTALL= command.
@@ -320,7 +320,7 @@ Ldexec_Line		db	0		;AN000;# of parm characters
 Ldexec_start		db	' '		;AN000;
 Ldexec_parm		db	80 dup (0)	;AN000;
 
-INSTEXE EXEC0 <0,Ldexec_Line,Ldexec_FCB,Ldexec_FCB>  ;AN000;
+INSTEXE Exec0 0,Ldexec_Line,Ldexec_FCB,Ldexec_FCB  ;AN000;
 
 ;AN016; Undo the extended attribute handling
 ;EA_QueryList		 label	 byte
@@ -349,7 +349,7 @@ IFS_Flag	dw	0			;AN000; Set to 1 if it is an IFS.
    IS_IFS	  equ	00000001b		;IFS command?
    NOT_IFS	  equ	11111110b
 
-IFS_RH	IFSRH <LENGTH_INIT, IFSINIT,,,,>	;AN000; IFS initialization request packet
+IFS_RH	IFSRH LENGTH_INIT,IFSINIT	;AN000; IFS initialization request packet
 
 ;------------------------------------------------------------------
 ;Variables for Comment=
@@ -361,17 +361,18 @@ Cmd_Indicator	db	?		;AN000;
 DoNotShowNum	db	0		;AN000;
 
 ;------------------------------------------------------------------
-COUNT		DW	0000
+COUNT_SYSINIT	DW	0000	; COUNT is a field offset in MSEQU.INC, and one
+					;  assembly cannot have the name twice
 Org_Count	dw	0000		;AN019;
 CHRPTR		DW	0000
 CntryFilehandle DW 0000
 Old_Area	dw	0		;AN013;
 Impossible_Owner_Size dw 0		;AN013; Paragraph
 ;------------------------------------------------------------------
-BucketPTR LABEL  dword			;AN000;
-BUFPTR	LABEL	DWORD			;LEAVE THIS STUFF IN ORDER!
+BucketPTR:;AN000;
+BUFPTR:;LEAVE THIS STUFF IN ORDER!
 MEMLO	DW	0
-PRMBLK	LABEL	WORD
+PRMBLK:
 MEMHI	DW	0
 LDOFF	DW	0
 AREA	DW	0
@@ -389,7 +390,7 @@ ConfigMsgFlag		dw	0	;AN014;AN022; Used to control "Error in CONFIG.SYS line #" m
 
 TempStack		DB	80h DUP (?)
 
-GOINIT:
+GOINIT_SYSINIT:				; MSINIT has a GOINIT of its own
 ;J.K. before doing anything else, let's set the model byte
 ;SB33043*****************************************************************
 	mov	ah,0c0h 		;get system configuration     ;SB ;3.30*
@@ -398,16 +399,16 @@ GOINIT:
 	jc	No_ROM_Config
 	cmp	ah, 0			; double check
 	jne	No_ROM_Config
-	mov	al, ES:[BX.bios_SD_modelbyte]
-	mov	cs:[Sys_Model_Byte], al
-	mov	al, ES:[BX.bios_SD_scnd_modelbyte]
-	mov	cs:[Sys_Scnd_Model_Byte], al
+	mov	al, [es:BX+BIOS_SYSTEM_DESCRIPTOR.bios_SD_modelbyte]
+	mov	[cs:Sys_Model_Byte], al
+	mov	al, [es:BX+BIOS_SYSTEM_DESCRIPTOR.bios_SD_scnd_modelbyte]
+	mov	[cs:Sys_Scnd_Model_Byte], al
 	jmp	short Move_Myself
 No_ROM_Config:				; Old ROM
 	mov	ax, 0f000h
 	mov	ds, ax
-	mov	al, byte ptr ds:[0fffeh]
-	mov	cs:[Sys_Model_Byte], al ;set the model byte.
+	mov	al, byte [0fffeh]
+	mov	[cs:Sys_Model_Byte], al ;set the model byte.
 ;J.K.6/24/87 Set Fake_Floppy_Drv if there is no diskette drives in this machine.
 ;SB34SYSINIT1001********************************************************
 ;SB	execute the equipment determination interrupt and then
@@ -419,7 +420,7 @@ No_ROM_Config:				; Old ROM
 	int	11h
 	test	ax,1			; has floppy ?
 	jnz	Move_Myself
-	mov	cs:Fake_Floppy_Drv,1	; no floppy, fake.
+	mov	[cs:Fake_Floppy_Drv],1	; no floppy, fake.
 
 ;SB34SYSINIT1001********************************************************
 Move_Myself:
@@ -427,8 +428,8 @@ Move_Myself:
 	XOR	SI,SI
 	MOV	DI,SI
 
-	IF	MSVER
-	MOV	CX,cs:[MEMORY_SIZE]
+	if	MSVER
+	MOV	CX,[cs:MEMORY_SIZE]
 	CMP	CX,1			; 1 means do scan
 	JNZ	NOSCAN
 	MOV	CX,2048 		;START SCANNING AT 32K BOUNDARY
@@ -445,48 +446,48 @@ MEMSCAN:INC	CX
 	MOV	[BX],AL
 	JZ	MEMSCAN
 SETEND:
-	MOV	cs:[MEMORY_SIZE],CX
-	ENDIF
+	MOV	[cs:MEMORY_SIZE],CX
+	end if
 
-	IF	IBMVER OR IBMJAPVER
-	MOV	CX,cs:[MEMORY_SIZE]
-	ENDIF
+	if	IBMVER OR IBMJAPVER
+	MOV	CX,[cs:MEMORY_SIZE]
+	end if
 
 NOSCAN: 				; CX is mem size in para
 	MOV	AX,CS
 	MOV	DS,AX
-ASSUME	DS:SYSINITSEG
+;ASSUME	DS:SYSINITSEG
 
-	MOV	AX,OFFSET SYSSIZE
+	MOV	AX,SYSSIZE
 	Call	ParaRound
 	SUB	CX,AX			;Compute new sysinit location
 	MOV	ES,CX
-	MOV	CX,OFFSET SYSSIZE + 1
+	MOV	CX,SYSSIZE + 1
 	SHR	CX,1			;Divide by 2 to get words
 	REP	MOVSW			;RELOCATE SYSINIT
 
-	ASSUME	ES:SYSINITSEG
+;	ASSUME	ES:SYSINITSEG
 
 	PUSH	ES
-	MOV	AX,OFFSET SYSIN
+	MOV	AX,SYSIN
 	PUSH	AX
 
-AAA_DUMMY	PROC	FAR
-	RET
-AAA_DUMMY	ENDP
+AAA_DUMMY:
+	RETF
+;AAA_DUMMY	ENDP
 ;
 ;	MOVE THE DOS TO ITS PROPER LOCATION
 ;
 SYSIN:
 
-	ASSUME	DS:NOTHING,ES:SYSINITSEG,SS:NOTHING
+;	ASSUME	DS:NOTHING,ES:SYSINITSEG,SS:NOTHING
 
 	MOV	AX,[CURRENT_DOS_LOCATION]   ; Where it is (set by BIOS)
 	MOV	DS,AX
 	MOV	AX,[FINAL_DOS_LOCATION]     ; Where it is going (set by BIOS)
 	MOV	ES,AX
 
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
 	XOR	SI,SI
 	MOV	DI,SI
@@ -500,28 +501,28 @@ SYSIN:
 	CLI
 	MOV	AX,CS
 	MOV	SS,AX
-	MOV	SP,OFFSET LOCSTACK	; Set stack
+	MOV	SP,LOCSTACK	; Set stack
 
-	ASSUME	SS:SYSINITSEG
+;	ASSUME	SS:SYSINITSEG
 
-	IF	NOT ALTVECT
+	if	NOT ALTVECT
 	STI				; Leave INTs disabled for ALTVECT
-	ENDIF
-LOCSTACK LABEL BYTE
+	end if
+LOCSTACK:
 
-	CALL	MSDOS			; Call DOSINIT
+	CALL	dword [MSDOS]			; Call DOSINIT
 					;ES:DI -> SysInitVars_Ext
-	mov	ax, word ptr es:[di.SYSI_InitVars] ;J.K. 5/29/86
-	mov	word ptr [dosinfo], ax
-	mov	ax, word ptr es:[di.SYSI_InitVars+2]
-	mov	word ptr [dosinfo+2],ax ;set the sysvar pointer
+	mov	ax, word [es:di+SysInitVars_Ext.SYSI_InitVars] ;J.K. 5/29/86
+	mov	word [DOSINFO], ax
+	mov	ax, word [es:di+SysInitVars_Ext.SYSI_InitVars+2]
+	mov	word [DOSINFO+2],ax ;set the sysvar pointer
 
-	mov	ax, word ptr es:[di.SYSI_Country_Tab]
-	mov	word ptr [SYSI_Country],ax
-	mov	ax, word ptr es:[di.SYSI_Country_Tab+2]
-	mov	word ptr [SYSI_Country+2],ax	;set the SYSI_Country pointer J.K.
+	mov	ax, word [es:di+SysInitVars_Ext.SYSI_Country_Tab]
+	mov	word [SYSI_Country],ax
+	mov	ax, word [es:di+SysInitVars_Ext.SYSI_Country_Tab+2]
+	mov	word [SYSI_Country+2],ax	;set the SYSI_Country pointer J.K.
 
-	les	di, dosinfo		;es:di -> dosinfo
+	les	di, [DOSINFO]		;es:di -> dosinfo
 
 	clc					;AN018;Get the extended memory size
 ;SB34SYSINIT1002**************************************************************
@@ -535,28 +536,28 @@ LOCSTACK LABEL BYTE
 	mov	ah,88h
 	int	15h				;check extended memory size
 	jc	No_Ext_Memory
-	mov	es:[di].SYSI_EXT_MEM,ax 	;save extended memory size
+	mov	[es:di+SysInitVars.SYSI_EXT_MEM],ax 	;save extended memory size
 No_Ext_Memory:
 
 ;SB34SYSINIT1002**************************************************************
-	mov	word ptr es:[di.SYSI_IFS], -1	;AN000; Initialize SYSI_IFS chain.
-	mov	word ptr es:[di.SYSI_IFS+2], -1 ;AN000;
+	mov	word [es:di+SysInitVars.SYSI_IFS], -1	;AN000; Initialize SYSI_IFS chain.
+	mov	word [es:di+SysInitVars.SYSI_IFS+2], -1 ;AN000;
 
-	mov	ax, es:[di.SYSI_MAXSEC] 	;AN020; Get the sector size
+	mov	ax, [es:di+SysInitVars.SYSI_MAXSEC] 	;AN020; Get the sector size
 	add	ax, BUFINSIZ			;AN020; size of buffer header
 	mov	[SingleBufferSize], ax		;AN020; total size for a buffer
 
-	mov	al, Default_Drive		;AN000;Get the 1 based boot drive number set by IBMINIT
-	mov	es:[di.SYSI_BOOT_DRIVE], al	;AN000; set SYSI_BOOT_DRIVE
+	mov	al, [DEFAULT_DRIVE]		;AN000;Get the 1 based boot drive number set by IBMINIT
+	mov	[es:di+SysInitVars.SYSI_BOOT_DRIVE], al	;AN000; set SYSI_BOOT_DRIVE
 
 ; Determine if 386 system...
 	Get_CPU_Type			; macro to determine cpu type
 	cmp	ax, 2			; is it a 386?
 	jne	Not_386_System		; no: don't mess with flag
-	mov	es:[di.SYSI_DWMOVE], 1		  ;AN003;
+	mov	[es:di+SysInitVars.SYSI_DWMOVE], 1		  ;AN003;
 Not_386_System: 				  ;AN003;
-	MOV	AL,ES:[DI.SYSI_NUMIO]
-	MOV	DriveNumber,AL		; Save start of installable block drvs
+	MOV	AL,[es:DI+SysInitVars.SYSI_NUMIO]
+	MOV	[DriveNumber],AL		; Save start of installable block drvs
 
 	MOV	AX,CS
 	SUB	AX,11H			; room for header we will copy shortly
@@ -571,34 +572,34 @@ Not_386_System: 				  ;AN003;
 
 	push	es			;AN020;
 	push	di			;AN020;
-	les	di, es:[di.SYSI_BUF]	;AN020;get the buffer hash entry pointer
-	les	di, es:[di.HASH_PTR]	;AN020;
-	mov	word ptr es:[di.BUFFER_BUCKET],0	;AN020;
-	mov	word ptr es:[di.BUFFER_BUCKET+2], ax	;AN020;
+	les	di, [es:di+SysInitVars.SYSI_BUF]	;AN020;get the buffer hash entry pointer
+	les	di, [es:di+Buffinfo.Hash_ptr]	;AN020;
+	mov	word [es:di+BUFFER_HASH_ENTRY.BUFFER_BUCKET],0	;AN020;
+	mov	word [es:di+BUFFER_HASH_ENTRY.BUFFER_BUCKET+2], ax	;AN020;
 	mov	es, ax			;AN020;
 	xor	ax, ax			;AN020;
 	mov	di, ax			;AN020;es:di -> Single buffer
-	mov	es:[di.BUF_NEXT], ax	;AN020;points to itself
-	mov	es:[di.BUF_PREV], ax	;AN020;points to itself
-	mov	word ptr es:[di.BUF_ID],00FFh	       ;AN020;free buffer, clear flag
-	mov	word ptr es:[di.BUF_SECTOR], 0	       ;AN020;
-	mov	word ptr es:[di.BUF_SECTOR+2], 0       ;AN020;
+	mov	[es:di+BUFFINFO.buf_next], ax	;AN020;points to itself
+	mov	[es:di+BUFFINFO.buf_prev], ax	;AN020;points to itself
+	mov	word [es:di+BUFFINFO.buf_ID],00FFh	       ;AN020;free buffer, clear flag
+	mov	word [es:di+BUFFINFO.buf_sector], 0	       ;AN020;
+	mov	word [es:di+BUFFINFO.buf_sector+2], 0       ;AN020;
 	pop	di			;AN020;
 	pop	es			;AN020;
 
 	PUSH	DS			; Save as input to RE_INIT
 	PUSH	CS
 	POP	DS
-ASSUME	DS:SYSINITSEG
+;ASSUME	DS:SYSINITSEG
 	CALL	TEMPCDS 		; Set up CDSs so RE_INIT and SYSINIT
 					;   can make DISK system calls
 
 	POP	DS			; Recover DS input to RE_INIT
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 
-	IF	NOT IBMJAPVER
+	if	NOT IBMJAPVER
 	CALL	RE_INIT 		; Re-call the BIOS
-	ENDIF
+	end if
 
 	STI				; INTs OK
 	CLD				; MAKE SURE
@@ -611,82 +612,82 @@ ASSUME	DS:NOTHING
 	MOV	DI,SI
 	MOV	CX,80H
 	REP	MOVSW
-	MOV	WORD PTR ES:[PDB_JFN_Pointer + 2],ES	; Relocate
-	MOV	AH,SET_CURRENT_PDB
+	MOV	word [es:Process_data_block.PDB_JFN_Pointer + 2],ES	; Relocate
+	MOV	AH,Set_Current_PDB
 	INT	21H			; Tell DOS we moved it
 	PUSH	DS
 	PUSH	CS
 	POP	DS
-ASSUME	DS:SYSINITSEG
-	MOV	DX,OFFSET INT24 	;SET UP INT 24 HANDLER
-	MOV	AX,(SET_INTERRUPT_VECTOR SHL 8) OR 24H
+;ASSUME	DS:SYSINITSEG
+	MOV	DX,INT24 	;SET UP INT 24 HANDLER
+	MOV	AX,(Set_Interrupt_Vector SHL 8) OR 24H
 	INT	21H
 
 	MOV	BX,0FFFFH
-	MOV	AH,ALLOC
+	MOV	AH,Alloc
 	INT	21H			;FIRST TIME FAILS
-	MOV	AH,ALLOC
+	MOV	AH,Alloc
 	INT	21H			;SECOND TIME GETS IT
 	MOV	[AREA],AX
 	MOV	[MEMHI],AX		; MEMHI:MEMLO now points to
 					; start of free memory
-	IF	ALTVECT
-	MOV	DX,OFFSET BOOTMES
+	if	ALTVECT
+	MOV	DX,BOOTMES
 	invoke	PRINT			;Print message DOSINIT couldn't
-	ENDIF
+	end if
 
 	POP	DS
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 
 	MOV	DL,[DEFAULT_DRIVE]
 	OR	DL,DL
 	JZ	NODRVSET		; BIOS didn't say
 	DEC	DL			;A = 0
-	MOV	AH,SET_DEFAULT_DRIVE
+	MOV	AH,Set_Default_Drive
 	INT	21H			;SELECT THE DISK
 ;J.K.  2/23/87	Modified to handle INSTALL= command.
 NODRVSET:
 	CALL	DOCONF			;DO THE CONFIG STUFF
-	inc	cs:Multi_Pass_Id	;AN027;
+	inc	[cs:Multi_Pass_Id]	;AN027;
 	call	Multi_Pass		;AN027;
-	inc	cs:Multi_Pass_Id	;AN024;
+	inc	[cs:Multi_Pass_Id]	;AN024;
 	call	Multi_Pass		;AN024;
-	call	EndFile
-	test	Install_Flag, HAVE_INSTALL_CMD		;AN019;
+	call	ENDFILE
+	test	[Install_Flag], HAVE_INSTALL_CMD		;AN019;
 	jz	DoLast					;AN019;
-	inc	cs:Multi_Pass_Id			;AN024;
+	inc	[cs:Multi_Pass_Id]			;AN024;
 	call	Multi_Pass				;AN019;AN024; Execute INSTALL= commands
 
 ;J.K. [AREA] has the segment address for the allocated memory of SYSINIT,CONFBOT.
 ;Free the CONFBOT area used for CONFIG.SYS and SYSINIT itself.
 DoLast:
 	call	LoadShare		;AN021; Try to load share.exe, if needed.
-	mov	cs:[DoNotShowNum], 1	;AN000; Done with CONFIG.SYS. Do not show line number message.
-	mov	cx, [area]		;AN000;
+	mov	[cs:DoNotShowNum], 1	;AN000; Done with CONFIG.SYS. Do not show line number message.
+	mov	cx, [AREA]		;AN000;
 	mov	es, cx			;AN000;
 	mov	ah, 49h 		;AN000; Free allocated memory for command.com
 	int	21h			;AN000;
 
-	test	cs:[Install_flag], HAS_INSTALLED ;AN013; SYSINIT_BASE installed?
+	test	[cs:Install_Flag], HAS_INSTALLED ;AN013; SYSINIT_BASE installed?
 	jz	Skip_Free_SYSINITBASE		 ;AN013; No.
 ;Set Block from the Old_Area with Impossible_Owner_size.
 ;This will free the unnecessary SYSINIT_BASE that had been put in memory to
 ;handle INSTALL= command.
 	push	es			       ;AN013;
 	push	bx			       ;AN013;
-	mov	ax, cs:[Old_Area]	       ;AN013;
+	mov	ax, [cs:Old_Area]	       ;AN013;
 	mov	es, ax			       ;AN013;
-	mov	bx, cs:[Impossible_Owner_Size] ;AN013;
-	mov	ah, SETBLOCK		       ;AN013;
+	mov	bx, [cs:Impossible_Owner_Size] ;AN013;
+	mov	ah, Setblock		       ;AN013;
 	int	21h			       ;AN013;
 	MOV	AX,ES			       ;AN013;
 	DEC	AX			       ;AN013;
 	MOV	ES,AX			       ;Point to arena
-	MOV	ES:[arena_owner],8	       ;Set impossible owner
+	MOV	[es:arena.arena_owner],8	       ;Set impossible owner
 	pop	bx			       ;AN013;
 	pop	es			       ;AN013;
 Skip_Free_SYSINITBASE:			       ;AN013;
-	IF	NOEXEC
+	if	NOEXEC
 	MOV	BP,DS			       ;SAVE COMMAND.COM SEGMENT
 	PUSH	DS
 	POP	ES
@@ -697,29 +698,29 @@ Skip_Free_SYSINITBASE:			       ;AN013;
 	MOV	DI,SI
 	MOV	CX,80H
 	REP	MOVSW			       ; Copy it to new location for shell
-	MOV	WORD PTR ES:[PDB_JFN_Pointer + 2],ES	; Relocate
+	MOV	word [es:Process_data_block.PDB_JFN_Pointer + 2],ES	; Relocate
 	MOV	BX,ES
-	MOV	AH,SET_CURRENT_PDB
+	MOV	AH,Set_Current_PDB
 	INT	21H			       ; Tell DOS we moved it
-	MOV	ES:[PDB_PARENT_PID],ES	       ;WE ARE THE ROOT
-	ENDIF
+	MOV	[es:Process_data_block.PDB_Parent_PID],ES	       ;WE ARE THE ROOT
+	end if
 
 	PUSH	CS
 	POP	DS
-ASSUME	DS:SYSINITSEG
+;ASSUME	DS:SYSINITSEG
 ;
 ; SET UP THE PARAMETERS FOR COMMAND
 ;
 
-	MOV	SI,OFFSET COMMAND_LINE+1
+	MOV	SI,COMMAND_LINE+1
 
-	IF	NOEXEC
+	if	NOEXEC
 	MOV	DI,81H
-	ELSE
+	else
 	PUSH	DS
 	POP	ES
 	MOV	DI,SI
-	ENDIF
+	end if
 
 	MOV	CL,-1
 COMTRANLP:				;FIND LENGTH OF COMMAND LINE
@@ -732,24 +733,24 @@ COMTRANLP:				;FIND LENGTH OF COMMAND LINE
 	MOV	AL,CR		       ; CR terminate
 	STOSB
 
-	IF	NOEXEC
-	MOV	ES:[80H],CL		; Set up header
+	if	NOEXEC
+	MOV	[es:80H],CL		; Set up header
 	MOV	AL,[DEFAULT_DRIVE]
-	MOV	ES:[5CH],AL
-	ELSE
+	MOV	[es:5CH],AL
+	else
 	MOV	[COMMAND_LINE],CL	;Count
-	ENDIF
+	end if
 
-	MOV	DX,OFFSET COMMND	;NOW POINTING TO FILE DESCRIPTION
+	MOV	DX,COMMND	;NOW POINTING TO FILE DESCRIPTION
 
-	IF	NOEXEC
+	if	NOEXEC
 	MOV	ES,BP			;SET LOAD ADDRESS
 	MOV	BX,100H
 	CALL	LDFIL			;READ IN COMMAND
 	JC	COMERR
 	MOV	DS,BP
 	MOV	DX,80H
-	MOV	AH,SET_DMA		;SET DISK TRANFER ADDRESS
+	MOV	AH,Set_DMA		;SET DISK TRANFER ADDRESS
 	INT	21H
 	CLI
 	MOV	SS,BP
@@ -760,11 +761,11 @@ COMTRANLP:				;FIND LENGTH OF COMMAND LINE
 	PUSH	BP			;SET HIGH PART OF JUMP ADDRESS
 	MOV	AX,100H
 	PUSH	AX			;SET LOW PART OF JUMP ADDRESS
-CCC	PROC	FAR
-	RET				;CRANK UP COMMAND!
-CCC	ENDP
+CCC:
+	RETF				;CRANK UP COMMAND!
+;CCC	ENDP
 
-	ELSE
+	else
 ; We are going to open the command interpreter and size it as is done in
 ; LDFIL.  The reason we must do this is that SYSINIT is in free memory.  If
 ; there is not enough room for the command interpreter, EXEC will probably
@@ -778,13 +779,13 @@ CCC	ENDP
 
 ; First, find out where the command interpreter is going to go.
 	MOV	BX,0FFFFH
-	MOV	AH,ALLOC
+	MOV	AH,Alloc
 	INT	21H			;Get biggest piece
-	MOV	AH,ALLOC
+	MOV	AH,Alloc
 	INT	21H			;SECOND TIME GETS IT
 	JC	MEMERRJX		; Oooops
 	MOV	ES,AX
-	MOV	AH,DEALLOC
+	MOV	AH,Dealloc
 	INT	21H			; Give it right back
 	MOV	BP,BX
 ; ES:0 points to Block, and BP is the size of the block
@@ -800,14 +801,14 @@ CCC	ENDP
 	SUB	BP,BX			; BAIS down
 	JC	MEMERRJX		; No Way.
 
-	MOV	AX,(OPEN SHL 8) 	;OPEN THE FILE being EXECED
+	MOV	AX,(Open SHL 8) 	;OPEN THE FILE being EXECED
 	STC				;IN CASE OF INT 24
 	INT	21H
 	JC	COMERR			; Ooops
 	MOV	BX,AX			;Handle in BX
 	XOR	CX,CX
 	XOR	DX,DX
-	MOV	AX,(LSEEK SHL 8) OR 2
+	MOV	AX,(LSeek SHL 8) OR 2
 	STC				;IN CASE OF INT 24
 	INT	21H			; Get file size in DX:AX
 	JC	COMERR
@@ -826,60 +827,60 @@ MEMERRJX:
 	JMP	MEM_ERR
 
 OKLD:
-	MOV	AH,CLOSE
+	MOV	AH,Close
 	INT	21H			; Close file
 	POP	DX			; Recover pointer to name
 	PUSH	CS
 	POP	ES
-	ASSUME	ES:SYSINITSEG
-	MOV	BX,OFFSET COMEXE	; Point to EXEC block
-	MOV	WORD PTR [BX.EXEC0_COM_LINE+2],CS	; Set segments
-	MOV	WORD PTR [BX.EXEC0_5C_FCB+2],CS
-	MOV	WORD PTR [BX.EXEC0_6C_FCB+2],CS
+;	ASSUME	ES:SYSINITSEG
+	MOV	BX,COMEXE	; Point to EXEC block
+	MOV	word [BX+Exec0.Exec0_com_line+2],CS	; Set segments
+	MOV	word [BX+Exec0.Exec0_5C_FCB+2],CS
+	MOV	word [BX+Exec0.Exec0_6C_FCB+2],CS
 	XOR	AX,AX			;Load and go
-	MOV	AH,EXEC
+	MOV	AH,Exec
 	STC				;IN CASE OF INT 24
 	INT	21H			;GO START UP COMMAND
-	ENDIF
+	end if
 ; NOTE FALL THROUGH IF EXEC RETURNS (an error)
 
 COMERR:
-	MOV	DX,OFFSET BADCOM	;WANT TO PRINT COMMAND ERROR
+	MOV	DX,BADCOM	;WANT TO PRINT COMMAND ERROR
 	INVOKE	BADFIL
 STALL:	JMP	STALL
 
-	PUBLIC	TEMPCDS
+;	PUBLIC	TEMPCDS
 TEMPCDS:
-ASSUME	DS:SYSINITSEG
+;ASSUME	DS:SYSINITSEG
 	LES	DI,[DOSINFO]
 
-	MOV	CL,BYTE PTR ES:[DI.SYSI_NUMIO]
+	MOV	CL,byte [es:DI+SysInitVars.SYSI_NUMIO]
 	XOR	CH,CH
-	MOV	ES:[DI.SYSI_NCDS],CL
+	MOV	[es:DI+SysInitVars.SYSI_NCDS],CL
 	MOV	AL,CL
-	MOV	AH,SIZE curdir_list
+	MOV	AH,sizeof.curdir_list
 	MUL	AH
 	call	ParaRound
 	MOV	SI,[CONFBOT]
 	SUB	SI,AX
 	MOV	[ALLOCLIM],SI		; Can't alloc past here!
-	MOV	WORD PTR ES:[DI.SYSI_CDS + 2],SI
+	MOV	word [es:DI+SysInitVars.SYSI_CDS + 2],SI
 	MOV	AX,SI
-	MOV	WORD PTR ES:[DI.SYSI_CDS],0
-	LDS	SI,ES:[DI.SYSI_DPB]
-ASSUME	DS:NOTHING
+	MOV	word [es:DI+SysInitVars.SYSI_CDS],0
+	LDS	SI,[es:DI+SysInitVars.SYSI_DPB]
+;ASSUME	DS:NOTHING
 	MOV	ES,AX
 	XOR	DI,DI
 
 FOOSET: 				; Init CDSs
-	MOV	AX,WORD PTR [FOOSTRNG]
+	MOV	AX,word [FOOSTRNG]
 	STOSW
-	MOV	AX,WORD PTR [FOOSTRNG + 2]
+	MOV	AX,word [FOOSTRNG + 2]
 	STOSW
-	INC	BYTE PTR [FOOSTRNG]
+	INC	byte [FOOSTRNG]
 	XOR	AX,AX
 	PUSH	CX
-	MOV	CX,curdir_flags - 4
+	MOV	CX,curdir_list.curdir_flags - 4
 	REP	STOSB
 	CMP	SI,-1
 ;	 JNZ	 NORMCDS
@@ -899,9 +900,9 @@ FOOSET: 				; Init CDSs
 ;SB	For dpb offsets look at inc\dpb.inc.
 ;SB	 5 LOCS
 
-	cmp	cs:Fake_Floppy_Drv,1	;fake drive ?
+	cmp	[cs:Fake_Floppy_Drv],1	;fake drive ?
 	jnz	NORMCDS
-	cmp	ds:[si].dpb_drive,02	;check for a: or b:
+	cmp	[si+dpb.dpb_drive],02	;check for a: or b:
 	jae	NORMCDS
 
 ;SB34SYSINIT1003*************************************************************
@@ -916,16 +917,16 @@ NORMCDS:
 ;J.K. If a non-fat based media is detected (by DPB.NumberOfFat == 0), then
 ; set curdir_flags to 0.  This is for signaling IBMDOS and IFSfunc that
 ; this media is a non-fat based one.
-	cmp	[SI.dpb_FAT_count], 0	;AN000; Non fat system?
+	cmp	[SI+dpb.dpb_FAT_count], 0	;AN000; Non fat system?
 	je	SetNormCDS		;AN000; Yes. Set curdir_Flags to 0. AX = 0 now.
-	MOV	AX,CURDIR_INUSE 	;AN000;  else, FAT system. set the flag to CURDIR_INUSE.
+	MOV	AX,curdir_inuse 	;AN000;  else, FAT system. set the flag to CURDIR_INUSE.
 SetNormCDS:				;AN000;
 	STOSW				; curdir_flags
 	MOV	AX,SI
 	STOSW				; curdir_devptr
 	MOV	AX,DS
 	STOSW
-	LDS	SI,[SI.dpb_next_dpb]
+	LDS	SI,[SI+dpb.dpb_next_dpb]
 FINCDS:
 	MOV	AX,-1
 	STOSW				; curdir_ID
@@ -939,7 +940,7 @@ FINCDS:
 	stosw				;AN000;
 	stosb				;AN000;
 	LOOP	FOOSET
-	MOV	BYTE PTR [FOOSTRNG],"A"
+	MOV	byte [FOOSTRNG],"A"
 	return
 
 ;------------------------------------------------------------------------------
@@ -963,15 +964,15 @@ ENDFILE:
 ;ENDFILE_Cont:				 ;AN000;
 
 	push	ds			    ;AN002;
-	mov	ax, Code		    ;AN002;
+	mov	ax, CODE		    ;AN002;
 	mov	ds, ax			    ;AN002;
-	assume	ds:Code
-	cmp	MulTrk_flag, MULTRK_OFF1    ;AN002;=0, MULTRACK= command entered?
+;	assume	ds:Code
+	cmp	[MulTrk_Flag], MULTRK_OFF1    ;AN002;=0, MULTRACK= command entered?
 	jne	MulTrk_Flag_Done	    ;AN002;
-	or	MulTrk_flag, MULTRK_ON	    ;AN002; Default will be ON.
+	or	[MulTrk_Flag], MULTRK_ON	    ;AN002; Default will be ON.
 MulTrk_Flag_Done:			    ;AN002;
 	pop	ds			    ;AN002;
-	assume	ds:nothing
+;	assume	ds:nothing
 
 	MOV	AX,[CONFBOT]
 	MOV	[ALLOCLIM],AX
@@ -991,15 +992,15 @@ MulTrk_Flag_Done:			    ;AN002;
 	MOV	BX,[MEMLO]
 	MOV	DX,[MEMHI]
 	LDS	DI,[DOSINFO]		;GET POINTER TO DOS DATA
-	LDS	DI,[DI+SYSI_SFT]	;DS:BP POINTS TO SFT
-	MOV	WORD PTR [DI+SFLINK],BX
-	MOV	WORD PTR [DI+SFLINK+2],DX   ;SET POINTER TO NEW SFT
+	LDS	DI,[DI+SysInitVars.SYSI_SFT]	;DS:BP POINTS TO SFT
+	MOV	word [DI+SF.SFLink],BX
+	MOV	word [DI+SF.SFLink+2],DX   ;SET POINTER TO NEW SFT
 	PUSH	CS
 	POP	DS
-	LES	DI,DWORD PTR [MEMLO]	;POINT TO NEW SFT
-	MOV	WORD PTR ES:[DI+SFLINK],-1
-	MOV	ES:[DI+SFCOUNT],AX
-	MOV	BL,SIZE SF_ENTRY
+	LES	DI,dword [MEMLO]	;POINT TO NEW SFT
+	MOV	word [es:DI+SF.SFLink],-1
+	MOV	[es:DI+SF.SFCount],AX
+	MOV	BL,sizeof.sf_entry
 	MUL	BL			;AX = NUMBER OF BYTES TO CLEAR
 	MOV	CX,AX
 	ADD	[MEMLO],AX		;ALLOCATE MEMORY
@@ -1026,23 +1027,23 @@ DOFCBS:
 	MOV	BX,[MEMLO]
 	MOV	DX,[MEMHI]
 	LDS	DI,[DOSINFO]		;GET POINTER TO DOS DATA
-	ASSUME	DS:NOTHING
-	MOV	WORD PTR [DI+SYSI_FCB],BX
-	MOV	WORD PTR [DI+SYSI_FCB+2],DX ;SET POINTER TO NEW Table
-	MOV	BL,CS:Keep
+;	ASSUME	DS:NOTHING
+	MOV	word [DI+SysInitVars.SYSI_FCB],BX
+	MOV	word [DI+SysInitVars.SYSI_FCB+2],DX ;SET POINTER TO NEW Table
+	MOV	BL,[cs:Keep]
 	XOR	BH,BH
-	MOV	[DI+SYSI_keep],BX
+	MOV	[DI+SysInitVars.SYSI_Keep],BX
 	PUSH	CS
 	POP	DS
-	ASSUME	DS:SYSINITSEG
-	LES	DI,DWORD PTR [MEMLO]	;POINT TO NEW Table
-	MOV	WORD PTR ES:[DI+SFLINK],-1
-	MOV	ES:[DI+SFCOUNT],AX
-	MOV	BL,SIZE SF_ENTRY
+;	ASSUME	DS:SYSINITSEG
+	LES	DI,dword [MEMLO]	;POINT TO NEW Table
+	MOV	word [es:DI+SF.SFLink],-1
+	MOV	[es:DI+SF.SFCount],AX
+	MOV	BL,sizeof.sf_entry
 	MOV	CX,AX
 	MUL	BL			;AX = NUMBER OF BYTES TO CLEAR
 	ADD	[MEMLO],AX		;ALLOCATE MEMORY
-	MOV	AX,size sf-2
+	MOV	AX,sizeof.SF-2
 	ADD	[MEMLO],AX		;REMEMBER THE HEADER TOO
 	or	[SetDevMarkFlag], FOR_DEVMARK ;AN005;
 	INVOKE	ROUND			; Check for mem error before the STOSB
@@ -1050,12 +1051,12 @@ DOFCBS:
 	MOV	AL,"A"
 FillLoop:
 	PUSH	CX			; save count
-	MOV	CX,SIZE sf_entry	; number of bytes to fill
+	MOV	CX,sizeof.sf_entry	; number of bytes to fill
 	cld
 	REP	STOSB			; filled
-	MOV	WORD PTR ES:[DI-(SIZE sf_entry)+sf_ref_count],0
-	MOV	WORD PTR ES:[DI-(SIZE sf_entry)+sf_position],0
-	MOV	WORD PTR ES:[DI-(SIZE sf_entry)+sf_position+2],0
+	MOV	word [es:DI-(sizeof.sf_entry)+sf_entry.sf_ref_count],0
+	MOV	word [es:DI-(sizeof.sf_entry)+sf_entry.sf_position],0
+	MOV	word [es:DI-(sizeof.sf_entry)+sf_entry.sf_position+2],0
 	POP	CX
 	LOOP	FillLoop
 
@@ -1068,7 +1069,7 @@ FillLoop:
 
 	CMP	[BUFFERS], -1			; Has buffers been already set?
 	je	DoDefaultBuff
-	cmp	Buffer_Slash_X, 1		;AN000;
+	cmp	[Buffer_Slash_X], 1		;AN000;
 	jne	DO_Buffer			;AN000;
 	call	DoEMS				;AN000; Carry set if (enough) EMS is not available
 	jc	DoDefaultBuff			;AN000;  Error. Just use default buffer.
@@ -1080,18 +1081,18 @@ DoDefaultBuff:
 	MOV	[BUFFERS], 2			; Default to 2 buffers
 	PUSH	AX
 	PUSH	DS
-	LES	BP,CS:[DOSINFO] 		; Search through the DPB's
-	LES	BP,DWORD PTR ES:[BP.SYSI_DPB]	; Get first DPB
+	LES	BP,[cs:DOSINFO] 		; Search through the DPB's
+	LES	BP,dword [es:BP+SysInitVars.SYSI_DPB]	; Get first DPB
 
-ASSUME DS:SYSINITSEG
+;ASSUME DS:SYSINITSEG
 	PUSH	CS
 	POP	DS
 
 NEXTDPB:
 	; Test if the drive supports removeable media
-	MOV	BL, BYTE PTR ES:[BP.DPB_DRIVE]
+	MOV	BL, byte [es:BP+dpb.dpb_drive]
 	INC	BL
-	MOV	AX, (IOCTL SHL 8) OR 8
+	MOV	AX, (IOCtl SHL 8) OR 8
 	INT	21H
 
 ; Ignore fixed disks
@@ -1100,10 +1101,10 @@ NEXTDPB:
 
 ; Get parameters of drive
 	XOR	BX, BX
-	MOV	BL, BYTE PTR ES:[BP.DPB_DRIVE]
+	MOV	BL, byte [es:BP+dpb.dpb_drive]
 	INC	BL
-	MOV	DX, OFFSET DeviceParameters
-	MOV	AX, (IOCTL SHL 8) OR GENERIC_IOCTL
+	MOV	DX, DeviceParameters
+	MOV	AX, (IOCtl SHL 8) OR GENERIC_IOCTL
 	MOV	CX, (RAWIO SHL 8) OR GET_DEVICE_PARAMETERS
 	INT	21H
 	JC	NOSETBUF		; Get next DPB if driver doesn't support
@@ -1111,12 +1112,12 @@ NEXTDPB:
 
 ; Determine capacity of drive
 ; Media Capacity = #Sectors * Bytes/Sector
-	MOV	BX, WORD PTR DeviceParameters.DP_BPB.BPB_TotalSectors
+	MOV	BX, word [DeviceParameters+A_DEVICEPARAMETERS.DP_BPB+A_BPB.BPB_TOTALSECTORS]
 
 ; To keep the magnitude of the media capacity within a word,
 ; scale the sector size
 ; (ie. 1 -> 512 bytes, 2 -> 1024 bytes, ...)
-	MOV	AX, WORD PTR DeviceParameters.DP_BPB.BPB_BytesPerSector
+	MOV	AX, word [DeviceParameters+A_DEVICEPARAMETERS.DP_BPB+A_BPB.BPB_BYTESPERSECTOR]
 	XOR	DX, DX
 	MOV	CX, 512
 	DIV	CX				; Scale sector size in factor of
@@ -1132,10 +1133,10 @@ SETBUF:
 	jmp	Chk_Memsize_for_Buffers 	; Now check the memory size for default buffer count
 ;	 JMP	 BUFSET 			 ; Jump out of search loop
 NOSETBUF:
-	CMP	WORD PTR ES:[BP.DPB_NEXT_DPB],-1
+	CMP	word [es:BP+dpb.dpb_next_dpb],-1
 	jz	Chk_Memsize_for_Buffers
 ;	 JZ	 BUFSET
-	LES	BP,ES:[BP.DPB_NEXT_DPB]
+	LES	BP,[es:BP+dpb.dpb_next_dpb]
 	JMP	NEXTDPB
 
 ;J.K. 10/15/86 DCR00014.
@@ -1148,18 +1149,18 @@ NOSETBUF:
 ; If memory size > 512 kb (8000H para), then default buffers = 15.
 
 Chk_Memsize_for_Buffers:
-	cmp	[memory_size], 2000h
-	jbe	BufSet
-	mov	[buffers], 5
-	cmp	[memory_size], 4000h
-	jbe	BufSet
-	mov	[buffers], 10
-	cmp	[memory_size], 8000h
-	jbe	BufSet
-	mov	[buffers], 15
+	cmp	[MEMORY_SIZE], 2000h
+	jbe	BUFSET
+	mov	[BUFFERS], 5
+	cmp	[MEMORY_SIZE], 4000h
+	jbe	BUFSET
+	mov	[BUFFERS], 10
+	cmp	[MEMORY_SIZE], 8000h
+	jbe	BUFSET
+	mov	[BUFFERS], 15
 
 BUFSET:
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 	POP	DS
 	POP	AX
 
@@ -1235,126 +1236,126 @@ ASSUME	DS:NOTHING
 ;									       *
 ;*******************************************************************************
 DOBUFF: 					;AN000;
-	lds	bx, cs:[DosInfo]		;AN000; ds:bx -> SYSINITVAR
+	lds	bx, [cs:DOSINFO]		;AN000; ds:bx -> SYSINITVAR
 
-	mov	ax, [Buffers]				;AN000;Set SYSI_BUFFERS
-	mov	word ptr ds:[bx.SYSI_BUFFERS], ax	;AN000;
+	mov	ax, [BUFFERS]				;AN000;Set SYSI_BUFFERS
+	mov	word [bx+SysInitVars.SYSI_BUFFERS], ax	;AN000;
 	mov	ax, [H_Buffers] 			;AN000;
-	mov	word ptr ds:[bx.SYSI_BUFFERS+2], ax	;AN000;
+	mov	word [bx+SysInitVars.SYSI_BUFFERS+2], ax	;AN000;
 
-	lds	bx, ds:[bx.SYSI_BUF]		;AN000; now, ds:bx -> BuffInfo
-	cmp	ds:[bx.EMS_MODE], -1		;AN000;
+	lds	bx, [bx+SysInitVars.SYSI_BUF]		;AN000; now, ds:bx -> BuffInfo
+	cmp	[bx+Buffinfo.EMS_mode], -1		;AN000;
 ;	$IF	E, LONG 			;AN000;
-	JE $$XL1
-	JMP $$IF1
-$$XL1:
+	JE SI1_XL1
+	JMP SI1_IF1
+SI1_XL1:
 	    xor    dx, dx			;AN000;
-	    mov    ax, [Buffers]		;AN000; < 99
+	    mov    ax, [BUFFERS]		;AN000; < 99
 	    cmp al, 30				;AN026; if less than 30,
 ;	    $IF  B				;AN026;
-	    JNB $$IF2
+	    JNB SI1_IF2
 		mov [BufferBuckets], 1		;AN026;  then put every buffer
-		mov ds:[bx.HASH_COUNT], 1	;AN026;    into one bucket
+		mov [bx+Buffinfo.Hash_count], 1	;AN026;    into one bucket
 		mov [MaxNumBuf1], al		;AN026;
 		mov [NthBuck], 1		;AN026;
 ;	    $ELSE				;AN026; else...
-	    JMP SHORT $$EN2
-$$IF2:
+	    JMP SHORT SI1_EN2
+SI1_IF2:
 		mov cl, 15			;AN026; Magic number 15.
 		div cl				;AN026; al=# of buckets, ah=remainders
 		push ax 			;AN026; save the result
 		xor  ah, ah			;AN026;
 		mov  [BufferBuckets], ax	;AN026;
-		mov  ds:[bx.HASH_COUNT], ax	;AN026;
+		mov  [bx+Buffinfo.Hash_count], ax	;AN026;
 		pop  ax 			;AN026;
 		or   ah, ah			;AN026;
 ;		$IF  Z				;AN026;if no remainders
-		JNZ $$IF4
+		JNZ SI1_IF4
 		   mov [NthBuck], al		;AN026;then set NthBuck=# of bucket for Set_Buffer proc.
 ;		$ELSE				;AN026;else
-		JMP SHORT $$EN4
-$$IF4:
+		JMP SHORT SI1_EN4
+SI1_IF4:
 		   mov cl, al			;AN026;
 		   mov al, ah			;AN026;remainder/# of buckets
 		   xor ah, ah			;AN026; =
 		   div cl			;AN026;al=additional num of buffers
 		   or  ah, ah			;AN026;ah=Nth bucket
 ;		   $IF	Z			;AN026;
-		   JNZ $$IF6
+		   JNZ SI1_IF6
 		      add [MaxNumBuf1], al	;AN026;
 		      mov ax, [BufferBuckets]	;AN026;
 		      mov [NthBuck], al 	;AN026;
 ;		   $ELSE			;AN026;
-		   JMP SHORT $$EN6
-$$IF6:
+		   JMP SHORT SI1_EN6
+SI1_IF6:
 		      mov [NthBuck], ah 	;AN026;
 		      add [MaxNumBuf1], al	;AN026;MaxNumNuf are initially set to 15.
 		      add [MaxNumBuf2], al	;AN026;
 		      inc [MaxNumBuf1]		;AN026;Additional 1 more buffer for group 1 buckets.
 ;		   $ENDIF			;AN026;
-$$EN6:
+SI1_EN6:
 ;		$ENDIF				;AN026;
-$$EN4:
+SI1_EN4:
 ;	    $ENDIF				;AN026;
-$$EN2:
+SI1_EN2:
 ;	$ELSE					;AN000; Use the extended memory.
-	JMP SHORT $$EN1
-$$IF1:
+	JMP SHORT SI1_EN1
+SI1_IF1:
 	    mov   ax, [Buffer_Pages]		;AN000;
-	    mov   cx, MAXBUCKETINPAGE		;AN000;
+	    mov   cx, MaxBucketinPage		;AN000;
 	    mul   cx				;AN000; gauranteed to be word boundary.
 	    mov   [BufferBuckets], ax		;AN000;
-	    mov   ds:[bx.HASH_COUNT], ax	;AN000;
+	    mov   [bx+Buffinfo.Hash_count], ax	;AN000;
 ;	$ENDIF					;AN000;
-$$EN1:
-	invoke Round				;AN000; get [MEMHI]:[MEMLO]
+SI1_EN1:
+	invoke ROUND				;AN000; get [MEMHI]:[MEMLO]
 	mov	al, DEVMARK_BUF 		;AN005; ='B'
 	call	SetDevMark			;AN005;
 ;Now, allocate Hash table at [memhi]:[memlo]. AX = Hash_Count.
 	mov	ax, [BufferBuckets]		;AN026; # of buckets==Hash_Count
-	mov	cx, size BUFFER_HASH_ENTRY	;AN000;
+	mov	cx, sizeof.BUFFER_HASH_ENTRY	;AN000;
 	mul	cx				;AN000; now AX = Size of hash table.
-	les	di, ds:[bx.HASH_PTR]		;AN000; save Single buffer address.
-	mov	cx, [MemLo]			      ;AN000;
-	mov	word ptr ds:[bx.HASH_PTR], cx	      ;AN000; set BuffINFO.HASH_PTR
-	mov	cx, [MemHi]			      ;AN000;
-	mov	word ptr ds:[bx.HASH_PTR+2], cx       ;AN000;
-	mov	[Memlo], ax			      ;AN000;
+	les	di, [bx+Buffinfo.Hash_ptr]		;AN000; save Single buffer address.
+	mov	cx, [MEMLO]			      ;AN000;
+	mov	word [bx+Buffinfo.Hash_ptr], cx	      ;AN000; set BuffINFO.HASH_PTR
+	mov	cx, [MEMHI]			      ;AN000;
+	mov	word [bx+Buffinfo.Hash_ptr+2], cx       ;AN000;
+	mov	[MEMLO], ax			      ;AN000;
 	or	[SetDevMarkFlag], FOR_DEVMARK	;AN005;
-	call	Round				;AN000; get new [memhi]:[memlo]
+	call	ROUND				;AN000; get new [memhi]:[memlo]
 ;Allocate buffers
 	push	ds				;AN000; Save Buffer info. ptr.
 	push	bx				;AN000;
-	cmp	ds:[bx.EMS_MODE], -1		;AN000;
+	cmp	[bx+Buffinfo.EMS_mode], -1		;AN000;
 ;	$IF	NE				;AN000;
-	JE $$IF13
+	JE SI1_IF13
 	    call   Set_EMS_Buffer		;AN000;
 ;	$ELSE					;AN000;
-	JMP SHORT $$EN13
-$$IF13:
+	JMP SHORT SI1_EN13
+SI1_IF13:
 	    call   Set_Buffer			;AN000;
 ;	$ENDIF					;AN000;
-$$EN13:
+SI1_EN13:
 	pop	bx				;AN000;
 	pop	ds				;AN000;
 ;Now set the secondary buffer if specified.
 	cmp	[H_Buffers], 0			;AN000;
 ;	$IF	NE				;AN000;
-	JE $$IF16
-	    call   Round			;AN000;
-	    mov    cx, [MemLo]			;AN000;
-	    mov    word ptr ds:[bx.CACHE_PTR], cx    ;AN000;
-	    mov    cx, [MemHi]			     ;AN000;
-	    mov    word ptr ds:[bx.CACHE_PTR+2], cx  ;AN000;
+	JE SI1_IF16
+	    call   ROUND			;AN000;
+	    mov    cx, [MEMLO]			;AN000;
+	    mov    word [bx+Buffinfo.Cache_ptr], cx    ;AN000;
+	    mov    cx, [MEMHI]			     ;AN000;
+	    mov    word [bx+Buffinfo.Cache_ptr+2], cx  ;AN000;
 	    mov    cx, [H_Buffers]		     ;AN000;
-	    mov    ds:[bx.CACHE_COUNT], cx	     ;AN000;
+	    mov    [bx+Buffinfo.Cache_count], cx	     ;AN000;
 	    mov    ax, 512			;AN000; 512 byte
 	    mul    cx				;AN000;
-	    mov    [Memlo], ax			;AN000;
+	    mov    [MEMLO], ax			;AN000;
 	    or	   [SetDevMarkFlag], FOR_DEVMARK ;AN005;
-	    call   Round			;AN000;
+	    call   ROUND			;AN000;
 ;	$ENDIF					;AN000;
-$$IF16:
+SI1_IF16:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;J.K. END OF NEW BUFFER SCHEME.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1391,44 +1392,44 @@ BUF1:
 	call	SetDevMark			;AN005;
 	pop	ax				;AN005;
 	LES	DI,[DOSINFO]
-	MOV	CL,BYTE PTR ES:[DI.SYSI_NUMIO]
+	MOV	CL,byte [es:DI+SysInitVars.SYSI_NUMIO]
 	CMP	CL,[NUM_CDS]
 	JAE	GOTNCDS 			; User setting must be at least NUMIO
 	MOV	CL,[NUM_CDS]
 GOTNCDS:
 	XOR	CH,CH
-	MOV	ES:[DI.SYSI_NCDS],CL
+	MOV	[es:DI+SysInitVars.SYSI_NCDS],CL
 	MOV	AX,[MEMHI]
-	MOV	WORD PTR ES:[DI.SYSI_CDS + 2],AX
+	MOV	word [es:DI+SysInitVars.SYSI_CDS + 2],AX
 	MOV	AX,[MEMLO]
-	MOV	WORD PTR ES:[DI.SYSI_CDS],AX
+	MOV	word [es:DI+SysInitVars.SYSI_CDS],AX
 	MOV	AL,CL
-	MOV	AH,SIZE curdir_list
+	MOV	AH,sizeof.curdir_list
 	MUL	AH
 	call	ParaRound
 	ADD	[MEMHI],AX
 	or	[SetDevMarkFlag], FOR_DEVMARK	;AN005;
 	INVOKE	ROUND				; Check for mem error before initializing
-	LDS	SI,ES:[DI.SYSI_DPB]
-ASSUME	DS:NOTHING
-	LES	DI,ES:[DI.SYSI_CDS]
+	LDS	SI,[es:DI+SysInitVars.SYSI_DPB]
+;ASSUME	DS:NOTHING
+	LES	DI,[es:DI+SysInitVars.SYSI_CDS]
 	CALL	FOOSET
 
 ;------------------------------------------------------------------------------
 ; Allocate Space for Internal Stack
 ;------------------------------------------------------------------------------
 
-	IF	STACKSW
+	if	STACKSW
 
 	PUSH	CS
 	POP	DS
-	ASSUME	DS:SYSINITSEG
+;	ASSUME	DS:SYSINITSEG
 
-	IF	IBM
+	if	IBM
 ;Don't install the system stack on the PCjr. Ignore STACKS=command too.
 		CMP	[Sys_Model_Byte], 0FDh	     ; PCjr = 0FDh
-		JE	SkipStack_brdg
-	ENDIF
+		JE	SkipStack_Brdg
+	end if
 
 ;J.K. 10/15/86 DCR00013
 ;If the use does not entered STACKS= command, as a default, do not install
@@ -1436,44 +1437,44 @@ ASSUME	DS:NOTHING
 ;Otherwise, install it to the user specified value or to the default
 ;value of 9, 128 for the rest of the system.
 
-	cmp	word ptr [stack_addr], -1	;Has the user entered "stacks=" command?
+	cmp	word [STACK_ADDR], -1	;Has the user entered "stacks=" command?
 	je	DoInstallStack			;Then install as specified by the user
 	cmp	[Sys_Scnd_Model_Byte], 0	;PC1, XT has the secondary model byte = 0
 	jne	DoInstallStack			;Other model should have default stack of 9, 128
 	cmp	[Sys_Model_Byte], 0FFh		;PC1 ?
-	je	SkipStack_brdg
+	je	SkipStack_Brdg
 	cmp	[Sys_Model_Byte], 0FEh		;PC/XT or PC Portable ?
 	jne	DoInstallStack
 SkipStack_Brdg:
 	jmp	SkipStack
 DoInstallStack:
-	mov	ax, [stack_count]		;J.K. Stack_count = 0?
+	mov	ax, [STACK_COUNT]		;J.K. Stack_count = 0?
 	cmp	ax, 0				;then, stack size must be 0 too.
-	jz	SkipStack_brdg			;Don't install stack.
+	jz	SkipStack_Brdg			;Don't install stack.
 ;J.K. 10/21/86 Dynamic Relocation of Stack code.
-	call	Round				;[memhi] = Seg. for stack code
+	call	ROUND				;[memhi] = Seg. for stack code
 						;[memlo] = 0
 ;J.K. Set DEVMARK block into memory for MEM command
 ;J.K. DEVMARK_ID = 'S' for stack
 	mov	al, DEVMARK_STK 		;AN005;='S'
 	call	SetDevMark
 
-	mov	ax, [memhi]
+	mov	ax, [MEMHI]
 	mov	es, ax				;ES -> Seg. the stack code is going to move.
-	assume	es:nothing
+;	assume	es:nothing
 	push	cs
 	pop	ds
 	xor	si,si				;!!We know that Stack code is at the beginning of SYSINIT.
 	xor	di,di
-	mov	cx, offset Endstackcode
-	mov	[memlo],cx
-	call	Round				;Have enough space for relocation?
+	mov	cx, Endstackcode
+	mov	[MEMLO],cx
+	call	ROUND				;Have enough space for relocation?
 	rep	movsb
 
-	mov	ax, [memlo]
-	mov	word ptr [stack_addr],ax	;set for stack area initialization
-	mov	ax, [memhi]			;This will be used by Stack_Init routine.
-	mov	word ptr [stack_addr+2],ax
+	mov	ax, [MEMLO]
+	mov	word [STACK_ADDR],ax	;set for stack area initialization
+	mov	ax, [MEMHI]			;This will be used by Stack_Init routine.
+	mov	word [STACK_ADDR+2],ax
 
 ;	Space for Internal Stack area = STACK_COUNT(ENTRYSIZE + STACK_SIZE)
 	MOV	AX, EntrySize
@@ -1488,29 +1489,29 @@ DoInstallStack:
 	CALL	StackInit			; Initialize hardware stack. CS=DS=sysinitseg, ES=Relocated stack code & data
 
 SkipStack:
-	ENDIF
+	end if
 
 	PUSH	CS
 	POP	DS
-	ASSUME	DS:SYSINITSEG
+;	ASSUME	DS:SYSINITSEG
 
 	MOV	AL,[FILES]
 	XOR	AH,AH				; DO NOT USE CBW INSTRUCTION!!!!!
 						;  IT DOES SIGN EXTEND.
 	MOV	CX,AX
 	XOR	BX,BX				;Close standard input
-	MOV	AH,CLOSE
+	MOV	AH,Close
 	INT	21H
 	MOV	BX,2
 RCCLLOOP:					;Close everybody but standard output
-	MOV	AH,CLOSE			; Need output so we can print message
+	MOV	AH,Close			; Need output so we can print message
 	INT	21H				; in case we can't get new one open.
 	INC	BX
 	LOOP	RCCLLOOP
 
-	MOV	DX,OFFSET CONDEV
+	MOV	DX,CONDEV
 	MOV	AL,2
-	MOV	AH,OPEN 			;OPEN CON FOR READ/WRITE
+	MOV	AH,Open 			;OPEN CON FOR READ/WRITE
 	STC					; Set for possible INT 24
 	INT	21H
 	JNC	GOAUX
@@ -1519,21 +1520,21 @@ RCCLLOOP:					;Close everybody but standard output
 
 GOAUX:	PUSH	AX
 	MOV	BX,1				;close standard output
-	MOV	AH,CLOSE
+	MOV	AH,Close
 	INT	21H
 	POP	AX
 
 	MOV	BX,AX				;New device handle
-	MOV	AH,XDUP
+	MOV	AH,XDup
 	INT	21H				;Dup to 1, STDOUT
-	MOV	AH,XDUP
+	MOV	AH,XDup
 	INT	21H				;Dup to 2, STDERR
 
-GOAUX2: MOV	DX,OFFSET AUXDEV
+GOAUX2: MOV	DX,AUXDEV
 	MOV	AL,2				;READ/WRITE ACCESS
 	INVOKE	OPEN_DEV
 
-	MOV	DX,OFFSET PRNDEV
+	MOV	DX,PRNDEV
 	MOV	AL,1				;WRITE ONLY
 	INVOKE	OPEN_DEV
 
@@ -1567,7 +1568,7 @@ GOAUX2: MOV	DX,OFFSET AUXDEV
 ; call (INT 15h), function AH=0C0h returns the system configuration parameters
 ;
 
-	cmp	[sys_model_byte], 0FDh		;PCjr?
+	cmp	[Sys_Model_Byte], 0FDh		;PCjr?
 ;	 je	 GoCheckInstall
 	je	Set_Sysinit_Base
 ;SB33045*******************************************************************
@@ -1594,7 +1595,7 @@ GOAUX2: MOV	DX,OFFSET AUXDEV
 ;SB Secondary global rearm						  ;3.30
 	mov	ax,0f000h		;Get machine type	      ;SB ;3.30*
 	mov	es,ax			; *			      ;SB ;3.30*
-	cmp	byte ptr es:[0fffeh],0fch ;Q:Is it a AT type machine  ;SB ;3.30*
+	cmp	byte [es:0fffeh],0fch ;Q:Is it a AT type machine  ;SB ;3.30*
 	je	startrearm		  ; *if AT no need to check
 	mov	ah,0c0h 		;Get system configuration     ;SB ;3.30*
 	int	15h			; *			      ;SB ;3.30*
@@ -1602,7 +1603,7 @@ GOAUX2: MOV	DX,OFFSET AUXDEV
 ;								      ;SB ;3.30*
 ; Test feature byte for secondary interrupt controller		      ;SB ;3.30*
 ;								      ;SB ;3.30*
-	test	es:[bx.bios_SD_featurebyte1],ScndIntController ;      ;SB ;3.30*
+	test	[es:bx+BIOS_SYSTEM_DESCRIPTOR.bios_SD_featurebyte1],ScndIntController ;      ;SB ;3.30*
 	je	finishrearm		;Jmp if it is there	      ;SB ;3.30*
 startrearm:
 	mov	al,0ffh 		;Write any pattern to port    ;SB ;3.30*
@@ -1646,28 +1647,32 @@ Set_Sysinit_Base:
 ;is displayed by SYSINIT_BASE.
 ;------------------------------------------------------------------------------
 	push	ax				 ;AN013; Set DEVMARK for MEM command
-	mov	ax, [memhi]			 ;AN013;
-	sub	ax, [area]			 ;AN013;
-	mov	[Impossible_owner_size], ax	 ;AN013;Remember the size in case.
+	mov	ax, [MEMHI]			 ;AN013;
+	sub	ax, [AREA]			 ;AN013;
+	mov	[Impossible_Owner_Size], ax	 ;AN013;Remember the size in case.
 	mov	al, DEVMARK_INST		 ;AN013;
 	call	SetDevMark			 ;AN013;
 	pop	ax				 ;AN013;
 
-	mov	di, [memhi]			 ;AN000;
+	mov	di, [MEMHI]			 ;AN000;
 	mov	es, di				 ;AN000;
-	assume	es:nothing			 ;AN000;
-	mov	word ptr [sysinit_base_ptr+2],di ;AN000; save this entry for the next use.
+;	assume	es:nothing			 ;AN000;
+	mov	word [Sysinit_Base_Ptr+2],di ;AN000; save this entry for the next use.
 	xor	di, di				 ;AN000;
-	mov	word ptr [sysinit_base_ptr], di  ;AN000; es:di -> destination.
-	mov	si, offset SYSINIT_BASE 	 ;AN000; ds:si -> source code to be relocated.
-	mov	cx, Size_SYSINIT_BASE		 ;AN000;
-	add	[memlo],cx			 ;AN000;
-	or	cs:[SetDevMarkFlag], FOR_DEVMARK ;AN013;
-	call	round				 ;AN000; check mem error. Also, readjust MEMHI for the next use.
+	mov	word [Sysinit_Base_Ptr], di  ;AN000; es:di -> destination.
+	mov	si, Sysinit_Base 	 ;AN000; ds:si -> source code to be relocated.
+; fasm's EQU is a preprocessor definition, so it has to stand before the
+; line that uses it: the distance between the two labels rather than a
+; position read off $ at the end.
+SIZE_SYSINIT_BASE	equ End_Sysinit_Base-Sysinit_Base	;AN000;
+	mov	cx, SIZE_SYSINIT_BASE		 ;AN000;
+	add	[MEMLO],cx			 ;AN000;
+	or	[cs:SetDevMarkFlag], FOR_DEVMARK ;AN013;
+	call	ROUND				 ;AN000; check mem error. Also, readjust MEMHI for the next use.
 	rep	movsb				 ;AN000; reallocate it.
 
-	mov	word ptr [Sysinit_Ptr], offset SYSINITPTR ;AN000; Returing address from
-	mov	word ptr [Sysinit_Ptr+2], cs		  ;AN000;  SYSINIT_BASE back to SYSINIT.
+	mov	word [Sysinit_Ptr], SYSINITPTR ;AN000; Returing address from
+	mov	word [Sysinit_Ptr+2], cs		  ;AN000;  SYSINIT_BASE back to SYSINIT.
 	or	[Install_Flag],HAS_INSTALLED	 ;AN000; Set the flag.
 
 ;------------------------------------------------------------------------------
@@ -1683,13 +1688,13 @@ Set_Sysinit_Base:
 	mov	[Old_Area], ax			;AN013; Save [AREA]
 	MOV	ES,AX				;CALC WHAT WE NEEDED
 	SUB	BX,AX
-	MOV	AH,SETBLOCK
+	MOV	AH,Setblock
 	INT	21H				;GIVE THE REST BACK
 	PUSH	ES
 	MOV	AX,ES
 	DEC	AX
 	MOV	ES,AX				;Point to arena
-	MOV	ES:[arena_owner],8		;Set impossible owner
+	MOV	[es:arena.arena_owner],8		;Set impossible owner
 	POP	ES
 
 	mov	bx,0ffffh			;AN000;
@@ -1698,8 +1703,8 @@ Set_Sysinit_Base:
 	mov	ah,Alloc			;AN000;
 	int	21h				;AN000; Allocate the rest of the memory
 
-	mov	[memhi],ax			;AN000; Start of the allocated memory
-	mov	[memlo],0			;AN000;   to be used next.
+	mov	[MEMHI],ax			;AN000; Start of the allocated memory
+	mov	[MEMLO],0			;AN000;   to be used next.
 
 	;;;; At this moment, memory from [MEMHI]:0 to Top-of-the memory is
 	;;;; allocated.
@@ -1710,20 +1715,20 @@ Set_Sysinit_Base:
 	;;;; 3). "Free Alloc Memory" from MEMHI to CONFBOT.
 ;Memory allocation for SYSINIT, CONFBOT module.
 	mov	es, ax				;AN000;
-	mov	bx, [confbot]			;AN000;
+	mov	bx, [CONFBOT]			;AN000;
 	sub	bx, ax				;AN000; CONFBOT - MEMHI
 	dec	bx				;AN000; Make a room for the memory block id.
 	dec	bx				;AN000; make sure!!!.
-	mov	ah, SETBLOCK			;AN000;
+	mov	ah, Setblock			;AN000;
 	int	21h				;AN000; this will free (CONFBOT to top of memory)
 	mov	bx, 0ffffh			;AN000;
-	mov	ah, ALLOC			;AN000;
+	mov	ah, Alloc			;AN000;
 	int	21h				;AN000;
-	mov	ah, ALLOC			;AN000;
+	mov	ah, Alloc			;AN000;
 	int	21h				;AN000; allocate (CONFBOT to top of memory)
-	mov	[area],ax			;AN000; Save Allocated memory segment.
+	mov	[AREA],ax			;AN000; Save Allocated memory segment.
 						;AN000; Need this to free this area for COMMAND.COM.
-	mov	es, [memhi]			;AN000;
+	mov	es, [MEMHI]			;AN000;
 	mov	ah, 49h 			;AN000; Free Allocated Memory.
 	int	21h				;AN000; Free (Memhi to CONFBOT(=AREA))
 
@@ -1743,7 +1748,7 @@ ENDFILE_Ret:
 	return
 
 
-Do_Install_Exec proc near			;AN000; Now, handles INSTALL= command.
+Do_Install_Exec:				;AN000; Now, handles INSTALL= command.
 
 	push	si				;AN000; save SI for config.sys again.
 
@@ -1761,7 +1766,7 @@ Do_Install_Exec proc near			;AN000; Now, handles INSTALL= command.
 	push	ds				;AN000;
 	pop	es				;AN000;
 	pop	ds				;AN000; es->sysinitseg, ds->confbot seg
-	assume	ds:nothing			;AN000;
+;	assume	ds:nothing			;AN000;
 	mov	dx, si				;AN000; ds:dx->file name,0 in CONFIG.SYS image.
 ;AN016; UNDO THE EXTENDED ATTRIBUTES HANDLING
 ;	 mov	 ax, OPEN SHL 8 		 ;AN008;
@@ -1776,8 +1781,8 @@ Do_Install_Exec proc near			;AN000; Now, handles INSTALL= command.
 ;EA_Installable_OK:				 ;AN012;
 	xor	cx,cx				;AN000;
 	cld					;AN000;
-	mov	cs:Ldexec_start, ' '		;AN015; Clear out the parm area
-	mov	di, offset Ldexec_parm		;AN000;
+	mov	[cs:Ldexec_start], ' '		;AN015; Clear out the parm area
+	mov	di, Ldexec_parm		;AN000;
 InstallFilename:				;AN000;  skip the file name
 	lodsb					;AN000;  al = ds:si; si++
 	cmp	al, 0				;AN000;
@@ -1785,32 +1790,32 @@ InstallFilename:				;AN000;  skip the file name
 	jmp	InstallFilename 		;AN000;
 Got_InstallParm:				;AN000;  copy the parameters to Ldexec_parm
 	lodsb					;AN000;
-	mov	es:[di], al			;AN000;
+	mov	[es:di], al			;AN000;
 	cmp	al, LF				;AN000;AN028;  line feed?
-	je	Done_InstallParm		;AN000;AN028;
+	je	Done_Installparm		;AN000;AN028;
 	inc	cl				;AN000;  # of char. in the parm.
 	inc	di				;AN000;
-	jmp	Got_Installparm 		;AN000;
+	jmp	Got_InstallParm 		;AN000;
 Done_Installparm:				;AN000;
-	mov	byte ptr cs:[Ldexec_line], cl	;AN000;  length of the parm.
+	mov	byte [cs:Ldexec_Line], cl	;AN000;  length of the parm.
 	cmp	cl, 0				;AN015;If no parm, then
 	jne	Install_Seg_Set 		;AN015; let the parm area
-	mov	byte ptr cs:[Ldexec_Start],CR	;AN015;   starts with CR.
+	mov	byte [cs:Ldexec_start],CR	;AN015;   starts with CR.
 Install_Seg_Set:				;AN015;
-	mov	word ptr cs:0, 0		;AN000;  Make a null environment segment
+	mov	word [cs:0], 0		;AN000;  Make a null environment segment
 	mov	ax, cs				;AN000;   by overlap JMP instruction of SYSINITSEG.
-	mov	cs:[INSTEXE.EXEC0_ENVIRON],ax	;AN000; Set the environment seg.
-	mov	word ptr cs:[INSTEXE.EXEC0_COM_LINE+2],ax  ;AN000; Set the seg.
-	mov	word ptr cs:[INSTEXE.EXEC0_5C_FCB+2],ax    ;AN000;
-	mov	word ptr cs:[INSTEXE.EXEC0_6C_FCB+2],ax    ;AN000;
+	mov	[cs:INSTEXE.Exec0_environ],ax	;AN000; Set the environment seg.
+	mov	word [cs:INSTEXE.Exec0_com_line+2],ax  ;AN000; Set the seg.
+	mov	word [cs:INSTEXE.Exec0_5C_FCB+2],ax    ;AN000;
+	mov	word [cs:INSTEXE.Exec0_6C_FCB+2],ax    ;AN000;
 	call	Sum_up				;AN000;
-	mov	es:CheckSum, ax 		;AN000;  save the value of the sum
+	mov	[es:CheckSum], ax 		;AN000;  save the value of the sum
 	xor	ax,ax				;AN000;
-	mov	ah, EXEC			;AN000;  Load/Exec
-	mov	bx, offset INSTEXE		;AN000;  ES:BX -> parm block.
+	mov	ah, Exec			;AN000;  Load/Exec
+	mov	bx, INSTEXE		;AN000;  ES:BX -> parm block.
 	push	es				;AN000; Save es,ds for Load/Exec
 	push	ds				;AN000; these registers will be restored in SYSINIT_BASE.
-	jmp	cs:dword ptr SYSINIT_BASE_PTR	;AN000; jmp to SYSINIT_BASE to execute
+	jmp	dword [cs:Sysinit_Base_Ptr]	;AN000; jmp to SYSINIT_BASE to execute
 						; LOAD/EXEC function and check sum.
 
 ;J.K. This is the returning address from SYSINIT_BASE.
@@ -1821,14 +1826,14 @@ SYSINITPTR:					;AN000; returning far address from SYSINIT_BASE
 	pop	es				;AN000;
 	pop	ds				;AN000; now ds - sysinitseg, es - confbot
 	jnc	Exec_Exit_Code
-	test	cs:Install_Flag, SHARE_INSTALL	;AN021; Called by LoadShare proc?
+	test	[cs:Install_Flag], SHARE_INSTALL	;AN021; Called by LoadShare proc?
 	jnz	Install_Error_Exit		;AN021; Just exit with carry set.
 	push	si				;AN000; Error in loading the file for INSTALL=.
-	call	BadLoad 			;AN000; ES:SI-> path,filename,0.
+	call	BADLOAD 			;AN000; ES:SI-> path,filename,0.
 	pop	si				;AN000;
 	jmp	Install_Exit_Ret
 Exec_Exit_Code:
-	test	cs:Install_Flag, SHARE_INSTALL	;AN021; Called by LoadShare proc?
+	test	[cs:Install_Flag], SHARE_INSTALL	;AN021; Called by LoadShare proc?
 	jnz	Install_Exit_Ret		;AN021; Just exit.
 	mov	ah, 4dh 			;AN017;
 	int	21h				;AN017;
@@ -1839,9 +1844,9 @@ Install_Error_Exit:				;AN021;
 	stc					;AN021;
 Install_Exit_Ret:
 	ret
-Do_Install_Exec endp
+;Do_Install_Exec endp
 
-Public	ParaRound
+;Public	ParaRound
 ParaRound:
 	ADD	AX,15
 	RCR	AX,1
@@ -1866,30 +1871,36 @@ ParaRound:
 ;Note: SYSINIT should save necessary registers and when the control is back
 
 
-	public	Sysinit_Base
+;	public	Sysinit_Base
 Sysinit_Base:					;AN000;
-	mov	word ptr cs:SYSINIT_BASE_SS, SS ;AN000; save stack
-	mov	word ptr cs:SYSINIT_BASE_SP, SP ;AN000;
+; Offsets inside the block that gets relocated, which MASM read off $ at
+; the data below; fasm's EQU has to stand before the line that uses it,
+; so each is the distance between two labels instead.
+Sysinit_Base_SS  equ Sysinit_Base_SS_at-Sysinit_Base	;AN000;
+Sysinit_Base_SP  equ Sysinit_Base_SP_at-Sysinit_Base	;AN000;
+Mem_Alloc_Err_msg equ Mem_Alloc_Err_msg_at-Sysinit_Base	;AN000;
+	mov	word [cs:Sysinit_Base_SS], SS ;AN000; save stack
+	mov	word [cs:Sysinit_Base_SP], SP ;AN000;
 	int	21h				;AN000; LOAD/EXEC DOS call.
-	mov	SS, word ptr cs:SYSINIT_BASE_SS ;AN000; restore stack
-	mov	SP, word ptr cs:SYSINIT_BASE_SP ;AN000;
+	mov	SS, word [cs:Sysinit_Base_SS] ;AN000; restore stack
+	mov	SP, word [cs:Sysinit_Base_SP] ;AN000;
 	pop	ds				;AN000; restore CONFBOT seg
 	pop	es				;AN000; restore SYSINITSEG
 	jc	SysInit_Base_End		;AN000; LOAD/EXEC function failed.
 						;At this time, I don't have to worry about
 						;that SYSINIT module has been broken or not.
 	call	Sum_up				;AN000; Otherwise, check if it is good.
-	cmp	es:CheckSum, AX 		;AN000;
+	cmp	[es:CheckSum], AX 		;AN000;
 	je	SysInit_Base_End		;AN000;
 ;Memory broken. Show "Memory allocation error" message and stall.
 	mov	ah, 09h 			;AN000;
 	push	cs				;AN000;
 	pop	ds				;AN000;
-	mov	dx, Mem_alloc_err_msg		;AN000;
+	mov	dx, Mem_Alloc_Err_msg		;AN000;
 	int	21h				;AN000;
 Stall_now: jmp	  Stall_now			;AN000;
 
-SysInit_Base_End: jmp	  es:Sysinit_Ptr	;AN000; return back to sysinit module
+SysInit_Base_End: jmp	  [es:Sysinit_Ptr]	;AN000; return back to sysinit module
 
 Sum_up: 					;AN000;
 ;In:
@@ -1901,43 +1912,43 @@ Sum_up: 					;AN000;
 ;	 gaurantee to be safe.
 ;First sum up CONFBOT seg.
 	push	ds				;AN021;
-	mov	ax,es:ConfBot			;AN021;
+	mov	ax,[es:CONFBOT]			;AN021;
 	mov	ds,ax				;AN021;
 	xor	si,si				;AN000;
 	xor	ax,ax				;AN000;
-	mov	cx,es:Config_Size		;AN000; If CONFIG_SIZE has been broken, then this
+	mov	cx,[es:Config_Size]		;AN000; If CONFIG_SIZE has been broken, then this
 						;whole test better fail.
 	shr	cx, 1				;AN000; make it a word count
 	jz	Sum_Sys_Code			;AN025; When CONFIG.SYS file not exist.
 Sum1:						;AN000;
-	add	ax, ds:word ptr [si]		;AN000;
+	add	ax, word [si]		;AN000;
 	inc	si				;AN000;
 	inc	si				;AN000;
 	loop	Sum1				;AN000;
 ;Now, sum up SYSINIT module.
 Sum_Sys_Code:					;AN025;
-	mov	si, offset LocStack		;AN000; Starting after the stack.
+	mov	si, LOCSTACK		;AN000; Starting after the stack.
 						;AN000;  This does not cover the possible STACK code!!!
-	mov	cx, offset SYSSIZE		;AN000; SYSSIZE is the label at the end of SYSINIT
+	mov	cx, SYSSIZE		;AN000; SYSSIZE is the label at the end of SYSINIT
 	sub	cx, si				;AN000;  From After_Checksum to SYSSIZE
 	shr	cx, 1				;AN000;
 Sum2:						;AN000;
-	add	ax, es:word ptr [si]		;AN000;
+	add	ax, word [es:si]		;AN000;
 	inc	si				;AN000;
 	inc	si				;AN000;
 	loop	Sum2				;AN000;
 	pop	ds				;AN021;
 	ret					;AN000;
 
-Sysinit_Base_SS  equ $-Sysinit_Base		;AN000;
+Sysinit_Base_SS_at:				;AN000;
 		dw	?			;AN000;
-Sysinit_Base_SP  equ $-Sysinit_Base		;AN000;
+Sysinit_Base_SP_at:				;AN000;
 		dw	?			;AN000;
-Mem_Alloc_Err_msg equ $-Sysinit_Base		;AN000;
+Mem_Alloc_Err_msg_at:				;AN000;
 ;include BASEMES.INC				;AN000; Memory allocation error message
-include MSBIO.CL4				;AN011; Memory allocation error message
-End_Sysinit_Base	label	byte		;AN000;
-SIZE_SYSINIT_BASE	equ $-Sysinit_Base	;AN000;
+INCLUDE 'MSBIO.CL4'				;AN011; Memory allocation error message
+End_Sysinit_Base:;AN000;
+;SIZE_SYSINIT_BASE	equ $-Sysinit_Base	;AN000;	; written above, where it is needed
 
 ;
 ;AN016; Undo the extended attribute handling
@@ -1977,7 +1988,7 @@ SIZE_SYSINIT_BASE	equ $-Sysinit_Base	;AN000;
 
 ;------------------------------------------------------------------------------
 
-DoEMS	proc	near
+DoEMS:
 ;*******************************************************************************
 ; Function: Called prior to DOBUFF subroutine.	Only called when /E option     *
 ;	    for the buffers= command has been specified.		       *
@@ -2020,78 +2031,78 @@ DoEMS	proc	near
 	push	bx				;AN010;
 	xor	di,di				;AN004; if vector pointer of
 	mov	es, di				;AN004; EMS (INT 67h) is 0,0
-	mov	di, word ptr es:[EMS_INT * 4]	;AN004; then error.
-	mov	ax, word ptr es:[EMS_INT * 4 +2]   ;AN009;
+	mov	di, word [es:EMS_INT * 4]	;AN004; then error.
+	mov	ax, word [es:EMS_INT * 4 +2]   ;AN009;
 	or	ax,di				   ;AN009;
 ;	$IF	NZ,AND,LONG			;AN004;
-	JNZ $$XL2
-	JMP $$IF18
-$$XL2:
-	les	di, cs:[DosInfo]		;AN000; es:di -> SYSINITVAR
-	les	di, es:[di.SYSI_BUF]		;AN000; now, es:di -> BuffInfo
+	JNZ SI1_XL2
+	JMP SI1_IF18
+SI1_XL2:
+	les	di, [cs:DOSINFO]		;AN000; es:di -> SYSINITVAR
+	les	di, [es:di+SysInitVars.SYSI_BUF]		;AN000; now, es:di -> BuffInfo
 
 	mov	ah, EMS_STATUS			;AN000; get the status of EMS = 40h
 	int	EMS_INT 			;AN000;
 	or	ah, ah				;AN000; EMS installed?
 ;	$IF	Z,AND,LONG			;AN000;
-	JZ $$XL3
-	JMP $$IF18
-$$XL3:
+	JZ SI1_XL3
+	JMP SI1_IF18
+SI1_XL3:
 	     mov ah, EMS_VERSION		;AN010;=46h
 	     int  EMS_INT			;AN010;
 	     cmp AL, EMSVERSION 		;AN010;40h = 4.0
 ;	$IF    AE,AND,LONG			;AN010;
-	JAE $$XL4
-	JMP $$IF18
-$$XL4:
+	JAE SI1_XL4
+	JMP SI1_IF18
+SI1_XL4:
 	     call Check_IBM_PageID		;AN000; IBM (compatible) mode?
 
-IF	BUFFERFLAG
-		mov	ax, cs:[LAST_PAGE]
-		mov	es:[di.EMS_LAST_PAGE], ax
-		mov	ax, cs:[LAST_PAGE+2]
-		mov	es:[di.EMS_LAST_PAGE+2], ax
-		mov	ax, cs:[FIRST_PAGE]
-		mov	es:[di.EMS_FIRST_PAGE], ax
-		mov	ax, cs:[FIRST_PAGE+2]
-		mov	es:[di.EMS_FIRST_PAGE+2], ax
-		mov	ax, cs:[NPA640]
-		mov	es:[di.EMS_NPA640], ax
-		mov	es:[di.EMS_SAFE_FLAG], 1
-ENDIF
+if	BUFFERFLAG
+		mov	ax, [cs:LAST_PAGE]
+		mov	[es:di+Buffinfo.EMS_LAST_PAGE], ax
+		mov	ax, [cs:LAST_PAGE+2]
+		mov	[es:di+Buffinfo.EMS_LAST_PAGE+2], ax
+		mov	ax, [cs:FIRST_PAGE]
+		mov	[es:di+Buffinfo.EMS_FIRST_PAGE], ax
+		mov	ax, [cs:FIRST_PAGE+2]
+		mov	[es:di+Buffinfo.EMS_FIRST_PAGE+2], ax
+		mov	ax, [cs:NPA640]
+		mov	[es:di+Buffinfo.EMS_NPA640], ax
+		mov	[es:di+Buffinfo.EMS_SAFE_FLAG], 1
+end if
 
 ;	$IF	NC,AND,LONG			;AN000;
-	JNC $$XL5
-	JMP $$IF18
-$$XL5:
+	JNC SI1_XL5
+	JMP SI1_IF18
+SI1_XL5:
 	     mov ah, EMAP_STATE 		;AN010; Check if the size of
 	     mov al, GET_MAP_SIZE		;AN010;   the MAP state table
 	     mov bx, 1				;AN010; # of pages
 	     int  EMS_INT			;AN010;   is acceptable.
 	     or  ah, ah 			;AN010;
 ;	$IF	Z,AND				;AN010;
-	JNZ $$IF18
+	JNZ SI1_IF18
 	     cmp al, EMS_MAP_BUFF_SIZE		;AN010; Curretly=12 bytes
 ;	$IF	BE,AND				;AN010;
-	JNBE $$IF18
+	JNBE SI1_IF18
 	     mov  ah, EQ_PAGES			;AN000; Get number of unallocated & total pages = 42h
 	     int  EMS_INT			;AN000; result in BX
 	     xor  dx, dx			;AN000;
-	     mov  ax, cs:[Buffers]		;AN000;
-	     mov  cx, MAXBUFFINBUCKET*MAXBUCKETINPAGE	;AN000;
+	     mov  ax, [cs:BUFFERS]		;AN000;
+	     mov  cx, MaxBuffinBucket*MaxBucketinPage	;AN000;
 	     call Roundup			;AN000; find out how many pages are needed.
 	     cmp  bx, ax			;AN000; AX is the number of pages for [buffers]
 ;	$IF	AE,AND				;AN000;
-	JNAE $$IF18
-	     mov  cs:[Buffer_Pages], ax 	;AN000;
+	JNAE SI1_IF18
+	     mov  [cs:Buffer_Pages], ax 	;AN000;
 	     mov  bx, ax			;AN000; prepare for Get handle call.
 	     mul  cx				;AN000;
-	     mov  cs:[Buffers], ax		;AN000; set new [Buffers] for the extended memory.
+	     mov  [cs:BUFFERS], ax		;AN000; set new [Buffers] for the extended memory.
 	     mov  ah, E_GET_HANDLE		;AN000; allocate pages = 43h
 	     int  EMS_INT			;AN000; page handle in DX.
 	     or   ah, ah			;AN000;
 ;	$IF	Z				;AN000; pages allocated.
-	JNZ $$IF18
+	JNZ SI1_IF18
 	     mov ah, EMS_HANDLE_NAME		;AN010;
 	     mov al, SET_HANDLE_NAME		;AN010;
 	     push es				;AN010;
@@ -2099,48 +2110,48 @@ $$XL5:
 	     push ds				;AN010;
 	     push cs				;AN010;
 	     pop  ds				;AN010;
-	     mov  si, offset EMSHandleName	;AN010;
+	     mov  si, EMSHandleName	;AN010;
 	     int  EMS_INT			;AN010; Set the handle name
 	     pop  ds				;AN010;
 	     pop  di				;AN010;
 	     pop  es				;AN010;
 	     xor  ah,ah 			;AN010;
-	     mov es:[di.EMS_MODE], ah		;AN000; put 0 in EMS_mode.
-	     mov es:[di.EMS_HANDLE], dx 	;AN000; save EMS handle
-	     mov ax, cs:[IBM_Frame_Seg] 	;AN010;
-	     mov es:[di.EMS_PAGE_FRAME],ax	;AN010;
-	     mov ax, cs:[Real_IBM_Page_Id]	 ;AN029;
-	     mov es:[di.EMS_PAGEFRAME_NUMBER], ax;AN029;
+	     mov [es:di+Buffinfo.EMS_mode], ah		;AN000; put 0 in EMS_mode.
+	     mov [es:di+Buffinfo.EMS_handle], dx 	;AN000; save EMS handle
+	     mov ax, [cs:IBM_Frame_Seg] 	;AN010;
+	     mov [es:di+Buffinfo.EMS_Page_Frame],ax	;AN010;
+	     mov ax, [cs:Real_IBM_Page_Id]	 ;AN029;
+	     mov [es:di+Buffinfo.EMS_PageFrame_Number], ax;AN029;
 	     mov ax, es 			;AN010;
-	     mov word ptr cs:[EMS_Ctrl_tab+2],ax ;AN010;
-	     mov word ptr cs:[EMS_state_buf+2],ax;AN010;
+	     mov word [cs:EMS_Ctrl_Tab+2],ax ;AN010;
+	     mov word [cs:EMS_State_Buf+2],ax;AN010;
 	     push di				;AN010;save di-> Buffinfo
-	     add di, EMS_SEG_CNT		;AN010;
-	     mov word ptr cs:[EMS_Ctrl_tab], di ;AN010;
+	     add di, Buffinfo.EMS_Seg_Cnt		;AN010;
+	     mov word [cs:EMS_Ctrl_Tab], di ;AN010;
 	     pop di				;AN010;
-	     add di, EMS_MAP_BUFF		;AN010;
-	     mov word ptr cs:[EMS_state_Buf],di ;AN010;
+	     add di, Buffinfo.EMS_Map_Buff		;AN010;
+	     mov word [cs:EMS_State_Buf],di ;AN010;
 	     clc				;AN000;
 ;	$ELSE					;AN000;
-	JMP SHORT $$EN18
-$$IF18:
-	     mov  ax, cs:[Buffer_LineNum]	;AN000; Show error message.
-	     push cs:[LineCount]		;AN017; Save current line count
-	     mov  cs:[LineCount], ax		;AN000; Now, we can change Linecount
+	JMP SHORT SI1_EN18
+SI1_IF18:
+	     mov  ax, [cs:Buffer_LineNum]	;AN000; Show error message.
+	     push [cs:LineCount]		;AN017; Save current line count
+	     mov  [cs:LineCount], ax		;AN000; Now, we can change Linecount
 	     call Error_Line			;AN000; since we are through with CONFIG.SYS file.
-	     pop cs:[LineCount] 		;AN017; Restore line count
+	     pop [cs:LineCount] 		;AN017; Restore line count
 	     stc				;AN000;
 ;	$ENDIF
-$$EN18:
+SI1_EN18:
 	pop	bx				;AN010;
 	pop	si				;AN010;
 	pop	di				;AN000;
 	pop	es				;AN000;
 	ret					;AN000;
-DoEMS	endp
+;DoEMS	endp
 
 ;
-Set_Buffer	proc	near
+Set_Buffer:
 ;*******************************************************************************
 ;Function: Set buffers in the real memory.				       *
 ;	   For each hash table entry, set the pointer to the		       *
@@ -2177,56 +2188,56 @@ Set_Buffer	proc	near
 ;	   };								       *
 ;*******************************************************************************
 
-	assume	ds:nothing			;AN000;to make sure.
-	lds	bx, ds:[bx.HASH_PTR]		;AN000;now, ds:bx -> hash table
+;	assume	ds:nothing			;AN000;to make sure.
+	lds	bx, [bx+Buffinfo.Hash_ptr]		;AN000;now, ds:bx -> hash table
 	xor	dx, dx				;AN026;To be used to count buckets
 ;	$DO					;AN000;For each bucket
-$$DO21:
+SI1_DO21:
 	    inc  dl				      ;AN026; Current bucket number
-	    mov  word ptr ds:[bx.BUFFER_BUCKET],0     ;AN000;Memlo is 0 after ROUND.
-	    mov  di, [MemHi]			      ;AN000;
-	    mov  word ptr ds:[bx.BUFFER_BUCKET+2], di ;AN000;Hash entry set.
-	    mov word ptr ds:[bx.DIRTY_COUNT], 0       ;AN020;set DIRTY_COUNT, BUFFER_RESERVED to 0.
+	    mov  word [bx+BUFFER_HASH_ENTRY.BUFFER_BUCKET],0     ;AN000;Memlo is 0 after ROUND.
+	    mov  di, [MEMHI]			      ;AN000;
+	    mov  word [bx+BUFFER_HASH_ENTRY.BUFFER_BUCKET+2], di ;AN000;Hash entry set.
+	    mov word [bx+BUFFER_HASH_ENTRY.DIRTY_COUNT], 0       ;AN020;set DIRTY_COUNT, BUFFER_RESERVED to 0.
 	    mov  es, di 			;AN000;
 	    xor  di, di 			;AN000;es:di -> hash bucket
 	    xor  cx, cx 			;AN000
 	    xor  ax, ax 			;AN000
 ;	    $DO 				;AN000;For each buffer in the bucket
-$$DO22:
+SI1_DO22:
 		call Set_Buffer_Info		;AN000;Set buf_link, buf_id...
 		inc cx				;AN000;buffer number
 		cmp dl, [NthBuck]		;AN026;Current bucket number > NthBuck?
 ;		$IF BE				;AN026;
-		JNBE $$IF23
+		JNBE SI1_IF23
 		    cmp cl, [MaxNumBuf1]	;AN026; last buffer of the 1st group?
 ;		$ELSE				;AN026;
-		JMP SHORT $$EN23
-$$IF23:
+		JMP SHORT SI1_EN23
+SI1_IF23:
 		    cmp cl, [MaxNumBuf2]	;AN026; last buffer of the 2nd group?
 ;		$ENDIF				;AN026;
-$$EN23:
+SI1_EN23:
 
 ;		$IF  E				     ;AN020;Yes, last buffer
-		JNE $$IF26
-		   mov	word ptr es:[di.BUF_NEXT], 0 ;AN020;the last buffer's next -> the first buffer in bucket (Circular chain)
-		   mov	word ptr es:[BUF_PREV], di   ;AN020;the first buffer's prev -> the last buffer
+		JNE SI1_IF26
+		   mov	word [es:di+BUFFINFO.buf_next], 0 ;AN020;the last buffer's next -> the first buffer in bucket (Circular chain)
+		   mov	word [es:BUFFINFO.buf_prev], di   ;AN020;the first buffer's prev -> the last buffer
 ;		$ENDIF				     ;AN020;
-$$IF26:
+SI1_IF26:
 		mov  di, ax			;AN000;adjust next buffer position
 ;	    $ENDDO   E				;AN000;flag set already for testing last buffer.
-	    JNE $$DO22
-	    add  [Memlo], ax			;AN000;AX is the size of this bucket.
+	    JNE SI1_DO22
+	    add  [MEMLO], ax			;AN000;AX is the size of this bucket.
 	    or	 [SetDevMarkFlag], FOR_DEVMARK	;AN005;Update DEVMARK_SIZE
-	    call Round				;AN000;memhi:memlo adjusted for the next bucket.
-	    add  bx, size BUFFER_HASH_ENTRY	;AN000;ds:bx -> next hash entry.
+	    call ROUND				;AN000;memhi:memlo adjusted for the next bucket.
+	    add  bx, sizeof.BUFFER_HASH_ENTRY	;AN000;ds:bx -> next hash entry.
 	    dec  [BufferBuckets]		;AN000;
 ;	$ENDDO	 Z				;AN000;
-	JNZ $$DO21
+	JNZ SI1_DO21
 	ret					;AN000;
-Set_Buffer	endp
+;Set_Buffer	endp
 
 ;
-Set_EMS_Buffer	    proc    near
+Set_EMS_Buffer:
 ;*******************************************************************************
 ;Function: Set buffers in the extended memory.				       *
 ;	   For each hash table entry, set the pointer to the corresponding     *
@@ -2264,80 +2275,80 @@ Set_EMS_Buffer	    proc    near
 ;	   };								       *
 ;*******************************************************************************
 
-	assume	ds:nothing			;AN000;to make sure.
+;	assume	ds:nothing			;AN000;to make sure.
 
-IF	BUFFERFLAG
+if	BUFFERFLAG
 
 	push	ax
-	mov	ax, offset ems_save_buf
-	mov	word ptr cs:[ems_state_buf], ax
+	mov	ax, EMS_SAVE_BUF
+	mov	word [cs:EMS_State_Buf], ax
 	push	cs
-	pop	word ptr cs:[ems_state_buf+2]
+	pop	word [cs:EMS_State_Buf+2]
 	pop	ax
 
-ENDIF
+end if
 
-	call	Save_MAP_State			;AN010;
-	mov	dx, es:[bx.EMS_Handle]		;AN000;save EMS_Handle
-	lds	si, ds:[bx.HASH_PTR]		;AN000;now ds:si -> Hash table
+	call	Save_Map_State			;AN010;
+	mov	dx, [es:bx+Buffinfo.EMS_handle]		;AN000;save EMS_Handle
+	lds	si, [bx+Buffinfo.Hash_ptr]		;AN000;now ds:si -> Hash table
 	xor	bx, bx				;AN000;starting logical page number.
 ;	$DO					;AN000;For each page,
-$$DO30:
+SI1_DO30:
 	     call  Map_Page			;AN000;map it to IBM physical page 254.
-	     mov   di, cs:IBM_Frame_Seg 	;AN000;
+	     mov   di, [cs:IBM_Frame_Seg] 	;AN000;
 	     mov   es, di			;AN000
 	     xor   di, di			;AN000;es:di -> bucket
 	     xor   ax, ax			;AN000
 	     xor   cx, cx			;AN000
 ;	     $DO				;AN000;For each bucket,
-$$DO31:
-		 mov ds:[si.EMS_PAGE_NUM], bx	;AN000;set the logical page number in Hash table.
-		 mov word ptr ds:[si.BUFFER_BUCKET], di   ;AN000;set the offset in hash table for this bucket.
-		 mov word ptr ds:[si.BUFFER_BUCKET+2], es ;AN000;set the segment value in hash table.
-		 mov word ptr ds:[si.DIRTY_COUNT], 0	  ;AN020;set DIRTY_COUNT, BUFFER_RESERVED to 0.
+SI1_DO31:
+		 mov [si+BUFFER_HASH_ENTRY.EMS_PAGE_NUM], bx	;AN000;set the logical page number in Hash table.
+		 mov word [si+BUFFER_HASH_ENTRY.BUFFER_BUCKET], di   ;AN000;set the offset in hash table for this bucket.
+		 mov word [si+BUFFER_HASH_ENTRY.BUFFER_BUCKET+2], es ;AN000;set the segment value in hash table.
+		 mov word [si+BUFFER_HASH_ENTRY.DIRTY_COUNT], 0	  ;AN020;set DIRTY_COUNT, BUFFER_RESERVED to 0.
 		 push cx			;AN000;save bucket number
 		 xor cx, cx			;AN000;
 ;		 $DO				;AN000;For each buffer in a bucket,
-$$DO32:
+SI1_DO32:
 		     call Set_Buffer_Info	;AN000;AX adjusted for the next buffer.
 		     inc  cx			;AN000;inc number of buffers in this bucket.
 		     cmp  cx, 1 		;AN020;The first buffer in the bucket?
 ;		     $IF  E			;AN020;
-		     JNE $$IF33
-			  mov  cs:[EMS_Buf_First], di ;AN020;then save the offset value
+		     JNE SI1_IF33
+			  mov  [cs:EMS_Buf_First], di ;AN020;then save the offset value
 ;		     $ENDIF			;AN020;
-$$IF33:
-		     cmp  cx, MAXBUFFINBUCKET	;AN000;
+SI1_IF33:
+		     cmp  cx, MaxBuffinBucket	;AN000;
 ;		     $IF  E			;AN000
-		     JNE $$IF35
-			  push word ptr cs:[EMS_Buf_First]  ;AN020;
-			  pop  word ptr es:[di.BUF_NEXT]    ;AN020;the last buffer's next -> the first buffer in bucket (Circular chain)
+		     JNE SI1_IF35
+			  push word [cs:EMS_Buf_First]  ;AN020;
+			  pop  word [es:di+BUFFINFO.buf_next]    ;AN020;the last buffer's next -> the first buffer in bucket (Circular chain)
 			  push di			    ;AN020;save di
 			  push di			    ;AN020;di-> last buffer
-			  mov  di, cs:[EMS_Buf_First]	    ;AN020;es:di-> first buffer
-			  pop  word ptr es:[di.BUF_PREV]    ;AN020;the first buffer's prev -> the last buffer
+			  mov  di, [cs:EMS_Buf_First]	    ;AN020;es:di-> first buffer
+			  pop  word [es:di+BUFFINFO.buf_prev]    ;AN020;the first buffer's prev -> the last buffer
 			  pop  di			    ;AN020;restore di
 ;		     $ENDIF				    ;AN000;
-$$IF35:
+SI1_IF35:
 		     mov di, ax 		;AN000;advance di to the next buffer position.
 ;		 $ENDDO  E			;AN000;
-		 JNE $$DO32
-		 add si, size BUFFER_HASH_ENTRY ;AN000;ds:si -> next hash table entry
+		 JNE SI1_DO32
+		 add si, sizeof.BUFFER_HASH_ENTRY ;AN000;ds:si -> next hash table entry
 		 pop cx 			;AN000;restore bucket number
 		 inc cx 			;AN000;next bucket
-		 cmp cx, MAXBUCKETINPAGE	;AN000;2 buckets per page
+		 cmp cx, MaxBucketinPage	;AN000;2 buckets per page
 ;	     $ENDDO  E				;AN000;
-	     JNE $$DO31
+	     JNE SI1_DO31
 	     inc bx				;AN000;increse logical page number
-	     cmp bx, cs:[Buffer_Pages]		;AN000;reached the maximum page number?
+	     cmp bx, [cs:Buffer_Pages]		;AN000;reached the maximum page number?
 ;	$ENDDO	E				;AN000;
-	JNE $$DO30
-	call	Restore_MAP_State		;AN010;
+	JNE SI1_DO30
+	call	Restore_Map_State		;AN010;
 	 ret					;AN000;
-Set_EMS_Buffer	    endp
+;Set_EMS_Buffer	    endp
 
 
-Set_Buffer_Info        proc
+Set_Buffer_Info:
 ;Function: Set buf_link, buf_id, Buf_Sector
 ;In: ES:DI -> Buffer header to be set.
 ;    AX = DI
@@ -2345,18 +2356,18 @@ Set_Buffer_Info        proc
 ;    Above entries set.
 
 
-	push	[Buf_Prev_Off]			;AN020;
-	pop	es:[di.BUF_PREV]		;AN020;
-	mov	Buf_Prev_Off, ax		;AN020;
+	push	[BUF_PREV_OFF]			;AN020;
+	pop	[es:di+BUFFINFO.buf_prev]		;AN020;
+	mov	[BUF_PREV_OFF], ax		;AN020;
 	add ax, [SingleBufferSize]		;AN000;adjust ax
-	mov word ptr es:[di.BUF_NEXT], ax	;AN020;
-	mov word ptr es:[di.BUF_ID], 00FFh	;AN000;new buffer free
-	mov word ptr es:[di.BUF_SECTOR], 0	;AN000;To compensate the MASM 3 bug
-	mov word ptr es:[di.BUF_SECTOR+2],0	;AN000;To compensate the MASM 3 bug
+	mov word [es:di+BUFFINFO.buf_next], ax	;AN020;
+	mov word [es:di+BUFFINFO.buf_ID], 00FFh	;AN000;new buffer free
+	mov word [es:di+BUFFINFO.buf_sector], 0	;AN000;To compensate the MASM 3 bug
+	mov word [es:di+BUFFINFO.buf_sector+2],0	;AN000;To compensate the MASM 3 bug
 	ret					;AN000;
-Set_Buffer_Info        endp
+;Set_Buffer_Info        endp
 
-Check_IBM_PageID	proc	near
+Check_IBM_PageID:
 ;Function: check if the physical page 255 exists. (Physical page 255 is only
 ;	   one we are intereseted in, and this will be used for BUFFER
 ;	   manipulation by IBMBIO, IBMDOS)
@@ -2369,7 +2380,7 @@ Check_IBM_PageID	proc	near
 	push	dx				;AN000;
 	push	di				;AN010;
 
-IF	NOT BUFFERFLAG
+if	NOT BUFFERFLAG
 
 	mov	ax, 1B00h			;AN029;AN030;AN0 Check EMS int 2fh installed.
 	int	2fh				;AN029;
@@ -2380,12 +2391,12 @@ IF	NOT BUFFERFLAG
 	int	2fh				;AN029;
 	or	ah, ah				;AN029;
 	jnz	Cp_IBM_Err			;AN029;;No IBM Page
-	mov	cs:IBM_Frame_Seg, es		;AN029;;Save Physical IBM page frame addr.
-	mov	cs:Real_IBM_Page_Id, di 	;AN029;;Real page number for it.
+	mov	[cs:IBM_Frame_Seg], es		;AN029;;Save Physical IBM page frame addr.
+	mov	[cs:Real_IBM_Page_Id], di 	;AN029;;Real page number for it.
 	clc					;AN029;
 	jmp	short Cp_ID_Ret 		;AN029;
 
-ELSE
+else
 	 push	 cs				 ;AN000;
 	 pop	 es				 ;AN000;
 	 mov	 ah, GET_PAGE_FRAME		 ;AN010;=58h
@@ -2398,11 +2409,11 @@ ELSE
 	 push	 cx				 ;AN010;
 	 mov	 ah, GET_PAGE_FRAME		 ;AN010;
 	 mov	 al, GET_PAGEFRAME_TAB		 ;AN010;
-	 mov	 di, offset Frame_info_Buffer	 ;AN010;
+	 mov	 di, Frame_Info_Buffer	 ;AN010;
 	 int	 EMS_INT			 ;AN010;
 	 pop	 cx				 ;AN010;
 	 or	 ah, ah 			 ;AN010;
-	 jnz	 cp_IBM_Err			 ;AN010;
+	 jnz	 Cp_IBM_Err			 ;AN010;
 Cp_IBM_ID:					 ;AN010;
 
 ;	mov	dx, es:[di]
@@ -2414,7 +2425,7 @@ Cp_IBM_ID:					 ;AN010;
 
 ;	int	3
 find_page:
-	cmp	es:[di], 0a000h ; is current page above 640K
+	cmp	word [es:di], 0a000h ; is current page above 640K
 	jb	next		; NO - goto check_last
 
 	inc	dx		; count the no. of pages above 640K
@@ -2422,33 +2433,33 @@ find_page:
 	cmp	dx, 1
 	jne	first_ok
 
-	mov	ax, es:[di]
-	mov	cs:[FIRST_PAGE], ax
-	mov	ax, es:[di+2]
-	mov	cs:[FIRST_PAGE+2], ax
+	mov	ax, [es:di]
+	mov	[cs:FIRST_PAGE], ax
+	mov	ax, [es:di+2]
+	mov	[cs:FIRST_PAGE+2], ax
 
 first_ok:
-	mov	ax, cs:[FIRST_PAGE]
-	cmp	ax, es:[di]	; is this page less than the one we have in
+	mov	ax, [cs:FIRST_PAGE]
+	cmp	ax, [es:di]	; is this page less than the one we have in
 				; FIRST_PAGE
 	jbe	check_last	; NO - goto check_last
-	mov	ax, es:[di]	; update FIRST_PAGE with this page segment
-	mov	cs:[FIRST_PAGE], ax
-	mov	ax, es:[di+2]
-	mov	cs:[FIRST_PAGE+2], ax
+	mov	ax, [es:di]	; update FIRST_PAGE with this page segment
+	mov	[cs:FIRST_PAGE], ax
+	mov	ax, [es:di+2]
+	mov	[cs:FIRST_PAGE+2], ax
 	jmp	next
 
-hkn_err: jmp	cp_ibm_err
+hkn_err: jmp	Cp_IBM_Err
 
 check_last:
-	mov	ax, cs:[LAST_PAGE]	;
-	cmp	ax, es:[di]	; is this page greater than the one we have in
+	mov	ax, [cs:LAST_PAGE]	;
+	cmp	ax, [es:di]	; is this page greater than the one we have in
 				; LAST_PAGE?
 	ja	next		; NO - goto next
-	mov	ax, es:[di]	; update LAST_PAGE with this value.
-	mov	cs:[LAST_PAGE], ax
-	mov	ax, es:[di+2]
-	mov	cs:[LAST_PAGE+2], ax
+	mov	ax, [es:di]	; update LAST_PAGE with this value.
+	mov	[cs:LAST_PAGE], ax
+	mov	ax, [es:di+2]
+	mov	[cs:LAST_PAGE+2], ax
 
 next:
 	add	di, 4
@@ -2459,15 +2470,15 @@ next:
 					; installed.
 	jb	Cp_IBM_Err
 
-	mov	ax, cs:[LAST_PAGE]
-	mov	cs:IBM_Frame_Seg, ax
-	mov	ax, cs:[LAST_PAGE+2]
-	mov	cs:Real_IBM_Page_Id, ax
-	mov	cs:[NPA640], dx
+	mov	ax, [cs:LAST_PAGE]
+	mov	[cs:IBM_Frame_Seg], ax
+	mov	ax, [cs:LAST_PAGE+2]
+	mov	[cs:Real_IBM_Page_Id], ax
+	mov	[cs:NPA640], dx
 	clc
-	jmp	short Cp_Id_Ret
+	jmp	short Cp_ID_Ret
 
-ENDIF
+end if
 
 
 ;	 cmp	 word ptr es:[di+2], IBM_PAGE_ID ;AN010; the second word is the id
@@ -2491,10 +2502,10 @@ Cp_ID_Ret:					;AN000;
 	pop	ax				;AN000;
 	pop	es				;AN000;
 	ret					;AN000;
-Check_IBM_PageID	endp
+;Check_IBM_PageID	endp
 
 ;
-Save_Map_State	proc				;AN010;
+Save_Map_State:				;AN010;
 ;Function: Save the map state.
 ;In)
 ;    EMS_Ctrl_Tab = double word pointer to EMS_state control table address
@@ -2505,8 +2516,8 @@ Save_Map_State	proc				;AN010;
 	push	si				;AN010;
 	push	es				;AN010;
 	push	di				;AN010;
-	lds	si, cs:EMS_Ctrl_Tab		;AN010;
-	les	di, cs:EMS_state_Buf		;AN010;
+	lds	si, [cs:EMS_Ctrl_Tab]		;AN010;
+	les	di, [cs:EMS_State_Buf]		;AN010;
 	mov	ah, EMAP_STATE			;AN010; =4Fh
 	mov	al, GET_MAP_STATE		;AN010; =00h
 	int	EMS_INT 			;AN010;
@@ -2516,13 +2527,13 @@ Save_Map_State	proc				;AN010;
 	pop	ds				;AN010;
 	pop	ax				;AN010;
 	ret					;AN010;
-Save_Map_State	endp
+;Save_Map_State	endp
 ;
-Restore_Map_State	proc			;AN010;
+Restore_Map_State:				;AN010;
 	push	ax				;AN010;
 	push	ds				;AN010;
 	push	si				;AN010;
-	lds	si, cs:EMS_state_Buf		;AN010;
+	lds	si, [cs:EMS_State_Buf]		;AN010;
 	mov	ah, EMAP_STATE			;AN010;
 	mov	al, SET_MAP_STATE		;AN010;
 	int	EMS_INT 			;AN010;
@@ -2530,9 +2541,9 @@ Restore_Map_State	proc			;AN010;
 	pop	ds				;AN010;
 	pop	ax				;AN010;
 	ret					;AN010;
-Restore_Map_State	endp
+;Restore_Map_State	endp
 ;
-Map_Page	proc	near			;AN000;
+Map_Page:				;AN000;
 ;Function: Map the logical page in BX of handle in DX to the physical page 255
 ;In)
 ;    BX = logical page number
@@ -2544,14 +2555,14 @@ Map_Page	proc	near			;AN000;
 
 	push	ax				;AN000;
 	mov	ah, EMAP_L_TO_P 		;AN000;
-	mov	al, byte ptr cs:Real_IBM_PAGE_ID	 ;AN029;= 255
+	mov	al, byte [cs:Real_IBM_Page_Id]	 ;AN029;= 255
 	int	EMS_INT 			;AN000;
 	pop	ax				;AN000;
 	ret					;AN000;
-Map_Page	endp				;AN000;
+;Map_Page	endp				;AN000;
 ;
 
-Roundup proc
+Roundup:
 ;In: DX;AX - operand
 ;    CX    - divisor
 ;    Important: DX should be less than CX.
@@ -2563,19 +2574,19 @@ Roundup proc
 	inc AX					;AN000;
 RU_ret: 					;AN000;
 	ret					;AN000;
-Roundup endp
+;Roundup endp
 ;------------------------------------------------------------------------------
 ;J.K. 5/6/86. IBMSTACK initialization routine.
-	IF	STACKSW
-.SALL
+	if	STACKSW
+;.SALL
 
-INCLUDE STKINIT.INC
+INCLUDE 'STKINIT.INC'
 
-.XALL
-	ENDIF
+;.XALL
+	end if
 ;------------------------------------------------------------------------------
-	public	SetDevMark
-SetDevMark	proc
+;	public	SetDevMark
+SetDevMark:
 ;Set the DEVMARK for MEM command.
 ;In: [MEMHI] - the address to place DEVMARK
 ;    [MEMLO] = 0
@@ -2587,18 +2598,18 @@ SetDevMark	proc
 	push	es				;AN005;
 	push	cx				;AN005;
 
-	mov	cx, cs:[memhi]			;AN005;
-	mov	cs:[DevMark_Addr],cx		;AN005;
+	mov	cx, [cs:MEMHI]			;AN005;
+	mov	[cs:DevMark_Addr],cx		;AN005;
 	mov	es, cx				;AN005;
-	mov	es:[DEVMARK_ID], al		;AN005;
+	mov	[es:DEVMARK.DEVMARK_ID], al		;AN005;
 	inc	cx				;AN007;
-	mov	es:[DEVMARK_SEG], cx		;AN007;
+	mov	[es:DEVMARK.DEVMARK_SEG], cx		;AN007;
 
 	pop	cx				;AN005;
 	pop	es				;AN005;
-	inc	cs:[memhi]			;AN005;
+	inc	[cs:MEMHI]			;AN005;
 	ret					;AN005;
-SetDevMark	endp
+;SetDevMark	endp
 
 ;*******************************************************************************
 ;Function: Load  SHARE.EXE, if Big_Media_Flag = 1 and SHARE.EXE has not been   *
@@ -2612,8 +2623,8 @@ SetDevMark	endp
 ;Output:   Share.exe loaded if necessary.				       *
 ;									       *
 ;*******************************************************************************
-LoadShare	proc	near			;AN021;
-	cmp	Big_Media_Flag, 1		;AN021;
+LoadShare:				;AN021;
+	cmp	[Big_Media_Flag], 1		;AN021;
 	jne	LShare_Ret			;AN021;
 ;Check if SHARE is already loaded.
 	mov	ax, 1000h			;AN021;multShare installation check
@@ -2625,18 +2636,18 @@ LoadShare	proc	near			;AN021;
 	pop	ds				;AN021;
 	push	cs				;AN021;
 	pop	es				;AN021;
-	mov	si, offset COMMND		;AN021;
-	mov	di, offset PathString		;AN021;
+	mov	si, COMMND		;AN021;
+	mov	di, PathString		;AN021;
 LShare_String:					;AN021;
 	movsb					;AN021;
-	cmp	byte ptr [di-1], 0		;AN021;reached to the end?
-	jne	LShare_string			;AN021;
-	mov	si, offset PathString		;AN021;SI= start of PathString
+	cmp	byte [di-1], 0		;AN021;reached to the end?
+	jne	LShare_String			;AN021;
+	mov	si, PathString		;AN021;SI= start of PathString
 LShare_Tail:					;AN021;
 	dec	di				;AN021;
-	cmp	byte ptr [di], "\"		;AN021;
+	cmp	byte [di], "\"		;AN021;
 	je	LShare_Got_Tail 		;AN021;
-	cmp	byte ptr [di], ":"		;AN021;
+	cmp	byte [di], ":"		;AN021;
 	je	LShare_Got_Tail 		;AN021;
 	cmp	di, si				;AN021;No path case (e.g. SHELL=command.com)
 	je	LShare_Got_Tail_0		;AN021;
@@ -2644,25 +2655,24 @@ LShare_Tail:					;AN021;
 LShare_Got_Tail:				;AN021;di -> "\" or ":"
 	inc	di				;AN021;
 LShare_Got_Tail_0:				;AN021;
-	mov	si, offset LShare		;AN021;
+	mov	si, LShare		;AN021;
 LShare_Set_Filename:				;AN021;
 	movsb					;AN021;Tag "SHARE.EXE",0,0Ah to the path.
-	cmp	byte ptr [di-1], 0Ah		;AN021;Line feed?
+	cmp	byte [di-1], 0Ah		;AN021;Line feed?
 	jne	LShare_Set_Filename		;AN021;
 ;Now, we got a path,filename with no parameters for SHARE.EXE
-	mov	si, offset PathString		;AN021;
-	or	Install_Flag, SHARE_INSTALL	;AN021;Signals Do_Install_Exec that this is for SHARE.EXE.
+	mov	si, PathString		;AN021;
+	or	[Install_Flag], SHARE_INSTALL	;AN021;Signals Do_Install_Exec that this is for SHARE.EXE.
 	call	Do_Install_Exec 		;AN021;execute it.
 	jnc	LShare_Ret			;AN021;No problem
 ;Load/Exec failed.  Show "Warning: SHARE should be loaded for large media"
 	push	cs				;AN021;
 	pop	ds				;AN021;
-	mov	dx, offset ShareWarnMsg 	;AN021;WARNING! SHARE should be loaded...
-	invoke	Print				;AN021;
+	mov	dx, SHAREWARNMSG 	;AN021;WARNING! SHARE should be loaded...
+	invoke	PRINT				;AN021;
 LShare_Ret:					;AN021;
 	ret					;AN021;
-LoadShare	endp				;AN021;
+;LoadShare	endp				;AN021;
 
-SYSINITSEG	ENDS
-	   END
-
+;SYSINITSEG	ENDS
+;	   END

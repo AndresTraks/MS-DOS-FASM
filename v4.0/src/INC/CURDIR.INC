@@ -15,24 +15,35 @@ BREAK <Current directory list structure>
 DIRSTRLEN	EQU	64+3		; Max length in bytes of directory strings
 TEMPLEN 	EQU	DIRSTRLEN*2
 
-curdir_list	STRUC
-curdir_text	DB	DIRSTRLEN DUP (?)   ; text of assignment and curdir
-curdir_flags	DW	?		; various flags
-curdir_devptr	DD	?		; local pointer to DPB or net device
-curdir_ID	DW	?		; cluster of current dir (net ID)
-		DW	?
-curdir_user_word DW	?
-curdir_end	DW	?		; end of assignment
-curdir_type	DB	?		; IFS drive (2=ifs, 4=netuse)
-curdir_ifs_hdr	DD	?		; Ptr to File System Header
-curdir_fsda	DB	2 DUP (?)	; File System Dependent Data Area
-curdir_list	ENDS
+STRUC curdir_list
+{
+.curdir_text	DB	DIRSTRLEN dup (0)   ; text of assignment and curdir
+.curdir_flags	DW	0		; various flags
+.curdir_devptr	DD	0		; local pointer to DPB or net device
+.curdir_ID	DW	0		; cluster of current dir (net ID)
+		DW	0
+.curdir_user_word DW	0
+.curdir_end	DW	0		; end of assignment
+.curdir_type	DB	0		; IFS drive (2=ifs, 4=netuse)
+.curdir_ifs_hdr	DD	0		; Ptr to File System Header
+.curdir_fsda	DB	2 dup (0)	; File System Dependent Data Area
+}
+match =curdir_list_LAID_OUT, curdir_list_LAID_OUT
+{
+    curdir_list_LAID_OUT equ 1
+    virtual at 0
+      curdir_list curdir_list
+      sizeof.curdir_list = $ - curdir_list
+    end virtual
+}
 
-curdirLen	EQU	Size curdir_list	; Needed for screwed up
+curdirLen	EQU	sizeof.curdir_list	; Needed for screwed up
 						; ASM87 which doesn't allow
 						; Size directive as a macro
 						; argument
-curdir_netID	EQU	DWORD PTR curdir_ID
+; The ID field read as a dword rather than a word; in fasm the size goes
+; on the instruction, so this is the field's offset and nothing more.
+curdir_netID	EQU	curdir_list.curdir_ID
 
 ;Flag word masks
 curdir_isnet	EQU	1000000000000000B

@@ -24,28 +24,48 @@
     IFSIOCTL	EQU	0002H	;  Supports IOCTL functions
     IFSUSESHARE EQU	0001H	;  Uses DOS share support (vs own share)
 
-IFSHEADER	STRUC
-IFS_NEXT	DD	-1	; Next header in list (-1=end)
-IFS_NAME	DB	"        " ; IFS name
-IFS_ATTRIBUTE	DW	?	; Attributes
-IFS_VERSION	DW	0	; Request level supported
-IFS_DOSCALL@	DD	?	; DOS interface routine
+STRUC IFSHEADER
+{
+.IFS_NEXT	DD	-1	; Next header in list (-1=end)
+.IFS_NAME	DB	"        " ; IFS name
+.IFS_ATTRIBUTE	DW	0	; Attributes
+.IFS_VERSION	DW	0	; Request level supported
+IFS_DOSCALL@	DD	0	; DOS interface routine
 				;   (set by TUPPER before the init call)
-IFS_CALL@	DW	?	; Function entry point
-IFSHEADER	ENDS
+IFS_CALL@	DW	0	; Function entry point
+}
+match =IFSHEADER_LAID_OUT, IFSHEADER_LAID_OUT
+{
+    IFSHEADER_LAID_OUT equ 1
+    virtual at 0
+      IFSHEADER IFSHEADER
+      sizeof.IFSHEADER = $ - IFSHEADER
+    end virtual
+}
 
 ;=====================
 ; IFS Request Header
 ;=====================
 
-IFSRH		STRUC
-IFSR_LENGTH	DW    ? 		; Total length of request
-IFSR_FUNCTION	DB    ? 		; Requested function
-IFSR_RETCODE	DB    ? 		; Explicit error
-IFSR_RETCLASS	DB    ? 		; Error class
-IFSR_RESV1	DB    17 DUP(0) 	; DOS reserved
-IFSR_FCN_PARMS	DB    38 DUP(0) 	; Additional parameters
-IFSRH		ENDS
+; Filled in where it stands, so the fields are the macro's arguments,
+; each defaulting to what the structure declares.
+STRUC IFSRH IFSR_LENGTH_=0,IFSR_FUNCTION_=0,IFSR_RETCODE_=0,IFSR_RETCLASS_=0
+{
+.IFSR_LENGTH	DW    IFSR_LENGTH_; Total length of request
+.IFSR_FUNCTION	DB    IFSR_FUNCTION_; Requested function
+.IFSR_RETCODE	DB    IFSR_RETCODE_; Explicit error
+.IFSR_RETCLASS	DB    IFSR_RETCLASS_; Error class
+.IFSR_RESV1	DB    17 dup(0) 	; DOS reserved
+.IFSR_FCN_PARMS	DB    38 dup(0) 	; Additional parameters
+}
+match =IFSRH_LAID_OUT, IFSRH_LAID_OUT
+{
+    IFSRH_LAID_OUT equ 1
+    virtual at 0
+      IFSRH IFSRH
+      sizeof.IFSRH = $ - IFSRH
+    end virtual
+}
 
 ; IFSR_FUNCTION codes
 ;	Control requests:
@@ -56,7 +76,11 @@ IFSEXECAPI     EQU     4
 IFSCRITMSG     EQU     5
 IFSCBUPDATE    EQU     6
 ; INIT function.
-IFSR_PARMS@	   =  DWORD PTR  IFSR_FCN_PARMS    ; command parameters
-IFSR_RESSIZE	   =  WORD  PTR  IFSR_FCN_PARMS+4  ; driver total size
-LENGTH_INIT	   EQU IFSR_RESSIZE-IFSRH+2
+; Two more names for places inside the request packet, read as a dword and
+; as a word; in fasm the size goes on the instruction, so these are the
+; offsets alone.  The length below took the structure's own name for the
+; start of it, which is 0.
+IFSR_PARMS@	   =  IFSRH.IFSR_FCN_PARMS    ; command parameters
+IFSR_RESSIZE	   =  IFSRH.IFSR_FCN_PARMS+4  ; driver total size
+LENGTH_INIT	   EQU IFSR_RESSIZE+2
 

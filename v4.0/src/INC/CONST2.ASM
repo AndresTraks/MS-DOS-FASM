@@ -155,7 +155,7 @@ SWAP_START	LABEL BYTE
 
 ; Combination of all device call parameters
 	PUBLIC	DEVCALL 		;
-DEVCALL SRHEAD	<>			; basic header for disk packet
+DEVCALL SRHEAD				; basic header for disk packet
 	PUBLIC	CALLUNIT
 CALLUNIT    LABEL   BYTE		; unit number for disk
 CALLFLSH    LABEL   WORD		;
@@ -181,7 +181,7 @@ CALLSSEC    LABEL    WORD		;
 ; Same as above for I/O calls		;
 					;
 	PUBLIC	IOCall			;
-IOCALL	SRHEAD	<>			;
+IOCALL	SRHEAD				;
 IOFLSH	LABEL	WORD			;
 	PUBLIC	IORCHR			;
 IORCHR	LABEL	BYTE			;

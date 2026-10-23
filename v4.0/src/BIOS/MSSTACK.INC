@@ -43,7 +43,7 @@
 ; 6. Intercepts Ints 70, 72-77 for PC-ATs and other future products
 
 ;The following variables are for MSSTACK.inc
-		EVEN
+		align	2		; MASM's EVEN
 		dw	0	; SPARE FIELD BUT LEAVE THESE IN ORDER
 StackCount	dw	0
 StackAt 	dw	0
@@ -61,49 +61,52 @@ NextEntry	dw	Stacks+(DefaultCount*EntrySize)-EntrySize
 ;Macro Interrupt handler for the ordinary interrupt vectors and
 ;the shared interrupt vectors.
 ;*****************************
-Stack_Main	MACRO	AA
-	ASSUME	DS:NOTHING
-	ASSUME	ES:NOTHING
-	ASSUME	SS:NOTHING
-PUBLIC	Int&AA
-PUBLIC	Old&AA
+; MASM's & joins a name together; fasm's is #.  The argument is AA in
+; every place that uses it, MASM having read AA and aa as one name.
+macro Stack_Main AA
+{
+;	ASSUME	DS:NOTHING
+;	ASSUME	ES:NOTHING
+;	ASSUME	SS:NOTHING
+;PUBLIC	Int&AA
+;PUBLIC	Old&AA
 ;-----------------------------
-	ife	IntSharingFlag		;if not IntSharingFlag
+	if	(IntSharingFlag) = 0	;if not IntSharingFlag
 ;-----------------------------
-	Old&AA	DD	0
-Int&AA	PROC	FAR
+	Old#AA	DD	0
+Int#AA:
 ;-----------------------------
     else				;for shared interrupt. A Header exists.
 
-PUBLIC	FirstFlag&AA
-Int&AA	PROC	FAR
-	jmp	short	  Entry_Int&AA&_Stk
-	Old&AA	dd	  0		;Forward pointer
+;PUBLIC	FirstFlag&AA
+Int#AA:
+	jmp	short	  Entry_Int#AA#_Stk
+	Old#AA	dd	  0		;Forward pointer
 		dw	  424Bh 	;compatible signature for Int. Sharing
-	FirstFlag&AA db   0		;the firstly hooked.
-	jmp	short	Intret_&AA	;Reset routine. We don't care this.
+	FirstFlag#AA db   0		;the firstly hooked.
+	jmp	short	INTRET_#AA	;Reset routine. We don't care this.
 		db	  7 dup (0)	;Reserved for future.
-Entry_Int&AA&_Stk:
+Entry_Int#AA#_Stk:
 ;-----------------------------
-	endif
+	end if
 ;-----------------------------
 
 ;
 ; Keyboard interrupt must have a three byte jump, a NOP and a zero byte
 ; as its first instruction for compatibility reasons
-	ifidn	<&aa>,<09>
+	match =09, AA \{			; only for this one vector
 	jmp	Keyboard_lbl
 	nop
 	db	0
-Keyboard_lbl	label	near
-	endif
+Keyboard_lbl:
+	\}
 
 ; This patches INTERRUPT 75h to be "unhooked".  We do this Wierdness,
 ; rather than never hooking INT 75h, to maintain maximum compat. with IBMs
 ; post production patch.
 	push	ax
 
-	ifidn	<&aa>,<02>
+	match =02, AA \{			; only for this one vector
 
 ; *********************************************************************
 ;
@@ -133,37 +136,37 @@ Keyboard_lbl	label	near
 	push	es
 	mov	ax,0f000h
 	mov	es,ax
-	cmp	byte ptr es:[0fffeh],mdl_convert	;check if convertible
+	cmp	byte [es:0fffeh],MDL_CONVERT	;check if convertible
 	pop	es
-	jne	Normal&aa
+	jne	Normal#AA
 
 	in	al,62h
 	test	al,80h
-	jz	Normal&aa
+	jz	Normal#AA
 
-Special&aa:
+Special#AA:
 	pop	ax
-	jmp	dword ptr Old&aa
+	jmp	dword [Old#AA]
 
-Normal&aa:
+Normal#AA:
 
 ; *********************************************************************
 
-	endif
+	\}
 
 	push	bp
 	push	es
-	mov	es, cs:[STACKS+2]	; Get segment of stacks
+	mov	es, [cs:Stacks+2]	; Get segment of stacks
 
-	mov	bp,NextEntry		; get most likely candidate
-	mov	al,Allocated
+	mov	bp,[NextEntry]		; get most likely candidate
+	mov	al,allocated
 	xchg	AllocByte,al		; grab the entry
 	cmp	al,Free 		; still avail?
-	jne	NotFree&aa
+	jne	NotFree#AA
 
-	sub	NextEntry,EntrySize	; set for next interrupt
+	sub	[NextEntry],EntrySize	; set for next interrupt
 
-Found&aa:
+found#AA:
 	mov	SavedSP,sp		; save sp value
 	mov	SavedSS,ss		; save ss also
 ;	mov	IntLevel,aa&h		; save the int level
@@ -171,18 +174,18 @@ Found&aa:
 	mov	ax,bp			; temp save of table offset
 
 	mov	bp,NewSP		; get new SP value
-	cmp	es:[bp],ax		; check for offset into table
-	jne	FoundBad&aa
+	cmp	[es:bp],ax		; check for offset into table
+	jne	FoundBad#AA
 
 	mov	ax,es			; point ss,sp to the new stack
 	mov	ss,ax
 	mov	sp,bp
 
 	pushf				; go execute the real interrupt handler
-	call	dword ptr old&aa	;  which will iret back to here
+	call	dword [Old#AA]	;  which will iret back to here
 
 	mov	bp,sp			; retrieve the table offset for us
-	mov	bp,es:[bp]		   ;  but leave it on the stack
+	mov	bp,[es:bp]		   ;  but leave it on the stack
 	mov	ss,SavedSS	     ; get old stack back
 	mov	sp,SavedSP
 
@@ -190,78 +193,80 @@ Found&aa:
 ;	jne	NewError&aa		;  do not free us
 
 	mov	AllocByte,Free		; free the entry
-	mov	NextEntry,bp		; setup to use next time
+	mov	[NextEntry],bp		; setup to use next time
 
-NewError&aa:
+NewError#AA:
 	pop	es
 	pop	bp			; saved on entry
 	pop	ax			; saved on entry
 
-INTRET_&AA:								  ;3.30
+INTRET_#AA:								  ;3.30
 	iret				; done with this interrupt
 
-NotFree&aa:
-	cmp	al,Allocated		; error flag
-	je	findnext&aa		;  no, continue
+NotFree#AA:
+	cmp	al,allocated		; error flag
+	je	FindNext#AA		;  no, continue
 	xchg	AllocByte,al		;  yes, restore error value
 
-FindNext&aa:
-	call	LongPath
-	jmp	Found&aa
+FindNext#AA:
+	call	longpath
+	jmp	found#AA
 
-FoundBad&aa:
-	cmp	bp,FirstEntry
-	jc	findnext&aa
+FoundBad#AA:
+	cmp	bp,[FirstEntry]
+	jc	FindNext#AA
 	mov	bp,ax			; flag this entry
-	mov	AllocByte,Clobbered
+	mov	AllocByte,clobbered
 ;	add	bp,EntrySize		;  and previous entry
 ;	mov	AllocByte,Overflowed
 ;	sub	bp,EntrySize
-	jmp	findnext&aa		; keep looking
+	jmp	FindNext#AA		; keep looking
 
-int&aa	endp
+;int&aa	endp
 
 
-	endm
+}
 
 ;*****************************						  ;3.30
 ;End of Macro definition						  ;3.30
 ;********************************************************************	  ;3.30
 ; THESE ARE THE INDIVIDUAL INTERRUPT HANDLERS				  ;3.30
 									  ;3.30
-	IRP	A,<02,08,09,70> 					  ;3.30
+	irp	A,02,08,09,70					  ;3.30
+	{
 	IntSharingFlag=0						  ;3.30
-	Stack_Main &A							  ;3.30
-	ENDM								  ;3.30
+	Stack_Main A							  ;3.30
+	}								  ;3.30
 									  ;3.30
-	IRP	A,<0A,0B,0C,0D,0E,72,73,74,76,77>			  ;3.30
+	irp	A,0A,0B,0C,0D,0E,72,73,74,76,77			  ;3.30
+	{
 	IntSharingFlag=1						  ;3.30
-	Stack_Main &A							  ;3.30
-	ENDM								  ;3.30
+	Stack_Main A							  ;3.30
+	}								  ;3.30
 									  ;3.30
 ;********************************************************************	  ;3.30
 ;Common routines							  ;3.30
 
 longpath:
-	mov	bp,LastEntry		; start with last entry in table
+	mov	bp,[LastEntry]		; start with last entry in table
 
 LPLOOPP:								  ;3.30
 	cmp	AllocByte,Free		; is entry free?
 	jne	inuse			;  no, try next one
 
-	mov	al,Allocated
+	mov	al,allocated
 	xchg	AllocByte,al		; allocate entry
 	cmp	al,Free 		; is it still free?
 	je	found			;  yes, go use it
 
-	cmp	al,Allocated		; is it other than Allocated or Free?
+	cmp	al,allocated		; is it other than Allocated or Free?
 	je	inuse			;  no, check the next one
 
 	mov	AllocByte,al		;  yes, put back the error state
 
 inuse:
-	cmp	bp,FirstEntry
-	je	Fatal
+	cmp	bp,[FirstEntry]
+	je	fatal
 	sub	bp,EntrySize
 	JMP	LPLOOPP 						  ;3.30
 
@@ -270,11 +275,11 @@ found:
 
 	page
 
-fatal	proc	near
+fatal:
 	push	ds							  ;3.30
 	mov	ax, 0f000h		;loook at the model byte	  ;3.30
 	mov	ds, ax							  ;3.30
-	cmp	ds:byte ptr [0fffeh], mdl_convert	;convertible?	  ;3.30
+	cmp	byte [0fffeh], MDL_CONVERT	;convertible?	  ;3.30
 	pop	ds							  ;3.30
 	jne	Skip_NMIS						  ;3.30
 									  ;3.30
@@ -289,7 +294,7 @@ Skip_NMIS:								  ;3.30
 
 	mov	si,cs
 	mov	ds,si
-	mov	si,offset fatal_msg
+	mov	si,FATAL_MSG
 
 fatal_loop:
 	lodsb
@@ -303,4 +308,4 @@ fatal_loop:
 
 fatal_done:
 	jmp	fatal_done
-fatal	endp
+;fatal	endp

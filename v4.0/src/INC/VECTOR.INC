@@ -1,21 +1,26 @@
 ;	SCCSID = @(#)vector.asm	1.1 85/04/10
 BREAK <interrupt definitions>
 
-Asmvar	AltVect
+match =ALTVECT, ALTVECT { ALTVECT = FALSE }	; see DOSMAC.INC
 
 INTTAB		EQU	20H
-INTBASE 	EQU	4 * inttab
+INTBASE 	EQU	4 * INTTAB
 ENTRYPOINT	EQU	INTBASE+40H
 
-	IF	ALTVECT
+; ALTVECT is FALSE in the release.  fasm's preprocessor makes an EQU as
+; it reads the line, whether or not the IF around it holds, so a switch
+; cannot pick between two sets of them: the set that goes with FALSE is
+; the live one here and the other is commented out.  These two are
+; defined either way, nothing using them while ALTVECT is FALSE.
+;	if	ALTVECT
 ALTTAB	EQU	0F0H
 ALTBASE EQU	4 * ALTTAB
-	ENDIF
+;	end if
 
 ;
 ; interrupt assignments
 ;
-	IF	NOT ALTVECT
+;	if	NOT ALTVECT
 int_abort	    EQU     INTTAB	; abort process
 int_command	    EQU     int_abort+1 ; call MSDOS
 int_terminate	    EQU     int_abort+2 ; int to terminate address
@@ -34,24 +39,24 @@ int_IBM 	    EQU     int_abort+10; critical section maintenance
 ;									   ;
 ;	     C	A  V  E  A  T	  P  R	O  G  R  A  M  M  E  R		   ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
-	ELSE
-int_abort	    EQU     INTTAB	; abort process
-int_command	    EQU     int_abort+1 ; call MSDOS
-int_terminate	    EQU     ALTTAB	; int to terminate address
-int_ctrl_c	    EQU     int_terminate+1 ; ^c trapper
-int_fatal_abort     EQU     int_terminate+2 ; hard disk error
-int_disk_read	    EQU     int_abort+5 ; logical sector disk read
-int_disk_write	    EQU     int_abort+6 ; logical sector disk write
-int_keep_process    EQU     int_abort+7 ; terminate program and stay resident
-;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
-;	     C	A  V  E  A  T	  P  R	O  G  R  A  M  M  E  R		   ;
-;									   ;
-int_spooler	    EQU     int_terminate+3 ; spooler call
-int_fastcon	    EQU     int_abort+9 ; fast CON interrupt
-;									   ;
-;	     C	A  V  E  A  T	  P  R	O  G  R  A  M  M  E  R		   ;
-;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
-	ENDIF
+;	else
+;int_abort	    EQU     INTTAB	; abort process
+;int_command	    EQU     int_abort+1 ; call MSDOS
+;int_terminate	    EQU     ALTTAB	; int to terminate address
+;int_ctrl_c	    EQU     int_terminate+1 ; ^c trapper
+;int_fatal_abort     EQU     int_terminate+2 ; hard disk error
+;int_disk_read	    EQU     int_abort+5 ; logical sector disk read
+;int_disk_write	    EQU     int_abort+6 ; logical sector disk write
+;int_keep_process    EQU     int_abort+7 ; terminate program and stay resident
+;;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
+;;	     C	A  V  E  A  T	  P  R	O  G  R  A  M  M  E  R		   ;
+;;									   ;
+;int_spooler	    EQU     int_terminate+3 ; spooler call
+;int_fastcon	    EQU     int_abort+9 ; fast CON interrupt
+;;									   ;
+;;	     C	A  V  E  A  T	  P  R	O  G  R  A  M  M  E  R		   ;
+;;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
+;	end if
 
 addr_int_abort		EQU    4 * int_abort
 addr_int_command	EQU    4 * int_command

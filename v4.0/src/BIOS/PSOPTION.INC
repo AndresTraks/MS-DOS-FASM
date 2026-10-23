@@ -4,60 +4,32 @@
 ;
 ;**** Default assemble swiches definition **************************
 
-IFNDEF	FarSW
-FarSW	equ	0	; Near call expected
-ENDIF
+match =FarSW, FarSW { FarSW	equ	0 }; Near call expected
 
-IFNDEF	DateSW
-DateSW	equ	0	; Check date format
-ENDIF
+match =DateSW, DateSW { DateSW	equ	0 }; Check date format
 
-IFNDEF	TimeSW
-TimeSW	equ	0	; Check time format
-ENDIF
+match =TimeSW, TimeSW { TimeSW	equ	0 }; Check time format
 
-IFNDEF	FileSW
-FileSW	equ	1	; Check file specification
-ENDIF
+match =FileSW, FileSW { FileSW	equ	1 }; Check file specification
 
-IFNDEF	CAPSW
-CAPSW	equ	0	; Perform CAPS if specified
-ENDIF
+match =CAPSW, CAPSW { CAPSW	equ	0 }; Perform CAPS if specified
 
-IFNDEF	CmpxSW
-CmpxSW	equ	0	; Check complex list
-ENDIF
+match =CmpxSW, CmpxSW { CmpxSW	equ	0 }; Check complex list
 
-IFNDEF	NumSW
-NumSW	equ	1	; Check numeric value
-ENDIF
+match =NumSW, NumSW { NumSW	equ	1 }; Check numeric value
 
-IFNDEF	KeySW
-KeySW	equ	0	; Support keywords
-ENDIF
+match =KeySW, KeySW { KeySW	equ	0 }; Support keywords
 
-IFNDEF	SwSW
-SwSW	equ	1	; Support switches
-ENDIF
+match =SwSW, SwSW { SwSW	equ	1 }; Support switches
 
-IFNDEF	Val1SW
-Val1SW	equ	1	; Support value definition 1
-ENDIF
+match =Val1SW, Val1SW { Val1SW	equ	1 }; Support value definition 1
 
-IFNDEF	Val2SW
-Val2SW	equ	0	; Support value definition 2
-ENDIF
+match =Val2SW, Val2SW { Val2SW	equ	0 }; Support value definition 2
 
-IFNDEF	Val3SW
-Val3SW	equ	1	; Support value definition 3
-ENDIF
+match =Val3SW, Val3SW { Val3SW	equ	1 }; Support value definition 3
 
-IFNDEF	DrvSW
-DrvSW	equ	1	; Support drive only format
-ENDIF
+match =DrvSW, DrvSW { DrvSW	equ	1 }; Support drive only format
 
-IFNDEF	QusSW
-QusSW	equ	0	; Support quoted string format
-ENDIF
+match =QusSW, QusSW { QusSW	equ	0 }; Support quoted string format
 
 

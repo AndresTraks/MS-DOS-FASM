@@ -57,8 +57,8 @@
 ;In - CS, DS -> sysinitseg, ES -> relocated stack code & data.		       ;3.30
 									       ;3.30
 	PAGE								       ;3.30
-	assume  ds:sysinitseg			; sunilp SB340
-StackInit	proc near						       ;3.30
+;	assume  ds:sysinitseg			; sunilp SB340
+StackInit:				;3.30
 									       ;3.30
 	PUSH	AX				;SAVE ALL		       ;3.30
 	PUSH	DS							       ;3.30
@@ -71,48 +71,49 @@ StackInit	proc near						       ;3.30
 	PUSH	BP							       ;3.30
 									       ;3.30
 ;Currently ES -> stack code area					       ;3.30
-	MOV	AX, cs:[STACK_COUNT]		   ;defined in CS	       ;3.30
-	MOV	es:[STACKCOUNT], AX		   ;defined in STACK CODE AREA ;3.30
+	MOV	AX, [cs:STACK_COUNT]		   ;defined in CS	       ;3.30
+	MOV	[es:StackCount], AX		   ;defined in STACK CODE AREA ;3.30
 	MOV	AX, [STACK_SIZE]		;in CS			       ;3.30
-	MOV	es:[STACKSIZE], AX		   ;			       ;3.30
-	MOV	AX, WORD PTR cs:[STACK_ADDR]	   ; OFFSET		       ;3.30
-	MOV	WORD PTR es:[STACKS], AX				       ;3.30
-	MOV	AX, WORD PTR cs:[STACK_ADDR+WORD]  ; SEGMENT		       ;3.30
-	MOV	WORD PTR es:[STACKS+WORD], AX				       ;3.30
+	MOV	[es:StackSize], AX		   ;			       ;3.30
+	MOV	AX, word [cs:STACK_ADDR]	   ; OFFSET		       ;3.30
+	MOV	word [es:Stacks], AX				       ;3.30
+; MASM's WORD is 2 in an expression, which is what it is doing here.
+	MOV	AX, word [cs:STACK_ADDR+2]  ; SEGMENT		       ;3.30
+	MOV	word [es:Stacks+2], AX				       ;3.30
 									       ;3.30
 ; INITIALIZE THE DATA FIELDS WITH THE PARAMETERS			       ;3.30
 									       ;3.30
 ; "FIRSTENTRY" WILL ALWAYS BE AT STACKS                                        ;3.30
 									       ;3.30
-	MOV	BP, word ptr es:STACKS		   ; GET OFFSET OF STACK       ;3.30
-	MOV	es:FIRSTENTRY,BP					       ;3.30
+	MOV	BP, word [es:Stacks]		   ; GET OFFSET OF STACK       ;3.30
+	MOV	[es:FirstEntry],BP					       ;3.30
 									       ;3.30
 ; THE STACKS WILL ALWAYS IMMEDIATELY FOLLOW THE TABLE ENTRIES		       ;3.30
 									       ;3.30
-	MOV	AX,ENTRYSIZE						       ;3.30
-	MOV	CX,es:STACKCOUNT					       ;3.30
+	MOV	AX,EntrySize						       ;3.30
+	MOV	CX,[es:StackCount]					       ;3.30
 	MUL	CX							       ;3.30
 	ADD	AX,BP							       ;3.30
-	MOV	es:STACKAT,AX						       ;3.30
+	MOV	[es:StackAt],AX						       ;3.30
 	MOV	BX,AX							       ;3.30
 	SUB	BX,2							       ;3.30
 									       ;3.30
 ; ZERO THE ENTIRE STACK AREA TO START WITH				       ;3.30
 									       ;3.30
-	MOV	DI,es:STACKAT						       ;3.30
-	MOV	AX,es:STACKSIZE 					       ;3.30
+	MOV	DI,[es:StackAt]						       ;3.30
+	MOV	AX,[es:StackSize] 					       ;3.30
 	MUL	CX							       ;3.30
 	MOV	CX,AX							       ;3.30
 	xor	ax,ax							       ;3.30
 	push	es							       ;3.30
 	pop	ds				;ds = Relocated stack code seg.;3.30
-	assume	ds:nothing						       ;3.30
+;	assume	ds:nothing						       ;3.30
 ;Now, DS -> stack code area						       ;3.30
-	MOV	ES, word ptr ds:[STACKS+2]	   ; GET SEGMENT OF STACK AREA.;3.30
+	MOV	ES, word [Stacks+2]	   ; GET SEGMENT OF STACK AREA.;3.30
 	CLD								       ;3.30
 	REP	STOSB							       ;3.30
 									       ;3.30
-	MOV	CX, ds:STACKCOUNT					       ;3.30
+	MOV	CX, [StackCount]					       ;3.30
 									       ;3.30
 ; LOOP FOR "COUNT" TIMES, BUILDING A TABLE ENTRY                               ;3.30
 ;  cs = sysinitseg, ds = Relocated stack code seg , es = segment of stack space;3.30
@@ -121,25 +122,25 @@ StackInit	proc near						       ;3.30
 ;  ES:BX => FIRST TABLE ENTRY						       ;3.30
 									       ;3.30
 BUILDLOOP:								       ;3.30
-	MOV	ALLOCBYTE,FREE						       ;3.30
-	MOV	INTLEVEL,AL			;AX = 0 		       ;3.30
-	MOV	SAVEDSP,AX						       ;3.30
-	MOV	SAVEDSS,AX						       ;3.30
-	ADD	BX,ds:STACKSIZE 					       ;3.30
-	MOV	NEWSP,BX						       ;3.30
-	MOV	ES:[BX],BP						       ;3.30
-	ADD	BP,ENTRYSIZE						       ;3.30
+	MOV	AllocByte,Free						       ;3.30
+	MOV	IntLevel,AL			;AX = 0 		       ;3.30
+	MOV	SavedSP,AX						       ;3.30
+	MOV	SavedSS,AX						       ;3.30
+	ADD	BX,[StackSize] 					       ;3.30
+	MOV	NewSP,BX						       ;3.30
+	MOV	[es:BX],BP						       ;3.30
+	ADD	BP,EntrySize						       ;3.30
 									       ;3.30
 	LOOP	BUILDLOOP						       ;3.30
 									       ;3.30
-	SUB	BP,ENTRYSIZE						       ;3.30
-	MOV	ds:LASTENTRY,BP 					       ;3.30
-	MOV	ds:NEXTENTRY,BP 					       ;3.30
+	SUB	BP,EntrySize						       ;3.30
+	MOV	[LastEntry],BP 					       ;3.30
+	MOV	[NextEntry],BP 					       ;3.30
 									       ;3.30
 	push	ds							       ;3.30
 	mov	ax, 0f000h		;loook at the model byte	       ;3.30
 	mov	ds, ax							       ;3.30
-	cmp	ds:byte ptr [0fffeh], mdl_convert	;convertible?	       ;3.30
+	cmp	byte [0fffeh], MDL_CONVERT	;convertible?	       ;3.30
 	pop	ds							       ;3.30
 	jne	Skip_disableNMIS					       ;3.30
 									       ;3.30
@@ -149,67 +150,69 @@ BUILDLOOP:								       ;3.30
 Skip_disableNMIS:							       ;3.30
 	XOR	AX,AX							       ;3.30
 	MOV	es,AX				;es - SEGID OF VECTOR TABLE AT 0;3.30
-	ASSUME	es:NOTHING			;ds - Relocated Stack code segment;3.30
+;	ASSUME	es:NOTHING			;ds - Relocated Stack code segment;3.30
 									       ;3.30
 	CLI								       ;3.30
 									       ;3.30
-	IRP	AA,<02,08,09,70>					       ;3.30
+	irp	AA,02,08,09,70					       ;3.30
+	{
 									       ;3.30
-	MOV	SI,AA&H*4		;PASS WHERE VECTOR IS TO BE ADJUSTED   ;3.30
-	mov	di, offset Int19OLD&AA	       ;we have to set OLD&AA for Int19 handler too.;3.30
-	MOV	BX,OFFSET OLD&AA	;PASS WHERE TO SAVE ORIGINAL OWNER POINTER;3.30
-	MOV	DX,OFFSET INT&AA	;PASS WHERE NEW HANDLER IS	       ;3.30
+	MOV	SI,AA#H*4		;PASS WHERE VECTOR IS TO BE ADJUSTED   ;3.30
+	mov	di, Int19OLD#AA	       ;we have to set Old#AA for Int19 handler too.;3.30
+	MOV	BX,Old#AA	;PASS WHERE TO SAVE ORIGINAL OWNER POINTER;3.30
+	MOV	DX,Int#AA	;PASS WHERE NEW HANDLER IS	       ;3.30
 	CALL	NEW_INIT_LOOP		;ADJUST THE VECTOR TO NEW HANDLER,     ;3.30
 					;  SAVING POINTER TO ORIGINAL OWNER    ;3.30
-	ENDM								       ;3.30
+	}							       ;3.30
 									       ;3.30
-	IRP	AA,<0A,0B,0C,0D,0E,72,73,74,76,77>	;shared interrupts     ;3.30
+	irp	AA,0A,0B,0C,0D,0E,72,73,74,76,77	;shared interrupts     ;3.30
+	{
 									       ;3.30
-	MOV	SI,AA&H*4		;PASS WHERE VECTOR IS TO BE ADJUSTED   ;3.30
+	MOV	SI,AA#H*4		;PASS WHERE VECTOR IS TO BE ADJUSTED   ;3.30
 	push	ds			;save relocated stack code segment     ;3.30
-	lds	bx, es:[si]		;ds:bx -> original interrupt handler   ;3.30
+	lds	bx, [es:si]		;ds:bx -> original interrupt handler   ;3.30
 	push	ds							       ;3.30
 	pop	dx			;dx = segment value		       ;3.30
 
 	cmp	dx,0
-	jz	int&AA&_first
+	jz	int#AA#_first
 
-	cmp	byte ptr ds:[bx],0cfh	;Does vector point to an IRET?
-	jz	int&AA&_first
+	cmp	byte [bx],0cfh	;Does vector point to an IRET?
+	jz	int#AA#_first
 
-	cmp	word ptr ds:[bx.6],424Bh ;Magic offset (see INT&AA, msstack.inc)
-	jz	int&AA&_Not_first
+	cmp	word [bx+6],424Bh ;Magic offset (see Int#AA, msstack.inc)
+	jz	int#AA#_Not_first
 
 	cmp	dx,0f000h		;ROM BIOS segment
-	jnz	int&AA&_Not_first
+	jnz	int#AA#_Not_first
 
 	push	es
 	push	dx
 	mov	dx,0f000h
 	mov	es,dx
-	cmp	bx,word ptr es:0ff01h
+	cmp	bx,word [es:0ff01h]
        	pop	dx
 	pop	es
-	jz	int&AA&_first
+	jz	int#AA#_first
 
-int&AA&_Not_first:			 ;Not the first. We are going to hook vector.;3.30
+int#AA#_Not_first:			 ;Not the first. We are going to hook vector.;3.30
 	pop	ds							       ;3.30
-	mov	di, offset Int19OLD&AA	;we have to set OLD&AA for Int19 handler too.;3.30
-	mov	BX, OFFSET OLD&AA	;PASS WHERE TO SAVE ORIGINAL OWNER POINTER;3.30
-	MOV	DX, OFFSET INT&AA	;PASS WHERE NEW HANDLER IS	       ;3.30
+	mov	di, Int19OLD#AA	;we have to set Old#AA for Int19 handler too.;3.30
+	mov	BX, Old#AA	;PASS WHERE TO SAVE ORIGINAL OWNER POINTER;3.30
+	MOV	DX, Int#AA	;PASS WHERE NEW HANDLER IS	       ;3.30
 	CALL	NEW_INIT_LOOP		;ADJUST THE VECTOR TO NEW HANDLER, SAVING;3.30
 					;POINTER TO ORIGINAL OWNER.	       ;3.30
-	jmp	short int&AA&_end					       ;3.30
-int&AA&_first:				 ;the first. Don't have to hook stack code.;3.30
+	jmp	short int#AA#_end					       ;3.30
+int#AA#_first:				 ;the first. Don't have to hook stack code.;3.30
 	pop	ds							       ;3.30
-int&AA&_end:								       ;3.30
+int#AA#_end:								       ;3.30
 									       ;3.30
-	ENDM								       ;3.30
+	}							       ;3.30
 									       ;3.30
 	push	ds							       ;3.30
 	mov	ax, 0f000h		;loook at the model byte	       ;3.30
 	mov	ds, ax							       ;3.30
-	cmp	ds:byte ptr [0fffeh], mdl_convert	;PC convertible?	       ;3.30
+	cmp	byte [0fffeh], MDL_CONVERT	;PC convertible?	       ;3.30
 	pop	ds							       ;3.30
 	jne	Skip_EnableNMIS 					       ;3.30
 									       ;3.30
@@ -218,9 +221,9 @@ int&AA&_end:								       ;3.30
 									       ;3.30
 Skip_EnableNMIS:							       ;3.30
 	STI								       ;3.30
-	MOV	AX,code 						       ;3.30
+	MOV	AX,CODE 						       ;3.30
 	MOV	DS,AX							       ;3.30
-	ASSUME	DS:CODE 						       ;3.30
+;	ASSUME	DS:CODE 						       ;3.30
 									       ;3.30
 ;	MOV	SI,OFFSET STKMSG1					       ;3.30
 ;	CALL	WRMSG							       ;3.30
@@ -237,35 +240,35 @@ Skip_EnableNMIS:							       ;3.30
 									       ;3.30
 	POP	ES							       ;3.30
 	POP	DS							       ;3.30
-	assume	ds:sysinitseg						       ;3.30
+;	assume	ds:sysinitseg						       ;3.30
 	POP	AX							       ;3.30
 	RET								       ;3.30
-STACKINIT	ENDP							       ;3.30
+;STACKINIT	ENDP							       ;3.30
 ;									       ;3.30
 									       ;3.30
-NEW_INIT_LOOP PROC NEAR 						       ;3.30
+NEW_INIT_LOOP:				;3.30
 ;INPUT: SI=OFSET INTO VECTOR TABLE OF THE PARTICULAR INT VECTOR BEING ADJUSTED ;3.30
 ;	BX=ds:OFFSET OF OLDxx, WHERE WILL BE SAVED THE POINTER TO ORIGINAL OWNER;3.30
 ;	DX=ds:OFFSET OF INTxx, THE NEW INTERRUPT HANDLER		       ;3.30
-;	di=offset value of Int19OLD&AA variable in BIOS.		       ;3.30
+;	di=offset value of Int19OLD#AA variable in BIOS.		       ;3.30
 ;	es=ZERO, SEGID OF VECTOR TABLE					       ;3.30
 ;	ds=Relocated Stack code segment 				       ;3.30
 									       ;3.30
-	MOV	AX,es:[SI+0]	       ;REMEMBER OFFSET IN VECTOR	       ;3.30
-	MOV	WORD PTR ds:[BX],AX	  ; TO ORIGINAL OWNER in DS	       ;3.30
-	MOV	AX,es:[SI+2]	       ;REMEMBER SEGID IN VECTOR	       ;3.30
-	MOV	WORD PTR ds:[BX]+2,AX	  ; TO ORIGINAL OWNER in DS	       ;3.30
+	MOV	AX,[es:SI+0]	       ;REMEMBER OFFSET IN VECTOR	       ;3.30
+	MOV	word [BX],AX	  ; TO ORIGINAL OWNER in DS	       ;3.30
+	MOV	AX,[es:SI+2]	       ;REMEMBER SEGID IN VECTOR	       ;3.30
+	MOV	word [BX+2],AX	  ; TO ORIGINAL OWNER in DS	       ;3.30
 	push	ds							       ;3.30
-	mov	ax, code						       ;3.30
+	mov	ax, CODE						       ;3.30
 	mov	ds, ax			;Set Int19OLDxx value in BIOS for      ;3.30
-	mov	ax,es:[si+0]		;Int 19 handler 		       ;3.30
-	mov	word ptr ds:[di],ax					       ;3.30
-	mov	ax,es:[si+2]						       ;3.30
-	mov	word ptr ds:[di]+2,ax					       ;3.30
+	mov	ax,[es:si+0]		;Int 19 handler 		       ;3.30
+	mov	word [di],ax					       ;3.30
+	mov	ax,[es:si+2]						       ;3.30
+	mov	word [di+2],ax					       ;3.30
 	pop	ds							       ;3.30
 									       ;3.30
-	MOV	WORD PTR es:[SI+0],DX  ;SET VECTOR TO POINT TO NEW INT HANDLER ;3.30
-	MOV	es:[SI+2],ds						       ;3.30
+	MOV	word [es:SI+0],DX  ;SET VECTOR TO POINT TO NEW INT HANDLER ;3.30
+	MOV	[es:SI+2],ds						       ;3.30
 	RET								       ;3.30
-NEW_INIT_LOOP ENDP							       ;3.30
+;NEW_INIT_LOOP ENDP							       ;3.30
 									       ;3.30

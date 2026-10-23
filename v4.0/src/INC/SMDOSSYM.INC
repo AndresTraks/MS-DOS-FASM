@@ -5,16 +5,16 @@ TRUE	    EQU 0FFFFh
 FALSE	    EQU 0
 
 Installed   = TRUE
-IFNDEF	DEBUG
+if ~ defined DEBUG
     DEBUG	= FALSE
-ENDIF
+end if
 
-include dosmac.INC
-INCLUDE VERSIONA.INC		;DEFINE THE MAJOR AND MINOR VERSION NUMBERS
+INCLUDE 'DOSMAC.INC'
+INCLUDE 'VERSIONA.INC'		;DEFINE THE MAJOR AND MINOR VERSION NUMBERS
 
-IF2
-    %OUT    DOSSYM in Pass 2
-ENDIF
+;IF2
+;    %OUT    DOSSYM in Pass 2
+;end if
 
 BREAK <Control character definitions>
 
@@ -46,35 +46,44 @@ BREAK <Read This and Weep>
 ;									   ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 
-include bpb.INC
+INCLUDE 'BPB.INC'
 
-include buffer.INC
+INCLUDE 'BUFFER.INC'
 
 BREAK <User stack inside of system call and SysVars>
 ; Location of user registers relative user stack pointer
 
-user_environ	STRUC
-user_AX     DW	    ?
-user_BX     DW	    ?
-user_CX     DW	    ?
-user_DX     DW	    ?
-user_SI     DW	    ?
-user_DI     DW	    ?
-user_BP     DW	    ?
-user_DS     DW	    ?
-user_ES     DW	    ?
-user_IP     DW	    ?
-user_CS     DW	    ?
-user_F	    DW	    ?
-user_environ	ENDS
+STRUC user_environ
+{
+.user_AX     DW	    0
+.user_BX     DW	    0
+.user_CX     DW	    0
+.user_DX     DW	    0
+.user_SI     DW	    0
+.user_DI     DW	    0
+.user_BP     DW	    0
+.user_DS     DW	    0
+.user_ES     DW	    0
+.user_IP     DW	    0
+.user_CS     DW	    0
+.user_F	    DW	    0
+}
+match =user_environ_LAID_OUT, user_environ_LAID_OUT
+{
+    user_environ_LAID_OUT equ 1
+    virtual at 0
+      user_environ user_environ
+      sizeof.user_environ = $ - user_environ
+    end virtual
+}
 
-include sysvar.INC
+INCLUDE 'SYSVAR.INC'
 
-include vector.INC
+INCLUDE 'VECTOR.INC'
 
 ;include mult.INC
 
-BREAK <Disk map>
+BREAK <DISK map>
 ;  MSDOS partitions the disk into 4 sections:
 ;
 ;  phys sector 0:   +-------------------+
@@ -96,7 +105,7 @@ BREAK <Disk map>
 ; All partition boundaries are sector boundaries.  The size of the FAT is
 ; adjusted to maximize the file space addressable.
 
-include dirent.INC
+INCLUDE 'DIRENT.INC'
 
 BREAK <File allocation Table information>
 ;
@@ -120,25 +129,25 @@ BREAK <File allocation Table information>
 ; number is selected so that disk checking programs know what to do (ie.  a
 ; cluster with entry FF7H which is not in a chain is not an error).
 
-include dpb.INC
+INCLUDE 'dpb.INC'
 
-include curdir.INC
+INCLUDE 'CURDIR.INC'
 
 ;include cpmfcb.INC
 
 ;include find.INC
 
-include pdb.INC
+INCLUDE 'PDB.INC'
 
-include exe.INC
+INCLUDE 'EXE.INC'
 
-include sf.INC
+INCLUDE 'SF.INC'
 
-include arena.INC
+INCLUDE 'arena.INC'
 
-include intnat.INC
+INCLUDE 'INTNAT.INC'
 
-include mi.INC
+INCLUDE 'MI.INC'
 
 fChk	equ 1
 fDelim	equ 2
@@ -149,9 +158,8 @@ fFCB	equ 8
 
 ;include error.INC
 
-include syscall.INC
+INCLUDE 'SYSCALL.INC'
 
-include doscntry.inc		;J.K. 5/26/86
+INCLUDE 'DOSCNTRY.INC'		;J.K. 5/26/86
 
 SUBTTL
-
