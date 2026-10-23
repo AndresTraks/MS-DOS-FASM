@@ -103,19 +103,19 @@ b:	push	SI
 ; rather than being rewritten at a hundred and fifty call sites.
 macro Message Bits,msg
 {
-	MESSAGE Bits,msg
+	MESSAGE Bits,<msg>
 }
 macro message Bits,msg
 {
-	MESSAGE Bits,msg
+	MESSAGE Bits,<msg>
 }
 macro MNUM	Bits,num
 {
-	MNum	Bits,num
+	MNum	Bits,<num>
 }
 macro mnum	Bits,num
 {
-	MNum	Bits,num
+	MNum	Bits,<num>
 }
 
 macro MNum	Bits,num

@@ -1,4 +1,4 @@
-%OUT BIOSTRUC.INC...
+;%OUT BIOSTRUC.INC...
 ;	SCCSID = @(#)BIOSTRUC.INC 1.0 86/09/30
 ; ROM BIOS CALL PACKET STRUCTURES
 
@@ -77,14 +77,23 @@
 ;	DB	xx		feature information byte 2 - reserved
 ;
 
-BIOS_SYSTEM_DESCRIPTOR	struc
-bios_SD_leng		dw	?
-bios_SD_modelbyte	db	?
-bios_SD_scnd_modelbyte	db	?
-			db	?
-bios_SD_featurebyte1	db	?
-			db   4 dup (?)
-BIOS_SYSTEM_DESCRIPTOR ends
+STRUC BIOS_SYSTEM_DESCRIPTOR
+{
+.bios_SD_leng		dw	0
+.bios_SD_modelbyte	db	0
+.bios_SD_scnd_modelbyte	db	0
+			db	0
+.bios_SD_featurebyte1	db	0
+			db   4 dup (0)
+}
+match =BIOS_SYSTEM_DESCRIPTOR_LAID_OUT, BIOS_SYSTEM_DESCRIPTOR_LAID_OUT
+{
+    BIOS_SYSTEM_DESCRIPTOR_LAID_OUT equ 1
+    virtual at 0
+      BIOS_SYSTEM_DESCRIPTOR BIOS_SYSTEM_DESCRIPTOR
+      sizeof.BIOS_SYSTEM_DESCRIPTOR = $ - BIOS_SYSTEM_DESCRIPTOR
+    end virtual
+}
 
 ;FeatureByte1	bit map equates
 DMAchannel3		equ 10000000b
