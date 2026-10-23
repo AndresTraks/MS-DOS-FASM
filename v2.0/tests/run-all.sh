@@ -87,6 +87,10 @@ fi
 # editor commands, and compares the files and the transcripts.
 ./tests/edlin.sh || fail=1
 
+# Drives our DEBUG and Microsoft's with the same script of commands and
+# compares the two transcripts.
+./tests/debug.sh || fail=1
+
 # Queues a file with PRINT and reads what reached the printer, pressing keys
 # at the prompt to give DOS the idle interrupts PRINT prints from.
 ./tests/print.sh || fail=1

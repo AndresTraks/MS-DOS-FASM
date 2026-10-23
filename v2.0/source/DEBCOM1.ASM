@@ -1,52 +1,33 @@
-TITLE   PART1 DEBUGGER COMMANDS
 
 ; Routines to perform debugger commands except ASSEMble and UASSEMble
 
-.xlist
-.xcref
-        INCLUDE DEBEQU.ASM
-        INCLUDE DOSSYM.ASM
-.cref
-.list
+        INCLUDE 'DEBEQU.ASM'
 
-CODE    SEGMENT PUBLIC BYTE 'CODE'
-CODE    ENDS
+if SEGSEL = S_CODE
+end if
 
-CONST   SEGMENT PUBLIC BYTE
-
-        EXTRN   SYNERR:BYTE
-
-        EXTRN   DISPB:WORD,DSIZ:BYTE,DSSAVE:WORD
-        if  sysver
-        EXTRN   CIN:DWORD,PFLAG:BYTE
-        endif
-
-CONST   ENDS
-
-DATA    SEGMENT PUBLIC BYTE
-
-        EXTRN   DEFLEN:WORD,BYTEBUF:BYTE,DEFDUMP:BYTE
-
-DATA    ENDS
-
-DG      GROUP   CODE,CONST,DATA
+if SEGSEL = S_CONST
 
 
-CODE    SEGMENT PUBLIC BYTE 'CODE'
+        if  SYSVER
+        end if
+
+end if
+
+if SEGSEL = S_DATA
+
+
+end if
+
+
+
+if SEGSEL = S_CODE
 ASSUME  CS:DG,DS:DG,ES:DG,SS:DG
 
 
-        PUBLIC  HEXCHK,GETHEX1,PRINT,DSRANGE,ADDRESS,HEXIN,PERROR
-        PUBLIC  GETHEX,GET_ADDRESS,GETEOL,GETHX,PERR
-        PUBLIC  PERR,MOVE,DUMP,ENTER,FILL,SEARCH,DEFAULT
-        if  sysver
-        PUBLIC  IN
-        EXTRN   DISPREG:NEAR,DEVIOCALL:NEAR
-        endif
+        if  SYSVER
+        end if
 
-        EXTRN   OUT:NEAR,CRLF:NEAR,OUTDI:NEAR,OUTSI:NEAR,SCANP:NEAR
-        EXTRN   SCANB:NEAR,BLANK:NEAR,TAB:NEAR,PRINTMES:NEAR,COMMAND:NEAR
-        EXTRN   HEX:NEAR,BACKUP:NEAR
 
 
 DEBCOM1:
@@ -87,9 +68,9 @@ GetDef:
         POP     CX                      ; get original offset
         PUSH    CX                      ; save it
         NEG     CX                      ; rest of segment
-        JZ      RngRet                  ; use default
+        JZ      RNGRET                  ; use default
         CMP     CX,DX                   ; more room in segment?
-        JAE     RngRet                  ; yes, use default
+        JAE     RNGRET                  ; yes, use default
         JMP     RngRet1                 ; no, length is in CX
 
 GETLEN:
@@ -127,8 +108,8 @@ USEDEF:
 
 DUMP:
         MOV     BP,[DSSAVE]
-        MOV     CX,DISPB
-        MOV     DI,OFFSET DG:DEFDUMP
+        MOV     CX,[DISPB]
+        MOV     DI,DEFDUMP
         CALL    DEFAULT                 ; Get range if specified
         MOV     DS,AX                   ; Set segment
         MOV     SI,DX                   ; SI has displacement in segment
@@ -136,7 +117,7 @@ DUMP:
         IF  ZIBO
         PUSH    SI                      ; save SI away
         AND     SI,0FFF0h               ; convert to para number
-        CALL    OutSI                   ; display location
+        CALL    OUTSI                   ; display location
         POP     SI                      ; get SI back
         MOV     AX,SI                   ; move offset
         MOV     AH,3                    ; spaces per byte
@@ -146,10 +127,10 @@ DUMP:
         JZ      InRow                   ; if xero go on
         PUSH    CX                      ; save count
         MOV     CX,AX                   ; move to convenient spot
-        CALL    Tab                     ; move over
+        CALL    TAB                     ; move over
         POP     CX                      ; get back count
         JMP     InRow                   ; display line
-        ENDIF
+        end if
 
 ROW:
         CALL    OUTSI                   ; Print address at start of line
@@ -165,13 +146,13 @@ BYTE1:
         DEC     CX                      ; Drop loop count
         JZ      ToAscii                 ; If through do ASCII dump
         MOV     AX,SI
-        TEST    AL,CS:(BYTE PTR DSIZ)   ; On 16-byte boundary?
+        TEST    AL,byte [CS:DSIZ]   ; On 16-byte boundary?
         JZ      ENDROW
         PUSH    DX                      ; Didn't need ASCII addr. yet
         TEST    AL,7                    ; On 8-byte boundary?
         JNZ     BYTE0
         MOV     AL,"-"                  ; Mark every 8 bytes
-        CALL    OUT
+        CALL    OUT_
         JMP     SHORT BYTE1
 ENDROW:
         CALL    ASCII                   ; Show it in ASCII
@@ -185,7 +166,7 @@ ToAscii:
         MOV     CL,3
         MUL     CL
         MOV     CX,AX                   ; number of chars to move
-        CALL    Tab
+        CALL    TAB
 ASCII:
         PUSH    CX                      ; Save byte count
         MOV     AX,SI                   ; Current dump address
@@ -213,7 +194,7 @@ ASCII:
         PUSH    AX                      ; save count
         CALL    TAB
         POP     CX                      ; get count back
-        ENDIF
+        end if
 ASCDMP:
         LODSB                           ; Get ASCII byte to dump
         AND     AL,7FH                  ; ASCII uses 7 bits
@@ -224,11 +205,11 @@ ASCDMP:
 NOPRT:
         MOV     AL,"."                  ; If unprintable character
 PRIN:
-        CALL    OUT                     ; Print ASCII character
+        CALL    OUT_                     ; Print ASCII character
         LOOP    ASCDMP                  ; CX times
         POP     CX                          ; Restore overall dump length
-        MOV     ES:WORD PTR [DEFDUMP],SI
-        MOV     ES:WORD PTR [DEFDUMP+2],DS  ; Save last address as default
+        MOV     word [ES:DEFDUMP],SI
+        MOV     word [ES:DEFDUMP+2],DS  ; Save last address as default
         CALL    CRLF                        ; Print CR/LF and return
         RET
 
@@ -280,7 +261,7 @@ FILL:
         POP     ES                      ; Segment
         POP     CX                      ; Length
         CMP     BX,CX                   ; BX is length of fill list
-        MOV     SI,OFFSET DG:BYTEBUF    ; List is in byte buffer
+        MOV     SI,BYTEBUF    ; List is in byte buffer
         JCXZ    BIGRNG
         JAE     COPYLIST                ; If list is big, copy part of it
 BIGRNG:
@@ -316,7 +297,7 @@ SEARCH:
         POP     CX                      ; Length to be searched
         SUB     CX,BX                   ;  minus length of list
 SCAN:
-        MOV     SI,OFFSET DG:BYTEBUF    ; List kept in byte buffer
+        MOV     SI,BYTEBUF    ; List kept in byte buffer
         LODSB                           ; Bring first byte into AL
 DOSCAN:
         SCASB                           ; Search for first byte
@@ -329,12 +310,12 @@ DOSCAN:
         MOV     CX,BX                   ; Area length back in CX
         POP     DI                      ; Next search location
         POP     BX                      ; Restore list length
-        JNZ     TEST                    ; Continue search if no match
+        JNZ     TEST_                    ; Continue search if no match
         DEC     DI                      ; Match address
         CALL    OUTDI                   ; Print it
         INC     DI                      ; Restore search address
         CALL    CRLF
-TEST:
+TEST_:
         JCXZ    RET1
         JMP     SHORT SCAN              ; Look for next occurrence
 
@@ -438,11 +419,11 @@ STOSTRG:
 ; (') or double (") quotes.
 
 LIST:
-        MOV     BX,OFFSET DG:BYTEBUF    ; Put byte list in the byte buffer
+        MOV     BX,BYTEBUF    ; Put byte list in the byte buffer
 LISTLP:
         CALL    LISTITEM                ; Process a parameter
         JNC     LISTLP                  ; If OK, try for more
-        SUB     BX,OFFSET DG:BYTEBUF    ; BX now has no. of bytes in list
+        SUB     BX,BYTEBUF    ; BX now has no. of bytes in list
         JZ      PERROR                  ; List must not be empty
 
 ; Make sure there is nothing more on the line except for
@@ -467,10 +448,10 @@ PERR:
 ; it on the terminal. Then print "^ Error".
 
 PERROR:
-        SUB     SI,OFFSET DG:(BYTEBUF-1); How many char processed so far?
+        SUB     SI,(BYTEBUF-1); How many char processed so far?
         MOV     CX,SI                   ; Parameter for TAB in CX
         CALL    TAB                     ; Directly below bad char
-        MOV     SI,OFFSET DG:SYNERR     ; Error message
+        MOV     SI,SYNERR     ; Error message
 
 ; Print error message and abort to command level
 
@@ -497,7 +478,7 @@ GET_ADDRESS:
         CALL    GETHX
         JC      ADRERR
         MOV     AX,BP                   ; Get default segment
-        CMP     BYTE PTR [SI],":"
+        CMP     byte [SI],":"
         JNZ     GETRET
         PUSH    DX
 GETDISP:
@@ -510,7 +491,7 @@ GETRET: CLC
         RET
 SEGREG:
         MOV     AL,[SI]
-        MOV     DI,OFFSET DG:SEGLET
+        MOV     DI,SEGLET
         MOV     CX,4
         REPNE   SCASB
         JNZ     ADRERR
@@ -518,9 +499,9 @@ SEGREG:
         INC     SI
         SHL     CX,1
         MOV     BX,CX
-        CMP     BYTE PTR [SI],":"
+        CMP     byte [SI],":"
         JNZ     ADRERR
-        PUSH    [BX+DSSAVE]
+        PUSH    word [BX+DSSAVE]
         JMP     SHORT GETDISP
 
 SEGLET  DB      "CSED"
@@ -533,7 +514,7 @@ GETLIST:
         CALL    LIST                    ; Get the bytes to enter
         POP     DI                      ; Displacement within segment
         POP     ES                      ; Segment to enter into
-        MOV     SI,OFFSET DG:BYTEBUF    ; List of bytes is in byte 2uffer
+        MOV     SI,BYTEBUF    ; List of bytes is in byte 2uffer
         MOV     CX,BX                   ; Count of bytes
         REP     MOVSB                   ; Enter that byte list
         RET
@@ -554,7 +535,7 @@ GETLIST:
 ; the address. This is in regular LIST format so any number
 ; of hex values or strings in quotes may be entered.
 
-ENTER:
+ENTER_:
         MOV     BP,[DSSAVE]             ; Set default segment to DS
         CALL    ADDRESS
         PUSH    AX                      ; Save for later
@@ -568,15 +549,15 @@ GETROW:
         CALL    BLANK                   ; Leave a space
         CALL    BLANK
 GETBYTE:
-        MOV     AL,ES:[DI]              ; Get current value
+        MOV     AL,[ES:DI]              ; Get current value
         CALL    HEX                     ; And display it
 PUTDOT:
         MOV     AL,"."
-        CALL    OUT                     ; Prompt for new value
+        CALL    OUT_                     ; Prompt for new value
         MOV     CX,2                    ; Max of 2 digits in new value
         MOV     DX,0                    ; Intial new value
 GETDIG:
-        CALL    IN                      ; Get digit from user
+        CALL    IN_                      ; Get digit from user
         MOV     AH,AL                   ; Save
         CALL    HEXCHK                  ; Hex digit?
         XCHG    AH,AL                   ; Need original for echo
@@ -586,7 +567,7 @@ GETDIG:
         LOOP    GETDIG                  ; At most 2 digits
 ; We have two digits, so all we will accept now is a command.
 DWAIT:
-        CALL    IN                      ; Get command character
+        CALL    IN_                      ; Get command character
 NOHEX:
         CMP     AL,8                    ; Backspace
         JZ      BS
@@ -599,14 +580,14 @@ NOHEX:
         CMP     AL," "                  ; Go to next address
         JZ      NEXT
         MOV     AL,8
-        CALL    OUT                     ; Back   CLDover illegal character
+        CALL    OUT_                     ; Back   CLDover illegal character
         CALL    BACKUP
         JCXZ    DWAIT
         JMP     SHORT GETDIG
 
 RUB:
         MOV     AL,8
-        CALL    OUT
+        CALL    OUT_
 BS:
         CMP     CL,2                    ; CX=2 means nothing typed yet
         JZ      PUTDOT                  ; Put back the dot we backed     CLDover
@@ -619,7 +600,7 @@ BS:
 ; If new value has been entered, convert it to binary and
 ; put into memory. Always bump pointer to next location
 
-STORE:
+STORE_:
         CMP     CL,2                    ; CX=2 means nothing typed yet
         JZ      NOSTO                   ; So no new value to store
 ; Rotate DH left 4 bits to combine with DL and make a byte value
@@ -628,12 +609,12 @@ STORE:
         SHL     DH,CL
         POP     CX
         OR      DL,DH                   ; Hex is now converted to binary
-        MOV     ES:[DI],DL              ; Store new value
+        MOV     [ES:DI],DL              ; Store new value
 NOSTO:
         INC     DI                      ; Prepare for next location
         RET
 NEXT:
-        CALL    STORE                   ; Enter new value
+        CALL    STORE_                   ; Enter new value
         INC     CX                      ; Leave a space plus two for
         INC     CX                      ;  each digit not entered
         CALL    TAB
@@ -644,23 +625,23 @@ NEWROW:
         CALL    CRLF                    ; Terminate line
         JMP     GETROW                  ; Print address on new line
 PREV:
-        CALL    STORE                   ; Enter the new value
+        CALL    STORE_                   ; Enter the new value
 ; DI has been bumped to next byte. Drop it 2 to go to previous addr
         DEC     DI
         DEC     DI
         JMP     SHORT NEWROW            ; Terminate line after backing   CLD
 
 EOL:
-        CALL    STORE                   ; Enter the new value
+        CALL    STORE_                   ; Enter the new value
         JMP     CRLF                    ; CR/LF and terminate
 
 ; Console input of single character
 
         IF      SYSVER
-IN:
+IN_:
         PUSH    DS
         PUSH    SI
-        LDS     SI,CS:[CIN]
+        LDS     SI,[CS:CIN]
         MOV     AH,4
         CALL    DEVIOCALL
         POP     SI
@@ -673,21 +654,20 @@ NOTCNTC:
         JZ      PRINTON
         CMP     AL,'N'-'@'
         JZ      PRINTOFF
-        CALL    OUT
+        CALL    OUT_
         RET
 
 PRINTOFF:
 PRINTON:
         NOT     [PFLAG]
-        JMP     SHORT IN
+        JMP     SHORT IN_
 
         ELSE
 
-IN:
+IN_:
         MOV     AH,1
         INT     21H
         RET
-        ENDIF
+        end if
 
-CODE    ENDS
-        END     DEBCOM1
+end if

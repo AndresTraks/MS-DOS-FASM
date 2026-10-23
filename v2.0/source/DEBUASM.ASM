@@ -1,71 +1,40 @@
-TITLE   DEBUASM
 
 ; Code for the UASSEMble command in the debugger
 
-.xlist
-.xcref
-        INCLUDE DEBEQU.ASM
-        INCLUDE DOSSYM.ASM
-.cref
-.list
+        INCLUDE 'DEBEQU.ASM'
 
 
-CODE    SEGMENT PUBLIC BYTE 'CODE'
-CODE    ENDS
+if SEGSEL = S_CODE
+end if
 
-CONST   SEGMENT PUBLIC BYTE
-
-        EXTRN   SYNERR:BYTE
-        EXTRN   NSEG:WORD,SISAVE:WORD,BPSAVE:WORD,DISAVE:WORD
-        EXTRN   BXSAVE:WORD,DSSAVE:WORD,ESSAVE:WORD,CSSAVE:WORD,IPSAVE:WORD
-        EXTRN   SSSAVE:WORD,CXSAVE:WORD,SPSAVE:WORD,FSAVE:WORD
-        EXTRN   DISTAB:WORD,SHFTAB:WORD,IMMTAB:WORD,GRP1TAB:WORD,GRP2TAB:WORD
-        EXTRN   DBMN:BYTE,ESCMN:BYTE,DISPB:WORD,STACK:BYTE,REG8:BYTE
-        EXTRN   REG16:BYTE,SREG:BYTE,SIZ8:BYTE,SEGTAB:WORD,M8087_TAB:BYTE
-        EXTRN   FI_TAB:BYTE,SIZE_TAB:BYTE,MD9_TAB:BYTE,MD9_TAB2:BYTE
-        EXTRN   MDB_TAB:BYTE,MDB_TAB2:BYTE,MDD_TAB:BYTE,MDD_TAB2:BYTE
-        EXTRN   MDF_TAB:BYTE
-
-CONST   ENDS
-
-DATA    SEGMENT PUBLIC BYTE
-
-        EXTRN   DISADD:BYTE,DISCNT:WORD,BYTCNT:BYTE,TEMP:BYTE,AWORD:BYTE
-        EXTRN   MIDFLD:BYTE,MODE:BYTE,REGMEM:BYTE,OPCODE:WORD,OPBUF:BYTE
-        EXTRN   INDEX:WORD
-
-DATA    ENDS
-
-DG      GROUP   CODE,CONST,DATA
+if SEGSEL = S_CONST
 
 
-CODE    SEGMENT PUBLIC BYTE 'CODE'
+end if
+
+if SEGSEL = S_DATA
+
+
+end if
+
+
+
+if SEGSEL = S_CODE
 ASSUME  CS:DG,DS:DG,ES:DG,SS:DG
 
 
-        PUBLIC  UNASSEM
-        PUBLIC  DISASLN,MEMIMM,JMPCALL,SIGNIMM,ALUFROMREG,WORDTOALU
-        PUBLIC  GRP2,PREFIX,OUTVARW,GRP1,SSPRE,MOVSEGTO,DSPRE,SHIFT
-        PUBLIC  ESPRE,IMMED,CSPRE,OUTVARB,CHK10,ACCIMM,INT3,INVARB
-        PUBLIC  MOVSEGFROM,LOADACC,OUTFIXB,XCHGAX,REGIMMW,SHORTJMP
-        PUBLIC  SAV8,M8087,M8087_DB,M8087_DF,M8087_D9,M8087_DD
-        PUBLIC  SAV16,SAVHEX,INFIXW,REGIMMB,OUTFIXW,SHIFTV,LONGJMP
-        PUBLIC  INVARW,STOREACC,INFIXB,NOOPERANDS,ALUTOREG
-        PUBLIC  SEGOP,REGOP,GETADDR
 
-        EXTRN   CRLF:NEAR,PRINTMES:NEAR,BLANK:NEAR,TAB:NEAR,OUT:NEAR
-        EXTRN   HEX:NEAR,DEFAULT:NEAR,OUTSI:NEAR,OUTDI:NEAR
 
 UNASSEM:
         MOV     BP,[CSSAVE]             ; Default code segment
-        MOV     DI,OFFSET DG:DISADD     ; Default address
-        MOV     CX,DISPB                ; Default length
+        MOV     DI,DISADD     ; Default address
+        MOV     CX,[DISPB]                ; Default length
         SHR     CX,1
         SHR     CX,1
         CALL    DEFAULT
-        MOV     WORD PTR [DISADD],DX    ; Displacement of disassembly
-        MOV     WORD PTR [DISADD+2],AX  ; Segment
-        MOV     WORD PTR [DISCNT],CX    ; No. of bytes (but whole instructions)
+        MOV     word [DISADD],DX    ; Displacement of disassembly
+        MOV     word [DISADD+2],AX  ; Segment
+        MOV     word [DISCNT],CX    ; No. of bytes (but whole instructions)
 DISLP:
         CALL    DISASLN                 ; Disassemble one line
         CALL    CRLF
@@ -75,7 +44,7 @@ DISLP:
 
 GOTDIS: PUSH    DS                      ; RE-GET LAST BYTE
         PUSH    SI
-        LDS     SI,DWORD PTR [DISADD]
+        LDS     SI,dword [DISADD]
         MOV     AL,[SI-1]
         POP     SI
         POP     DS
@@ -83,10 +52,10 @@ GOTDIS: PUSH    DS                      ; RE-GET LAST BYTE
 
 GETDIS:
         PUSH    DS
-        LDS     SI,DWORD PTR [DISADD]
+        LDS     SI,dword [DISADD]
         LODSB                           ; Get the next byte of code
         POP     DS
-        MOV     WORD PTR [DISADD],SI    ; Update pointer
+        MOV     word [DISADD],SI    ; Update pointer
         PUSH    AX
         CALL    HEX                     ; Display each code byte
         MOV     SI,[DISCNT]
@@ -95,14 +64,14 @@ GETDIS:
         DEC     SI                      ; Count off the bytes
         MOV     [DISCNT],SI
 ENDRNG:
-        INC     BYTE PTR[BYTCNT]        ; Keep track of no. of bytes per line
+        INC     byte [BYTCNT]        ; Keep track of no. of bytes per line
         POP     AX
         RET
 
-DSPRE:  INC     BYTE PTR [NSEG+1]
-SSPRE:  INC     BYTE PTR [NSEG+1]
-CSPRE:  INC     BYTE PTR [NSEG+1]
-ESPRE:  INC     BYTE PTR [NSEG+1]
+DSPRE:  INC     byte [NSEG+1]
+SSPRE:  INC     byte [NSEG+1]
+CSPRE:  INC     byte [NSEG+1]
+ESPRE:  INC     byte [NSEG+1]
 
 PREFIX:
         POP     BX                      ; Dump off return address
@@ -110,17 +79,17 @@ PREFIX:
         CALL    CRLF
 DISASLN:
         PUSH    DS
-        LDS     SI,DWORD PTR [DISADD]
+        LDS     SI,dword [DISADD]
         CALL    OUTSI                   ; Show disassembly address
         POP     DS
         CALL    BLANK
 DISASLN1:
-        MOV     BYTE PTR [BYTCNT],0     ; Count of code bytes per line
-        MOV     DI,OFFSET DG:OPBUF      ; Point to operand buffer
+        MOV     byte [BYTCNT],0     ; Count of code bytes per line
+        MOV     DI,OPBUF      ; Point to operand buffer
         MOV     AL," "
         MOV     CX,OPBUFLEN-1           ; Don't do last byte which has end marker
         REP     STOSB                   ; Initialize operand buffer to blanks
-        MOV     BYTE PTR [DI]," "+80H
+        MOV     byte [DI]," "+80H
         CALL    GETDIS                  ; Get opcode
         MOV     AH,0
         MOV     BX,AX
@@ -129,13 +98,13 @@ DISASLN1:
         MOV     AL,BL                   ; Restore opcode
         SHL     BX,1
         SHL     BX,1                    ; Multiply opcode by 4
-        ADD     BX,OFFSET DG:DISTAB
+        ADD     BX,DISTAB
         MOV     DX,[BX]                 ; Get pointer to mnemonic from table
         MOV     [OPCODE],DX             ; Save it until line is complete
-        MOV     DI,OFFSET DG:OPBUF      ; Initialize for opcode routines
-        CALL    WORD PTR [BX+2]         ; Dispatch to opcode routine
+        MOV     DI,OPBUF      ; Initialize for opcode routines
+        CALL    word [BX+2]         ; Dispatch to opcode routine
 FINLN:
-        MOV     SI,OFFSET DG:DISADD
+        MOV     SI,DISADD
         MOV     AH,[BYTCNT]             ; See how many bytes in this instruction
         ADD     AH,AH                   ; Each uses two characters
         MOV     AL,14                   ; Amount of space we want to use
@@ -148,8 +117,8 @@ FINLN:
         JZ      NOOPC
         CALL    PRINTMES                ; Print opcode mnemonic
         MOV     AL,9
-        CALL    OUT                     ; and a tab
-NOOPC:  MOV     SI,OFFSET DG:OPBUF
+        CALL    OUT_                     ; and a tab
+NOOPC:  MOV     SI,OPBUF
         JMP     PRINTMES                ; and the operand buffer
 
 GETMODE:
@@ -170,7 +139,7 @@ GETMODE:
         RET
 
 IMMED:
-        MOV     BX,OFFSET DG:IMMTAB
+        MOV     BX,IMMTAB
         CALL    GETMNE
 FINIMM:
         CALL    TESTREG
@@ -187,7 +156,7 @@ IMM1:
 IMM:
         MOV     AL,","
         STOSB
-        TEST    BYTE PTR [AWORD],-1
+        TEST    byte [AWORD],-1
         JNZ     SAV16
 SAV8:
         CALL    GETDIS
@@ -195,13 +164,13 @@ SAV8:
 
 LONGJMP:
         PUSH    DI
-        MOV     DI,OFFSET DG:TEMP
+        MOV     DI,TEMP
         CALL    SAV16
         POP     DI
         CALL    SAV16
         MOV     AL,":"
         STOSB
-        MOV     SI,OFFSET DG:TEMP
+        MOV     SI,TEMP
         MOV     CX,4
 MOVDIG:
         LODSB
@@ -239,7 +208,7 @@ CHK10:
         RET
 
 SIGNIMM:
-        MOV     BX,OFFSET DG:IMMTAB
+        MOV     BX,IMMTAB
         CALL    GETMNE
         CALL    TESTREG
         MOV     AL,","
@@ -268,11 +237,11 @@ ALUFROMREG:
 REGFLD:
         MOV     AL,[MIDFLD]
 SAVREG:
-        MOV     SI,OFFSET DG:REG8
-        CMP     BYTE PTR [AWORD],1
+        MOV     SI,REG8
+        CMP     byte [AWORD],1
         JNE     FNDREG
 SAVREG16:
-        MOV     SI,OFFSET DG:REG16
+        MOV     SI,REG16
 FNDREG:
         CBW
         ADD     SI,AX
@@ -286,7 +255,7 @@ SEGOP:
         SHR     AL,1
 SAVSEG:
         AND     AL,3
-        MOV     SI,OFFSET DG:SREG
+        MOV     SI,SREG
         JMP     SHORT FNDREG
 
 REGOP:
@@ -294,7 +263,7 @@ REGOP:
         JMP     SHORT SAVREG16
 
 MOVSEGTO:
-        MOV     BYTE PTR [AWORD],1
+        MOV     byte [AWORD],1
         CALL    GETADDR
         MOV     AL,","
         STOSB
@@ -304,7 +273,7 @@ MOVSEGTO:
 MOVSEGFROM:
         CALL    GETMODE
         CALL    SAVSEG
-        MOV     BYTE PTR [AWORD],1
+        MOV     byte [AWORD],1
         JMP     SHORT MEMOP2
 
 GETADDR:
@@ -312,7 +281,7 @@ GETADDR:
         JMP     SHORT ADDRMOD
 
 WORDTOALU:
-        MOV     BYTE PTR [AWORD],1
+        MOV     byte [AWORD],1
 ALUTOREG:
         CALL    GETMODE
         CALL    REGFLD
@@ -320,16 +289,16 @@ MEMOP2:
         MOV     AL,","
         STOSB
 ADDRMOD:
-        CMP     BYTE PTR [MODE],3
+        CMP     byte [MODE],3
         MOV     AL,[REGMEM]
         JE      SAVREG
         XOR     BX,BX
-        MOV     BYTE PTR [NSEG],3
-        MOV     BYTE PTR [DI],"["
+        MOV     byte [NSEG],3
+        MOV     byte [DI],"["
         INC     DI
         CMP     AL,6
         JNE     NODRCT
-        CMP     BYTE PTR [MODE],0
+        CMP     byte [MODE],0
         JE      DIRECT                  ; Mode=0 and R/M=6 means direct addr.
 NODRCT:
         MOV     DL,AL
@@ -343,7 +312,7 @@ NODRCT:
         JNE     CHKPLS
 USEBP:
         MOV     BX,[BPSAVE]
-        MOV     BYTE PTR [NSEG],2       ; Change default to Stack Segment
+        MOV     byte [NSEG],2       ; Change default to Stack Segment
         MOV     AX,BPREG
 SAVBASE:
         STOSW
@@ -397,7 +366,7 @@ USESI:
 SHORTJMP:
         CALL    GETDIS
         CBW
-        ADD     AX,WORD PTR [DISADD]
+        ADD     AX,word [DISADD]
         XCHG    DX,AX
 SAVJMP:
         MOV     AL,DH
@@ -410,7 +379,7 @@ JMPCALL:
         MOV     DL,AL
         CALL    GETDIS
         MOV     DH,AL
-        ADD     DX,WORD PTR [DISADD]
+        ADD     DX,word [DISADD]
         JMP     SHORT SAVJMP
 
 XCHGAX:
@@ -430,7 +399,7 @@ MEMDIR:
         MOV     AL,"["
         STOSB
         XOR     BX,BX
-        MOV     BYTE PTR [NSEG],3
+        MOV     byte [NSEG],3
         JMP     DIRECT
 
 STOREACC:
@@ -441,16 +410,16 @@ STOREACC:
         JMP     SAVREG
 
 REGIMMB:
-        MOV     BYTE PTR [AWORD],0
+        MOV     byte [AWORD],0
         JMP     SHORT REGIMM
 REGIMMW:
-        MOV     BYTE PTR [AWORD],1
+        MOV     byte [AWORD],1
 REGIMM:
         AND     AL,7
         JMP     IMM1
 
-INT3:
-        MOV     BYTE PTR [DI],"3"
+INT3_:
+        MOV     byte [DI],"3"
         RET
 ;
 ;  8087 instructions whose first byte is 0dfh
@@ -458,7 +427,7 @@ INT3:
 M8087_DF:
         CALL    GET64F
         JZ      ISDD3
-        MOV     SI,OFFSET DG:MDF_TAB
+        MOV     SI,MDF_TAB
         JMP     NODB3
 ;
 ;  8087 instructions whose first byte is 0ddh
@@ -466,7 +435,7 @@ M8087_DF:
 M8087_DD:
         CALL    GET64F
         JZ      ISDD3
-        MOV     SI,OFFSET DG:MDD_TAB
+        MOV     SI,MDD_TAB
         JMP     NOD93
 
 ISDD3:
@@ -475,7 +444,7 @@ ISDD3:
         JZ      ISSTI
         JMP     ESC0
 ISSTI:  AND     AL,11B
-        MOV     SI,OFFSET DG:MDD_TAB2
+        MOV     SI,MDD_TAB2
         MOV     CL,AL
         CALL    MOVBYT
         JMP     PUTRST
@@ -485,7 +454,7 @@ ISSTI:  AND     AL,11B
 M8087_DB:
         CALL    GET64F
         JZ      ISDB3
-        MOV     SI,OFFSET DG:MDB_TAB
+        MOV     SI,MDB_TAB
 NODB3:  CALL    PUTOP
         CALL    PUTSIZE
         JMP     ADDRMOD
@@ -499,7 +468,7 @@ ISDBIG: CALL    GOTDIS
         AND     AL,11111B
         CMP     AL,4
         JAE     ESC0V
-        MOV     SI,OFFSET DG:MDB_TAB2
+        MOV     SI,MDB_TAB2
         JMP     DOBIG
 ;
 ;  8087 instructions whose first byte is 0d9h
@@ -508,7 +477,7 @@ M8087_D9:
         CALL    GET64F
         JZ      ISD93
 
-        MOV     SI,OFFSET DG:MD9_TAB
+        MOV     SI,MD9_TAB
 NOD93:  CALL    PUTOP
         AND     AL,111B
         CMP     AL,3
@@ -554,7 +523,7 @@ GOTFNOP:MOV     AX,"ON"
 
 ISD9BIG:
         CALL    GOTDIS                  ; GET THE MODE BYTE
-        MOV     SI,OFFSET DG:MD9_TAB2
+        MOV     SI,MD9_TAB2
 DOBIG:  AND     AL,11111B
         MOV     CL,AL
         JMP     MOVBYT
@@ -565,7 +534,7 @@ M8087:
         CALL    GET64
         CALL    PUTFI                   ; PUT FIRST PART OF OPCODE
         MOV     AL,DL
-        CMP     BYTE PTR [MODE],11B     ; CHECK FOR REGISTER MODE
+        CMP     byte [MODE],11B     ; CHECK FOR REGISTER MODE
         JZ      MODEIS3
         CALL    PUTMN                   ; PUT MIDDLE PART OF OPCODE
 NO3:    MOV     AL,9                    ; OUTPUT A TAB
@@ -629,20 +598,20 @@ PUTST0: CALL    PUTST
 ;
 ; output an 8087 mnemonic
 ;
-PUTMN:  MOV     SI,OFFSET DG:M8087_TAB
+PUTMN:  MOV     SI,M8087_TAB
         MOV     CL,AL
         AND     CL,00000111B
         JMP     SHORT MOVBYT
 ;
 ; output either 'FI' or 'F' for first byte of opcode
 ;
-PUTFI:  MOV     SI,OFFSET DG:FI_TAB
+PUTFI:  MOV     SI,FI_TAB
         JMP     SHORT PUTFI2
 ;
 ; output size (dword, tbyte, etc.)
 ;
-PUTSIZE:MOV     SI,OFFSET DG:SIZE_TAB
-PUTFI2: CMP     BYTE PTR [MODE],11B     ; check if 8087 register
+PUTSIZE:MOV     SI,SIZE_TAB
+PUTFI2: CMP     byte [MODE],11B     ; check if 8087 register
         JNZ     PUTFI3
         AND     AL,111000B              ; LOOK FOR INVALID FORM OF 0DAH OPERANDS
         CMP     AL,010000B
@@ -650,7 +619,7 @@ PUTFI2: CMP     BYTE PTR [MODE],11B     ; check if 8087 register
         MOV     AL,DL
         CMP     AL,110011B              ; FCOMPP
         JNZ     GOFI
-        CMP     BYTE PTR [REGMEM],1
+        CMP     byte [REGMEM],1
         JZ      GOFI
 ESC0PJ: JMP     ESC0P
 GOFI:   XOR     CL,CL
@@ -716,7 +685,7 @@ PUTOP:  AND     AL,111B
 GET64F: CALL    GET64
         MOV     AL,"F"
         STOSB
-        CMP     BYTE PTR [MODE],3
+        CMP     byte [MODE],3
         MOV     AL,DL
         RET
 
@@ -732,16 +701,16 @@ GET64:
         RET
 
 ESC0P:  POP     DI                      ; CLEAN UP STACK
-ESC0:   MOV     WORD PTR [OPCODE],OFFSET DG:ESCMN
+ESC0:   MOV     word [OPCODE],ESCMN
         MOV     AL,DL
-        MOV     DI,OFFSET DG:OPBUF
+        MOV     DI,OPBUF
         JMP     SHORT ESC1
 
 ESC:    CALL    GET64
 ESC1:   CALL    SAVHEX
-        CMP     BYTE PTR [MODE],3
+        CMP     byte [MODE],3
         JZ      SHRTESC
-        MOV     BYTE PTR  [AWORD],1
+        MOV     byte [AWORD],1
         JMP     MEMOP2
 
 SHRTESC:
@@ -800,14 +769,14 @@ PUTX:   STOSW
         RET
 
 SHFT:
-        MOV     BX,OFFSET DG:SHFTAB
+        MOV     BX,SHFTAB
         CALL    GETMNE
 TESTREG:
-        CMP     BYTE PTR [MODE],3
+        CMP     byte [MODE],3
         JZ      NOFLG
-        MOV     SI,OFFSET DG:SIZE_TAB
+        MOV     SI,SIZE_TAB
         MOV     CL,3
-        TEST    BYTE PTR [AWORD],-1
+        TEST    byte [AWORD],-1
         JNZ     TEST_1
         INC     CL
 TEST_1: CALL    MOVBYT
@@ -818,7 +787,7 @@ SHIFTV:
         CALL    SHFT
         MOV     AL,","
         STOSB
-        MOV     WORD PTR [DI],"C"+4C00H ; "CL"
+        MOV     word [DI],"C"+4C00H ; "CL"
         RET
 
 SHIFT:
@@ -839,7 +808,7 @@ GETMNE:
         RET
 
 GRP1:
-        MOV     BX,OFFSET DG:GRP1TAB
+        MOV     BX,GRP1TAB
         CALL    GETMNE
         OR      AL,AL
         JZ      FINIMMJ
@@ -848,7 +817,7 @@ FINIMMJ:
         JMP     FINIMM
 
 GRP2:
-        MOV     BX,OFFSET DG:GRP2TAB
+        MOV     BX,GRP2TAB
         CALL    GETMNE
         CMP     AL,2
         JB      TESTREG
@@ -863,5 +832,4 @@ GRP2:
 INDIRECT:
         JMP     ADDRMOD
 
-CODE    ENDS
-        END     UNASSEM
+end if

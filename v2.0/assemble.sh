@@ -38,9 +38,14 @@ $FASM source/FORLINK.ASM bin/FORMAT.COM
 # reports, so create_image.sh uses this one -- see CHKLINK.ASM.
 $FASM source/CHKLINK.ASM bin/CHKDSKF.COM
 
-# PRINT.COM, from PRINT_v211.ASM.  Built so the conversion cannot quietly
-# stop assembling; it is not on the image yet -- see PRTLINK.ASM.
+# PRINT.COM, from PRINT_v211.ASM.  The release ships one built from the other
+# source, which refuses this version, so create_image.sh uses this one -- see
+# PRTLINK.ASM.
 $FASM source/PRTLINK.ASM bin/PRINTF.COM
+
+# DEBUG.COM, from DEBUG.ASM and the seven modules beside it: eight modules
+# and three segments, the most of either here -- see DEBLINK.ASM.
+$FASM source/DEBLINK.ASM bin/DEBUGF.COM
 
 # EDLIN.COM, from EDLIN.ASM, the procedures and the messages -- the biggest
 # of the utilities, and the same shape as the rest; see EDLLINK.ASM.

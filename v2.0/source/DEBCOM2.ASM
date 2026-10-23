@@ -1,98 +1,62 @@
-TITLE   PART2 DEBUGGER COMMANDS
 
 ; Routines to perform debugger commands except ASSEMble and UASSEMble
 
-.xlist
-.xcref
-        INCLUDE DEBEQU.ASM
-        INCLUDE DOSSYM.ASM
-.cref
-.list
+        INCLUDE 'DEBEQU.ASM'
 
-CODE    SEGMENT PUBLIC BYTE 'CODE'
-CODE    ENDS
+if SEGSEL = S_CODE
+end if
 
-CONST   SEGMENT PUBLIC BYTE
-
-        EXTRN   NOTFND:BYTE,NOROOM:BYTE,DRVLET:BYTE,NOSPACE:BYTE,NAMBAD:BYTE
-        EXTRN   TOOBIG:BYTE,ERRMES:BYTE
-        EXTRN   EXEBAD:BYTE,HEXERR:BYTE,EXEWRT:BYTE,HEXWRT:BYTE
-        EXTRN   EXECEMES:BYTE,WRTMES1:BYTE,WRTMES2:BYTE,ACCMES:BYTE
-
-        EXTRN   FLAGTAB:WORD,EXEC_BLOCK:BYTE,COM_LINE:DWORD,COM_FCB1:DWORD
-        EXTRN   COM_FCB2:DWORD,COM_SSSP:DWORD,COM_CSIP:DWORD,RETSAVE:WORD
-        EXTRN   NEWEXEC:BYTE,HEADSAVE:WORD
-        EXTRN   REGTAB:BYTE,TOTREG:BYTE,NOREGL:BYTE
-        EXTRN   USER_PROC_PDB:WORD,STACK:BYTE,RSTACK:WORD,AXSAVE:WORD
-        EXTRN   BXSAVE:WORD,DSSAVE:WORD,ESSAVE:WORD,CSSAVE:WORD,IPSAVE:WORD
-        EXTRN   SSSAVE:WORD,CXSAVE:WORD,SPSAVE:WORD,FSAVE:WORD
-        EXTRN   SREG:BYTE,SEGTAB:WORD,REGDIF:WORD,RDFLG:BYTE
-
-CONST   ENDS
-
-DATA    SEGMENT PUBLIC BYTE
-
-        EXTRN   DEFDUMP:BYTE,TRANSADD:DWORD,INDEX:WORD,BUFFER:BYTE
-        EXTRN   ASMADD:BYTE,DISADD:BYTE,NSEG:WORD,BPTAB:BYTE
-        EXTRN   BRKCNT:WORD,TCOUNT:WORD,SWITCHAR:BYTE,XNXCMD:BYTE,XNXOPT:BYTE
-        EXTRN   AWORD:BYTE,EXTPTR:WORD,HANDLE:WORD,PARSERR:BYTE
-
-DATA    ENDS
-
-DG      GROUP   CODE,CONST,DATA
+if SEGSEL = S_CONST
 
 
-CODE    SEGMENT PUBLIC BYTE 'CODE'
+
+end if
+
+if SEGSEL = S_DATA
+
+
+end if
+
+
+
+if SEGSEL = S_CODE
 ASSUME  CS:DG,DS:DG,ES:DG,SS:DG
 
-        PUBLIC  DEFIO,SKIP_FILE,PREPNAME,DEBUG_FOUND
-        PUBLIC  REG,COMPARE,GO,INPUT,LOAD
-        PUBLIC  NAME,OUTPUT,TRACE,ZTRACE,DWRITE
-        if  sysver
-        PUBLIC  DISPREG
-        endif
+        if  SYSVER
+        end if
 
-        EXTRN   GETHEX:NEAR,GETEOL:NEAR
-        EXTRN   CRLF:NEAR,BLANK:NEAR,OUT:NEAR
-        EXTRN   OUTSI:NEAR,OUTDI:NEAR,INBUF:NEAR,SCANB:NEAR,SCANP:NEAR
-        EXTRN   RPRBUF:NEAR,HEX:NEAR,OUT16:NEAR,DIGIT:NEAR
-        EXTRN   COMMAND:NEAR,DISASLN:NEAR,SET_TERMINATE_VECTOR:NEAR
-        EXTRN   RESTART:NEAR,DABORT:NEAR,TERMINATE:NEAR,DRVERR:NEAR
-        EXTRN   FIND_DEBUG:NEAR,NMIInt:NEAR,NMIIntEnd:NEAR
-        EXTRN   HEXCHK:NEAR,GETHEX1:NEAR,PRINT:NEAR,DSRANGE:NEAR
-        EXTRN   ADDRESS:NEAR,HEXIN:NEAR,PERROR:NEAR
 
 
 DEBCOM2:
 DISPREG:
-        MOV     SI,OFFSET DG:REGTAB
-        MOV     BX,OFFSET DG:AXSAVE
-        MOV     BYTE PTR TOTREG,13
+        MOV     SI,REGTAB
+        MOV     BX,AXSAVE
+        MOV     byte [TOTREG],13
         MOV     CH,0
-        MOV     CL,NOREGL
+        MOV     CL,[NOREGL]
 REPDISP:
-        SUB     TOTREG,CL
+        SUB     [TOTREG],CL
         CALL    DISPREGLINE
         CALL    CRLF
         MOV     CH,0
-        MOV     CL,NOREGL
-        CMP     CL,TOTREG
+        MOV     CL,[NOREGL]
+        CMP     CL,[TOTREG]
         JL      REPDISP
-        MOV     CL,TOTREG
+        MOV     CL,[TOTREG]
         CALL    DISPREGLINE
         CALL    BLANK
         CALL    DISPFLAGS
         CALL    CRLF
         MOV     AX,[IPSAVE]
-        MOV     WORD PTR [DISADD],AX
+        MOV     word [DISADD],AX
         PUSH    AX
         MOV     AX,[CSSAVE]
-        MOV     WORD PTR [DISADD+2],AX
+        MOV     word [DISADD+2],AX
         PUSH    AX
         MOV     [NSEG],-1
         CALL    DISASLN
-        POP     WORD PTR DISADD+2
-        POP     WORD PTR DISADD
+        POP     word [DISADD+2]
+        POP     word [DISADD]
         MOV     AX,[NSEG]
         CMP     AL,-1
         JZ      CRLFJ
@@ -103,23 +67,23 @@ NOOVER:
         CBW
         MOV     BX,AX
         SHL     BX,1
-        MOV     AX,WORD PTR [BX+SREG]
-        CALL    OUT
+        MOV     AX,word [BX+SREG]
+        CALL    OUT_
         XCHG    AL,AH
-        CALL    OUT
+        CALL    OUT_
         MOV     AL,":"
-        CALL    OUT
+        CALL    OUT_
         MOV     DX,[INDEX]
         CALL    OUT16
         MOV     AL,"="
-        CALL    OUT
+        CALL    OUT_
         MOV     BX,[BX+SEGTAB]
         PUSH    DS
         MOV     DS,[BX]
         MOV     BX,DX
         MOV     DX,[BX]
         POP     DS
-        TEST    BYTE PTR [AWORD],-1
+        TEST    byte [AWORD],-1
         JZ      OUT8
         CALL    OUT16
 CRLFJ:
@@ -146,7 +110,7 @@ REG:
         CALL    GETEOL
         CMP     DH," "
         JZ      FLAG
-        MOV     DI,OFFSET DG:REGTAB
+        MOV     DI,REGTAB
         XCHG    AX,DX
         PUSH    CS
         POP     ES
@@ -157,11 +121,11 @@ REG:
         JNZ     NOTPC
         DEC     DI
         DEC     DI
-        MOV     AX,CS:[DI-2]
+        MOV     AX,[CS:DI-2]
 NOTPC:
-        CALL    OUT
+        CALL    OUT_
         MOV     AL,AH
-        CALL    OUT
+        CALL    OUT_
         CALL    BLANK
         PUSH    DS
         POP     ES
@@ -170,7 +134,7 @@ NOTPC:
         CALL    OUT16
         CALL    CRLF
         MOV     AL,":"
-        CALL    OUT
+        CALL    OUT_
         CALL    INBUF
         CALL    SCANB
         JZ      RET4
@@ -181,24 +145,24 @@ NOTPC:
 RET4:   RET
 BADREG:
         MOV     AX,5200H+"B"            ; BR ERROR
-        JMP     ERR
+        JMP     ERR_
 FLAG:
         CMP     DL,"F"
         JNZ     BADREG
         CALL    DISPFLAGS
         MOV     AL,"-"
-        CALL    OUT
+        CALL    OUT_
         CALL    INBUF
         CALL    SCANB
         XOR     BX,BX
-        MOV     DX,[FSAVE]
+        MOV     DX,[FSAVE_]
 GETFLG:
         LODSW
         CMP     AL,13
         JZ      SAVCHG
         CMP     AH,13
         JZ      FLGERR
-        MOV     DI,OFFSET DG:FLAGTAB
+        MOV     DI,FLAGTAB
         MOV     CX,32
         PUSH    CS
         POP     ES
@@ -219,12 +183,12 @@ NEXFLG:
         CALL    SCANP
         JMP     SHORT GETFLG
 DISPREGLINE:
-        LODS    CS:WORD PTR [SI]
-        CALL    OUT
+        LODS    word [CS:SI]
+        CALL    OUT_
         MOV     AL,AH
-        CALL    OUT
+        CALL    OUT_
         MOV     AL,"="
-        CALL    OUT
+        CALL    OUT_
         MOV     DX,[BX]
         INC     BX
         INC     BX
@@ -237,33 +201,33 @@ REPFLG:
         MOV     AX,4600H+"D"            ; DF ERROR
 FERR:
         CALL    SAVCHG
-ERR:
-        CALL    OUT
+ERR_:
+        CALL    OUT_
         MOV     AL,AH
-        CALL    OUT
-        MOV     SI,OFFSET DG:ERRMES
+        CALL    OUT_
+        MOV     SI,ERRMES
         JMP     PRINT
 SAVCHG:
-        MOV     [FSAVE],DX
+        MOV     [FSAVE_],DX
         RET
 FLGERR:
         MOV     AX,4600H+"B"            ; BF ERROR
         JMP     SHORT FERR
 DISPFLAGS:
-        MOV     SI,OFFSET DG:FLAGTAB
+        MOV     SI,FLAGTAB
         MOV     CX,16
-        MOV     DX,[FSAVE]
+        MOV     DX,[FSAVE_]
 DFLAGS:
-        LODS    CS:WORD PTR [SI]
+        LODS    word [CS:SI]
         SHL     DX,1
         JC      FLAGSET
-        MOV     AX,CS:[SI+30]
+        MOV     AX,[CS:SI+30]
 FLAGSET:
         OR      AX,AX
         JZ      NEXTFLG
-        CALL    OUT
+        CALL    OUT_
         MOV     AL,AH
-        CALL    OUT
+        CALL    OUT_
         CALL    BLANK
 NEXTFLG:
         LOOP    DFLAGS
@@ -320,7 +284,7 @@ COMP:
         CALL    BLANK
         CALL    BLANK
         DEC     DI
-        MOV     AL,ES:[DI]
+        MOV     AL,[ES:DI]
         CALL    HEX
         CALL    BLANK
         CALL    BLANK
@@ -339,7 +303,7 @@ IF ZIBO
         MOV     ES,[CSSAVE]             ; point to instruction to execute
         MOV     DI,[IPSAVE]             ; include offset in segment
         XOR     DX,DX                   ; where to place breakpoint
-        MOV     AL,ES:[DI]              ; get the opcode
+        MOV     AL,[ES:DI]              ; get the opcode
         CMP     AL,11101000B            ; direct intra call
         JZ      ZTrace3                 ; yes, 3 bytes
         CMP     AL,10011010B            ; direct inter call
@@ -358,8 +322,8 @@ IF ZIBO
         JZ      ZTrace2                 ; 2 byter
         AND     AL,11111110B            ; check for rep
         CMP     AL,11110010B            ; perhaps?
-        JNZ     Step                    ; can't do anything special, step
-        MOV     AL,ES:[DI+1]            ; next instruction
+        JNZ     STEP                    ; can't do anything special, step
+        MOV     AL,[ES:DI+1]            ; next instruction
         AND     AL,11111110B            ; ignore w bit
         CMP     AL,10100100B            ; MOVS
         JZ      ZTrace2                 ; two byte
@@ -371,10 +335,10 @@ IF ZIBO
         JZ      ZTrace2                 ; two byte
         CMP     AL,10101010B            ; STOS
         JZ      ZTrace2                 ; two byte
-        JMP     Step                    ; bogus, do single step
+        JMP     STEP                    ; bogus, do single step
 
 ZTraceModRM:
-        MOV     AL,ES:[DI+1]            ; get next byte
+        MOV     AL,[ES:DI+1]            ; get next byte
         AND     AL,11111000B            ; get mod and type
         CMP     AL,01010000B            ; indirect intra 8 bit offset?
         JZ      ZTrace3                 ; yes, three byte whammy
@@ -384,21 +348,21 @@ ZTraceModRM:
         JZ      ZTrace4                 ; four byte offset
         CMP     AL,10011000B            ; indirect inter 16 bit offset?
         JZ      ZTrace4                 ; four bytes
-        JMP     Step                    ; can't figger out what this is!
+        JMP     STEP                    ; can't figger out what this is!
 ZTrace5:INC     DX
 ZTrace4:INC     DX
 ZTrace3:INC     DX
 ZTrace2:INC     DX
 ZTrace1:INC     DX
         ADD     DI,DX                   ; offset to breakpoint instruction
-        MOV     WORD PTR [BPTab],DI     ; save offset
-        MOV     WORD PTR [BPTab+2],ES   ; save segment
-        MOV     AL,ES:[DI]              ; get next opcode byte
-        MOV     BYTE PTR [BPTab+4],AL   ; save it
-        MOV     BYTE PTR ES:[DI],0CCh   ; break point it
-        MOV     [BrkCnt],1              ; only this breakpoint
-        JMP     DExit                   ; start the operation!
-        ENDIF
+        MOV     word [BPTAB],DI     ; save offset
+        MOV     word [BPTAB+2],ES   ; save segment
+        MOV     AL,[ES:DI]              ; get next opcode byte
+        MOV     byte [BPTAB+4],AL   ; save it
+        MOV     byte [ES:DI],0CCh   ; break point it
+        MOV     [BRKCNT],1              ; only this breakpoint
+        JMP     DEXIT                   ; start the operation!
+        end if
 
 ; Trace 1 instruction or the number of instruction specified
 ; by the parameter using 8086 trace mode. Registers are all
@@ -417,29 +381,29 @@ STOCNT:
         CALL    GETEOL
 STEP:
         MOV     [BRKCNT],0
-        OR      BYTE PTR [FSAVE+1],1
+        OR      byte [FSAVE_+1],1
 DEXIT:
 IF  NOT SYSVER
         MOV     BX,[USER_PROC_PDB]
         MOV     AH,SET_CURRENT_PDB
         INT     21H
-ENDIF
+end if
         PUSH    DS
         XOR     AX,AX
         MOV     DS,AX
-        MOV     WORD PTR DS:[12],OFFSET DG:BREAKFIX ; Set vector 3--breakpoint instruction
-        MOV     WORD PTR DS:[14],CS
-        MOV     WORD PTR DS:[4],OFFSET DG:REENTER   ; Set vector 1--Single step
-        MOV     WORD PTR DS:[6],CS
+        MOV     word [DS:12],BREAKFIX ; Set vector 3--breakpoint instruction
+        MOV     word [DS:14],CS
+        MOV     word [DS:4],REENTER   ; Set vector 1--Single step
+        MOV     word [DS:6],CS
         CLI
 
         IF      SETCNTC
-        MOV     WORD PTR DS:[8CH],OFFSET DG:CONTC   ; Set vector 23H (CTRL-C)
-        MOV     WORD PTR DS:[8EH],CS
-        ENDIF
+        MOV     word [DS:8CH],CONTC   ; Set vector 23H (CTRL-C)
+        MOV     word [DS:8EH],CS
+        end if
 
         POP     DS
-        MOV     SP,OFFSET DG:STACK
+        MOV     SP,STACK_
         POP     AX
         POP     BX
         POP     CX
@@ -452,9 +416,9 @@ ENDIF
         POP     ES
         POP     SS
         MOV     SP,[SPSAVE]
-        PUSH    [FSAVE]
-        PUSH    [CSSAVE]
-        PUSH    [IPSAVE]
+        PUSH    word [FSAVE_]
+        PUSH    word [CSSAVE]
+        PUSH    word [IPSAVE]
         MOV     DS,[DSSAVE]
         IRET
 STEP1:
@@ -476,35 +440,40 @@ CONTC:
 BREAKFIX:
         PUSH    BP
         MOV     BP,SP
-        DEC     WORD PTR [BP].OldIP
+        DEC     word [BP+Interrupt_Frame.OldIP]
         POP     BP
-        JMP     ReenterReal
+        JMP     ReEnterReal
 
 ; Re-entry point from trace mode or interrupt during
 ; execution. All registers are saved so they can be
 ; displayed or modified.
 
-Interrupt_Frame STRUC
-OldBP   DW  ?
-OldIP   DW  ?
-OldCS   DW  ?
-OldF    DW  ?
-OlderIP DW  ?
-OlderCS DW  ?
-OlderF  DW  ?
-Interrupt_Frame ENDS
+STRUC Interrupt_Frame
+{
+        .OldBP          dw 0
+        .OldIP          dw 0
+        .OldCS          dw 0
+        .OldF           dw 0
+        .OlderIP        dw 0
+        .OlderCS        dw 0
+        .OlderF         dw 0
+}
 
+virtual at 0
+  Interrupt_Frame Interrupt_Frame
+  sizeof.Interrupt_Frame = $ - Interrupt_Frame
+end virtual
 REENTER:
         PUSH    BP
         MOV     BP,SP                   ; get a frame to address from
         PUSH    AX
         MOV     AX,CS
-        CMP     AX,[BP].OldCS           ; Did we interrupt ourselves?
+        CMP     AX,[BP+Interrupt_Frame.OldCS]           ; Did we interrupt ourselves?
         JNZ     GoReEnter               ; no, go reenter
-        MOV     AX,[BP].OldIP
-        CMP     AX,OFFSET DG:NMIInt     ; interrupt below NMI interrupt?
+        MOV     AX,[BP+Interrupt_Frame.OldIP]
+        CMP     AX,NMIInt     ; interrupt below NMI interrupt?
         JB      GoReEnter               ; yes, go reenter
-        CMP     [BP].OLDIP,OFFSET DG:NMIIntEnd
+        CMP     [BP+Interrupt_Frame.OldIP],NMIIntEnd
         JAE     GoReEnter               ; interrupt above NMI interrupt?
         POP     AX                      ; restore state
         POP     BP
@@ -512,16 +481,16 @@ REENTER:
         PUSH    BP
         MOV     BP,SP                   ; set up frame
         PUSH    AX                      ; get temp variable
-        MOV     AX,[BP].OlderIP         ; get NMI Vector
-        MOV     [BP].OldIP,AX           ; stuff in new NMI vector
-        MOV     AX,[BP].OlderCS         ; get NMI Vector
-        MOV     [BP].OldCS,AX           ; stuff in new NMI vector
-        MOV     AX,[BP].OlderF          ; get NMI Vector
+        MOV     AX,[BP+Interrupt_Frame.OlderIP]         ; get NMI Vector
+        MOV     [BP+Interrupt_Frame.OldIP],AX           ; stuff in new NMI vector
+        MOV     AX,[BP+Interrupt_Frame.OlderCS]         ; get NMI Vector
+        MOV     [BP+Interrupt_Frame.OldCS],AX           ; stuff in new NMI vector
+        MOV     AX,[BP+Interrupt_Frame.OlderF]          ; get NMI Vector
         AND     AH,0FEh                 ; turn off Trace if present
-        MOV     [BP].OldF,AX            ; stuff in new NMI vector
-        MOV     [BP].OlderF,AX
-        MOV     [BP].OlderIP,OFFSET DG:ReEnter  ; offset of routine
-        MOV     [BP].OlderCS,CS         ; and CS
+        MOV     [BP+Interrupt_Frame.OldF],AX            ; stuff in new NMI vector
+        MOV     [BP+Interrupt_Frame.OlderF],AX
+        MOV     [BP+Interrupt_Frame.OlderIP],REENTER  ; offset of routine
+        MOV     [BP+Interrupt_Frame.OlderCS],CS         ; and CS
         POP     AX
         POP     BP
         IRET                            ; go try again
@@ -529,11 +498,11 @@ GoReEnter:
         POP     AX
         POP     BP
 ReEnterReal:
-        MOV     CS:[SPSAVE+SEGDIF],SP
-        MOV     CS:[SSSAVE+SEGDIF],SS
-        MOV     CS:[FSAVE],CS
-        MOV     SS,CS:[FSAVE]
-        MOV     SP,OFFSET DG:RSTACK
+        MOV     [CS:SPSAVE+SEGDIF],SP
+        MOV     [CS:SSSAVE+SEGDIF],SS
+        MOV     [CS:FSAVE_],CS
+        MOV     SS,[CS:FSAVE_]
+        MOV     SP,RSTACK
         PUSH    ES
         PUSH    DS
         PUSH    DI
@@ -549,25 +518,25 @@ ReEnterReal:
         POP     DS
         MOV     SS,[SSSAVE]
         MOV     SP,[SPSAVE]
-        POP     [IPSAVE]
-        POP     [CSSAVE]
+        POP     word [IPSAVE]
+        POP     word [CSSAVE]
         POP     AX
         AND     AH,0FEH                 ; turn off trace mode bit
-        MOV     [FSAVE],AX
+        MOV     [FSAVE_],AX
         MOV     [SPSAVE],SP
         PUSH    DS
         POP     ES
         PUSH    DS
         POP     SS
-        MOV     SP,OFFSET DG:STACK
+        MOV     SP,STACK_
         PUSH    DS
         XOR     AX,AX
         MOV     DS,AX
 
         IF      SETCNTC
-        MOV     WORD PTR DS:[8CH],OFFSET DG:DABORT  ; Set Ctrl-C vector
-        MOV     WORD PTR DS:[8EH],CS
-        ENDIF
+        MOV     word [DS:8CH],DABORT  ; Set Ctrl-C vector
+        MOV     word [DS:8EH],CS
+        end if
 
         POP     DS
         STI
@@ -579,17 +548,17 @@ IF  NOT SYSVER
         MOV     BX,DS
         MOV     AH,SET_CURRENT_PDB
         INT     21H
-ENDIF
+end if
         DEC     [TCOUNT]
         JZ      CheckDisp
-        JMP     Step1
+        JMP     STEP1
 CheckDisp:
-        MOV     SI,OFFSET DG:BPTAB
+        MOV     SI,BPTAB
         MOV     CX,[BRKCNT]
         JCXZ    SHOREG
         PUSH    ES
 CLEARBP:
-        LES     DI,DWORD PTR [SI]
+        LES     DI,dword [SI]
         ADD     SI,4
         MOVSB
         LOOP    CLEARBP
@@ -602,7 +571,7 @@ SHOREG:
 SETADD:
         MOV     BP,[CSSAVE]
         CALL    SCANP
-        CMP     BYTE PTR [SI],"="
+        CMP     byte [SI],"="
         JNZ     RET$5
         INC     SI
         CALL    ADDRESS
@@ -616,7 +585,7 @@ RET$5:  RET
 GO:
         CALL    SETADD
         XOR     BX,BX
-        MOV     DI,OFFSET DG:BPTAB
+        MOV     DI,BPTAB
 GO1:
         CALL    SCANP
         JZ      DEXEC
@@ -629,18 +598,18 @@ GO1:
         CMP     BX,1+BPMAX
         JNZ     GO1
         MOV     AX,5000H+"B"            ; BP ERROR
-        JMP     ERR
+        JMP     ERR_
 DEXEC:
         MOV     [BRKCNT],BX
         MOV     CX,BX
         JCXZ    NOBP
-        MOV     DI,OFFSET DG:BPTAB
+        MOV     DI,BPTAB
         PUSH    DS
 SETBP:
-        LDS     SI,ES:DWORD PTR [DI]
+        LDS     SI,dword [ES:DI]
         ADD     DI,4
         MOVSB
-        MOV     BYTE PTR [SI-1],0CCH
+        MOV     byte [SI-1],0CCH
         LOOP    SETBP
         POP     DS
 NOBP:
@@ -662,7 +631,7 @@ GOTDELIM:
         RET
 
 PREPNAME:
-        MOV     ES,DSSAVE
+        MOV     ES,[DSSAVE]
         PUSH    SI
         MOV     DI,81H
 COMTAIL:
@@ -672,17 +641,17 @@ COMTAIL:
         JNZ     COMTAIL
         SUB     DI,82H
         XCHG    AX,DI
-        MOV     ES:(BYTE PTR [80H]),AL
+        MOV     byte [ES:80H],AL
         POP     SI
         MOV     DI,FCB
         MOV     AX,(PARSE_FILE_DESCRIPTOR SHL 8) OR 01H
         INT     21H
-        MOV     BYTE PTR [AXSAVE],AL    ; Indicate analysis of first parm
+        MOV     byte [AXSAVE],AL    ; Indicate analysis of first parm
         CALL    SKIP_FILE
         MOV     DI,6CH
         MOV     AX,(PARSE_FILE_DESCRIPTOR SHL 8) OR 01H
         INT     21H
-        MOV     BYTE PTR [AXSAVE+1],AL  ; Indicate analysis of second parm
+        MOV     byte [AXSAVE+1],AL  ; Indicate analysis of second parm
 RET23:  RET
 
 
@@ -693,29 +662,29 @@ RET23:  RET
 ;  VARIABLE [EXTPTR] POINTS TO THE FILES EXTENSION
 
 DELETE_A_FILE:
-        MOV     BYTE PTR [XNXCMD],UNLINK
+        MOV     byte [XNXCMD],UNLINK
         JMP     SHORT OC_FILE
 
 PARSE_A_FILE:
-        MOV     BYTE PTR [XNXCMD],0
+        MOV     byte [XNXCMD],0
         JMP     SHORT OC_FILE
 
 EXEC_A_FILE:
-        MOV     BYTE PTR [XNXCMD],EXEC
-        MOV     BYTE PTR [XNXOPT],1
+        MOV     byte [XNXCMD],EXEC
+        MOV     byte [XNXOPT],1
         JMP     SHORT OC_FILE
 
 OPEN_A_FILE:
-        MOV     BYTE PTR [XNXCMD],OPEN
-        MOV     BYTE PTR [XNXOPT],2     ; Try read write
+        MOV     byte [XNXCMD],OPEN
+        MOV     byte [XNXOPT],2     ; Try read write
         CALL    OC_FILE
         JNC     RET23
-        MOV     BYTE PTR [XNXCMD],OPEN
-        MOV     BYTE PTR [XNXOPT],0     ; Try read only
+        MOV     byte [XNXCMD],OPEN
+        MOV     byte [XNXOPT],0     ; Try read only
         JMP     SHORT OC_FILE
 
 CREATE_A_FILE:
-        MOV     BYTE PTR [XNXCMD],CREAT
+        MOV     byte [XNXCMD],CREAT
 
 OC_FILE:
         PUSH    DS
@@ -751,19 +720,19 @@ OPEN3:  CALL    GETCHRUP
         JNZ     OPEN2
 
 OPEN4:  DEC     SI                      ; POINT BACK TO LAST CHAR
-        PUSH    [SI]                    ; SAVE TERMINATION CHAR
-        MOV     BYTE PTR [SI],0         ; NULL TERMINATE THE STRING
+        PUSH    word [SI]                    ; SAVE TERMINATION CHAR
+        MOV     byte [SI],0         ; NULL TERMINATE THE STRING
 
         MOV     AL,[XNXOPT]
         MOV     AH,[XNXCMD]             ; OPEN OR CREATE FILE
         OR      AH,AH
         JZ      OPNRET
-        MOV     BX,OFFSET DG:EXEC_BLOCK
+        MOV     BX,EXEC_BLOCK
         XOR     CX,CX
         INT     21H
-        MOV     CS:[HANDLE],AX          ; SAVE ERROR CODE OR HANDLE
+        MOV     [CS:HANDLE],AX          ; SAVE ERROR CODE OR HANDLE
 
-OPNRET: POP     [SI]
+OPNRET: POP     word [SI]
 
         POP     SI
         POP     DX
@@ -804,8 +773,8 @@ LIMRET: RET
 
 NAME:
         CALL    PREPNAME
-        MOV     AL,BYTE PTR AXSAVE
-        MOV     PARSERR,AL
+        MOV     AL,byte [AXSAVE]
+        MOV     [PARSERR],AL
         PUSH    ES
         POP     DS
         PUSH    CS
@@ -817,34 +786,34 @@ NAME:
 RET6:   RET
 
 BADNAM:
-        MOV     DX,OFFSET DG:NAMBAD
+        MOV     DX,NAMBAD
         JMP     RESTART
 
 IFHEX:
-        CMP     BYTE PTR [PARSERR],-1   ; Invalid drive specification?
+        CMP     byte [PARSERR],-1   ; Invalid drive specification?
         JZ      BADNAM
         CALL    PARSE_A_FILE
         MOV     BX,[EXTPTR]
-        CMP     WORD PTR DS:[BX],"EH"   ; "HE"
+        CMP     word [DS:BX],"EH"   ; "HE"
         JNZ     RET6
-        CMP     BYTE PTR DS:[BX+2],"X"
+        CMP     byte [DS:BX+2],"X"
         RET
 
 IFEXE:
         PUSH    BX
         MOV     BX,[EXTPTR]
-        CMP     WORD PTR DS:[BX],"XE"   ; "EX"
+        CMP     word [DS:BX],"XE"   ; "EX"
         JNZ     RETIF
-        CMP     BYTE PTR DS:[BX+2],"E"
+        CMP     byte [DS:BX+2],"E"
 RETIF:  POP     BX
         RET
 
-LOAD:
-        MOV     BYTE PTR [RDFLG],READ
+LOAD_:
+        MOV     byte [RDFLG],READ
         JMP     SHORT DSKIO
 
 DWRITE:
-        MOV     BYTE PTR [RDFLG],WRITE
+        MOV     byte [RDFLG],WRITE
 DSKIO:
         MOV     BP,[CSSAVE]
         CALL    SCANB
@@ -869,7 +838,7 @@ PRMIO:  PUSH    AX                      ; Save segment
         POP     DX                      ; Logical record number
         POP     AX                      ; Drive number
         CBW                             ; Turn off verify after write
-        MOV     BYTE PTR DRVLET,AL      ; Save drive in case of error
+        MOV     byte [DRVLET],AL      ; Save drive in case of error
         PUSH    AX
         PUSH    BX
         PUSH    DX
@@ -883,7 +852,7 @@ PRMIO:  PUSH    AX                      ; Save segment
         POP     AX
         POP     DS                      ; Segment of transfer
         JNZ     DRVERRJ
-        CMP     CS:BYTE PTR [RDFLG],WRITE
+        CMP     byte [CS:RDFLG],WRITE
         JZ      ABSWRT
         INT     25H                     ; Primitive disk read
         JMP     SHORT ENDABS
@@ -913,17 +882,17 @@ FILEIO:
 EXECHK:
         CALL    IFEXE
         JNZ     BINFIL
-        CMP     BYTE PTR [RDFLG],READ
+        CMP     byte [RDFLG],READ
         JZ      EXELJ
-        MOV     DX,OFFSET DG:EXEWRT
+        MOV     DX,EXEWRT
         JMP     RESTART                 ; Can't write .EXE files
 
 BINFIL:
-        CMP     BYTE PTR [RDFLG],WRITE
+        CMP     byte [RDFLG],WRITE
         JZ      BINLOAD
-        CMP     WORD PTR DS:[BX],4F00H + "C"    ; "CO"
+        CMP     word [DS:BX],4F00H + "C"    ; "CO"
         JNZ     BINLOAD
-        CMP     BYTE PTR DS:[BX+2],"M"
+        CMP     byte [DS:BX+2],"M"
         JNZ     BINLOAD
 EXELJ:
         DEC     SI
@@ -953,7 +922,7 @@ BIN2:   MOV     [BXSAVE],DX             ; SET UP FILE SIZE IN DX:AX
         JMP     EXELOAD
 
 NO_MEM_ERR:
-        MOV     DX,OFFSET DG:TOOBIG
+        MOV     DX,TOOBIG
         MOV     AH,STD_CON_STRING_OUTPUT
         INT     21H
         JMP     COMMAND
@@ -964,7 +933,7 @@ NOFILEJ: JMP    NOFILE
 BINLOAD:
         PUSH    AX
         PUSH    DX
-        CMP     BYTE PTR [RDFLG],WRITE
+        CMP     byte [RDFLG],WRITE
         JZ      WRTFILEJ
         CALL    OPEN_A_FILE
         JC      NOFILEJ
@@ -996,10 +965,10 @@ BINLOAD:
         INC     AX
 NOREM:                                  ; AX is number of paras in transfer
         ADD     AX,BX                   ; AX is first seg that need not exist
-        CMP     AX,CS:[PDB_block_len]
+        CMP     AX,[CS:Process_data_block.PDB_block_len]
         JA      NO_MEM_ERR
-        MOV     CXSAVE,DI
-        MOV     BXSAVE,SI
+        MOV     [CXSAVE],DI
+        MOV     [BXSAVE],SI
         POP     DX
         POP     AX
 
@@ -1015,8 +984,8 @@ RDWRLOOP:
         ADD     AX,BX                   ; Add to segment register to get new Seg:offset
         PUSH    AX
         PUSH    DX                      ; Save AX,DX register pair
-        MOV     WORD PTR [TRANSADD],DX
-        MOV     WORD PTR [TRANSADD+2],AX
+        MOV     word [TRANSADD],DX
+        MOV     word [TRANSADD+2],AX
         MOV     CX,0FFF0H               ; Keep request in segment
         OR      SI,SI                   ; Need > 64K?
         JNZ     BIGRDWR
@@ -1031,7 +1000,7 @@ BIGRDWR:
         POP     BX
         POP     DS
         JC      BADWR
-        CMP     BYTE PTR [RDFLG],WRITE
+        CMP     byte [RDFLG],WRITE
         JNZ     GOODR
         CMP     CX,AX
         JZ      GOODR
@@ -1057,30 +1026,30 @@ RET8:   CLC                             ; End-of-file not reached
         RET
 
 NOFILE:
-        MOV     DX,OFFSET DG:NOTFND
+        MOV     DX,NOTFND
 RESTARTJMP:
         JMP     RESTART
 
 WRTFILE:
         CALL    CREATE_A_FILE           ; Create file we want to write to
-        MOV     DX,OFFSET DG:NOROOM     ; Creation error - report error
+        MOV     DX,NOROOM     ; Creation error - report error
         JC      RESTARTJMP
-        MOV     SI,BXSAVE               ; Get high order number of bytes to transfer
+        MOV     SI,[BXSAVE]               ; Get high order number of bytes to transfer
         CMP     SI,000FH
         JLE     WRTSIZE                 ; Is bx less than or equal to FH
         XOR     SI,SI                   ; Ignore BX if greater than FH - set to zero
 WRTSIZE:
-        MOV     DX,OFFSET DG:WRTMES1    ; Print number bytes we are writing
+        MOV     DX,WRTMES1    ; Print number bytes we are writing
         CALL    RPRBUF
         OR      SI,SI
         JZ      NXTBYT
         MOV     AX,SI
         CALL    DIGIT
 NXTBYT:
-        MOV     DX,CXSAVE
+        MOV     DX,[CXSAVE]
         MOV     DI,DX
         CALL    OUT16                   ; Amount to write is SI:DI
-        MOV     DX,OFFSET DG:WRTMES2
+        MOV     DX,WRTMES2
         CALL    RPRBUF
         POP     DX
         POP     AX
@@ -1088,7 +1057,7 @@ NXTBYT:
         JNC     CLSFLE
         CALL    CLSFLE
         CALL    DELETE_A_FILE
-        MOV     DX,OFFSET DG:NOSPACE
+        MOV     DX,NOSPACE
         JMP     RESTARTJMP
         CALL    CLSFLE
         JMP     COMMAND
@@ -1100,8 +1069,8 @@ CLSFLE:
         RET
 
 EXELOAD:
-        POP     [RETSAVE]               ; Suck up return addr
-        INC     BYTE PTR [NEWEXEC]
+        POP     word [RETSAVE]               ; Suck up return addr
+        INC     byte [NEWEXEC]
         MOV     BX,[USER_PROC_PDB]
         MOV     AX,DS
         CMP     AX,BX
@@ -1111,9 +1080,9 @@ EXELOAD:
 DEBUG_CURRENT:
         MOV     AX,[DSSAVE]
 DEBUG_FOUND:
-        MOV     BYTE PTR [NEWEXEC],0
+        MOV     byte [NEWEXEC],0
         MOV     [HEADSAVE],AX
-        PUSH    [RETSAVE]               ; Get the return address back
+        PUSH    word [RETSAVE]               ; Get the return address back
         PUSH    AX
         MOV     BX,CS
         SUB     AX,BX
@@ -1124,9 +1093,9 @@ DEBUG_FOUND:
         MOV     AH,SETBLOCK
         INT     21H
         POP     AX
-        MOV     WORD PTR [COM_LINE+2],AX
-        MOV     WORD PTR [COM_FCB1+2],AX
-        MOV     WORD PTR [COM_FCB2+2],AX
+        MOV     word [COM_LINE+2],AX
+        MOV     word [COM_FCB1+2],AX
+        MOV     word [COM_FCB2+2],AX
 
         CALL    EXEC_A_FILE
         JC      EXECERR
@@ -1137,22 +1106,22 @@ DEBUG_FOUND:
         MOV     [DSSAVE],BX
         MOV     [ESSAVE],BX
         MOV     ES,BX
-        MOV     WORD PTR ES:[PDB_exit],OFFSET DG:TERMINATE
-        MOV     WORD PTR ES:[PDB_exit+2],DS
+        MOV     word [ES:Process_data_block.PDB_Exit],TERMINATE
+        MOV     word [ES:Process_data_block.PDB_Exit+2],DS
         LES     DI,[COM_CSIP]
         MOV     [CSSAVE],ES
         MOV     [IPSAVE],DI
-        MOV     WORD PTR [DISADD+2],ES
-        MOV     WORD PTR [DISADD],DI
-        MOV     WORD PTR [ASMADD+2],ES
-        MOV     WORD PTR [ASMADD],DI
-        MOV     WORD PTR [DEFDUMP+2],ES
-        MOV     WORD PTR [DEFDUMP],DI
+        MOV     word [DISADD+2],ES
+        MOV     word [DISADD],DI
+        MOV     word [ASMADD+2],ES
+        MOV     word [ASMADD],DI
+        MOV     word [DEFDUMP+2],ES
+        MOV     word [DEFDUMP],DI
         MOV     BX,DS
         MOV     AH,SET_CURRENT_PDB
         INT     21H
         LES     DI,[COM_SSSP]
-        MOV     AX,ES:[DI]
+        MOV     AX,[ES:DI]
         INC     DI
         INC     DI
         MOV     [AXSAVE],AX
@@ -1161,19 +1130,19 @@ DEBUG_FOUND:
         RET
 
 EXECERR:
-        MOV     DX,OFFSET DG:NOTFND
+        MOV     DX,NOTFND
         CMP     AX,exec_file_not_found
         JZ      GOTEXECEMES
-        MOV     DX,OFFSET DG:ACCMES
+        MOV     DX,ACCMES
         CMP     AX,error_access_denied
         JZ      GOTEXECEMES
-        MOV     DX,OFFSET DG:TOOBIG
+        MOV     DX,TOOBIG
         CMP     AX,exec_not_enough_memory
         JZ      GOTEXECEMES
-        MOV     DX,OFFSET DG:EXEBAD
+        MOV     DX,EXEBAD
         CMP     AX,exec_bad_format
         JZ      GOTEXECEMES
-        MOV     DX,OFFSET DG:EXECEMES
+        MOV     DX,EXECEMES
 GOTEXECEMES:
         MOV     AH,STD_CON_STRING_OUTPUT
         INT     21H
@@ -1181,19 +1150,19 @@ GOTEXECEMES:
 
 HEX2BIN:
         MOV     [INDEX],DX
-        MOV     DX,OFFSET DG:HEXWRT
-        CMP     BYTE PTR [RDFLG],WRITE
+        MOV     DX,HEXWRT
+        CMP     byte [RDFLG],WRITE
         JNZ     RDHEX
         JMP     RESTARTJ2
 RDHEX:
         MOV     ES,AX
         CALL    OPEN_A_FILE
-        MOV     DX,OFFSET DG:NOTFND
+        MOV     DX,NOTFND
         JNC     HEXFND
         JMP     RESTART
 HEXFND:
         XOR     BP,BP
-        MOV     SI,OFFSET DG:(BUFFER+BUFSIZ)    ; Flag input buffer as empty
+        MOV     SI,(BUFFER+BUFSIZ)    ; Flag input buffer as empty
 READHEX:
         CALL    GETCH
         CMP     AL,":"                  ; Search for : to start line
@@ -1220,9 +1189,9 @@ HAVBIG:
         JMP     SHORT READHEX
 
 GETCH:
-        CMP     SI,OFFSET DG:(BUFFER+BUFSIZ)
+        CMP     SI,(BUFFER+BUFSIZ)
         JNZ     NOREAD
-        MOV     DX,OFFSET DG:BUFFER
+        MOV     DX,BUFFER
         MOV     SI,DX
         MOV     AH,READ
         PUSH    BX
@@ -1242,14 +1211,14 @@ NOREAD:
         JNZ     RET7
 HEXDONE:
         MOV     [CXSAVE],BP
-        MOV     BXSAVE,0
+        MOV     [BXSAVE],0
         RET
 
 HEXDIG:
         CALL    GETCH
         CALL    HEXCHK
         JNC     RET7
-        MOV     DX,OFFSET DG:HEXERR
+        MOV     DX,HEXERR
 RESTARTJ2:
         JMP     RESTART
 
@@ -1265,5 +1234,4 @@ GETBYT:
 RET7:   RET
 
 
-CODE    ENDS
-        END     DEBCOM2
+end if

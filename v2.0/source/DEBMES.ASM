@@ -1,61 +1,51 @@
-TITLE   DEBUGger Messages
-FALSE   EQU     0
-TRUE    EQU     NOT FALSE
+FALSE   =     0
+TRUE    =     -1
 
-SYSVER  EQU     FALSE                   ;if true, i/o direct to bios
+SYSVER  =     FALSE                   ;if true, i/o direct to bios
                                         ; so DOS can be debugged
-IBMJAPVER   EQU FALSE                   ; true for their special parity stuff
-
-.xlist
-.xcref
-        INCLUDE DOSSYM.ASM
-.cref
-.list
-
-FIRSTDRV EQU    "A"
-
-CODE    SEGMENT PUBLIC BYTE 'CODE'
-CODE    ENDS
-
-CONST   SEGMENT PUBLIC BYTE
-CONST   ENDS
-
-DATA    SEGMENT PUBLIC BYTE
-        EXTRN   ParityFlag:BYTE
-DATA    ENDS
-
-DG      GROUP   CODE,CONST,DATA
+IBMJAPVER   = FALSE                   ; true for their special parity stuff
 
 
-CODE    SEGMENT PUBLIC BYTE 'CODE'
+FIRSTDRV =    "A"
+
+if SEGSEL = S_CODE
+end if
+
+if SEGSEL = S_CONST
+end if
+
+if SEGSEL = S_DATA
+end if
+
+
+
+if SEGSEL = S_CODE
 ASSUME  CS:DG,DS:DG,ES:DG,SS:DG
 
-        EXTRN   RPRBUF:NEAR,RESTART:NEAR
-        PUBLIC  DRVERR, TrapParity, ReleaseParity, NMIInt, NMIIntEnd
 TrapParity:
         IF IBMJAPVER
         PUSH    BX
         PUSH    ES
         PUSH    DX                      ; save location of new offset
-        MOV     DX,OFFSET DG:NMIInt     ; DS:DX has new interrupt vector
+        MOV     DX,NMIInt     ; DS:DX has new interrupt vector
         CALL    SwapInt                 ; diddle interrupts
         ASSUME  ES:NOTHING
-        MOV     WORD PTR [NMIPtr],BX    ; save old offset
-        MOV     WORD PTR [NMIPtr+2],ES  ; save old segment
+        MOV     word [NMIPtr],BX    ; save old offset
+        MOV     word [NMIPtr+2],ES  ; save old segment
         POP     DX                      ; get old regs back
         POP     ES                      ; restore old values
         ASSUME  ES:DG
         POP     BX
-        MOV     BYTE PTR [ParityFlag],0 ; no interrupts detected yet!
+        MOV     byte [ParityFlag],0 ; no interrupts detected yet!
         RET
 SwapInt:
         PUSH    AX
-        MOV     AX,(Get_interrupt_vector SHL 8) + 2
+        MOV     AX,(GET_INTERRUPT_VECTOR SHL 8) + 2
         INT     21h                     ; get old nmi vector
-        MOV     AX,(Set_Interrupt_Vector SHL 8) + 2
+        MOV     AX,(SET_INTERRUPT_VECTOR SHL 8) + 2
         INT     21h                     ; let OS set new vector
         POP     AX
-        ENDIF
+        end if
         RET
 ReleaseParity:
         IF  IBMJAPVER
@@ -63,14 +53,14 @@ ReleaseParity:
         PUSH    DS
         PUSH    BX
         PUSH    ES
-        LDS     DX,DWORD PTR [NMIPtr]   ; get old vector
+        LDS     DX,dword [NMIPtr]   ; get old vector
         CALL    SwapInt                 ; diddle back to original
         POP     ES
         POP     BX
         POP     DS
         POP     DX
         MOV     [ParityFlag],0          ; no interrupts possible!
-        ENDIF
+        end if
         RET
 
 NMIInt:
@@ -81,56 +71,48 @@ NMIInt:
         POP     AX                      ; get old AX back
         JZ      NMIChain                ; no, go chain interrupt
         OUT     0A2h,AL                 ; reset NMI detector
-        MOV     CS:[ParityFlag],1       ; signal detection
+        MOV     [CS:ParityFlag],1       ; signal detection
         IRET
 NMIChain:
-        JMP     DWORD PTR CS:[NMIPtr]   ; chain the vectors
-NMIPtr  DD      ?                       ; where old NMI gets stashed
-        ENDIF
+        JMP     dword [CS:NMIPtr]   ; chain the vectors
+NMIPtr  DD      0; where old NMI gets stashed
+        end if
 NMIIntEnd:
 
-DRVERR: MOV     DX,OFFSET DG:DISK
+DRVERR: MOV     DX,DISK
         OR      AL,AL
         JNZ     SAVDRV
-        MOV     DX,OFFSET DG:WRTPRO
+        MOV     DX,WRTPRO
 SAVDRV:
         PUSH    CS
         POP     DS
         PUSH    CS
         POP     ES
-        ADD     BYTE PTR DRVLET,FIRSTDRV
-        MOV     SI,OFFSET DG:READM
-        MOV     DI,OFFSET DG:ERRTYP
-        CMP     BYTE PTR RDFLG,WRITE
+        ADD     byte [DRVLET],FIRSTDRV
+        MOV     SI,READM
+        MOV     DI,ERRTYP
+        CMP     byte [RDFLG],WRITE
         JNZ     MOVMES
-        MOV     SI,OFFSET DG:WRITM
+        MOV     SI,WRITM
 MOVMES:
         MOVSW
         MOVSW
         CALL    RPRBUF
-        MOV     DX,OFFSET DG:DSKERR
+        MOV     DX,DSKERR
         JMP     RESTART
 CODEEND:
 
-CODE    ENDS
+end if
 
 
-CONST   SEGMENT PUBLIC BYTE
+if SEGSEL = S_CONST
 
-        PUBLIC  BADVER,ENDMES,CARRET,NAMBAD,NOTFND,NOROOM
-        PUBLIC  NOSPACE,DRVLET
-        PUBLIC  ACCMES
-        PUBLIC  TOOBIG,SYNERR,ERRMES,BACMES
-        PUBLIC  EXEBAD,HEXERR,EXEWRT,HEXWRT,WRTMES1,WRTMES2
-        PUBLIC  EXECEMES, ParityMes
-        EXTRN   RDFLG:BYTE
 
         IF      SYSVER
-        PUBLIC  BADDEV,BADLSTMES
 BADDEV      DB      "Bad device name",13,10,"$"
 BADLSTMES   DB    "Couldn't open list device PRN",13,10
             DB      "Enter name of list device? $"
-        ENDIF
+        end if
 
 BADVER      DB      "Incorrect DOS version",13,10,"$"
 ENDMES      DB      13,10,"Program terminated normally"
@@ -154,9 +136,9 @@ TOOBIG      DB      "Insufficient memory",13,10,"$"
 SYNERR      DB      '^'
 ERRMES      DB      " Error",13,10+80H
 BACMES      DB      32,8+80H
-EXEBAD      LABEL   BYTE
+label EXEBAD byte
 HEXERR      DB      "Error in EXE or HEX file",13,10,"$"
-EXEWRT      LABEL   BYTE
+label EXEWRT byte
 HEXWRT      DB      "EXE and HEX files cannot be written",13,10,"$"
 WRTMES1     DB      "Writing $"
 WRTMES2     DB      " bytes",13,10,"$"
@@ -166,5 +148,4 @@ ParityMes   DB      "Parity error or nonexistant memory error detected",13,10,"$
 
 CONSTEND:
 
-CONST   ENDS
-        END
+end if

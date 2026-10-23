@@ -1,4 +1,3 @@
-TITLE   DEBUGger for MS-DOS
 ; DEBUG-86 8086 debugger runs under 86-DOS       version 2.30
 ;
 ; Modified 5/4/82 by AaronR to do all I/O direct to devices
@@ -22,86 +21,63 @@ TITLE   DEBUGger for MS-DOS
 
 
 
-.xlist
-.xcref
-        INCLUDE DEBEQU.ASM
-        INCLUDE DOSSYM.ASM
-.cref
-.list
+        INCLUDE 'DEBEQU.ASM'
 
         IF      SYSVER
 
 ; Structure for system call 72
 
-SYSINITVAR  STRUC
-DPBHEAD     DD      ?                   ; Pointer to head of DPB-FAT list
-sft_addr    DD      ?                   ; Pointer to first FCB table
-; The following address points to the CLOCK device
-BCLOCK      DD      ?
-; The following address is used by DISKSTATCHK it is always
-; points to the console input device header
-BCON        DD      ?                   ; Console device entry points
-NUMIO       DB      0                   ; Number of disk tables
-MAXSEC      DW      0                   ; Maximum allowed sector size
-BUFFHEAD    DD      ?
-DEVHEAD     DD      ?
-SYSINITVAR  ENDS
+STRUC SYSINITVAR
+{
+        .DPBHEAD        dd 0
+        .sft_addr       dd 0
+        ; The following address points to the CLOCK device
+        .BCLOCK         dd 0
+        ; The following address is used by DISKSTATCHK it is always
+        ; points to the console input device header
+        .BCON           dd 0
+        .NUMIO          db 0                   ; Number of disk tables
+        .MAXSEC         dw 0                   ; Maximum allowed sector size
+        .BUFFHEAD       dd 0
+        .DEVHEAD        dd 0
+}
 
-        ENDIF
+virtual at 0
+  SYSINITVAR SYSINITVAR
+  sizeof.SYSINITVAR = $ - SYSINITVAR
+end virtual
+        end if
 
 
-CODE    SEGMENT PUBLIC 'CODE'
-CODE    ENDS
+if SEGSEL = S_CODE
+end if
 
-CONST   SEGMENT PUBLIC BYTE
+if SEGSEL = S_CONST
 
-        EXTRN   USER_PROC_PDB:WORD,STACK:BYTE,CSSAVE:WORD,DSSAVE:WORD
-        EXTRN   SPSAVE:WORD,IPSAVE:WORD,LINEBUF:BYTE,QFLAG:BYTE
-        EXTRN   NEWEXEC:BYTE,HEADSAVE:WORD,LBUFSIZ:BYTE,BACMES:BYTE
-        EXTRN   BADVER:BYTE,ENDMES:BYTE,CARRET:BYTE,ParityMes:BYTE
 
         IF  IBMVER
-        EXTRN   DSIZ:BYTE,NOREGL:BYTE,DISPB:WORD
-        ENDIF
+        end if
 
         IF      SYSVER
-        EXTRN   CONFCB:BYTE,POUT:DWORD,COUT:DWORD,CIN:DWORD,IOBUFF:BYTE
-        EXTRN   IOADDR:DWORD,IOCALL:BYTE,IOCOM:BYTE,IOSTAT:WORD,IOCNT:WORD
-        EXTRN   IOSEG:WORD,COLPOS:BYTE,BADDEV:BYTE,BADLSTMES:BYTE
-        EXTRN   LBUFFCNT:BYTE,PFLAG:BYTE
-        ENDIF
+        end if
 
-CONST   ENDS
+end if
 
-DATA    SEGMENT PUBLIC BYTE
-
-        EXTRN   PARSERR:BYTE,DATAEND:WORD,ParityFlag:BYTE,DISADD:BYTE
-        EXTRN   ASMADD:BYTE,DEFDUMP:BYTE,BYTEBUF:BYTE
-
-DATA    ENDS
-
-DG      GROUP   CODE,CONST,DATA
+if SEGSEL = S_DATA
 
 
-CODE    SEGMENT PUBLIC 'CODE'
+end if
+
+
+
+if SEGSEL = S_CODE
 ASSUME  CS:DG,DS:DG,ES:DG,SS:DG
 
-        PUBLIC  RESTART,SET_TERMINATE_VECTOR,DABORT,TERMINATE,COMMAND
-        PUBLIC  FIND_DEBUG,CRLF,BLANK,TAB,OUT,INBUF,SCANB,SCANP
-        PUBLIC  PRINTMES,RPRBUF,HEX,OUTSI,OUTDI,OUT16,DIGIT,BACKUP,RBUFIN
 
         IF  SYSVER
-        PUBLIC  SETUDEV,DEVIOCALL
-        EXTRN   DISPREG:NEAR,IN:NEAR
-        ENDIF
+        end if
 
-        EXTRN   PERR:NEAR,COMPARE:NEAR,DUMP:NEAR,ENTER:NEAR,FILL:NEAR
-        EXTRN   GO:NEAR,INPUT:NEAR,LOAD:NEAR,MOVE:NEAR,NAME:NEAR
-        EXTRN   REG:NEAR,SEARCH:NEAR,DWRITE:NEAR,UNASSEM:NEAR,ASSEM:NEAR
-        EXTRN   OUTPUT:NEAR,ZTRACE:NEAR,TRACE:NEAR,GETHEX:NEAR,GETEOL:NEAR
 
-        EXTRN   PREPNAME:NEAR,DEFIO:NEAR,SKIP_FILE:NEAR,DEBUG_FOUND:NEAR
-        EXTRN   TrapParity:NEAR,ReleaseParity:NEAR
 
         ORG     100H
 
@@ -112,14 +88,14 @@ DEBUG:
 HEADER DB       "Vers 2.30"
 
 DSTRT:
-DOSVER_HIGH     EQU  0200H              ; 2.00 in hex
+DOSVER_HIGH     =  0200H              ; 2.00 in hex
         MOV     AH,GET_VERSION
         INT     21H
         XCHG    AH,AL                   ; Turn it around to AH.AL
         CMP     AX,DOSVER_HIGH
         JAE     OKDOS
 GOTBADDOS:
-        MOV     DX,OFFSET DG:BADVER
+        MOV     DX,BADVER
         MOV     AH,STD_CON_STRING_OUTPUT
         INT     21H
         INT     20H
@@ -132,28 +108,28 @@ OKDOS:
 
         IF      SYSVER
         MOV     [IOSEG],CS
-        ENDIF
+        end if
 
-        MOV     SP,OFFSET DG:STACK
+        MOV     SP,STACK_
         MOV     [PARSERR],AL
         MOV     AH,GET_IN_VARS
         INT     21H
 
 
         IF      SYSVER
-        LDS     SI,ES:[BX.BCON]
-        MOV     WORD PTR CS:[CIN+2],DS
-        MOV     WORD PTR CS:[CIN],SI
-        MOV     WORD PTR CS:[COUT+2],DS
-        MOV     WORD PTR CS:[COUT],SI
+        LDS     SI,[ES:BX+SYSINITVAR.BCON]
+        MOV     word [CS:CIN+2],DS
+        MOV     word [CS:CIN],SI
+        MOV     word [CS:COUT+2],DS
+        MOV     word [CS:COUT],SI
         PUSH    CS
         POP     DS
-        MOV     DX,OFFSET DG:CONFCB
+        MOV     DX,CONFCB
         MOV     AH,FCB_OPEN
         INT     21H
         OR      AL,AL
         JZ      GOTLIST
-        MOV     DX,OFFSET DG:BADLSTMES
+        MOV     DX,BADLSTMES
         CALL    RPRBUF
         CALL    RBUFIN
         CALL    CRLF
@@ -161,33 +137,32 @@ OKDOS:
         OR      CL,CL
         JZ      NOLIST1                 ; User didn't specify one
         XOR     CH,CH
-        MOV     DI,OFFSET DG:(CONFCB + 1)
-        MOV     SI,OFFSET DG:LINEBUF
+        MOV     DI,(CONFCB + 1)
+        MOV     SI,LINEBUF
         REP     MOVSB
-        MOV     DX,OFFSET DG:CONFCB
+        MOV     DX,CONFCB
         MOV     AH,FCB_OPEN
         INT     21H
         OR      AL,AL
         JZ      GOTLIST                 ; GOOD
-        MOV     DX,OFFSET DG:BADDEV
+        MOV     DX,BADDEV
         CALL    RPRBUF
 NOLIST1:
-        MOV     WORD PTR [POUT+2],CS
-        MOV     WORD PTR [POUT],OFFSET DG:LONGRET
+        MOV     word [POUT+2],CS
+        MOV     word [POUT],LONGRET
         JMP     NOLIST
 
-XXX     PROC FAR
-LONGRET:RET
-XXX     ENDP
-        ENDIF
+XXX:
+LONGRET:RETF
+        end if
 
 GOTLIST:
         IF      SYSVER
         MOV     SI,DX
-        LDS     SI,DWORD PTR DS:[SI.fcb_FIRCLUS]
-        MOV     WORD PTR CS:[POUT+2],DS
-        MOV     WORD PTR CS:[POUT],SI
-        ENDIF
+        LDS     SI,dword [DS:SI+sys_fcb.fcb_FIRCLUS]
+        MOV     word [CS:POUT+2],DS
+        MOV     word [CS:POUT],SI
+        end if
 NOLIST:
         MOV     AX,CS
         MOV     DS,AX
@@ -201,12 +176,12 @@ NOLIST:
 
         IF      SETCNTC
         MOV     AL,23H                  ; Set vector 23H
-        MOV     DX,OFFSET DG:DABORT
+        MOV     DX,DABORT
         INT     21H
-        ENDIF
+        end if
 
         MOV     DX,CS                   ; Get DEBUG's segment
-        MOV     AX,OFFSET DG:DATAEND + 15   ; End of debug
+        MOV     AX,DATAEND + 15   ; End of debug
         SHR     AX,1                    ; Convert to segments
         SHR     AX,1
         SHR     AX,1
@@ -215,33 +190,33 @@ NOLIST:
         MOV     AH,CREATE_PROCESS_DATA_BLOCK    ; create program segment just after DEBUG
         INT     21H
         MOV     AX,DX
-        MOV     DI,OFFSET DG:DSSAVE
+        MOV     DI,DSSAVE
         CLD
         STOSW
         STOSW
         STOSW
         STOSW
-        MOV     WORD PTR [DISADD+2],AX
-        MOV     WORD PTR [ASMADD+2],AX
-        MOV     WORD PTR [DEFDUMP+2],AX
+        MOV     word [DISADD+2],AX
+        MOV     word [ASMADD+2],AX
+        MOV     word [DEFDUMP+2],AX
         MOV     AX,100H
-        MOV     WORD PTR[DISADD],AX
-        MOV     WORD PTR[ASMADD],AX
-        MOV     WORD PTR [DEFDUMP],AX
+        MOV     word [DISADD],AX
+        MOV     word [ASMADD],AX
+        MOV     word [DEFDUMP],AX
         MOV     DS,DX
         MOV     ES,DX
         MOV     DX,80H
         MOV     AH,SET_DMA
         INT     21H                     ; Set default DMA address to 80H
-        MOV     AX,WORD PTR DS:[6]
+        MOV     AX,word [DS:6]
         MOV     BX,AX
         CMP     AX,0FFF0H
         PUSH    CS
         POP     DS
         JAE     SAVSTK
-        MOV     AX,WORD PTR DS:[6]
+        MOV     AX,word [DS:6]
         PUSH    BX
-        MOV     BX,OFFSET DG:DATAEND + 15
+        MOV     BX,DATAEND + 15
         AND     BX,0FFF0H               ; Size of DEBUG in bytes (rounded up to PARA)
         SUB     AX,BX
         POP     BX
@@ -250,15 +225,15 @@ SAVSTK:
         DEC     AX
         DEC     AX
         MOV     BX,AX
-        MOV     WORD PTR [BX],0
+        MOV     word [BX],0
         POP     BX
-        MOV     SPSAVE,AX
+        MOV     [SPSAVE],AX
         DEC     AH
-        MOV     ES:WORD PTR [6],AX
+        MOV     word [ES:6],AX
         SUB     BX,AX
         MOV     CL,4
         SHR     BX,CL
-        ADD     ES:WORD PTR [8],BX
+        ADD     word [ES:8],BX
 
         IF IBMVER
         ; Get screen size and initialize display related variables
@@ -266,10 +241,10 @@ SAVSTK:
         INT     10H
         CMP     AH,40
         JNZ     PARSCHK
-        MOV     BYTE PTR DSIZ,7
-        MOV     BYTE PTR NOREGL,4
-        MOV     DISPB,64
-        ENDIF
+        MOV     byte [DSIZ],7
+        MOV     byte [NOREGL],4
+        MOV     [DISPB],64
+        end if
 
 PARSCHK:
 ; Copy rest of command line to test program's parameter area
@@ -283,40 +258,40 @@ PARSCHK:
         POP     ES
 FILECHK:
         MOV     DI,80H
-        CMP     BYTE PTR ES:[DI],0      ; ANY STUFF FOUND?
+        CMP     byte [ES:DI],0      ; ANY STUFF FOUND?
         JZ      COMMAND                 ; NOPE
 FILOOP: INC     DI
-        CMP     BYTE PTR ES:[DI],13     ; COMMAND LINE JUST SPACES?
+        CMP     byte [ES:DI],13     ; COMMAND LINE JUST SPACES?
         JZ      COMMAND
-        CMP     BYTE PTR ES:[DI]," "
+        CMP     byte [ES:DI]," "
         JZ      FILOOP
-        CMP     BYTE PTR ES:[DI],9
+        CMP     byte [ES:DI],9
         JZ      FILOOP
 
         CALL    DEFIO                   ; WELL READ IT IN
-        MOV     AX,CSSAVE
-        MOV     WORD PTR DISADD+2,AX
-        MOV     WORD PTR ASMADD+2,AX
-        MOV     AX,IPSAVE
-        MOV     WORD PTR DISADD,AX
-        MOV     WORD PTR ASMADD,AX
+        MOV     AX,[CSSAVE]
+        MOV     word [DISADD+2],AX
+        MOV     word [ASMADD+2],AX
+        MOV     AX,[IPSAVE]
+        MOV     word [DISADD],AX
+        MOV     word [ASMADD],AX
 COMMAND:
         CLD
         MOV     AX,CS
         MOV     DS,AX
         MOV     ES,AX
         MOV     SS,AX
-        MOV     SP,OFFSET DG:STACK
+        MOV     SP,STACK_
         STI
         CMP     [ParityFlag],0          ; did we detect a parity error?
         JZ      GoPrompt                ; nope, go prompt
         MOV     [ParityFlag],0          ; reset flag
-        MOV     DX,OFFSET DG:ParityMes  ; message to print
+        MOV     DX,ParityMes  ; message to print
         MOV     AH,STD_CON_STRING_OUTPUT; easy way out
         INT     21h                     ; blam
 GoPrompt:
         MOV     AL,PROMPT
-        CALL    OUT
+        CALL    OUT_
         CALL    INBUF                   ; Get command line
 ; From now and throughout command line processing, DI points
 ; to next character in command line to be processed.
@@ -331,31 +306,31 @@ GoPrompt:
         SHL     AL,1                    ; Times two
         CBW                             ; Now a 16-bit quantity
         XCHG    BX,AX                   ; In BX we can address with it
-        CALL    CS:[BX+COMTAB]          ; Execute command
+        CALL    [CS:BX+COMTAB]          ; Execute command
         JMP     SHORT COMMAND           ; Get next command
 ERR1:   JMP     PERR
 
 SET_TERMINATE_VECTOR:
         MOV     AX,(SET_INTERRUPT_VECTOR SHL 8) OR 22H  ; Set vector 22H
-        MOV     DX,OFFSET DG:TERMINATE
+        MOV     DX,TERMINATE
         INT     21H
         RET
 
 TERMINATE:
-        CMP     BYTE PTR CS:[QFLAG],0
+        CMP     byte [CS:QFLAG],0
         JNZ     QUITING
-        MOV     CS:[USER_PROC_PDB],CS
-        CMP     BYTE PTR CS:[NEWEXEC],0
+        MOV     [CS:USER_PROC_PDB],CS
+        CMP     byte [CS:NEWEXEC],0
         JZ      NORMTERM
         MOV     AX,CS
         MOV     DS,AX
         MOV     SS,AX
-        MOV     SP,OFFSET DG:STACK
+        MOV     SP,STACK_
         MOV     AX,[HEADSAVE]
         JMP     DEBUG_FOUND
 
 NORMTERM:
-        MOV     DX,OFFSET DG:ENDMES
+        MOV     DX,ENDMES
         JMP     SHORT RESTART
 
 QUITING:
@@ -363,54 +338,54 @@ QUITING:
         INT     21H
 
 DABORT:
-        MOV     DX,OFFSET DG:CARRET
+        MOV     DX,CARRET
 RESTART:
         MOV     AX,CS
         MOV     DS,AX
         MOV     SS,AX
-        MOV     SP,OFFSET DG:STACK
+        MOV     SP,STACK_
         CALL    RPRBUF
         JMP     COMMAND
 
         IF      SYSVER
 SETUDEV:
-        MOV     DI,OFFSET DG:CONFCB
+        MOV     DI,CONFCB
         MOV     AX,(PARSE_FILE_DESCRIPTOR SHL 8) OR 01H
         INT     21H
         CALL    USERDEV
         JMP     DISPREG
 
 USERDEV:
-        MOV     DX,OFFSET DG:CONFCB
+        MOV     DX,CONFCB
         MOV     AH,FCB_OPEN
         INT     21H
         OR      AL,AL
         JNZ     OPENERR
         MOV     SI,DX
-        TEST    BYTE PTR [SI.fcb_DEVID],080H    ; Device?
+        TEST    byte [SI+sys_fcb.fcb_DEVID],080H    ; Device?
         JZ      OPENERR                 ; NO
-        LDS     SI,DWORD PTR [CONFCB.fcb_FIRCLUS]
-        MOV     WORD PTR CS:[CIN],SI
-        MOV     WORD PTR CS:[CIN+2],DS
-        MOV     WORD PTR CS:[COUT],SI
-        MOV     WORD PTR CS:[COUT+2],DS
+        LDS     SI,dword [CONFCB+sys_fcb.fcb_FIRCLUS]
+        MOV     word [CS:CIN],SI
+        MOV     word [CS:CIN+2],DS
+        MOV     word [CS:COUT],SI
+        MOV     word [CS:COUT+2],DS
         PUSH    CS
         POP     DS
         RET
 
 
 OPENERR:
-        MOV     DX,OFFSET DG:BADDEV
+        MOV     DX,BADDEV
         CALL    RPRBUF
         RET
-        ENDIF
+        end if
 
 ; Get input line. Convert all characters NOT in quotes to upper case.
 
 INBUF:
         CALL    RBUFIN
-        MOV     SI,OFFSET DG:LINEBUF
-        MOV     DI,OFFSET DG:BYTEBUF
+        MOV     SI,LINEBUF
+        MOV     DI,BYTEBUF
 CASECHK:
         LODSB
         CMP     AL,'a'
@@ -438,26 +413,26 @@ KILLSTR:
         JMP     SHORT CASECHK
 
 INDONE:
-        MOV     SI,OFFSET DG:BYTEBUF
+        MOV     SI,BYTEBUF
 
 ; Output CR/LF sequence
 
 CRLF:
         MOV     AL,13
-        CALL    OUT
+        CALL    OUT_
         MOV     AL,10
-        JMP     OUT
+        JMP     OUT_
 
 ; Physical backspace - blank, backspace, blank
 
 BACKUP:
-        MOV     SI,OFFSET DG:BACMES
+        MOV     SI,BACMES
 
 ; Print ASCII message. Last char has bit 7 set
 
 PRINTMES:
-        LODS    CS:BYTE PTR [SI]        ; Get char to print
-        CALL    OUT
+        LODS    byte [CS:SI]        ; Get char to print
+        CALL    OUT_
         SHL     AL,1                    ; High bit set?
         JNC     PRINTMES
         RET
@@ -466,7 +441,7 @@ PRINTMES:
 
 SCANP:
         CALL    SCANB                   ; Get first non-blank
-        CMP     BYTE PTR [SI],","       ; One comma between params OK
+        CMP     byte [SI],","       ; One comma between params OK
         JNE     EOLCHK                  ; If not comma, we found param
         INC     SI                      ; Skip over comma
 
@@ -483,7 +458,7 @@ SCANNEXT:
         DEC     SI                      ; Back to first non-blank
         POP     AX
 EOLCHK:
-        CMP     BYTE PTR [SI],13
+        CMP     byte [SI],13
         RET
 
 ; Hex addition and subtraction
@@ -512,7 +487,7 @@ OUTSI:
         MOV     DX,DS                   ; Put DS where we can work with it
         CALL    OUT16                   ; Display segment
         MOV     AL,":"
-        CALL    OUT
+        CALL    OUT_
         MOV     DX,SI
         JMP     SHORT OUT16             ; Output displacement
 
@@ -523,7 +498,7 @@ OUTDI:
         MOV     DX,ES
         CALL    OUT16
         MOV     AL,":"
-        CALL    OUT
+        CALL    OUT_
         MOV     DX,DI
 
 ; Print out 16-bit value in DX in hex
@@ -557,7 +532,7 @@ DIGIT:
 ; is reset before output.
 
         IF      SYSVER
-OUT:
+OUT_:
         PUSH    AX
         AND     AL,7FH
         CMP     AL,7FH
@@ -577,16 +552,16 @@ NOTDEL:
         CALL    DOCONOUT
         MOV     AL,8
         CALL    DOCONOUT
-        CMP     BYTE PTR CS:[COLPOS],0
+        CMP     byte [CS:COLPOS],0
         JZ      NOTINC
-        DEC     BYTE PTR CS:[COLPOS]
+        DEC     byte [CS:COLPOS]
         JMP     NOTINC
 ZEROPOS:
-        MOV     BYTE PTR CS:[COLPOS],0FFH
+        MOV     byte [CS:COLPOS],0FFH
 OOKRET:
-        INC     BYTE PTR CS:[COLPOS]
+        INC     byte [CS:COLPOS]
 NOTINC:
-        TEST    BYTE PTR CS:[PFLAG],1
+        TEST    byte [CS:PFLAG],1
         JZ      POPRET
         CALL    LISTOUT
 POPRET:
@@ -594,7 +569,7 @@ POPRET:
         RET
 
 TABDO:
-        MOV     AL,CS:[COLPOS]
+        MOV     AL,[CS:COLPOS]
         OR      AL,0F8H
         NEG     AL
         PUSH    CX
@@ -603,7 +578,7 @@ TABDO:
         JCXZ    POPTAB
 TABLP:
         MOV     AL," "
-        CALL    OUT
+        CALL    OUT_
         LOOP    TABLP
 POPTAB:
         POP     CX
@@ -616,10 +591,10 @@ DOCONOUT:
         PUSH    SI
         PUSH    AX
 CONOWAIT:
-        LDS     SI,CS:[COUT]
+        LDS     SI,[CS:COUT]
         MOV     AH,10
         CALL    DEVIOCALL
-        MOV     AX,CS:[IOSTAT]
+        MOV     AX,[CS:IOSTAT]
         AND     AX,200H
         JNZ     CONOWAIT
         POP     AX
@@ -637,10 +612,10 @@ LISTOUT:
         PUSH    SI
         PUSH    AX
 LISTWAIT:
-        LDS     SI,CS:[POUT]
+        LDS     SI,[CS:POUT]
         MOV     AH,10
         CALL    DEVIOCALL
-        MOV     AX,CS:[IOSTAT]
+        MOV     AX,[CS:IOSTAT]
         AND     AX,200H
         JNZ     LISTWAIT
         POP     AX
@@ -657,25 +632,25 @@ DEVIOCALL:
         PUSH    BX
         PUSH    CS
         POP     ES
-        MOV     BX,OFFSET DG:IOCALL
-        MOV     CS:[IOCOM],AH
-        MOV     WORD PTR CS:[IOSTAT],0
-        MOV     WORD PTR CS:[IOCNT],1
-        MOV     CS:[IOBUFF],AL
-        MOV     WORD PTR CS:[IOADDR+2],DS
+        MOV     BX,IOCALL
+        MOV     [CS:IOCOM],AH
+        MOV     word [CS:IOSTAT],0
+        MOV     word [CS:IOCNT],1
+        MOV     [CS:IOBUFF],AL
+        MOV     word [CS:IOADDR+2],DS
         MOV     AX,[SI+6]
-        MOV     WORD PTR CS:[IOADDR],AX
-        CALL    DWORD PTR CS:[IOADDR]
+        MOV     word [CS:IOADDR],AX
+        CALL    dword [CS:IOADDR]
         MOV     AX,[SI+8]
-        MOV     WORD PTR CS:[IOADDR],AX
-        CALL    DWORD PTR CS:[IOADDR]
-        MOV     AL,CS:[IOBUFF]
+        MOV     word [CS:IOADDR],AX
+        CALL    dword [CS:IOADDR]
+        MOV     AL,[CS:IOBUFF]
         POP     BX
         POP     ES
         RET
         ELSE
 
-OUT:
+OUT_:
         PUSH    DX
         PUSH    AX
         AND     AL,7FH
@@ -685,7 +660,7 @@ OUT:
         POP     AX
         POP     DX
         RET
-        ENDIF
+        end if
 
 
         IF      SYSVER
@@ -695,20 +670,20 @@ RBUFIN:
         PUSH    DI
         PUSH    CS
         POP     ES
-        MOV     BYTE PTR [LBUFFCNT],0
-        MOV     DI,OFFSET DG:LINEBUF
+        MOV     byte [LBUFFCNT],0
+        MOV     DI,LINEBUF
 FILLBUF:
-        CALL    IN
+        CALL    IN_
         CMP     AL,0DH
         JZ      BDONE
         CMP     AL,8
         JZ      ECHR
         CMP     AL,7FH
         JZ      ECHR
-        CMP     BYTE PTR [LBUFFCNT],BUFLEN
+        CMP     byte [LBUFFCNT],BUFLEN
         JAE     BFULL
         STOSB
-        INC     BYTE PTR [LBUFFCNT]
+        INC     byte [LBUFFCNT]
         JMP     SHORT FILLBUF
 
 BDONE:
@@ -720,16 +695,16 @@ BDONE:
 
 BFULL:
         MOV     AL,8
-        CALL    OUT
+        CALL    OUT_
         MOV     AL,7
-        CALL    OUT
+        CALL    OUT_
         JMP     SHORT FILLBUF
 
 ECHR:
-        CMP     DI,OFFSET DG:LINEBUF
+        CMP     DI,LINEBUF
         JZ      FILLBUF
         DEC     DI
-        DEC     BYTE PTR [LBUFFCNT]
+        DEC     byte [LBUFFCNT]
         JMP     SHORT FILLBUF
         ELSE
 
@@ -737,12 +712,12 @@ RBUFIN:
         PUSH    AX
         PUSH    DX
         MOV     AH,10
-        MOV     DX,OFFSET DG:LBUFSIZ
+        MOV     DX,LBUFSIZ
         INT     21H
         POP     DX
         POP     AX
         RET
-        ENDIF
+        end if
 
 
         IF      SYSVER
@@ -755,7 +730,7 @@ PLOOP:
         LODSB
         CMP     AL,"$"
         JZ      PRTDONE
-        CALL    OUT
+        CALL    OUT_
         JMP     SHORT PLOOP
 PRTDONE:
         POP     SI
@@ -768,13 +743,13 @@ RPRBUF:
         MOV     AH,9
         INT     21H
         RET
-        ENDIF
+        end if
 
 ; Output one space
 
 BLANK:
         MOV     AL," "
-        JMP     OUT
+        JMP     OUT_
 
 ; Output the number of blanks in CX
 
@@ -790,14 +765,14 @@ COMTAB  DW      ASSEM                   ; A
         DW      PERR                    ; B
         DW      COMPARE                 ; C
         DW      DUMP                    ; D
-        DW      ENTER                   ; E
+        DW      ENTER_                   ; E
         DW      FILL                    ; F
         DW      GO                      ; G
         DW      HEXADD                  ; H
         DW      INPUT                   ; I
         DW      PERR                    ; J
         DW      PERR                    ; K
-        DW      LOAD                    ; L
+        DW      LOAD_                    ; L
         DW      MOVE                    ; M
         DW      NAME                    ; N
         DW      OUTPUT                  ; O
@@ -805,7 +780,7 @@ COMTAB  DW      ASSEM                   ; A
         DW      ZTRACE
         ELSE
         DW      PERR                    ; P
-        ENDIF
+        end if
         DW      QUIT                    ; Q (QUIT)
         DW      REG                     ; R
         DW      SEARCH                  ; S
@@ -817,21 +792,20 @@ COMTAB  DW      ASSEM                   ; A
         DW      SETUDEV                 ; X
         ELSE
         DW      PERR
-        ENDIF
+        end if
         DW      PERR                    ; Y
         DW      PERR                    ; Z
 
 QUIT:
-        INC     BYTE PTR [QFLAG]
+        INC     byte [QFLAG]
         MOV     BX,[USER_PROC_PDB]
 FIND_DEBUG:
 IF  NOT SYSVER
         MOV     AH,SET_CURRENT_PDB
         INT     21H
-ENDIF
+end if
         CALL    ReleaseParity           ; let system do normal parity stuff
         MOV     AX,(EXIT SHL 8)
         INT     21H
 
-CODE    ENDS
-        END START
+end if

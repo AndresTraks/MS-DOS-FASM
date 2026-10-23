@@ -1,93 +1,79 @@
-.xlist
-.xcref
-INCLUDE debequ.asm
-INCLUDE dossym.asm
-.list
-.cref
+INCLUDE 'debequ.asm'
 
-CODE    SEGMENT PUBLIC BYTE 'CODE'
-CODE    ENDS
+if SEGSEL = S_CODE
+end if
 
-CONST   SEGMENT PUBLIC BYTE
-CONST   ENDS
+if SEGSEL = S_CONST
+end if
 
-DATA    SEGMENT PUBLIC BYTE
-DATA    ENDS
-
-DG      GROUP   CODE,CONST,DATA
-
-DATA    SEGMENT PUBLIC BYTE
+if SEGSEL = S_DATA
+end if
 
 
-        PUBLIC  ParityFlag,XNXOPT,XNXCMD,SWITCHAR,EXTPTR,HANDLE,TRANSADD
-        PUBLIC  PARSERR,ASMADD,DISADD,DISCNT,ASMSP,INDEX,DEFDUMP,DEFLEN
-        PUBLIC  REGSAVE,SEGSAVE,OFFSAVE,TEMP,BUFFER,BYTCNT,OPCODE,AWORD
-        PUBLIC  REGMEM,MIDFLD,MODE,NSEG,OPBUF,BRKCNT,TCOUNT,ASSEM_CNT
-        PUBLIC  ASSEM1,ASSEM2,ASSEM3,ASSEM4,ASSEM5,ASSEM6,BYTEBUF,BPTAB
-        PUBLIC  DIFLG,SIFLG,BXFLG,BPFLG,NEGFLG,NUMFLG,MEMFLG,REGFLG
-        PUBLIC  MOVFLG,TSTFLG,SEGFLG,LOWNUM,HINUM,F8087,DIRFLG,DATAEND
+if SEGSEL = S_DATA
+
+
 
 
 ParityFlag  DB  0
-XNXOPT  DB      ?                       ; AL OPTION FOR DOS COMMAND
-XNXCMD  DB      ?                       ; DOS COMMAND FOR OPEN_A_FILE TO PERFORM
-SWITCHAR DB     ?                       ; CURRENT SWITCH CHARACTER
-EXTPTR  DW      ?                       ; POINTER TO FILE EXTENSION
-HANDLE  DW      ?                       ; CURRENT HANDLE
-TRANSADD DD     ?                       ; TRANSFER ADDRESS
+XNXOPT  DB      0; AL OPTION FOR DOS COMMAND
+XNXCMD  DB      0; DOS COMMAND FOR OPEN_A_FILE TO PERFORM
+SWITCHAR DB      0; CURRENT SWITCH CHARACTER
+EXTPTR  DW      0; POINTER TO FILE EXTENSION
+HANDLE  DW      0; CURRENT HANDLE
+TRANSADD DD      0; TRANSFER ADDRESS
 
-PARSERR DB      ?
-ASMADD  DB      4 DUP (?)
-DISADD  DB      4 DUP (?)
-DISCNT  DW      ?
-ASMSP   DW      ?                       ; SP AT ENTRY TO ASM
-INDEX   DW      ?
-DEFDUMP DB      4 DUP (?)
-DEFLEN  DW      ?
-REGSAVE DW      ?
-SEGSAVE DW      ?
-OFFSAVE DW      ?
+PARSERR DB      0
+ASMADD  DB      4 dup (0)
+DISADD  DB      4 dup (0)
+DISCNT  DW      0
+ASMSP   DW      0; SP AT ENTRY TO ASM
+INDEX   DW      0
+DEFDUMP DB      4 dup (0)
+DEFLEN  DW      0
+REGSAVE DW      0
+SEGSAVE DW      0
+OFFSAVE DW      0
 
 ; The following data areas are destroyed during hex file read
-TEMP    DB      4 DUP(?)
-BUFFER  LABEL   BYTE
-BYTCNT  DB      ?
-OPCODE  DW      ?
-AWORD   DB      ?
-REGMEM  DB      ?
-MIDFLD  DB      ?
-MODE    DB      ?
-NSEG    DW      ?
-OPBUF   DB      OPBUFLEN DUP (?)
-BRKCNT  DW      ?                       ; Number of breakpoints
-TCOUNT  DW      ?                       ; Number of steps to trace
-ASSEM_CNT       DB      ?               ; preserve order of assem_cnt and assem1
-ASSEM1          DB      ?
-ASSEM2          DB      ?
-ASSEM3          DB      ?
-ASSEM4          DB      ?
-ASSEM5          DB      ?
-ASSEM6          DB      ?               ; preserve order of assemx and bytebuf
-BYTEBUF DB      BUFLEN  DUP (?)         ; Table used by LIST
-BPTAB   DB      BPLEN   DUP (?)         ; Breakpoint table
-DIFLG   DB      ?
-SIFLG   DB      ?
-BXFLG   DB      ?
-BPFLG   DB      ?
-NEGFLG  DB      ?
-NUMFLG  DB      ?                       ; ZERO MEANS NO NUMBER SEEN
-MEMFLG  DB      ?
-REGFLG  DB      ?
-MOVFLG  DB      ?
-TSTFLG  DB      ?
-SEGFLG  DB      ?
-LOWNUM  DW      ?
-HINUM   DW      ?
-F8087   DB      ?
-DIRFLG  DB      ?
-        DB      BUFFER+BUFSIZ-$ DUP (?)
+TEMP    DB      4 dup (0)
+label BUFFER byte
+BYTCNT  DB      0
+OPCODE  DW      0
+AWORD   DB      0
+REGMEM  DB      0
+MIDFLD  DB      0
+MODE    DB      0
+NSEG    DW      0
+OPBUF   DB      OPBUFLEN dup (0)
+BRKCNT  DW      0; Number of breakpoints
+TCOUNT  DW      0; Number of steps to trace
+ASSEM_CNT       DB      0; preserve order of assem_cnt and assem1
+ASSEM1          DB      0
+ASSEM2          DB      0
+ASSEM3          DB      0
+ASSEM4          DB      0
+ASSEM5          DB      0
+ASSEM6          DB      0; preserve order of assemx and bytebuf
+BYTEBUF DB      BUFLEN  dup (0)         ; Table used by LIST
+BPTAB   DB      BPLEN   dup (0)         ; Breakpoint table
+DIFLG   DB      0
+SIFLG   DB      0
+BXFLG   DB      0
+BPFLG   DB      0
+NEGFLG  DB      0
+NUMFLG  DB      0; ZERO MEANS NO NUMBER SEEN
+MEMFLG  DB      0
+REGFLG  DB      0
+MOVFLG  DB      0
+TSTFLG  DB      0
+SEGFLG  DB      0
+LOWNUM  DW      0
+HINUM   DW      0
+F8087   DB      0
+DIRFLG  DB      0
+        DB      BUFFER+BUFSIZ-$ dup (0)
 
-DATAEND LABEL   WORD
+label DATAEND word
 
-DATA    ENDS
-        END
+end if

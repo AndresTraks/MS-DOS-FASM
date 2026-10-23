@@ -26,7 +26,8 @@ mcopy -i "$IMAGE" bin/COMMANDF.COM ::COMMAND.COM
 # -- see source/CHKLINK.ASM.
 mcopy -i "$IMAGE" bin/CHKDSKF.COM ::CHKDSK.COM
 mcopy -i "$IMAGE" bin/CREF.EXE ::
-mcopy -i "$IMAGE" bin/DEBUG.COM ::
+# DEBUG is ours, Microsoft's staying in bin to compare against.
+mcopy -i "$IMAGE" bin/DEBUGF.COM ::DEBUG.COM
 # DISKCOPY is ours, Microsoft's staying in bin to compare against.
 mcopy -i "$IMAGE" bin/DISKCOPF.COM ::DISKCOPY.COM
 # EDLIN is ours, Microsoft's staying in bin to compare against.

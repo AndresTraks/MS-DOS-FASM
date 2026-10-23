@@ -190,6 +190,33 @@ PROGRAMS = {
         "renames": {},
         "macros": {},
     },
+    "DEBUG": {
+        # Eight modules and three segments, the most of either here.  DEBUG
+        # declares its externals rather than leaning on the linker to find
+        # them, so the order below is only a guess at the one LINK was given:
+        # the release keeps no response file for DEBUG, and the order decides
+        # the layout and nothing else.  DEBUG.ASM first, as it holds the
+        # ORG 100H and the entry point.
+        "dossym": "DOSSYM.ASM",
+        # DEBEQU.ASM holds the switches and is read once by the link file
+        # rather than in the walk, but it is converted with the rest: its
+        # EQUs are FASM preprocessor definitions until they become =, and
+        # one of them is FALSE, which would turn the FALSE = 0 at the top of
+        # DEBMES.ASM into 0 = 0.
+        "modules": ("DEBEQU.ASM", "DEBUG.ASM", "DEBCOM1.ASM", "DEBCOM2.ASM",
+                    "DEBASM.ASM", "DEBUASM.ASM", "DEBMES.ASM",
+                    "DEBCONST.ASM", "DEBDATA.ASM"),
+        "segments": ("CODE", "CONST", "DATA"),
+        "group": "DG",
+        # A debugger names its labels after the instructions it debugs, so
+        # most of these are mnemonics FASM would rather assemble: the pass
+        # that renames them leaves the mnemonic of a line alone and takes
+        # only the label and the references to it.
+        "reserved": ("ENTER", "ERR", "FSAVE", "IN", "INT3", "LOAD", "OUT",
+                     "STACK", "STORE", "TEST"),
+        "renames": {},
+        "macros": {},
+    },
     "SYS": {
         "dossym": "DOSSYM.ASM",
         "modules": ("SYS.ASM", "SYSMES.ASM"),
@@ -508,6 +535,15 @@ def bracket(body, labels):
     return "%s%s%s%s" % (m.group(1), m.group(2), m.group(3), ",".join(ops))
 
 
+# A name FASM reserves can also be the mnemonic of the line it appears on:
+# DEBUG defines labels called IN, OUT and TEST and uses all three
+# instructions as well.  The mnemonic is the one place the name cannot be a
+# reference, so it is held back while the rest of the line is rewritten.
+# Leading whitespace is required, which is what tells an instruction from a
+# definition: "STACK LABEL BYTE" starts in the first column.
+MNEMONIC_POS = re.compile(r"^(\s+(?:\w+:\s*)?)([A-Za-z]\w*)(?=\s)")
+
+
 def line(code):
     def words(t):
         t = re.sub(r"\b(BYTE|WORD|DWORD)\s+PTR\b", lambda m: m.group(1).lower(), t, flags=re.I)
@@ -579,7 +615,12 @@ def line(code):
         for name in RESERVED:
             t = re.sub(r"\b%s\b" % name, name + "_", t, flags=re.I)
         return t
-    return outside_strings(code, words)
+    hold, m = None, MNEMONIC_POS.match(code) if RESERVED else None
+    if m and m.group(2).upper() in {r.upper() for r in RESERVED}:
+        hold = m.group(2)
+        code = code[:m.start(2)] + "\0" + code[m.end(2):]
+    out = outside_strings(code, words)
+    return out.replace("\0", hold, 1) if hold else out
 
 
 def convert(text, renames, first=False):
