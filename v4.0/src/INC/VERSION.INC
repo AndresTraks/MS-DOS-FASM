@@ -1,13 +1,10 @@
 ; Some modules really want TRUE to be 0FFH.  Best to let them have their way.
-ifndef TRUE
-	TRUE	   EQU	   0FFFFh
-endif
-ifndef TRUEBYTE
-	TRUEBYTE   EQU     0FFh
-endif
-ifndef FALSE
-	FALSE	   EQU	   0
-endif
+; fasm's EQU is a preprocessor definition, so an IF around one would not
+; stop it being made; MATCH asks the same question where it counts -- the
+; name stands for itself only while nothing else has defined it.
+match =TRUE, TRUE { TRUE EQU 0FFFFh }
+match =TRUEBYTE, TRUEBYTE { TRUEBYTE EQU 0FFh }
+match =FALSE, FALSE { FALSE EQU 0 }
 
 ;
 ; Use the following switches to control cmacros.inc
@@ -36,28 +33,26 @@ IBMCOPYRIGHT EQU   FALSE
 
 BUFFERFLAG	EQU	NOT IBMCOPYRIGHT
 
-ifndef	MSVER	
-MSVER      EQU     NOT IBMVER
-endif
+match =MSVER, MSVER { MSVER EQU NOT IBMVER }
 IBM	   EQU	   IBMVER
 ;
 ;
-  IF1
-	IF IBMVER
-	    IF IBMCOPYRIGHT
-              %OUT ... IBM version build switch on ...
-	    ELSE
-	      %OUT ... CLONE version build switch on ...
-	    ENDIF
-	ELSE
-	    IF NOT IBMCOPYRIGHT
-	      %OUT ... MS version build switch on ...
-	    ELSE
-	      %OUT !!!!!!!!!  VERSION SWITCHES SET INCORECTLY  !!!!!!!!!
-	      %OUT !!!!!!!!! CHECK SETTINGS IN INC\VERSION.INC !!!!!!!!!
-	    ENDIF
-	ENDIF   
-  ENDIF
+;  IF1
+;	IF IBMVER
+;	    IF IBMCOPYRIGHT
+;              %OUT ... IBM version build switch on ...
+;	    ELSE
+;	      %OUT ... CLONE version build switch on ...
+;	    ENDIF
+;	ELSE
+;	    IF NOT IBMCOPYRIGHT
+;	      %OUT ... MS version build switch on ...
+;	    ELSE
+;	      %OUT !!!!!!!!!  VERSION SWITCHES SET INCORECTLY  !!!!!!!!!
+;	      %OUT !!!!!!!!! CHECK SETTINGS IN INC\VERSION.INC !!!!!!!!!
+;	    ENDIF
+;	ENDIF   
+;  ENDIF
 ;
 ;
 ;***************************************************************************
@@ -75,32 +70,25 @@ IBMJAPVER  EQU	   FALSE		;If TRUE set KANJI true also
 ;
 INTERNAT   EQU	   FALSE
 ;
-	IF INTERNAT
-KANJI	   EQU	   TRUE
-IBMJAPAN   EQU	   TRUE
-	ELSE
-KANJI	   EQU	   FALSE
-IBMJAPAN   EQU	   FALSE
-	ENDIF
+; An EQU is a definition fasm's preprocessor makes as it reads the line,
+; whether or not the IF around it would have held, so a switch cannot pick
+; between two of them.  Both of these follow INTERNAT exactly, so they are
+; written as INTERNAT rather than branched on it.
+KANJI	   EQU	   INTERNAT
+IBMJAPAN   EQU	   INTERNAT
 
-ifndef altvect				; avoid jerking off vector.inc
-ALTVECT    EQU	   FALSE		;Switch to build ALTVECT version
-endif
+; avoid jerking off vector.inc
+match =ALTVECT, ALTVECT { ALTVECT EQU FALSE }	;Switch to build ALTVECT version
 
 ;
 ; Country code switches
 ; The default contry code is assumed as USA.
 ;
-	IF INTERNAT
- KOREA	   EQU	   TRUE
+ KOREA	   EQU	   INTERNAT
  JAPAN	   EQU	   FALSE
-	ELSE
- KOREA	   EQU	   FALSE
- JAPAN	   EQU	   FALSE
-	ENDIF
 ;
-	IF1
-		IF INTERNAT
-%OUT	Internat(ECS) version build switch on
-		ENDIF
-	ENDIF
+;	IF1
+;		IF INTERNAT
+;%OUT	Internat(ECS) version build switch on
+;		ENDIF
+;	ENDIF

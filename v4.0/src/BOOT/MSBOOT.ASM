@@ -1,5 +1,17 @@
-	Page 60,132 ;	    SCCSID = @(#)msboot.asm	    1.1 85/05/13
-TITLE BOOT	SECTOR 1 OF TRACK 0 - BOOT LOADER
+;	Page 60,132 ;	    SCCSID = @(#)msboot.asm	    1.1 85/05/13
+;TITLE BOOT	SECTOR 1 OF TRACK 0 - BOOT LOADER
+
+; The boot sector, as fasm assembles it.  One segment, one ORG and no
+; linking, so the segment and ASSUME directives are commented out rather
+; than replaced, and the two things MASM did at the end -- padding the
+; sector out to the signature, and the far jump to a segment declared AT
+; 70h -- are written out where they happen.
+;
+; fasm keeps every name that begins with $ for itself, so $START, the
+; label on the first byte of the sector, is START$ here.  The names with
+; a $ inside them -- BIOS$_L and the rest -- it takes as they are.
+
+use16
 
 ;   Rev 1.0 ChrisP, AaronR and others.	2.0 format boot
 ;
@@ -67,29 +79,35 @@ cbDirEnt    EQU 32
 DirOff	    EQU 500h
 IBMLOADSIZE equ 3			;J.K. Size of IBMLOAD module in sectors
 ROM_DISKRD  equ 2
-include version.inc
+include '../INC/VERSION.INC'
 
 ;
 ; Define the destination segment of the BIOS, including the initialization
 ; label
 ;
-SEGBIOS SEGMENT AT BIOSEG
-BIOS	LABEL	BYTE
-SEGBIOS ENDS
+;SEGBIOS SEGMENT AT BIOSEG
+;BIOS	LABEL	BYTE
+;SEGBIOS ENDS
 
-CODE	SEGMENT
-	ASSUME CS:CODE,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;CODE	SEGMENT
+;	ASSUME CS:CODE,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
 ;	 ORG	 DirOff + 1Ch
 ;BiosFS  LABEL	 WORD
 
-	ORG	ORIGIN
+	org	ORIGIN
 
 DSKADR	=	1EH*4			;POINTER TO DRIVE PARAMETERS
 
-Public $START
-$START:
+;Public $START
+START$:
 	JMP	START
+	NOP				; MASM left three bytes for the jump: it took
+					;  the long one on its first pass, found the
+					;  short one would reach on its second and
+					;  padded.  The table below has to start at
+					;  offset 3, where DOS reads it, so the
+					;  padding is written out here.
 ;----------------------------------------------------------
 ;
 ;	THE FOLLOWING DATA CONFIGURES THE BOOT PROGRAM
@@ -97,11 +115,11 @@ $START:
 ;
 ;J.K. Extened_BPB
 
-if ibmcopyright
+if IBMCOPYRIGHT
 	  DB	  "IBM  "
 else
 	  DB	  "MSDOS"
-endif
+end if
 	  DB	  "4.0"                 ;AN005;
 ByteSec   DW	  cbSec 		; SIZE OF A PHYSICAL SECTOR
 	  DB	  8			; SECTORS PER ALLOCATION UNIT
@@ -114,10 +132,10 @@ MEDIA	  DB	  0F8H			; MEDIA BYTE
 cSecFat   DW	  8			; NUMBER OF FAT SECTORS
 SECLIM	  DW	  17			; SECTORS PER TRACK
 HDLIM	  DW	  4			; NUMBER OF SURFACES
-Ext_cSecHid label dword
+label Ext_cSecHid dword
 cSecHid_L DW	  1			;AN000; NUMBER OF HIDDEN SECTORS
 cSecHid_H dw	  0			;AN000; high order word of Hiden Sectors
-Ext_cTotSec label dword
+label Ext_cTotSec dword
 ctotsec_L dw	  0			;AN000; 32 bit version of NUMBER OF SECTORS
 ctotsec_H dw	  0			;AN000; (when 16 bit version is zero)
 ;
@@ -133,15 +151,17 @@ Boot_System_id	db    'FAT12   '        ;AN000;
 ;
 
 ;
-Public UDATA
-UDATA	LABEL	byte
-Sec9	  equ	byte ptr UDATA+0	;11 byte diskette parm. table
-BIOS$_L   EQU	WORD PTR UDATA+11
-BIOS$_H   equ	word ptr UDATA+13	;AN000;
-CURTRK	  EQU	WORD PTR UDATA+15
-CURSEC	  EQU	BYTE PTR UDATA+17
-DIR$_L	  EQU	WORD PTR UDATA+18
-Dir$_H	  equ	word ptr UDATA+20	;AN000;
+;Public UDATA
+UDATA:					; the names below are addresses in fasm, with no
+					;  size of their own, so each instruction says
+					;  what it is reading or writing
+Sec9	  equ	UDATA+0			;11 byte diskette parm. table
+BIOS$_L   EQU	UDATA+11
+BIOS$_H   equ	UDATA+13		;AN000;
+CURTRK	  EQU	UDATA+15
+CURSEC	  EQU	UDATA+17
+DIR$_L	  EQU	UDATA+18
+Dir$_H	  equ	UDATA+20		;AN000;
 START:
 
 ;
@@ -151,11 +171,11 @@ START:
 	CLI				;Stop interrupts till stack ok
 	XOR	AX,AX
 	MOV	SS,AX			;Work in stack just below this routine
-	ASSUME	SS:CODE
+;	ASSUME	SS:CODE
 	MOV	SP,ORIGIN
 	PUSH	SS
 	POP	ES
-	ASSUME	ES:CODE
+;	ASSUME	ES:CODE
 ;
 ; We copy the disk parameter table into a local area.  We scan the table above
 ; for non-zero parameters.  Any we see get changed to their non-zero values.
@@ -165,31 +185,32 @@ START:
 ;by FORMAT.
 
 	MOV	BX,DSKADR
-	LDS	SI,DWORD PTR SS:[BX]	; get address of disk table
+	LDS	SI,[SS:BX]		; get address of disk table
 	PUSH	DS			; save original vector for possible
 	PUSH	SI			; restore
 	PUSH	SS
 	PUSH	BX
-	MOV	DI,offset Sec9
+	MOV	DI,Sec9
 	MOV	CX,11
 	CLD
-if	$ le BIOS$_L
-	%OUT Don't destroy unexcuted code yet!!!
-endif
+if	$ <= BIOS$_L
+	display "Don't destroy unexcuted code yet!!!",13,10
+	err
+end if
 	repz	movsb			;AN000;
 	push	es			;AN000;
 	pop	ds			;AN000; DS = ES = code = 0.
-	assume	ds:code 		;AN000;
+;	assume	ds:code 		;AN000;
 ;	 mov	 byte ptr [di-2], 1	 ;AN000; Head settle time
 ;J.K. Change the head settle to 15 ms will slow the boot time quite a bit!!!
-	mov	byte ptr [di-2], 0fh	;AN002; Head settle time
-	mov	cx, SECLIM		;AN004;
-	mov	byte ptr [di-7], cl	;AN000; End of Track
+	mov	byte [di-2], 0fh	;AN002; Head settle time
+	mov	cx, [SECLIM]		;AN004;
+	mov	[di-7], cl		;AN000; End of Track
 ;
 ; Place in new disk parameter table vector.
 ;
 	MOV	[BX+2],AX
-	MOV	[BX],offset SEC9
+	MOV	word [BX],Sec9
 ;
 ; We may now turn interrupts back on.  Before this, there is a small window
 ; when a reboot command may come in when the disk parameter table is garbage
@@ -200,39 +221,39 @@ endif
 ;
 	INT	13H			;Reset the system
 ;	 JC	 RERROR
-	jc	CKErr			;AN000;
+	jc	CKERR			;AN000;
 ;
 ; The system is now prepared for us to begin reading.  First, determine
 ; logical sector numbers of the start of the directory and the start of the
 ; data area.
 
 	xor	ax,ax			;AN000;
-	cmp	cTotSec,ax		;AN000; 32 bit calculation?
+	cmp	[cTotSec],ax		;AN000; 32 bit calculation?
 	je	Dir_Cont		;AN000;
-	mov	cx,cTotSec		;AN000;
-	mov	cTotSec_L,cx		;AN000; cTotSec_L,cTotSec_H will be used for calculation
+	mov	cx,[cTotSec]		;AN000;
+	mov	[ctotsec_L],cx		;AN000; ctotsec_L,ctotsec_H will be used for calculation
 Dir_Cont:				;AN000;
-	MOV	AL,cFat 		;Determine sector dir starts on
-	MUL	cSecFat 		;DX;AX
-	ADD	AX,cSecHid_L
-	adc	DX,cSecHid_H		;AN000;
-	ADD	AX,cSecRes
+	MOV	AL,[cFat]		;Determine sector dir starts on
+	MUL	[cSecFat]		;DX;AX
+	ADD	AX,[cSecHid_L]
+	adc	DX,[cSecHid_H]		;AN000;
+	ADD	AX,[cSecRes]
 	ADC	DX,0
 	MOV	[DIR$_L],AX		; DX;AX = cFat*cSecFat + cSecRes + cSecHid
-	mov	[DIR$_H],DX		;AN000;
+	mov	[Dir$_H],DX		;AN000;
 	MOV	[BIOS$_L],AX
 	mov	[BIOS$_H],DX		;AN000;
 ;
 ; Take into account size of directory (only know number of directory entries)
 ;
 	MOV	AX,cbDirEnt		; bytes per directory entry
-	MUL	DirNum			; convert to bytes in directory
-	MOV	BX,ByteSec		; add in sector size
+	MUL	[DirNum]		; convert to bytes in directory
+	MOV	BX,[ByteSec]		; add in sector size
 	ADD	AX,BX
 	DEC	AX			; decrement so that we round up
 	DIV	BX			; convert to sector number
 	ADD	[BIOS$_L],AX		; Start sector # of Data area
-	adc	[BIOS$_H],0		;AN000;
+	adc	word [BIOS$_H],0	;AN000;
 
 ;
 ; We load in the first directory sector and examine it to make sure the the
@@ -241,10 +262,10 @@ Dir_Cont:				;AN000;
 ; into 00500h
 ;
 	MOV	BX,DirOff		; sector to go in at 00500h
-	mov	dx,[DIR$_H]		;AN000;
+	mov	dx,[Dir$_H]		;AN000;
 	MOV	AX,[DIR$_L]		; logical sector of directory
 	CALL	DODIV			; convert to sector, track, head
-	jc	CKErr			;AN000; Overflow? BPB must be wrong!!
+	jc	CKERR			;AN000; Overflow? BPB must be wrong!!
 ;	 MOV	 AX,0201H		 ; disk read 1 sector
 	mov	al, 1			;AN000; disk read 1 sector
 	CALL	DOCALL			; do the disk read
@@ -255,14 +276,14 @@ Dir_Cont:				;AN000;
 ;
 	MOV	DI,BX
 	MOV	CX,11
-	MOV	SI,OFFSET BIO		; point to "ibmbio  com"
+	MOV	SI,BIO			; point to "ibmbio  com"
 	REPZ	CMPSB			; see if the same
 	JNZ	CKERR			; if not there advise the user
 ;
 ; Found the BIOS.  Check the second directory entry.
 ;
 	LEA	DI,[BX+20h]
-	MOV	SI,OFFSET DOS		; point to "ibmdos  com"
+	MOV	SI,DOS			; point to "ibmdos  com"
 	MOV	CX,11
 	REPZ	CMPSB
 	JZ	DoLoad
@@ -271,21 +292,21 @@ Dir_Cont:				;AN000;
 ; There has been some recoverable error.  Display a message and wait for a
 ; keystroke.
 ;
-CKERR:	MOV	SI,OFFSET SYSMSG	; point to no system message
+CKERR:	MOV	SI,SYSMSG		; point to no system message
 ErrOut: CALL	WRITE			; and write on the screen
 	XOR	AH,AH			; wait for response
 	INT	16H			; get character from keyboard
 	POP	SI			; reset disk parameter table back to
 	POP	DS			; rom
-	POP	[SI]
-	POP	[SI+2]
+	POP	word [SI]
+	POP	word [SI+2]
 	INT	19h			; Continue in loop till good disk
 
 Load_Failure:
 	pop	ax			;adjust the stack
 	pop	ax
 	pop	ax
-	jmp	short Ckerr		;display message and reboot.
+	jmp	short CKERR		;display message and reboot.
 
 ;J.K. We don't have the following error message any more!!!
 ;J.K. Sysmsg is fine.  This will save space by eliminating DMSSG message.
@@ -317,10 +338,10 @@ Do_While:				;AN000;
 	pop	CX			;AN000;
 	pop	DX			;AN000;
 	pop	AX			;AN000;
-	jc	CkErr			;AN000; Read error?
+	jc	CKERR			;AN000; Read error?
 	add	AX,1			;AN000; Next sector number.
 	adc	DX,0			;AN000;
-	add	BX,ByteSec		;AN000; adjust buffer address.
+	add	BX,[ByteSec]		;AN000; adjust buffer address.
 	loop	Do_While		;AN000;
 
 
@@ -404,15 +425,15 @@ Do_While:				;AN000;
 ;J.K.I1. If it is, then should us AX;BX for the starting data sector number.
 
 DISKOK:
-	MOV	CH,Media
-	MOV	DL,PhyDrv
+	MOV	CH,[MEDIA]
+	MOV	DL,[Phydrv]
 	MOV	bx,[BIOS$_L]		;AN000; J.K.I1.Get bios sector in bx
 	mov	ax,[BIOS$_H]		;AN000; J.K.I1.
-	JMP	FAR PTR BIOS		;CRANK UP THE DOS
+	JMP	BIOSEG:0		;CRANK UP THE DOS
 
 WRITE:	LODSB				;GET NEXT CHARACTER
 	OR	AL,AL			;clear the high bit
-	JZ	ENDWR			;ERROR MESSAGE UP, JUMP TO BASIC
+	JZ	EndWR			;ERROR MESSAGE UP, JUMP TO BASIC
 	MOV	AH,14			;WILL WRITE CHARACTER & ATTRIBUTE
 	MOV	BX,7			;ATTRIBUTE
 	INT	10H			;PRINT THE CHARACTER
@@ -426,16 +447,16 @@ WRITE:	LODSB				;GET NEXT CHARACTER
 ;
 
 DODIV:
-	cmp	dx,Seclim		;AN000; To prevent overflow!!!
+	cmp	dx,[SECLIM]		;AN000; To prevent overflow!!!
 	jae	DivOverFlow		;AN000; Compare high word with the divisor.
-	DIV	SECLIM			;AX = Total tracks, DX = sector number
+	DIV	[SECLIM]		;AX = Total tracks, DX = sector number
 	INC	DL			;Since we assume SecLim < 255 (a byte), DH =0.
 					;Cursec is 1-based.
-	MOV	CURSEC, DL		;save it
+	MOV	[CURSEC], DL		;save it
 	XOR	DX,DX
-	DIV	HDLIM
-	MOV	CURHD,DL		;Also, Hdlim < 255.
-	MOV	CURTRK,AX
+	DIV	[HDLIM]
+	MOV	[Curhd],DL		;Also, Hdlim < 255.
+	MOV	[CURTRK],AX
 	clc				;AN000;
 	ret				;AN000;
 DivOverFlow:				;AN000;
@@ -482,36 +503,37 @@ EndWR:
 ; of sectors.
 ;
 DOCALL: MOV	AH,ROM_DISKRD		;AC000;=2
-	MOV	DX,CURTRK
+	MOV	DX,[CURTRK]
 	MOV	CL,6
 	SHL	DH,CL
-	OR	DH,CURSEC
+	OR	DH,[CURSEC]
 	MOV	CX,DX
 	XCHG	CH,CL
-	MOV	DL, PHYDRV
-	mov	dh, curhd
+	MOV	DL, [Phydrv]
+	mov	dh, [Curhd]
 	INT	13H
 	RET
 
 ;	 include ibmbtmes.inc
-	include boot.cl1			;AN003;
+	include 'BOOT.CL1'			;AN003;
 
 
-	IF IBMCOPYRIGHT
+	if IBMCOPYRIGHT
 BIO	DB	"IBMBIO  COM"
 DOS	DB	"IBMDOS  COM"
-	ELSE
+	else
 BIO	DB	"IO      SYS"
 DOS	DB	"MSDOS   SYS"
-	ENDIF
+	end if
 
-Free	EQU (cbSec - 4) - ($-$start)		;AC000;
+Free	=   (cbSec - 4) - ($-START$)		;AC000;
 ;Free	 EQU (cbSec - 5) - ($-$start)
-if Free LT 0
-    %out FATAL PROBLEM:boot sector is too large
-endif
+if Free < 0
+    display "FATAL PROBLEM:boot sector is too large",13,10
+    err
+end if
 
-	org	origin + (cbSec - 2)		;AN004;
+	times	(ORIGIN + (cbSec - 2)) - $ db 0	;AN004;
 ;	 org	 origin + (cbSec - 5)
 
 ;Warning!! Do not change the position of following unless
@@ -525,6 +547,5 @@ endif
 ; Boot sector signature
 	db	55h,0aah
 
-CODE	ENDS
-	END
-
+;CODE	ENDS
+;	END
