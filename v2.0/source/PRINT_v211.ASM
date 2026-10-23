@@ -952,7 +952,7 @@ INT_13_BACK:
         PUSHF
         DEC     [CS:BUSY]
         POPF
-        RET     2               ;Chuck saved flags
+        RETF    2               ;Chuck saved flags
         end if
 
 

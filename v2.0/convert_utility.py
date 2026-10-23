@@ -626,8 +626,12 @@ def convert(text, renames, first=False):
             if infar:
                 infar.pop()
             continue
+        # RET with a count is as far as the plain one: PRINT's INT_13_BACK
+        # ends "RET 2" to drop the flags word of the frame it was entered on,
+        # and left near it returned into the middle of the stack.
         if infar and infar[-1]:
-            raw = re.sub(r"^(\s*)RET(\s*(;.*)?)$", r"\1RETF\2", raw, flags=re.I)
+            raw = re.sub(r"^(\s*(?:\w+:\s*)?)RET\b(\s*(?:\d+\s*)?(?:;.*)?)$",
+                         r"\1RETF\2", raw, flags=re.I)
         m = re.match(r"^\s*(\w+)\s+MACRO\s*(.*?)\s*$", raw, re.I)
         if m:
             out.append("macro %s %s" % (m.group(1), m.group(2)))
