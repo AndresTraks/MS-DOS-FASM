@@ -21,7 +21,7 @@
 ;AN007; P1535 Unformatted hard file problem			   10/15/87 J.K.
 ;AN008; P2590 Change the recommended BPB info. after AFS format    11/20/87 J.K.
 ;AN009; P2828 Do not retry for multi-track format request	   12/08/87 J.K.
-;AN010; P2781 Changeline error behavior incompatibile with DOS 3.3. 1/06/88 J.K.
+;AN010; P2781 Changeline error behavior incompatibile with DOS 3. 1/06/88 J.K.
 ;AN011; P3178 Set Media ID should update media info in BDS table.   1/21/88 J.K.
 ;AN012; D490 IOCTL subfunction 63h,43h,64h,44h conflicts with OS2   2/26/88 J.K.
 ;==============================================================================

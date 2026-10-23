@@ -15,10 +15,12 @@
 ;
 
 
-	.286c		;Use 80286 non-protected mode
+; fasm assembles the 286's instructions in 16-bit mode without being
+; asked, so there is nothing for this to say.
+;	.286c		;Use 80286 non-protected mode
 
-BIOSEG		= 040h		;Segment for ROM BIOS Data
-ROMSEG		= 0F000h	;Segment of ROM
+BIOSEG		= 040h;Segment for ROM BIOS Data
+ROMSEG		= 0F000h;Segment of ROM
 
 
 BAD_DISK 	= 01
@@ -30,10 +32,10 @@ HF_REG_PORT 	= 03F6h
 FDP_PRECOMP	= 5
 FDP_CONTROL 	= 8
 
-DATA	SEGMENT AT BIOSEG	;ROM BIOS data segment
+;DATA	SEGMENT AT BIOSEG	;ROM BIOS data segment
 
-	ORG 42h
-CMD_BLOCK	DB 6 DUP (?)
+;	ORG 42h
+CMD_BLOCK       = 042h
 
 ;*	Offsets into CMD_BLOCK for registers
 PRE_COMP = 0	;Write Pre-compensation
@@ -46,59 +48,59 @@ DRV_HEAD = 5	;Drive/Head (Bit 7 = ECC mode, Bit 5 = 512 byte sectors,
 CMD_REG  = 6	;Command register
 
 
-	ORG 074h
+;	ORG 074h
 
-DISK_STATUS1 	DB ?
-HF_NUM		DB ?
-CONTROL_BYTE	DB ?
+DISK_STATUS1    = 074h
+HF_NUM          = 075h
+CONTROL_BYTE    = 076h
 
-DATA	ENDS
+;DATA	ENDS
 
 
 
 ;***	Define where the ROM routines are actually located
-ROM	SEGMENT AT ROMSEG
+;ROM	SEGMENT AT ROMSEG
 
-	ORG 02E1Eh
-ROMCOMMAND PROC FAR
-ROMCOMMAND ENDP
+;	ORG 02E1Eh
+ROMCOMMAND      = 2E1Eh
+;ROMCOMMAND ENDP
 
-	ORG 02E7Fh
-ROMWAIT	PROC FAR
-ROMWAIT	ENDP
+;	ORG 02E7Fh
+ROMWAIT         = 2E7Fh
+;ROMWAIT	ENDP
 
-	ORG 02EE2h
-ROMWAIT_DRQ PROC FAR
-ROMWAIT_DRQ ENDP
+;	ORG 02EE2h
+ROMWAIT_DRQ     = 2EE2h
+;ROMWAIT_DRQ ENDP
 
-	ORG 02EF8h
-ROMCHECK_STATUS PROC FAR
-ROMCHECK_STATUS ENDP
+;	ORG 02EF8h
+ROMCHECK_STATUS = 2EF8h
+;ROMCHECK_STATUS ENDP
 
-	ORG 02F69h
-ROMCHECK_DMA PROC FAR
-ROMCHECK_DMA ENDP
+;	ORG 02F69h
+ROMCHECK_DMA    = 2F69h
+;ROMCHECK_DMA ENDP
 
-	ORG 02F8Eh
-ROMGET_VEC PROC FAR
-ROMGET_VEC ENDP
+;	ORG 02F8Eh
+ROMGET_VEC      = 2F8Eh
+;ROMGET_VEC ENDP
 
-	ORG 0FF65h
-ROMFRET PROC FAR	;Far return at F000:FF65 in AT ROM.
-ROMFRET ENDP
+;	ORG 0FF65h
+ROMFRET         = 0FF65h;Far return at F000:FF65 in AT ROM.
+;ROMFRET ENDP
 
-ROM	ENDS
-
-
-CODE	SEGMENT BYTE PUBLIC 'code'
-
-EXTRN	OLD13:DWORD		;Link to AT bios int 13h
-
-PUBLIC	IBM_DISK_IO	
+;ROM	ENDS
 
 
-	ASSUME CS:CODE
-	ASSUME DS:DATA
+;CODE	SEGMENT BYTE PUBLIC 'code'
+
+;EXTRN	OLD13:DWORD		;Link to AT bios int 13h
+
+;PUBLIC	IBM_DISK_IO	
+
+
+;	ASSUME CS:CODE
+;	ASSUME DS:DATA
 
 
 ;***	IBM_DISK_IO - main routine, fixes AT ROM bug
@@ -126,7 +128,7 @@ PUBLIC	IBM_DISK_IO
 ;
 ;	EFFECTS: Performs DISK I/O operation.
 ;
-IBM_DISK_IO PROC FAR
+IBM_DISK_IO:
 	CMP DL, 80h
 	JB  ATD1		;Pass through floppy disk calls.
 	CMP AH, 02
@@ -134,7 +136,7 @@ IBM_DISK_IO PROC FAR
 	CMP AH, 0Ah
 	JE  ATD2		;and call 0Ah (read long).
 ATD1:
-	JMP OLD13		;Use ROM INT 13h handler.
+	JMP dword [OLD13]		;Use ROM INT 13h handler.
 ATD2:
 	PUSH BX
 	PUSH CX
@@ -145,11 +147,11 @@ ATD2:
 	PUSH AX
 	MOV  AX,BIOSEG		;Establish BIOS segment addressing.
 	MOV  DS,AX
-	MOV  DISK_STATUS1, 0	;Initially no error code.
+	MOV  byte [DISK_STATUS1], 0	;Initially no error code.
 	AND  DL, 07fh		;Mask to hard disk number
-	CMP  DL, HF_NUM
+	CMP  DL, byte [HF_NUM]
 	JB   ATD3		;Disk number in range
-	MOV  DISK_STATUS1, BAD_DISK
+	MOV  byte [DISK_STATUS1], BAD_DISK
 	JMP  SHORT ATD4		;Disk number out of range error, return
 
 ATD3:
@@ -182,7 +184,7 @@ ATD4:
 ;;  New Code - Let Logical or clear carry and then set carry if ah!=0
 ;;             And save a couple bytes while were at it.
 	POP  AX
-	MOV  AH,DISK_STATUS1	;On return AH has error code
+	MOV  AH,byte [DISK_STATUS1]	;On return AH has error code
 	OR   AH,AH
 	JZ   ATD5 		;Carry set if error
 	STC
@@ -194,8 +196,8 @@ ATD5:
 	POP  DX
 	POP  CX
 	POP  BX
-	RET  2			;Far return, dropping flags
-IBM_DISK_IO ENDP
+	RETF  2			;Far return, dropping flags
+;IBM_DISK_IO ENDP
 
 
 
@@ -216,42 +218,42 @@ IBM_DISK_IO ENDP
 ;	WARNING: (AX) destroyed.
 ;		Does direct calls to the AT ROM.
 ;
-SETCMD	PROC NEAR
-	MOV  CMD_BLOCK[SEC_CNT], AL
-	MOV  CMD_BLOCK[CMD_REG], 020h	;Assume function 02
+SETCMD:
+	MOV  byte [CMD_BLOCK+SEC_CNT], AL
+	MOV  byte [CMD_BLOCK+CMD_REG], 020h	;Assume function 02
 	CMP  AH, 2
 	JE   SETC1			;CMD_REG = 20h if function 02 (read)
-	MOV  CMD_BLOCK[CMD_REG], 022h   ;CMD_REG = 22h if function 0A (" long)
+	MOV  byte [CMD_BLOCK+CMD_REG], 022h   ;CMD_REG = 22h if function 0A (" long)
 SETC1:					;No longer need value in AX
 	MOV  AL, CL
 	AND  AL, 03fh			;Mask to sector number
-	MOV  CMD_BLOCK[SEC_NUM], AL
-	MOV  CMD_BLOCK[CYL_LOW], CH
+	MOV  byte [CMD_BLOCK+SEC_NUM], AL
+	MOV  byte [CMD_BLOCK+CYL_LOW], CH
 	MOV  AL, CL
 	SHR  AL, 6			;Get two high bits of cylender number
-	MOV  CMD_BLOCK[CYL_HIGH], AL
+	MOV  byte [CMD_BLOCK+CYL_HIGH], AL
 	MOV  AX, DX
 	SHL  AL, 4			;Drive number
 	AND  AH, 0Fh
 	OR   AL, AH			;Head number
 	OR   AL, 0A0h			;Set ECC and 512 bytes per sector
-	MOV  CMD_BLOCK[DRV_HEAD], AL
+	MOV  byte [CMD_BLOCK+DRV_HEAD], AL
 	PUSH ES				;GET_VEC destroys ES:BX
 	PUSH BX
 	PUSH CS
 	CALL GET_VEC
-	MOV  AX, ES:FDP_PRECOMP[BX]	;Write pre-comp from disk parameters
+	MOV  AX, [es:FDP_PRECOMP+BX]	;Write pre-comp from disk parameters
 	SHR  AX, 2
-	MOV  CMD_BLOCK[PRE_COMP],AL	;Only use low part
-	MOV  AL, ES:FDP_CONTROL[BX]	;Control byte modifier
+	MOV  byte [CMD_BLOCK+PRE_COMP],AL	;Only use low part
+	MOV  AL, [es:FDP_CONTROL+BX]	;Control byte modifier
 	POP  BX
 	POP  ES
-	MOV  AH, CONTROL_BYTE
+	MOV  AH, byte [CONTROL_BYTE]
 	AND  AH, 0C0h			;Keep disable retry bits
 	OR   AH, AL
-	MOV  CONTROL_BYTE, AH
+	MOV  byte [CONTROL_BYTE], AH
 	RET
-SETCMD	ENDP	
+;SETCMD	ENDP	
 
 
 
@@ -271,7 +273,7 @@ SETCMD	ENDP
 ;	EFFECTS: Programs disk controller.
 ;		Performs disk input.
 ;
-DOCMD	PROC NEAR
+DOCMD:
 	MOV  DI, BX		;(ES:DI) = data buffer addr.
 	PUSH CS
 	CALL COMMAND
@@ -286,7 +288,7 @@ DOC1:
 	CLI			;Disable interrupts (BUG WAS FORGETTING THIS)
   REPZ  INSW			;Read in sector
   	STI
-	TEST CMD_BLOCK[CMD_REG], 02
+	TEST byte [CMD_BLOCK+CMD_REG], 02
 	JZ   DOC2		;No ECC bytes to read.
 	PUSH CS
 	CALL WAIT_DRQ
@@ -300,11 +302,11 @@ DOC2:
 	PUSH CS
 	CALL CHECK_STATUS
 	JNZ  DOC3		;Operation failed
-	DEC  CMD_BLOCK[SEC_CNT]	
+	DEC  byte [CMD_BLOCK+SEC_CNT]	
 	JNZ  DOC1		;Loop while more sectors to read
 DOC3:
 	RET
-DOCMD	ENDP
+;DOCMD	ENDP
 
 
 
@@ -322,10 +324,10 @@ DOCMD	ENDP
 ;	WARNING: (AX) destroyed.
 ;		This does a direct call to the AT ROM.
 ;
-GET_VEC	PROC NEAR
-	PUSH OFFSET ROMFRET
-	JMP  ROMGET_VEC
-GET_VEC ENDP
+GET_VEC:
+	PUSH ROMFRET
+	JMP  ROMSEG:ROMGET_VEC
+;GET_VEC ENDP
 
 
 
@@ -343,10 +345,10 @@ GET_VEC ENDP
 ;
 ;	EFFECTS: Programs disk controller.
 ;
-COMMAND	PROC NEAR
-	PUSH OFFSET ROMFRET
-	JMP  ROMCOMMAND
-COMMAND ENDP
+COMMAND:
+	PUSH ROMFRET
+	JMP  ROMSEG:ROMCOMMAND
+;COMMAND ENDP
 
 
 
@@ -363,10 +365,10 @@ COMMAND ENDP
 ;		
 ;	EFFECTS: Calls int 15h, function 9000h.
 ;
-WAITT	PROC NEAR
-	PUSH OFFSET ROMFRET 
-	JMP  ROMWAIT
-WAITT	ENDP
+WAITT:
+	PUSH ROMFRET 
+	JMP  ROMSEG:ROMWAIT
+;WAITT	ENDP
 
 
 
@@ -381,10 +383,10 @@ WAITT	ENDP
 ;	WARNING: (AL), (CX), (DX) destroyed.
 ;		Does a direct call to the AT ROM.
 ;
-WAIT_DRQ PROC NEAR
-	PUSH OFFSET ROMFRET
-	JMP  ROMWAIT_DRQ
-WAIT_DRQ ENDP
+WAIT_DRQ:
+	PUSH ROMFRET
+	JMP  ROMSEG:ROMWAIT_DRQ
+;WAIT_DRQ ENDP
 
 
 
@@ -399,10 +401,10 @@ WAIT_DRQ ENDP
 ;	WARNING: (AX), (CX), (DX) destroyed.
 ;		Does a direct call to the AT ROM.
 ;
-CHECK_STATUS PROC NEAR
-	PUSH OFFSET ROMFRET
-	JMP  ROMCHECK_STATUS
-CHECK_STATUS ENDP
+CHECK_STATUS:
+	PUSH ROMFRET
+	JMP  ROMSEG:ROMCHECK_STATUS
+;CHECK_STATUS ENDP
 
 
 
@@ -417,11 +419,11 @@ CHECK_STATUS ENDP
 ;
 ;	WARNING: Does a direct call to the AT ROM.
 ;
-CHECK_DMA PROC NEAR
-	PUSH OFFSET ROMFRET
-	JMP  ROMCHECK_DMA
-CHECK_DMA ENDP
+CHECK_DMA:
+	PUSH ROMFRET
+	JMP  ROMSEG:ROMCHECK_DMA
+;CHECK_DMA ENDP
 
 
-CODE	ENDS
-	END
+;CODE	ENDS
+;	END

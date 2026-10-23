@@ -6,7 +6,12 @@
 ;              = 1 if 80286
 ;              = 2 if 80386
 ;
-Get_CPU_Type	macro
+; Two modules expand this, which in MASM meant two copies of the three
+; labels inside it in two separate modules.  One assembly reads both, so
+; the labels are LOCAL: fasm gives each expansion its own.
+macro Get_CPU_Type
+{
+	local	cpu_8086, cpu_286, cpu_386
 	pushf
 	push	bx			; preserve bx
 	xor	bx, bx			; init bx to zero
@@ -36,4 +41,4 @@ cpu_8086:				; don't inc at all if 086
 	mov	ax, bx			; put CPU type value in ax
 	pop	bx			; restore original bx
 	popf
-	endm
+}

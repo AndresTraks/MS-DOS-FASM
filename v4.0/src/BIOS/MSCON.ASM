@@ -270,7 +270,7 @@ INTRET:
 	IRET
 
 ;------------------------------------------------------------------------------
-;J.K. 4/29/86 - CONSOLE GENERIC IOCTL SUPPORT FOR DOS 3.3.
+;J.K. 4/29/86 - CONSOLE GENERIC IOCTL SUPPORT FOR DOS 3.
 ;CON$GENIOCTL supports Get mode information, Set mode information functions.
 ;It will only save the value from "Set mode information" and will return
 ;the value through "Get mode information".  It is supposed to be set by
@@ -322,7 +322,7 @@ INTRET:
 ;	 rep	 movsb		 ;ds:si -> sc_mode, es:di -> sav_sc_info
 ;	 jmp	 exit
 ;
-;J.K. 4/29/86 - End of CONSOLE GENERIC IOCTL SUPPORT FOR DOS 3.3.
+;J.K. 4/29/86 - End of CONSOLE GENERIC IOCTL SUPPORT FOR DOS 3.
 
 ;CODE	ENDS
 ;	END
