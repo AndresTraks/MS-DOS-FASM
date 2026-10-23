@@ -31,7 +31,7 @@
 	extrn	KEYSTS_Func:byte	;J.K. For IBMCON. Defined in IBMBDATA.
 	extrn	DiskSector:byte 	;J.K. IBMBDATA
 	extrn	Bpb_In_Sector:word	;J.K. IBMBDATA
-	extrn	SecPerCLusInSector:Byte ;J.K. IBMBDATA
+	extrn	SecPerClusInSector:Byte ;J.K. IBMBDATA
 	extrn	NumberOfFats:byte	;J.K. IBMBDATA
 	extrn	MediaByte:byte		;J.K. IBMBDATA
 	extrn	Ext_Boot_Sig:Byte	;J.K. IBMBDATA
@@ -42,9 +42,9 @@
 	extrn	Fat_12_ID:Byte		;J.K. IBMDISK
 	extrn	Fat_16_ID:Byte		;J.K. IBMDISK
 	extrn	Vol_No_Name:Byte	;J.K. IBMDISK
-	extrn	MotorStartup:Byte	;J.K. IBMBDATA
+	extrn	MOTORSTARTUP:Byte	;J.K. IBMBDATA
 	extrn	DoubleWordMov:Byte	;J.K. IBMDISK
-	extrn	Model_Byte:Byte 	;J.K. IBMBIO2
+	extrn	MODEL_BYTE:Byte 	;J.K. IBMBIO2
 	extrn	Secondary_Model_Byte:Byte ;J.K. IBMBIO2
 
 	IF     iTEST
@@ -65,8 +65,8 @@
 	extrn	Clear_IDs:Near				;J.K.
 	IF     iTEST
 	  IFNDEF NUMBUF
-	    EXTRN   MSGNUM:NEAR,MSGOUT:NEAR,dumpbytes:near,hex_to_ascii:near
-	    EXTRN   outchar:near
+	    EXTRN   MSGNUM:NEAR,MSGOUT:NEAR,DUMPBYTES:near,Hex_to_ascii:near
+	    EXTRN   Outchar:near
 	  ENDIF
 	ENDIF
 

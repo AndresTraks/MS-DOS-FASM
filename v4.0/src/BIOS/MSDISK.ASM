@@ -44,7 +44,7 @@
 	EXTRN CHECKLATCHIO:NEAR 	;96TPI
 	EXTRN CHECKIO:NEAR		;96TPI
 	EXTRN SET_CHANGED_DL:NEAR	;96TPI
-	EXTRN SET_VOLUME_ID:NEAR	;MSVOLID
+	EXTRN Set_Volume_ID:NEAR	;MSVOLID
 	EXTRN SWPDSK:NEAR		;MSBIO2
 	EXTRN CMDERR:NEAR		;MSBIO1
 	EXTRN STRATEGY:NEAR		;MSBIO1
@@ -53,7 +53,7 @@
 	EXTRN EXIT:NEAR 		;MSBIO1
 	EXTRN BUS$EXIT:NEAR		;MSBIO1
 	EXTRN ERR$EXIT:NEAR		;MSBIO1
-	extrn ResetChanged:near 	;AN000; MS96TPI
+	extrn RESETCHANGED:near 	;AN000; MS96TPI
 
 ;DATA
 	EXTRN OLD13:DWORD		;MSBIO2
@@ -63,11 +63,11 @@
 	EXTRN TIM_DRV:BYTE		;MSDATA
 	EXTRN ACCESSCOUNT:BYTE		;MSDATA
 	EXTRN SM92:BYTE 		;MSDATA
-	EXTRN DISKSECTOR:BYTE		;MSDATA
-	EXTRN MEDIABYTE:BYTE		;MSDATA
-	EXTRN SECPERCLUSINSECTOR:BYTE	;MSDATA
-	EXTRN BPB_IN_SECTOR:WORD	;MSDATA
-	EXTRN DISKSECTOR:BYTE		;MSDATA
+	EXTRN DiskSector:BYTE		;MSDATA
+	EXTRN MediaByte:BYTE		;MSDATA
+	EXTRN SecPerClusInSector:BYTE	;MSDATA
+	EXTRN Bpb_In_Sector:WORD	;MSDATA
+	EXTRN DiskSector:BYTE		;MSDATA
 	EXTRN STEP_DRV:BYTE		;MSDATA
 	EXTRN START_BDS:WORD		;MSDATA
 	EXTRN PHYS_DRV:BYTE		;MSDATA
@@ -101,7 +101,7 @@
 	extrn Boot_Serial_H:word	;AN000; msbdata
 	extrn Boot_Volume_Label:byte	;AN000; msbdata
 	extrn Boot_System_ID:byte	;AN000; msbdata
-	extrn Model_Byte:Byte		;MSBIO2
+	extrn MODEL_BYTE:Byte		;MSBIO2
 	extrn Secondary_Model_Byte:Byte ;MSBIO2
 
 ;-----------------------------------------------------------------
@@ -214,19 +214,19 @@ MEDIA$CHK PROC	NEAR
 	CALL	SETDRIVE
 
 	cmp	cs:Secrete_Code, 'jk'   ;J.K.11/7/86 Secrete code for DOS 3.3 IBMBIO.
-	jne	media$done		;J.K.11/7/86
+	jne	MEDIA$DONE		;J.K.11/7/86
 
 ; FOR NON-REMOVABLE DISKS ONLY RETURN CHANGED IF CHANGED BY FORMAT, OTHERWISE
 ; RETURN 'NOT CHANGED'.
 	MOV	SI,1			; ASSUME NO CHANGE
-	TEST	WORD PTR [DI].FLAGS,FCHANGED_BY_FORMAT
+	TEST	WORD PTR [DI].BDS_TYPE.FLAGS,FCHANGED_BY_FORMAT
 	JZ	WEARENOTFAKINGIT
-	AND	WORD PTR [DI].FLAGS,NOT FCHANGED_BY_FORMAT	; RESET FLAG
+	AND	WORD PTR [DI].BDS_TYPE.FLAGS,NOT FCHANGED_BY_FORMAT	; RESET FLAG
 ; IF MEDIA HAS BEEN CHANGED BY FORMAT, WE MUST ASK THE ROM. CANNOT RELY ON THE
 ; 2 SECOND TIME CHECK.
 	MOV	CS:[TIM_DRV],-1 	; ENSURE THAT WE ASK THE ROM IF MEDIA
 					; HAS CHANGED
-	TEST	WORD PTR [DI].FLAGS,FNON_REMOVABLE
+	TEST	WORD PTR [DI].BDS_TYPE.FLAGS,FNON_REMOVABLE
 	JZ	WEHAVEAFLOPPY
 	MOV	SI,-1			; INDICATE MEDIA CHANGED
 	JMP	SHORT MEDIA$DONE
@@ -234,7 +234,7 @@ MEDIA$CHK PROC	NEAR
 ; WE NEED TO RETURN 'NOT CHANGED' IF WE HAVE A HARD FILE.
 ;
 WEARENOTFAKINGIT:
-	TEST	WORD PTR [DI].FLAGS,FNON_REMOVABLE
+	TEST	WORD PTR [DI].BDS_TYPE.FLAGS,FNON_REMOVABLE
 	JNZ	MEDIA$DONE
 WEHAVEAFLOPPY:
 	XOR	SI,SI			; PRESUME "I DON'T KNOW"
@@ -254,7 +254,7 @@ MEDIA_PATCH:				;|
 ; IF WE COME HERE, WE HAVE A FLOPPY WITH NO CHANGELINE SUPPORT
 	MOV	SI,1			; PRESUME NO CHANGE
 	MOV	AL,CS:[TIM_DRV] 	; LAST DRIVE ACCESSED
-	CMP	AL,BYTE PTR [DI].DRIVENUM   ;IS DRIVE OF LAST ACCESS THE SAME?
+	CMP	AL,BYTE PTR [DI].BDS_TYPE.DRIVENUM   ;IS DRIVE OF LAST ACCESS THE SAME?
 	JNZ	MEDIA$UNK		; NO, THEN "I DON'T KNOW"
 ;
 ; CHECK TO SEE IF THIS DRIVE HAS BEEN ACCESSED IN THE LAST 2 SECONDS.
@@ -324,9 +324,9 @@ CHECK_TIME_OF_ACCESS PROC NEAR
 ;
 ; COMPUTE ELAPSED TIME
 ;
-	MOV	AX,WORD PTR DS:[DI].TIM_LO   ; GET STORED TIME
+	MOV	AX,WORD PTR DS:[DI].BDS_TYPE.TIM_LO   ; GET STORED TIME
 	SUB	DX,AX
-	MOV	AX,WORD PTR DS:[DI].TIM_HI
+	MOV	AX,WORD PTR DS:[DI].BDS_TYPE.TIM_HI
 	SBB	CX,AX
 ;
 ; CX:DX IS THE ELAPSED TIME
@@ -371,7 +371,7 @@ GET$BPB PROC	NEAR
 	MESSAGE FTESTDISK,<CR,LF>
 	MOV	AH,BYTE PTR ES:[DI]	;GET FAT ID BYTE READ BY DOS
 	CALL	SETDRIVE		; GET THE CORRECT BDS FOR THE DRIVE
-	TEST	WORD PTR [DI].FLAGS,FNON_REMOVABLE
+	TEST	WORD PTR [DI].BDS_TYPE.FLAGS,FNON_REMOVABLE
 	JNZ	ALREADY_GOTBPB		; NO NEED TO BUILD FOR FIXED DISKS
 ;J.K. Let's set the default value for VOLID,Vol_Serial,FileSys_ID in BDS table
 	call	Clear_IDs		;AN000;
@@ -380,7 +380,7 @@ GET$BPB PROC	NEAR
 	JC	ERR$EXITJ2		;AN000; If error, Set_ID_flag is set to 0 already.
 	cmp	cs:[Set_ID_Flag],2	;AN000; Already, volume_Label set from Boot record
 	mov	cs:[Set_ID_Flag],0	;AN000;  to BDS table?
-	je	Already_GotBPB		;AN000; Then do not set it again from Root directory.
+	je	ALREADY_GOTBPB		;AN000; Then do not set it again from Root directory.
 					;AN000; Otherwise, conventional Boot record.
 GET$BPB ENDP
 ;----------------------------------------|
@@ -388,7 +388,7 @@ GET$BPB ENDP
 ;	   IT GETS PATCHED IN MSINIT	;|
 	PUBLIC SET_PATCH		;|
 SET_PATCH PROC	NEAR			;|
-	CALL	SET_VOLUME_ID		;|
+	CALL	Set_Volume_ID		;|
 ;----------------------------------------|
 	MESSAGE FTESTDISK,<"SET VOLUME ID">
 	MNUM	FTESTDISK,DI
@@ -397,7 +397,7 @@ SET_PATCH PROC	NEAR			;|
 	MESSAGE FTESTDISK,<CR,LF>
 
 ALREADY_GOTBPB:
-	ADD	DI,BYTEPERSEC		; RETURN THE BPB THAT IS IN THE CURRENT BDS
+	ADD	DI,BDS_TYPE.BYTEPERSEC		; RETURN THE BPB THAT IS IN THE CURRENT BDS
 
 	PUBLIC	SETPTRSAV
 SETPTRSAV:				; RETURN POINT FOR DSK$INIT
@@ -429,24 +429,24 @@ Clear_IDs	proc near		;AN000;
 	pop	ds			;AN000; ds = cs
 
 	mov	cx, 0			;AN000; no serial number
-	mov	word ptr es:[di.VOL_SERIAL],cx	 ;AN000;
-	mov	word ptr es:[di.VOL_SERIAL]+2,cx ;AN000;
+	mov	word ptr es:[di+BDS_TYPE.VOL_SERIAL],cx	 ;AN000;
+	mov	word ptr es:[di+BDS_TYPE.VOL_SERIAL]+2,cx ;AN000;
 
 	mov	cx, BOOT_VOLUME_LABEL_SIZE	 ;AN000; =11
-	mov	si, offset VOL_NO_NAME		 ;AN000;
+	mov	si, offset Vol_No_Name		 ;AN000;
 	push	di				 ;AN000; save BDS pointer
-	add	di, VOLID			 ;AN000; points to VOLID field
+	add	di, BDS_TYPE.VOLID			 ;AN000; points to VOLID field
 	rep	movsb				 ;AN000;
 	pop	di				 ;AN000; restore BDS pointer
-	test	es:[di.FATSIZ], FBIG		 ;AN000;
+	test	es:[di+BDS_TYPE.FATSIZ], FBIG		 ;AN000;
 	jnz	CI_BigFat			 ;AN000; small fat
-	mov	si, offset FAT_12_ID		 ;AN000;
+	mov	si, offset Fat_12_ID		 ;AN000;
 	jmp	CI_Filesys			 ;AN000;
 CI_BigFat:					 ;AN000;
-	mov	si, offset FAT_16_ID		 ;AN000; big fat
+	mov	si, offset Fat_16_ID		 ;AN000; big fat
 CI_Filesys:					 ;AN000;
 	mov	cx, BOOT_SYSTEM_ID_SIZE 	 ;AN000; =8
-	add	di, FILESYS_ID			 ;AN000; points to FILESYS_ID field
+	add	di, BDS_TYPE.FILESYS_Id			 ;AN000; points to FILESYS_ID field
 	rep	movsb				 ;AN000;
 
 	pop	cx				 ;AN000;
@@ -479,7 +479,7 @@ Clear_IDs	endp				 ;AN000;
 	PUBLIC GETBP
 GETBP	PROC	NEAR
 ; IF RETURNING FAKE BPB THEN RETURN BPB AS IS.
-	TEST	WORD PTR [DI].FLAGS,RETURN_FAKE_BPB OR FNON_REMOVABLE
+	TEST	WORD PTR [DI].BDS_TYPE.FLAGS,RETURN_FAKE_BPB OR FNON_REMOVABLE
 	JZ	GETBP1
 	JMP	GETRET_EXIT
 
@@ -492,21 +492,21 @@ GETBP1:
 ;
 RDBOOT:
 	CALL	READBOOTSEC
-	JC	GETBP_ERR_RET_brdg	; CARRY SET IF THERE WAS ERROR.
+	JC	Getbp_err_ret_brdg	; CARRY SET IF THERE WAS ERROR.
 	CMP	BX,0			; BX IS 0 IF BOOT SECTOR IS VALID.
 	JNZ	DOFATBPB
 
 	CALL	MOVBPB			; MOVE BPB INTO REGISTERS.
 	JMP	HAS1
 
-Getbp_err_ret_brdg: jmp Getbp_err_ret
+Getbp_err_ret_brdg: jmp GETBP_ERR_RET
 ;
 ; WE HAVE A 1.X DISKETTE.
 ; IN THIS CASE READ IN THE FAT ID BYTE AND FILL IN BPB FROM THERE.
 ;
 DOFATBPB:
 	CALL	READFAT 		; PUTS MEDIA DESCRIPTOR BYTE IN AH
-	JC	GETBP_ERR_RET_Brdg
+	JC	Getbp_err_ret_brdg
 ;----------------------------------------|
 ; WARNING: DO NOT CHANGE THE FOLLOWING. ;|
 ;	   IT GETS PATCHED IN MSINIT	;|
@@ -515,7 +515,7 @@ GETBP1_PATCH:				;|
 	CALL	HIDENSITY		;|
 ;----------------------------------------|
 ;TEST FOR A VALID 3.5" MEDIUM
-	CMP	[DI].FORMFACTOR,FFSMALL
+	CMP	[DI].BDS_TYPE.FORMFACTOR,FFSMALL
 	JNZ	IS_FLOPPY
 	CMP	AH,0F9H 		; IS IT A VALID FAT ID BYTE FOR 3.5" ?
 	JNZ	GOT_UNKNOWN_MEDIUM
@@ -527,10 +527,10 @@ GETBP1_PATCH:				;|
 ;J.K. DS points to segment of BDS. The following should be modified
 ;J.K. to get spf,csec,spa,spt correctly. It had been wrong if DRIVER.SYS
 ;J.K. is loaded since the BDS is inside the driver.sys.
-	MOV	AL,es:[BX.SPF]
-	MOV	CX,es:[BX.CSEC]
-	MOV	DX,WORD PTR es:[BX.SPA]
-	MOV	BX,WORD PTR es:[BX.SPT]
+	MOV	AL,es:[BX+BPBTYPE.SPF]
+	MOV	CX,es:[BX+BPBTYPE.CSEC]
+	MOV	DX,WORD PTR es:[BX+BPBTYPE.SPA]
+	MOV	BX,WORD PTR es:[BX+BPBTYPE.SPT]
 	JMP	SHORT HAS1
 ; MUST BE A 5.25" FLOPPY IF WE COME HERE
 IS_FLOPPY:
@@ -560,21 +560,21 @@ HAS8:
 HAS1:
 	PUBLIC	HAS1
 
-	MOV	BYTE PTR DS:[DI].SECPERCLUS,DH
-	MOV	BYTE PTR DS:[DI].CDIR,BH
-	MOV	WORD PTR DS:[DI].DRVLIM,CX
-	MOV	BYTE PTR DS:[DI].MEDIAD,AH
-	MOV	BYTE PTR DS:[DI].CSECFAT,AL
-	MOV	BYTE PTR DS:[DI].SECLIM,BL
-	MOV	BYTE PTR DS:[DI].HDLIM,DL
+	MOV	BYTE PTR DS:[DI].BDS_TYPE.SECPERCLUS,DH
+	MOV	BYTE PTR DS:[DI].BDS_TYPE.CDIR,BH
+	MOV	WORD PTR DS:[DI].BDS_TYPE.DRVLIM,CX
+	MOV	BYTE PTR DS:[DI].BDS_TYPE.MEDIAD,AH
+	MOV	BYTE PTR DS:[DI].BDS_TYPE.CSECFAT,AL
+	MOV	BYTE PTR DS:[DI].BDS_TYPE.SECLIM,BL
+	MOV	BYTE PTR DS:[DI].BDS_TYPE.HDLIM,DL
 ;SB34DISK001*******************************************************************
 ;SB	the HIDSEC_H field and DRVLIM_L field and the 
 ;SB	DRVLIM_H fields need to be set to 0 since this code here is for floppies
 ;SB		3 LOCS
 
-	mov	word ptr ds:[di].HIDSEC_H,0
-	mov	word ptr ds:[di].HIDSEC_L,0
-	mov	word ptr ds:[di].DRVLIM_H,0
+	mov	word ptr ds:[di].BDS_TYPE.HIDSEC_H,0
+	mov	word ptr ds:[di].BDS_TYPE.HIDSEC_L,0
+	mov	word ptr ds:[di].BDS_TYPE.DRVLIM_H,0
 
 ;SB34DISK001*******************************************************************
 GETRET:
@@ -638,13 +638,13 @@ READBOOTSEC PROC NEAR
 ; good jump instruction and signature but with the false BPB informations
 ; that will crash the diskette drive operation. (For example, Symphony diskette).
 ;******************************************************************************
-	 CMP	BYTE PTR CS:[DISKSECTOR],069H	; IS IT A DIRECT JUMP?
+	 CMP	BYTE PTR CS:[DiskSector],069H	; IS IT A DIRECT JUMP?
 	 JE	Check_bpb_MediaByte		; DON'T NEED TO FIND A NOP
-	 CMP	BYTE PTR CS:[DISKSECTOR],0E9H	; DOS 2.0 JUMP?
+	 CMP	BYTE PTR CS:[DiskSector],0E9H	; DOS 2.0 JUMP?
 	 JE	Check_bpb_MediaByte		; NO NEED FOR NOP
-	 CMP	BYTE PTR CS:[DISKSECTOR],0EBH	; HOW ABOUT A SHORT JUMP.
+	 CMP	BYTE PTR CS:[DiskSector],0EBH	; HOW ABOUT A SHORT JUMP.
 	 JNE	INVALIDBOOTSEC
-	 CMP	BYTE PTR CS:[DISKSECTOR]+2,090H ; IS NEXT ONE A NOP?
+	 CMP	BYTE PTR CS:[DiskSector]+2,090H ; IS NEXT ONE A NOP?
 	 JNE	INVALIDBOOTSEC
 
 
@@ -663,7 +663,7 @@ READBOOTSEC PROC NEAR
 
 Check_bpb_MediaByte:
 
-	 MOV	 AL,BYTE PTR CS:MEDIABYTE
+	 MOV	 AL,BYTE PTR CS:MediaByte
 	 AND	 AL,0F0H
 	 CMP	 AL,0F0H		; ALLOW FOR STRANGE MEDIA
 	 JNZ	 INVALIDBOOTSEC
@@ -680,17 +680,17 @@ Check_bpb_MediaByte:
 ; IS SINGLE-SIDED AND IS A PRE-DOS 3.20 DISKETTE. IF IT IS, WE SET THE
 ; SEC/CLUS FIELD TO 1. IF NOT, WE CARRY ON AS NORMAL.
 CHECKSINGLESIDED:
-	MOV	AL,BYTE PTR CS:MEDIABYTE
+	MOV	AL,BYTE PTR CS:MediaByte
 	TEST	AL,0001H	; IS LOW BIT SET? - INDICATES DOUBLE SIDED
 	JNZ	GOODDSK
-	CMP	WORD PTR CS:[DISKSECTOR+8],"." SHL 8 + "3"
+	CMP	WORD PTR CS:[DiskSector+8],"." SHL 8 + "3"
 	JNZ	MUSTBEEARLIER
-	CMP	BYTE PTR CS:[DISKSECTOR+10],"2"
+	CMP	BYTE PTR CS:[DiskSector+10],"2"
 	JAE	GOODDSK
 
 ; WE MUST HAVE A PRE-3.20 DISKETTE. SET THE SEC/CLUS FIELD TO 1
 MUSTBEEARLIER:
-	MOV	BYTE PTR CS:[SECPERCLUSINSECTOR],1
+	MOV	BYTE PTR CS:[SecPerClusInSector],1
 	JMP	SHORT GOODDSK
 ;******************************************************************************
 
@@ -719,14 +719,14 @@ MOVBPB	PROC	NEAR
 	SAVEREG <DS,DI>
 	PUSH	CS
 	POP	DS
-	MOV	DI,OFFSET BPB_IN_SECTOR
-	MOV	DH,BYTE PTR [DI].SECALL     ;SECTORS PER UNIT
-	MOV	BH,BYTE PTR [DI].DIRNUM     ;NUMBER OF DIRECTORY ENTRIES
-	MOV	CX,WORD PTR [DI].SECNUM     ;SIZE OF DRIVE
-	MOV	AH,BYTE PTR [DI].FATID	    ;MEDIA DESCRIPTOR
-	MOV	AL,BYTE PTR [DI].FATSIZE    ;NUMBER OF FAT SECTORS
-	MOV	BL,BYTE PTR [DI].SLIM	    ;SECTORS PER TRACK
-	MOV	DL,BYTE PTR [DI].HLIM	    ;NUMBER OF HEADS
+	MOV	DI,OFFSET Bpb_In_Sector
+	MOV	DH,BYTE PTR [DI].BPB_TYPE.SECALL     ;SECTORS PER UNIT
+	MOV	BH,BYTE PTR [DI].BPB_TYPE.DIRNUM     ;NUMBER OF DIRECTORY ENTRIES
+	MOV	CX,WORD PTR [DI].BPB_TYPE.SECNUM     ;SIZE OF DRIVE
+	MOV	AH,BYTE PTR [DI].BPB_TYPE.FATID	    ;MEDIA DESCRIPTOR
+	MOV	AL,BYTE PTR [DI].BPB_TYPE.FATSIZE    ;NUMBER OF FAT SECTORS
+	MOV	BL,BYTE PTR [DI].BPB_TYPE.SLIM	    ;SECTORS PER TRACK
+	MOV	DL,BYTE PTR [DI].BPB_TYPE.HLIM	    ;NUMBER OF HEADS
 	RESTOREREG <DI,DS>
 	cmp	cs:[Set_ID_Flag], 1	     ;AC008 called by GET$BPB?
 	jne	MovBPB_Ret		     ;AC008
@@ -734,9 +734,9 @@ MOVBPB	PROC	NEAR
 	jc	MovBPB_Conv		     ;AC008 Conventional boot record?
 	mov	cs:[Set_ID_Flag],2	     ;AC008 signals that Volume ID is set.
 MovBPB_Conv:				     ;AC008
-	cmp	cs:fHave96, 1		     ;AC008
+	cmp	cs:FHAVE96, 1		     ;AC008
 	jne	MovBPB_Ret		     ;AC008
-	call	ResetChanged		     ;AC008 Reset Flags in BDS to NOT fCHANGED.
+	call	RESETCHANGED		     ;AC008 Reset Flags in BDS to NOT fCHANGED.
 MovBPB_Ret:				     ;AC008
 	clc				     ;AC008
 	ret				     ;AC008
@@ -760,7 +760,7 @@ Mov_Media_IDs	Proc	near		    ;AN000;
 	jne	MMI_Not_Ext		    ;AN000;
 	push	cx			    ;AN000;
 	mov	cx, cs:[Boot_Serial_L]	    ;AN000;
-	mov	word ptr ds:[di.VOL_SERIAL],cx	 ;AN000;
+	mov	word ptr ds:[di+BDS_TYPE.VOL_SERIAL],cx	 ;AN000;
 	mov	cx, cs:[Boot_Serial_H]		 ;AN000;
 	mov	word ptr ds:[di.VOL_SERIAL+2],cx ;AN000;
 	push	ds			    ;AN000; Save regs.
@@ -776,12 +776,12 @@ Mov_Media_IDs	Proc	near		    ;AN000;
 	mov	cx, BOOT_VOLUME_LABEL_SIZE  ;AN000;
 	mov	si, offset Boot_Volume_Label;AN000;
 	push	di
-	add	di, VOLID		    ;AN000;
+	add	di, BDS_TYPE.VOLID		    ;AN000;
 	rep	movsb			    ;AN000;
 	pop	di
 	mov	cx, BOOT_SYSTEM_ID_SIZE     ;AN000;  =8
 	mov	si, offset Boot_System_ID   ;AN000;
-	add	di, FILESYS_ID		    ;AN000;
+	add	di, BDS_TYPE.FILESYS_Id		    ;AN000;
 	rep	movsb			    ;AN000;
 
 	pop	si			    ;AN000;
@@ -838,7 +838,7 @@ READ_SECTOR PROC NEAR
 	MOV	BP,3		; MAKE 3 ATTEMPTS
 	PUSH	ES
 ;SB33015*****************************************************************
-	mov	DL, byte ptr ds:[di].DriveNum			       ;SB;3.30*
+	mov	DL, byte ptr ds:[di].BDS_TYPE.DRIVENUM			       ;SB;3.30*
 	mov	BX, offset DiskSector	; Get ES:BX to point to buffer ;SB;3.30*
 	push	CS			;    get the segment right     ;SB;3.30*
 	pop	ES			; now ES:BX is correct	       ;SB;3.30*
@@ -852,17 +852,17 @@ RD_RET:
 	JNC	OKRET2
 Rd_rty:
 	CALL	AGAIN		; RESET DISK, DECREMENT BP, PRESERVE AX
-	jz	Err_RD_RET
-	test	word ptr ds:[di].flags,fNon_Removable
+	jz	ERR_RD_RET
+	test	word ptr ds:[di].BDS_TYPE.FLAGS,FNON_REMOVABLE
 	JNZ	RD_RET
-	cmp	cs:[Media_Set_For_Format], 0 ;AN012;
+	cmp	cs:[MEDIA_SET_FOR_FORMAT], 0 ;AN012;
 	jne	Rd_Skip1_DPT	;AN012;
 	push	ds		;J.K. 11/7/86 For retry, set the head settle time
 	push	ax		;to 0Fh. PTM845.
 	lds	si,cs:DPT
-	mov	al, ds:[si].disk_head_sttl
-	mov	cs:[save_head_sttl],al
-	mov	byte ptr ds:[si].disk_head_sttl, NormSettle
+	mov	al, ds:[si].DISK_PARMS.DISK_HEAD_STTL
+	mov	cs:[Save_head_sttl],al
+	mov	byte ptr ds:[si].DISK_PARMS.DISK_HEAD_STTL, NORMSETTLE
 	pop	ax
 	pop	ds
 Rd_Skip1_DPT:			;AN012;
@@ -872,13 +872,13 @@ Rd_Skip1_DPT:			;AN012;
 	INT	13h			; CALL ROM-BIOS DISK ROUTINES ;SB ;3.30
 ;SB33017*****************************************************************
 	pushf			;AN012;
-	cmp	cs:[Media_Set_For_Format], 0	;AN012;
+	cmp	cs:[MEDIA_SET_FOR_FORMAT], 0	;AN012;
 	jne	Rd_Skip2_DPT	       ;AN012;
 	push	ds
 	push	ax
 	lds	si,cs:DPT
-	mov	al, cs:[save_head_sttl]
-	mov	byte ptr ds:[si].disk_head_sttl, al
+	mov	al, cs:[Save_head_sttl]
+	mov	byte ptr ds:[si].DISK_PARMS.DISK_HEAD_STTL, al
 	pop	ax
 	pop	ds
 Rd_Skip2_DPT:			;AN012;
@@ -893,7 +893,7 @@ ERR_RD_RET:
 OKRET2:
 	MOV	CS:[STEP_DRV],DL	; SET UP FOR HEAD SETTLE LOGIC IN DISK.
 	MOV	CS:[TIM_DRV],DL 	;SAVE DRIVE LAST ACCESSED
-	MOV	BYTE PTR [DI].TRACK,CH	; SAVE LAST TRACK ACCESSED ON THIS DRIVE
+	MOV	BYTE PTR [DI].BDS_TYPE.TRACK,CH	; SAVE LAST TRACK ACCESSED ON THIS DRIVE
 	PUSHF				; PRESERVE FLAGS IN CASE ERROR OCCURRED
 	CALL	SET_TIM
 	POPF				; RESTORE FLAGS
@@ -915,7 +915,7 @@ DSK$REM PROC	NEAR			;ARR 2.41
 	MESSAGE FTESTDISK,<CR,LF>
 ; AL IS UNIT #
 	CALL	SETDRIVE		; GET BDS FOR THIS DRIVE
-	TEST	WORD PTR [DI].FLAGS,FNON_REMOVABLE
+	TEST	WORD PTR [DI].BDS_TYPE.FLAGS,FNON_REMOVABLE
 	JNZ	NON_REM
 	JMP	EXIT
 
@@ -948,15 +948,15 @@ SETDRIVE PROC	NEAR
 SCAN_LOOP:
 	CMP	BYTE PTR CS:[PHYS_DRV],1	; DOES AL HAVE PHYSICAL DRIVE?
 	JB	USE_LOGICAL_DRV
-	CMP	BYTE PTR [DI].DRIVENUM,AL
+	CMP	BYTE PTR [DI].BDS_TYPE.DRIVENUM,AL
 	JE	SETDRV
 	JMP	SHORT GET_NXT_BDS
 USE_LOGICAL_DRV:
-	CMP	BYTE PTR [DI].DRIVELET,AL
+	CMP	BYTE PTR [DI].BDS_TYPE.DRIVELET,AL
 	JE	SETDRV
 GET_NXT_BDS:
-	MOV	BX,WORD PTR [DI].LINK+2   ; GO TO NEXT BDS
-	MOV	DI,WORD PTR [DI].LINK
+	MOV	BX,WORD PTR [DI].BDS_TYPE.LINK+2   ; GO TO NEXT BDS
+	MOV	DI,WORD PTR [DI].BDS_TYPE.LINK
 	MOV	DS,BX
 	ASSUME	DS:NOTHING
 
@@ -1030,7 +1030,7 @@ CHECKSINGLE PROC NEAR
 
 	PUSH	AX
 	PUSH	BX
-	MOV	BX,WORD PTR DS:[DI].FLAGS
+	MOV	BX,WORD PTR DS:[DI].BDS_TYPE.FLAGS
  ; IF HARD DRIVE, CANNOT CHANGE DISK.
  ; IF CURRENT OWNER OF PHYSICAL DRIVE, NO NEED TO CHANGE DISKETTE.
 	TEST	BL,FNON_REMOVABLE OR FI_OWN_PHYSICAL
@@ -1040,7 +1040,7 @@ CHECKSINGLE PROC NEAR
 	JZ	SINGLERET
 ; LOOK FOR THE PREVIOUS OWNER OF THIS PHYSICAL DRIVE AND RESET ITS OWNERSHIP
 ; FLAG.
-	MOV	AL,DS:[DI].DRIVENUM	; GET PHYSICAL DRIVE NUMBER
+	MOV	AL,DS:[DI].BDS_TYPE.DRIVENUM	; GET PHYSICAL DRIVE NUMBER
 	PUSH	DS			; PRESERVE POINTER TO CURRENT BDS
 	PUSH	DI
 	PUSH	CS
@@ -1049,27 +1049,27 @@ CHECKSINGLE PROC NEAR
 
 	MOV	DI,OFFSET START_BDS
 SCAN_LIST:
-	MOV	BX,WORD PTR [DI].LINK+2     ; GO TO NEXT BDS
-	MOV	DI,WORD PTR [DI].LINK
+	MOV	BX,WORD PTR [DI].BDS_TYPE.LINK+2     ; GO TO NEXT BDS
+	MOV	DI,WORD PTR [DI].BDS_TYPE.LINK
 	MOV	DS,BX
 	ASSUME	DS:NOTHING
 
 	CMP	DI,-1			; END OF LIST?
 	JZ	SINGLE_ERR_RET		; MUST BE ERROR
-	CMP	BYTE PTR [DI].DRIVENUM,AL
+	CMP	BYTE PTR [DI].BDS_TYPE.DRIVENUM,AL
 	JNZ	SCAN_LIST
 
 CHECK_OWN:
-	MOV	BX,WORD PTR [DI].FLAGS
+	MOV	BX,WORD PTR [DI].BDS_TYPE.FLAGS
 	TEST	BL,FI_OWN_PHYSICAL
 	JZ	SCAN_LIST
 	XOR	BL,FI_OWN_PHYSICAL	    ; RESET OWNERSHIP FLAG
-	MOV	WORD PTR DS:[DI].FLAGS,BX
+	MOV	WORD PTR DS:[DI].BDS_TYPE.FLAGS,BX
 	POP	DI			    ; RESTORE POINTER TO CURRENT BDS
 	POP	DS
 	XOR	BX,BX
 	OR	BL,FI_OWN_PHYSICAL	    ; ESTABLISH CURRENT BDS AS OWNER
-	OR	WORD PTR [DI].FLAGS,BX
+	OR	WORD PTR [DI].BDS_TYPE.FLAGS,BX
 
 ;
 ; WE EXAMINE THE FSETOWNER FLAG. IF IT IS SET, THEN WE ARE USING THE CODE IN
@@ -1085,7 +1085,7 @@ CHECK_OWN:
 	JNE	SHORT IGNORE_SDSB
 
 	SAVEREG <DS,DI,AX>		    ;	THEN
-	MOV	AL,DS:[DI].DRIVELET	    ;	  IF (CURR_DRV == REQ_DRV)
+	MOV	AL,DS:[DI].BDS_TYPE.DRIVELET	    ;	  IF (CURR_DRV == REQ_DRV)
 	MOV	AH,AL
 	XOR	DI,DI
 	MOV	DS,DI
@@ -1144,7 +1144,7 @@ DISKRD	PROC	NEAR
 DISKIO:
 	MOV	BX,DI			; ES:BX = TRANSFER ADDRESS
 	CALL	SETDRIVE		; MAP LOGICAL AND PHYSICAL
-	MOV	AL,BYTE PTR DS:[DI].MEDIAD
+	MOV	AL,BYTE PTR DS:[DI].BDS_TYPE.MEDIAD
 	MOV	CS:MEDBYT,AL		; PRESERVE MEDIA BYTE FOR DRIVE FOR USE
 					; IN DETERMINING MEDIA CHANGE.
 	JCXZ	IORET
@@ -1153,7 +1153,7 @@ DISKIO:
 ;SB	in the BDS.  If it is unformatted we cannot allow I/O, so we should
 ;SB	go to the error exit at label UnformattedDrive.  2LOCS
 
-	test	word ptr ds:[di].FLAGS, UNFORMATTED_MEDIA
+	test	word ptr ds:[di].BDS_TYPE.FLAGS, UNFORMATTED_MEDIA
 	jnz	UnformattedDrive
 ;SB34DISK006******************************************************************
 	mov	cs:[SECCNT],CX		;save sector count
@@ -1166,24 +1166,24 @@ DISKIO:
 	xor	si,si			;AN000;
 	add	dx,cx			;AN000;
 	adc	si,0			;AN000;
-	cmp	[di].DrvLim, 0		;AN000; Is this drive > 32 bit sector ?
+	cmp	[di].BDS_TYPE.DRVLIM, 0		;AN000; Is this drive > 32 bit sector ?
 	je	Sanity32		;AN000;
 	cmp	si,0			;AN000;
 	jne	BADDRIVE		;AN000;
-	cmp	dx, [di].DrvLim 	;AN000;
+	cmp	dx, [di].BDS_TYPE.DRVLIM 	;AN000;
 	ja	BADDRIVE		;AN000;
 	jmp	short SanityOK		;AN000;
 Sanity32:				;AN000;
 	add	si, cs:[Start_Sec_H]	;AN000;
-	cmp	si, [di].DrvLim_H	;AN000;
+	cmp	si, [di].BDS_TYPE.DRVLIM_H	;AN000;
 	jb	SanityOK		;AN000;
 	ja	BADDRIVE		;AN000;
-	cmp	dx, [di].DrvLim_L	;AN000;
+	cmp	dx, [di].BDS_TYPE.DRVLIM_L	;AN000;
 	ja	BADDRIVE		;AN000;
 SanityOK:				;AN000;
 	mov	dx,cs:[Start_Sec_H]	;AN000;
-	add	ax,word ptr [di].HIDSEC_L    ;AN000;
-	adc	dx,word ptr [di].Hidsec_H    ;AN000;
+	add	ax,word ptr [di].BDS_TYPE.HIDSEC_L    ;AN000;
+	adc	dx,word ptr [di].BDS_TYPE.HIDSEC_H    ;AN000;
 ;J.K. Now DX;AX have the physical first sector.
 ;Since the following procedures is going to destroy AX, let's
 ;save it temporarily to SAVED_WORD.
@@ -1204,7 +1204,7 @@ SanityOK:				;AN000;
 	MOV	WORD PTR CS:DPT,SI
 	MOV	WORD PTR CS:DPT+2,DS
 	POP	DS
-	TEST	WORD PTR [DI].FLAGS,FNON_REMOVABLE
+	TEST	WORD PTR [DI].BDS_TYPE.FLAGS,FNON_REMOVABLE
 	JNZ	SKIP_SETUP
 	CALL	CHECKSINGLE
 ;
@@ -1230,14 +1230,14 @@ SKIP_SETUP:
 ; DX;[Saved_Word] = starting sector number.
 	mov	ax,dx			;AN000;
 	xor	dx,dx			;AN000;
-	DIV	WORD PTR [DI].SECLIM	;DIVIDE BY SEC PER TRACK
+	DIV	WORD PTR [DI].BDS_TYPE.SECLIM	;DIVIDE BY SEC PER TRACK
 	mov	cs:[Temp_H],ax		;AN000;
 	mov	ax, cs:[Saved_Word]	;AN000; Restore the lower word
-	div	word ptr [di].SecLim	;AN000;
+	div	word ptr [di].BDS_TYPE.SECLIM	;AN000;
 ;Now, [Temp_H],AX = track #, DX = sector
 	INC	DL			;Sector number is 1 based.
 	MOV	CS:[CURSEC],DL		;SAVE CURRENT SECTOR
-	MOV	CX,WORD PTR [DI].HDLIM	;GET NUMBER OF HEADS
+	MOV	CX,WORD PTR [DI].BDS_TYPE.HDLIM	;GET NUMBER OF HEADS
 
 	push	ax			;AN000;
 	XOR	DX,DX			;DIVIDE TRACKS BY HEADS PER CYLINDER
@@ -1248,9 +1248,9 @@ SKIP_SETUP:
 	div	cx			;AN000;
 ;Now, [Temp_H],AX = cyliner #, DX = head
 	cmp	cs:[Temp_H],0		;AN000;
-	ja	BADDRIVE_brdg		;AN000;
+	ja	BADDRIVE_Brdg		;AN000;
 	cmp	AX, 1024		;AN000; 2**10 currently maxium for track #.
-	ja	BADDRIVE_brdg		;AN000;
+	ja	BADDRIVE_Brdg		;AN000;
 	MOV	CS:[CURHD],DL		;SAVE CURRENT HEAD
 	MOV	CS:[CURTRK],AX		;SAVE CURRENT TRACK
 
@@ -1266,7 +1266,7 @@ SKIP_SETUP:
 DISKRD	ENDP
 
 ;
-BADDRIVE_Brdg:jmp Baddrive
+BADDRIVE_Brdg:jmp BADDRIVE
 ;
 
 ; SET THE DRIVE-LAST-ACCESSED FLAG FOR DISKETTE ONLY.  WE KNOW THAT THE HARD
@@ -1276,18 +1276,18 @@ BADDRIVE_Brdg:jmp Baddrive
 ;
 	PUBLIC IOSETUP
 IOSETUP PROC	NEAR
-	MOV	AL,[DI].DRIVENUM
+	MOV	AL,[DI].BDS_TYPE.DRIVENUM
 	MOV	CS:[TIM_DRV],AL 	; SAVE DRIVE LETTER
 ;
 ; DETERMINE PROPER HEAD SETTLE VALUES
 ;
-	cmp	cs:[Media_Set_For_Format], 0	;AN012;
+	cmp	cs:[MEDIA_SET_FOR_FORMAT], 0	;AN012;
 	jne	Skip_DPT_Setting		;AN012;
 	MOV	CX,DS
 	LDS	SI,DWORD PTR CS:[DPT]	; GET POINTER TO DISK BASE TABLE
 	MOV	AL,CS:[EOT]
-	MOV	[SI].DISK_EOT,AL	; BUMP FOR US
-	MOV	AL,[SI].DISK_MOTOR_STRT ; PRESERVE OLD MOTOR START TIME
+	MOV	[SI].DISK_PARMS.DISK_EOT,AL	; BUMP FOR US
+	MOV	AL,[SI].DISK_PARMS.DISK_MOTOR_STRT ; PRESERVE OLD MOTOR START TIME
 	MOV	CS:MOTORSTARTUP,AL
 ;
 ; FOR 3.5" DRIVES, BOTH EXTERNAL AS WELL AS ON THE K09, WE NEED TO SET THE
@@ -1296,7 +1296,7 @@ IOSETUP PROC	NEAR
 ;
 	PUSH	ES
 	MOV	ES,CX			; ES:DI -> TO CURRENT BDS
-	CMP	BYTE PTR ES:[DI].FORMFACTOR,FFSMALL
+	CMP	BYTE PTR ES:[DI].BDS_TYPE.FORMFACTOR,FFSMALL
 	JNZ	MOTOR_START_OK
 	MOV	AL,4
 	XCHG	AL,[SI].DISK_MOTOR_STRT
@@ -1320,7 +1320,7 @@ Skip_DPT_Setting:			;AN012;
 ; SET TIME OF LAST ACCESS, AND RESET DEFAULT VALUES IN THE DPT.
 ;
 DONE:
-	TEST	WORD PTR [DI].FLAGS,FNON_REMOVABLE
+	TEST	WORD PTR [DI].BDS_TYPE.FLAGS,FNON_REMOVABLE
 	JNZ	RETZ			; DO NOT SET FOR NON-REMOVABLE MEDIA
 	CALL	SET_TIM 		; SET TIME OF LAST ACCESS FOR DRIVE
 ;
@@ -1328,7 +1328,7 @@ DONE:
 ;
 DIDDLEBACK:
 	pushf					;AN013;Save flag
-	cmp	cs:[Media_Set_For_Format], 0	;AN012;
+	cmp	cs:[MEDIA_SET_FOR_FORMAT], 0	;AN012;
 	jne	NoDiddleBack			;AN012;
 	PUSH	AX
 	MOV	DX,DS
@@ -1340,11 +1340,11 @@ DIDDLEBACK:
 					;with 1.44M diskette in Polaris when the user
 					;issue INT 13 with the default system
 					;diskbase.
-	mov	[si].DISK_EOT,9 	;J.K. 11/5/86. For compatibility reason, return
+	mov	[si].DISK_PARMS.DISK_EOT,9 	;J.K. 11/5/86. For compatibility reason, return
 					;back to set it to 9 ( PTM826 ).
-	MOV	[SI].DISK_HEAD_STTL,AL
-	MOV	[SI].DISK_SECTOR_SIZ,2
-	MOV	[SI].DISK_MOTOR_STRT,AH
+	MOV	[SI].DISK_PARMS.DISK_HEAD_STTL,AL
+	MOV	[SI].DISK_PARMS.DISK_SECTOR_SIZ,2
+	MOV	[SI].DISK_PARMS.DISK_MOTOR_STRT,AH
 	MOV	DS,DX
 	POP	AX
 NoDiddleBack:				;AN013;
@@ -1358,13 +1358,13 @@ BLOCK:
 	OR	AX,AX			;SEE IF ANY SECTORS TO READ
 	JZ	RETZ
 ;Fixed disk will not be restricted to the track-by-track basis. -J.K.4/10/86
-	test	word ptr [di].Flags, fNon_Removable  ;J.K. Fixed disk?
+	test	word ptr [di].BDS_TYPE.FLAGS, FNON_REMOVABLE  ;J.K. Fixed disk?
 	jz	BLOCK_FLOPPY				;J.K.
 ;SB34DISK002*****************************************************************
 ;SB	Check to see if multi track operation is allowed.  If not
 ;SB	we have to go to the block_floppy below to break up the operation.
 ;SB		2 LOCS
-	test	word ptr CS:MulTrk_Flag, MulTrk_ON
+	test	word ptr CS:MulTrk_Flag, MULTRK_ON
 	jz	BLOCK_FLOPPY
 ;SB34DISK002*****************************************************************
 	call	DISK					;J.K.
@@ -1374,7 +1374,7 @@ BLOCK_FLOPPY:						;J.K.4/10/86
 ;
 ; READ AT MOST 1 TRACK WORTH.  PERFORM MINIMIZATION AT SECTOR / TRACK
 ;
-	MOV	CL,BYTE PTR [DI].SECLIM
+	MOV	CL,BYTE PTR [DI].BDS_TYPE.SECLIM
 	INC	CL
 	SUB	CL,CS:CURSEC		; LEEAC 3.20 ADD SEGMENT OVERRIDE
 	XOR	CH,CH
@@ -1401,7 +1401,7 @@ GOTMIN:
 	JMP	BLOCK
 IOSETUP ENDP
 
-DskErr_Brdg: jmp DskErr 		;AN003;
+DskErr_Brdg: jmp DSKERR 		;AN003;
 
 ;
 ;PERFORM DISK I/O WITH RETRIES
@@ -1423,11 +1423,11 @@ RETRY:
 
 	MOV	DX,CS:[CURTRK]		;LOAD CURRENT CYLINDER
 
-	test	word ptr [di].FLAGS, fNon_Removable ;Fixed disk? - J.K. 4/7/86
+	test	word ptr [di].BDS_TYPE.FLAGS, FNON_REMOVABLE ;Fixed disk? - J.K. 4/7/86
 	jz	DISK_NOT_MINI		;no, skip this. - J.K. 4/7/86
-	cmp	[di].IsMini, 1		;Is this a mini disk? - J.K. 4/7/86
+	cmp	[di].BDSM_type.IsMini, 1		;Is this a mini disk? - J.K. 4/7/86
 	jnz	DISK_NOT_MINI		;No. continue to next.- J.K. 4/7/86
-	add	dx, [di].Hidden_Trks	;else add hidden trks.- J.K. 4/7/86
+	add	dx, [di].BDSM_type.Hidden_Trks	;else add hidden trks.- J.K. 4/7/86
 DISK_NOT_MINI:				;J.K. 4/7/86
 	ROR	DH,1
 	ROR	DH,1
@@ -1436,8 +1436,8 @@ DISK_NOT_MINI:				;J.K. 4/7/86
 	MOV	CX,DX
 	XCHG	CH,CL			; CL = SECTOR, CH = CYLINDER
 	MOV	DH,BYTE PTR CS:[CURHD]	; LOAD CURRENT HEAD NUMBER AND
-	MOV	DL,BYTE PTR [DI].DRIVENUM  ; PHYSICAL DRIVE NUMBER
-	CMP	BYTE PTR [DI].FORMFACTOR,FFHARDFILE
+	MOV	DL,BYTE PTR [DI].BDS_TYPE.DRIVENUM  ; PHYSICAL DRIVE NUMBER
+	CMP	BYTE PTR [DI].BDS_TYPE.FORMFACTOR,FFHARDFILE
 	JZ	DO_FAST 		; HARD FILES USE FAST SPEED
 ; IF WE HAVE [STEP_DRV] SET TO -1, WE USE THE SLOW SETTLE TIME.
 ; THIS HELPS WHEN WE HAVE JUST DONE A RESED DISK OPERATION AND THE HEAD HAS
@@ -1454,10 +1454,10 @@ DO_WRITEJ:
 DO_FAST:				; ARR 2.20
 	CALL	FASTSPEED		; MZ  2.21 CHANGE SETTLE MODE
 TESTERR:				; MZ  2.21
-	JC	DSKERR_brdg
+	JC	DskErr_Brdg
 ; SET DRIVE AND TRACK OF LAST ACCESS
 	MOV	CS:[STEP_DRV],DL	; ARR 2.20 SET DRIVE
-	MOV	BYTE PTR [DI].TRACK,CH	; ARR 2.20 SAVE TRACK
+	MOV	BYTE PTR [DI].BDS_TYPE.TRACK,CH	; ARR 2.20 SAVE TRACK
 NO_SET:
 	CMP	CS:WRTVERIFY,103H	; CHECK FOR WRITE AND VERIFY
 	JZ	DOVERIFY
@@ -1472,9 +1472,9 @@ NOVERIFY:
 ;SB	track since we are already done.  So we can go to the exit of this 
 ;SB	routine.	5 LOCS
 
-	test	word ptr [di].FLAGS, fNON_REMOVABLE
+	test	word ptr [di].BDS_TYPE.FLAGS, FNON_REMOVABLE
 	jz	ITS_REMOVABLE
-	test	CS:MulTrk_Flag, MulTrk_ON
+	test	CS:MulTrk_Flag, MULTRK_ON
 	jnz	DISK_RET
 ITS_REMOVABLE:
 ;SB34DISK003*****************************************************************
@@ -1483,13 +1483,13 @@ ITS_REMOVABLE:
 	SUB	CS:[SECCNT],AX		; REDUCE COUNT OF SECTORS TO GO
 	ADD	CL,AL			; NEXT SECTOR
 	MOV	CS:[CURSEC],CL
-	CMP	CL,BYTE PTR [DI].SECLIM ; SEE IF SECTOR/TRACK LIMIT REACHED
+	CMP	CL,BYTE PTR [DI].BDS_TYPE.SECLIM ; SEE IF SECTOR/TRACK LIMIT REACHED
 	JBE	DISK_RET
 NEXTTRACK:
 	MOV	CS:[CURSEC],1		; START WITH FIRST SECTOR OF NEXT TRACK
 	MOV	DH,CS:[CURHD]
 	INC	DH
-	CMP	DH,BYTE PTR [DI].HDLIM
+	CMP	DH,BYTE PTR [DI].BDS_TYPE.HDLIM
 	JB	NOXOR
 	XOR	DH,DH
 	INC	CS:[CURTRK]		;NEXT TRACK
@@ -1508,7 +1508,7 @@ DO_WRITE PROC	NEAR
 	CMP	DL,CS:[STEP_DRV]	; ARR 2.20
 	JNZ	DO_NORM 		;  WE HAVE CHANGED DRIVES
 
-	CMP	CH,BYTE PTR [DI].TRACK	; ARR 2.20
+	CMP	CH,BYTE PTR [DI].BDS_TYPE.TRACK	; ARR 2.20
 	JZ	DO_FAST 		; WE ARE STILL ON THE SAME TRACK
 
 DO_NORM:
@@ -1536,15 +1536,15 @@ DOVERIFY PROC	NEAR
 
 	cmp	ah,11h			;SOFT ECC error ?
 	jnz	Not_SoftECC_Err
-	dec	SOFT_ECC_CNT
-	jz	NoVerify		;no more retry
-	call	ResetDisk		;reset disk
-	jmp	DskErr1			;retry
+	dec	Soft_ECC_Cnt
+	jz	NOVERIFY		;no more retry
+	call	RESETDISK		;reset disk
+	jmp	DSKERR1			;retry
 
 ;SB34DISK004**************************************************************
 
 Not_SoftECC_Err:			;AN003;Other error.
-	call	ResetDisk		;AN003;
+	call	RESETDISK		;AN003;
 	dec	VRetry_Cnt		;AN003;
 	jmp	DskErr0 		;AN003;
 DOVERIFY ENDP
@@ -1568,7 +1568,7 @@ DoChkAgain:				   ;AN007;
 	CALL	AGAIN
 DskErr0:				;AN003;
 	JZ	HARDERR
-	test	word ptr [di].FLAGS, fNon_Removable	;AN009;
+	test	word ptr [di].BDS_TYPE.FLAGS, FNON_REMOVABLE	;AN009;
 	jnz	Skip_TimeOut_Chk			;AN009;
 	CMP	AH,80H			;TIMEOUT?
 	JZ	HARDERR 		;***
@@ -1582,7 +1582,7 @@ DSKERR1:
 
 Write_Fault_Err:			;AN003;
 	mov	bp, 1			;AN003;Just retry only once for Write Fault error.
-	jmp	DskErr1 		;AN003;
+	jmp	DSKERR1 		;AN003;
 
 HARDERR:
 	PUBLIC	HARDERR
@@ -1608,19 +1608,19 @@ DSKERR	ENDP
 ; NOTE THAT THIS ROUTINE IS NEVER CALLED FOR A FIXED DISK.
 ;
 NORMSPEED PROC	NEAR
-	cmp	cs:[Media_Set_For_Format], 0	;AN012;
+	cmp	cs:[MEDIA_SET_FOR_FORMAT], 0	;AN012;
 	jne	FASTSPEED			;AN012;
 	PUSH	DS
 	PUSH	AX
 	MOV	AL,CS:SETTLESLOW
 	LDS	SI,CS:DPT		; CURRENT DISK PARM TABLE
-	MOV	[SI].DISK_HEAD_STTL,AL
+	MOV	[SI].DISK_PARMS.DISK_HEAD_STTL,AL
 	POP	AX
 	POP	DS
 	CALL	FASTSPEED
 	PUSH	DS
 	LDS	SI,CS:DPT
-	MOV	[SI].DISK_HEAD_STTL,1	; 1 IS FAST SETTLE VALUE
+	MOV	[SI].DISK_PARMS.DISK_HEAD_STTL,1	; 1 IS FAST SETTLE VALUE
 	POP	DS
 	RET
 NORMSPEED ENDP
@@ -1630,7 +1630,7 @@ FASTSPEED PROC	NEAR
 ; IF THE DRIVE HAS BEEN MARKED AS TOO BIG (I.E. STARTING SECTOR OF THE
 ; PARTITION IS > 16 BITS, THEN ALWAYS RETURN DRIVE NOT READY.
 ;
-	TEST	BYTE PTR [DI].FATSIZ,FTOOBIG
+	TEST	BYTE PTR [DI].BDS_TYPE.FATSIZ,FTOOBIG
  IF iTEST
 	JZ	READY
 	JMP	NOTREADY
@@ -1695,14 +1695,14 @@ SET_TIM PROC	NEAR
 NOROLL3:
 ; WE HAVE THE NEW TIME. IF WE SEE THAT THE TIME HAS PASSED, THEN WE RESET
 ; THE THRESHOLD COUNTER...
-	CMP	DX,WORD PTR [DI].TIM_LO
+	CMP	DX,WORD PTR [DI].BDS_TYPE.TIM_LO
 	JNZ	SETACCESS
-	CMP	CX,WORD PTR [DI].TIM_HI
+	CMP	CX,WORD PTR [DI].BDS_TYPE.TIM_HI
 	JZ	DONE_SET
 SETACCESS:
 	MOV	BYTE PTR CS:[ACCESSCOUNT],0
-	MOV	WORD PTR [DI].TIM_LO,DX 	    ;SAVE IT
-	MOV	WORD PTR [DI].TIM_HI,CX
+	MOV	WORD PTR [DI].BDS_TYPE.TIM_LO,DX 	    ;SAVE IT
+	MOV	WORD PTR [DI].BDS_TYPE.TIM_HI,CX
 DONE_SET:
 	CLC
 	POP	AX
@@ -1797,7 +1797,7 @@ NOT_FORMAT:
 not_EC35:
 	RESTOREREG <cx, bx, ax>
 not_floppy:
-	cmp	cs:[model_byte], mdl_ps2_30	; is this a ps2/30?
+	cmp	cs:[MODEL_BYTE], mdl_ps2_30	; is this a ps2/30?
 	jne	not_ps2_30		; if not, just do normal call
 	cmp	ah, 8			;J.K. 1/30/87 Read Driver Parm ?
 	je	ps2_30_Problem		;J.K. 1/30/87
@@ -1808,7 +1808,7 @@ not_ps2_30:
 	JC	GOTERR13_br		; ERROR?
 	RET	2			; NO, RETURN AND CLEAR FLAGS
 
-GOTERR13_br: jmp Goterr13
+GOTERR13_br: jmp GOTERR13
 
 ;J.K.1/30/87 ps2_30 machine has some problem with AH=8h(Read Drive Parm), Int 13h.
 ;This function does not reset the common buses after the execution.
@@ -1817,7 +1817,7 @@ GOTERR13_br: jmp Goterr13
 
 ps2_30_Problem: 			;J.K. 1/30/87; ps2_30 = PS2 Model 30.
 	mov	cs:Prev_DX, DX		;save orignal drive number
-	call	Orig13			;Do "Read drive parm"
+	call	ORIG13			;Do "Read drive parm"
 
 	mov	cs:Save_AX, AX		;Save registers,flag
 	mov	cs:Save_BX, BX
@@ -1834,7 +1834,7 @@ ps2_30_Problem: 			;J.K. 1/30/87; ps2_30 = PS2 Model 30.
 	mov	dx, cs:Prev_DX		;restore orignal drive
 	pushf
 	mov	ah, 1			;Read Status.
-	call	Orig13			;Reset the bus as a side effect of this call.
+	call	ORIG13			;Reset the bus as a side effect of this call.
 
 	mov	AX, cs:Save_AX		;restore registers,flag
 	mov	BX, cs:Save_BX
@@ -1847,7 +1847,7 @@ ps2_30_Problem: 			;J.K. 1/30/87; ps2_30 = PS2 Model 30.
 	mov	ES, cs:Save_ES
 	push	cs:Save_Flag
 	popf
-	jc	GotErr13		;AH=8 had been an error?
+	jc	GOTERR13		;AH=8 had been an error?
 	ret	2
 
 ;
@@ -1865,10 +1865,10 @@ Chk_ValidMedia_ERR13:			;AN011;If SetDrive fails, then just
 	push	ds			;AN011;    return back to INT 13h caller,
 	push	di			;AN011;      without performing ECC, DMA
 	push	ax			;AN011; 	error handling.
-	mov	byte ptr cs:[Phys_Drv], 1 ;AN011;
+	mov	byte ptr cs:[PHYS_DRV], 1 ;AN011;
 	mov	al, dl			;AN011;
-	call	SetDrive		;AN011;
-	mov	byte ptr cs:[Phys_Drv], 0 ;AN011;
+	call	SETDRIVE		;AN011;
+	mov	byte ptr cs:[PHYS_DRV], 0 ;AN011;
 	pop	ax			;AN011;
 	pop	di			;AN011;
 	pop	ds			;AN011;
@@ -1898,13 +1898,13 @@ CHECK_ECC:
 ;SB	returned in AH is the SOFT_ECC error and if so go to OK11 since
 ;SB	the error can be ignored.  6 LOCS
 
-	cmp	cs:[Media_Set_For_Format], 1 ; formatting?
+	cmp	cs:[MEDIA_SET_FOR_FORMAT], 1 ; formatting?
 	je	Skip_Ecc_Check
-	cmp	cs:[Model_Byte], 0FEh	; PC or XT?
+	cmp	cs:[MODEL_BYTE], 0FEh	; PC or XT?
 	jae	Go_Chk_Ecc
-	cmp	cs:[Model_Byte], 0FBh	; XT?
+	cmp	cs:[MODEL_BYTE], 0FBh	; XT?
 	je	Go_Chk_Ecc
-	cmp	cs:[Model_Byte], 0FCh
+	cmp	cs:[MODEL_BYTE], 0FCh
 	jne	Skip_Ecc_Check
 	cmp	cs:[Secondary_Model_Byte], 2 ; AT?
 	ja	Skip_Ecc_Check
@@ -1934,7 +1934,7 @@ OK11:
 ;call Orig13 again
 
 	xor	ah, ah
-	call	Orig13			;reset. Don't care about the result
+	call	ORIG13			;reset. Don't care about the result
 
 	MOV	AX,CS:[PREVOPER]	; RETRIEVE REQUEST
 ;
@@ -1973,7 +1973,7 @@ LOOP_ECC:
 	JNZ	OK11_EXIT_err		;J.K. 8/26/86 Other error?
 	mov	ah, 0			;J.K. ECC error. Reset the system again.
 	pushf
-	call	Orig13
+	call	ORIG13
 	xor	ax, ax			; clear the error code so that if this 
 					; was the last sector, no error code 
 					; will be returned for the corrected 
@@ -2042,7 +2042,7 @@ NO_SKIP_FIRST:
 ; CONTINUE THE OPERATION AS NORMAL.  OTHERWISE, WE BREAK IT INTO PIECES.
 ;
 	CMP	AH,AL			; CAN WE FIT IT IN?
-	JB	DOBLOCK 		; NO, PERFORM BLOCKING.
+	JB	DoBlock 		; NO, PERFORM BLOCKING.
 ;
 ; YES, THE REQUEST FITS.  LET IT HAPPEN
 ;
@@ -2057,7 +2057,7 @@ INTVERIFY:
 	PUSH	CS
 	POP	ES
 DOSIMPLE:
-	MOV	BX,OFFSET DISKSECTOR
+	MOV	BX,OFFSET DiskSector
 	PUSHF
 	CALL	ORIG13
 	RESTOREREG  <BX,ES>
@@ -2074,7 +2074,7 @@ INTFORMAT:
 	POP	ES
 	POP	DS
 	MOV	SI,BX
-	MOV	DI,OFFSET DISKSECTOR
+	MOV	DI,OFFSET DiskSector
 	CALL	MOVE
 	RESTOREREG  <DS,DI,SI>
 	JMP	DOSIMPLE
@@ -2103,26 +2103,26 @@ DoBlock:
 ;For any mini disks installed, here we have to pray that they have the
 ;same # of sector/track as the main DOS partition disk drive.
 
-	Message ftestDisk,<"!!!DMA DoBlock!!!">
+	Message FTESTDISK,<"!!!DMA DoBlock!!!">
 
-	mov	dx, word ptr [bp.olddx] ;set head #
+	mov	dx, word ptr [bp.OLDDX] ;set head #
 	push	di
 	push	ds
 	push	ax			;AH - # of sectors before DMA boundary
 					;AL - User requeseted # of sectors for I/O.
-	mov	byte ptr CS:[phys_drv],1
+	mov	byte ptr CS:[PHYS_DRV],1
 	mov	al, dl
-	call	SetDrive		;get BDS pointer for this DISK.
+	call	SETDRIVE		;get BDS pointer for this DISK.
 	pop	ax
-	mov	byte ptr CS:[phys_drv],0
-	test	word ptr [DI].Flags, fNon_Removable	;don't have to worry
+	mov	byte ptr CS:[PHYS_DRV],0
+	test	word ptr [DI].BDS_TYPE.FLAGS, FNON_REMOVABLE	;don't have to worry
 	jnz	DoBlockHard		;about floppies. They are track by track operation.
 	mov	al, ah			;set al = ah for floppies
 	jmp	short DoBlockCont
 DoBlockHard:
 	push	cx
 	xor	cx, cx
-	mov	cx, [DI].SecLim 	;# of sectors/track
+	mov	cx, [DI].BDS_TYPE.SECLIM 	;# of sectors/track
 	mov	ch, 63
 	sub	ch, cl
 	mov	al, ch
@@ -2133,7 +2133,7 @@ DoBlockCont:
 	pop	ds
 	pop	di
 DoBlockContinue:
-	Message ftestDisk,<"%%DMA DoBlock Loop%%">
+	Message FTESTDISK,<"%%DMA DoBlock Loop%%">
 	cmp	ah, al			;if safe_# >= #_of_sectors_to_go_before DMA,
 	jae	DoBlocklast		;then #_of_sectors_to_go as it is for DoInt.
 	push	ax			;save AH, AL
@@ -2143,17 +2143,17 @@ DoBlocklast:
 	mov	ah, al
 	push	ax			;save AH
 DoBlockDoInt:				;let AH = AL = # of sectors for this shot
-	CALL	DoInt
+	CALL	DOINT
 	JC	BAD13			;something happened, bye!
 	pop	ax
-	SUB	BYTE PTR [BP.oldax], AH ;decrement by the successful operation
+	SUB	BYTE PTR [BP.OLDAX], AH ;decrement by the successful operation
 	ADD	CL,AH			;advance sector number. Safety gauranteed.
 	ADD	BH,AH			;advance DMA address
 	ADD	BH,AH			;twice for 512 byte sectors.
 	cmp	ah, al			;check the previous value
-	je	Buffer			;if #_of_sectors_to_go < safe_#, then we are done already.
+	je	BUFFER			;if #_of_sectors_to_go < safe_#, then we are done already.
 	sub	al, ah			;otherwise, #_sector_to_go = #_of_sector_to_go - safe_#
-	call	Check_Wrap		;get new CX, DH for the next operation.
+	call	CHECK_WRAP		;get new CX, DH for the next operation.
 	jmp	short DoBlockContinue	;handles next sectors left.
 ;End of modificaion of DoBlock	- J.K. 2/28/86
 ;The following is the original one.
@@ -2190,7 +2190,7 @@ BUFFER:
 	PUSH	ES
 	POP	DS
 	POP	ES
-	MOV	DI,OFFSET DISKSECTOR	; WHERE TO MOVE
+	MOV	DI,OFFSET DiskSector	; WHERE TO MOVE
 	PUSH	DI			; SAVE IT
 	MOV	SI,BX			; SOURCE
 	CALL	MOVE
@@ -2219,7 +2219,7 @@ DOREAD:
 	SAVEREG <ES,BX>
 	PUSH	CS
 	POP	ES
-	MOV	BX,OFFSET DISKSECTOR
+	MOV	BX,OFFSET DiskSector
 	MOV	AL,1
 ; SEE IF OUR REQUEST WILL WRAP A TRACK OR HEAD BOUNDARY
 	MOV	DL,BYTE PTR [BP.OLDDX]	; GET DRIVE NUMBER
@@ -2237,7 +2237,7 @@ DOREAD:
 	PUSH	CS
 	POP	DS
 	MOV	DI,BX
-	MOV	SI,OFFSET DISKSECTOR
+	MOV	SI,OFFSET DiskSector
 	CALL	MOVE
 	RESTOREREG  <DI,SI,DS>
 ;
@@ -2287,16 +2287,16 @@ BLOCK13 ENDP
 ;
 	PUBLIC CHECK_WRAP
 CHECK_WRAP:
-	Message ftestDisk,<"Entering Check_Wrap...",cr,lf>
+	Message FTESTDISK,<"Entering CHECK_WRAP...",cr,lf>
 	SAVEREG <AX,BX,DS,DI>
 	MOV	BYTE PTR CS:[PHYS_DRV],1; USE PHYSICAL DRIVE IN AL TO GET BDS
 	MOV	AL,DL			; AL HAS PHYSICAL DRIVE NUMBER
 	CALL	SETDRIVE		; GET POINTER TO BDS FOR DRIVE
 	MOV	BYTE PTR CS:[PHYS_DRV],0; RESTORE FLAG TO USE LOGICAL DRIVE
 	JC	NO_WRAP 		; DO NOTHING IF WRONG PHYSICAL DRIVE
-	TEST	WORD PTR [DI].FLAGS,FNON_REMOVABLE
+	TEST	WORD PTR [DI].BDS_TYPE.FLAGS,FNON_REMOVABLE
 	JZ	NO_WRAP 		; NO WRAPPING FOR REMOVABLE MEDIA
-	MOV	BX,[DI].SECLIM
+	MOV	BX,[DI].BDS_TYPE.SECLIM
 	MOV	AX,CX
 	AND	AX,003FH		; EXTRACT SECTOR NUMBER
 	CMP	AX,BX			; ARE WE GOING TO WRAP?
@@ -2315,11 +2315,11 @@ NOT_ON_BOUND:
 	INC	AX
 	ADD	AL,DH			; ADD IN STARTING HEAD #
 	ADC	AH,0			; CATCH ANY CARRY
-	CMP	AX,[DI].HDLIM		; ARE WE GOING TO WRAP AROUND A HEAD?
+	CMP	AX,[DI].BDS_TYPE.HDLIM		; ARE WE GOING TO WRAP AROUND A HEAD?
 	JBE	NO_WRAP_HEAD		; DO NOT LOSE NEW HEAD NUMBER!!
 	PUSH	DX			; PRESERVE DRIVE NUMBER AND HEAD NUMBER
 	XOR	DX,DX
-	MOV	BX,[DI].HDLIM
+	MOV	BX,[DI].BDS_TYPE.HDLIM
 	DIV	BX			; DX=NEW HEAD #, AX=# OF CYLINDER WRAPS
 ; CAREFUL HERE! IF NEW HEAD # IS 0, THEN WE ARE ON THE LAST HEAD.
 	OR	DX,DX

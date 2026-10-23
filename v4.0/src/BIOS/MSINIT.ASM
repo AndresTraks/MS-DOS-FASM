@@ -53,8 +53,8 @@ Daycnt_to_day	proc	near	;J.K. 4/30/86 for real time clock support
 ;Entry: [DAYCNT] = number of days since 1-1-80
 ;Return: CH - centry in BCD, CL - year in BCD, DH - month in BCD, DL - day in BCD
 
-	push	[daycnt]		;save daycnt
-	cmp	daycnt, (365*20+(20/4)) ;# of days from 1-1-1980 to 1-1-2000
+	push	[DAYCNT]		;save daycnt
+	cmp	DAYCNT, (365*20+(20/4)) ;# of days from 1-1-1980 to 1-1-2000
 	jae	century20
 	mov	base_century, 19
 	mov	base_year, 80
@@ -62,13 +62,13 @@ Daycnt_to_day	proc	near	;J.K. 4/30/86 for real time clock support
 century20:				;20th century
 	mov	base_century, 20
 	mov	base_year, 0
-	sub	daycnt, (365*20+(20/4)) ;adjust daycnt
+	sub	DAYCNT, (365*20+(20/4)) ;adjust daycnt
 years:
 	xor	dx, dx
-	mov	ax, daycnt
+	mov	ax, DAYCNT
 	mov	bx, (366+365*3) 	;# of days in a Leap year block
 	div	bx			;AX = # of leap block, DX = daycnt
-	mov	daycnt, dx		;save daycnt left
+	mov	DAYCNT, dx		;save daycnt left
 ;	or	ah, ah			;ax should be less than 256
 ;	jz	OK1
 ;	 jmp	 Erroroccur
@@ -76,26 +76,26 @@ years:
 	mov	bl,4
 	mul	bl			;AX = # of years. Less than 100 years!
 	add	base_year, al		;So, ah = 0. Adjust year accordingly.
-	inc	daycnt			;set daycnt to 1 base
-	cmp	daycnt, 366		;the daycnt here is the remainder of the leap year block.
+	inc	DAYCNT			;set daycnt to 1 base
+	cmp	DAYCNT, 366		;the daycnt here is the remainder of the leap year block.
 	jbe	Leapyear		;So, it should within 366+355+355+355 days.
 	inc	base_year		;First if daycnt <= 366, then leap year
-	sub	daycnt, 366		;else daycnt--, base_year++;
+	sub	DAYCNT, 366		;else daycnt--, base_year++;
 					;And the next three years are regular years.
 	mov	cx, 3
 Regularyear:
-	cmp	daycnt, 365		;for(i=1; i>3 or daycnt <=365;i++)
-	jbe	YearDone		;{if (daycnt > 365)
+	cmp	DAYCNT, 365		;for(i=1; i>3 or daycnt <=365;i++)
+	jbe	Yeardone		;{if (daycnt > 365)
 	inc	base_year		;  { daycnt -= 365
-	sub	daycnt, 365		;  }
-	loop	regularyear		;}
+	sub	DAYCNT, 365		;  }
+	loop	Regularyear		;}
 ;	 jmp	 Erroroccur		 ;cannot come to here
 Leapyear:
 	mov	byte ptr month_tab+1,29 ;leap year. change the month table.
 Yeardone:
 	xor	bx,bx
 	xor	dx,dx
-	mov	ax, daycnt
+	mov	ax, DAYCNT
 	mov	si, offset month_tab
 	mov	cx, 12
 Months:
@@ -125,7 +125,7 @@ Month_done:
 	call	word ptr BinToBCD
 ;	call Bin_to_bcd
 	mov	ch, al			;ch = bcd century
-	pop	[daycnt]		;restore original value
+	pop	[DAYCNT]		;restore original value
 	ret
 Daycnt_to_day	endp
 
@@ -180,11 +180,11 @@ INT6C	PROC	FAR
 	POP	WORD PTR INT6C_RET_ADDR ; POP OFF RETURN ADDRESS
 	POP	WORD PTR INT6C_RET_ADDR+2
 	POPF
-	CALL	READ_REAL_DATE		; GET THE DATE FROM THE CLOCK
+	CALL	read_real_date		; GET THE DATE FROM THE CLOCK
 	CLI
 	MOV	DS:DAYCNT,SI	      ; UPDATE DOS COPY OF DATE
 	STI
-	CALL	READ_REAL_TIME		; GET THE TIME FROM THE RTC
+	CALL	Read_Real_Time		; GET THE TIME FROM THE RTC
 	CLI
 ;SB33019***************************************************************
 	MOV	AH, 01h 		; COMMAND TO SET THE TIME      ;SB;3.30
@@ -406,7 +406,7 @@ INIT	PROC	NEAR
 ;SB	Save this in cs:BIOS$_H and cs:BIOS$_L. This is for the start of
 ;SB	data sector of the BIOS.
 
-	mov	cs:BIOS$_H,ax
+	mov	cs:bios$_H,ax
 	mov	cs:BIOS$_L,bx
 
 ;SB34INIT000*************************************************************
@@ -528,7 +528,7 @@ GOTHRD:
 	cmp	ah, 0			; double check
 	jne	No_Rom_System_Conf
 	mov	al, ES:[BX.bios_SD_modelbyte] ;get the model byte
-	mov	[Model_Byte], al
+	mov	[MODEL_BYTE], al
 	mov	al, ES:[BX.bios_SD_scnd_modelbyte] ;secondary model byte
 	mov	[Secondary_Model_Byte], al
 	jmp	short Turn_Timer_On
@@ -643,15 +643,15 @@ Skip_Patch_DoubleWordMov:		;AN003;
 ;SB	parameter table at SEC9.  The offsets in this table are defined in
 ;SB	the DISK_PARMS struc in MSDSKPRM.INC.  2 LOCS
 
-	mov	al,ds:SEC9 + DISK_MOTOR_STRT
-	mov	cs:MotorStartup,al
+	mov	al,ds:SEC9 + DISK_PARMS.DISK_MOTOR_STRT
+	mov	cs:MOTORSTARTUP,al
 ;SB34INIT002******************************************************************
 	CMP	MODEL_BYTE,0FDH       ; IS THIS AN OLD ROM?	ARR 2.41
 	JB	NO_DIDDLE		; NO			  ARR 2.41
-	MOV	WORD PTR DS:(SEC9 + DISK_HEAD_STTL),0200H+NORMSETTLE
+	MOV	WORD PTR DS:(SEC9 + DISK_PARMS.DISK_HEAD_STTL),0200H+NORMSETTLE
 					; SET HEAD SETTLE AND MOTOR START
 					; ON PC-1 PC-2 PC-XT HAL0 ARR 2.41
-	MOV	DS:(SEC9 + DISK_SPECIFY_1),0DFH
+	MOV	DS:(SEC9 + DISK_PARMS.DISK_SPECIFY_1),0DFH
 					; SET 1ST SPECIFY BYTE
 					; ON PC-1 PC-2 PC-XT HAL0 ARR 2.41
 NO_DIDDLE:				;			  ARR 2.41
@@ -761,8 +761,8 @@ KEEPINTF:
 	mov	cl,ds:0496h			; get keyboard flag
 	test	cl,00010000b
 	jz	ORG_KEY				; orginal keyboard
-	mov	byte ptr KEYRD_func,10h		; extended keyboard
-	mov	byte ptr KEYSTS_func,11h	; change for extended keyboard functions
+	mov	byte ptr KEYRD_Func,10h		; extended keyboard
+	mov	byte ptr KEYSTS_Func,11h	; change for extended keyboard functions
 ORG_KEY:
 
 ;SB34INIT003****************************************************************
@@ -854,10 +854,10 @@ ENDDRV:
 
 	cmp	cs:FakeFloppyDrv,1
 	jnz	LOOP_DRIVE		; system has floppy
-	mov	di,word ptr [di].link	; di <- first BDS link
-	mov	di,word ptr [di].link	; di <- second BDS link
-	mov	word ptr [di].link,-1	; set end of link
-	jmp	DoHard			; allocate/initialise BDS for HardDrives
+	mov	di,word ptr [di].BDS_TYPE.LINK	; di <- first BDS link
+	mov	di,word ptr [di].BDS_TYPE.LINK	; di <- second BDS link
+	mov	word ptr [di].BDS_TYPE.LINK,-1	; set end of link
+	jmp	DOHARD			; allocate/initialise BDS for HardDrives
 ;SB34INIT004*********************************************************
 
 LOOP_DRIVE:
@@ -866,7 +866,7 @@ LOOP_DRIVE:
 	JMP	DONE_DRIVES
 GOT_MORE:
 	XOR	CX,CX			; ZERO ALL FLAGS
-	MOV	DI,WORD PTR [DI].LINK	; GET NEXT BDS
+	MOV	DI,WORD PTR [DI].BDS_TYPE.LINK	; GET NEXT BDS
 	MOV	DH,FF48TPI		; SET FORM FACTOR TO 48 TPI
 	MOV	NUM_CYLN,40	      ; 40 TRACKS PER SIDE
 
@@ -1008,22 +1008,22 @@ NOT_SPECIAL:
 ; FORM FACTOR IS OF TYPE "FFOTHER".
 	XOR	AX,AX
 	MOV	AL,NUM_HEADS
-	MOV	WORD PTR [DI].RHDLIM,AX
+	MOV	WORD PTR [DI].BDS_TYPE.RHDLIM,AX
 	MOV	AL,SEC_TRK
-	MOV	WORD PTR [DI].RSECLIM,AX
-	MOV	WORD PTR [DI].FLAGS,CX
-	MOV	BYTE PTR [DI].FORMFACTOR,DH
-	MOV	BYTE PTR [DI].DRIVELET,DL
-	MOV	BYTE PTR [DI].DRIVENUM,BH
+	MOV	WORD PTR [DI].BDS_TYPE.RSECLIM,AX
+	MOV	WORD PTR [DI].BDS_TYPE.FLAGS,CX
+	MOV	BYTE PTR [DI].BDS_TYPE.FORMFACTOR,DH
+	MOV	BYTE PTR [DI].BDS_TYPE.DRIVELET,DL
+	MOV	BYTE PTR [DI].BDS_TYPE.DRIVENUM,BH
 	MOV	BL,BYTE PTR NUM_CYLN
-	MOV	BYTE PTR [DI].CCYLN,BL	; ONLY THE L.S. BYTE IS SET HERE
+	MOV	BYTE PTR [DI].BDS_TYPE.CCYLN,BL	; ONLY THE L.S. BYTE IS SET HERE
 	CMP	SINGLE,1		; SPECIAL CASE FOR SINGLE DRIVE SYSTEM
 	JNZ	NO_SINGLE
 	MESSAGE FTESTINIT,<"SINGLE DRIVE SYSTEM",CR,LF>
 	MOV	SINGLE,2		; DON'T LOSE INFO THAT WE HAVE SINGLE SYSTEM
 	OR	CX,FI_AM_MULT
-	OR	WORD PTR [DI].FLAGS,CX
-	MOV	DI,WORD PTR [DI].LINK	; MOVE TO NEXT BDS IN LIST
+	OR	WORD PTR [DI].BDS_TYPE.FLAGS,CX
+	MOV	DI,WORD PTR [DI].BDS_TYPE.LINK	; MOVE TO NEXT BDS IN LIST
 	INC	DL
 	JMP	SHORT NEXTDRIVE 	; USE SAME INFO FOR BDS A PREVIOUS
 NO_SINGLE:
@@ -1032,14 +1032,14 @@ NO_SINGLE:
 
 DONE_DRIVES:
 	MOV	AX,-1			; SET LINK TO NULL
-	MOV	WORD PTR [DI].LINK,AX
+	MOV	WORD PTR [DI].BDS_TYPE.LINK,AX
 
 ; SET UP ALL THE HARD DRIVES IN THE SYSTEM
 
 DOHARD:
-	MNUM	FTESTINIT+FTESTHARD,AX
-	MESSAGE FTESTINIT+FTESTHARD,<" HARD DISK(S) TO INITIALIZE",CR,LF>
-	MESSAGE FTESTINIT+FTESTHARD,<"HARD DISK 1",CR,LF>
+	MNUM	FTESTINIT+fTestHARD,AX
+	MESSAGE FTESTINIT+fTestHARD,<" HARD DISK(S) TO INITIALIZE",CR,LF>
+	MESSAGE FTESTINIT+fTestHARD,<"HARD DISK 1",CR,LF>
 
 	CMP	HNUM,0		      ; IF (NO_HARD_FILES)
 	JLE	STATIC_CONFIGURE      ;   THEN EXIT TO CONFIGURE
@@ -1067,7 +1067,7 @@ HARDFILE1_OK:
 
 SECOND_HARD:				; SETUP SECOND HARD FILE
 
-	MESSAGE FTESTINIT+FTESTHARD,<"HARD DISK 2",CR,LF>
+	MESSAGE FTESTINIT+fTestHARD,<"HARD DISK 2",CR,LF>
 	MOV	DL,81H			; NEXT HARD FILE
 	CALL	SETHARD
 	assume	es:nothing
@@ -1132,20 +1132,20 @@ STATIC_CONFIGURE:
 
 	PUSH	AX
 	mov	ax, offset END96TPI	;let's start with the biggest one.
-	cmp	fHave96, 0		;Is change line support there?
-	jnz	Config96		;Yes.
+	cmp	FHAVE96, 0		;Is change line support there?
+	jnz	CONFIG96		;Yes.
 
 	mov	ax, offset ENDTWOHARD
 	cmp	HNUM, 1 		;1 hard file?
 	jbe	No_Two_HRD
-	jmp	ConfigTwoHard
+	jmp	CONFIGTWOHARD
 No_Two_HRD:
 	mov	ax, offset ENDONEHARD
 	jnz	Basic_Floppy
-	jmp	ConfigOneHard
+	jmp	CONFIGONEHARD
 Basic_Floppy:
 	mov	ax, offset ENDFLOPPY
-	jmp	Dynamic_Configure	;static configuration is done!
+	jmp	DYNAMIC_CONFIGURE	;static configuration is done!
 
 ;
 ; KEEP THE 96TPI CODE
@@ -1209,7 +1209,7 @@ DYNAMIC_CONFIGURE:
 	mov	ax, End_Of_BDSM 		;set the new ending address
 	call	Get_Para_Offset
 CheckATROM:
-	cmp	Model_Byte, 0FCh		;AT ?
+	cmp	MODEL_BYTE, 0FCh		;AT ?
 	jnz	CheckCMOSClock
 	cmp	HNUM, 0 			;No hard file?
 	jz	CheckCMOSClock
@@ -1248,15 +1248,15 @@ CheckCMOSClock:
 	jne	CheckK09
 	mov	DaycntToDay, ax 		;set the address for MSCLOCK
 	mov	cx, offset EndDaycntToDay
-	mov	si, offset Daycnt_To_Day
+	mov	si, offset Daycnt_to_day
 	sub	cx, si				;size of CMOS clock supporting routine
 	mov	di, ax
 	rep	movsb
 	mov	ax, di
 	call	Get_Para_Offset
 	mov	BinToBCD, ax			;set the address for MSCLOCK
-	mov	cx, offset EndCMOSClockSet
-	mov	si, offset Bin_To_BCD
+	mov	cx, offset EndCMOSClockset
+	mov	si, offset Bin_to_bcd
 	sub	cx, si
 	mov	di, ax
 	rep	movsb
@@ -1285,7 +1285,7 @@ CheckK09:
 
 	push	ax
 	push	ds
-	mov	fHaveK09, 1			;remember we have a K09 type
+	mov	FHAVEK09, 1			;remember we have a K09 type
 	xor	ax,ax
 	mov	ds, ax
 	assume	ds:nothing
@@ -1346,13 +1346,13 @@ READDOS:
 	MESSAGE FTESTINIT,<CR,LF>
 	CALL	SETDRIVE		;GET CORRECT BDS FOR THIS DRIVE
 
-	mov	bx, [di].BYTEPERSEC
+	mov	bx, [di].BDS_TYPE.BYTEPERSEC
 	mov	cs:Md_SectorSize, bx	;AN004;Used by Get_Fat_Sector proc.
-	MOV	BL,[DI].FATSIZ		; GET SIZE OF FAT ON MEDIA
+	MOV	BL,[DI].BDS_TYPE.FATSIZ		; GET SIZE OF FAT ON MEDIA
 	MOV	FBIGFAT,BL
-	MOV	CL,[DI].SECPERCLUS	;GET SECTORS/CLUSTER
+	MOV	CL,[DI].BDS_TYPE.SECPERCLUS	;GET SECTORS/CLUSTER
 ;J.K.32 bit calculation
-	MOV	AX,[DI].HIDSEC_L	;GET NUMBER OF HIDDEN SECTORS (low)
+	MOV	AX,[DI].BDS_TYPE.HIDSEC_L	;GET NUMBER OF HIDDEN SECTORS (low)
 	SUB	BIOS$_L,AX		;SUBTRACT HIDDEN SECTORS since we
 					;need a logical sector number that will
 					;be used by GETCLUS(diskrd procedure)
@@ -1360,8 +1360,8 @@ READDOS:
 ;SB	We have 32 bit sector number now though. SO the high word also needs
 ;SB	to be adjusted.  Update BIOS$_H too.  2 LOCS
 
-	mov	ax,[di].HIDSEC_H	;subtract upper 16 bits of sector num
-	sbb	BIOS$_H,ax
+	mov	ax,[di].BDS_TYPE.HIDSEC_H	;subtract upper 16 bits of sector num
+	sbb	bios$_H,ax
 ;SB34INIT005******************************************************************
 	XOR	CH,CH			;CX = SECTORS/CLUSTER
 
@@ -1449,7 +1449,7 @@ GETBOOT PROC	NEAR
 	mov	AX, cs:Init_BootSeg	; prepare to load ES
 	mov	ES, AX	      ;SB	; load ES segment register
 	assume	es:nothing
-	mov	BX, BootBias  ;SB	; load BX,  ES:BX is where sector goes
+	mov	BX, BOOTBIAS  ;SB	; load BX,  ES:BX is where sector goes
 	mov	AX, 0201h     ;SB	; command to read & num sec. to 1
 	xor	DH, DH	      ;SB	; head number zero
 	mov	CX, 0001h     ;SB	; cylinder zero and sector one
@@ -1459,9 +1459,9 @@ GETBOOT PROC	NEAR
 
 	CMP	WORD PTR ES:[BOOTBIAS+1FEH],0AA55H ; DAVE L**** MAGIC BYTE?
 	JZ	NORM_RET
-	  MESSAGE FTESTHARD,<"SIGNATURE AA55 NOT FOUND",CR,LF>
+	  MESSAGE fTestHARD,<"SIGNATURE AA55 NOT FOUND",CR,LF>
 ERRET:
-	  MESSAGE FTESTHARD,<"ERROR IN GETBOOT",CR,LF>
+	  MESSAGE fTestHARD,<"ERROR IN GETBOOT",CR,LF>
 	STC
 NORM_RET:
 	RET
@@ -1482,12 +1482,12 @@ SETHARD PROC	NEAR
 	PUSH	DI
 	PUSH	BX
 	PUSH	DS
-	MOV	BYTE PTR [DI].DRIVELET,BL
-	MOV	BYTE PTR [DI].DRIVENUM,DL
+	MOV	BYTE PTR [DI].BDS_TYPE.DRIVELET,BL
+	MOV	BYTE PTR [DI].BDS_TYPE.DRIVENUM,DL
 	XOR	AX,AX
 	OR	AL,FNON_REMOVABLE
-	OR	WORD PTR [DI].FLAGS,AX
-	MOV	BYTE PTR [DI].FORMFACTOR,FFHARDFILE
+	OR	WORD PTR [DI].BDS_TYPE.FLAGS,AX
+	MOV	BYTE PTR [DI].BDS_TYPE.FORMFACTOR,FFHARDFILE
 	MOV	FBIGFAT,0		; ASSUME 12 BIT FAT
 	PUSH	DX
 ;SB33027***************************************************************
@@ -1499,11 +1499,11 @@ SETHARD PROC	NEAR
 ; LOW 6 BITS OF CL IS SECTORS/TRACK
 ; HIGH 2 BITS OF CL WITH CH ARE MAX # OF CYLINDERS
 	INC	DH			; GET NUMBER OF HEADS
-	MOV	BYTE PTR [DI].HDLIM,DH
+	MOV	BYTE PTR [DI].BDS_TYPE.HDLIM,DH
 	POP	DX
 	JC	SETRET			; CARRY HERE MEANS NO HARD DISK
 	AND	CL,3FH			; EXTRACT NUMBER OF SECTORS/TRACK
-	MOV	BYTE PTR [DI].SECLIM,CL
+	MOV	BYTE PTR [DI].BDS_TYPE.SECLIM,CL
 	CALL	GETBOOT 		;   IF (GETBOOT ())
 	assume	es:nothing
 	JC	SETRET			;	RETURN -1;
@@ -1519,7 +1519,7 @@ SET1:
 ;SB	we have a new partition type 6 now. add code to support this too.
 
 	cmp	byte ptr es:[bx],6	;	P->PARTITIONTYPE !=6
-	jz	set2
+	jz	SET2
 ;SB34INIT006******************************************************************
 
 	ADD	BX,16			;	P += SIZEOF PARTITION;
@@ -1561,21 +1561,21 @@ SET2:
 	ADD	AX,WORD PTR ES:[BX+8]	;Sectors in Partition
 	ADC	DX,WORD PTR ES:[BX+10]
 ;	 JZ	 OKDRIVE
-	jnc	Okdrive 		;AC000;
-	  MESSAGE FTESTHARD,<"PARTITION INVALID",CR,LF>
+	jnc	OKDRIVE 		;AC000;
+	  MESSAGE fTestHARD,<"PARTITION INVALID",CR,LF>
 	OR	FBIGFAT,FTOOBIG
 OKDRIVE:
 ;	 POP	 DX
 	MOV	AX,WORD PTR ES:[BX+4]
 
-	MOV	[DI].HIDSEC_L,AX	;   BPB->HIDSECCT = P->PARTITIONBEGIN;
+	MOV	[DI].BDS_TYPE.HIDSEC_L,AX	;   BPB->HIDSECCT = P->PARTITIONBEGIN;
 	mov	ax,word ptr es:[bx+6]	;AN000;
-	mov	[di].HIDSEC_H,ax	;AN000;
+	mov	[di].BDS_TYPE.HIDSEC_H,ax	;AN000;
 
 	mov	dx,word ptr es:[bx+10]	;AN000; # of sectors (High)
 	MOV	AX,WORD PTR ES:[BX+8]	;# of sectors (Low)
-	mov	word ptr [di].DRVLIM_H,dx ;AN000;
-	MOV	WORD PTR [DI].DRVLIM_L,AX ;   BPB->MAXSEC = P->PARTITIONLENGTH;
+	mov	word ptr [di].BDS_TYPE.DRVLIM_H,dx ;AN000;
+	MOV	WORD PTR [DI].BDS_TYPE.DRVLIM_L,AX ;   BPB->MAXSEC = P->PARTITIONLENGTH;
 	cmp	dx,0			;AN000;
 	ja	OKDrive_Cont		;AN000;
 	CMP	AX,64			;   IF (P->PARTITIONLENGTH < 64)
@@ -1583,12 +1583,12 @@ OKDRIVE:
 
 OKDrive_Cont:				;AN000;
  ;	 PUSH	 DX			;AC000;
-	mov	dx,[di].HIDSEC_H	;AN000;
-	MOV	AX,[DI].HIDSEC_L	; BOOT SECTOR NUMBER - For mini disk,;J.K.
+	mov	dx,[di].BDS_TYPE.HIDSEC_H	;AN000;
+	MOV	AX,[DI].BDS_TYPE.HIDSEC_L	; BOOT SECTOR NUMBER - For mini disk,;J.K.
 ;	 XOR	 DX,DX			 ; this will be logical and equal to  ;AC000;
 	xor	bx,bx			;usUally equal to the # of sec/trk.  ;J.K.
 ;	 MOV	 BH,DH			;AC000;
-	MOV	BL,BYTE PTR [DI].SECLIM
+	MOV	BL,BYTE PTR [DI].BDS_TYPE.SECLIM
 	push	ax			;AN000;
 	mov	ax,dx			;AN000;
 	xor	dx,dx			;AN000;
@@ -1601,7 +1601,7 @@ OKDrive_Cont:				;AN000;
 ;	 CWD				;AC000;
 
 	xor	bx,bx			;AN000;
-	MOV	BL,BYTE PTR [DI].HDLIM
+	MOV	BL,BYTE PTR [DI].BDS_TYPE.HDLIM
 	push	ax			;AN000;
 	xor	dx,dx			;AN000;
 	mov	ax, cs:[Temp_H] 	;AN000;
@@ -1610,18 +1610,18 @@ OKDrive_Cont:				;AN000;
 	pop	ax			;AN000;
 	DIV	BX			; DL IS HEAD, AX IS CYLINDER
 	cmp	cs:[Temp_H],0		;AN000;
-	ja	SetRet_brdg		;AN000; Exceeds the limit of Int 13h
+	ja	SetRet_Brdg		;AN000; Exceeds the limit of Int 13h
 	cmp	ax, 1024		;AN000;
-	ja	SetRet_brdg		;AN000; Exceeds the limit of Int 13h
+	ja	SetRet_Brdg		;AN000; Exceeds the limit of Int 13h
 
 ; DL IS HEAD.
 ; AX IS CYLINDER
 ; CL IS SECTOR NUMBER (assume less than 2**6 = 64 for INT 13h)
 
 ;*** For Mini Disks *** J.K. 4/7/86
-	cmp	word ptr [di].ISMINI, 1 ;check for mini disk -J.K. 4/7/86
+	cmp	word ptr [di].BDSM_type.IsMini, 1 ;check for mini disk -J.K. 4/7/86
 	jnz	OKnotMini		;not mini disk. -J.K. 4/7/86
-	add	ax, [di].HIDDEN_TRKS	;set the physical track number -J.K. 4/7/86
+	add	ax, [di].BDSM_type.Hidden_Trks	;set the physical track number -J.K. 4/7/86
 OKnotMini:				;J.K. 4/7/86
 ;*** End of added logic for mini disk
 	ROR	AH,1			; MOVE HIGH TWO BITS OF CYL TO HIGH
@@ -1691,7 +1691,7 @@ sigfound:			; signature was found, now check version
 	JNZ	TRY5
 	CMP	BYTE PTR cs:[bx+10], "0"
 	JNZ	TRY5
-	MESSAGE FTESTHARD,<"VERSION 2.0 MEDIA",CR,LF>
+	MESSAGE fTestHARD,<"VERSION 2.0 MEDIA",CR,LF>
 	JMP	SHORT COPYBPB
 
 SetRet_Brdg:
@@ -1703,13 +1703,13 @@ UNKNOWN3_0_J:					;AN012;Legally formatted media,
 	jmp	Unknown3_0			;AN012; although, content might be bad.
 
 TRY5:
-	call	Cover_Fdisk_Bug 		;AN010;
+	call	Cover_FDISK_Bug 		;AN010;
 	CMP	WORD PTR cs:[bx+8],"." SHL 8 + "3"
-	jb	Unknown3_0_J			;AN012; Must be 2.1 boot record. Do not trust it, but still legal.
+	jb	UNKNOWN3_0_J			;AN012; Must be 2.1 boot record. Do not trust it, but still legal.
 	JNZ	COPYBPB 			;AN007; Honor OS2 boot record, or DOS 4.0 version
 	cmp	byte ptr cs:[bx+10],"1"         ;do not trust 3.0 boot record. But still legal J.K. 4/15/86
-	jb	UnKnown3_0_J			;AN012; if version >= 3.1, then O.K.
-	Message ftestHard,<"VERSION 3.1 OR ABOVE MEDIA",CR,LF>
+	jb	UNKNOWN3_0_J			;AN012; if version >= 3.1, then O.K.
+	Message fTestHARD,<"VERSION 3.1 OR ABOVE MEDIA",CR,LF>
 
 COPYBPB:
 ; WE HAVE A VALID BOOT SECTOR. USE THE BPB IN IT TO BUILD THE
@@ -1737,36 +1737,36 @@ COPYBPB:
 	pop	ds			;AN000; ds = cs
 
 	mov	si, offset Bpb_In_Sector ;AN000; ds:si -> BPB in Boot
-	add	di, BYTEPERSEC		;AN000; es:di -> BPB in BDS
+	add	di, BDS_TYPE.BYTEPERSEC		;AN000; es:di -> BPB in BDS
 	mov	cx, size BPB_TYPE	;AN000;
 	rep	movsb			;AN000;
 
 	pop	ds			;AN000; Restore Reg.
 	pop	di			;AN000;
 	call	Mov_Media_IDs		;AN000; Set Volume id, SystemId, Serial.
-	jmp	GoodRet
+	jmp	GOODRET
 
 COPYBPB_FAT:				;AN000;  Fat system
 	xor	dx,dx			;AN000;
 	mov	si, offset Bpb_In_Sector ;AN000;  cs:bx -> bpb in boot
-	mov	ax, cs:[si.SECNUM]	;AN000;  total sectors
+	mov	ax, cs:[si+BPB_TYPE.SECNUM]	;AN000;  total sectors
 	cmp	ax,0			;AN000; double word sector number?
 	jnz	Fat_Big_Small		;AN000;  No. Conventional BPB.
-	mov	ax, word ptr cs:[si.SECNUM_L] ;AN000; Use double word
-	mov	dx, word ptr es:[si.SECNUM_H] ;AN000;
+	mov	ax, word ptr cs:[si+BPB_TYPE.SECNUM_L] ;AN000; Use double word
+	mov	dx, word ptr es:[si+BPB_TYPE.SECNUM_H] ;AN000;
 
 Fat_Big_Small:				 ;AN000; Determine Fat entry size.
 ;At this moment DX;AX = Total sector number
 ;	 DEC	 AX			 ; SUBTRACT # RESERVED (ALWAYS 1)
 	sub	ax,1			;AN000; Subtrack # reserved (always 1)
 	sbb	dx,0			;AN000;
-	mov	bx, cs:[si.FATSIZE]	;AN000;  BX = Sectors/Fat
-	mov	[di.CSECFAT],bx 	;AN000;  Set in BDS BPB
+	mov	bx, cs:[si+BPB_TYPE.FATSIZE]	;AN000;  BX = Sectors/Fat
+	mov	[di+BDS_TYPE.CSECFAT],bx 	;AN000;  Set in BDS BPB
 	shl	bx,1			;AN000; Always 2 FATS
 	sub	ax,bx			;AN000; Sub # fat sectors
 	sbb	dx,0			;AN000;
-	mov	bx, cs:[si.DIRNUM]	;AN000;  # root entries
-	mov	[di.cDIR],bx		;AN000;  Set in BDS BPB
+	mov	bx, cs:[si+BPB_TYPE.DIRNUM]	;AN000;  # root entries
+	mov	[di+BDS_TYPE.CDIR],bx		;AN000;  Set in BDS BPB
 
 	MOV	CL,4
 	shr	bx,cl			;AN000;  Div by 16 ents/sector
@@ -1774,12 +1774,12 @@ Fat_Big_Small:				 ;AN000; Determine Fat entry size.
 	sbb	dx,0			;AN000;
 					;AN000; DX;AX now contains the # of data sectors
 	xor	cx,cx			;AN000;
-	MOV	CL, cs:[si.SECALL]	; SECTORS PER CLUSTER
-	MOV	[DI.SECPERCLUS],CL	; SET IN BIOS BPB
+	MOV	CL, cs:[si+BPB_TYPE.SECALL]	; SECTORS PER CLUSTER
+	MOV	[DI+BDS_TYPE.SECPERCLUS],CL	; SET IN BIOS BPB
 ;	 XOR	 DX,DX
 ;	 MOV	 CH,DH
-	MNUM	FTESTHARD,CX
-	MESSAGE FTESTHARD,<" SECPERCLUS",CR,LF>
+	MNUM	fTestHARD,CX
+	MESSAGE fTestHARD,<" SECPERCLUS",CR,LF>
 ;J.K. 3/16/87 P54 Returning back to old logic for compatibility reason.
 ;So, use the old logic again that once had been commented out!!!!!!!!!!!!
 ;Old logic to determine FAT Entry Size J.K. 12/3/86
@@ -1815,20 +1815,20 @@ UNKNOWN:
 						;AN008; For the time being, allow it.
 						;AN009; Now implemented again
 Unknown3_0:				;AN012;Skip setting UNFORMATTED_MEDIA bit
-	MESSAGE FTESTHARD,<"UNKNOWN HARD MEDIA. ASSUMING 3.0.",CR,LF>
-	mov	dx, [di.DRVLIM_H]	;AN000;
-	mov	ax, [di.DRVLIM_L]	;AN000;
-	MOV	SI,OFFSET DISKTABLE2
+	MESSAGE fTestHARD,<"UNKNOWN HARD MEDIA. ASSUMING 3.0.",CR,LF>
+	mov	dx, [di+BDS_TYPE.DRVLIM_H]	;AN000;
+	mov	ax, [di+BDS_TYPE.DRVLIM_L]	;AN000;
+	MOV	SI,OFFSET DiskTable2
 SCAN:
 ;	 CMP	 AX,[SI]
 ;	 JBE	 GOTPARM
 ;	 ADD	 SI,4 * 2
 
 	cmp	dx, word ptr cs:[si]	;AN000;
-	jb	GotParm 		;AN000;
+	jb	GOTPARM 		;AN000;
 	ja	Scan_Next		;AN000;
 	cmp	ax, word ptr cs:[si+2]	;AN000;
-	jbe	GotParm 		;AN000;
+	jbe	GOTPARM 		;AN000;
 Scan_Next:				;AN000;
 	add	si, 5 * 2		;AN000;
 	JMP	SCAN			;AN000;  Covers upto 512 MB media
@@ -1847,24 +1847,24 @@ GOTPARM:
 
 ;	NOW CALCULATE SIZE OF FAT TABLE
 
-	MNUM	FTESTHARD,AX
-	MESSAGE FTESTHARD,<" SECTORS ">
-	MNUM	FTESTHARD,DX
-	MESSAGE FTESTHARD,<" DIRECTORY ENTRIES ">
-	MNUM	FTESTHARD,CX
-	MESSAGE FTESTHARD,<" SECPERCLUS|CLUSSHIFT">
+	MNUM	fTestHARD,AX
+	MESSAGE fTestHARD,<" SECTORS ">
+	MNUM	fTestHARD,DX
+	MESSAGE fTestHARD,<" DIRECTORY ENTRIES ">
+	MNUM	fTestHARD,CX
+	MESSAGE fTestHARD,<" SECPERCLUS|CLUSSHIFT">
 
-	MOV	WORD PTR CDIR[DI],DX	;SAVE NUMBER OF DIR ENTRIES
+	MOV	WORD PTR BDS_TYPE.CDIR[DI],DX	;SAVE NUMBER OF DIR ENTRIES
 
 ;Now, CX = SecPerClus|Clusshift
 ;     [DI.CDIR] = number of directory entries.
 
-	mov	dx, [di.DRVLIM_H]	;AN000;
-	mov	ax, [di.DRVLIM_L]	;AN000;
-	MOV	BYTE PTR SECPERCLUS[DI],CH ;SAVE SECTORS PER CLUSTER
+	mov	dx, [di+BDS_TYPE.DRVLIM_H]	;AN000;
+	mov	ax, [di+BDS_TYPE.DRVLIM_L]	;AN000;
+	MOV	BYTE PTR BDS_TYPE.SECPERCLUS[DI],CH ;SAVE SECTORS PER CLUSTER
 	TEST	FBIGFAT,FBIG		;   IF (FBIGFAT)
 	JNZ	DOBIG			;	GOTO DOBIG;
-	 MESSAGE FTESTHARD,<" SMALL FAT",CR,LF>
+	 MESSAGE fTestHARD,<" SMALL FAT",CR,LF>
 ;J.K. We don't need to change "small fat" logic since it is gauranteed
 ;that double word total sector will not use 12 bit fat (unless
 ;it's sectors/cluster >= 16 which will never be in this case.)
@@ -1882,14 +1882,14 @@ GOTPARM:
 	ADD	BX,SI
 	ADD	BX,511			;   BX += 511 + BX/2
 	SHR	BH,1			;   BH >>= 1; (=BX/512)
-	MOV	BYTE PTR [DI].CSECFAT,BH ;SAVE NUMBER OF FAT SECTORS
-	JMP	SHORT Massage_BPB
+	MOV	BYTE PTR [DI].BDS_TYPE.CSECFAT,BH ;SAVE NUMBER OF FAT SECTORS
+	JMP	SHORT Massage_bpb
 DOBIG:
 ;J.K. For BIGFAT we do need to extend this logic to 32 bit sector calculation.
-	  MESSAGE FTESTHARD,<" BIG FAT",CR,LF>
+	  MESSAGE fTestHARD,<" BIG FAT",CR,LF>
 	MOV	CL,4			; 16 (2^4) DIRECTORY ENTRIES PER SECTOR
 	push	dx			;AN000; Save total sectors (high)
-	mov	dx, CDIR[DI]		;AN000;
+	mov	dx, BDS_TYPE.CDIR[DI]		;AN000;
 	SHR	DX,CL			; CSECDIR = CDIR / 16;
 	SUB	AX,DX			; DX;AX -= CSECDIR; DX;AX -= CSECRESERVED;
 	pop	dx			;AN000;
@@ -1898,7 +1898,7 @@ DOBIG:
 	SUB	ax,1			;AN000; DX;AX = T - R - D
 	SBB	dx,0			;AN000;
 	MOV	BL,2
-	MOV	BH,SECPERCLUS[DI]	; BX = 256 * SECPERCLUS + 2
+	MOV	BH,BDS_TYPE.SECPERCLUS[DI]	; BX = 256 * SECPERCLUS + 2
 ;	 XOR	 DX,DX
 ;J.K. I don't understand why to add BX here!!!
 	ADD	AX,BX			; AX = T-R-D+256*SPC+2
@@ -1908,10 +1908,10 @@ DOBIG:
 ;J.K. Assuming DX in the table will never be bigger than BX.
 	DIV	BX			; CSECFAT = CEIL((TOTAL-DIR-RES)/
 					;		 (256*SECPERCLUS+2));
-	MOV	WORD PTR [DI].CSECFAT,AX ; NUMBER OF FAT SECTORS
+	MOV	WORD PTR [DI].BDS_TYPE.CSECFAT,AX ; NUMBER OF FAT SECTORS
 ;J.K. Now, set the default FileSys_ID, Volume label, Serial number
 	MOV	BL,FBIGFAT
-	MOV	[DI].FATSIZ,BL		; SET SIZE OF FAT ON MEDIA
+	MOV	[DI].BDS_TYPE.FATSIZ,BL		; SET SIZE OF FAT ON MEDIA
 	call	Clear_IDs		;AN000;
 
 ;J.K. At this point, in BPB of BDS table, DRVLIM_H,DRVLIM_L which were
@@ -1922,19 +1922,19 @@ DOBIG:
 ;We don't do this for the bpb information from the boot record. We
 ;are not going to change the BPB information from the boot record.
 Massage_bpb:				;AN000;
-	mov	dx, [di.DRVLIM_H]	;AN000;
-	mov	ax, [di.DRVLIM_L]	;AN000;
+	mov	dx, [di+BDS_TYPE.DRVLIM_H]	;AN000;
+	mov	ax, [di+BDS_TYPE.DRVLIM_L]	;AN000;
 	cmp	dx,0			;AN000; Double word total sector?
 	ja	GOODRET 		;AN000; don't have to change it.
-	cmp	[di.HIDSEC_H], 0	;AN000;
+	cmp	[di+BDS_TYPE.HIDSEC_H], 0	;AN000;
 	ja	GOODRET 		;AN000; don't have to change it.
-	add	ax, [di.HIDSEC_L]	;AN000;
+	add	ax, [di+BDS_TYPE.HIDSEC_L]	;AN000;
 	jc	GOODRET 		;AN000; bigger than a word boundary
-	mov	ax, [di.DRVLIM_L]	;AN000;
-	mov	[di.DRVLIM], ax 	;AN000;
-	mov	[di.DRVLIM_L], 0	;AN000;
+	mov	ax, [di+BDS_TYPE.DRVLIM_L]	;AN000;
+	mov	[di+BDS_TYPE.DRVLIM], ax 	;AN000;
+	mov	[di+BDS_TYPE.DRVLIM_L], 0	;AN000;
 GOODRET:
-	cmp	[di].DRVLIM_H, 0	;AN014; Big media?
+	cmp	[di].BDS_TYPE.DRVLIM_H, 0	;AN014; Big media?
 	jbe	Not_BigMedia		;AN014; No.
 	push	es			;AN014;
 	push	ax			;AN014;
@@ -1945,7 +1945,7 @@ GOODRET:
 	pop	es			;AN014;
 Not_BigMedia:				;AN014;
 	MOV	BL,FBIGFAT
-	MOV	[DI].FATSIZ,BL		; SET SIZE OF FAT ON MEDIA
+	MOV	[DI].BDS_TYPE.FATSIZ,BL		; SET SIZE OF FAT ON MEDIA
 	CLC
 RET_HARD:
 	POP	DS
@@ -1971,15 +1971,15 @@ Cover_FDISK_Bug 	proc			      ;AN010;
 	cmp	byte ptr cs:[bx+10], "0"              ;AN010;
 	jne	CFB_Retit			      ;AN010;
 CFB_Chk_SECNUM: 				      ;AN010;
-	mov	si, offset BPB_In_Sector	      ;AN010;
-	cmp	cs:[si.SECNUM], 0		      ;AN010;Just to make sure.
+	mov	si, offset Bpb_In_Sector	      ;AN010;
+	cmp	cs:[si+BPB_TYPE.SECNUM], 0		      ;AN010;Just to make sure.
 	je	CFB_Retit			      ;AN010;
-	mov	ax, cs:[si.SECNUM]		      ;AN010;
-	add	ax, cs:[si.HIDDEN_L]		      ;AN010;
+	mov	ax, cs:[si+BPB_TYPE.SECNUM]		      ;AN010;
+	add	ax, cs:[si+BPB_TYPE.HIDDEN_L]		      ;AN010;
 	jnc	CFB_Retit			      ;AN010;
 	xor	ax, ax				      ;AN010;if carry set and AX=0?
 	jnz	CFB_Retit			      ;AN010;
-	dec	cs:[si.SECNUM]			      ;AN010;  then decrease SECNUM by 1.
+	dec	cs:[si+BPB_TYPE.SECNUM]			      ;AN010;  then decrease SECNUM by 1.
 	dec	[di].DRVLIM_L			      ;AN010;
 CFB_Retit:					      ;AN010;
 	pop	si				      ;AN010;
@@ -2010,21 +2010,21 @@ DONE_SETPARMS:
 DO_SETP:
 	PUSH	ES
 	PUSH	DI			; PRESERVE POINTER TO BDS
-	MOV	BL,ES:[DI].FORMFACTOR
+	MOV	BL,ES:[DI].BDS_TYPE.FORMFACTOR
 	CMP	BL,FFHARDFILE
 	JNZ	NOTHARDFF
 
 	xor	dx,dx			;AN000;
-	MOV	AX,ES:[DI].DRVLIM
+	MOV	AX,ES:[DI].BDS_TYPE.DRVLIM
 	cmp	ax,0			;AN000;
 	jne	GET_cCYL		;AN000;
-	mov	dx,es:[di].DRVLIM_H	;AN000; Use Double word sector number
-	MOV	AX,ES:[DI].DRVLIM_L	;AN000;
+	mov	dx,es:[di].BDS_TYPE.DRVLIM_H	;AN000; Use Double word sector number
+	MOV	AX,ES:[DI].BDS_TYPE.DRVLIM_L	;AN000;
 GET_cCYL:
 	push	dx			;AN000;
 	PUSH	AX
-	MOV	AX,WORD PTR ES:[DI].HDLIM
-	MUL	WORD PTR ES:[DI].SECLIM ;Assume Sectorsp per cyl. < 64K.
+	MOV	AX,WORD PTR ES:[DI].BDS_TYPE.HDLIM
+	MUL	WORD PTR ES:[DI].BDS_TYPE.SECLIM ;Assume Sectorsp per cyl. < 64K.
 	MOV	CX,AX			; CX HAS # SECTORS PER CYLINDER
 	POP	AX			;
 	pop	dx			;AN000; Restore drvlim.
@@ -2039,13 +2039,13 @@ GET_cCYL:
 	JZ	NO_CYL_RND		; CAME OUT EVEN
 	INC	AX			; ROUND UP
 NO_CYL_RND:
-	MOV	ES:[DI].CCYLN,AX
+	MOV	ES:[DI].BDS_TYPE.CCYLN,AX
 	MESSAGE FTESTINIT,<"CCYLN ">
 	MNUM	FTESTINIT,AX
 	MESSAGE FTESTINIT,<CR,LF>
 	PUSH	ES
 	POP	DS
-	LEA	SI,[DI].BYTEPERSEC	; DS:SI -> BPB FOR HARD FILE
+	LEA	SI,[DI].BDS_TYPE.BYTEPERSEC	; DS:SI -> BPB FOR HARD FILE
 	JMP	SHORT SET_RECBPB
 
 NOTHARDFF:
@@ -2060,19 +2060,19 @@ NOTHARDFF:
 ;SB	BDS.  We can just go and deal with the next BDS at label Go_To_Next_BDS.
 
 	cmp	cs:FakeFloppyDrv,1
-	jz	Go_To_Next_BDS
+	jz	GO_TO_NEXT_BDS
 ;SB34INIT007******************************************************************
 
 	CMP	BL,FFOTHER		; SPECIAL CASE "OTHER" TYPE OF MEDIUM
 	JNZ	NOT_PROCESS_OTHER
 PROCESS_OTHER:
 	XOR	DX,DX
-	MOV	AX,[DI].CCYLN
-	MOV	BX,[DI].RHDLIM
+	MOV	AX,[DI].BDS_TYPE.CCYLN
+	MOV	BX,[DI].BDS_TYPE.RHDLIM
 	MUL	BX
-	MOV	BX,[DI].RSECLIM
+	MOV	BX,[DI].BDS_TYPE.RSECLIM
 	MUL	BX
-	MOV	[DI].RDRVLIM,AX 	; HAVE THE TOTAL NUMBER OF SECTORS
+	MOV	[DI].BDS_TYPE.RDRVLIM,AX 	; HAVE THE TOTAL NUMBER OF SECTORS
 	DEC	AX
 
 ;J.K. Old logic was...
@@ -2094,21 +2094,21 @@ PROCESS_OTHER:
 	inc	ax
 
 NO_ROUND_UP:
-	MOV	[DI].RCSECFAT,AX
+	MOV	[DI].BDS_TYPE.RCSECFAT,AX
 	JMP	SHORT GO_TO_NEXT_BDS
 NOT_PROCESS_OTHER:
 	SHL	BX,1			; BX IS WORD INDEX INTO TABLE OF BPBS
 	MOV	SI,OFFSET BPBTABLE
 	MOV	SI,WORD PTR [SI+BX]	; GET ADDRESS OF BPB
 SET_RECBPB:
-	LEA	DI,[DI].RBYTEPERSEC	; ES:DI -> RECBPB
+	LEA	DI,[DI].BDS_TYPE.RBYTEPERSEC	; ES:DI -> RECBPB
 	MOV	CX,BPBSIZ
 	REP	MOVSB			; MOVE BPBSIZ BYTES
 GO_TO_NEXT_BDS:
 	POP	DI
 	POP	ES			; RESTORE POINTER TO BDS
-	MOV	BX,WORD PTR ES:[DI].LINK+2
-	MOV	DI,WORD PTR ES:[DI].LINK
+	MOV	BX,WORD PTR ES:[DI].BDS_TYPE.LINK+2
+	MOV	DI,WORD PTR ES:[DI].BDS_TYPE.LINK
 	MOV	ES,BX
 	JMP	NEXT_BDS
 
@@ -2132,7 +2132,7 @@ GETCLUS PROC	NEAR
 ;SB	start sector number is in BIOS$_H:BIOS$_L
 
 	add	ax,cs:BIOS$_L
-	adc	dx,cs:BIOS$_H
+	adc	dx,cs:bios$_H
 ;SB34INIT008*************************************************************
 ;J.K. Now DX;AX = first logical sector to read
 ;	 MOV	 DX,AX			 ;DX = FIRST SECTOR TO READ
@@ -2155,13 +2155,13 @@ UNPACK:
 ;	 MOV	 SI,BX
 	SHR	SI,1			;12 bit fat. si=si/2
 	add	si, bx			;AN004; si = clus + clus/2
-	call	Get_Fat_Sector		;AN004; offset of FAT entry in BX
+	call	Get_FAT_Sector		;AN004; offset of FAT entry in BX
 	mov	ax, [bx]		;AN004;Save it into AX
 	jne	Even_Odd		;AN004;IF not a splitted FAT, check even-odd.
 	mov	al, byte ptr [bx]	;AN004;Splitted FAT.
 	mov	byte ptr cs:Temp_Cluster, al	;AN004;
 	inc	si				;AN004;
-	call	Get_Fat_Sector			;AN004;
+	call	Get_FAT_Sector			;AN004;
 	mov	al, byte ptr ds:[0]		 ;AN004;
 	mov	byte ptr cs:Temp_Cluster+1, al	;AN004;
 	mov	ax, cs:Temp_Cluster	;AN004;
@@ -2180,7 +2180,7 @@ HAVCLUS:
 	JMP	SHORT UNPACKX
 UNPACK16:				;16 bit fat.
 	shl	si, 1			;Get the offset value.
-	call	Get_Fat_Sector		;AN004;
+	call	Get_FAT_Sector		;AN004;
 	mov	bx, [bx]		;AN004; Now BX = New FAT entry.
 UNPACKX:
 	POP	SI			;Retore Old BX value into SI
@@ -2250,11 +2250,11 @@ Get_FAT_Sector	proc	near		;AN004;
 	mov	cs:[Start_Sec_H],0		;AN004; Prepare to read the FAT sector
 	mov	dx, ax				;AN004; Start_Sec_H is always 0 for FAT sector.
 	mov	cx, 1				;AN004; 1 sector to read
-	mov	ax, cs:DrvFAT			;AN004;
+	mov	ax, cs:DRVFAT			;AN004;
 	push	ds				;AN004;
 	pop	es				;AN004;
 	xor	di, di				;AN004; es:di -> FatLoc segment:0
-	call	DiskRD				;AN004; cross your finger.
+	call	DISKRD				;AN004; cross your finger.
 	pop	dx				;AN004; restore offset value.
 	mov	cx, cs:Md_SectorSize		;AN004;
 GFS_Split_Chk:					;AN004;
@@ -2277,7 +2277,7 @@ Get_FAT_Sector	endp				;AN004;
 ; J.K. code.
 
 PRINT_INIT:
-	call	Get_device_number
+	call	GET_DEVICE_NUMBER
 ;SB33028*****************************************************************
 	mov	ah,1			;initalize printer port        ;SB;3.30
 	int	17h			;call ROM-Bios routine	       ;SB;3.30
@@ -2285,7 +2285,7 @@ PRINT_INIT:
 	ret
 
 AUX_INIT:
-	call	Get_device_number
+	call	GET_DEVICE_NUMBER
 ;SB33028*****************************************************************
 	mov	al,RSINIT		;2400,N,1,8 (MSEQU.INC)       ;SB ;3.30*
 	mov	ah,0			;initalize AUX port	      ;SB ;3.30*
@@ -2380,7 +2380,7 @@ DoMini:
 	push	cs
 	pop	ds
 	assume	ds:code,es:code
-	Message fTestHard,<"Start of DoMini...",cr,lf>
+	Message fTestHARD,<"START of DoMini...",cr,lf>
 
 	push	ax			;Do I need to do this?
 
@@ -2394,7 +2394,7 @@ DoMini:
 	jz	DoMiniRet		;no hard file? Then exit.
 	mov	numh, dl		;save the number of hard files.
 	xor	ax,ax
-	mov	al, drvmax
+	mov	al, DRVMAX
 	mov	mininum, al		;this will be the logical drive letter
 					;for mini disk to start with.
 
@@ -2426,9 +2426,9 @@ DoMiniBegin:
 DoMiniNext:
 	dec	numh
 	jz	DoMiniRet
-	inc	Rom_MiniDsk_Num 	;Next hard file
+	inc	Rom_Minidsk_num 	;Next hard file
 ;SB33028********************************************************************
-	mov	dl, Rom_MiniDsk_Num	;look at next hard drive      ;SB ;3.30*
+	mov	dl, Rom_Minidsk_num	;look at next hard drive      ;SB ;3.30*
 	mov	ah, 8h			;get drive parameters	      ;SB ;3.30*
 	int	13h			;call ROM-Bios		      ;SB ;3.30*
 ;SB33028********************************************************************
@@ -2458,25 +2458,25 @@ FmpNext:
 	cmp	byte ptr ES:[BX], 5	; 5 = extended partition ID.
 	jz	FmpGot
 	add	bx, 16			; for next entry
-	cmp	bx, 202h+BootBias
+	cmp	bx, 202h+BOOTBIAS
 	jnz	FmpNext
 	jmp	FmpRet			;not found extended partition
 
 FmpGot: 				;found my partition.
-	Message ftestHard,<"Found my partition...",cr,lf>
+	Message fTestHARD,<"Found my partition...",cr,lf>
 	xor	ax,ax
-	or	al, fNon_Removable
-	or	word ptr [DI].Flags, ax
-	mov	byte ptr [DI].FormFactor, ffHardFile
-	mov	fBigFat, 0		;assume 12 bit Fat.
+	or	al, FNON_REMOVABLE
+	or	word ptr [DI].BDS_TYPE.FLAGS, ax
+	mov	byte ptr [DI].BDS_TYPE.FORMFACTOR, FFHARDFILE
+	mov	FBIGFAT, 0		;assume 12 bit Fat.
 	mov	ax, Mini_HDLIM
-	mov	[DI].HDLIM, ax
+	mov	[DI].BDS_TYPE.HDLIM, ax
 	mov	ax, Mini_SECLIM
-	mov	[DI].SECLIM, ax
-	mov	al, Rom_MiniDsk_Num
-	mov	[DI].DRIVENUM, al	;set physical number
-	mov	al, Mininum
-	mov	[DI].DRIVELET, al	;set logical number
+	mov	[DI].BDS_TYPE.SECLIM, ax
+	mov	al, Rom_Minidsk_num
+	mov	[DI].BDS_TYPE.DRIVENUM, al	;set physical number
+	mov	al, mininum
+	mov	[DI].BDS_TYPE.DRIVELET, al	;set logical number
 
 	cmp	word ptr es:[bx+10], 0	;AN000;
 	ja	FmpGot_Cont		;AN000;
@@ -2490,12 +2490,12 @@ FmpGot_Cont:				;AN000;
 	rol	dh, 1
 	rol	dh, 1
 	mov	dl, byte ptr ES:[BX+3]	;cyl byte
-	mov	[DI].HIDDEN_TRKS, dx	;set hidden trks
+	mov	[DI].BDSM_type.Hidden_Trks, dx	;set hidden trks
 ;** Now, read the volume boot record into BootBias.
 ;SB33029******************************************************************
 	mov	cx,ES:[BX+2]		;cylinder,cylinder/sector     ;SB ;3.30*
 	mov	dh,ES:[BX+1]		;head			      ;SB ;3.30*
-	mov	dl,Rom_MiniDsk_Num	;drive			      ;SB ;3.30*
+	mov	dl,Rom_Minidsk_num	;drive			      ;SB ;3.30*
 	mov	bx,BOOTBIAS		;buffer offset		      ;SB ;3.30*
 	mov	ax,0201h		;read,1 sector		      ;SB ;3.30*
 	int	13h			;call ROM-Bios routine	      ;SB ;3.30*
@@ -2519,14 +2519,14 @@ FmpGot_Cont:				;AN000;
 
 	push	bx			;now, set the DskDrvs pointer to BPB info.
 	mov	bx, Mini_BPB_ptr
-	lea	si, [di].BYTEPERSEC	;points to BPB of BDSM
+	lea	si, [di].BDS_TYPE.BYTEPERSEC	;points to BPB of BDSM
 	mov	[bx], si
 	inc	Mini_BPB_ptr		;advance to the next address
 	inc	Mini_BPB_ptr
 	pop	bx
 
 	add	DI, type BDSM_type	;adjust to the next BDSM table entry.
-	mov	End_OF_BDSM, DI 	;set the ending address of BDSM table to this.
+	mov	End_Of_BDSM, DI 	;set the ending address of BDSM table to this.
 ;	 Message fTestHard,<"Mini disk installed.",cr,lf>
 FmpnextChain: jmp FmpNext		;let's find out if we have any chained partition
 FmpRet:
@@ -2552,20 +2552,20 @@ assume	ds:code,es:nothing
 	push	si
 	push	es
 
-	les	si, dword ptr cs:Start_BDS	;start of the beginning of list
+	les	si, dword ptr cs:START_BDS	;start of the beginning of list
 I_BDSM_Next:
 	cmp	word ptr es:[si], -1		;end of the list?
 	jz	I_BDSM_New
-	mov	si, word ptr es:[si].LINK
-	mov	ax, word ptr es:[si].LINK+2	;next pointer
+	mov	si, word ptr es:[si].BDS_TYPE.LINK
+	mov	ax, word ptr es:[si].BDS_TYPE.LINK+2	;next pointer
 	mov	es, ax
 	jmp	short I_BDSM_Next
 I_BDSM_New:
 	mov	ax, ds
-	mov	word ptr ds:[di].LINK+2, ax	;BDSM segment had not been initialized.
-	mov	word ptr es:[si].LINK+2, ax
-	mov	word ptr es:[si].LINK, di
-	mov	word ptr ds:[di].LINK, -1	;make sure it is a null ptr.
+	mov	word ptr ds:[di].BDS_TYPE.LINK+2, ax	;BDSM segment had not been initialized.
+	mov	word ptr es:[si].BDS_TYPE.LINK+2, ax
+	mov	word ptr es:[si].BDS_TYPE.LINK, di
+	mov	word ptr ds:[di].BDS_TYPE.LINK, -1	;make sure it is a null ptr.
 
 I_BDSM_ret:
 	pop	es
@@ -2637,7 +2637,7 @@ CLOCK_PRESENT:
 
 	PUSH	SI
 	MESSAGE FTESTINIT,<"CLOCK DEVICE",CR,LF>
-	CALL	READ_REAL_DATE		;MJB002 READ REAL-TIME CLOCK FOR DATE
+	CALL	read_real_date		;MJB002 READ REAL-TIME CLOCK FOR DATE
 
 	CLI				;MJB002
 	MOV	DAYCNT,SI	      ;MJB002 SET SYSTEM DATE
@@ -2679,7 +2679,7 @@ CMOSCK	PROC	NEAR			;	CHECK AND RESET RTC RATE BITS
 
 ;Model byte and Submodel byte were already determined in MSINIT.
 	push	ax
-	cmp	cs:Model_byte, 0FCh	;check for PC-AT model byte
+	cmp	cs:MODEL_BYTE, 0FCh	;check for PC-AT model byte
 					 ;	 EXIT IF NOT "FC" FOR A PC-AT
 	JNE	CMOSCK9 		; Exit if not an AT model
 

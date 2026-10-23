@@ -3,23 +3,23 @@
 ;
 date_verify:				    ;
 assume	ds:code,es:nothing
-	cmp	byte ptr bin_date_time+0,20h  ; century check
+	cmp	byte ptr BIN_DATE_TIME+0,20h  ; century check
 	ja	date_error		    ; jmp error
 	jz	century_20		    ; jmp in 20th century
-	cmp	byte ptr bin_date_time+0,19h  ; century check
+	cmp	byte ptr BIN_DATE_TIME+0,19h  ; century check
 	jb	date_error		    ; jmp error
-	cmp	byte ptr bin_date_time+1,80h  ; year check
+	cmp	byte ptr BIN_DATE_TIME+1,80h  ; year check
 	jb	date_error		    ; jmp error
 century_20:				    ;
-	cmp	byte ptr bin_date_time+1,99h  ; year check
+	cmp	byte ptr BIN_DATE_TIME+1,99h  ; year check
 	ja	date_error		    ; jmp error
-	cmp	byte ptr bin_date_time+2,12h  ; month check
+	cmp	byte ptr BIN_DATE_TIME+2,12h  ; month check
 	ja	date_error		    ; jmp error
-	cmp	byte ptr bin_date_time+2,00h  ; month check
+	cmp	byte ptr BIN_DATE_TIME+2,00h  ; month check
 	jbe	date_error		    ; jmp error
-	cmp	byte ptr bin_date_time+3,31h  ; day check
+	cmp	byte ptr BIN_DATE_TIME+3,31h  ; day check
 	ja	date_error		    ; jmp error
-	cmp	byte ptr bin_date_time+3,00h  ; day check
+	cmp	byte ptr BIN_DATE_TIME+3,00h  ; day check
 	jbe	date_error		    ; jmp error
 	clc				    ; set success flag
 	ret				    ;
@@ -32,11 +32,11 @@ date_error:				    ;
 ;
 time_verify:
 assume	ds:code,es:nothing
-	cmp	byte ptr bin_date_time+0,24H
+	cmp	byte ptr BIN_DATE_TIME+0,24H
 	ja	time_error
-	cmp	byte ptr bin_date_time+1,59H
+	cmp	byte ptr BIN_DATE_TIME+1,59H
 	ja	time_error
-	cmp	byte ptr bin_date_time+2,59H
+	cmp	byte ptr BIN_DATE_TIME+2,59H
 	ja	time_error
 	clc
 	ret
@@ -51,7 +51,7 @@ time_error:
 bcd_verify:			;
 assume	ds:code,es:nothing
 	mov	cx,4		; 4 bytes to check
-	mov	bx,offset bin_date_time   ;
+	mov	bx,offset BIN_DATE_TIME   ;
 bv_loop:			;
 	mov	al,[bx] 	; get a bcd number (0..99)
 	mov	ah,al		;
