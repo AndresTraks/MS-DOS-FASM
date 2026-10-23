@@ -8,10 +8,19 @@
 ; touches the disk itself it leaves to an OEM module, and GENFOR.ASM is the
 ; generic one Microsoft shipped for "any ms-dos disk": it takes the geometry
 ; from the drive's DPB, zeros the FAT and the directory, and looks for bad
-; sectors by reading every allocation unit.  Its DISKFORMAT does nothing,
-; there being no track to lay down that DOS knows about -- which suits a
-; diskette image exactly, as the sectors are all there whether anyone has
-; written them or not.
+; sectors by reading every allocation unit.  Its DISKFORMAT lays down no
+; track, there being none that DOS knows about -- which suits a diskette image
+; exactly, as the sectors are all there whether anyone has written them or
+; not -- and writes the boot sector instead, which is the one thing
+; FORMAT.txt asks of DISKFORMAT that Microsoft's generic module left out.
+;
+; The /S path, where FORMAT transfers the system to the disk it has just
+; made, carried two faults, both of them in FORMAT.ASM and both fixed: the
+; REP STOSB that clears the FAT image went through an ES that only the /S
+; path leaves pointing somewhere else, and the SETBLOCK that gives away the
+; memory above the program ran before the OEM module's INIT, which is what
+; says where the program's own buffers end.  tests/formats.sh makes a
+; bootable disk with /S alone and boots it.
 ;
 ; Assembled as one file, so the PUBLIC and EXTRN pairs the two modules used to
 ; resolve between them are gone.

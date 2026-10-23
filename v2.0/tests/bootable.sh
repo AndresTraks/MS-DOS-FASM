@@ -13,10 +13,9 @@
 # started from.  GENFOR.ASM now writes the image bootsect.asm builds, the same
 # one create_image.sh puts on the system disk.
 #
-# FORMAT /S would do all three steps itself, and does not: it transfers the
-# system by writing it to the disk after the format, and hangs there after the
-# FATs are written, with or without the boot sector above.  That is a separate
-# fault and the long way round proves the disk either way.
+# FORMAT /S does all three steps itself, and tests/formats.sh is that: two
+# faults in FORMAT.ASM used to stop it, and they are fixed.  This stays as the
+# long way round, which is the only thing that exercises SYS.
 #
 # The format run is slow, the bad sector scan reading every allocation unit on
 # the disk, so this is not in run-all.sh.

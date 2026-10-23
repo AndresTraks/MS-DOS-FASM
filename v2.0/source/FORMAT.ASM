@@ -228,8 +228,24 @@ NOT_SW_B:
         end if
 
         MOV     [SWITCHMAP],BX
+
+; INIT goes first, and not after the memory below has been given away.  It is
+; what moves FREESPACE up past the FAT image and the temp buffer the format
+; builds, and the SETBLOCK below hands everything above FREESPACE to the
+; system files.  In the order the source had them FREESPACE was still just
+; ENDLOC, so the FAT image landed on the memory control block of the block
+; FORMAT had allocated for the system, and DOS answered "Memory allocation
+; error" and could not load COMMAND again.
+INITCALL:
+        CALL    INIT                    ;Let OEM read any files before disk is changed
+        JNC     INITOK
+        MOV     DX,FRMTERR
+        CALL    PRINT
+        JMP     FEXIT
+
+INITOK:
         TEST    [SWITCHMAP],SYSSW
-        JZ      INITCALL
+        JZ      SWITCHCHK
         CALL    SAVUDIRS
         MOV     BX,[FREESPACE]
         ADD     BX,15
@@ -255,17 +271,10 @@ NOT_SW_B:
 
 RDFRST:
         CALL    READDOS                 ;Read BIOS and DOS
-        JNC     INITCALL                ;OK -- read next file
+        JNC     SWITCHCHK               ;OK -- read next file
 NEEDSYS:
         CALL    SYSPRM                  ;Prompt for system disk
         JMP     RDFRST                  ;Try again
-
-INITCALL:
-        CALL    INIT                    ;Let OEM read any files before disk is changed
-        JNC     SWITCHCHK
-        MOV     DX,FRMTERR
-        CALL    PRINT
-        JMP     FEXIT
 
 SWITCHCHK:
         MOV     DX,[SWITCHMAP]
@@ -716,6 +725,15 @@ ROUNDED:
         MOV     CX,DX
         MOV     DI,[FATSPACE]
         ADD     DI,3
+; The ASSUME at the top of this file says ES belongs to the program, and
+; nothing puts it back after READDOS, which only /S runs: it ends on
+; LES SI,[COMSIZB], which leaves the high word of a file size -- zero -- in
+; ES.  So with /S this cleared 4271 bytes at 0000:16E4 rather than at
+; CS:16E4, which is the middle of the DOS kernel, and the INT 21H after it
+; never came back.  Without /S the ES DOS gives a .COM is still the right one
+; and the FAT buffer was cleared correctly, which is why only /S hung.
+        PUSH    CS
+        POP     ES
         REP     STOSB
         MOV     AH,DISK_RESET
         INT     21H
