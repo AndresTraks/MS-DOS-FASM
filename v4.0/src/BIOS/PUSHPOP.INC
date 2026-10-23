@@ -1,20 +1,24 @@
-	IF1								  ;3.30
+;	IF1								  ;3.30
 
-SaveReg MACRO	reglist 		;; push those registers
-IRP reg,<reglist>
+; Both are called with the register list in angle brackets -- SaveReg <AX,ES>
+; -- which fasm reads as one argument holding the lot, the same as MASM did,
+; so IRP takes it apart inside.  Nothing in the BIOS calls either of these;
+; SYSCONF.ASM does.
+macro SaveReg	reglist 		;; push those registers
+{
+    irp reg, reglist \{
 	?stackdepth = ?stackdepth + 1
-	PUSH	reg
-ENDM
-ENDM
-.xcref	SaveReg
+	PUSH	reg \}
+}
+;.xcref	SaveReg
 
 
-RestoreReg  MACRO   reglist		;; pop those registers
-IRP reg,<reglist>
+macro RestoreReg   reglist		;; pop those registers
+{
+    irp reg, reglist \{
 	?stackdepth = ?stackdepth - 1
-	POP	reg
-ENDM
-ENDM
-.xcref	RestoreReg
+	POP	reg \}
+}
+;.xcref	RestoreReg
 
-	ENDIF								  ;3.30
+;	ENDIF								  ;3.30

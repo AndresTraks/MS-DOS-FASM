@@ -39,17 +39,25 @@
 ;	The three macros preserve all register values.	If "test" is zero
 ;	defined during assembly then the  marco produce no code.
 ;
+; MASM had two sets of these: the real ones under IF iTEST and a set of empty
+; ones under the ELSE.  fasm's preprocessor makes a macro as it reads the
+; line, whether or not the IF around it would have held, so there can only be
+; one set -- and the IF goes inside the body instead, which comes to the same
+; thing.  iTEST is 0 in the release, so none of this is assembled; it is
+; converted all the same, and is the one part of the BIOS here that has never
+; been through the assembler.
+;
 
-	IF	iTEST							  ;3.30
-	   IFNDEF MSGOUT						  ;3.30
-		EXTRN	MSGOUT:NEAR,MSGNUM:NEAR 			  ;3.30
-	   ENDIF							  ;3.30
-	   IFNDEF NUMBUF						  ;3.30
-	    EXTRN   NUMBUF:BYTE,DIGITS:BYTE,FTESTBITS:WORD		  ;3.30
-	   ENDIF							  ;3.30
-	   IFNDEF DUMPBYTES						  ;3.30
-		EXTRN	DUMPBYTES:NEAR,OUTCHAR:NEAR,HEX_TO_ASCII:NEAR	  ;3.30
-	   ENDIF							  ;3.30
+;	IF	iTEST							  ;3.30
+;	   IFNDEF MSGOUT						  ;3.30
+;		EXTRN	MSGOUT:NEAR,MSGNUM:NEAR 			  ;3.30
+;	   ENDIF							  ;3.30
+;	   IFNDEF NUMBUF						  ;3.30
+;	    EXTRN   NUMBUF:BYTE,DIGITS:BYTE,FTESTBITS:WORD		  ;3.30
+;	   ENDIF							  ;3.30
+;	   IFNDEF DUMPBYTES						  ;3.30
+;		EXTRN	DUMPBYTES:NEAR,OUTCHAR:NEAR,HEX_TO_ASCII:NEAR	  ;3.30
+;	   ENDIF							  ;3.30
 
 
 
@@ -68,49 +76,79 @@ FtestClock  equ     0000000010000000b	; wathc clock device  5/2/86  ;3.30
 ; message macro -- see above for description
 ;
 
-MESSAGE MACRO	Bits,msg
-	    LOCAL   A,B 						  ;3.30
+macro MESSAGE	Bits,msg
+{
+    if iTEST
+	local	a,b
 	jmp	SHORT b
 a:	db	msg,0
 b:	push	SI
 	push	AX
 	mov	AX,Bits
-	mov	SI,OFFSET a
+	mov	SI,a
 	call	MSGOUT
 	pop	AX
 	pop	SI
-endm
+    end if
+}
 
 
 ;
 ; mnum macro -- see above for description
 ;
 
-MNum	MACRO	Bits,num
+; The modules call these in whatever case they please -- MESSAGE, Message
+; and message; MNUM and mnum -- all of them one name to MASM.  fasm tells
+; them apart, so the other spellings stand as names for the same macro
+; rather than being rewritten at a hundred and fifty call sites.
+macro Message Bits,msg
+{
+	MESSAGE Bits,msg
+}
+macro message Bits,msg
+{
+	MESSAGE Bits,msg
+}
+macro MNUM	Bits,num
+{
+	MNum	Bits,num
+}
+macro mnum	Bits,num
+{
+	MNum	Bits,num
+}
+
+macro MNum	Bits,num
+{
+    if iTEST
 	push	AX
-ifb <num>
+	match , num \{
 	mov	AX,Bits
-	call	MSGNUM
-else
+	call	MSGNUM \}
+	match any, num \{
 	push	BX
 	mov	BX,num
 	mov	AX,Bits
 	call	MSGNUM
-	pop	BX
-endif
+	pop	BX \}
 	pop	AX
-endm
+    end if
+}
 
 
 ;
 ; zwait macro -- see above for description
 ;
 
-ZWAIT	MACRO
-	Message fTestALL,<"? ">
+macro ZWAIT
+{
+    if iTEST
+	MESSAGE fTestALL,<"? ">
 	CALL	ZWAITrtn
-ENDM
+    end if
+}
 
+if iTEST
 ZWAITrtn:
 	pushf				; save the flags
 	push	AX			; preserve AX
@@ -119,10 +157,13 @@ ZWAITrtn:
 	pop	AX			; restore AX
 	popf				; restore the flags
 	ret
+end if
 
 ;Dump_byte dumps the memory contents in hex. 				  ;3.30
 ;DUMPOFFLABEL should be a label or a variable defined in DUMPSEG.	  ;3.30
-DUMP_BYTE	MACRO	DUMPSEG, DUMPOFFLABEL, BYTELENGTH		  ;3.30
+macro DUMP_BYTE 	DUMPSEG, DUMPOFFLABEL, BYTELENGTH		  ;3.30
+{
+    if iTEST
 	push	es							  ;3.30
 	PUSH	DS							  ;3.30
 	PUSH	SI							  ;3.30
@@ -130,19 +171,22 @@ DUMP_BYTE	MACRO	DUMPSEG, DUMPOFFLABEL, BYTELENGTH		  ;3.30
 									  ;3.30
 	MOV	CX, DUMPSEG						  ;3.30
 	MOV	DS, CX							  ;3.30
-	MOV	SI, OFFSET DUMPOFFLABEL 				  ;3.30
+	MOV	SI, DUMPOFFLABEL					  ;3.30
 	MOV	CX, BYTELENGTH						  ;3.30
-	call	dumpbytes						  ;3.30
+	call	DUMPBYTES						  ;3.30
 									  ;3.30
 	POP	CX							  ;3.30
 	POP	SI							  ;3.30
 	POP	DS							  ;3.30
 	pop	es							  ;3.30
-	ENDM								  ;3.30
+    end if
+}
 									  ;3.30
 ;Dump_Byte_Reg dumps the memory contents in hex. -  4/9/86		  ;3.30
 ;DUMPOFFREG should be a register contains the offset value in DUMPSEG.	  ;3.30
-DUMP_BYTE_REG	MACRO	DUMPSEG, DUMPOFFREG, BYTELENGTH 		  ;3.30
+macro DUMP_BYTE_REG	DUMPSEG, DUMPOFFREG, BYTELENGTH 		  ;3.30
+{
+    if iTEST
 	push	es							  ;3.30
 	PUSH	DS							  ;3.30
 	PUSH	SI							  ;3.30
@@ -152,41 +196,29 @@ DUMP_BYTE_REG	MACRO	DUMPSEG, DUMPOFFREG, BYTELENGTH 		  ;3.30
 	MOV	DS, CX							  ;3.30
 	MOV	SI, DUMPOFFREG						  ;3.30
 	MOV	CX, BYTELENGTH						  ;3.30
-	call	dumpbytes						  ;3.30
+	call	DUMPBYTES						  ;3.30
 									  ;3.30
 	POP	CX							  ;3.30
 	POP	SI							  ;3.30
 	POP	DS							  ;3.30
 	pop	es							  ;3.30
-	ENDM								  ;3.30
+    end if
+}
 
-else
-		; if test is not defined then make macro into null statements
-Message macro
-ENDM
-
-MNUM	macro
-ENDM
-
-ZWAIT	macro
-ENDM
-
-DUMP_BYTE   MACRO							  ;3.30
-	    ENDM							  ;3.30
-DUMP_BYTE_REG MACRO							  ;3.30
-	    ENDM							  ;3.30
-	ENDIF								  ;3.30
+; The PUBLIC is gone, there being one binary and nothing to export to, so
+; what is left of these two is the label that marks where a message block
+; starts and ends -- which the path tables are built from, and only when the
+; module asked for them by defining PATHGEN.
+macro PATHSTART INDEX,ABBR						  ;3.30
+{
+    if defined PATHGEN							  ;3.30
+	ABBR#INDEX#S:							  ;3.30
+    end if								  ;3.30
+}									  ;3.30
 									  ;3.30
-PATHSTART MACRO INDEX,ABBR						  ;3.30
-	IFDEF	PATHGEN 						  ;3.30
-	    PUBLIC  ABBR&INDEX&S,ABBR&INDEX&E				  ;3.30
-	    ABBR&INDEX&S LABEL	 BYTE					  ;3.30
-	ENDIF								  ;3.30
-	ENDM								  ;3.30
-									  ;3.30
-PATHEND MACRO	INDEX,ABBR						  ;3.30
-	IFDEF	PATHGEN 						  ;3.30
-	    ABBR&INDEX&E LABEL	 BYTE					  ;3.30
-	ENDIF								  ;3.30
-	ENDM								  ;3.30
-
+macro PATHEND	INDEX,ABBR						  ;3.30
+{
+    if defined PATHGEN							  ;3.30
+	ABBR#INDEX#E:							  ;3.30
+    end if								  ;3.30
+}

@@ -1,15 +1,33 @@
-	%OUT DEVSYM.INC...
+;	%OUT DEVSYM.INC...
+; The five structures here describe what a device driver is handed and
+; what it is: the device header, the request header every call begins
+; with, and the three packets the 4.00 generic IOCTL calls pass.  MASM
+; made each field name a name for its offset, so any address could be
+; read field by field; in fasm the fields belong to the structure, and a
+; reference names it -- ES:[BX].REQSTAT becomes [ES:BX+SRHEAD.REQSTAT].
+; A field that said ? says 0, fasm's structures wanting a value, and the
+; VIRTUAL block after each one is what gives the fields their offsets and
+; the structure its size.
 ;	SCCSID = @(#)DEVSYM.ASM 1.10 85/09/04
 ;	SCCSID = @(#)DEVSYM.ASM 1.10 85/09/04
 
 ; THE DEVICE TABLE LIST HAS THE FORM:
-SYSDEV	       STRUC
-SDEVNEXT       DD    ?		    ;POINTER TO NEXT DEVICE HEADER
-SDEVATT        DW    ?		    ;ATTRIBUTES OF THE DEVICE
-SDEVSTRAT      DW    ?		    ;STRATEGY ENTRY POINT
-SDEVINT        DW    ?		    ;INTERRUPT ENTRY POINT
-SDEVNAME       DB    8 DUP (?)	    ;NAME OF DEVICE (ONLY FIRST BYTE USED FOR BLOCK)
-SYSDEV	       ENDS
+STRUC SYSDEV
+{
+.SDEVNEXT       DD    0		    ;POINTER TO NEXT DEVICE HEADER
+.SDEVATT        DW    0		    ;ATTRIBUTES OF THE DEVICE
+.SDEVSTRAT      DW    0		    ;STRATEGY ENTRY POINT
+.SDEVINT        DW    0		    ;INTERRUPT ENTRY POINT
+.SDEVNAME       DB    8 dup (0)	    ;NAME OF DEVICE (ONLY FIRST BYTE USED FOR BLOCK)
+}
+match =SYSDEV_LAID_OUT, SYSDEV_LAID_OUT
+{
+    SYSDEV_LAID_OUT equ 1
+    virtual at 0
+      SYSDEV SYSDEV
+      sizeof.SYSDEV = $ - SYSDEV
+    end virtual
+}
 
 ;
 ; ATTRIBUTE BIT MASKS
@@ -93,13 +111,22 @@ ISCIN	       EQU   0001H	    ;BIT 0 - THIS DEVICE IS THE CONSOLE INPUT.
 EXTDRVR        EQU   0002H	    ;BIT 1 - BLOCK DEVICE EXTNDED DRIVER
 
 ;STATIC REQUEST HEADER
-SRHEAD	       STRUC
-REQLEN	       DB    ?		    ;LENGTH IN BYTES OF REQUEST BLOCK
-REQUNIT        DB    ?		    ;DEVICE UNIT NUMBER
-REQFUNC        DB    ?		    ;TYPE OF REQUEST
-REQSTAT        DW    ?		    ;STATUS WORD
-	       DB    8 DUP(?)	    ;RESERVED FOR QUEUE LINKS
-SRHEAD	       ENDS
+STRUC SRHEAD
+{
+.REQLEN	       DB    0		    ;LENGTH IN BYTES OF REQUEST BLOCK
+.REQUNIT        DB    0		    ;DEVICE UNIT NUMBER
+.REQFUNC        DB    0		    ;TYPE OF REQUEST
+.REQSTAT        DW    0		    ;STATUS WORD
+	       DB    8 dup(0)	    ;RESERVED FOR QUEUE LINKS
+}
+match =SRHEAD_LAID_OUT, SRHEAD_LAID_OUT
+{
+    SRHEAD_LAID_OUT equ 1
+    virtual at 0
+      SRHEAD SRHEAD
+      sizeof.SRHEAD = $ - SRHEAD
+    end virtual
+}
 
 ;STATUS WORD MASKS
 STERR	       EQU   8000H	    ;BIT 15 - ERROR
@@ -151,15 +178,24 @@ DEVOUTL        EQU   DEVWRT	    ; LENGTH OF OUTPUT UNTIL BUSY
 ; GENERIC IOCTL REQUEST STRUCTURE
 ;	SEE THE DOS 4.0 DEVICE DRIVER SPEC FOR FURTHER ELABORATION.
 ;
-IOCTL_REQ      STRUC
-	       DB    (SIZE SRHEAD) DUP(?)
+STRUC IOCTL_REQ
+{
+	       DB    sizeof.SRHEAD dup(0)
 				    ; GENERIC IOCTL ADDITION.
-MAJORFUNCTION  DB    ?		    ;FUNCTION CODE
-MINORFUNCTION  DB    ?		    ;FUNCTION CATEGORY
-REG_SI	       DW    ?
-REG_DI	       DW    ?
-GENERICIOCTL_PACKET DD ?	    ; POINTER TO DATA BUFFER
-IOCTL_REQ      ENDS
+.MAJORFUNCTION  DB    0		    ;FUNCTION CODE
+.MINORFUNCTION  DB    0		    ;FUNCTION CATEGORY
+.REG_SI	       DW    0
+.REG_DI	       DW    0
+.GENERICIOCTL_PACKET DD 0	    ; POINTER TO DATA BUFFER
+}
+match =IOCTL_REQ_LAID_OUT, IOCTL_REQ_LAID_OUT
+{
+    IOCTL_REQ_LAID_OUT equ 1
+    virtual at 0
+      IOCTL_REQ IOCTL_REQ
+      sizeof.IOCTL_REQ = $ - IOCTL_REQ
+    end virtual
+}
 
 ;	DEFINITIONS FOR IOCTL_REQ.MINORFUNCTION
 GEN_IOCTL_WRT_TRK   EQU   40H
@@ -168,20 +204,38 @@ GEN_IOCTL_FN_TST    EQU   20H	    ; USED TO DIFF. BET READS AND WRTS
 
 ;; 32-bit absolute read/write input list structure
 
-ABS_32RW	 STRUC
-SECTOR_RBA	 DD	 ?	    ; relative block address
-ABS_RW_COUNT	 DW	 ?	    ; number of sectors to be transferred
-BUFFER_ADDR	 DD	 ?	    ; data addrress
-ABS_32RW	 ENDS
+STRUC ABS_32RW
+{
+.SECTOR_RBA	 DD	 0	    ; relative block address
+.ABS_RW_COUNT	 DW	 0	    ; number of sectors to be transferred
+.BUFFER_ADDR	 DD	 0	    ; data addrress
+}
+match =ABS_32RW_LAID_OUT, ABS_32RW_LAID_OUT
+{
+    ABS_32RW_LAID_OUT equ 1
+    virtual at 0
+      ABS_32RW ABS_32RW
+      sizeof.ABS_32RW = $ - ABS_32RW
+    end virtual
+}
 
 ;; media ID info
 
-MEDIA_ID_INFO	 STRUC
-MEDIA_level	 DW	 0	    ; info level
-MEDIA_Serial	 DD	 0	    ; serial #
-MEDIA_Label	 DB	 11 dup (' ') ;volume label
-MEDIA_System	 DB	 8  dup (' ') ;system type
-MEDIA_ID_INFO	 ENDS
+STRUC MEDIA_ID_INFO
+{
+.MEDIA_level	 DW	 0	    ; info level
+.MEDIA_Serial	 DD	 0	    ; serial #
+.MEDIA_Label	 DB	 11 dup (' ') ;volume label
+.MEDIA_System	 DB	 8  dup (' ') ;system type
+}
+match =MEDIA_ID_INFO_LAID_OUT, MEDIA_ID_INFO_LAID_OUT
+{
+    MEDIA_ID_INFO_LAID_OUT equ 1
+    virtual at 0
+      MEDIA_ID_INFO MEDIA_ID_INFO
+      sizeof.MEDIA_ID_INFO = $ - MEDIA_ID_INFO
+    end virtual
+}
 
 ;; equates for DOS34_FLAG
 

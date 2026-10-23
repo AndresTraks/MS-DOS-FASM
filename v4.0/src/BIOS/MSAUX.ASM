@@ -44,18 +44,18 @@
 ;----------------------------------------------------------------
 
 ;;Ver 3.30 modification ---------------------------
-	itest=0
-	INCLUDE MSGROUP.INC	;DEFINE CODE SEGMENT
-	INCLUDE JUMPMAC.INC
-	INCLUDE MSMACRO.INC
+	iTEST=0
+	INCLUDE 'MSGROUP.INC'	;DEFINE CODE SEGMENT
+	INCLUDE 'JUMPMAC.INC'
+	INCLUDE 'MSMACRO.INC'
 
-	EXTRN ERR$CNT:NEAR	;MSBIO1
-	EXTRN GETDX:NEAR	;MSBIO1
-	EXTRN RDEXIT:NEAR	;MSCON
-	EXTRN EXIT:NEAR 	;MSBIO1
-	EXTRN BUS$EXIT:NEAR	;MSBIO1
+;	EXTRN ERR$CNT:NEAR	;MSBIO1
+;	EXTRN GETDX:NEAR	;MSBIO1
+;	EXTRN RDEXIT:NEAR	;MSCON
+;	EXTRN EXIT:NEAR 	;MSBIO1
+;	EXTRN BUS$EXIT:NEAR	;MSBIO1
 				;DATA
-	EXTRN AUXBUF:BYTE	;MSDATA
+;	EXTRN AUXBUF:BYTE	;MSDATA
 
 ;		VALUES IN AH, REQUESTING FUNCTION OF INT 14H IN ROM BIOS
 AUXFUNC_SEND	 EQU	1	;TRANSMIT
@@ -95,9 +95,9 @@ FLAG_REC_SIG	 EQU	80H	;RECEIVE LINE SIGNAL DETECT
 ;	      "auxnum" first byte has number of aux device (rel 0):
 ;								  :
 ;----------------------------------------------------------------
-	PUBLIC AUX$READ
-AUX$READ PROC NEAR
-	ASSUME	DS:CODE 	; SET BY AUX DEVICE DRIVER ENTRY ROUTINE
+;	PUBLIC AUX$READ
+AUX$READ:
+;	ASSUME	DS:CODE 	; SET BY AUX DEVICE DRIVER ENTRY ROUTINE
 	jcxz	EXVEC2		; if no characters, get out
 	call	GETBX		; put address of AUXBUF in BX
 	xor	AX,AX		; clear AX register
@@ -113,7 +113,7 @@ AUX2:				;
 	loop	AUX1		; if more character, go around again
 EXVEC2: 			;
 	Jump	EXIT		; all done, successful exit
-AUX$READ ENDP
+;AUX$READ ENDP
 
 ;
 ; AUXIN: make a call on ROM BIOS to read character from
@@ -122,7 +122,7 @@ AUX$READ ENDP
 ;	 does NOT return to where it was called from.
 ;
 
-AUXIN	PROC	NEAR
+AUXIN:
 
 	mov	ah,AUXFUNC_RECEIVE
 	call	AUXOP
@@ -140,7 +140,7 @@ AUXIN	PROC	NEAR
 	JUMP	ERR$CNT
 AROK:
 	RET			;CHAR JUST READ IS IN AL, STATUS IS IN AH
-AUXIN	ENDP
+;AUXIN	ENDP
 
 ;----------------------------------------------------------------
 ;								:
@@ -150,9 +150,9 @@ AUXIN	ENDP
 ;								:
 ;----------------------------------------------------------------
 ;
-	PUBLIC	AUX$RDND
-AUX$RDND PROC	NEAR
-	ASSUME	DS:CODE 	; SET BY AUX DEVICE DRIVER ENTRY ROUTINE
+;	PUBLIC	AUX$RDND
+AUX$RDND:
+;	ASSUME	DS:CODE 	; SET BY AUX DEVICE DRIVER ENTRY ROUTINE
 	call	GETBX		; have BX point to AUXBUF
 	mov	AL,[BX] 	; copy contents of buffer to AL
 	or	AL,AL		; if AL is non-zero (char in buffer)
@@ -171,16 +171,16 @@ AUXRDX: 			;
 
 AUXBUS: 			;
 	Jump	BUS$EXIT	; jump to device busy exit
-AUX$RDND ENDP
+;AUX$RDND ENDP
 
 ;----------------------------------------------------------------
 ;								:
 ;		Aux Output Status				:
 ;								:
 ;----------------------------------------------------------------
-	PUBLIC AUX$WRST
-AUX$WRST PROC	NEAR
-	ASSUME	DS:CODE 	; SET BY AUX DEVICE DRIVER ENTRY ROUTINE
+;	PUBLIC AUX$WRST
+AUX$WRST:
+;	ASSUME	DS:CODE 	; SET BY AUX DEVICE DRIVER ENTRY ROUTINE
 	call	AUXSTAT 	; get status of AUX in AX
 				; now test to see if device is busy
 				; if this bit is not set,
@@ -190,9 +190,9 @@ AUX$WRST PROC	NEAR
 	TEST	AH,FLAG_TRANHOL_EMP ;TEST TRANSMIT HOLD REG EMPTY
 ;;End of modification -------------------------
 	jz	AUXBUS		;   then device is busy (not ready)
-	Jump	Exit
+	Jump	EXIT
 
-AUX$WRST ENDP
+;AUX$WRST ENDP
 
 ;
 ; AUXSTAT makes a call on the ROM-BIOS to determine the status
@@ -203,32 +203,32 @@ AUX$WRST ENDP
 ;		NO other registers are modified
 ;
 
-AUXSTAT	proc near
+AUXSTAT:
 	mov	ah,AUXFUNC_STATUS
 	call	AUXOP
 	ret
-AUXSTAT endp
+;AUXSTAT endp
 
-AUXOP	PROC	NEAR
+AUXOP:
 				;AH=FUNCTION CODE
 				;0=INIT, 1=SEND, 2=RECEIVE, 3=STATUS
 	call	GETDX		; have DX point to proper card
 	int	14h		; call rom-bios for status
 	ret
-AUXOP	ENDP
+;AUXOP	ENDP
 
 ;----------------------------------------------------------------
 ;								:
 ;  Flush AUX Input buffer - set contents of AUXBUF to zero	:
 ;								:
 ;----------------------------------------------------------------
-	PUBLIC AUX$FLSH
-AUX$FLSH PROC	NEAR
-	ASSUME	DS:CODE 	; SET BY AUX DEVICE DRIVER ENTRY ROUTINE
+;	PUBLIC AUX$FLSH
+AUX$FLSH:
+;	ASSUME	DS:CODE 	; SET BY AUX DEVICE DRIVER ENTRY ROUTINE
 	call	GETBX		; get BX to point to AUXBUF
-	mov	BYTE PTR [BX],0 ; zero out buffer
-	Jump	Exit		; all done, successful return
-AUX$FLSH ENDP
+	mov	byte [BX],0 ; zero out buffer
+	Jump	EXIT		; all done, successful return
+;AUX$FLSH ENDP
 
 
 
@@ -237,13 +237,13 @@ AUX$FLSH ENDP
 ;		Write to Auxilary Device			:
 ;								:
 ;----------------------------------------------------------------
-	PUBLIC	AUX$WRIT
-AUX$WRIT PROC	NEAR
-	ASSUME	DS:CODE 	; SET BY AUX DEVICE DRIVER ENTRY ROUTINE
+;	PUBLIC	AUX$WRIT
+AUX$WRIT:
+;	ASSUME	DS:CODE 	; SET BY AUX DEVICE DRIVER ENTRY ROUTINE
 	jcxz	EXVEC2		; if CX is zero, no characters
 				;   to be written, jump to exit
 AUX$LOOP:
-	mov	AL,ES:[DI]	; get character to be written
+	mov	AL,[es:DI]	; get character to be written
 	inc	DI		; move DI pointer to next character
 ;;Ver 3.30 modification ---------------------------
 	MOV	AH,AUXFUNC_SEND ;VALUE=1, INDICATES A WRITE
@@ -258,8 +258,8 @@ AUX$LOOP:
 				; if CX is non-zero, still more
 AWOK:
 	loop	AUX$LOOP	; more characrter to print
-	Jump	Exit		; all done, successful return
-AUX$WRIT ENDP
+	Jump	EXIT		; all done, successful return
+;AUX$WRIT ENDP
 
 
 ;
@@ -270,12 +270,12 @@ AUX$WRIT ENDP
 ;  NOTE: The getdx routine is in msbio1 and looks like:
 ;	mov	dx,word ptr cs:[auxnum]
 ;
-GETBX	PROC	NEAR
+GETBX:
 	call	GETDX
 	mov	BX,DX
-	add	BX,OFFSET AUXBUF
+	add	BX,AUXBUF
 	ret
-GETBX	ENDP
+;GETBX	ENDP
 
-CODE	ENDS
-	END
+;CODE	ENDS
+;	END

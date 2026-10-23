@@ -1,35 +1,53 @@
 
 	PAGE	,132			;
 	TITLE	MSBIO1.asm - BIOS
+
+; The first module of the BIOS, and the first in the link: the device
+; headers and the command tables are in MSBDATA.INC below, and the code
+; here is what DOS reaches them through -- the strategy entry that saves
+; the request packet, an interrupt entry per device that picks the
+; device's command table, and the walk through that table to the routine
+; for the command, which the other modules supply.
+;
+; Those entries are called far and return far, so every RET inside a PROC
+; MASM declared FAR is written RETF here.
+;
+; ENTRY, the label the device entry points converge on, is ENTRY_ here:
+; fasm keeps ENTRY for itself, that being how a program says where it
+; starts.
+;
+; iTEST is 0, as the release has it, so the debugging routines below are
+; not assembled.  They are converted all the same, and are the one part
+; of this file the assembler has never seen.
 ;==============================================================================
 ;REVISION HISTORY:
 ;AN000 - New for DOS Version 4.00 - J.K.
 ;AC000 - Changed for DOS Version 4.00 - J.K.
 ;AN00x - PTM number for DOS Version 4.00 - J.K.
 ;==============================================================================
-COMMENT *
-THE LINK STEP IS PERFORMED BY USING THE FOLLOWING "NEW.ARF" FILE:
-msbio1+
-msSTACK+
-MsCON+
-msAUX+
-msLPT+
-msCLOCK+
-msdISK+
-msBIO2+
-C:\BIO2\OLDOBJ\disk+
-C:\BIO2\OLDOBJ\msinit+
-C:\BIO2\OLDOBJ\sysinit1+
-C:\BIO2\OLDOBJ\sysinit2+
-C:\BIO2\OLDOBJ\sysimes,msbio,/M;
-
-THE FOLLOWING IS A BATCH FILE THAT CAN BE USED TO CREATE THE IBMBIO.COM
-WHERE "LOCSCR" IS A FILE THAT JUST HAS THE NUMBER, 70:
-
-link @NEW.ARF
-exe2bin ibmbio ibmbio.com <C:\BIO2\Locscr
-del ibmbio.exe
-(END OF COMMENT)*
+;COMMENT *
+;THE LINK STEP IS PERFORMED BY USING THE FOLLOWING "NEW.ARF" FILE:
+;msbio1+
+;msSTACK+
+;MsCON+
+;msAUX+
+;msLPT+
+;msCLOCK+
+;msdISK+
+;msBIO2+
+;C:\BIO2\OLDOBJ\disk+
+;C:\BIO2\OLDOBJ\msinit+
+;C:\BIO2\OLDOBJ\sysinit1+
+;C:\BIO2\OLDOBJ\sysinit2+
+;C:\BIO2\OLDOBJ\sysimes,msbio,/M;
+;
+;THE FOLLOWING IS A BATCH FILE THAT CAN BE USED TO CREATE THE IBMBIO.COM
+;WHERE "LOCSCR" IS A FILE THAT JUST HAS THE NUMBER, 70:
+;
+;link @NEW.ARF
+;exe2bin ibmbio ibmbio.com <C:\BIO2\Locscr
+;del ibmbio.exe
+;(END OF COMMENT)*
 
 ;***For testing purposes, set the TEST flag to 1. Otherwise reset it.
 
@@ -37,44 +55,52 @@ iTEST=0
 
 PATHGEN =	1
 
-.SALL
-	%OUT	...MSBIO1.ASM
+;.SALL
+;	%OUT	...MSBIO1.ASM
 
 ; THIS IS A DOSMAC MACRO WHICH IS USED IN DEVSYM WHICH IS INCLUDED LATER
-BREAK	MACRO	SUBTITLE
+macro BREAK	SUBTITLE
+{
 	SUBTTL	SUBTITLE
 	PAGE
-	ENDM
+}
 
-POPFF	MACRO
+; A POPF that an 80286 will not fault on: the IRET in the middle is
+; jumped over and then called, so it pops the flags the PUSH CS and the
+; CALL left behind.
+macro POPFF
+{
 	JMP	$+3
 	IRET
 	PUSH	CS
 	CALL	$-2
-	ENDM
+}
 
-	INCLUDE MSGROUP.INC	;DEFINE CODE SEGMENT
+	INCLUDE 'MSGROUP.INC'	;DEFINE CODE SEGMENT
 
-SYSINITSEG SEGMENT PUBLIC 'SYSTEM_INIT'
-SYSINITSEG ENDS
+; An empty declaration, so that the modules could name the segment
+; SYSINIT lives in.  The link file names it instead.
+;SYSINITSEG SEGMENT PUBLIC 'SYSTEM_INIT'
+;SYSINITSEG ENDS
 
 
-	INCLUDE JUMPMAC.INC
-PATHSTART MACRO INDEX,ABBR
-	IFDEF	PATHGEN
-	    PUBLIC  ABBR&INDEX&S,ABBR&INDEX&E
-	    ABBR&INDEX&S LABEL	 BYTE
-	ENDIF
-	ENDM
+	INCLUDE 'JUMPMAC.INC'
+macro PATHSTART INDEX,ABBR
+{
+    if defined PATHGEN
+	    ABBR#INDEX#S:
+    end if
+}
 
-PATHEND MACRO	INDEX,ABBR
-	IFDEF	PATHGEN
-	    ABBR&INDEX&E LABEL	 BYTE
-	ENDIF
-	ENDM
+macro PATHEND	INDEX,ABBR
+{
+    if defined PATHGEN
+	    ABBR#INDEX#E:
+    end if
+}
 
-	INCLUDE PUSHPOP.INC
-	INCLUDE DEVSYM.INC		;MJB001
+	INCLUDE 'PUSHPOP.INC'
+	INCLUDE '../INC/DEVSYM.INC'	;MJB001
 
 ;   REV 2.1	5/1/83 ARR ADDED TIMER INT HANDLER AND CHANGED ORDER OF AUX
 ;		    PRN INIT FOR HAL0
@@ -119,7 +145,7 @@ PATHEND MACRO	INDEX,ABBR
 ;
 ;:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-	INCLUDE MSDSKPR.INC
+	INCLUDE 'MSDSKPR.INC'
 
 LF	=	10			;LINE FEED
 CR	=	13			;CARRIAGE RETURN
@@ -135,56 +161,56 @@ INITSPOT =	534H			; ARR IBM WANTS 4 ZEROS HERE
 AKPORT	=	20H
 EOI	=	20H
 
-	ASSUME	CS:CODE,DS:NOTHING,ES:NOTHING
+;	ASSUME	CS:CODE,DS:NOTHING,ES:NOTHING
 
-	EXTRN	MEDIA$CHK:NEAR
-	EXTRN	GET$BPB:NEAR
-	EXTRN	DSK$INIT:NEAR
-	EXTRN	DSK$READ:NEAR
-	EXTRN	DSK$WRIT:NEAR
-	EXTRN	DSK$WRITV:NEAR
-	EXTRN	DSK$OPEN:NEAR
-	EXTRN	DSK$CLOSE:NEAR
-	EXTRN	DSK$REM:NEAR
-	EXTRN	GENERIC$IOCTL:NEAR
-	EXTRN	IOCTL$GETOWN:NEAR
-	EXTRN	IOCTL$SETOWN:NEAR
-	EXTRN	CON$READ:NEAR
-	EXTRN	CON$RDND:NEAR
-	EXTRN	CON$FLSH:NEAR
-	EXTRN	CON$WRIT:NEAR
+;	EXTRN	MEDIA$CHK:NEAR
+;	EXTRN	GET$BPB:NEAR
+;	EXTRN	DSK$INIT:NEAR
+;	EXTRN	DSK$READ:NEAR
+;	EXTRN	DSK$WRIT:NEAR
+;	EXTRN	DSK$WRITV:NEAR
+;	EXTRN	DSK$OPEN:NEAR
+;	EXTRN	DSK$CLOSE:NEAR
+;	EXTRN	DSK$REM:NEAR
+;	EXTRN	GENERIC$IOCTL:NEAR
+;	EXTRN	IOCTL$GETOWN:NEAR
+;	EXTRN	IOCTL$SETOWN:NEAR
+;	EXTRN	CON$READ:NEAR
+;	EXTRN	CON$RDND:NEAR
+;	EXTRN	CON$FLSH:NEAR
+;	EXTRN	CON$WRIT:NEAR
 ;	EXTRN	CON$GENIOCTL:NEAR		;J.K. 4/29/86
-	EXTRN	AUX$READ:NEAR
-	EXTRN	AUX$WRIT:NEAR
-	EXTRN	AUX$FLSH:NEAR
-	EXTRN	AUX$RDND:NEAR
-	EXTRN	AUX$WRST:NEAR
-	EXTRN	TIM$READ:NEAR
-	EXTRN	TIM$WRIT:NEAR
-	EXTRN	PRN$WRIT:NEAR
-	EXTRN	PRN$STAT:NEAR
-	EXTRN	PRN$TILBUSY:NEAR
-	EXTRN	PRN$GENIOCTL:NEAR
-	EXTRN	WRMSG:NEAR
+;	EXTRN	AUX$READ:NEAR
+;	EXTRN	AUX$WRIT:NEAR
+;	EXTRN	AUX$FLSH:NEAR
+;	EXTRN	AUX$RDND:NEAR
+;	EXTRN	AUX$WRST:NEAR
+;	EXTRN	TIM$READ:NEAR
+;	EXTRN	TIM$WRIT:NEAR
+;	EXTRN	PRN$WRIT:NEAR
+;	EXTRN	PRN$STAT:NEAR
+;	EXTRN	PRN$TILBUSY:NEAR
+;	EXTRN	PRN$GENIOCTL:NEAR
+;	EXTRN	WRMSG:NEAR
 
 ;DATA AREAS
-	extrn	Start_Sec_H:word	;AN000; Starting sector high word for
+;	extrn	Start_Sec_H:word	;AN000; Starting sector high word for
 					;disk I/O request. IBMDISK.ASM
 
-	INCLUDE MSBDATA.INC
+	INCLUDE 'MSBDATA.INC'
 
-	IF	iTEST
-	    PUBLIC  MSGNUM
+	if	iTEST
+;	    PUBLIC  MSGNUM
 MSGNUM:
 	    PUSHF
-	    TEST    FTESTBITS,AX
+	    TEST    [cs:FTESTBITS],AX
 	    JZ	    MRET
 	    PUSH    SI
 	    PUSH    BX
 	    PUSH    CX
 	    PUSH    ES
 	    PUSH    DI
-	    MOV     DI,OFFSET NUMBUF
+	    MOV     DI,NUMBUF
 	    PUSH    CS
 	    POP     ES
 	    MOV     CX,4
@@ -195,7 +221,7 @@ NUMLOOP:
 	    POP     CX
 	    PUSH    BX
 	    AND     BX,0FH
-	    MOV     AL,DIGITS[BX]
+	    MOV     AL,[cs:DIGITS+BX]
 	    STOSB
 	    POP     BX
 	    LOOP    NUMLOOP
@@ -203,16 +229,16 @@ NUMLOOP:
 	    POP     ES
 	    POP     CX
 	    POP     BX
-	    MOV     SI,OFFSET NUMBUF
+	    MOV     SI,NUMBUF
 	    CALL    MSGOUT
 	    POP     SI
 	    POPF
 	    RET
 
-	    PUBLIC  MSGOUT
+;	    PUBLIC  MSGOUT
 MSGOUT:
 	    PUSHF
-	    TEST    FTESTBITS,AX
+	    TEST    [cs:FTESTBITS],AX
 	    JZ	    MRET
 	    PUSH    DS
 	    PUSH    AX
@@ -227,13 +253,13 @@ MRET:
 	    POPF
 	    RET
 
-	    PUBLIC DUMPBYTES		;J.K. 4/9/86
+;	    PUBLIC DUMPBYTES		;J.K. 4/9/86
 ;Dumpbytes will dump the bytes in memory in hex.  Space will be put in between
 ;the bytes and CR, LF will be put at the end. - J.K.
 ;Input: DS:SI -> buffer to dump in Hex.
 ;	CX -> # of bytes (Length of the buffer)
 ;
-DUMPBYTES proc near
+DUMPBYTES:
 	pushf
 	push	ax
 dumploops:
@@ -243,28 +269,28 @@ dumploops:
 	shr	ah, 1
 	shr	ah, 1
 	shr	ah, 1
-	call	hex_to_ascii
+	call	Hex_to_ascii
 	push	ax
 	mov	al, ah
-	call	outchar
+	call	Outchar
 	pop	ax
-	call	outchar
+	call	Outchar
 	mov	al, ' '
-	call	outchar
+	call	Outchar
 	loop	dumploops
 
 	mov	al, 0dh
-	call	outchar
+	call	Outchar
 	mov	al, 0ah
-	call	outchar
+	call	Outchar
 
 	pop	ax
 	popf
 	ret
-DUMPBYTES	endp
+;DUMPBYTES	endp
 
-	PUBLIC	Hex_to_ascii
-Hex_to_ascii	proc	near		;J.K. - 4/9/86
+;	PUBLIC	Hex_to_ascii
+Hex_to_ascii:				;J.K. - 4/9/86
 	and	ax, 0f0fh
 	add	ah, 30h
 	cmp	ah, 3ah
@@ -277,10 +303,10 @@ hta_$1:
 	add	al, 7
 hta_$2:
 	ret
-Hex_to_ascii	endp
+;Hex_to_ascii	endp
 
-	PUBLIC	outchar
-Outchar proc	near
+;	PUBLIC	outchar
+Outchar:
 	PUSH	AX
 	PUSH	SI
 	PUSH	DI
@@ -297,10 +323,10 @@ Outchar proc	near
 	POP	SI
 	POP	AX
 	RET
-Outchar endp
+;Outchar endp
 
-	ENDIF
-	INCLUDE MSMACRO.INC
+	end if
+	INCLUDE 'MSMACRO.INC'
 
 ;---------------------------------------------------
 ;
@@ -318,50 +344,50 @@ EXTRA	=	22			;USUALLY A POINTER TO VOL ID FOR ERROR 15
 START_L =	26			;AN000; Extended start sector (Low)
 START_H =	28			;AN000; Extended start sector (High)
 
-	PUBLIC	STRATEGY
-STRATEGY PROC	FAR
-	MOV	WORD PTR CS:[PTRSAV],BX
-	MOV	WORD PTR CS:[PTRSAV+2],ES
-	RET
-STRATEGY ENDP
+;	PUBLIC	STRATEGY
+STRATEGY:
+	MOV	word [cs:PTRSAV],BX
+	MOV	word [cs:PTRSAV+2],ES
+	RETF
+;STRATEGY ENDP
 
-	PUBLIC CON$IN
-CON$IN	PROC	FAR
+;	PUBLIC CON$IN
+CON$IN:
 	PUSH	SI
-	MOV	SI,OFFSET CONTBL
-	JMP	SHORT ENTRY
-CON$IN	ENDP
+	MOV	SI,CONTBL
+	JMP	SHORT ENTRY_
+;CON$IN	ENDP
 
-	PUBLIC	AUX0$IN
-AUX0$IN PROC	FAR
+;	PUBLIC	AUX0$IN
+AUX0$IN:
 	PUSH	SI
 	PUSH	AX
 	XOR	AL,AL
 	JMP	SHORT AUXENT
-AUX0$IN ENDP
+;AUX0$IN ENDP
 
-	PUBLIC AUX1$IN
-AUX1$IN PROC	FAR
+;	PUBLIC AUX1$IN
+AUX1$IN:
 	PUSH	SI
 	PUSH	AX
 	MOV	AL,1
 	JMP	short AUXENT		;J.K. 4/15/86
-AUX1$IN ENDP
+;AUX1$IN ENDP
 
 ;SB33102****************************************************************
 ;SB  Add code to handle two more COM Ports
 ;boban
 
-	PUBLIC  AUX2$IN
-AUX2$IN proc far
+;	PUBLIC  AUX2$IN
+AUX2$IN:
 	push	si
 	push	ax
 	mov	al,2
 	jmp	short AUXENT
-AUX2$IN endp
+;AUX2$IN endp
 
-	PUBLIC  AUX3$IN
-AUX3$IN proc far
+;	PUBLIC  AUX3$IN
+AUX3$IN:
 	push	si
 	push	ax
 	mov	al,3
@@ -370,62 +396,62 @@ AUX3$IN proc far
 ;SB33102****************************************************************
 
 AUXENT:
-	MOV	SI,OFFSET AUXTBL
+	MOV	SI,AUXTBL
 	JMP	SHORT ENTRY1
-AUX3$IN ENDP
+;AUX3$IN ENDP
 
-PRN0$IN PROC	FAR
-	PUBLIC	PRN0$IN
+PRN0$IN:
+;	PUBLIC	PRN0$IN
 
 	PUSH	SI
 	PUSH	AX
 	XOR	AX,AX
 	JMP	SHORT PRNENT
-PRN0$IN ENDP
+;PRN0$IN ENDP
 
-	PUBLIC	PRN1$IN
-PRN1$IN PROC	FAR
+;	PUBLIC	PRN1$IN
+PRN1$IN:
 	PUSH	SI
 	PUSH	AX
 	XOR	AL,AL
 	MOV	AH,1
 	JMP	SHORT PRNENT
-PRN1$IN ENDP
+;PRN1$IN ENDP
 
-	PUBLIC PRN2$IN
-PRN2$IN PROC	FAR
+;	PUBLIC PRN2$IN
+PRN2$IN:
 	PUSH	SI
 	PUSH	AX
 	MOV	AL,1
 	MOV	AH,2
 	JMP	SHORT PRNENT
-PRN2$IN ENDP
+;PRN2$IN ENDP
 
-	PUBLIC PRN3$IN
-PRN3$IN PROC	FAR
+;	PUBLIC PRN3$IN
+PRN3$IN:
 	PUSH	SI
 	PUSH	AX
 	MOV	AL,2
 	MOV	AH,3
 PRNENT:
-	MOV	SI,OFFSET PRNTBL
-	MOV	CS:[PRINTDEV],AH	;SAVE INDEX INTO ARRAY OF RETRY COUNTS
+	MOV	SI,PRNTBL
+	MOV	[cs:PRINTDEV],AH	;SAVE INDEX INTO ARRAY OF RETRY COUNTS
 	JMP	SHORT ENTRY1
-PRN3$IN ENDP
+;PRN3$IN ENDP
 
-	PUBLIC	TIM$IN
-TIM$IN	PROC	FAR
+;	PUBLIC	TIM$IN
+TIM$IN:
 	PUSH	SI
-	MOV	SI,OFFSET TIMTBL
-	JMP	SHORT ENTRY
-TIM$IN	ENDP
+	MOV	SI,TIMTBL
+	JMP	SHORT ENTRY_
+;TIM$IN	ENDP
 
-	PUBLIC	DSK$IN
-DSK$IN	PROC	FAR
+;	PUBLIC	DSK$IN
+DSK$IN:
 	PUSH	SI
-	MOV	SI,OFFSET DSKTBL
+	MOV	SI,DSKTBL
 
-ENTRY:
+ENTRY_:
 	PUSH	AX
 ENTRY1:
 	PUSH	CX
@@ -436,15 +462,15 @@ ENTRY1:
 	PUSH	ES
 	PUSH	BX
 
-	MOV	CS:[AUXNUM],AL		;SAVE CHOICE OF AUX/PRN DEVICE
+	MOV	[cs:AUXNUM],AL		;SAVE CHOICE OF AUX/PRN DEVICE
 
-	LDS	BX,CS:[PTRSAV]		;GET POINTER TO I/O PACKET
-	ASSUME	DS:NOTHING
+	LDS	BX,[cs:PTRSAV]		;GET POINTER TO I/O PACKET
+;	ASSUME	DS:NOTHING
 
-	MOV	AL,BYTE PTR DS:[BX].UNIT ;AL = UNIT CODE
-	MOV	AH,BYTE PTR DS:[BX].MEDIA ;AH = MEDIA DESCRIP
-	MOV	CX,WORD PTR DS:[BX].COUNT ;CX = COUNT
-	MOV	DX,WORD PTR DS:[BX].START ;DX = START SECTOR
+	MOV	AL,byte [BX+UNIT] ;AL = UNIT CODE
+	MOV	AH,byte [BX+MEDIA] ;AH = MEDIA DESCRIP
+	MOV	CX,word [BX+COUNT] ;CX = COUNT
+	MOV	DX,word [BX+START] ;DX = START SECTOR
 
 ;SB34MSB100*********************************************************************
 ;SB
@@ -476,23 +502,23 @@ ENTRY1:
 ;SB	
 ;SB NOTE:Remember not to destroy the registers which have been set up before
 
-	CMP	SI,OFFSET DSKTBL
+	CMP	SI,DSKTBL
 	JNZ	DSK_REQ_CONT		; Not Disk Req
 	CMP	DX,-1
 	JNZ	DSK_REQ_16
-	MOV	DX,DS:[BX].START_H	; 32 bits DSK REQ
-	MOV	CS:START_SEC_H,DX	; CS:Start_sec_H = Packet.Start_H
-	MOV	DX,DS:[BX].START_L	; DX             = Packet.Start_L
+	MOV	DX,[BX+START_H]	; 32 bits DSK REQ
+	MOV	[cs:Start_Sec_H],DX	; CS:Start_sec_H = Packet.Start_H
+	MOV	DX,[BX+START_L]	; DX             = Packet.Start_L
 	JMP	SHORT DSK_REQ_CONT
 DSK_REQ_16:
-	MOV	CS:START_SEC_H,0
+	MOV	[cs:Start_Sec_H],0
 DSK_REQ_CONT:
 
 ;SB34MSB100*********************************************************************
 
 	XCHG	DI,AX
-	MOV	AL,BYTE PTR DS:[BX].CMD
-	CMP	AL,CS:[SI]		;ARR 2.41
+	MOV	AL,byte [BX+CMD]
+	CMP	AL,[cs:SI]		;ARR 2.41
 	JA	CMDERR
 
 	CBW				; NOTE THAT AL <= 15 MEANS OK
@@ -501,16 +527,16 @@ DSK_REQ_CONT:
 	ADD	SI,AX
 	XCHG	AX,DI
 
-	LES	DI,DWORD PTR DS:[BX].TRANS
+	LES	DI,dword [BX+TRANS]
 
 	PUSH	CS
 	POP	DS
 
-	ASSUME	DS:CODE
+;	ASSUME	DS:CODE
 
 	CLD
-	JMP	WORD PTR [SI+1] 	;GO DO COMMAND
-DSK$IN	ENDP
+	JMP	word [SI+1] 	;GO DO COMMAND
+;DSK$IN	ENDP
 	PAGE
 ;=====================================================
 ;=
@@ -521,44 +547,44 @@ DSK$IN	ENDP
 ;
 ;	EXIT - ALL ROUTINES RETURN THROUGH THIS PATH
 ;
-	PUBLIC	BUS$EXIT
-BUS$EXIT PROC	FAR
-	ASSUME	DS:NOTHING
+;	PUBLIC	BUS$EXIT
+BUS$EXIT:
+;	ASSUME	DS:NOTHING
 	MOV	AH,00000011B
 	JMP	SHORT ERR1
 
-	PUBLIC	CMDERR
+;	PUBLIC	CMDERR
 CMDERR:
 	MOV	AL,3			;UNKNOWN COMMAND ERROR
 
-	PUBLIC	ERR$CNT
+;	PUBLIC	ERR$CNT
 ERR$CNT:
-	LDS	BX,CS:[PTRSAV]
-	ASSUME	DS:NOTHING
-	SUB	WORD PTR [BX].COUNT,CX	;# OF SUCCESSFUL I/O'S
+	LDS	BX,[cs:PTRSAV]
+;	ASSUME	DS:NOTHING
+	SUB	word [BX+COUNT],CX	;# OF SUCCESSFUL I/O'S
 
-	PUBLIC	ERR$EXIT
+;	PUBLIC	ERR$EXIT
 ERR$EXIT:
 	MOV	AH,10000001B		;MARK ERROR RETURN
 	JMP	SHORT ERR1
-BUS$EXIT ENDP
+;BUS$EXIT ENDP
 
-EXITP	PROC	FAR
-	ASSUME	DS:CODE      ; WE ARE NOT SURE THIS IS CORRECT 3/18/86
+EXITP:
+;	ASSUME	DS:CODE      ; WE ARE NOT SURE THIS IS CORRECT 3/18/86
 EXIT$ZER:
 	LDS	BX,[PTRSAV]
-	ASSUME	DS:NOTHING
+;	ASSUME	DS:NOTHING
 	XOR	AX,AX
-	MOV	WORD PTR [BX].COUNT,AX	;INDICATE NO CHARS READ
+	MOV	word [BX+COUNT],AX	;INDICATE NO CHARS READ
 
-	PUBLIC	EXIT
+;	PUBLIC	EXIT
 EXIT:
-	ASSUME	DS:NOTHING
+;	ASSUME	DS:NOTHING
 	MOV	AH,00000001B
 ERR1:
-	ASSUME	DS:NOTHING
-	LDS	BX,CS:[PTRSAV]
-	MOV	WORD PTR [BX].STATUS,AX ;MARK OPERATION COMPLETE
+;	ASSUME	DS:NOTHING
+	LDS	BX,[cs:PTRSAV]
+	MOV	word [BX+STATUS],AX ;MARK OPERATION COMPLETE
 
 	POP	BX
 	POP	ES
@@ -569,8 +595,8 @@ ERR1:
 	POP	CX
 	POP	AX
 	POP	SI
-	RET				;RESTORE REGS AND RETURN
-EXITP	ENDP
+	RETF				;RESTORE REGS AND RETURN
+;EXITP	ENDP
 
 ;-------------------------------------------------------------
 ;
@@ -578,11 +604,11 @@ EXITP	ENDP
 ;
 ;	CALLED VIA INT 29H
 ;
-	PUBLIC	CHROUT
+;	PUBLIC	CHROUT
 CHROUT	=	29H
 
-	PUBLIC	OUTCHR
-OUTCHR	PROC	FAR
+;	PUBLIC	OUTCHR
+OUTCHR:
 	PUSH	AX
 	PUSH	SI
 	PUSH	DI
@@ -599,16 +625,16 @@ OUTCHR	PROC	FAR
 	POP	SI
 	POP	AX
 	IRET
-OUTCHR	ENDP
+;OUTCHR	ENDP
 ;----------------------------------------------
 ;
 ;	SET DX TO AUXNUM
 ;
-	PUBLIC GETDX
-GETDX	PROC	NEAR
-	MOV	DX,WORD PTR CS:[AUXNUM]
+;	PUBLIC GETDX
+GETDX:
+	MOV	DX,word [cs:AUXNUM]
 	RET
-GETDX	ENDP
+;GETDX	ENDP
 	PAGE
 ;************************************************** ARR 2.15
 
@@ -641,5 +667,5 @@ GETDX	ENDP
 ;	 POP	 AX
 ;	 IRET
 ;************************************************** ARR 2.15
-CODE	ENDS
-	END
+;CODE	ENDS
+;	END
