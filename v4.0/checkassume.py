@@ -43,6 +43,13 @@ Two passes, because the two programs are laid out differently:
     half of MSBIOLNK.ASM its module is read in, and nothing but a register
     assumed to that segment reaches it.
 
+What it cannot see: a name the sources paste together.  MSSTACK.INC chains
+each hardware interrupt on through "call dword [Old#AA]", where AA is the
+vector's number, and no pass over the text can know that Old02 is a variable
+of the stack code's own segment -- so that reference kept the DS the
+interrupted program happened to have, and the machine followed it into the
+interrupt vector table.  Those two lines name CS themselves now.
+
 Three things that look like findings and are not:
 
   * "Context DS" is a macro, PUSH SS / POP DS, so it puts the data segment
@@ -79,7 +86,10 @@ DEFLABEL = re.compile(r"^(" + N + r"):")
 DEFFASM = re.compile(r"^\s*label\s+(" + N + r")\s", re.I)
 DECLARES = re.compile(r"(?i)^\s*I_am\s+(" + N + r")\s*,")
 STRUCT = re.compile(r"(?i)^\s*(" + N + r")\s+(" + N + r")\s*$")
-REFERENCE = re.compile(r"\[(?:(cs|ds|es|ss):)?\s*(" + N + r")(?:[-+][^\]]*)?\]", re.I)
+# The offset may be written with spaces round it -- [FOOSTRNG + 2] -- and
+# missing those is not harmless: SYSINIT1 reads the second half of the CDS
+# text that way, and that reference went unexamined.
+REFERENCE = re.compile(r"\[(?:(cs|ds|es|ss):)?\s*(" + N + r")(?:\s*[-+][^\]]*)?\]", re.I)
 # A reference through a register says nothing about where a variable lives.
 REGISTERS = {"AX", "BX", "CX", "DX", "SI", "DI", "BP", "SP",
              "AL", "BL", "CL", "DL", "AH", "BH", "CH", "DH"}

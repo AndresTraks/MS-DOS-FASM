@@ -287,10 +287,10 @@ BUILDDEST:
 	CMP	byte [ss:FAILERR],0
 	JNZ	BAD_ACCJ		; Find failed because user FAILed to I 24
 	MOV	AX,[ss:DESTSTART]		; DIRSTART of dest
-	CMP	AX,word [RENAMEDMA + 15]	; DIRSTART of source
+	CMP	AX,word [ss:RENAMEDMA + 15]	; DIRSTART of source
 	JZ	SIMPLE_RENAME		; If =, just give new name
 
-	MOV	AL,[RENAMEDMA + 21 + dir_entry.dir_attr]
+	MOV	AL,[ss:RENAMEDMA + 21 + dir_entry.dir_attr]
 	TEST	AL,attr_directory
 	JNZ	BAD_ACCJ		; Can only do a simple rename on dirs,
 					; otherwise the .  and ..  entries get
@@ -394,12 +394,12 @@ GET_SOURCE:
 	DOSAssume   CS,<DS>,"Get_Source"
 ;	ASSUME	ES:NOTHING
 
-	MOV	BX,word [RENAMEDMA + 15]	; DirStart
+	MOV	BX,word [ss:RENAMEDMA + 15]	; DirStart
 	LES	BP,[ss:THISDPB]
 	invoke	SETDIRSRCH
 	retc
 	invoke	StartSrch
-	MOV	AX,word [RENAMEDMA + 13]	; Lastent
+	MOV	AX,word [ss:RENAMEDMA + 13]	; Lastent
 	invoke	GETENT
 	return
 

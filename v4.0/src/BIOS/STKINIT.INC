@@ -109,11 +109,11 @@ StackInit:				;3.30
 	pop	ds				;ds = Relocated stack code seg.;3.30
 ;	assume	ds:nothing						       ;3.30
 ;Now, DS -> stack code area						       ;3.30
-	MOV	ES, word [ss:Stacks+2]	   ; GET SEGMENT OF STACK AREA.;3.30
+	MOV	ES, word [ds:Stacks+2]	   ; GET SEGMENT OF STACK AREA.;3.30
 	CLD								       ;3.30
 	REP	STOSB							       ;3.30
 									       ;3.30
-	MOV	CX, [ss:StackCount]					       ;3.30
+	MOV	CX, [ds:StackCount]					       ;3.30
 									       ;3.30
 ; LOOP FOR "COUNT" TIMES, BUILDING A TABLE ENTRY                               ;3.30
 ;  cs = sysinitseg, ds = Relocated stack code seg , es = segment of stack space;3.30
@@ -126,7 +126,7 @@ BUILDLOOP:								       ;3.30
 	MOV	IntLevel,AL			;AX = 0 		       ;3.30
 	MOV	SavedSP,AX						       ;3.30
 	MOV	SavedSS,AX						       ;3.30
-	ADD	BX,[ss:StackSize] 					       ;3.30
+	ADD	BX,[ds:StackSize] 					       ;3.30
 	MOV	NewSP,BX						       ;3.30
 	MOV	[es:BX],BP						       ;3.30
 	ADD	BP,EntrySize						       ;3.30
@@ -134,8 +134,8 @@ BUILDLOOP:								       ;3.30
 	LOOP	BUILDLOOP						       ;3.30
 									       ;3.30
 	SUB	BP,EntrySize						       ;3.30
-	MOV	[ss:LastEntry],BP 					       ;3.30
-	MOV	[ss:NextEntry],BP 					       ;3.30
+	MOV	[ds:LastEntry],BP 					       ;3.30
+	MOV	[ds:NextEntry],BP 					       ;3.30
 									       ;3.30
 	push	ds							       ;3.30
 	mov	ax, 0f000h		;loook at the model byte	       ;3.30

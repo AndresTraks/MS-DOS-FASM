@@ -146,7 +146,7 @@ Keyboard_lbl:
 
 Special#AA:
 	pop	ax
-	jmp	dword [Old#AA]
+	jmp	dword [cs:Old#AA]
 
 Normal#AA:
 
@@ -182,7 +182,7 @@ found#AA:
 	mov	sp,bp
 
 	pushf				; go execute the real interrupt handler
-	call	dword [Old#AA]	;  which will iret back to here
+	call	dword [cs:Old#AA]	;  which will iret back to here
 
 	mov	bp,sp			; retrieve the table offset for us
 	mov	bp,[es:bp]		   ;  but leave it on the stack

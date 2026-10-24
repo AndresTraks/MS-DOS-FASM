@@ -604,7 +604,7 @@ errset:
 	MOV	byte [ss:EXTERR_CLASS],errCLASS_OutRes	;MS. set class			;AN000;
 	MOV	byte [ss:EXTERR_ACTION],errACT_Abort	;MS. set action 		;AN000;
 	MOV	byte [ss:EXTERR_LOCUS],errLOC_Unk	;MS. set locus			;AN000;
-	MOV	word [EXITHOLD + 2],ES	;MS. save es:bp in exithold	;AN000;
+	MOV	word [ss:EXITHOLD + 2],ES	;MS. save es:bp in exithold	;AN000;
 	MOV	word [ss:EXITHOLD],BP		;MS.				;AN000;
 	TEST	[es:DI+sf_entry.sf_flags],devid_device	  ;MS. device  ?		;AN000;
 	JNZ	chardev2_DISK3			  ;MS. yes			;AN000;

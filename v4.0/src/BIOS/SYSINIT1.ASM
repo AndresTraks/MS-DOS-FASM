@@ -877,7 +877,7 @@ TEMPCDS:
 FOOSET: 				; Init CDSs
 	MOV	AX,word [ss:FOOSTRNG]
 	STOSW
-	MOV	AX,word [FOOSTRNG + 2]
+	MOV	AX,word [ss:FOOSTRNG + 2]
 	STOSW
 	INC	byte [ss:FOOSTRNG]
 	XOR	AX,AX
