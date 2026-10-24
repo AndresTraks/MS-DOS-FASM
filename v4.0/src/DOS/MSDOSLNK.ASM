@@ -128,13 +128,18 @@ macro walk
 ; CODE on a byte, CONSTANTS and DATA on a word, LAST on a paragraph.
 org 0
 
+; Where each of the six begins, for anything that wants to know -- the test
+; holds them against the alignments DOSSEG.ASM asked for.
 SEGSEL = S_START
+START_AT = $
 	walk
 	align	2
 SEGSEL = S_CONSTANTS
+CONSTANTS_AT = $
 	walk
 	align	2
 SEGSEL = S_DATA
+DATA_AT = $
 	walk
 ; The data segment is as long as MS_DATA.ASM's declarations, which share
 ; their space with the initialisation code above and emit nothing of
@@ -146,9 +151,12 @@ SEGSEL = S_DATA
     end if
 	times	MS_DATA_SIZE - ($ - DATA_SEG_START) db 0
 SEGSEL = S_TABLE
+TABLE_AT = $
 	walk
 SEGSEL = S_CODE
+CODE_AT = $
 	walk
 	align	16
 SEGSEL = S_LAST
+LAST_AT = $
 	walk

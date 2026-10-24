@@ -35,9 +35,10 @@ NAME   GETSET
 ;
 INCLUDE '../INC/DOSSEG.ASM'
 
-if ~ defined ALTVECT
-ALTVECT EQU	0			; FALSE
-end if
+; DEFINED answers differently on fasm's first pass and its later ones, so a
+; default given under it makes the assembly oscillate; MATCH asks the
+; preprocessor whether the name has a meaning yet, which is what IFNDEF asked.
+match =ALTVECT, ALTVECT { ALTVECT EQU 0 }	; FALSE
 
 if SEGSEL = S_CODE
 ;	ASSUME	SS:DOSGROUP,CS:DOSGROUP

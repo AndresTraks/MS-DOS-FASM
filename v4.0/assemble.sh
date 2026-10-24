@@ -44,3 +44,14 @@ $FASM src/BIOS/MSBIOLNK.ASM bin/MSBIO.BIN
 # IO.SYS is the two of them, one after the other, which is what the original
 # build did with "copy /b msload.com+msbio.bin io.sys".
 cat bin/MSLOAD.COM bin/MSBIO.BIN > bin/IO.SYS
+
+# The kernel's messages: MSDOS.SKL declares two classes, the divide-overflow
+# message the kernel prints on INT 0 and the yes/no letters for INT 24H.
+python3 buildmsg.py src/DOS/MSDOS.SKL >/dev/null
+
+# MSDOS.SYS: fifty-five modules and six segments in one group, gathered by
+# MSDOSLNK.ASM.  Microsoft's own EndProc check prints a line for each of the
+# twelve procedures whose SaveReg and RestoreReg do not pair up inside the
+# procedure -- the same twelve as in the release, which does its RestoreReg
+# on a shared way out -- so those lines are expected.
+$FASM src/DOS/MSDOSLNK.ASM bin/MSDOS.SYS

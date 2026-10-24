@@ -148,7 +148,7 @@ macro EndProc name, chk
 {
     match , chk \{
 	if ?initstack <> ?stackdepth	;; is it different?
-	display "***** Possible stack size error *****",13,10
+	display "***** Possible stack size error in ",`name," *****",13,10
 	end if
 	\}
 }

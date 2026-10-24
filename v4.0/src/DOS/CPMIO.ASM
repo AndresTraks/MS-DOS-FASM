@@ -48,9 +48,10 @@ INCLUDE '../INC/DOSCNTRY.INC'			;AN000		2/12/KK
 ;.list
 ;.cref
 
-if ~ defined KANJI
-KANJI	EQU	0	;FALSE
-end if
+; DEFINED answers differently on fasm's first pass and its later ones, so a
+; default given under it makes the assembly oscillate; MATCH asks the
+; preprocessor whether the name has a meaning yet, which is what IFNDEF asked.
+match =KANJI, KANJI { KANJI EQU 0 }	;FALSE
 
 ; The following routines form the console I/O group (funcs 1,2,6,7,8,9,10,11).
 ; They assume ES and DS NOTHING, while not strictly correct, this forces data

@@ -9,13 +9,12 @@
 ;	  A000	  version 4.00  Jan. 1988
 ;
 
-if ~ defined KANJI
-KANJI	EQU	FALSE
-end if
+; DEFINED answers differently on fasm's first pass and its later ones, so a
+; default given under it makes the assembly oscillate; MATCH asks the
+; preprocessor whether the name has a meaning yet, which is what IFNDEF asked.
+match =KANJI, KANJI { KANJI EQU FALSE }
 
-if ~ defined Rainbow
-Rainbow EQU FALSE
-end if
+match =Rainbow, Rainbow { Rainbow EQU FALSE }
 
 INCLUDE '../INC/DOSSYM.INC'
 INCLUDE '../INC/DOSMAC.INC'
