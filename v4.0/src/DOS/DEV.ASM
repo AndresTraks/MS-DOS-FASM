@@ -109,10 +109,10 @@ Break	<IOFUNC -- DO FUNCTION 1-12 I/O>
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
 	Assert	ISSFT,<DS,SI>,"IOFUNC"
-	MOV	word [IOXAD+2],SS
-	MOV	word [IOXAD],DEVIOBUF
-	MOV	word [IOSCNT],1
-	MOV	word [DEVIOBUF],AX
+	MOV	word [ss:IOXAD+2],SS
+	MOV	word [ss:IOXAD],DEVIOBUF
+	MOV	word [ss:IOSCNT],1
+	MOV	word [ss:DEVIOBUF],AX
 	TEST	[SI+sf_entry.sf_flags],sf_isnet
 	JZ	IOTO22								;AN000;
 	JMP	IOTOFILE							;AN000;
@@ -217,7 +217,7 @@ DNODRD: MOV	AH,byte [IOCALL.REQSTAT+1]
 QuickReturn:				;AN000; 2/13/KK
 	invoke	restore_world
 ;ASSUME	DS:NOTHING
-	MOV	AX,word [DEVIOBUF]
+	MOV	AX,word [ss:DEVIOBUF]
 	return
 
 ;IOTOFILEJ:
@@ -291,22 +291,22 @@ IOUT:
 
 IOIN:
 	CALL	SETXADDR
-	OR	word [DOS34_FLAG],Disable_EOF_I24   ;AN000;
+	OR	word [ss:DOS34_FLAG],Disable_EOF_I24   ;AN000;
 	invoke	DOS_READ
-	AND	word [DOS34_FLAG],NO_Disable_EOF_I24   ;AN000;
+	AND	word [ss:DOS34_FLAG],NO_Disable_EOF_I24   ;AN000;
 	OR	CX,CX			; Check EOF
 	CALL	RESTXADDR
-	MOV	AL,[DEVIOBUF]		; Get byte from trans addr
+	MOV	AL,[ss:DEVIOBUF]		; Get byte from trans addr
 	retnz
 	MOV	AL,1AH			; ^Z if no bytes
 	return
 
 SETXADDR:
-	POP	word [CALLSCNT]	; Return address
+	POP	word [ss:CALLSCNT]	; Return address
 	invoke	save_world
-	PUSH	word [DMAADD]	; Save Disk trans addr
-	PUSH	word [DMAADD+2]
-	MOV	word [THISSFT+2],DS
+	PUSH	word [ss:DMAADD]	; Save Disk trans addr
+	PUSH	word [ss:DMAADD+2]
+	MOV	word [ss:THISSFT+2],DS
 	Context DS
 	MOV	word [THISSFT],SI	; Finish setting SFT pointer
 	MOV	CX,word [IOXAD+2]
@@ -323,7 +323,7 @@ RESTXADDR:
 	POP	word [DMAADD]
 	invoke	restore_world
 ;ASSUME	DS:NOTHING
-RESTRET:JMP	word [CALLSCNT]	; Return address
+RESTRET:JMP	word [ss:CALLSCNT]	; Return address
 EndProc IOFUNC
 
 Break <DEV_OPEN_SFT, DEV_CLOSE_SFT - Open or Close a DEVICE>
@@ -382,7 +382,7 @@ EndProc DEV_OPEN_SFT
 ; then just short circuit to done.
 ;
 ;;;;;	invoke	CheckShare
-	CMP	byte [fShare],1		;AN010; /NC or no SHARE
+	CMP	byte [ss:fShare],1		;AN010; /NC or no SHARE
 	JBE	OPCLS_DONE		;AN010; yes
 	MOV	AH,[es:DI+dpb.dpb_UNIT]
 	MOV	CL,[es:DI+dpb.dpb_drive]
@@ -471,14 +471,14 @@ chkext:
 	TEST	[SI+SYSDEV.SDEVATT],EXTDRVR   ;AN000;>32mb   extended driver?
 	JZ	chksector	       ;AN000;>32mb   no
 	ADD	byte [es:BX],8     ;AN000;>32mb   make length to 30
-	MOV	AX,[CALLSSEC]	       ;AN000;>32mb
-	MOV	word [CALLSSEC],-1	       ;AN000;>32mb   old sector  =-1
-	MOV	word [CALLNEWSC],AX   ;AN000;>32mb	 new sector  =
-	MOV	AX,[HIGH_SECTOR]       ;AN000; >32mb   low sector,high sector
-	MOV	word [CALLNEWSC+2],AX  ;AN000; >32mb
+	MOV	AX,[ss:CALLSSEC]	       ;AN000;>32mb
+	MOV	word [ss:CALLSSEC],-1	       ;AN000;>32mb   old sector  =-1
+	MOV	word [ss:CALLNEWSC],AX   ;AN000;>32mb	 new sector  =
+	MOV	AX,[ss:HIGH_SECTOR]       ;AN000; >32mb   low sector,high sector
+	MOV	word [ss:CALLNEWSC+2],AX  ;AN000; >32mb
 	JMP	chardev2_DEV	       ;AN000; >32mb
 chksector:			       ;AN000; >32mb
-	CMP	word [HIGH_SECTOR],0        ;AN000; >32mb   if >32mb
+	CMP	word [ss:HIGH_SECTOR],0        ;AN000; >32mb   if >32mb
 	JZ	chardev2_DEV	       ;AN000; >32mb   then fake error
 	MOV	[es:BX+SRHEAD.REQSTAT],STERR+STDON+error_I24_not_DOS_disk  ;AN000; >32mb
 	JMP	SHORT dev_exit	       ;AN000; >32mb
@@ -486,12 +486,12 @@ chksector:			       ;AN000; >32mb
 chardev2_DEV:			       ;AN000;
 ; As above only DS:SI points to device header on entry, and DS:SI is preserved
 	MOV	AX,[SI+SYSDEV.SDEVSTRAT]
-	MOV	word [CALLDEVAD],AX
-	MOV	word [CALLDEVAD+2],DS
-	CALL	dword [CALLDEVAD]
+	MOV	word [ss:CALLDEVAD],AX
+	MOV	word [ss:CALLDEVAD+2],DS
+	CALL	dword [ss:CALLDEVAD]
 	MOV	AX,[SI+SYSDEV.SDEVINT]
-	MOV	word [CALLDEVAD],AX
-	CALL	dword [CALLDEVAD]
+	MOV	word [ss:CALLDEVAD],AX
+	CALL	dword [ss:CALLDEVAD]
 	CALL	VIRREAD 		;AN000;LB. move data from SC to buffer
 	JC	chardev2_DEV		;AN000;LB. bad sector or exceeds max sec
 dev_exit:
@@ -573,7 +573,7 @@ SETCALLHEAD:
 	PUSH	CX
 	PUSH	AX
 	MOV	CL,DEVWRT
-	ADD	CL,[VERFLG]
+	ADD	CL,[ss:VERFLG]
 	JMP	SHORT SETCALLHEAD
 EndProc SETREAD
 
@@ -596,9 +596,9 @@ Break	<RW_SC -- Read Write Secondary Cache>
 	procedure   RW_SC,NEAR		;AN000;
 ;ASSUME	DS:NOTHING,ES:NOTHING		;AN000;
 
-	CMP	word [SC_CACHE_COUNT],0	;AN000;LB. secondary cache exists?
+	CMP	word [ss:SC_CACHE_COUNT],0	;AN000;LB. secondary cache exists?
 	JZ	scexit4 		;AN000;LB. no, do nothing
-	CMP	word [CALLSCNT],1		;AN000;LB. sector count = 1 (buffer I/O)
+	CMP	word [ss:CALLSCNT],1		;AN000;LB. sector count = 1 (buffer I/O)
 	JNZ	scexit4 		;AN000;LB. no, do nothing
 	PUSH	CX			    ;AN000;;LB.
 	PUSH	DX			    ;AN000;;LB. yes
@@ -606,7 +606,7 @@ Break	<RW_SC -- Read Write Secondary Cache>
 	PUSH	SI			    ;AN000;;LB.
 	PUSH	ES			    ;AN000;;LB.
 	PUSH	DI			    ;AN000;;LB.
-	MOV	DX,word [CALLSSEC]	    ;AN000;;LB.  starting sector
+	MOV	DX,word [ss:CALLSSEC]	    ;AN000;;LB.  starting sector
 	CMP	byte [DEVCALL.REQFUNC],DEVRD ;AN000;LB. read ?		      ;AN000;
 	JZ	doread_DEV			;AN000;LB. yes				      ;AN000;
 	CALL	INVALIDATE_SC		    ;AN000;LB. invalidate SC		      ;AN000;
@@ -621,42 +621,42 @@ doread_DEV: 				    ;AN000;				       ;AN000;
 	STC				    ;AN000;LB. set carry		  ;AN000;
 	JMP	saveseq 		    ;AN000;LB. save seq. sector #	  ;AN000;
 readSC: 				    ;AN000;
-	MOV	AX,word [HIGH_SECTOR]   ;AN000;;LB. subtract sector num from
-	MOV	CX,word [CALLSSEC]	    ;AN000;;LB. saved sequential sector
-	SUB	CX,word [SEQ_SECTOR]    ;AN000;;LB. number
-	SBB	AX,word [SEQ_SECTOR+2]  ;AN000;;LB.
+	MOV	AX,word [ss:HIGH_SECTOR]   ;AN000;;LB. subtract sector num from
+	MOV	CX,word [ss:CALLSSEC]	    ;AN000;;LB. saved sequential sector
+	SUB	CX,word [ss:SEQ_SECTOR]    ;AN000;;LB. number
+	SBB	AX,word [ss:SEQ_SECTOR+2]  ;AN000;;LB.
 	CMP	AX,0			    ;AN000;;LB. greater than 64K
 	JNZ	saveseq2		    ;AN000;;LB. yes,save seq. sector #
 chklow: 									;AN000;
 	CMP	CX,1			    ;AN000;;LB. <= 1
 	JA	saveseq2		    ;AN000;;LB. no, not sequential
-	MOV	word [SC_STATUS],-1		    ;AN000;;LB. prsume all SC valid
-	MOV	AX,[SC_CACHE_COUNT]	    ;AN000;;LB. yes, sequential
-	MOV	[CALLSCNT],AX		    ;AN000;;LB. read continuous sectors
+	MOV	word [ss:SC_STATUS],-1		    ;AN000;;LB. prsume all SC valid
+	MOV	AX,[ss:SC_CACHE_COUNT]	    ;AN000;;LB. yes, sequential
+	MOV	[ss:CALLSCNT],AX		    ;AN000;;LB. read continuous sectors
 readsr:
-	MOV	AX,word [CALLXAD+2]     ;AN000;;LB. save buffer addr
-	MOV	[TEMP_VAR2],AX		    ;AN000;;LB. in temp vars
-	MOV	AX,word [CALLXAD]	    ;AN000;;LB.
-	MOV	[TEMP_VAR],AX		    ;AN000;;LB.
+	MOV	AX,word [ss:CALLXAD+2]     ;AN000;;LB. save buffer addr
+	MOV	[ss:TEMP_VAR2],AX		    ;AN000;;LB. in temp vars
+	MOV	AX,word [ss:CALLXAD]	    ;AN000;;LB.
+	MOV	[ss:TEMP_VAR],AX		    ;AN000;;LB.
 										;AN000;
-	MOV	AX,word [SC_CACHE_PTR]  ;AN000;LB. use SC cache addr as	      ;AN000;
-	MOV	word [CALLXAD],AX	    ;AN000;LB. transfer addr		      ;AN000;
-	MOV	AX,word [SC_CACHE_PTR+2]  ;AN000;LB.			      ;AN000;
-	MOV	word [CALLXAD+2],AX       ;AN000;LB.			      ;AN000;
-	MOV	byte [SC_FLAG],1		      ;AN000;LB. flag it for later	      ;AN000;
-	MOV	AL,[SC_DRIVE]		    ;AN000;;LB. current drive
-	MOV	[CurSC_DRIVE],AL	    ;AN000;;LB. set current drive
-	MOV	AX,word [CALLSSEC]	    ;AN000;;LB. current sector
-	MOV	[CurSC_SECTOR],AX	    ;AN000;;LB. set current sector
-	MOV	AX,word [CALLSSEC+2]    ;AN000;;LB.
-	MOV	[CurSC_SECTOR+2],AX	    ;AN000;;LB.
+	MOV	AX,word [ss:SC_CACHE_PTR]  ;AN000;LB. use SC cache addr as	      ;AN000;
+	MOV	word [ss:CALLXAD],AX	    ;AN000;LB. transfer addr		      ;AN000;
+	MOV	AX,word [ss:SC_CACHE_PTR+2]  ;AN000;LB.			      ;AN000;
+	MOV	word [ss:CALLXAD+2],AX       ;AN000;LB.			      ;AN000;
+	MOV	byte [ss:SC_FLAG],1		      ;AN000;LB. flag it for later	      ;AN000;
+	MOV	AL,[ss:SC_DRIVE]		    ;AN000;;LB. current drive
+	MOV	[ss:CurSC_DRIVE],AL	    ;AN000;;LB. set current drive
+	MOV	AX,word [ss:CALLSSEC]	    ;AN000;;LB. current sector
+	MOV	[ss:CurSC_SECTOR],AX	    ;AN000;;LB. set current sector
+	MOV	AX,word [ss:CALLSSEC+2]    ;AN000;;LB.
+	MOV	[ss:CurSC_SECTOR+2],AX	    ;AN000;;LB.
 saveseq2:				    ;AN000;
 	CLC				    ;AN000;LB. clear carry		      ;AN000;
 saveseq:				    ;AN000;				       ;AN000;
-	MOV	AX,[HIGH_SECTOR]	    ;AN000;LB. save current sector #	  ;AN000;
-	MOV	word [SEQ_SECTOR+2],AX  ;AN000;LB. for access mode ref.	  ;AN000;
-	MOV	AX,[CALLSSEC]		    ;AN000;LB.				  ;AN000;
-	MOV	word [SEQ_SECTOR],AX    ;AN000;LB.				  ;AN000;
+	MOV	AX,[ss:HIGH_SECTOR]	    ;AN000;LB. save current sector #	  ;AN000;
+	MOV	word [ss:SEQ_SECTOR+2],AX  ;AN000;LB. for access mode ref.	  ;AN000;
+	MOV	AX,[ss:CALLSSEC]		    ;AN000;LB.				  ;AN000;
+	MOV	word [ss:SEQ_SECTOR],AX    ;AN000;LB.				  ;AN000;
 	JMP	scexit			    ;AN000;LB.				  ;AN000;
 										;AN000;
 scexit2:				    ;AN000;LB.				      ;AN000;
@@ -690,16 +690,16 @@ Break	<IN_SC -- check if in secondary cache>
 	procedure   IN_SC,NEAR		    ;AN000;
 ;ASSUME	DS:NOTHING,ES:NOTHING		    ;AN000;
 
-	MOV	AL,[SC_DRIVE]		    ;AN000;;LB. current drive
-	CMP	AL,[CurSC_DRIVE]	    ;AN000;;LB. same as SC drive
+	MOV	AL,[ss:SC_DRIVE]		    ;AN000;;LB. current drive
+	CMP	AL,[ss:CurSC_DRIVE]	    ;AN000;;LB. same as SC drive
 	JNZ	outrange2		    ;AN000;;LB. no
-	MOV	AX,word [HIGH_SECTOR]   ;AN000;;LB. subtract sector num from
+	MOV	AX,word [ss:HIGH_SECTOR]   ;AN000;;LB. subtract sector num from
 	MOV	CX,DX			    ;AN000;;LB. secondary starting sector
-	SUB	CX,word [CurSC_SECTOR]    ;AN000;;LB. number
-	SBB	AX,word [CurSC_SECTOR+2]  ;AN000;;LB.
+	SUB	CX,word [ss:CurSC_SECTOR]    ;AN000;;LB. number
+	SBB	AX,word [ss:CurSC_SECTOR+2]  ;AN000;;LB.
 	CMP	AX,0			    ;AN000;;LB. greater than 64K
 	JNZ	outrange2		    ;AN000;;LB. yes
-	CMP	CX,[SC_CACHE_COUNT]	    ;AN000;;LB. greater than SC count
+	CMP	CX,[ss:SC_CACHE_COUNT]	    ;AN000;;LB. greater than SC count
 	JAE	outrange2		    ;AN000;;LB. yes
 	CLC				    ;AN000;;LB. clear carry
 	JMP	short inexit		    ;AN000;;LB. in SC
@@ -733,7 +733,7 @@ Break	<INVALIDATE_SC - invalide secondary cache>
 	MOV	AX,1			    ;AN000;;LB. invalidate the sector
 	SHL	AX,CL			    ;AN000;;LB. in the secondary cache
 	NOT	AX			    ;AN000;;LB.
-	AND	[SC_STATUS],AX		    ;AN000;;LB. save the status
+	AND	[ss:SC_STATUS],AX		    ;AN000;;LB. save the status
 outrange:				    ;AN000;;LB.
 	return				    ;AN000;;LB.
 
@@ -757,14 +757,14 @@ Break	<VIRREAD- virtually Read data into buffer>
 	procedure   VIRREAD,NEAR	    ;AN000;
 ;ASSUME	DS:NOTHING,ES:NOTHING		    ;AN000;
 
-	CMP	byte [SC_FLAG],0		    ;AN000;;LB.  from SC fill
+	CMP	byte [ss:SC_FLAG],0		    ;AN000;;LB.  from SC fill
 	JZ	sc2end			    ;AN000;;LB.  no
-	MOV	AX,[TEMP_VAR2]		    ;AN000;;LB. restore buffer addr
-	MOV	word [CALLXAD+2],AX     ;AN000;;LB.
-	MOV	AX,[TEMP_VAR]		    ;AN000;;LB.
-	MOV	word [CALLXAD],AX	    ;AN000;;LB.
-	MOV	byte [SC_FLAG],0		    ;AN000;;LB.  reset sc_flag
-	MOV	word [CALLSCNT],1		    ;AN000;;LB.  one sector transferred
+	MOV	AX,[ss:TEMP_VAR2]		    ;AN000;;LB. restore buffer addr
+	MOV	word [ss:CALLXAD+2],AX     ;AN000;;LB.
+	MOV	AX,[ss:TEMP_VAR]		    ;AN000;;LB.
+	MOV	word [ss:CALLXAD],AX	    ;AN000;;LB.
+	MOV	byte [ss:SC_FLAG],0		    ;AN000;;LB.  reset sc_flag
+	MOV	word [ss:CALLSCNT],1		    ;AN000;;LB.  one sector transferred
 
 	TEST	[DEVCALL.REQSTAT],STERR     ;AN000;;LB.  error?
 	JNZ	scerror 		    ;AN000;;LB. yes
@@ -785,9 +785,9 @@ Break	<VIRREAD- virtually Read data into buffer>
 	JMP	SHORT sc2end		    ;AN000;;LB. return
 
 scerror:				    ;AN000;
-	MOV	word [CALLSCNT],1		    ;AN000;;LB. reset sector count to 1
-	MOV	word [SC_STATUS],0		    ;AN000;;LB. invalidate all SC sectors
-	MOV	byte [CurSC_DRIVE],-1	    ;AN000;;LB. invalidate drive
+	MOV	word [ss:CALLSCNT],1		    ;AN000;;LB. reset sector count to 1
+	MOV	word [ss:SC_STATUS],0		    ;AN000;;LB. invalidate all SC sectors
+	MOV	byte [ss:CurSC_DRIVE],-1	    ;AN000;;LB. invalidate drive
 	STC				    ;AN000;;LB. carry set
 	return				    ;AN000;;LB.
 
@@ -815,21 +815,21 @@ Break	<SC2BUF- move data from SC to buffer>
 	JC	noSC			    ;AN000;;LB. no
 	MOV	AX,1			    ;AN000;;LB. check if valid sector
 	SHL	AX,CL			    ;AN000;;LB. in the secondary cache
-	TEST	[SC_STATUS],AX		    ;AN000;;LB.
+	TEST	[ss:SC_STATUS],AX		    ;AN000;;LB.
 	JZ	noSC			    ;AN000;;LB. invalid
 entry SC2BUF2				    ;AN000;
 	MOV	AX,CX			    ;AN000;;LB. times index with
-	MUL	word [SC_SECTOR_SIZE]	    ;AN000;;LB. sector size
-	ADD	AX,word [SC_CACHE_PTR]  ;AN000;;LB. add SC starting addr
-	ADC	DX,word [SC_CACHE_PTR+2];AN000;;LB.
+	MUL	word [ss:SC_SECTOR_SIZE]	    ;AN000;;LB. sector size
+	ADD	AX,word [ss:SC_CACHE_PTR]  ;AN000;;LB. add SC starting addr
+	ADC	DX,word [ss:SC_CACHE_PTR+2];AN000;;LB.
 	MOV	DS,DX			    ;AN000;    ;LB. DS:SI-> SC sector addr
 	MOV	SI,AX			    ;AN000;    ;LB.
-	MOV	ES,word [CALLXAD+2]     ;AN000;    ;LB. ES:DI-> buffer addr
-	MOV	DI,word [CALLXAD]	    ;AN000;    ;LB.
-	MOV	CX,[SC_SECTOR_SIZE]	    ;AN000;    ;LB. count= sector size
+	MOV	ES,word [ss:CALLXAD+2]     ;AN000;    ;LB. ES:DI-> buffer addr
+	MOV	DI,word [ss:CALLXAD]	    ;AN000;    ;LB.
+	MOV	CX,[ss:SC_SECTOR_SIZE]	    ;AN000;    ;LB. count= sector size
 	SHR	CX,1			    ;AN000;    ;LB. may use DWORD move for 386
 entry MOVWORDS				    ;AN000;
-	CMP	byte [DDMOVE],0		    ;AN000;    ;LB. 386 ?
+	CMP	byte [ss:DDMOVE],0		    ;AN000;    ;LB. 386 ?
 	JZ	nodd			    ;AN000;    ;LB. no
 	SHR	CX,1			    ;AN000;    ;LB. words/2
 	DB	66H			    ;AN000;    ;LB. use double word move

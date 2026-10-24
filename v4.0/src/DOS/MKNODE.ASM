@@ -88,20 +88,20 @@ Break   <BUILDDIR,NEWDIR -- ALLOCATE DIRECTORIES>
         DOSAssume   CS,<DS>,"BuildDir"
 ;        ASSUME  ES:NOTHING
 
-        MOV     AX,[ENTFREE]
+        MOV     AX,[ss:ENTFREE]
         CMP     AX,-1
         JZ      CHECK_IF_ROOT
         CLC
         return
 
 CHECK_IF_ROOT:
-        CMP     word [DIRSTART],0
+        CMP     word [ss:DIRSTART],0
         JNZ     NEWDIR
         STC
         return                  ; Can't grow root
 
         entry   NEWDIR
-        MOV     BX,[DIRSTART]
+        MOV     BX,[ss:DIRSTART]
         OR      BX,BX
         JZ      NULLDIR
         invoke  GETEOF
@@ -110,27 +110,27 @@ NULLDIR:
         MOV     CX,1
         invoke  ALLOCATE
         retc
-        MOV     DX,[DIRSTART]
+        MOV     DX,[ss:DIRSTART]
         OR      DX,DX
         JNZ     ADDINGDIR
         invoke  SETDIRSRCH
         retc
-        MOV     word [LASTENT],-1
+        MOV     word [ss:LASTENT],-1
         JMP     SHORT GOTDIRREC
 ADDINGDIR:
         PUSH    BX
-        MOV     BX,[CLUSNUM]
+        MOV     BX,[ss:CLUSNUM]
         Invoke  IsEof
         POP     BX
         JB      NOTFIRSTGROW
 ;;;; 10/17/86 update CLUSNUM in the fastopen cache
-        MOV     [CLUSNUM],BX
+        MOV     [ss:CLUSNUM],BX
         PUSH    CX
         PUSH    AX
         PUSH    BP
         MOV     AH,1                       ; CLUSNUM update
         MOV     DL,[es:BP+dpb.dpb_drive]       ; drive #
-        MOV     CX,[DIRSTART]              ; first cluster #
+        MOV     CX,[ss:DIRSTART]              ; first cluster #
         MOV     BP,BX                      ; CLUSNUM
         invoke  FastOpen_Update
         POP     BP
@@ -148,7 +148,7 @@ GOTDIRREC:
         XOR     CH,CH
 ZERODIR:
         PUSH    CX
-        MOV     byte [ALLOWED],Allowed_FAIL + Allowed_RETRY
+        MOV     byte [ss:ALLOWED],Allowed_FAIL + Allowed_RETRY
         MOV     AL,0FFH
         invoke  GETBUFFR
         JNC     GET_SSIZE
@@ -158,7 +158,7 @@ ZERODIR:
 GET_SSIZE:
         MOV     CX,[es:BP+dpb.dpb_sector_size]
         PUSH    ES
-        LES     DI,[CURBUF]
+        LES     DI,[ss:CURBUF]
         OR      [es:DI+BUFFINFO.buf_flags],buf_isDIR
         PUSH    DI
         ADD     DI,BUFINSIZ
@@ -179,7 +179,7 @@ yesdirty_MKNODE:
         POP     CX
         INC     DX
         LOOP    ZERODIR
-        MOV     AX,[LASTENT]
+        MOV     AX,[ss:LASTENT]
         INC     AX
         CLC
         return
@@ -213,7 +213,7 @@ EndProc BUILDDIR
 ; Initialize time and date of creation
 ;
         ADD     DI,10
-        MOV     SI,word [THISSFT]
+        MOV     SI,word [ss:THISSFT]
         MOV     AX,[SI+sf_entry.sf_time]
         errnz   dir_entry.dir_time-(dir_entry.dir_attr+1+10)
         STOSW
@@ -284,10 +284,10 @@ Break   <MakeNode -- CREATE a NEW NODE>
         DOSAssume   CS,<DS>,"MakeNode"
 ;        ASSUME  ES:NOTHING
 
-        MOV     word [CREATING],0E5FFH      ; Creating, not DEL *.*
+        MOV     word [ss:CREATING],0E5FFH      ; Creating, not DEL *.*
         PUSH    AX              ; Save AH value
-        MOV     byte [NoSetDir],0
-        MOV     [SATTRIB],AL
+        MOV     byte [ss:NoSetDir],0
+        MOV     [ss:SATTRIB],AL
         invoke  GetPathNoSet
         MOV     DL,CL           ; Save CL info
         MOV     CX,AX           ; Device ID to CH
@@ -307,17 +307,17 @@ make_err_ret:
 
 make_type:
 ;Extended Open hooks
-        TEST   byte [EXTOPEN_ON],ext_open_on  ;FT. from extended open                ;AN000;
+        TEST   byte [ss:EXTOPEN_ON],ext_open_on  ;FT. from extended open                ;AN000;
         JZ     make_type2                ;FT. no                                ;AN000;
-        OR     byte [EXTOPEN_ON],ext_file_not_exists ;FT. set for extended open      ;AN000;
-        TEST   word [EXTOPEN_FLAG],0F0H       ;FT. not exists and fails              ;AN000;
+        OR     byte [ss:EXTOPEN_ON],ext_file_not_exists ;FT. set for extended open      ;AN000;
+        TEST   word [ss:EXTOPEN_FLAG],0F0H       ;FT. not exists and fails              ;AN000;
         JNZ    make_type2                ;FT. no                                ;AN000;
         STC                              ;FT. set carry                         ;AN000;
         MOV    AX,7                      ;FT. file not found                    ;AN000;
         return                           ;FT.                                   ;AN000;
 make_type2:
 ;Extended Open hooks
-        LES     DI,[THISSFT]
+        LES     DI,[ss:THISSFT]
 ;       MOV     ES:[DI.sf_mode],sharing_compat + open_for_both
         XOR     AX,AX           ; nothing exists Disk Node
         STC                     ; Not found
@@ -331,7 +331,7 @@ make_type2:
 make_exists:
         JZ      make_exists_dir
         MOV     AL,3            ; file exists type 3  (error or device node)
-        TEST    byte [ATTRIB],(attr_volume_id+attr_directory)
+        TEST    byte [ss:ATTRIB],(attr_volume_id+attr_directory)
         JNZ     make_err_ret_5  ; Cannot already exist as Disk or Device Node
                                 ;       if making DIR or Volume ID
         OR      CH,CH
@@ -339,7 +339,7 @@ make_exists:
         OR      AH,AH
         JNZ     make_err_ret    ; truncating NOT OK (AL = 3)
         PUSH    CX              ; Save device ID
-        MOV     ES,word [CURBUF+2]
+        MOV     ES,word [ss:CURBUF+2]
         MOV     CH,[es:BX+dir_entry.dir_attr] ; Get file attributes
         TEST    CH,attr_read_only
         JNZ     make_err_ret_5P ; Cannot create on read only files
@@ -353,7 +353,7 @@ make_share:
         PUSH    CX              ; Save Device ID
         MOV     AH,CH           ; Device ID to AH
         CALL    DOOPEN          ; Fill in SFT for share check
-        LES     DI,[THISSFT]
+        LES     DI,[ss:THISSFT]
 ;       MOV     ES:[DI.sf_mode],sharing_compat + open_for_both
         SaveReg <SI,BX>         ; Save CURBUF pointers
         invoke  ShareEnter
@@ -388,7 +388,7 @@ make_save:
 make_new:
         call    make_save
         retc                    ; case 2 fail
-        TEST    byte [ATTRIB],attr_directory
+        TEST    byte [ss:ATTRIB],attr_directory
         retnz                   ; Don't "open" directories, so don't
                                 ;   tell the sharer about them
         SaveReg <AX,BX,SI>      ; Save AL code
@@ -401,7 +401,7 @@ make_new:
 ; possible:  delete the newly created directory entry and return share_error.
 ;
         PUSH    AX
-        LES     DI,[CURBUF]
+        LES     DI,[ss:CURBUF]
         MOV     byte [es:BX],0E5H   ; nuke newly created entry.
 
         TEST    [es:DI+BUFFINFO.buf_flags],buf_dirty  ;LB. if already dirty              ;AN000;
@@ -409,7 +409,7 @@ make_new:
         invoke  INC_DIRTY_COUNT           ;LB.                                  ;AN000;
         OR      [es:DI+BUFFINFO.buf_flags],buf_dirty ; flag buffer as dirty
 yesdirty2_MKNODE:
-        LES     BP,[THISDPB]
+        LES     BP,[ss:THISDPB]
         MOV     AL,[es:BP+dpb.dpb_drive]    ; get drive for flush
         Invoke  FlushBuf                ; write out buffer.
         POP     AX
@@ -427,7 +427,7 @@ yesdirty2_MKNODE:
 ; critDisk here and for someone else to get in, they must enter critDisk also.
 ;
 MakeEndShare:
-        LES     DI,[THISSFT]              ; grab SFT
+        LES     DI,[ss:THISSFT]              ; grab SFT
         XOR     AX,AX
         EnterCrit   critSFT
         XCHG    AX,[es:DI+sf_entry.sf_ref_count]
@@ -488,10 +488,10 @@ EndProc MakeNode
         DOSAssume   CS,<DS>,"NewEntry"
 ;        ASSUME  ES:NOTHING
 
-        LES     BP,[THISDPB]
+        LES     BP,[ss:THISDPB]
 ;ASSUME  ES:NOTHING
         JNC     EXISTENT
-        CMP     byte [FAILERR],0
+        CMP     byte [ss:FAILERR],0
         STC
         retnz                   ; User FAILed, node might exist
         CALL    BUILDDIR        ; Try to build dir
@@ -514,18 +514,18 @@ NOT_DEV1:
         invoke  FREEENT         ; Free cluster chain
         retc                    ; Failed
 FREESPOT:
-        TEST    byte [ATTRIB],attr_volume_id
+        TEST    byte [ss:ATTRIB],attr_volume_id
         JZ      NOTVOLID
-        CMP     byte [VOLID],0
+        CMP     byte [ss:VOLID],0
         JNZ     ERRRET3         ; Can't create a second volume ID
 NOTVOLID:
-        MOV     ES,word [CURBUF+2]
+        MOV     ES,word [ss:CURBUF+2]
         MOV     DI,BX
         MOV     SI,NAME1
         MOV     CX,5
         REP     MOVSW
         MOVSB                   ; Move name into dir entry
-        MOV     AL,[ATTRIB]
+        MOV     AL,[ss:ATTRIB]
         errnz   dir_entry.dir_attr-(dir_entry.dir_name+11)
         STOSB                   ; Attributes
 ;; File Tagging for Create DOS 4.00
@@ -557,14 +557,14 @@ NOTVOLID:
         STOSW
 updnxt:
         errnz   <sizeof.dir_entry-(dir_entry.dir_size_l+4)>
-        MOV     SI,word [CURBUF]
+        MOV     SI,word [ss:CURBUF]
 
         TEST    [es:SI+BUFFINFO.buf_flags],buf_dirty  ;LB. if already dirty              ;AN000;
         JNZ     yesdirty3                 ;LB.    don't increment dirty count   ;AN000;
         invoke  INC_DIRTY_COUNT           ;LB.                                  ;AN000;
         OR      [es:SI+BUFFINFO.buf_flags],buf_dirty
 yesdirty3:
-        LES     BP,[THISDPB]
+        LES     BP,[ss:THISDPB]
         MOV     AL,[es:BP+dpb.dpb_drive]    ; Sets AH value again (in AL)
         PUSH    AX
         PUSH    BX
@@ -573,21 +573,21 @@ yesdirty3:
 ; error occurs.
 ; Do nothing for a device.
         SaveReg <ES,DI>
-        LES     DI,[THISSFT]
+        LES     DI,[ss:THISSFT]
         test    [es:di+sf_entry.sf_flags],devid_device
         jnz     GotADevice
         SaveReg <DS,BX>
-        LDS     BX,[THISDPB]
+        LDS     BX,[ss:THISDPB]
         MOV     word [es:DI+sf_entry.sf_devptr],BX
         MOV     BX,DS
         MOV     word [es:DI+sf_entry.sf_devptr+2],BX
         RestoreReg <BX,DS>      ; need to use DS for segment later on
         invoke  DEV_OPEN_SFT    ; increment ref. count
-        mov     byte [VIRTUAL_OPEN],1; set flag
+        mov     byte [ss:VIRTUAL_OPEN],1; set flag
 GotADevice:
         RestoreReg <DI,ES>
 
-        PUSH    word [ACT_PAGE]      ;LB. save EMS page for curbuf                   ;AN000;
+        PUSH    word [ss:ACT_PAGE]      ;LB. save EMS page for curbuf                   ;AN000;
         invoke  FlushBuf
         POP     BX              ;LB. restore EMS page for curbuf                ;AN000;
         PUSHF                   ;LB. save flushbuf falg                         ;AN000;
@@ -646,13 +646,13 @@ Page_ok:                        ;BL-NETWORK PTM #-?
 ; Generate and store attribute
 ;
         MOV     DH,AH           ; AH to different place
-        LES     DI,[THISSFT]
+        LES     DI,[ss:THISSFT]
         ADD     DI,sf_entry.sf_attr      ; Skip ref_count and mode fields
         XOR     AL,AL           ; Assume it's a device, devices have an
                                 ;   attribute of 0 (for R/O testing etc).
         OR      DH,DH           ; See if our assumption good.
         JS      DEV_SFT1        ; If device DS=DOSGROUP
-        MOV     DS,word [CURBUF+2]
+        MOV     DS,word [ss:CURBUF+2]
 ;ASSUME  DS:NOTHING
         MOV     AL,[BX+dir_entry.dir_attr] ; If file, get attrib from dir entry
 DEV_SFT1:
@@ -671,7 +671,7 @@ DEV_SFT1:
         LDS     AX,dword [BX+dir_entry.dir_first]       ; Assume device
         OR      DH,DH
         JS      DEV_SFT2
-        LDS     AX,[THISDPB]            ; Was file
+        LDS     AX,[ss:THISDPB]            ; Was file
 DEV_SFT2:
         STOSW                           ; store offset
         MOV     AX,DS
@@ -753,7 +753,7 @@ FILE_SFT1:
 Not_FastOpen:
         POP     DS                      ; normal path
 ;ASSUME  DS:NOTHING
-        MOV     SI,word [CURBUF]    ; DS:SI->buffer header
+        MOV     SI,word [ss:CURBUF]    ; DS:SI->buffer header
         MOV     AX,word [SI+BUFFINFO.buf_sector]     ;F.C. >32mb                        ;AN000;
         STOSW                   ; sf_dirsec     ;F.C. >32mb                        ;AN000;
         MOV     AX,word [SI+BUFFINFO.buf_sector+2]   ;F.C. >32mb                        ;AN000;
@@ -818,7 +818,7 @@ EndProc NEWENTRY
 ;ASSUME  DS:NOTHING
         MOV     CX,[SI]         ; Get pointer to clusters
         MOV     DX,word [DI+BUFFINFO.buf_sector+2]  ;F.C. >32mb                      ;AN000;
-        MOV     [HIGH_SECTOR],DX               ;F.C. >32mb                      ;AN000;
+        MOV     [ss:HIGH_SECTOR],DX               ;F.C. >32mb                      ;AN000;
         MOV     DX,word [DI+BUFFINFO.buf_sector]
         POP     DS
         DOSAssume   CS,<DS>,"MKNODE/FreeEnt"
@@ -828,27 +828,27 @@ EndProc NEWENTRY
         JA      RET1            ; Treat like zero length file (firclus mucked)
         SUB     BX,DI
         PUSH    BX              ; Save offset
-        PUSH    word [HIGH_SECTOR]                  ;F.C. >32mb                      ;AN000;
+        PUSH    word [ss:HIGH_SECTOR]                  ;F.C. >32mb                      ;AN000;
         PUSH    DX              ; Save sector number
 
         MOV     BX,CX
         invoke  Delete_FSeek    ; FS. delete Fastseek Clusters                  ;AN000;
         invoke  RELEASE         ; Free any data allocated
         POP     DX
-        POP     word [HIGH_SECTOR]                  ;F.C. >32mb                      ;AN000;
+        POP     word [ss:HIGH_SECTOR]                  ;F.C. >32mb                      ;AN000;
         JNC     GET_BUF_BACK
         POP     BX
         return                  ; Screw up
 
 GET_BUF_BACK:
 
-        MOV     byte [ALLOWED],Allowed_RETRY + Allowed_FAIL
+        MOV     byte [ss:ALLOWED],Allowed_RETRY + Allowed_FAIL
         XOR     AL,AL
         invoke  GETBUFFR        ; Get sector back
         POP     BX              ; Get offset back
         retc
         invoke  SET_BUF_AS_DIR
-        ADD     BX,word [CURBUF]    ; Correct it for new buffer
+        ADD     BX,word [ss:CURBUF]    ; Correct it for new buffer
         MOV     SI,BX
         ADD     SI,dir_entry.dir_first    ; Get corrected SI
 RET1:
@@ -869,11 +869,11 @@ EndProc FREEENT
 
         PUSH    AX
         lahf                    ; preserve flags
-        CMP     byte [VIRTUAL_OPEN],0
+        CMP     byte [ss:VIRTUAL_OPEN],0
         JZ      ALL_CLOSED
-        mov     byte [VIRTUAL_OPEN],0        ; reset flag
+        mov     byte [ss:VIRTUAL_OPEN],0        ; reset flag
         SaveReg <ES,DI>
-        LES     DI,[THISSFT]
+        LES     DI,[ss:THISSFT]
         INVOKE  DEV_CLOSE_SFT
         RestoreReg <DI,ES>
 

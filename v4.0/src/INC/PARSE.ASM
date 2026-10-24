@@ -225,9 +225,9 @@ end if					;AN000;(of FarSW)
 ;	$SALUT	(4,9,17,41)
 	mov	[psdata_seg:P_Flags],0	;AC034; Clear all internal flags
 if	TimeSW				;AN039; FOR TIME ONLY
-	MOV    psdata_seg:[P_ORIG_ORD],CX ;AN039; ORIGINAL ORDINAL FROM CX
-	MOV    psdata_seg:[P_ORIG_STACK],SP ;AN039; ORIGINAL VALUE OF STACK FROM SP
-	MOV    psdata_seg:[P_ORIG_SI],SI ;AN039; ORIGINAL START PARSE POINTER FROM SI
+	MOV    psdata_seg:[cs:P_ORIG_ORD],CX ;AN039; ORIGINAL ORDINAL FROM CX
+	MOV    psdata_seg:[cs:P_ORIG_STACK],SP ;AN039; ORIGINAL VALUE OF STACK FROM SP
+	MOV    psdata_seg:[cs:P_ORIG_SI],SI ;AN039; ORIGINAL START PARSE POINTER FROM SI
 P_REDO_TIME:				;AN039; try to parse time again
 end if					;AN039; FOR TIME ONLY
 	cld				      ;AN000; confirm forward direction

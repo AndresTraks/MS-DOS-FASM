@@ -482,9 +482,9 @@ SYSIN:
 
 ;	ASSUME	DS:NOTHING,ES:SYSINITSEG,SS:NOTHING
 
-	MOV	AX,[CURRENT_DOS_LOCATION]   ; Where it is (set by BIOS)
+	MOV	AX,[es:CURRENT_DOS_LOCATION]   ; Where it is (set by BIOS)
 	MOV	DS,AX
-	MOV	AX,[FINAL_DOS_LOCATION]     ; Where it is going (set by BIOS)
+	MOV	AX,[es:FINAL_DOS_LOCATION]     ; Where it is going (set by BIOS)
 	MOV	ES,AX
 
 ;	ASSUME	ES:NOTHING
@@ -495,8 +495,8 @@ SYSIN:
 	MOV	CX,DOSSIZE/2
 	REP	MOVSW
 
-	LDS	SI,[DEVICE_LIST]	; Set for call to DOSINIT
-	MOV	DX,[MEMORY_SIZE]	; Set for call to DOSINIT
+	LDS	SI,[cs:DEVICE_LIST]	; Set for call to DOSINIT
+	MOV	DX,[cs:MEMORY_SIZE]	; Set for call to DOSINIT
 
 	CLI
 	MOV	AX,CS
@@ -510,19 +510,19 @@ SYSIN:
 	end if
 LOCSTACK:
 
-	CALL	dword [MSDOS]			; Call DOSINIT
+	CALL	dword [ss:MSDOS]			; Call DOSINIT
 					;ES:DI -> SysInitVars_Ext
 	mov	ax, word [es:di+SysInitVars_Ext.SYSI_InitVars] ;J.K. 5/29/86
-	mov	word [DOSINFO], ax
+	mov	word [ss:DOSINFO], ax
 	mov	ax, word [es:di+SysInitVars_Ext.SYSI_InitVars+2]
-	mov	word [DOSINFO+2],ax ;set the sysvar pointer
+	mov	word [ss:DOSINFO+2],ax ;set the sysvar pointer
 
 	mov	ax, word [es:di+SysInitVars_Ext.SYSI_Country_Tab]
-	mov	word [SYSI_Country],ax
+	mov	word [ss:SYSI_Country],ax
 	mov	ax, word [es:di+SysInitVars_Ext.SYSI_Country_Tab+2]
-	mov	word [SYSI_Country+2],ax	;set the SYSI_Country pointer J.K.
+	mov	word [ss:SYSI_Country+2],ax	;set the SYSI_Country pointer J.K.
 
-	les	di, [DOSINFO]		;es:di -> dosinfo
+	les	di, [ss:DOSINFO]		;es:di -> dosinfo
 
 	clc					;AN018;Get the extended memory size
 ;SB34SYSINIT1002**************************************************************
@@ -545,9 +545,9 @@ No_Ext_Memory:
 
 	mov	ax, [es:di+SysInitVars.SYSI_MAXSEC] 	;AN020; Get the sector size
 	add	ax, BUFINSIZ			;AN020; size of buffer header
-	mov	[SingleBufferSize], ax		;AN020; total size for a buffer
+	mov	[ss:SingleBufferSize], ax		;AN020; total size for a buffer
 
-	mov	al, [DEFAULT_DRIVE]		;AN000;Get the 1 based boot drive number set by IBMINIT
+	mov	al, [ss:DEFAULT_DRIVE]		;AN000;Get the 1 based boot drive number set by IBMINIT
 	mov	[es:di+SysInitVars.SYSI_BOOT_DRIVE], al	;AN000; set SYSI_BOOT_DRIVE
 
 ; Determine if 386 system...
@@ -557,18 +557,18 @@ No_Ext_Memory:
 	mov	[es:di+SysInitVars.SYSI_DWMOVE], 1		  ;AN003;
 Not_386_System: 				  ;AN003;
 	MOV	AL,[es:DI+SysInitVars.SYSI_NUMIO]
-	MOV	[DriveNumber],AL		; Save start of installable block drvs
+	MOV	[ss:DriveNumber],AL		; Save start of installable block drvs
 
 	MOV	AX,CS
 	SUB	AX,11H			; room for header we will copy shortly
-	mov	cx, [SingleBufferSize]	;AN020;Temporary Single buffer area
+	mov	cx, [ss:SingleBufferSize]	;AN020;Temporary Single buffer area
 	shr	cx, 1			;AN020;
 	shr	cx, 1			;AN020;
 	shr	cx, 1			;AN020;
 	shr	cx, 1			;AN020; Paragraphs
 	inc	cx			;AN020;
 	sub	ax, cx			;AN020;
-	MOV	[CONFBOT],AX		; Temp "unsafe" location
+	MOV	[ss:CONFBOT],AX		; Temp "unsafe" location
 
 	push	es			;AN020;
 	push	di			;AN020;
@@ -639,7 +639,7 @@ Not_386_System: 				  ;AN003;
 	POP	DS
 ;ASSUME	DS:NOTHING
 
-	MOV	DL,[DEFAULT_DRIVE]
+	MOV	DL,[ss:DEFAULT_DRIVE]
 	OR	DL,DL
 	JZ	NODRVSET		; BIOS didn't say
 	DEC	DL			;A = 0
@@ -653,7 +653,7 @@ NODRVSET:
 	inc	[cs:Multi_Pass_Id]	;AN024;
 	call	Multi_Pass		;AN024;
 	call	ENDFILE
-	test	[Install_Flag], HAVE_INSTALL_CMD		;AN019;
+	test	[ss:Install_Flag], HAVE_INSTALL_CMD		;AN019;
 	jz	DoLast					;AN019;
 	inc	[cs:Multi_Pass_Id]			;AN024;
 	call	Multi_Pass				;AN019;AN024; Execute INSTALL= commands
@@ -663,7 +663,7 @@ NODRVSET:
 DoLast:
 	call	LoadShare		;AN021; Try to load share.exe, if needed.
 	mov	[cs:DoNotShowNum], 1	;AN000; Done with CONFIG.SYS. Do not show line number message.
-	mov	cx, [AREA]		;AN000;
+	mov	cx, [ss:AREA]		;AN000;
 	mov	es, cx			;AN000;
 	mov	ah, 49h 		;AN000; Free allocated memory for command.com
 	int	21h			;AN000;
@@ -873,11 +873,11 @@ TEMPCDS:
 	XOR	DI,DI
 
 FOOSET: 				; Init CDSs
-	MOV	AX,word [FOOSTRNG]
+	MOV	AX,word [ss:FOOSTRNG]
 	STOSW
 	MOV	AX,word [FOOSTRNG + 2]
 	STOSW
-	INC	byte [FOOSTRNG]
+	INC	byte [ss:FOOSTRNG]
 	XOR	AX,AX
 	PUSH	CX
 	MOV	CX,curdir_list.curdir_flags - 4
@@ -940,7 +940,7 @@ FINCDS:
 	stosw				;AN000;
 	stosb				;AN000;
 	LOOP	FOOSET
-	MOV	byte [FOOSTRNG],"A"
+	MOV	byte [ss:FOOSTRNG],"A"
 	return
 
 ;------------------------------------------------------------------------------
@@ -974,13 +974,13 @@ MulTrk_Flag_Done:			    ;AN002;
 	pop	ds			    ;AN002;
 ;	assume	ds:nothing
 
-	MOV	AX,[CONFBOT]
-	MOV	[ALLOCLIM],AX
+	MOV	AX,[ss:CONFBOT]
+	MOV	[ss:ALLOCLIM],AX
 
 	PUSH	CS
 	POP	DS
 	INVOKE	ROUND
-	MOV	AL,[FILES]
+	MOV	AL,[ss:FILES]
 	SUB	AL,5
 	JBE	DOFCBS
 	push	ax			;AN005;
@@ -989,24 +989,24 @@ MulTrk_Flag_Done:			    ;AN002;
 	pop	ax			;AN005;
 	XOR	AH,AH			; DO NOT USE CBW INSTRUCTION!!!!!
 					;  IT DOES SIGN EXTEND.
-	MOV	BX,[MEMLO]
-	MOV	DX,[MEMHI]
-	LDS	DI,[DOSINFO]		;GET POINTER TO DOS DATA
+	MOV	BX,[ss:MEMLO]
+	MOV	DX,[ss:MEMHI]
+	LDS	DI,[ss:DOSINFO]		;GET POINTER TO DOS DATA
 	LDS	DI,[DI+SysInitVars.SYSI_SFT]	;DS:BP POINTS TO SFT
 	MOV	word [DI+SF.SFLink],BX
 	MOV	word [DI+SF.SFLink+2],DX   ;SET POINTER TO NEW SFT
 	PUSH	CS
 	POP	DS
-	LES	DI,dword [MEMLO]	;POINT TO NEW SFT
+	LES	DI,dword [ss:MEMLO]	;POINT TO NEW SFT
 	MOV	word [es:DI+SF.SFLink],-1
 	MOV	[es:DI+SF.SFCount],AX
 	MOV	BL,sizeof.sf_entry
 	MUL	BL			;AX = NUMBER OF BYTES TO CLEAR
 	MOV	CX,AX
-	ADD	[MEMLO],AX		;ALLOCATE MEMORY
+	ADD	[ss:MEMLO],AX		;ALLOCATE MEMORY
 	MOV	AX,6
-	ADD	[MEMLO],AX		;REMEMBER THE HEADER TOO
-	or	[SetDevMarkFlag], FOR_DEVMARK ;AN005;
+	ADD	[ss:MEMLO],AX		;REMEMBER THE HEADER TOO
+	or	[ss:SetDevMarkFlag], FOR_DEVMARK ;AN005;
 	INVOKE	ROUND			; Check for mem error before the STOSB
 	ADD	DI,AX
 	XOR	AX,AX
@@ -1021,12 +1021,12 @@ DOFCBS:
 	INVOKE	ROUND
 	mov	al, DEVMARK_FCBS	;AN005;='X'
 	call	SetDevMark		;AN005;
-	MOV	AL,[FCBS]
+	MOV	AL,[ss:FCBS]
 	XOR	AH,AH			; DO NOT USE CBW INSTRUCTION!!!!!
 					;  IT DOES SIGN EXTEND.
-	MOV	BX,[MEMLO]
-	MOV	DX,[MEMHI]
-	LDS	DI,[DOSINFO]		;GET POINTER TO DOS DATA
+	MOV	BX,[ss:MEMLO]
+	MOV	DX,[ss:MEMHI]
+	LDS	DI,[ss:DOSINFO]		;GET POINTER TO DOS DATA
 ;	ASSUME	DS:NOTHING
 	MOV	word [DI+SysInitVars.SYSI_FCB],BX
 	MOV	word [DI+SysInitVars.SYSI_FCB+2],DX ;SET POINTER TO NEW Table
@@ -1238,9 +1238,9 @@ BUFSET:
 DOBUFF: 					;AN000;
 	lds	bx, [cs:DOSINFO]		;AN000; ds:bx -> SYSINITVAR
 
-	mov	ax, [BUFFERS]				;AN000;Set SYSI_BUFFERS
+	mov	ax, [ss:BUFFERS]				;AN000;Set SYSI_BUFFERS
 	mov	word [bx+SysInitVars.SYSI_BUFFERS], ax	;AN000;
-	mov	ax, [H_Buffers] 			;AN000;
+	mov	ax, [ss:H_Buffers] 			;AN000;
 	mov	word [bx+SysInitVars.SYSI_BUFFERS+2], ax	;AN000;
 
 	lds	bx, [bx+SysInitVars.SYSI_BUF]		;AN000; now, ds:bx -> BuffInfo
@@ -1250,14 +1250,14 @@ DOBUFF: 					;AN000;
 	JMP SI1_IF1
 SI1_XL1:
 	    xor    dx, dx			;AN000;
-	    mov    ax, [BUFFERS]		;AN000; < 99
+	    mov    ax, [ss:BUFFERS]		;AN000; < 99
 	    cmp al, 30				;AN026; if less than 30,
 ;	    $IF  B				;AN026;
 	    JNB SI1_IF2
-		mov [BufferBuckets], 1		;AN026;  then put every buffer
+		mov [ss:BufferBuckets], 1		;AN026;  then put every buffer
 		mov [bx+Buffinfo.Hash_count], 1	;AN026;    into one bucket
-		mov [MaxNumBuf1], al		;AN026;
-		mov [NthBuck], 1		;AN026;
+		mov [ss:MaxNumBuf1], al		;AN026;
+		mov [ss:NthBuck], 1		;AN026;
 ;	    $ELSE				;AN026; else...
 	    JMP SHORT SI1_EN2
 SI1_IF2:
@@ -1265,13 +1265,13 @@ SI1_IF2:
 		div cl				;AN026; al=# of buckets, ah=remainders
 		push ax 			;AN026; save the result
 		xor  ah, ah			;AN026;
-		mov  [BufferBuckets], ax	;AN026;
+		mov  [ss:BufferBuckets], ax	;AN026;
 		mov  [bx+Buffinfo.Hash_count], ax	;AN026;
 		pop  ax 			;AN026;
 		or   ah, ah			;AN026;
 ;		$IF  Z				;AN026;if no remainders
 		JNZ SI1_IF4
-		   mov [NthBuck], al		;AN026;then set NthBuck=# of bucket for Set_Buffer proc.
+		   mov [ss:NthBuck], al		;AN026;then set NthBuck=# of bucket for Set_Buffer proc.
 ;		$ELSE				;AN026;else
 		JMP SHORT SI1_EN4
 SI1_IF4:
@@ -1282,16 +1282,16 @@ SI1_IF4:
 		   or  ah, ah			;AN026;ah=Nth bucket
 ;		   $IF	Z			;AN026;
 		   JNZ SI1_IF6
-		      add [MaxNumBuf1], al	;AN026;
-		      mov ax, [BufferBuckets]	;AN026;
-		      mov [NthBuck], al 	;AN026;
+		      add [ss:MaxNumBuf1], al	;AN026;
+		      mov ax, [ss:BufferBuckets]	;AN026;
+		      mov [ss:NthBuck], al 	;AN026;
 ;		   $ELSE			;AN026;
 		   JMP SHORT SI1_EN6
 SI1_IF6:
-		      mov [NthBuck], ah 	;AN026;
-		      add [MaxNumBuf1], al	;AN026;MaxNumNuf are initially set to 15.
-		      add [MaxNumBuf2], al	;AN026;
-		      inc [MaxNumBuf1]		;AN026;Additional 1 more buffer for group 1 buckets.
+		      mov [ss:NthBuck], ah 	;AN026;
+		      add [ss:MaxNumBuf1], al	;AN026;MaxNumNuf are initially set to 15.
+		      add [ss:MaxNumBuf2], al	;AN026;
+		      inc [ss:MaxNumBuf1]		;AN026;Additional 1 more buffer for group 1 buckets.
 ;		   $ENDIF			;AN026;
 SI1_EN6:
 ;		$ENDIF				;AN026;
@@ -1301,10 +1301,10 @@ SI1_EN2:
 ;	$ELSE					;AN000; Use the extended memory.
 	JMP SHORT SI1_EN1
 SI1_IF1:
-	    mov   ax, [Buffer_Pages]		;AN000;
+	    mov   ax, [ss:Buffer_Pages]		;AN000;
 	    mov   cx, MaxBucketinPage		;AN000;
 	    mul   cx				;AN000; gauranteed to be word boundary.
-	    mov   [BufferBuckets], ax		;AN000;
+	    mov   [ss:BufferBuckets], ax		;AN000;
 	    mov   [bx+Buffinfo.Hash_count], ax	;AN000;
 ;	$ENDIF					;AN000;
 SI1_EN1:
@@ -1312,16 +1312,16 @@ SI1_EN1:
 	mov	al, DEVMARK_BUF 		;AN005; ='B'
 	call	SetDevMark			;AN005;
 ;Now, allocate Hash table at [memhi]:[memlo]. AX = Hash_Count.
-	mov	ax, [BufferBuckets]		;AN026; # of buckets==Hash_Count
+	mov	ax, [ss:BufferBuckets]		;AN026; # of buckets==Hash_Count
 	mov	cx, sizeof.BUFFER_HASH_ENTRY	;AN000;
 	mul	cx				;AN000; now AX = Size of hash table.
 	les	di, [bx+Buffinfo.Hash_ptr]		;AN000; save Single buffer address.
-	mov	cx, [MEMLO]			      ;AN000;
+	mov	cx, [ss:MEMLO]			      ;AN000;
 	mov	word [bx+Buffinfo.Hash_ptr], cx	      ;AN000; set BuffINFO.HASH_PTR
-	mov	cx, [MEMHI]			      ;AN000;
+	mov	cx, [ss:MEMHI]			      ;AN000;
 	mov	word [bx+Buffinfo.Hash_ptr+2], cx       ;AN000;
-	mov	[MEMLO], ax			      ;AN000;
-	or	[SetDevMarkFlag], FOR_DEVMARK	;AN005;
+	mov	[ss:MEMLO], ax			      ;AN000;
+	or	[ss:SetDevMarkFlag], FOR_DEVMARK	;AN005;
 	call	ROUND				;AN000; get new [memhi]:[memlo]
 ;Allocate buffers
 	push	ds				;AN000; Save Buffer info. ptr.
@@ -1339,20 +1339,20 @@ SI1_EN13:
 	pop	bx				;AN000;
 	pop	ds				;AN000;
 ;Now set the secondary buffer if specified.
-	cmp	[H_Buffers], 0			;AN000;
+	cmp	[ss:H_Buffers], 0			;AN000;
 ;	$IF	NE				;AN000;
 	JE SI1_IF16
 	    call   ROUND			;AN000;
-	    mov    cx, [MEMLO]			;AN000;
+	    mov    cx, [ss:MEMLO]			;AN000;
 	    mov    word [bx+Buffinfo.Cache_ptr], cx    ;AN000;
-	    mov    cx, [MEMHI]			     ;AN000;
+	    mov    cx, [ss:MEMHI]			     ;AN000;
 	    mov    word [bx+Buffinfo.Cache_ptr+2], cx  ;AN000;
-	    mov    cx, [H_Buffers]		     ;AN000;
+	    mov    cx, [ss:H_Buffers]		     ;AN000;
 	    mov    [bx+Buffinfo.Cache_count], cx	     ;AN000;
 	    mov    ax, 512			;AN000; 512 byte
 	    mul    cx				;AN000;
-	    mov    [MEMLO], ax			;AN000;
-	    or	   [SetDevMarkFlag], FOR_DEVMARK ;AN005;
+	    mov    [ss:MEMLO], ax			;AN000;
+	    or	   [ss:SetDevMarkFlag], FOR_DEVMARK ;AN005;
 	    call   ROUND			;AN000;
 ;	$ENDIF					;AN000;
 SI1_IF16:
@@ -1391,24 +1391,24 @@ BUF1:
 	mov	ax, DEVMARK_CDS 		;AN005;='L'
 	call	SetDevMark			;AN005;
 	pop	ax				;AN005;
-	LES	DI,[DOSINFO]
+	LES	DI,[ss:DOSINFO]
 	MOV	CL,byte [es:DI+SysInitVars.SYSI_NUMIO]
-	CMP	CL,[NUM_CDS]
+	CMP	CL,[ss:NUM_CDS]
 	JAE	GOTNCDS 			; User setting must be at least NUMIO
-	MOV	CL,[NUM_CDS]
+	MOV	CL,[ss:NUM_CDS]
 GOTNCDS:
 	XOR	CH,CH
 	MOV	[es:DI+SysInitVars.SYSI_NCDS],CL
-	MOV	AX,[MEMHI]
+	MOV	AX,[ss:MEMHI]
 	MOV	word [es:DI+SysInitVars.SYSI_CDS + 2],AX
-	MOV	AX,[MEMLO]
+	MOV	AX,[ss:MEMLO]
 	MOV	word [es:DI+SysInitVars.SYSI_CDS],AX
 	MOV	AL,CL
 	MOV	AH,sizeof.curdir_list
 	MUL	AH
 	call	ParaRound
-	ADD	[MEMHI],AX
-	or	[SetDevMarkFlag], FOR_DEVMARK	;AN005;
+	ADD	[ss:MEMHI],AX
+	or	[ss:SetDevMarkFlag], FOR_DEVMARK	;AN005;
 	INVOKE	ROUND				; Check for mem error before initializing
 	LDS	SI,[es:DI+SysInitVars.SYSI_DPB]
 ;ASSUME	DS:NOTHING
@@ -2195,7 +2195,7 @@ Set_Buffer:
 SI1_DO21:
 	    inc  dl				      ;AN026; Current bucket number
 	    mov  word [bx+BUFFER_HASH_ENTRY.BUFFER_BUCKET],0     ;AN000;Memlo is 0 after ROUND.
-	    mov  di, [MEMHI]			      ;AN000;
+	    mov  di, [ss:MEMHI]			      ;AN000;
 	    mov  word [bx+BUFFER_HASH_ENTRY.BUFFER_BUCKET+2], di ;AN000;Hash entry set.
 	    mov word [bx+BUFFER_HASH_ENTRY.DIRTY_COUNT], 0       ;AN020;set DIRTY_COUNT, BUFFER_RESERVED to 0.
 	    mov  es, di 			;AN000;
@@ -2206,14 +2206,14 @@ SI1_DO21:
 SI1_DO22:
 		call Set_Buffer_Info		;AN000;Set buf_link, buf_id...
 		inc cx				;AN000;buffer number
-		cmp dl, [NthBuck]		;AN026;Current bucket number > NthBuck?
+		cmp dl, [ss:NthBuck]		;AN026;Current bucket number > NthBuck?
 ;		$IF BE				;AN026;
 		JNBE SI1_IF23
-		    cmp cl, [MaxNumBuf1]	;AN026; last buffer of the 1st group?
+		    cmp cl, [ss:MaxNumBuf1]	;AN026; last buffer of the 1st group?
 ;		$ELSE				;AN026;
 		JMP SHORT SI1_EN23
 SI1_IF23:
-		    cmp cl, [MaxNumBuf2]	;AN026; last buffer of the 2nd group?
+		    cmp cl, [ss:MaxNumBuf2]	;AN026; last buffer of the 2nd group?
 ;		$ENDIF				;AN026;
 SI1_EN23:
 
@@ -2226,11 +2226,11 @@ SI1_IF26:
 		mov  di, ax			;AN000;adjust next buffer position
 ;	    $ENDDO   E				;AN000;flag set already for testing last buffer.
 	    JNE SI1_DO22
-	    add  [MEMLO], ax			;AN000;AX is the size of this bucket.
-	    or	 [SetDevMarkFlag], FOR_DEVMARK	;AN005;Update DEVMARK_SIZE
+	    add  [ss:MEMLO], ax			;AN000;AX is the size of this bucket.
+	    or	 [ss:SetDevMarkFlag], FOR_DEVMARK	;AN005;Update DEVMARK_SIZE
 	    call ROUND				;AN000;memhi:memlo adjusted for the next bucket.
 	    add  bx, sizeof.BUFFER_HASH_ENTRY	;AN000;ds:bx -> next hash entry.
-	    dec  [BufferBuckets]		;AN000;
+	    dec  [ss:BufferBuckets]		;AN000;
 ;	$ENDDO	 Z				;AN000;
 	JNZ SI1_DO21
 	ret					;AN000;
@@ -2356,10 +2356,10 @@ Set_Buffer_Info:
 ;    Above entries set.
 
 
-	push	[BUF_PREV_OFF]			;AN020;
+	push	[ss:BUF_PREV_OFF]			;AN020;
 	pop	[es:di+BUFFINFO.buf_prev]		;AN020;
-	mov	[BUF_PREV_OFF], ax		;AN020;
-	add ax, [SingleBufferSize]		;AN000;adjust ax
+	mov	[ss:BUF_PREV_OFF], ax		;AN020;
+	add ax, [ss:SingleBufferSize]		;AN000;adjust ax
 	mov word [es:di+BUFFINFO.buf_next], ax	;AN020;
 	mov word [es:di+BUFFINFO.buf_ID], 00FFh	;AN000;new buffer free
 	mov word [es:di+BUFFINFO.buf_sector], 0	;AN000;To compensate the MASM 3 bug

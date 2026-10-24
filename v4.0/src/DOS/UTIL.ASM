@@ -58,7 +58,7 @@ BREAK   <pJFNFromHandle - return pointer to JFN table entry>
 ;       at DOSINIT time with SS NOT DOSGROUP
 procedure   pJFNFromHandle,NEAR
 ;	ASSUME  CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
-	MOV     ES,[CurrentPDB]         ; get user process data block
+	MOV     ES,[cs:CurrentPDB]         ; get user process data block
 	CMP     BX,[es:Process_data_block.PDB_JFN_Length]  ; is handle greater than allocated
 	JB      JFNAdd                  ; no, get offset
 	fmt     TypAccess,LevSFN,<"p$: Illegal JFN %x\n">,<BX>
@@ -118,7 +118,7 @@ BREAK <SFFromSFN - TableFrame.Index into SF table for SFN>
 ;       at DOSINIT time with SS NOT DOSGROUP
 procedure   SFFromSFN,NEAR
 ;	ASSUME  CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
-	LES     DI,[sft_addr]           ; get pointer to beginning of table
+	LES     DI,[cs:sft_addr]           ; get pointer to beginning of table
 ScanLoop:
 	CMP     BX,[es:DI+SF.SFCount]      ; is handle in this table?
 	JB      GetOffset               ; yes, go grab it
@@ -201,10 +201,10 @@ end if
 	JNZ     SFNNext                 ; not marked busy...
 	fmt     TypAccess,LevSFN,<"p$: SFT x$:x$(x$)is busy, owner x$:x$\n">,<ES,DI,BX,ES:[DI].sf_UID,ES:[DI].sf_pid>
 	SaveReg <BX>
-	MOV     BX,[USER_ID]
+	MOV     BX,[ss:USER_ID]
 	CMP     [es:DI+sf_entry.sf_UID],BX
 	JNZ     SFNNextP
-	MOV     BX,[PROC_ID]
+	MOV     BX,[ss:PROC_ID]
 	CMP     [es:DI+sf_entry.sf_PID],BX
 	JZ      SFNGotP
 SFNNextP:
@@ -219,9 +219,9 @@ SFNGotP:
 	CLC                             ; no error
 	fmt     TypAccess,LevSFN,<"p$: SFT x$:x$(x$) marked busy\n">,<ES,DI,BX>
 	MOV     [es:DI+sf_entry.sf_ref_count],sf_busy    ; make sure that this is allocated
-	MOV     BX,[USER_ID]
+	MOV     BX,[ss:USER_ID]
 	MOV     [es:DI+sf_entry.sf_UID],BX
-	MOV     BX,[PROC_ID]
+	MOV     BX,[ss:PROC_ID]
 	MOV     [es:DI+sf_entry.sf_PID],BX
 	RestoreReg  <BX>
 SFNDone:

@@ -74,10 +74,10 @@ MOVDPB:
 	REP	MOVSB
 	CLD
 	MOV	word [es:DMAADD+2],DX
-	MOV	SI,word [DPBHEAD]	; Address of first DPB
+	MOV	SI,word [cs:DPBHEAD]	; Address of first DPB
 	MOV	word [es:DPBHEAD+2],ES
 	MOV	word [es:sft_addr+2],ES
-	MOV	CL,[NUMIO]	; Number of DPBs
+	MOV	CL,[cs:NUMIO]	; Number of DPBs
 	XOR	CH,CH
 SETFINDPB:
 	MOV	word [es:SI+dpb.dpb_next_dpb+2],ES
@@ -119,7 +119,7 @@ SETFINDPB:
 
 	PUSH	ES
 	INC	DX			    ; Leave enough room for the ARENA
-	MOV	SI,[EndMem]
+	MOV	SI,[es:EndMem]
 	invoke	Dup_PDB$
 ;	MOV	BYTE PTR [CreatePDB],0FFh   ; create jfns and set CurrentPDB
 ;	invoke	$CREATE_PROCESS_DATA_BLOCK     ; Set up segment
@@ -133,7 +133,7 @@ SETFINDPB:
 ; segment as refed by CS is. From this point until the return below be careful
 ; about references off of CS.
 ;
-	MOV	AX,[CurrentPDB]
+	MOV	AX,[cs:CurrentPDB]
 	MOV	[es:CurrentPDB],AX	   ; Put it in the REAL location
 	MOV	byte [es:CreatePDB],0h ; reset flag in REAL location
 	DEC	AX
@@ -182,15 +182,15 @@ INITIRET:			; Temp IRET instruction
 	entry	DOSINIT
 	CLI
 	CLD
-	MOV	[EndMem],DX
-	MOV	[INITSP],SP
-	MOV	[INITSS],SS
+	MOV	[cs:EndMem],DX
+	MOV	[cs:INITSP],SP
+	MOV	[cs:INITSS],SS
 	MOV	AX,CS
 	MOV	SS,AX
 ;ASSUME	SS:DOSGROUP
 	MOV	SP,INITSTACK
-	MOV	word [NULDEV+2],DS
-	MOV	word [NULDEV],SI   ; DS:SI Points to CONSOLE Device
+	MOV	word [ss:NULDEV+2],DS
+	MOV	word [ss:NULDEV],SI   ; DS:SI Points to CONSOLE Device
 
 	PUSH	DS		; Need Crit vector inited to use DEVIOCALL
 	XOR	AX,AX
@@ -247,15 +247,15 @@ INITIRET:			; Temp IRET instruction
 	REP	STOSB	; Extension
 	POP	SI	; Get back pointer to header
 	OR	byte [SI+SYSDEV.SDEVATT],ISCIN OR ISCOUT
-	MOV	word [BCON],SI
-	MOV	word [BCON+2],DS
+	MOV	word [ss:BCON],SI
+	MOV	word [ss:BCON+2],DS
 CHAR_INIT_LOOP:
 	LDS	SI,dword [SI]		; AUX device
 	CALL	CHARINIT
 	TEST	byte [SI+SYSDEV.SDEVATT],ISCLOCK
 	JZ	CHAR_INIT_LOOP
-	MOV	word [BCLOCK],SI
-	MOV	word [BCLOCK+2],DS
+	MOV	word [ss:BCLOCK],SI
+	MOV	word [ss:BCLOCK+2],DS
 	MOV	BP,MEMSTRT	; ES:BP points to DPB
 PERDRV:
 	LDS	SI,dword [SI]		; Next device
@@ -264,15 +264,15 @@ PERDRV:
 	CALL	CHARINIT
 	TEST	[SI+SYSDEV.SDEVATT],DEVTYP
 	JNZ	PERDRV				; Skip any other character devs
-	MOV	CL,[CALLUNIT]
+	MOV	CL,[ss:CALLUNIT]
 	XOR	CH,CH
 	MOV	[SI+SYSDEV.SDEVNAME],CL		; Number of units in name field
-	MOV	DL,[NUMIO]
+	MOV	DL,[ss:NUMIO]
 	XOR	DH,DH
-	ADD	[NUMIO],CL
+	ADD	[ss:NUMIO],CL
 	PUSH	DS
 	PUSH	SI
-	LDS	BX,[CALLBPB]
+	LDS	BX,[ss:CALLBPB]
 PERUNIT:
 	MOV	SI,[BX] 		; DS:SI Points to BPB
 	INC	BX
@@ -284,9 +284,9 @@ PERUNIT:
 	PUSH	DX
 	invoke	SETDPB$
 	MOV	AX,[es:BP+dpb.dpb_sector_size]
-	CMP	AX,[MAXSEC]
+	CMP	AX,[ss:MAXSEC]
 	JBE	NOTMAX
-	MOV	[MAXSEC],AX
+	MOV	[ss:MAXSEC],AX
 NOTMAX:
 
 	POP	DX

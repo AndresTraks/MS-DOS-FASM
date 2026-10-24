@@ -139,7 +139,7 @@ Break	<DWRITE -- SEE ABOUT WRITING>
 	Assert	ISDPB,<ES,BP>,"DWrite"
 	CALL	DSKWRITE
 	retz			; Carry clear
-	MOV	byte [READOP],1
+	MOV	byte [ss:READOP],1
 	invoke	HARDERRRW
 	CMP	AL,1		; Check for retry
 	JZ	DWRITE
@@ -187,12 +187,12 @@ DODSKOP:
 	MOV	DS,CX		; Restore DS
 	POP	ES		; Restore ES
 	POP	BX
-	MOV	CX,[CALLSCNT]	; Number of sectors transferred
+	MOV	CX,[ss:CALLSCNT]	; Number of sectors transferred
 	POP	DI
 	SUB	CX,DI
 	NEG	CX		; Number of sectors not transferred
 	MOV	AX,[DEVCALL.REQSTAT]
-	MOV	[IFS_DRIVER_ERR],AX ;IFS. save it for IFS			;AN000;
+	MOV	[ss:IFS_DRIVER_ERR],AX ;IFS. save it for IFS			;AN000;
 	TEST	AX,STERR
 	return
 EndProc DskRead
@@ -220,9 +220,9 @@ Break	<HARDERRRW - map extended errors and call HardErr>
 	JNZ	DO_ERR				; Nothing to do
 	PUSH	DS
 	PUSH	SI
-	LDS	SI,[CALLVIDRW]			; Get pointer from dev
-	MOV	word [EXTERRPT+2],DS	; Set ext err pointer
-	MOV	word [EXTERRPT],SI
+	LDS	SI,[ss:CALLVIDRW]			; Get pointer from dev
+	MOV	word [ss:EXTERRPT+2],DS	; Set ext err pointer
+	MOV	word [ss:EXTERRPT],SI
 	POP	SI
 	POP	DS
 DO_ERR:
@@ -269,7 +269,7 @@ Break	<SETUP -- SETUP a DISK Read OR Write FROM USER>
 	Assert	    ISSFT,<ES,DI>,"SetUp"
 	LDS	SI,[es:DI+sf_entry.sf_devptr]
 ;ASSUME	DS:NOTHING
-	MOV	word [THISDPB+2],DS
+	MOV	word [ss:THISDPB+2],DS
 	context DS
 	MOV	word [THISDPB],SI
 	MOV	BX,word [DMAADD]
@@ -547,7 +547,7 @@ RDLP:
 
 if	BUFFERFLAG
 	pushf
-	cmp	byte [BUF_EMS_SAFE_FLAG], 1
+	cmp	byte [ss:BUF_EMS_SAFE_FLAG], 1
 	je	safe_read
 	call	SAVE_MAP
 	call	RESTORE_USER_MAP
@@ -559,7 +559,7 @@ end if
 
 if	BUFFERFLAG
 	pushf
-	cmp	byte [BUF_EMS_SAFE_FLAG], 1
+	cmp	byte [ss:BUF_EMS_SAFE_FLAG], 1
 	je	safe_mapping
 	call	SAVE_USER_MAP
 	call	RESTORE_MAP
@@ -572,8 +572,8 @@ end if
 	JNC	SKP_CANOT_READ
 	JMP	CANOT_READ
 SKP_CANOT_READ:
-	MOV	[TEMP_VAR],BX		  ;LB. save sector count		;AN000;
-	MOV	[TEMP_VAR2],DX		  ;LB. 1st sector			;AN000;
+	MOV	[ss:TEMP_VAR],BX		  ;LB. save sector count		;AN000;
+	MOV	[ss:TEMP_VAR2],DX		  ;LB. 1st sector			;AN000;
 SCAN_NEXT:
 ;;;;;;; invoke	GETCURHEAD		  ;LB. get buffer header		;AN000;
 	PUSH	DX			  ;LB. save regs			;AN000;
@@ -582,12 +582,12 @@ SCAN_NEXT:
 	MOV	AX,DX			  ;LB.
 ;	MOV	DX,[HIGH_SECTOR]	  ;LB. HASH(sector#) and get entry #	;AN000;
 	XOR	DX,DX			  ;LB. to avoid divide overflow 	;AN000;
-	DIV	word [BUF_HASH_COUNT]	  ;LB. get remainder			;AN000;
+	DIV	word [ss:BUF_HASH_COUNT]	  ;LB. get remainder			;AN000;
 	ADD	DX,DX			  ;LB. 8 bytes per entry		;AN000;
 	ADD	DX,DX			  ;LB.					;AN000;
 	ADD	DX,DX			  ;LB. times 8				;AN000;
 
-	LDS	DI,[BUF_HASH_PTR]	  ;LB. get Hash Table addr		;AN000;
+	LDS	DI,[ss:BUF_HASH_PTR]	  ;LB. get Hash Table addr		;AN000;
 	ADD	DI,DX			  ;LB position to entry 		;AN000;
 	CMP	[DI+BUFFER_HASH_ENTRY.DIRTY_COUNT],0	  ;LB dirty hash entry ?		;AN000;
 	JNZ	yesdirty_DISK2		  ;LB yes and map it			;AN000;
@@ -602,14 +602,14 @@ else
 end if
 
 yesdirty_DISK2:
-	MOV	word [CurHashEntry+2],DS ;LB. update current Hash entry ptr ;AN000;
-	MOV	word [CurHashEntry],DI ;LB. 				;AN000;
-	MOV	word [LastBuffer],-1   ;LB. invalidate last buffer		;AN000;
+	MOV	word [ss:CurHashEntry+2],DS ;LB. update current Hash entry ptr ;AN000;
+	MOV	word [ss:CurHashEntry],DI ;LB. 				;AN000;
+	MOV	word [ss:LastBuffer],-1   ;LB. invalidate last buffer		;AN000;
 	MOV	BX,[DI+BUFFER_HASH_ENTRY.EMS_PAGE_NUM]	  ;LB. logical page			;AN000;
 
 if	NOT	BUFFERFLAG
 	LDS	DI,[DI+BUFFER_HASH_ENTRY.BUFFER_BUCKET]	  ;LB. ds:di is 1st buffer addr 	;AN000;
-	MOV	[FIRST_BUFF_ADDR],DI	  ;LB. save first buff addr 1/19/88	;AN000;
+	MOV	[ss:FIRST_BUFF_ADDR],DI	  ;LB. save first buff addr 1/19/88	;AN000;
 	invoke	SET_MAP_PAGE		  ;LB. activate handle if EMS there	;AN000;
 else
 ;	int	3
@@ -623,7 +623,7 @@ else
 	PUSH	DX		     ; F.C. no need for high sector, <64K
 	push	cx
 
-	MOV	DX,[TEMP_VAR2]	     ;LB. get 1st sector #
+	MOV	DX,[ss:TEMP_VAR2]	     ;LB. get 1st sector #
 	SUB	DX,word [DI+BUFFINFO.buf_sector]   ; How far into transfer?
 	NEG	DX
 	MOV	DI,AX
@@ -631,7 +631,7 @@ else
 	MOV	CX,[es:BP+dpb.dpb_sector_size]
 	MUL	CX
 	ADD	DI,AX		; Put the buffer here
-	mov	[CURADD], di
+	mov	[ss:CURADD], di
 	
 	pop	cx
 	pop	dx
@@ -641,7 +641,7 @@ else
 	pop	di			; restore hash ptr.
 	pop	ds
 	LDS	DI,[DI+BUFFER_HASH_ENTRY.BUFFER_BUCKET]	  ;LB. ds:di is 1st buffer addr 	;AN000;
-	MOV	[FIRST_BUFF_ADDR],DI	  ;LB. save first buff addr 1/19/88	;AN000;
+	MOV	[ss:FIRST_BUFF_ADDR],DI	  ;LB. save first buff addr 1/19/88	;AN000;
 end if
 										;AN000;
 	POP	BX			  ;LB.					;AN000;
@@ -666,7 +666,7 @@ inrange:
 	PUSH	DI		; Save search environment
 	PUSH	DX		     ; F.C. no need for high sector, <64K
 
-	MOV	DX,[TEMP_VAR2]	     ;LB. get 1st sector #
+	MOV	DX,[ss:TEMP_VAR2]	     ;LB. get 1st sector #
 	SUB	DX,word [DI+BUFFINFO.buf_sector]   ; How far into transfer?
 	NEG	DX
 	MOV	SI,DI
@@ -678,7 +678,7 @@ inrange:
 	LEA	SI,[SI+BUFINSIZ]
 	SHR	CX,1
 	PUSH	ES
-	MOV	ES,word [DMAADD+2]
+	MOV	ES,word [ss:DMAADD+2]
 	REP	MOVSW
 	JNC	EVENMOV
 	MOVSB
@@ -692,12 +692,12 @@ EVENMOV:
 CLBUFF:
 	invoke	ScanPlace
 DONXTBUF:
-	CMP	DI,[FIRST_BUFF_ADDR]	 ;LB. end of buffers			;AN000;
+	CMP	DI,[ss:FIRST_BUFF_ADDR]	 ;LB. end of buffers			;AN000;
 	JNZ	NXTBUF
 end_scan:
 	ADD	DX,1			 ;LB. next sector #			;AN000;
-	ADC	word [HIGH_SECTOR],0 	 ;LB.					;AN000;
-	DEC	word [TEMP_VAR]		 ;LB. decrement count			;AN000;
+	ADC	word [ss:HIGH_SECTOR],0 	 ;LB.					;AN000;
+	DEC	word [ss:TEMP_VAR]		 ;LB. decrement count			;AN000;
 	JZ	SCAN_DONE		 ;LB. scan next sector			;AN000;
 	JMP	SCAN_NEXT		 ;LB. scan next sector			;AN000;
 SCAN_DONE:

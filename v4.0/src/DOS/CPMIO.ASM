@@ -126,7 +126,7 @@ INTEST:
 	invoke	STATCHK
 	JNZ	Get
 ;*************************************************************************
-	cmp	byte [PRINTER_FLAG],0	; is printer idle?
+	cmp	byte [ss:PRINTER_FLAG],0	; is printer idle?
 	jnz	no_sys_wait_CPMIO
 	mov	ah,5			; get input status with system wait
 	invoke	IOFUNC
@@ -139,7 +139,7 @@ no_sys_wait_CPMIO:
 ;;; Dec 19, 1986 D.C.L. changed following CMP to Byte Ptr from Word Ptr
 ;;;;		 to shorten loop in consideration of the PC Convertible
 
-	CMP	byte [DATE_FLAG],-1 ; date is updated may be every
+	CMP	byte [ss:DATE_FLAG],-1 ; date is updated may be every
 	JNZ	NoUpdate		; 65535 x ? ms if no one calls
 	PUSH	AX
 	PUSH	BX			; following is tricky,
@@ -171,7 +171,7 @@ check_ok:
 	POP	BX
 	POP	AX
 NoUpdate:
-	INC	word [DATE_FLAG]
+	INC	word [ss:DATE_FLAG]
 
 ;;; 7/15/86 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	JMP	INTEST
@@ -181,10 +181,10 @@ Get:
 	POP	SI
 	POP	DS
 ;;; 7/15/86
-	MOV	byte [SCAN_FLAG],0
+	MOV	byte [ss:SCAN_FLAG],0
 	CMP	AL,0	    ; extended code ( AL )
 	JNZ	noscan
-	MOV	byte [SCAN_FLAG],1	; set this flag for ALT_Q key
+	MOV	byte [ss:SCAN_FLAG],1	; set this flag for ALT_Q key
 
 noscan:
 ;;; 7/15/86
@@ -253,19 +253,19 @@ Break
 	JZ	RAW22				      ;AN000;
 	JMP	RAWOUT				      ;AN000;
 RAW22:						      ;AN000;
-	LES	DI,dword [user_SP]		      ; Get pointer to register save area
+	LES	DI,dword [ss:user_SP]		      ; Get pointer to register save area
 	XOR	BX,BX
 	invoke	get_io_sft
 	retc
  if  DBCS				;AN000;
-	push	word [InterCon]	;AN000;
-	mov	[InterCon],0		;AN000; disable interim characters
+	push	word [ss:InterCon]	;AN000;
+	mov	[ss:InterCon],0		;AN000; disable interim characters
  end if					;AN000;
 	MOV	AH,1
 	invoke	IOFUNC
 	JNZ	RESFLG
  if  DBCS				;AN000;
-	pop	word [InterCon]	;AN000; restore interim flag
+	pop	word [ss:InterCon]	;AN000; restore interim flag
  end if					;AN000;
 	invoke	SPOOLINT
 	OR	byte [es:DI+user_environ.user_F],40H ; Set user's zero flag
@@ -277,7 +277,7 @@ RESFLG:
  if  DBCS				;AN000;
 	XOR	AH,AH			;AN000;
 	invoke	IOFUNC			;AN000; get the character
-	pop	word [InterCon]	;AN000;
+	pop	word [ss:InterCon]	;AN000;
 	return				;AN000;
  end if					;AN000; 				;AN000;
 
@@ -308,7 +308,7 @@ Got:
 	XOR	AH,AH
 	invoke	IOFUNC
  if  DBCS				;AN000;
-	cmp	[InterChar],1		;AN000;    2/11/KK
+	cmp	[ss:InterChar],1		;AN000;    2/11/KK
 ;								2/11/KK
 ;	Sets the application zero flag depending on the 	2/11/KK
 ;	zero flag upon entry to this routine. Then returns	2/11/KK

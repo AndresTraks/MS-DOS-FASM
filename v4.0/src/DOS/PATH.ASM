@@ -69,11 +69,11 @@ BREAK <CURRENT_DIR$ - dump the current directory into user space>
 	JNC	CurrentValidate 	; no error -> go and validate dir
 CurdirErr:
 	LeaveCrit   critDisk
-	MOV	AL,[DrvErr]		;IFS.					;AN000;
+	MOV	AL,[cs:DrvErr]		;IFS.					;AN000;
 	transfer SYS_RET_ERR		;IFS. make noise			;AN000;
 CurrentValidate:
 	SaveReg <DS,SI> 		; save destination
-	LDS	SI,[THISCDS]
+	LDS	SI,[cs:THISCDS]
 	TEST	[SI+curdir_list.curdir_flags],curdir_isnet
 	JNZ	DoCheck
 ; Random optimization nuked due to some utilities using GetCurrentDir to do
@@ -81,7 +81,7 @@ CurrentValidate:
 ;	CMP	[SI].curdir_id,0
 ;	JZ	GetDst
 DoCheck:
-	MOV	byte [NoSetDir],0		; interested only in contents
+	MOV	byte [cs:NoSetDir],0		; interested only in contents
 	MOV	DI,OPENBUF
 	Invoke	ValidateCDS		; output is ES:DI -> CDS
 	SaveReg <ES,DI> 		; swap source and destination
@@ -160,7 +160,7 @@ BREAK <RMDIR$ -- Remove a directory>
 	error	error_path_not_found	; Otherwise, return an error
 
 rmlset:
-	CMP	byte [cMeta],-1		;   if (cMeta >= 0)
+	CMP	byte [ss:cMeta],-1		;   if (cMeta >= 0)
 	Jnz	rmerr			;	return (-1);
 	Context ES
 	xor	al,al			; al = 0 , ie drive a:
@@ -323,7 +323,7 @@ MkErrP:
 MkErr:
 	transfer    SYS_RET_ERR
 MkDirCrack:
-	CMP	byte [cMeta],-1
+	CMP	byte [ss:cMeta],-1
 	JNZ	MkErrP
 
 	PUSH	SI			;PTM.					;AN000;
@@ -349,7 +349,7 @@ EndProc MKDIR$
 	procedure Check_PathLen,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 
-	MOV	SI,[WFP_START]
+	MOV	SI,[ss:WFP_START]
   entry Check_PathLen2
 	Context <DS>
 	SaveReg <CX>

@@ -201,7 +201,7 @@ Procedure FCB_Close$,NEAR
 	JZ	NoAttr			; not extended
 	MOV	AL,[SI-1]		; get attributes
 NoAttr:
-	MOV	[ATTRIB],AL		; stash away found attributes
+	MOV	[ss:ATTRIB],AL		; stash away found attributes
 	invoke	SFTFromFCB
 	JC	GoodRet_FCBIO 		; MZ 16 Jan Assume death
 ;
@@ -215,7 +215,7 @@ NoAttr:
 ;;; 9/8/86 F.C. save SFT attribute and restore it back when close is done
 	invoke	CheckShare
 	JNZ	NoStash
-	MOV	AL,[ATTRIB]
+	MOV	AL,[ss:ATTRIB]
 	MOV	[es:DI+sf_entry.sf_attr],AL	; attempted attribute for close
 NoStash:
 	MOV	AX,[SI+sys_fcb.fcb_FDATE]	; move in the time and date
@@ -278,8 +278,8 @@ Procedure FCB_Rename$,NEAR
 	RestoreReg  <SI,DS,word [ds:SI]>	; get path back
 	RestoreReg  <DX>		; Original FCB pointer
 	JC	BadRen			; bad path -> error
-	MOV	SI,[WFP_START]		; get pointer
-	MOV	[REN_WFP],SI		; stash it
+	MOV	SI,[ss:WFP_START]		; get pointer
+	MOV	[ss:REN_WFP],SI		; stash it
 	MOV	DI,OPENBUF  ; appropriate spot
 	invoke	TransFCB		; wham
 					; NOTE that this call is pointing
@@ -414,7 +414,7 @@ Break	<SaveFCBInfo - store pertinent information from an SFT into the FCB>
 
 Procedure   SaveFCBInfo,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
-	LES	DI,[THISSFT]
+	LES	DI,[ss:THISSFT]
 	Assert	ISSFT,<ES,DI>,"SaveFCBInfo"
 	invoke	IsSFTNet
 	JZ	SaveLocal		; if not network then save local info
@@ -484,7 +484,7 @@ SaveShare:
 ;----- In share support -----
 ;
 if Installed
-	Call	dword [JShare+10*4]
+	Call	dword [ss:JShare+10*4]
 else
 	Call	ShSave
 end if
@@ -500,11 +500,11 @@ SaveSFN:
 ;
 ; Adjust for offset to table.
 ;
-	SUB	AX,word [sftFCB]
+	SUB	AX,word [ss:sftFCB]
 	MOV	BL,sizeof.sf_entry
 	DIV	BL
 	MOV	[SI+fcb_sfn],AL 	; last used SFN
-	MOV	AX,[FCBLRU]		; get lru count
+	MOV	AX,[ss:FCBLRU]		; get lru count
 	INC	AX
 	MOV	word [es:DI+sf_LRU],AX
 	JNZ	SimpleStuff
@@ -518,7 +518,7 @@ SaveSFN:
 ; Set new LRU to AX
 ;
 SimpleStuff:
-	MOV	[FCBLRU],AX
+	MOV	[ss:FCBLRU],AX
 	return
 EndProc SaveFCBInfo
 
@@ -540,7 +540,7 @@ Procedure   ResetLRU,NEAR
 	Assert	ISSFT,<ES,DI>,"ResetLRU"
 	MOV	AX,8000h
 	SaveReg <ES,DI>
-	LES	DI,[sftFCB]		; get pointer to head
+	LES	DI,[cs:sftFCB]		; get pointer to head
 	MOV	CX,[es:DI+SF.SFCount]
 	LEA	DI,[DI+SF.SFTable] 	; point at table
 ovScan:
@@ -572,14 +572,14 @@ Break	<SetOpenAge - UPDATE the Open age of a SFT>
 Procedure   SetOpenAge,NEAR
 ;	ASSUME CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
 	Assert	ISSFT,<ES,DI>,"SetOpenAge"
-	MOV	AX,[OpenLRU]
+	MOV	AX,[cs:OpenLRU]
 	INC	AX
 	MOV	word [es:DI+sf_OpenAge],AX
 	JNZ	SetDone
 	MOV	BX,sf_entry.sf_position+2
 	invoke	ResetLRU
 SetDone:
-	MOV	[OpenLRU],AX
+	MOV	[cs:OpenLRU],AX
 	return
 EndProc SetOpenAge
 
@@ -610,7 +610,7 @@ Procedure   LRUFCB,NEAR
 ;   BP is the count of times we need to go through this loop.
 ;   AX is the current acceptable minimum age to consider
 ;
-	mov	bp,[KeepCount]		; k = keepcount;
+	mov	bp,[cs:KeepCount]		; k = keepcount;
 	XOR	AX,AX			; low = 0;
 ;
 ; If we've scanned the table n times, then we are done.
@@ -628,7 +628,7 @@ lru1:
 ;
 	MOV	BX,-1			;     min = 0xffff;
 	MOV	si,BX			;     pos = 0xffff;
-	LES	DI,[sftFCB]		;     for (CX=FCBCount; CX>0; CX--)
+	LES	DI,[cs:sftFCB]		;     for (CX=FCBCount; CX>0; CX--)
 	MOV	CX,[es:DI+SF.SFCount]
 	LEA	DI,[DI+SF.SFTable]
 ;
@@ -701,7 +701,7 @@ lru65:	stc
 lru75:
 	mov	bx,-1			; min = 0xffff;
 	mov	si,bx			; pos = 0xffff;
-	LES	DI,[sftFCB]		; for (CX=FCBCount; CX>0; CX--)
+	LES	DI,[cs:sftFCB]		; for (CX=FCBCount; CX>0; CX--)
 	MOV	CX,[es:DI+SF.SFCount]
 	LEA	DI,[DI+SF.SFTable]
 ;
@@ -744,8 +744,8 @@ lru10:
 	jz	lru65			;     return -1;
 lru11:
 	mov	di,si
-	MOV	word [THISSFT],DI	; set thissft
-	MOV	word [THISSFT+2],ES
+	MOV	word [cs:THISSFT],DI	; set thissft
+	MOV	word [cs:THISSFT+2],ES
 ;
 ; If we have sharing or thisSFT is a net sft, then close it until ref count
 ; is 0.
@@ -782,7 +782,7 @@ LRUDone:
 LRUDead:
 	Invoke	restore_world
 ;	ASSUME	DS:NOTHING
-	LES	DI,[THISSFT]
+	LES	DI,[cs:THISSFT]
 	Assert	ISSFT,<ES,DI>,"LRUFCB return"
 	retnc
 	MOV	AL,error_FCB_unavailable
@@ -829,7 +829,7 @@ Procedure   FCBRegen,NEAR
 	OR	AL,AL			; is it there?
 	JZ	RegenDead		; no, just fail the operation
 RegenFail:
-	MOV	AX,[USER_IN_AX]
+	MOV	AX,[cs:USER_IN_AX]
 	cmp	AH,FCB_Close
 	jz	RegenDead
 	invoke	FCBHardErr		; massive hard error.
@@ -863,7 +863,7 @@ RegenNoSharing:
 	AND	CL,access_mask		; get the mode bits
 	MOV	byte [es:DI+sf_entry.sf_mode],CL
 	MOV	[es:DI+sf_entry.sf_flags],AX	; initial flags
-	MOV	AX,[PROC_ID]
+	MOV	AX,[cs:PROC_ID]
 	MOV	[es:DI+sf_entry.sf_PID],AX
 	SaveReg <DS,SI,ES,DI>
 	Context ES
@@ -903,7 +903,7 @@ DoneNam2:
 ;
 	MOV	byte [es:DI+sf_entry.sf_flags],BH   ; device parms
 	MOV	[es:DI+sf_entry.sf_attr],0	; attribute
-	LDS	SI,[DEVPT]		; get device driver
+	LDS	SI,[cs:DEVPT]		; get device driver
 	MOV	word [es:DI+sf_entry.sf_devptr],SI
 	MOV	word [es:DI+sf_entry.sf_devptr+2],DS
 	return				; carry is clear
@@ -996,14 +996,14 @@ Break	<CheckFCB - see if the SFT pointed to by the FCB is still OK>
 
 Procedure   CheckFCB,NEAR
 ;	ASSUME DS:NOTHING,ES:NOTHING
-	LES	DI,[sftFCB]
+	LES	DI,[cs:sftFCB]
 	CMP	byte [es:DI+SF.SFCount],AL
 	JC	BadSFT
 	MOV	BL,sizeof.sf_entry
 	MUL	BL
 	LEA	DI,[DI+SF.SFTable]
 	ADD	DI,AX
-	MOV	AX,[PROC_ID]
+	MOV	AX,[cs:PROC_ID]
 	CMP	[es:DI+sf_entry.sf_PID],AX
 	JNZ	BadSFT			; must match process
 	CMP	[es:DI+sf_entry.sf_ref_count],0
@@ -1024,7 +1024,7 @@ Procedure   CheckFCB,NEAR
 ;----- In share support -----
 ;
 if Installed
-	Call	dword [JShare+11*4]
+	Call	dword [cs:JShare+11*4]
 else
 	Call	ShChk
 end if
@@ -1137,8 +1137,8 @@ Procedure   SFTFromFCB,NEAR
 	MOV	AL,[SI+fcb_sfn] 	; set SFN for check
 	invoke	CheckFCB
 	RestoreReg  <BX,AX>
-	MOV	word [THISSFT],DI	; set thissft
-	MOV	word [THISSFT+2],ES
+	MOV	word [cs:THISSFT],DI	; set thissft
+	MOV	word [cs:THISSFT+2],ES
 	JNC	SetSFT			; no problems, just set thissft
 
 	fmt	typFCB,LevCheck,<"FCB x$:x$ does not match SFT x$:x$\n">,<DS,SI,ES,DI>
@@ -1146,13 +1146,13 @@ Procedure   SFTFromFCB,NEAR
 	Invoke	save_world
 	invoke	FCBRegen
 	Invoke	restore_world		; restore world
-	MOV	AX,[EXTERR]
+	MOV	AX,[cs:EXTERR]
 	retc
 
 ;	Message 1,<"FCBRegen Succeeded",13,10>
 
-SetSFT: LES	DI,[THISSFT]
-	PUSH	word [PROC_ID] 		; set process id
+SetSFT: LES	DI,[cs:THISSFT]
+	PUSH	word [cs:PROC_ID] 		; set process id
 	POP	word [es:DI+sf_entry.sf_PID]
 	return				; carry is clear
 EndProc SFTFromFCB
@@ -1171,8 +1171,8 @@ Break	<FCBHardErr - generate INT 24 for hard errors on FCBS>
 Procedure   FCBHardErr,NEAR
 ;	ASSUME	DS:NOTHING,ES:NOTHING
 	MOV	AX,error_FCB_unavailable
-	MOV	byte [ALLOWED],Allowed_FAIL
-	LES	BP,[THISDPB]
+	MOV	byte [cs:ALLOWED],Allowed_FAIL
+	LES	BP,[cs:THISDPB]
 	MOV	DI,1				; Fake some registers
 	MOV	CX,DI
 	MOV	DX,[es:BP+dpb.dpb_first_sector]

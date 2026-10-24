@@ -251,10 +251,10 @@ Break	<Idle - wait for a specified amount of time>
 
 Procedure   Idle,NEAR
 ;	ASSUME	CS:DOSGroup,SS:DOSGROUP,DS:NOTHING,ES:NOTHING
-	TEST	byte [fSharing],-1
+	TEST	byte [ss:fSharing],-1
 	retnz
 	SaveReg <CX>
-	MOV	CX,[RetryLoop]
+	MOV	CX,[ss:RetryLoop]
 	JCXZ	Idle3
 Idle1:	PUSH	CX
 	XOR	CX,CX
@@ -319,7 +319,7 @@ Break	<TestNet - determine if a CDS is for the network>
 
 Procedure   TestNet,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
-	LES	DI,[THISCDS]
+	LES	DI,[cs:THISCDS]
 	CMP	DI,-1
 	JZ	CMCRet			; UNC? carry is clear
 	TEST	[es:DI+curdir_list.curdir_flags],curdir_isnet
@@ -365,7 +365,7 @@ Break	<FastInit - Initialize FastTable entries >
 Procedure   FastInit,NEAR				      ;AN000;
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING  ;AN000;
 
-	MOV	DI,[FastTable+2]   ;AN000;FO. points to fastxxx entry
+	MOV	DI,[cs:FastTable+2]   ;AN000;FO. points to fastxxx entry
 	DEC	BX		  ;AN000;FO.;; decrement index
 	MOV	DX,BX		  ;AN000;FO.;; save bx
 	SHL	BX,1		  ;AN000;FO.;; times 4 , each entry is DWORD
@@ -387,7 +387,7 @@ ok_install:			      ;AN000;
 	MOV	CX,DS		      ;AN000;FO.;;  get FASTXXX entry segment
 	MOV	word [cs:DI+2],CX ;AN000;FO.;;  initialize routine entry
 	MOV	word [cs:DI],SI   ;AN000;FO.;;  initialize routine offset
-	MOV	DI,[FastFlg] ;AN000;FO.; get addr of FASTXXX flags
+	MOV	DI,[cs:FastFlg] ;AN000;FO.; get addr of FASTXXX flags
 	ADD	DI,DX			   ;AN000;FO.;	index to a FASTXXX flag
 	OR	byte [cs:DI],Fast_yes  ;AN000;FO.;	indicate installed
 
@@ -448,13 +448,13 @@ Break	<NLS_LSEEK - do LSEEK$ for NLSFUNC   >
 Procedure   NLS_LSEEK,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
-	PUSH	word [user_SP]	 ; save user stack
-	PUSH	word [user_SS]
+	PUSH	word [cs:user_SP]	 ; save user stack
+	PUSH	word [cs:user_SS]
 	CALL	Fake_User_Stack
 	MOV	AX,BP	     ; set up correct interface for $LSEEK
 	invoke	LSEEK$
-	POP	word [user_SS]	 ; restore user stack
-	POP	word [user_SP]
+	POP	word [cs:user_SS]	 ; restore user stack
+	POP	word [cs:user_SP]
 	RET
 EndProc NLS_LSEEK
 
@@ -469,11 +469,11 @@ Break	<Fake_User_Stack - save uesr stack >
 Procedure   Fake_User_Stack,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
-	MOV	AX,[USER_SP_2F] 	      ; replace with INT 2F stack
-	MOV	[user_SP],AX
+	MOV	AX,[cs:USER_SP_2F] 	      ; replace with INT 2F stack
+	MOV	[cs:user_SP],AX
 
 	MOV	AX,CS
-	MOV	[user_SS],AX		      ; DOSGROUP
+	MOV	[cs:user_SS],AX		      ; DOSGROUP
 
 	RET
 EndProc Fake_User_Stack
@@ -490,7 +490,7 @@ Break	<GetDevList - Get device Header list pointer>
 Procedure   GetDevList,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGROUP
 
-	MOV	SI,[SysInitTable]
+	MOV	SI,[ss:SysInitTable]
 	LDS	SI,[cs:SI+SysInitVars_Ext.SYSI_InitVars]
 
 	MOV	AX,word [SI+SysInitVars.SYSI_DEV]
@@ -511,13 +511,13 @@ Break	<NLS_IOCTL - do IOCTL$ for NLSFUNC   >
 Procedure   NLS_IOCTL,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
-	PUSH	word [user_SP]	 ; save user stack
-	PUSH	word [user_SS]
+	PUSH	word [cs:user_SP]	 ; save user stack
+	PUSH	word [cs:user_SS]
 	CALL	Fake_User_Stack
 	MOV	AX,BP	     ; set up correct interface for $LSEEK
 	invoke	IOCTL$
-	POP	word [user_SS]	 ; restore user stack
-	POP	word [user_SP]
+	POP	word [cs:user_SS]	 ; restore user stack
+	POP	word [cs:user_SP]
 	RET
 EndProc NLS_IOCTL
 
@@ -561,7 +561,7 @@ Procedure   MSG_RETRIEVAL,NEAR					  ;AN000;
 	PUSH	AX		    ;AN000;;MS. save regs
 	PUSH	SI		    ;AN000;;MS. save regs
 	MOV	AX,DX		    ;AN000;;MS.
-	MOV	SI,[MSG_EXTERROR] ;AN000;;MS.
+	MOV	SI,[cs:MSG_EXTERROR] ;AN000;;MS.
 	TEST	AL,1		    ;AN000;;MS. get ?
 	JZ	toget		    ;AN000;;MS. yes
 	DEC	AL		    ;AN000;;MS.
@@ -596,7 +596,7 @@ Break	<Fake_version - Set/reset version flag>
 Procedure   Fake_version,NEAR					  ;AN000;
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING	  ;AN000;
 
-	MOV	[SPECIAL_VERSION],DX   ;AN006;MS.
+	MOV	[cs:SPECIAL_VERSION],DX   ;AN006;MS.
 	return			       ;AN006;;MS. exit
 
 EndProc Fake_version		       ;AN006;;MS.

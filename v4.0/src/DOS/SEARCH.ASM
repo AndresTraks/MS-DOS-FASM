@@ -59,8 +59,8 @@ INCLUDE '../INC/FASTXXXX.INC'
 	procedure DIR_SEARCH_FIRST$,NEAR
 ;ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 
-	MOV	word [THISFCB],DX
-	MOV	word [THISFCB+2],DS
+	MOV	word [ss:THISFCB],DX
+	MOV	word [ss:THISFCB+2],DS
 	MOV	SI,DX
 	CMP	byte [SI],0FFH
 	JNZ	NORMFCB4
@@ -158,10 +158,10 @@ EndProc DIR_SEARCH_FIRST$
 	procedure DIR_SEARCH_NEXT$,NEAR
 ;ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 
-	MOV	word [THISFCB],DX
-	MOV	word [THISFCB+2],DS
-	MOV	byte [SATTRIB],0
-	MOV	byte [EXTFCB],0
+	MOV	word [ss:THISFCB],DX
+	MOV	word [ss:THISFCB+2],DS
+	MOV	byte [ss:SATTRIB],0
+	MOV	byte [ss:EXTFCB],0
 	Context ES
 	MOV	DI,SEARCHBUF
 	MOV	SI,DX
@@ -169,8 +169,8 @@ EndProc DIR_SEARCH_FIRST$
 	JNZ	NORMFCB6
 	ADD	SI,6
 	LODSB
-	MOV	[SATTRIB],AL
-	DEC	byte [EXTFCB]
+	MOV	[ss:SATTRIB],AL
+	DEC	byte [ss:EXTFCB]
 NORMFCB6:
 	LODSB				; Get original user drive byte
 	SaveReg <AX>			; Put it on stack
@@ -218,7 +218,7 @@ EndProc DIR_SEARCH_NEXT$
 ;ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 
 	MOV	SI,DX			; get name in appropriate place
-	MOV	[SATTRIB],CL		; Search attribute to correct loc
+	MOV	[ss:SATTRIB],CL		; Search attribute to correct loc
 	MOV	DI,OPENBUF  ; appropriate buffer
 	invoke	TransPathSet		; convert the path
 	JNC	Find_it 		; no error, go and look
@@ -278,7 +278,7 @@ EndProc FIND_FIRST$
 
 	Context ES
 	MOV	DI,SEARCHBUF
-	LDS	SI,[DMAADD]
+	LDS	SI,[ss:DMAADD]
 	MOV	CX,21
 	REP	MOVSB			; Put the search continuation info
 					;  in the right place
@@ -337,7 +337,7 @@ EndProc PackName
 	procedure   GET_FAST_SEARCH,NEAR
 ;	ASSUME	DS:NOTHING,ES:NOTHING
 
-	OR	word [DOS34_FLAG],SEARCH_FASTOPEN  ;FO.trigger fastopen		;AN000;
+	OR	word [ss:DOS34_FLAG],SEARCH_FASTOPEN  ;FO.trigger fastopen		;AN000;
 	invoke	DOS_SEARCH_FIRST
 	return
 

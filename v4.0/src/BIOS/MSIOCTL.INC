@@ -968,7 +968,7 @@ IOCTL$GETOWN:
 	MOV	AL,byte [DI+BDS_TYPE.DRIVENUM]	; GET PHYSICAL DRIVE NUMBER
 	PUSH	CS
 	POP	DS
-	MOV	DI,word [START_BDS]
+	MOV	DI,word [cs:START_BDS]
 OWN_LOOP:
 	CMP	byte [DI+BDS_TYPE.DRIVENUM],AL
 	JNE	GETNEXTBDS
@@ -1266,7 +1266,7 @@ Boot_IO:				;AN000;
 	mov	es, di
 	mov	di, DiskSector	;es:di -> transfer address
 	xor	dx, dx			;first sector (H) -> 0
-	mov	[Start_Sec_H], dx	;start sector (H) -> 0
+	mov	[cs:Start_Sec_H], dx	;start sector (H) -> 0
 	mov	cx, 01			;one sector
 	call	DISKIO
 ;SB34IOCTL003**************************************************************

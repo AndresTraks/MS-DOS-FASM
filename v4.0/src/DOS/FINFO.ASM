@@ -106,7 +106,7 @@ nofiles_FINFO:
 
 LOCAL_INFO_FINFO:
 	EnterCrit   critDisk
-	MOV	byte [NoSetDir],1		; if we find a dir, don't change to it
+	MOV	byte [ss:NoSetDir],1		; if we find a dir, don't change to it
 	invoke	GET_FAST_PATH
 info_check:
 	JNC	info_check_dev
@@ -134,7 +134,7 @@ info_check_dev:
 	OR	AH,AH
 	JS	info_no_file		; device
 	PUSH	DS
-	MOV	DS,word [CURBUF+2]
+	MOV	DS,word [ss:CURBUF+2]
 ;ASSUME	DS:NOTHING
 	MOV	SI,BX
 	XOR	BX,BX			; Assume size=0 (dir)
@@ -194,9 +194,9 @@ Break	<SET_FILE_ATTRIBUTE -- Set File Attribute>
 	TEST	AX,NOT attr_changeable
 	JZ	set_look
 BAD_ACC_FINFO:
-	MOV	byte [EXTERR_LOCUS],errLOC_Unk
-	MOV	byte [EXTERR_CLASS],errCLASS_Apperr
-	MOV	byte [EXTERR_ACTION],errACT_Abort
+	MOV	byte [ss:EXTERR_LOCUS],errLOC_Unk
+	MOV	byte [ss:EXTERR_CLASS],errCLASS_Apperr
+	MOV	byte [ss:EXTERR_ACTION],errACT_Abort
 	MOV	AX,error_access_denied
 	STC
 	return
@@ -218,7 +218,7 @@ end if
 LOCAL_SET:
 	EnterCrit   critDisk
 	PUSH	AX			; Save new attributes
-	MOV	byte [NoSetDir],1		; if we find a dir, don't change to it
+	MOV	byte [ss:NoSetDir],1		; if we find a dir, don't change to it
 	invoke	GETPATH 		; get path through fastopen if there	 ;AC000;
 	JNC	set_check_device
 	POP	BX			; Clean stack (don't zap AX)
@@ -239,7 +239,7 @@ set_check_share:
 	jmp	short	OK_BYE
 
 set_do:
-	LES	DI,[CURBUF]
+	LES	DI,[ss:CURBUF]
 	AND	byte [es:BX+dir_entry.dir_attr],NOT attr_changeable
 	OR	byte [es:BX+dir_entry.dir_attr],AL
 
@@ -248,7 +248,7 @@ set_do:
 	invoke	INC_DIRTY_COUNT 	  ;LB.					;AN000;
 	OR	[es:DI+BUFFINFO.buf_flags],buf_dirty
 yesdirty_FINFO:
-	MOV	AL,[THISDRV]
+	MOV	AL,[ss:THISDRV]
 ;;;; 10/1/86 F.C update fastopen cache
 	PUSH	DX
 	PUSH	DI
@@ -273,10 +273,10 @@ EndProc SET_FILE_ATTRIBUTE
 	procedure   GET_FAST_PATH,NEAR
 ;	ASSUME	DS:NOTHING,ES:NOTHING
 
-	OR	byte [FastOpenFlg],FastOpen_Set ;FO. trigger fastopen		;AN000;
+	OR	byte [ss:FastOpenFlg],FastOpen_Set ;FO. trigger fastopen		;AN000;
 	invoke	GETPATH
 	PUSHF			       ;FO.					;AN000;
-	AND    byte [FastOpenFlg],Fast_yes  ;FO. clear all fastopen flags		;AN000;
+	AND    byte [ss:FastOpenFlg],Fast_yes  ;FO. clear all fastopen flags		;AN000;
 	POPF			       ;FO.					;AN000;
 	return
 

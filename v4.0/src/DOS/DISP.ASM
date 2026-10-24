@@ -88,7 +88,7 @@ BREAK <SET_CTRL_C_TRAPPING$ -- En/Disable ^C check in dispatcher>
 ;ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
         OR      AL,AL
         JNZ     Check1
-        MOV     DL,[CNTCFLAG]
+        MOV     DL,[cs:CNTCFLAG]
         IRET
 Check1:
         CMP     AL,2
@@ -96,12 +96,12 @@ Check1:
         JZ      SetAndRet
         PUSH    DX
         AND     DL,01h
-        MOV     [CNTCFLAG],DL
+        MOV     [cs:CNTCFLAG],DL
         POP     DX
         IRET
 SetAndRet:
         AND     DL,01h
-        XCHG    [CNTCFLAG],DL
+        XCHG    [cs:CNTCFLAG],DL
         IRET
 BadVal:
         MOV     AL,0FFH
@@ -132,7 +132,7 @@ CPSWset:                                ;AN000;
 QueryDOSboot:                            ;AN000;
         CMP     AL,5                ;AN000;MS.
         JA      BadVal              ;AN000;MS.
-        MOV     DL,[BOOTDRIVE]      ;AN000;;MS. put boot drive in DL
+        MOV     DL,[cs:BOOTDRIVE]      ;AN000;;MS. put boot drive in DL
         IRET                        ;AN000;;MS.
 
 
@@ -152,7 +152,7 @@ BREAK <GET_CURRENT_PDB$ -- Set/Get PDB value>
 ;
         procedure   SET_CURRENT_PDB$,NEAR
 ;        ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
-        MOV     [CurrentPDB],BX
+        MOV     [cs:CurrentPDB],BX
         IRET
 EndProc SET_CURRENT_PDB$
 
@@ -162,7 +162,7 @@ EndProc SET_CURRENT_PDB$
 ;
 procedure   GET_CURRENT_PDB$,NEAR
 ;        ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
-        MOV     BX,[CurrentPDB]
+        MOV     BX,[cs:CurrentPDB]
         IRET
 EndProc GET_CURRENT_PDB$
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
@@ -175,7 +175,7 @@ EndProc GET_CURRENT_PDB$
 ;
 Procedure Set_Printer_Flag$
 ;ASSUME DS:NOTHING, ES:NOTHING, SS:NOTHING
-        mov     [PRINTER_FLAG],al
+        mov     [cs:PRINTER_FLAG],al
         IRET
 EndProc Set_Printer_Flag$
 
@@ -207,15 +207,15 @@ BADCALL:
         entry   CALL_ENTRY              ; System call entry point and dispatcher
         POP     AX                      ; IP from the long call at 5
         POP     AX                      ; Segment from the long call at 5
-        POP     word [user_SP]               ; IP from the CALL 5
+        POP     word [cs:user_SP]               ; IP from the CALL 5
 ;
 ; Re order the stack to simulate an interrupt 21.
 ;
         PUSHF                           ; Start re-ordering the stack
         CLI
         PUSH    AX                      ; Save segment
-        PUSH    word [user_SP]               ; Stack now ordered as if INT had been used
-        CMP     CL,[MAXCALL]              ; This entry point doesn't get as many calls
+        PUSH    word [cs:user_SP]               ; Stack now ordered as if INT had been used
+        CMP     CL,[cs:MAXCALL]              ; This entry point doesn't get as many calls
         JA      BADCALL
         MOV     AH,CL
         JMP     SHORT SAVREGS
@@ -234,7 +234,7 @@ entry   COMMAND                         ; Interrupt call entry point (INT 21H)
 NOTOEM:
         end if
 
-        CMP     AH,[MAXCOM]
+        CMP     AH,[cs:MAXCOM]
         JA      BADCALL
 
 ;
@@ -259,8 +259,8 @@ chkprt:
 ; Preserve all user's registers on his own stack.
 ;
         CALL    save_world
-        MOV     [SaveDS],DS
-        MOV     [SaveBX],BX
+        MOV     [cs:SaveDS],DS
+        MOV     [cs:SaveBX],BX
         MOV     BX,CS
         MOV     DS,BX
 ;        ASSUME  DS:DOSGROUP
@@ -288,7 +288,7 @@ chkprt:
         MOV     word [Process_data_block.PDB_User_stack],SP
         MOV     word [Process_data_block.PDB_User_stack+2],SS
 
-        MOV     byte [fSharing],0              ; allow redirection
+        MOV     byte [cs:fSharing],0              ; allow redirection
 
         MOV     BX,CS                   ; no holes here.
         MOV     SS,BX
@@ -307,16 +307,16 @@ entry   REDISP
 ;; DOS 3.4 INIT
 ;       MOV     BL,[CPSWSAVE]           ;AN000;;FT. DOS 3.4
 ;       MOV     [CPSWFLAG],BL           ;AN000;;FT. DOS 3.4 in case ABORT
-        MOV     byte [DISK_FULL],0           ;AN000;;MS. no disk full
-        MOV     byte [EXTOPEN_ON],0          ;AN000;;EO. clear extended open flag
-        MOV     word [DOS34_FLAG],0          ;AN000;;MS. clear common flag
-        MOV     word [ACT_PAGE],-1           ;BN000;BL;AN000;;LB. invalidate active page
+        MOV     byte [ss:DISK_FULL],0           ;AN000;;MS. no disk full
+        MOV     byte [ss:EXTOPEN_ON],0          ;AN000;;EO. clear extended open flag
+        MOV     word [ss:DOS34_FLAG],0          ;AN000;;MS. clear common flag
+        MOV     word [ss:ACT_PAGE],-1           ;BN000;BL;AN000;;LB. invalidate active page
 ;; DOS 4.00 INIT
         XOR     BH,BH
-        MOV     [CONSWAP],BH            ; random clean up of possibly mis-set flags
-        MOV     byte [IDLEINT],1             ; presume that we can issue INT 28
-        MOV     byte [NoSetDir],BH  ; set directories on search
-        MOV     byte [FAILERR],BH   ; FAIL not in progress
+        MOV     [ss:CONSWAP],BH            ; random clean up of possibly mis-set flags
+        MOV     byte [ss:IDLEINT],1             ; presume that we can issue INT 28
+        MOV     byte [ss:NoSetDir],BH  ; set directories on search
+        MOV     byte [ss:FAILERR],BH   ; FAIL not in progress
         MOV     BL,AH
         SHL     BX,1                    ; 2 bytes per call in table
         CLD
@@ -342,7 +342,7 @@ entry   REDISP
 ;
         CMP     AH,12
         JA      DSKROUT
-        CMP     byte [ErrorMode],0           ; Are we in an INT 24?
+        CMP     byte [ss:ErrorMode],0           ; Are we in an INT 24?
         JNZ     DISPCALL                ; Stay on AUXSTACK if INT 24.
         MOV     SP,IOStack
         JMP     SHORT DISPCALL
@@ -356,10 +356,10 @@ entry   REDISP
 ;       server to remove all the resources.
 ;
 DSKROUT:
-        MOV     [USER_IN_AX],AX         ; Remember what user is doing
-        MOV     byte [EXTERR_LOCUS],errLOC_Unk ; Default
-        MOV     byte [ErrorMode],0           ; Cannot make non 1-12 calls in
-        MOV     byte [WPErr],-1              ; error mode, so good place to make
+        MOV     [ss:USER_IN_AX],AX         ; Remember what user is doing
+        MOV     byte [ss:EXTERR_LOCUS],errLOC_Unk ; Default
+        MOV     byte [ss:ErrorMode],0           ; Cannot make non 1-12 calls in
+        MOV     byte [ss:WPErr],-1              ; error mode, so good place to make
 ;
 ; Release all resource information
 ;
@@ -372,17 +372,17 @@ DSKROUT:
 ; Since we are going to be running on the DSKStack and since INT 28 people
 ; will use the DSKStack, we must turn OFF the generation of INT 28's.
 ;
-        MOV     byte [IDLEINT],0
+        MOV     byte [ss:IDLEINT],0
         MOV     SP,DskStack
-        TEST    byte [CNTCFLAG],-1
+        TEST    byte [ss:CNTCFLAG],-1
         JZ      DISPCALL                ; Extra ^C checking is disabled
         PUSH    AX
         invoke  DSKSTATCHK
         POP     AX
 DISPCALL:
         MOV     BX,[cs:DISPATCH+BX]
-        XCHG    BX,[SaveBX]
-        MOV     DS,[SaveDS]
+        XCHG    BX,[ss:SaveBX]
+        MOV     DS,[ss:SaveDS]
 
 if	BUFFERFLAG
 	mov	byte [cs:SETVECTFLAG], 0
@@ -396,7 +396,7 @@ saveuser:
 end if
 
 ;        ASSUME  DS:NOTHING
-        CALL    word [SaveBX]
+        CALL    word [ss:SaveBX]
 
 if	BUFFERFLAG
       invoke  RESTORE_USER_MAP            ;AN000;LB.  retsore EMS map
@@ -405,15 +405,15 @@ end if
         entry   LEAVEDOS
 ;ASSUME  SS:NOTHING                      ; User routines may misbehave
         CLI
-        DEC     byte [INDOS]
-        MOV     SS,[user_SS]
-        MOV     SP,[user_SP]
+        DEC     byte [cs:INDOS]
+        MOV     SS,[cs:user_SS]
+        MOV     SP,[cs:user_SP]
         MOV     BP,SP
         MOV     byte [BP+user_environ.user_AX],AL
-        MOV     AX,[NSP]
-        MOV     [user_SP],AX
-        MOV     AX,[NSS]
-        MOV     [user_SS],AX
+        MOV     AX,[cs:NSP]
+        MOV     [cs:user_SP],AX
+        MOV     AX,[cs:NSS]
+        MOV     [cs:user_SS],AX
         CALL    restore_world
         IRET
 EndProc SYSTEM_CALL
@@ -424,7 +424,7 @@ EndProc SYSTEM_CALL
 ;
 ;        ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
         procedure   restore_world,NEAR
-        POP     word [restore_tmp]             ; POP     restore_tmp
+        POP     word [cs:restore_tmp]             ; POP     restore_tmp
         POP     AX                      ; PUSH    ES
         POP     BX                      ; PUSH    DS
         POP     CX                      ; PUSH    BP
@@ -434,7 +434,7 @@ EndProc SYSTEM_CALL
         POP     BP                      ; PUSH    CX
         POP     DS                      ; PUSH    BX
         POP     ES                      ; PUSH    AX
-        JMP     word [restore_tmp]             ; PUSH    restore_tmp
+        JMP     word [cs:restore_tmp]             ; PUSH    restore_tmp
 EndProc restore_world
 
 ;
@@ -442,7 +442,7 @@ EndProc restore_world
 ;
 ;        ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
         procedure   save_world,NEAR
-        POP     word [restore_tmp]
+        POP     word [cs:restore_tmp]
         PUSH    ES
         PUSH    DS
         PUSH    BP
@@ -452,7 +452,7 @@ EndProc restore_world
         PUSH    CX
         PUSH    BX
         PUSH    AX
-        JMP     word [restore_tmp]             ; PUSH    restore_tmp
+        JMP     word [cs:restore_tmp]             ; PUSH    restore_tmp
 EndProc save_world
 
 if BUFFERFLAG
@@ -543,7 +543,7 @@ end if
 ; get_user_stack returns the user's stack (and hence registers) in DS:SI
 ;
         procedure   get_user_stack,NEAR
-        LDS     SI,dword [user_SP]
+        LDS     SI,dword [cs:user_SP]
         return
 EndProc get_user_stack
 
@@ -562,17 +562,17 @@ SET_OEM_HANDLER$:
 ;       Jumps to OEM_HANDLER if appropriate
 
         JNE     DO_OEM_FUNC             ; If above F8 try to jump to handler
-        MOV     word [OEM_HANDLER],DX   ; Set Handler
-        MOV     word [OEM_HANDLER+2],DS
+        MOV     word [cs:OEM_HANDLER],DX   ; Set Handler
+        MOV     word [cs:OEM_HANDLER+2],DS
         IRET                            ; Quick return, Have altered no registers
 
 DO_OEM_FUNC:
-        CMP     word [OEM_HANDLER],-1
+        CMP     word [cs:OEM_HANDLER],-1
         JNZ     OEM_JMP
         JMP     BADCALL                 ; Handler not initialized
 
 OEM_JMP:
-        JMP     [OEM_HANDLER]
+        JMP     [cs:OEM_HANDLER]
         end if
 
 

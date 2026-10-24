@@ -106,21 +106,21 @@ LOCAL_MKDIR:
 ;
 ; MakeNode requires an SFT to fiddle with.  We Use a temp spot (RENBUF)
 ;
-	MOV	word [THISSFT+2],SS
-	MOV	word [THISSFT],RenBuf
+	MOV	word [ss:THISSFT+2],SS
+	MOV	word [ss:THISSFT],RenBuf
 ;
 ;  NOTE: Need WORD PTR because MASM takes type of
 ;   TempSFT (byte) instead of type of sf_mft (word).
 ;
-	MOV	word [RenBuf+sf_entry.sf_MFT],0    ; make sure SHARER won't complain.
+	MOV	word [ss:RenBuf+sf_entry.sf_MFT],0    ; make sure SHARER won't complain.
 	MOV	AL,attr_directory
 	invoke	MakeNode
 
 	JC	PATHNFJ
 	CMP	AX,3
 	JZ	NODEACCERRJ	; Can't make a device into a directory
-	LES	BP,[THISDPB]	; Makenode zaps this
-	LDS	DI,[CURBUF]
+	LES	BP,[ss:THISDPB]	; Makenode zaps this
+	LDS	DI,[ss:CURBUF]
 ;ASSUME	DS:NOTHING
 	SUB	SI,DI
 	PUSH	SI		; Pointer to dir_first
@@ -252,21 +252,21 @@ LOCAL_CHDIR:
 	JZ	nojoin				   ;PTM.
 	MOV	[es:DI+curdir_list.curdir_ID],0FFFFH	   ;PTM.
 nojoin:
-	MOV	byte [NoSetDir],FALSE
-	MOV	byte [SATTRIB],attr_directory+attr_system+attr_hidden
+	MOV	byte [ss:NoSetDir],FALSE
+	MOV	byte [ss:SATTRIB],attr_directory+attr_system+attr_hidden
 				; Dir calls can find these
 ; DOS 3.3  6/24/86 FastOpen
 
-	OR	byte [FastOpenFlg],FastOpen_Set	   ; set fastopen flag
+	OR	byte [ss:FastOpenFlg],FastOpen_Set	   ; set fastopen flag
 	invoke	GETPATH
 	PUSHF									;AN000;
-	AND	byte [FastOpenFlg],Fast_yes		   ; clear it all		;AC000;
+	AND	byte [ss:FastOpenFlg],Fast_yes		   ; clear it all		;AC000;
 	POPF									;AN000;
 ; DOS 3.3  6/24/86 FastOpen
 	MOV	AX,error_path_not_found
 	JC	ChDirDone
 	JNZ	NOTDIRPATH	; Path not a DIR
-	MOV	CX,[DIRSTART]	; Get cluster number
+	MOV	CX,[ss:DIRSTART]	; Get cluster number
 	CLC
 ChDirDone:
 	LeaveCrit   critDisk
@@ -319,13 +319,13 @@ end if
 
 LOCAL_RMDIR:
 	EnterCrit   critDisk
-	MOV	byte [NoSetDir],0
-	MOV	byte [SATTRIB],attr_directory+attr_system+attr_hidden
+	MOV	byte [ss:NoSetDir],0
+	MOV	byte [ss:SATTRIB],attr_directory+attr_system+attr_hidden
 				; Dir calls can find these
 	invoke	GETPATH
 	JC	NOPATH		; Path not found
 	JNZ	NOTDIRPATH	; Path not a DIR
-	MOV	DI,[DIRSTART]
+	MOV	DI,[ss:DIRSTART]
 	OR	DI,DI		; Root ?
 	JNZ	rmdir_get_buf	; No
 	JMP	SHORT NOTDIRPATH
@@ -343,7 +343,7 @@ NOTDIRPATH:
 	JMP	NODEACCERRJ
 
 rmdir_get_buf:
-	LDS	DI,[CURBUF]
+	LDS	DI,[ss:CURBUF]
 ;ASSUME	DS:NOTHING
 	SUB	BX,DI		; Compute true offset
 	PUSH	BX		; Save entry pointer

@@ -158,13 +158,13 @@ Normal#AA:
 	push	es
 	mov	es, [cs:Stacks+2]	; Get segment of stacks
 
-	mov	bp,[NextEntry]		; get most likely candidate
+	mov	bp,[cs:NextEntry]		; get most likely candidate
 	mov	al,allocated
 	xchg	AllocByte,al		; grab the entry
 	cmp	al,Free 		; still avail?
 	jne	NotFree#AA
 
-	sub	[NextEntry],EntrySize	; set for next interrupt
+	sub	[cs:NextEntry],EntrySize	; set for next interrupt
 
 found#AA:
 	mov	SavedSP,sp		; save sp value
@@ -193,7 +193,7 @@ found#AA:
 ;	jne	NewError&aa		;  do not free us
 
 	mov	AllocByte,Free		; free the entry
-	mov	[NextEntry],bp		; setup to use next time
+	mov	[cs:NextEntry],bp		; setup to use next time
 
 NewError#AA:
 	pop	es
@@ -213,7 +213,7 @@ FindNext#AA:
 	jmp	found#AA
 
 FoundBad#AA:
-	cmp	bp,[FirstEntry]
+	cmp	bp,[cs:FirstEntry]
 	jc	FindNext#AA
 	mov	bp,ax			; flag this entry
 	mov	AllocByte,clobbered
@@ -248,7 +248,7 @@ FoundBad#AA:
 ;Common routines							  ;3.30
 
 longpath:
-	mov	bp,[LastEntry]		; start with last entry in table
+	mov	bp,[cs:LastEntry]		; start with last entry in table
 
 LPLOOPP:								  ;3.30
 	cmp	AllocByte,Free		; is entry free?
@@ -265,7 +265,7 @@ LPLOOPP:								  ;3.30
 	mov	AllocByte,al		;  yes, put back the error state
 
 inuse:
-	cmp	bp,[FirstEntry]
+	cmp	bp,[cs:FirstEntry]
 	je	fatal
 	sub	bp,EntrySize
 	JMP	LPLOOPP 						  ;3.30

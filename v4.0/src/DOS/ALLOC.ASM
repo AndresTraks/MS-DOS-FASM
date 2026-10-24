@@ -57,7 +57,7 @@ PAGE
 	procedure   arena_free_process,NEAR
 ;	ASSUME  DS:NOTHING,ES:NOTHING
 	MOV     DI,arena.arena_signature
-	MOV     AX,[arena_head]
+	MOV     AX,[ss:arena_head]
 	CALL    check_signature         ; ES <- AX, check for valid block
 
 arena_free_process_loop:
@@ -164,12 +164,12 @@ PAGE
 	XOR     AX,AX
 	MOV     DI,AX
 
-	MOV     [FirstArena],AX         ; init the options
-	MOV     [BestArena],AX
-	MOV     [LastArena],AX
+	MOV     [ss:FirstArena],AX         ; init the options
+	MOV     [ss:BestArena],AX
+	MOV     [ss:LastArena],AX
 
 	PUSH    AX                      ; alloc_max <- 0
-	MOV     AX,[arena_head]         ; AX <- beginning of arena
+	MOV     AX,[ss:arena_head]         ; AX <- beginning of arena
 	CALL    check_signature         ; ES <- AX, carry set if error
 	JC      alloc_err               ; IF error THEN GOTO err
 
@@ -194,7 +194,7 @@ alloc_trashed:
 	error   error_arena_trashed
 
 alloc_end:
-	CMP     word [FirstArena],0
+	CMP     word [ss:FirstArena],0
 	JNZ     alloc_do_split
 
 alloc_fail:
@@ -219,28 +219,28 @@ alloc_test:
 	CMP     BX,CX                   ; IF BX > size of current block THEN
 	JA      alloc_next              ;   GOTO next
 
-	CMP     word [FirstArena],0
+	CMP     word [ss:FirstArena],0
 	JNZ     alloc_best
-	MOV     [FirstArena],DS         ; save first one found
+	MOV     [ss:FirstArena],DS         ; save first one found
 alloc_best:
-	CMP     word [BestArena],0
+	CMP     word [ss:BestArena],0
 	JZ      alloc_make_best         ; initial best
 	PUSH    ES
-	MOV     ES,[BestArena]
+	MOV     ES,[ss:BestArena]
 	CMP     [es:arena.arena_size],CX      ; is size of best larger than found?
 	POP     ES
 	JBE     alloc_last
 alloc_make_best:
-	MOV     [BestArena],DS          ; assign best
+	MOV     [ss:BestArena],DS          ; assign best
 alloc_last:
-	MOV     [LastArena],DS          ; assign last
+	MOV     [ss:LastArena],DS          ; assign last
 	JMP     alloc_next
 
 ;
 ; split the block high
 ;
 alloc_do_split_high:
-	MOV     DS,[LastArena]
+	MOV     DS,[ss:LastArena]
 	MOV     CX,[arena.arena_size]
 	SUB     CX,BX
 	MOV     DX,DS
@@ -257,11 +257,11 @@ alloc_do_split_high:
 ; last must be split high
 ;
 alloc_do_split:
-	CMP     byte [AllocMethod], 1
+	CMP     byte [ss:AllocMethod], 1
 	JA      alloc_do_split_high
-	MOV     DS,[FirstArena]
+	MOV     DS,[ss:FirstArena]
 	JB      alloc_get_size
-	MOV     DS,[BestArena]
+	MOV     DS,[ss:BestArena]
 alloc_get_size:
 	MOV     CX,[arena.arena_size]
 	SUB     CX,BX                   ; get room left over
@@ -282,7 +282,7 @@ alloc_set_sizes:
 
 alloc_set_owner:
 	MOV     DS,DX
-	MOV     AX,[CurrentPDB]
+	MOV     AX,[ss:CurrentPDB]
 	MOV     [arena.arena_owner],AX
 	MOV     AX,DS
 	INC     AX
@@ -377,14 +377,14 @@ PAGE
 	CMP     AL,1
 	JB      AllocOperGet
 	JZ      AllocOperSet
-	MOV     byte [EXTERR_LOCUS],errLOC_Mem ; Extended Error Locus
+	MOV     byte [ss:EXTERR_LOCUS],errLOC_Mem ; Extended Error Locus
 	error   error_invalid_function
 AllocOperGet:
-	MOV     AL,byte [AllocMethod]
+	MOV     AL,byte [ss:AllocMethod]
 	XOR     AH,AH
 	transfer    SYS_RET_OK
 AllocOperSet:
-	MOV     [AllocMethod],BL
+	MOV     [ss:AllocMethod],BL
 	transfer    SYS_RET_OK
 EndProc AllocOper$
 

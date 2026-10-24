@@ -125,7 +125,7 @@ BREAK <GET_VERIFY_ON_WRITE$ - return verify-after-Write flag>
 ; Returns:
 ;	AL = value of VERIFY flag
 
-	MOV	AL,[VERFLG]
+	MOV	AL,[ss:VERFLG]
 	return
 EndProc GET_VERIFY_ON_WRITE$
 
@@ -141,7 +141,7 @@ BREAK <SET_VERIFY_ON_WRITE$ - Toggle verify-after-Write flag>
 ;	None
 
 	AND	AL,1
-	MOV	[VERFLG],AL
+	MOV	[ss:VERFLG],AL
 	return
 EndProc SET_VERIFY_ON_WRITE$
 
@@ -600,8 +600,8 @@ BREAK <GET_DMA$, SET_DMA$ -- Get/Set current DMA address>
 ; Returns:
 ;	ES:BX is current transfer address
 
-	MOV	BX,word [DMAADD]
-	MOV	CX,word [DMAADD+2]
+	MOV	BX,word [ss:DMAADD]
+	MOV	CX,word [ss:DMAADD+2]
 	invoke	get_user_stack
 	MOV	[SI+user_environ.user_BX],BX
 	MOV	[SI+user_environ.user_ES],CX
@@ -618,8 +618,8 @@ EndProc GET_DMA$
 ; Returns:
 ;	None
 
-	MOV	word [DMAADD],DX
-	MOV	word [DMAADD+2],DS
+	MOV	word [ss:DMAADD],DX
+	MOV	word [ss:DMAADD+2],DS
 	return
 EndProc SET_DMA$
 
@@ -634,7 +634,7 @@ BREAK <GET_DEFAULT_DRIVE$, SET_DEFAULT_DRIVE$ -- Set/Get default drive>
 ; Returns:
 ;	AL = drive number
 
-	MOV	AL,[CURDRV]
+	MOV	AL,[ss:CURDRV]
 	return
 EndProc GET_DEFAULT_DRIVE$
 
@@ -655,9 +655,9 @@ EndProc GET_DEFAULT_DRIVE$
 ;	LDS	SI,ThisCDS		; get CDS
 ;	TEST	[SI].curdir_flags,curdir_splice ; was it spliced?
 ;	JNZ	SetRet			; yes, do not set
-	MOV	[CURDRV],AL		; no, set
+	MOV	[ss:CURDRV],AL		; no, set
 SETRET_GETSET:
-	MOV	AL,[CDSCOUNT]		; let user see what the count really is
+	MOV	AL,[ss:CDSCOUNT]		; let user see what the count really is
 RET17:	return
 EndProc SET_DEFAULT_DRIVE$
 
@@ -735,8 +735,8 @@ procedure   RECSET,NEAR
 
 	if	ALTVECT
 	context ES
-	MOV	[LSTVEC],AL		; Terminate list with real vector
-	MOV	[LSTVEC2],AL		; Terminate list with real vector
+	MOV	[ss:LSTVEC],AL		; Terminate list with real vector
+	MOV	[ss:LSTVEC2],AL		; Terminate list with real vector
 	MOV	CX,NUMVEC		; Number of possible translations
 	MOV	DI,VECIN    ; Point to vectors
 	REPNE	SCASB
@@ -883,9 +883,9 @@ get_lbt:				; get lead byte table			;AN000;
 set_interim:				; Set interim console flag		;AN000;
 	push	dx								;AN000;
 	and	dl,01			; isolate bit 1 			;AN000;
-	mov	[InterCon], dl							;AN000;
+	mov	[ss:InterCon], dl							;AN000;
 	push	ds								;AN000;
-	mov	ds, [CurrentPDB]						;AN000;
+	mov	ds, [ss:CurrentPDB]						;AN000;
 	mov	byte [PDB_InterCon], dl	; update value in pdb		;AN000;
 	pop	ds								;AN000;
 	pop	dx								;AN000;
@@ -894,7 +894,7 @@ set_interim:				; Set interim console flag		;AN000;
 get_interim:									;AN000;
 	push	dx								;AN000;
 	push	ds								;AN000;
-	mov	dl,[InterCon]							;AN000;
+	mov	dl,[ss:InterCon]							;AN000;
 	invoke	get_user_stack		; get interim console flag		;AN000;
 ; assume ds:nothing								;AN000;
 	mov	[SI+user_environ.user_DX],DX 						;AN000;

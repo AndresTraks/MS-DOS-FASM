@@ -73,7 +73,7 @@ PAGE
 	MOV	[SI+user_environ.user_DX],BX 	;DH=month, DL=day
 	ADD	AX,1980 		;Put bias back
 	MOV	[SI+user_environ.user_CX],AX 	;CX=year
-	MOV	AL,byte [WEEKDAY]
+	MOV	AL,byte [ss:WEEKDAY]
 	return
 EndProc GET_DATE$
 
@@ -159,9 +159,9 @@ EndProc GET_TIME$
 	DOSAssume   CS,<DS>,"TIME/DevIOCall2"
 	POP	BX
 	invoke	SETWRITE
-	POP	word [TIMEBUF+4]
-	POP	word [TIMEBUF+2]
-	LDS	SI,[BCLOCK]
+	POP	word [ss:TIMEBUF+4]
+	POP	word [ss:TIMEBUF+2]
+	LDS	SI,[ss:BCLOCK]
 ;ASSUME	DS:NOTHING
 	invoke	DEVIOCALL2		;Set the time
 	XOR	AL,AL
@@ -228,14 +228,14 @@ EndProc DATE16
 	DOSAssume   CS,<DS>,"ReadTime/DevIOCall2"
 	POP	BX
 	POP	SI
-	MOV	AX,word [TIMEBUF]
-	MOV	CX,word [TIMEBUF+2]
-	MOV	DX,word [TIMEBUF+4]
-	CMP	AX,[DAYCNT]		;See if day count is the same
+	MOV	AX,word [ss:TIMEBUF]
+	MOV	CX,word [ss:TIMEBUF+2]
+	MOV	DX,word [ss:TIMEBUF+4]
+	CMP	AX,[ss:DAYCNT]		;See if day count is the same
 	retz
 	CMP	AX,FOURYEARS*30 	;Number of days in 120 years
 	JAE	RET22			;Ignore if too large
-	MOV	[DAYCNT],AX
+	MOV	[ss:DAYCNT],AX
 	PUSH	SI
 	PUSH	CX
 	PUSH	DX			;Save time
@@ -256,9 +256,9 @@ SK:
 	MOV	CL,1			;At least at first month in year
 	MOV	SI,MONTAB   ;Table of days in each month
 	CALL	DSLIDE			;Find out which month we're in
-	MOV	[MONTH],CL
+	MOV	[ss:MONTH],CL
 	INC	DX			;Remainder is day of month (start with one)
-	MOV	[DAY],DL
+	MOV	[ss:DAY],DL
 	CALL	WKDAY			;Set day of week
 	POP	DX
 	POP	CX
@@ -279,7 +279,7 @@ EndProc DSLIDE
 
 	procedure   SETYEAR,NEAR
 ;Set year with value in CX. Adjust length of February for this year.
-	MOV	byte [YEAR],CL
+	MOV	byte [ss:YEAR],CL
 
 CHKYR:
 	TEST	CL,3			;Check for leap year
@@ -287,7 +287,7 @@ CHKYR:
 	JNZ	SAVFEB			;28 days if no leap year
 	INC	AL			;Add leap day
 SAVFEB:
-	MOV	[MONTAB+1],AL		;Store for February
+	MOV	[ss:MONTAB+1],AL		;Store for February
 RET23:	return
 EndProc SETYEAR
 
@@ -296,7 +296,7 @@ EndProc SETYEAR
 ;	ASSUME	ES:NOTHING
 	CALL	CHKYR			;Set Feb. up for new year
 	MOV	AL,DH
-	MOV	BX,[MONTAB-1]
+	MOV	BX,[ss:MONTAB-1]
 	XLATB				;Look up days in month
 	CMP	AL,DL
 	MOV	AL,-1			;Restore error flag, just in case
@@ -305,13 +305,13 @@ EndProc SETYEAR
 ;
 ; WARNING!  DAY and MONTH must be adjacently allocated
 ;
-	MOV	word [DAY],DX	;Set both day and month
+	MOV	word [ss:DAY],DX	;Set both day and month
 	SHR	CX,1
 	SHR	CX,1
 	MOV	AX,FOURYEARS
 	MOV	BX,DX
 	MUL	CX
-	MOV	CL,byte [YEAR]
+	MOV	CL,byte [ss:YEAR]
 	AND	CL,3
 	MOV	SI,YRTAB
 	MOV	DX,AX
@@ -325,7 +325,7 @@ EndProc SETYEAR
 	DEC	CX			;Account for days starting with one
 	ADD	DX,CX			;Add in to day total
 	XCHG	AX,DX			;Get day count in AX
-	MOV	[DAYCNT],AX
+	MOV	[ss:DAYCNT],AX
 	PUSH	SI
 	PUSH	BX
 	PUSH	AX
@@ -337,16 +337,16 @@ EndProc SETYEAR
 	invoke	SETREAD
 	DOSAssume   CS,<ES>,"DoDate/SetRead"
 	PUSH	DS
-	LDS	SI,[BCLOCK]
+	LDS	SI,[ss:BCLOCK]
 ;ASSUME	DS:NOTHING
 	invoke	DEVIOCALL2		;Get correct date and time
 	POP	DS
 	POP	BX
 	DOSAssume   CS,<DS>,"DoDate/DevIOCall2"
 	invoke	SETWRITE
-	POP	word [TIMEBUF]
+	POP	word [ss:TIMEBUF]
 	PUSH	DS
-	LDS	SI,[BCLOCK]
+	LDS	SI,[ss:BCLOCK]
 ;ASSUME	DS:NOTHING
 	invoke	DEVIOCALL2		;Set the date
 	POP	DS
@@ -354,13 +354,13 @@ EndProc SETYEAR
 	POP	BX
 	POP	SI
 WKDAY:
-	MOV	AX,[DAYCNT]
+	MOV	AX,[ss:DAYCNT]
 	XOR	DX,DX
 	MOV	CX,7
 	INC	AX
 	INC	AX			;First day was Tuesday
 	DIV	CX			;Compute day of week
-	MOV	[WEEKDAY],DL
+	MOV	[ss:WEEKDAY],DL
 	XOR	AL,AL			;Flag OK
 Ret25:	return
 EndProc DODATE

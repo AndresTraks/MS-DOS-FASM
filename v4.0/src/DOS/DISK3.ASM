@@ -98,7 +98,7 @@ Break	<DISKWRITE -- PERFORM USER DISK Write>
 
 	Assert	ISSFT,<ES,DI>,"DiskWrite"
 	PUSH	word [es:DI+sf_entry.sf_firclus]	  ; set up 1st cluster # for FastSeek
-	POP	word [FSeek_firclus]
+	POP	word [ss:FSeek_firclus]
 
 	invoke	CHECK_WRITE_LOCK	  ;IFS. check write lock		 ;AN000;
 	JNC	WRITE_OK_DISK3		  ;IFS. lock check ok			 ;AN000;
@@ -110,14 +110,14 @@ WRTEOFJ:
 WRITE_OK_DISK3:
 	AND	[es:DI+sf_entry.sf_flags],NOT (sf_close_nodate OR devid_file_clean)
 				; Mark file as dirty, clear no date on close
-	LES	BP,[THISDPB]
+	LES	BP,[ss:THISDPB]
 	Assert	ISDPB,<ES,BP>,"DiskWrite/WriteOk"
 	MOV	AL,[es:BP+dpb.dpb_drive]   ; set up drive # for FastSeek
-	MOV	[FSeek_drive],AL       ; 11/5/86 DOS 4.00
+	MOV	[ss:FSeek_drive],AL       ; 11/5/86 DOS 4.00
 
 	invoke	BREAKDOWN
-	MOV	AX,word [BYTPOS]
-	MOV	DX,word [BYTPOS+2]
+	MOV	AX,word [ss:BYTPOS]
+	MOV	DX,word [ss:BYTPOS+2]
 	JCXZ	WRTEOFJ 		;Make the file length = sf_position
 	ADD	AX,CX
 	ADC	DX,0			; AX:DX=byte after last byte accessed
@@ -133,17 +133,17 @@ WRITE_OK_DISK3:
 	OR	DX,DX
 	JNZ	CALCLUS
 	SUB	AX,1			; AX must be zero base indexed		;AC000;
-	SBB	word [HIGH_SECTOR],0 	;F.C. >32mb				;AN000;
+	SBB	word [ss:HIGH_SECTOR],0 	;F.C. >32mb				;AN000;
 CALCLUS:
-	PUSH	word [HIGH_SECTOR]		;F.C. >32mb				;AN000;
+	PUSH	word [ss:HIGH_SECTOR]		;F.C. >32mb				;AN000;
 	CALL	SHR32			;F.C. >32mb				;AN000;
-	POP	word [HIGH_SECTOR]		;F.C. >32mb				;AN000;
+	POP	word [ss:HIGH_SECTOR]		;F.C. >32mb				;AN000;
 
 ;	SHR	AX,CL			; Last cluster to be accessed
 	PUSH	AX
 	PUSH	DX			; Save the size of the "tail"
 	PUSH	ES
-	LES	DI,[THISSFT]
+	LES	DI,[ss:THISSFT]
 	Assert	ISSFT,<ES,DI>,"DiskWrite/CalClus"
 	MOV	AX,word [es:DI+sf_entry.sf_size]
 	MOV	DX,word [es:DI+sf_entry.sf_size+2]
@@ -155,7 +155,7 @@ CALCLUS:
 	MOV	AX,DX			;F.C. >32mb				;AN000;
 	XOR	DX,DX			;F.C. >32mb				;AN000;
 	DIV	[es:BP+dpb.dpb_sector_size] ;F.C. >32mb				;AN000;
-	MOV	[HIGH_SECTOR_TEMP],AX	;F.C. >32mb				;AN000;
+	MOV	[ss:HIGH_SECTOR_TEMP],AX	;F.C. >32mb				;AN000;
 	POP	AX			;F.C. >32mb				;AN000;
 
 	DIV	[es:BP+dpb.dpb_sector_size]
@@ -163,22 +163,22 @@ CALCLUS:
 	OR	DX,DX
 	JZ	NORNDUP
 	ADD	AX,1		; Round up if any remainder			;AC000;
-	ADC	word [HIGH_SECTOR_TEMP],0	;F.C. >32mb				;AN000;
+	ADC	word [ss:HIGH_SECTOR_TEMP],0	;F.C. >32mb				;AN000;
 NORNDUP:
-	PUSH	word [HIGH_SECTOR_TEMP]	;F.C. >32mb				;AN000;
-	POP	word [VALSEC+2]	;F.C. >32mb				;AN000;
-	MOV	word [VALSEC],AX  ;Number of sectors that have been written
+	PUSH	word [ss:HIGH_SECTOR_TEMP]	;F.C. >32mb				;AN000;
+	POP	word [ss:VALSEC+2]	;F.C. >32mb				;AN000;
+	MOV	word [ss:VALSEC],AX  ;Number of sectors that have been written
 	XOR	AX,AX
-	MOV	word [GROWCNT],AX
-	MOV	word [GROWCNT+2],AX
+	MOV	word [ss:GROWCNT],AX
+	MOV	word [ss:GROWCNT+2],AX
 	POP	AX
 
-	MOV	DI,[HIGH_SECTOR]	;F.C. >32mb				;AN000;
-	CMP	DI,[HIGH_SECTOR_TEMP]	;F.C. >32mb				;AN000;
+	MOV	DI,[ss:HIGH_SECTOR]	;F.C. >32mb				;AN000;
+	CMP	DI,[ss:HIGH_SECTOR_TEMP]	;F.C. >32mb				;AN000;
 	JB	NOGROW			;F.C. >32mb				;AN000;
 	JZ	lowsec			;F.C. >32mb				;AN000;
 	SUB	BX,CX			;F.C. >32mb				;AN000;
-	SBB	DI,[HIGH_SECTOR_TEMP]	;F.C. >32mb di:bx no. of sectors	;AN000;
+	SBB	DI,[ss:HIGH_SECTOR_TEMP]	;F.C. >32mb di:bx no. of sectors	;AN000;
 	JMP	yesgrow 		;F.C. >32mb				;AN000;
 lowsec:
 	MOV	DI,0		;F.C. >32mb
@@ -189,13 +189,13 @@ yesgrow:
 	MOV	CX,DX
 	XCHG	AX,BX
 	MUL	[es:BP+dpb.dpb_sector_size]  ; Bytes of full sector growth
-	MOV	[HIGH_SECTOR],DX	 ;F.C. >32mb save dx			;AN000;
-	MOV	[HIGH_SECTOR_TEMP],AX	 ;F.C. >32mb save ax			;AN000;
+	MOV	[ss:HIGH_SECTOR],DX	 ;F.C. >32mb save dx			;AN000;
+	MOV	[ss:HIGH_SECTOR_TEMP],AX	 ;F.C. >32mb save ax			;AN000;
 	MOV	AX,DI			 ;F.C. >32mb				;AN000;
 	MUL	[es:BP+dpb.dpb_sector_size]  ;F.C. >32mb do higher word multiply	;AN000;
-	ADD	AX,[HIGH_SECTOR]	 ;F.C. >32mb add lower value		;AN000;
+	ADD	AX,[ss:HIGH_SECTOR]	 ;F.C. >32mb add lower value		;AN000;
 	MOV	DX,AX			 ;F.C. >32mb DX:AX is the result of	;AN000;
-	MOV	AX,[HIGH_SECTOR_TEMP]	 ;F.C. >32mb a 32 bit multiply		;AN000;
+	MOV	AX,[ss:HIGH_SECTOR_TEMP]	 ;F.C. >32mb a 32 bit multiply		;AN000;
 
 	SUB	AX,CX		; Take off current "tail"
 	SBB	DX,0		; 32-bit extension
@@ -208,8 +208,8 @@ HAVSTART:
 	invoke	SKPCLP
 	JCXZ	DOWRTJ
 ;;; 11/5/86 FastSeek
-	MOV	[FSeek_logclus],DX   ; delete EOF (FFFFH)
-	INC	word [FSeek_logclus]
+	MOV	[ss:FSeek_logclus],DX   ; delete EOF (FFFFH)
+	INC	word [ss:FSeek_logclus]
 	invoke	FastSeek_Truncate    ;
 ;;; 11/5/86 FastSeek
 	invoke	ALLOCATE
@@ -221,11 +221,11 @@ HAVSTART:
 
 	MOV	AH,0FH				;MS. write/data/fail/abort	;AN000;
  entry WRTERR22
-	MOV	AL,[THISDRV]			;MS.				;AN000;
+	MOV	AL,[ss:THISDRV]			;MS.				;AN000;
 	CALL	File_Handle_Fail_Error	;MS. issue disk full I24
 	MOV	CX,0			;No bytes transferred
 ;	XOR	CX,CX			; will be deleted
-	LES	DI,[THISSFT]
+	LES	DI,[ss:THISSFT]
 	Assert	ISSFT,<ES,DI>,"DiskWrite/WrtErr"
 ;	CLC
 	return
@@ -240,17 +240,17 @@ TESTTAIL:
 	JBE	NOGROW
 	XOR	DX,DX
 SETGRW:
-	MOV	word [GROWCNT],AX
-	MOV	word [GROWCNT+2],DX
+	MOV	word [ss:GROWCNT],AX
+	MOV	word [ss:GROWCNT+2],DX
 NOGROW:
 	POP	AX
-	MOV	CX,[CLUSNUM]	; First cluster accessed
+	MOV	CX,[ss:CLUSNUM]	; First cluster accessed
 	invoke	FNDCLUS
 	JC	ACC_ERRWJ
-	MOV	[CLUSNUM],BX
-	MOV	[LASTPOS],DX
+	MOV	[ss:CLUSNUM],BX
+	MOV	[ss:LASTPOS],DX
 ;;; 11/5/86 FastSeek
-	MOV	[FSeek_logclus],AX    ; set up last position
+	MOV	[ss:FSeek_logclus],AX    ; set up last position
 	SUB	AX,DX		; Last cluster minus current cluster
 	JZ	DOWRT		; If we have last clus, we must have first
 	JCXZ	HAVSTART	; See if no more data
@@ -258,10 +258,10 @@ NOGROW:
 	MOV	CX,AX
 
 ;;; 11/5/86 FastSeek
-	CMP	word [CLUSNUM],0	      ;FS. null file				;AN000;
+	CMP	word [ss:CLUSNUM],0	      ;FS. null file				;AN000;
 	JZ	NULL_FILE	      ;FS. yes					;AN000;
-	MOV	[FSeek_logclus],DX    ;FS. delete EOF (FFFFH)			;AN000;
-	INC	word [FSeek_logclus]       ;FS.					;AN000;
+	MOV	[ss:FSeek_logclus],DX    ;FS. delete EOF (FFFFH)			;AN000;
+	INC	word [ss:FSeek_logclus]       ;FS.					;AN000;
 	invoke	FastSeek_Truncate     ;FS.					;AN000;
 NULL_FILE:
 ;;; 11/5/86 FastSeek
@@ -269,40 +269,40 @@ NULL_FILE:
 	POP	AX
 	JC	WRTERR
 	MOV	CX,AX
-	MOV	DX,[LASTPOS]
+	MOV	DX,[ss:LASTPOS]
 	INC	DX
 	DEC	CX
 	JZ	NOSKIP
 ;;; 11/5/86 FastSeek
-	MOV	[FSeek_logclus],DX    ;
-	ADD	[FSeek_logclus],CX    ; set up last position
+	MOV	[ss:FSeek_logclus],DX    ;
+	ADD	[ss:FSeek_logclus],CX    ; set up last position
 	invoke	SKPCLP
 	JC	ACC_ERRWJ
 NOSKIP:
-	MOV	[CLUSNUM],BX
-	MOV	[LASTPOS],DX
+	MOV	[ss:CLUSNUM],BX
+	MOV	[ss:LASTPOS],DX
 DOWRT:
-	CMP	word [BYTCNT1],0
+	CMP	word [ss:BYTCNT1],0
 	JZ	WRTMID
-	MOV	BX,[CLUSNUM]
+	MOV	BX,[ss:CLUSNUM]
 	invoke	BUFWRT
 	JC	ACC_ERRWJ
 WRTMID:
-	MOV	AX,[SECCNT]
+	MOV	AX,[ss:SECCNT]
 	OR	AX,AX
 	JNZ	havemid
 	JMP	WRTLAST
 havemid:
-	ADD	word [SECPOS],AX
-	ADC	word [SECPOS+2],0	 ;F.C. >32mb				;AN000;
+	ADD	word [ss:SECPOS],AX
+	ADC	word [ss:SECPOS+2],0	 ;F.C. >32mb				;AN000;
 	invoke	NEXTSEC
 	JNC	gotok
 	JMP	ACC_ERRWJ
 gotok:
-	MOV	byte [TRANS],1	 ; A transfer is taking place
-	MOV	DL,[SECCLUSPOS]
-	MOV	BX,[CLUSNUM]
-	MOV	CX,[SECCNT]
+	MOV	byte [ss:TRANS],1	 ; A transfer is taking place
+	MOV	DL,[ss:SECCLUSPOS]
+	MOV	BX,[ss:CLUSNUM]
+	MOV	CX,[ss:SECCNT]
 WRTLP:
 	invoke	OPTIMIZE
 	JNC	wokok
@@ -314,14 +314,14 @@ wokok:
 	PUSH	BX
 	Assert	ISDPB,<ES,BP>,"DiskWrite/WrtLp"
 	MOV	AL,[es:BP+dpb.dpb_drive]
-	MOV	[SC_DRIVE],AL		  ;LB. save it for INVALIDATE_SC	;AN000;
+	MOV	[ss:SC_DRIVE],AL		  ;LB. save it for INVALIDATE_SC	;AN000;
 	PUSH	CX			  ;LB.					;AN000;
-	PUSH	word [HIGH_SECTOR]		  ;LB.					;AN000;
+	PUSH	word [ss:HIGH_SECTOR]		  ;LB.					;AN000;
 SCANNEXT:				  ;LB.					;AN000;
 	invoke	GETCURHEAD		  ;LB.					;AN000;
 ;ASSUME	DS:NOTHING
 NEXTBUFF:			; Search for buffers
-	CMP	word [SC_CACHE_COUNT],0	    ;LB. SC support ?			;AN000;
+	CMP	word [ss:SC_CACHE_COUNT],0	    ;LB. SC support ?			;AN000;
 	JZ	nosc			    ;LB. no				;AN000;
 	PUSH	AX			    ;LB. save reg			;AN000;
 	PUSH	CX			    ;LB. save reg			;AN000;
@@ -343,22 +343,22 @@ not_dirty:
 	MOV	word [DI+BUFFINFO.buf_ID],(buf_visit SHL 8) OR 0FFH	  ; Free the buffer, it is being over written
 	invoke	ScanPlace
 DONEXTBUFF:
-	CMP	DI,[FIRST_BUFF_ADDR]	  ;LB. end of chain			;AN000;
+	CMP	DI,[ss:FIRST_BUFF_ADDR]	  ;LB. end of chain			;AN000;
 	JNZ	NEXTBUFF		  ;LB. no				;AN000;
 	ADD	DX,1			  ;LB. next sector number		;AN000;
-	ADC	word [HIGH_SECTOR],0 	  ;LB.					;AN000;
+	ADC	word [ss:HIGH_SECTOR],0 	  ;LB.					;AN000;
 	LOOP	SCANNEXT		  ;LB. check again			;AN000;
-	POP	word [HIGH_SECTOR]		  ;LB.					;AN000;
+	POP	word [ss:HIGH_SECTOR]		  ;LB.					;AN000;
 	POP	CX			  ;LB. get count back			;AN000;
 
 	POP	BX
 	POP	DX
-	MOV	DS,word [DMAADD+2]
-	MOV	byte [ALLOWED],Allowed_RETRY + Allowed_FAIL + Allowed_IGNORE
+	MOV	DS,word [ss:DMAADD+2]
+	MOV	byte [ss:ALLOWED],Allowed_RETRY + Allowed_FAIL + Allowed_IGNORE
 
 if	BUFFERFLAG
 	pushf
-	cmp	byte [BUF_EMS_MODE], -1
+	cmp	byte [ss:BUF_EMS_MODE], -1
 	je	safe_write	
 	call	SAVE_MAP
 	call	RESTORE_USER_MAP
@@ -370,7 +370,7 @@ end if
 
 if	BUFFERFLAG
 	pushf
-	cmp	byte [BUF_EMS_MODE], -1
+	cmp	byte [ss:BUF_EMS_MODE], -1
 	je	safe_map	
 	call	SAVE_USER_MAP
 	call	RESTORE_MAP
@@ -535,7 +535,7 @@ Break	<DIV32 -- PERFORM 32 BIT DIVIDE>
 	MOV	AX,DX			;F.C. >32mb				;AN000;
 	XOR	DX,DX			;F.C. >32mb				;AN000;
 	DIV	BX			;F.C. >32mb				;AN000;
-	MOV	[HIGH_SECTOR],AX	;F.C. >32mb				;AN000;
+	MOV	[ss:HIGH_SECTOR],AX	;F.C. >32mb				;AN000;
 	POP	AX			;F.C. >32mb				;AN000;
 
 
@@ -564,7 +564,7 @@ entry ROTASHFT				;F.C. >32mb				;AN000;
 	JZ	norota			;F.C. >32mb				;AN000;
 ROTASHFT2:
 	CLC				;F.C. >32mb				;AN000;
-	RCR	word [HIGH_SECTOR],1 	;F.C. >32mb				;AN000;
+	RCR	word [ss:HIGH_SECTOR],1 	;F.C. >32mb				;AN000;
 	RCR	AX,1			;F.C. >32mb				;AN000;
 	LOOP	ROTASHFT2		;F.C. >32mb:				;AN000;
 norota:
@@ -584,28 +584,28 @@ EndProc SHR32
 procedure File_Handle_Fail_Error,NEAR						;AN000;
 ;	ASSUME	ES:NOTHING,DS:NOTHING						;AN000;
 										;AN000;
-	CMP	byte [DISK_FULL],0	 ;MS. disk full or EOF				;AN000;
+	CMP	byte [ss:DISK_FULL],0	 ;MS. disk full or EOF				;AN000;
 	JZ	Fexit		 ;MS. no					;AN000;
-	TEST	word [DOS34_FLAG],Disable_EOF_I24   ;MS. check input status ?	;AN000;
+	TEST	word [ss:DOS34_FLAG],Disable_EOF_I24   ;MS. check input status ?	;AN000;
 	JNZ	Fexit		 ;MS. yes					;AN000;
 										;AN000;
-	LES	DI,[THISSFT]	 ;MS. get current SFT				;AN000;
+	LES	DI,[ss:THISSFT]	 ;MS. get current SFT				;AN000;
 ;	LES	DI,ES:[DI.sf_DEVPTR];MS. get device header			;AN000;
 	TEST	[es:DI+sf_entry.sf_flags],Handle_Fail_I24  ;MS. gen I24 ?		;AN000;
 	JZ	Fexit		 ;MS. no					;AN000;
 	PUSH	DS		 ;MS. save DS					;AN000;
 	TEST	AH,1				;MS. READ ?			;AN000;
 	JZ	readeof 			;MS. yes			;AN000;
-	MOV	word [EXTERR],error_handle_Disk_Full ;MS. set extended error 	;AN000;
+	MOV	word [ss:EXTERR],error_handle_Disk_Full ;MS. set extended error 	;AN000;
 	JMP	SHORT errset			;MS. set extended error 	;AN000;
 readeof:
-	MOV	word [EXTERR],error_handle_EOF	;MS. set extended error 	;AN000;
+	MOV	word [ss:EXTERR],error_handle_EOF	;MS. set extended error 	;AN000;
 errset:
-	MOV	byte [EXTERR_CLASS],errCLASS_OutRes	;MS. set class			;AN000;
-	MOV	byte [EXTERR_ACTION],errACT_Abort	;MS. set action 		;AN000;
-	MOV	byte [EXTERR_LOCUS],errLOC_Unk	;MS. set locus			;AN000;
+	MOV	byte [ss:EXTERR_CLASS],errCLASS_OutRes	;MS. set class			;AN000;
+	MOV	byte [ss:EXTERR_ACTION],errACT_Abort	;MS. set action 		;AN000;
+	MOV	byte [ss:EXTERR_LOCUS],errLOC_Unk	;MS. set locus			;AN000;
 	MOV	word [EXITHOLD + 2],ES	;MS. save es:bp in exithold	;AN000;
-	MOV	word [EXITHOLD],BP		;MS.				;AN000;
+	MOV	word [ss:EXITHOLD],BP		;MS.				;AN000;
 	TEST	[es:DI+sf_entry.sf_flags],devid_device	  ;MS. device  ?		;AN000;
 	JNZ	chardev2_DISK3			  ;MS. yes			;AN000;
 	LDS	SI,[es:DI+sf_entry.sf_devptr]		  ;MS. get dpb			;AN000;
@@ -619,7 +619,7 @@ doi24:
 	invoke	NET_I24_ENTRY			;MS. issue I24			;AN000;
 	STC					;MS. must be fail		;AN000;
 	POP	DS				;MS. restore DS 		;AN000;
-	MOV	AX,[EXTERR]			;MS. set error			;AN000;
+	MOV	AX,[ss:EXTERR]			;MS. set error			;AN000;
 	JMP	SHORT Fend			;MS. exit			;AN000;
 Fexit:										;AN000;
 	CLC					;MS. clear carry		;AN000;
@@ -645,7 +645,7 @@ Break	<BUFF_RANGE_CHECK- buffer range checkink>
 
 	CMP	word [DI+BUFFINFO.buf_sector],DX					;AN000;
 	JNZ	DONEXTBUFF2	; not this sector	   ;F.C. >32mb		;AN000;
-	MOV	SI,[HIGH_SECTOR]			   ;F.C. >32mb		;AN000;
+	MOV	SI,[ss:HIGH_SECTOR]			   ;F.C. >32mb		;AN000;
 	CMP	word [DI+BUFFINFO.buf_sector+2],SI		   ;F.C. >32mb		;AN000;
 	JNZ	DONEXTBUFF2	; Not for this drive
 	CMP	AL,[DI+BUFFINFO.buf_ID]

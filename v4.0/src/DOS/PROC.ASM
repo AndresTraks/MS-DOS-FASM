@@ -62,7 +62,7 @@ PAGE
 	procedure   WAIT$,NEAR
 ;	ASSUME	DS:NOTHING,ES:NOTHING
 	XOR	AX,AX
-	XCHG	AX,[exit_code]
+	XCHG	AX,[ss:exit_code]
 	transfer    SYS_RET_OK
 EndProc WAIT$
 
@@ -88,8 +88,8 @@ PAGE
 ;	ASSUME DS:NOTHING,ES:NOTHING,SS:DOSGROUP
 
 	PUSH	AX			; keep exit code around
-	MOV	byte [exit_type],Exit_Keep_process
-	MOV	ES,[CurrentPDB]
+	MOV	byte [ss:exit_type],Exit_Keep_process
+	MOV	ES,[ss:CurrentPDB]
 	CMP	DX,6h			; keep enough space around for system
 	JAE	keep_shrink		; info
 	MOV	DX,6h
@@ -135,16 +135,16 @@ PAGE
 	procedure   EXIT$,NEAR
 ;	ASSUME	DS:NOTHING,ES:NOTHING,SS:DOSGROUP
 	XOR	AH,AH
-	XCHG	AH,byte [DidCTRLC]
+	XCHG	AH,byte [ss:DidCTRLC]
 	OR	AH,AH
-	MOV	byte [exit_type],Exit_terminate
+	MOV	byte [ss:exit_type],Exit_terminate
 	JZ	Exit_inner
-	MOV	byte [exit_type],Exit_Ctrl_C
+	MOV	byte [ss:exit_type],Exit_Ctrl_C
 
 	entry	Exit_inner
 
 	invoke	get_user_stack
-	PUSH	word [CurrentPDB]
+	PUSH	word [ss:CurrentPDB]
 	POP	word [SI+user_environ.user_CS]
 	JMP	SHORT abort_inner
 EndProc EXIT$
@@ -163,7 +163,7 @@ BREAK <ABORT$ -- Terminate a process>
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
 	XOR	AL,AL
-	MOV	byte [exit_type],Exit_abort
+	MOV	byte [ss:exit_type],Exit_abort
 
 ;
 ; abort_inner must have AL set as the exit code!  The exit type is retrieved
@@ -172,8 +172,8 @@ BREAK <ABORT$ -- Terminate a process>
 ;
 	entry	abort_inner
 
-	MOV	AH,[exit_type]
-	MOV	[exit_code],AX
+	MOV	AH,[ss:exit_type]
+	MOV	[ss:exit_code],AX
 	invoke	get_user_stack
 	MOV	DS,[SI+user_environ.user_CS] 	; set up old interrupts
 	XOR	AX,AX

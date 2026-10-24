@@ -17,8 +17,8 @@ Lock_add	    equ    6
 STRUC LockBuf
 {
 
-   Lock_position DD    0	    ; file position for LOCK
-   Lock_length	 DD    0	    ; number of bytes to LOCK
+   .Lock_position DD    0	    ; file position for LOCK
+   .Lock_length	 DD    0	    ; number of bytes to LOCK
 
 }
 match =LockBuf_LAID_OUT, LockBuf_LAID_OUT

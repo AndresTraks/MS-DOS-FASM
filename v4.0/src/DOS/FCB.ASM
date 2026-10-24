@@ -55,7 +55,7 @@ ScanSeparator	=   1
 DRVBIT	EQU	2
 NAMBIT	EQU	4
 EXTBIT	EQU	8
-	MOV	byte [SpaceFlag],0
+	MOV	byte [ss:SpaceFlag],0
 	XOR	DL,DL		; Flag--not ambiguous file name
 	TEST	AL,DRVBIT	; Use current drive field if default?
 	JNZ	DEFDRV
@@ -107,7 +107,7 @@ NOSCAN:
 	Invoke	GetVisDrv
 	POP	AX
 	JNC	HAVDRV
-	CMP	byte [DrvErr],error_not_DOS_disk  ; if not FAt drive 		;AN000;
+	CMP	byte [ss:DrvErr],error_not_DOS_disk  ; if not FAt drive 		;AN000;
 	JZ	HAVDRV			     ; assume ok			;AN000;
 BADDRV:
 	MOV	DL,-1
@@ -126,7 +126,7 @@ NODRV:
 	CMP	byte [SI],"."
 	JNZ	NODOT
 	INC	SI		; Skip over dot if present
-	TEST	word [DOS34_FLAG],DBCS_VOLID2					;AN000;
+	TEST	word [ss:DOS34_FLAG],DBCS_VOLID2					;AN000;
 	JZ	VOLOK								;AN000;
 	MOVSB			; 2nd byte of DBCS				;AN000;
 	MOV	CX,2								;AN000;
@@ -159,7 +159,7 @@ MUSTGETWORD:
 ;
 	JB	FILLNAM
 	JNZ	MustCheckCX
-	TEST	byte [SpaceFlag],0FFh
+	TEST	byte [ss:SpaceFlag],0FFh
 	JZ	FILLNAM
 	CMP	AL," "
 	JNZ	FILLNAM
@@ -182,11 +182,11 @@ NOSTAR:
 	DEC	CX						  ;AN000;
 	JMP	MUSTGETWORD					  ;AN000;
 BNDERR: 							  ;AN000;
-	TEST	[DOS34_FLAG],DBCS_VOLID 			  ;AN000;
+	TEST	[ss:DOS34_FLAG],DBCS_VOLID 			  ;AN000;
 	JZ	notvolumeid					  ;AN000;
-	TEST	[DOS34_FLAG],DBCS_VOLID2			  ;AN000;
+	TEST	[ss:DOS34_FLAG],DBCS_VOLID2			  ;AN000;
 	JNZ	notvolumeid					  ;AN000;
-	OR	[DOS34_FLAG],DBCS_VOLID2			  ;AN000;
+	OR	[ss:DOS34_FLAG],DBCS_VOLID2			  ;AN000;
 	JMP	MUSTGETWORD					  ;AN000;
 
 notvolumeid:
@@ -240,7 +240,7 @@ EndProc MakeFcb
 ;   Registers modified: DI,AX,DX,CX
 procedure   NameTrans,near
 ;	ASSUME	DS:NOTHING,ES:NOTHING
-	MOV	byte [SpaceFlag],1
+	MOV	byte [ss:SpaceFlag],1
 	context ES
 	MOV	DI,NAME1
 	PUSH	DI
@@ -255,15 +255,15 @@ procedure   NameTrans,near
 
 	CALL	NORMSCAN
 if DBCS 			;AN000;;KK.
-	MOV	AL,[NAME1]	;AN000;;KK. check 1st char
+	MOV	AL,[ss:NAME1]	;AN000;;KK. check 1st char
 	invoke	TESTKANJ	;AN000;;KK. dbcs ?
 	JZ	notdbcs_FCB 	;AN000;;KK. no
 	return			;AN000;;KK. yes
 notdbcs_FCB:			;AN000;
 end if				;AN000;
-	CMP	byte [NAME1],0E5H
+	CMP	byte [ss:NAME1],0E5H
 	retnz
-	MOV	byte [NAME1],5	; Magic name translation
+	MOV	byte [ss:NAME1],5	; Magic name translation
 	return
 
 EndProc NameTrans

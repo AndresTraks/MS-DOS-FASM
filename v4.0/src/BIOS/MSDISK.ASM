@@ -1539,7 +1539,7 @@ DOVERIFY:
 
 	cmp	ah,11h			;SOFT ECC error ?
 	jnz	Not_SoftECC_Err
-	dec	[Soft_ECC_Cnt]
+	dec	[cs:Soft_ECC_Cnt]
 	jz	NOVERIFY		;no more retry
 	call	RESETDISK		;reset disk
 	jmp	DSKERR1			;retry
@@ -1548,7 +1548,7 @@ DOVERIFY:
 
 Not_SoftECC_Err:			;AN003;Other error.
 	call	RESETDISK		;AN003;
-	dec	[VRetry_Cnt]		;AN003;
+	dec	[cs:VRetry_Cnt]		;AN003;
 	jmp	DskErr0 		;AN003;
 ;DOVERIFY ENDP
 ;
@@ -1816,7 +1816,7 @@ not_floppy:
 	cmp	ah, 15h
 	je	ps2_30_Problem
 not_ps2_30:
-	CALL	dword [ORIG13]			; SIMULATE INT 13
+	CALL	dword [cs:ORIG13]			; SIMULATE INT 13
 	JC	GOTERR13_br		; ERROR?
 	RETF	2			; NO, RETURN AND CLEAR FLAGS
 
@@ -1829,7 +1829,7 @@ GOTERR13_br: jmp GOTERR13
 
 ps2_30_Problem: 			;J.K. 1/30/87; ps2_30 = PS2 Model 30.
 	mov	[cs:Prev_DX], DX		;save orignal drive number
-	call	dword [ORIG13]			;Do "Read drive parm"
+	call	dword [cs:ORIG13]			;Do "Read drive parm"
 
 	mov	[cs:Save_AX], AX		;Save registers,flag
 	mov	[cs:Save_BX], BX
@@ -1846,7 +1846,7 @@ ps2_30_Problem: 			;J.K. 1/30/87; ps2_30 = PS2 Model 30.
 	mov	dx, [cs:Prev_DX]		;restore orignal drive
 	pushf
 	mov	ah, 1			;Read Status.
-	call	dword [ORIG13]			;Reset the bus as a side effect of this call.
+	call	dword [cs:ORIG13]			;Reset the bus as a side effect of this call.
 
 	mov	AX, [cs:Save_AX]		;restore registers,flag
 	mov	BX, [cs:Save_BX]
@@ -1946,7 +1946,7 @@ OK11:
 ;call Orig13 again
 
 	xor	ah, ah
-	call	dword [ORIG13]			;reset. Don't care about the result
+	call	dword [cs:ORIG13]			;reset. Don't care about the result
 
 	MOV	AX,[cs:PREVOPER]	; RETRIEVE REQUEST
 ;
@@ -1979,13 +1979,13 @@ LOOP_ECC:
 ;
 	CALL	CHECK_WRAP		; GET CORRECT PARAMETERS FOR INT 13
 	PUSHF
-	CALL	dword [ORIG13]
+	CALL	dword [cs:ORIG13]
 	JNC	OK11_OP
 	CMP	AH,11H			; ONLY ALLOW ECC ERRORS
 	JNZ	OK11_EXIT_err		;J.K. 8/26/86 Other error?
 	mov	ah, 0			;J.K. ECC error. Reset the system again.
 	pushf
-	call	dword [ORIG13]
+	call	dword [cs:ORIG13]
 	xor	ax, ax			; clear the error code so that if this 
 					; was the last sector, no error code 
 					; will be returned for the corrected 
@@ -2071,7 +2071,7 @@ INTVERIFY:
 DOSIMPLE:
 	MOV	BX,DiskSector
 	PUSHF
-	CALL	dword [ORIG13]
+	CALL	dword [cs:ORIG13]
 	RESTOREREG  <BX,ES>
 	RETF	2
 
@@ -2094,7 +2094,7 @@ INTFORMAT:
 ; INLINE CONTINUATION OF OPERATION
 ;
 INTDONE:
-	JMP	dword [ORIG13]
+	JMP	dword [cs:ORIG13]
 
 ;
 ; We can't fit the request into the entire block.  Perform the operation on
@@ -2445,7 +2445,7 @@ DOINT:
 	JZ	DOINTDONE
 	MOV	AH,byte [BP+INT13FRAME.OLDAX+1]	; GET REQUEST CODE
 	PUSH	[BP+INT13FRAME.OLDF]
-	CALL	dword [ORIG13]
+	CALL	dword [cs:ORIG13]
 	PUSHF
 	POP	[BP+INT13FRAME.OLDF]
 DOINTDONE:

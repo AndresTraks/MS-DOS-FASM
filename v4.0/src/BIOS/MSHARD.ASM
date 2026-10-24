@@ -136,7 +136,7 @@ IBM_DISK_IO:
 	CMP AH, 0Ah
 	JE  ATD2		;and call 0Ah (read long).
 ATD1:
-	JMP dword [OLD13]		;Use ROM INT 13h handler.
+	JMP dword [cs:OLD13]		;Use ROM INT 13h handler.
 ATD2:
 	PUSH BX
 	PUSH CX

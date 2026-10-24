@@ -92,7 +92,7 @@ Break	<Checks for ^C in CON I/O>
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
 	procedure   DSKSTATCHK,NEAR	; Check for ^C if only one level in
-	CMP	byte [INDOS],1
+	CMP	byte [ss:INDOS],1
 	retnz				; Do NOTHING
 	PUSH	CX
 	PUSH	ES
@@ -114,7 +114,7 @@ Break	<Checks for ^C in CON I/O>
 	LDS	SI,[BCON]
 ;ASSUME	DS:NOTHING
 	invoke	DEVIOCALL2
-	TEST	word [DSKSTST],STBUI
+	TEST	word [ss:DSKSTST],STBUI
 	JZ	GotCh			; No characters available
 	XOR	AL,AL			; Set zero
 RET36:
@@ -126,15 +126,15 @@ RET36:
 	return
 
 GotCh:
-	MOV	AL,byte [DSKCHRET]
+	MOV	AL,byte [ss:DSKCHRET]
 DSK1:
 	CMP	AL,"C"-"@"
 	JNZ	RET36
-	MOV	byte [DSKSTCOM],DEVRD
-	MOV	byte [DSKSTCALL],DRDWRHL
-	MOV	byte [DSKCHRET],CL
-	MOV	word [DSKSTST],0
-	MOV	word [DSKSTCNT],1
+	MOV	byte [ss:DSKSTCOM],DEVRD
+	MOV	byte [ss:DSKSTCALL],DRDWRHL
+	MOV	byte [ss:DSKCHRET],CL
+	MOV	word [ss:DSKSTST],0
+	MOV	word [ss:DSKSTCNT],1
 	invoke	DEVIOCALL2		; Eat the ^C
 	POP	SI
 	POP	DS
@@ -146,7 +146,7 @@ DSK1:
 NOSTOP:
 	CMP	AL,"P"-"@"
 	JNZ	check_next
-	CMP	byte [SCAN_FLAG],0	      ; ALT_Q ?
+	CMP	byte [ss:SCAN_FLAG],0	      ; ALT_Q ?
 	JZ	INCHKJ			      ; no
 	return
 check_next:
@@ -172,17 +172,17 @@ EndProc DSKSTATCHK
 ;
 procedure   SPOOLINT,NEAR
 	PUSHF
-	test	byte [IDLEINT],-1
+	test	byte [ss:IDLEINT],-1
 	jz	POPFRET
-	test	byte [ErrorMode],-1
+	test	byte [ss:ErrorMode],-1
 	jnz	POPFRET
 ;
 ; Note that we are going to allow an external program to issue system calls
 ; at this time.  We MUST preserve IdleInt across this.
 ;
-	PUSH	word [IDLEINT]
+	PUSH	word [ss:IDLEINT]
 	INT	int_spooler
-	POP	word [IDLEINT]
+	POP	word [ss:IDLEINT]
 POPFRET:
 	POPF
 	return
@@ -203,14 +203,14 @@ EndProc SPOOLINT
 	CMP	AL,"S"-"@"
 	JNZ	NOSTOP
 
-	CMP	byte [SCAN_FLAG],0	      ;AN000; ALT_R ?
+	CMP	byte [ss:SCAN_FLAG],0	      ;AN000; ALT_R ?
 	JNZ	check_end		      ;AN000; yes
 	XOR	AH,AH
 	invoke	IOFUNC			; Eat Cntrl-S
 	JMP	SHORT PAUSOSTRT
 PRINTOFF:
 PRINTON:
-	NOT	byte [PFLAG]
+	NOT	byte [ss:PFLAG]
 	PUSH	BX
 	MOV	BX,4
 	invoke	get_io_sft
@@ -225,12 +225,12 @@ PRINTON:
 	JZ	NORM_PR 		; Not redirected, echo is OK
 	Callinstall NetSpoolEchoCheck,MultNET,38,<AX>,<AX> ; See if allowed
 	JNC	NORM_PR 		; Echo is OK
-	MOV	byte [PFLAG],0	; If not allowed, disable echo
+	MOV	byte [ss:PFLAG],0	; If not allowed, disable echo
 	Callinstall NetSpoolClose,MultNET,36,<AX>,<AX> ; and close
 	JMP	SHORT RETP6
 
 NORM_PR:
-	CMP	byte [PFLAG],0
+	CMP	byte [ss:PFLAG],0
 	JNZ	PRNOPN
 	invoke	DEV_CLOSE_SFT
 	JMP	SHORT RETP6
@@ -281,7 +281,7 @@ EndProc STATCHK
 ; handler wishes to continue, it must leave all registers unchanged and RET
 ; (not IRET) with carry CLEAR.	If carry is SET then an terminate system call
 ; is simulated.
-	TEST	word [DOS34_FLAG],CTRL_BREAK_FLAG  ;AN002; from RAWOUT
+	TEST	word [ss:DOS34_FLAG],CTRL_BREAK_FLAG  ;AN002; from RAWOUT
 	JNZ	around_deadlock 	      ;AN002;
 	MOV	AL,3			; Display "^C"
 	invoke	BUFOUT
@@ -298,9 +298,9 @@ NOSWAP:
 	MOV	SP,[user_SP]
 	invoke	restore_world		; User registers now restored
 ;ASSUME	DS:NOTHING
-	MOV	byte [INDOS],0	; Go to known state
-	MOV	byte [ErrorMode],0
-	MOV	[ConC_spsave],SP	; save his SP
+	MOV	byte [cs:INDOS],0	; Go to known state
+	MOV	byte [cs:ErrorMode],0
+	MOV	[cs:ConC_spsave],SP	; save his SP
 	CLC
 	INT	int_ctrl_c		; Execute user Ctrl-C handler
 ;
@@ -314,19 +314,19 @@ NOSWAP:
 ; sure
 ;
 	CLI
-	MOV	[USER_IN_AX],ax 	; save the AX
+	MOV	[cs:USER_IN_AX],ax 	; save the AX
 	PUSHF				; and the flags (maybe new call)
 	POP	AX
 ;
 ; See if the input stack is identical to the output stack
 ;
-	CMP	SP,[ConC_spsave]
+	CMP	SP,[cs:ConC_spsave]
 	JNZ	ctrlc_try_new		; current SP not the same as saved SP
 ;
 ; Repeat the operation by redispatching the system call.
 ;
 ctrlc_repeat:
-	MOV	AX,[USER_IN_AX]
+	MOV	AX,[cs:USER_IN_AX]
 	transfer    COMMAND
 ;
 ; The current SP is NOT the same as the input SP.  Presume that he RETF'd
@@ -342,7 +342,7 @@ ctrlc_try_new:
 ;
 ctrlc_abort:
 	MOV	AX,(Exit SHL 8) + 0
-	MOV	byte [DidCTRLC],-1
+	MOV	byte [cs:DidCTRLC],-1
 	transfer    COMMAND		; give up by faking $EXIT
 
 EndProc CNTCHAND
@@ -381,8 +381,8 @@ procedure   OutMes,NEAR
 	LDS	SI,[BCON]
 ;ASSUME	DS:NOTHING
 	invoke	DEVIOCALL2
-	MOV	word [DSKCHRET+1],DEVIOBUF
-	MOV	word [DSKSTCNT],1
+	MOV	word [es:DSKCHRET+1],DEVIOBUF
+	MOV	word [es:DSKSTCNT],1
 	return
 EndProc OutMes
 
@@ -395,9 +395,9 @@ Break	<CHARHRD,HardErr,ERROR -- HANDLE DISK ERRORS AND RETURN TO USER>
 ; Same function as HARDERR
 
 	OR	AH,Allowed_FAIL + Allowed_IGNORE + Allowed_RETRY
-	MOV	[ALLOWED],AH
-	MOV	word [EXITHOLD+2],ES
-	MOV	word [EXITHOLD],BP
+	MOV	[ss:ALLOWED],AH
+	MOV	word [ss:EXITHOLD+2],ES
+	MOV	word [ss:EXITHOLD],BP
 	PUSH	SI
 	AND	DI,STECODE
 	MOV	BP,DS			; Device pointer is BP:SI
@@ -427,7 +427,7 @@ EndProc CHARHARD
 	JNZ	NOSETWRPERR
 	PUSH	AX
 	MOV	AL,[es:BP+dpb.dpb_drive]
-	MOV	byte [WPErr],AL	; Flag drive with WP error
+	MOV	byte [ss:WPErr],AL	; Flag drive with WP error
 	POP	AX
 NOSETWRPERR:
 	SUB	AX,CX			; Number of sectors successfully transferred
@@ -452,7 +452,7 @@ TESTDIR:
 	INC	AH			; Must be in data area
 ERRINT:
 	SHL	AH,1			; Make room for read/write bit
-	OR	AH,byte [READOP]	; Set bit 0
+	OR	AH,byte [ss:READOP]	; Set bit 0
 ; If we have a write protect error when writing on a critical area on disk,
 ; do not allow a retry as this may write out garbage on any subsequent disk.
 	;test	ah,1
@@ -461,12 +461,12 @@ ERRINT:
 	;ja	Not_Crit
 	;and	[ALLOWED],NOT Allowed_RETRY
 Not_Crit:
-	OR	AH,[ALLOWED]		; Set the allowed_ bits
+	OR	AH,[ss:ALLOWED]		; Set the allowed_ bits
 	entry	FATAL
 	MOV	AL,[es:BP+dpb.dpb_drive]	; Get drive number
 	entry	FATAL1
-	MOV	word [EXITHOLD+2],ES
-	MOV	word [EXITHOLD],BP	; The only things we preserve
+	MOV	word [ss:EXITHOLD+2],ES
+	MOV	word [ss:EXITHOLD],BP	; The only things we preserve
 	LES	SI,[es:BP+dpb.dpb_driver_addr]
 	MOV	BP,ES			; BP:SI points to the device involved
 ;
@@ -491,7 +491,7 @@ FATALC:
 ;     EXITHOLD set for restore of ES:BP.
 
 GOT_RIGHT_CODE:
-	CMP	byte [ErrorMode],0	; No INT 24s if already INT 24
+	CMP	byte [ss:ErrorMode],0	; No INT 24s if already INT 24
 	JZ	NoSetFail
 	MOV	AL,3
 	JMP	FAILRET
@@ -499,7 +499,7 @@ NoSetFail:
 if	BUFFERFLAG
 	invoke	RESTORE_USER_MAP		;AN000;LB. restore user's EMS map
 end if
-	MOV	[CONTSTK],SP
+	MOV	[ss:CONTSTK],SP
 	Context ES
 	fmt TypInt24,LevLog,<"INT 24: AX = x$ DI = x$\n">,<AX,DI>
 ;
@@ -507,20 +507,20 @@ end if
 ; may have locked down a JFN for a user and he may NEVER return to us.	Thus,
 ; we need to free it here and then reallocate it when we come back.
 ;
-	CMP	word [SFN],-1
+	CMP	word [ss:SFN],-1
 	JZ	NoFree_MSCTRLC
 	SaveReg <DS,SI>
-	LDS	SI,[PJFN]
+	LDS	SI,[ss:PJFN]
 	MOV	byte [SI],0FFH
 	RestoreReg  <SI,DS>
 NoFree_MSCTRLC:
 	CLI				; Prepare to play with stack
-	INC	byte [ErrorMode]	; Flag INT 24 in progress
-	DEC	byte [INDOS]	; INT 24 handler might not return
+	INC	byte [ss:ErrorMode]	; Flag INT 24 in progress
+	DEC	byte [ss:INDOS]	; INT 24 handler might not return
 ;; Extneded Open hooks
-	TEST	word [DOS34_FLAG],Force_I24_Fail   ;AN000;IFS. form IFS Call Back	      ;AN000;
+	TEST	word [ss:DOS34_FLAG],Force_I24_Fail   ;AN000;IFS. form IFS Call Back	      ;AN000;
 	JNZ	faili24 		      ;AN000;IFS.			      ;AN000;
-	TEST	byte [EXTOPEN_ON],ext_open_I24_off ;AN000;IFS.I24 error disabled	      ;AN000;
+	TEST	byte [ss:EXTOPEN_ON],ext_open_I24_off ;AN000;IFS.I24 error disabled	      ;AN000;
 	JZ	i24yes			      ;AN000;IFS.no			      ;AN000;
 faili24:				      ;AN000;
 	MOV	AL,3			      ;AN000;IFS.fake fail		      ;AN000;
@@ -528,7 +528,7 @@ faili24:				      ;AN000;
 i24yes: 				      ;AN000;
 
 ;; Extended Open hooks
-	MOV	SS,[user_SS]
+	MOV	SS,[ss:user_SS]
 ;ASSUME	SS:NOTHING
 	MOV	SP,[es:user_SP] 	; User stack pointer restored
 	INT	int_fatal_abort 	; Fatal error interrupt vector, must preserve ES
@@ -538,15 +538,15 @@ i24yes: 				      ;AN000;
 	MOV	SS,BP
 ;ASSUME	SS:DOSGROUP
 passi24:				;AN000;
-	MOV	SP,[CONTSTK]
-	INC	byte [INDOS]	; Back in the DOS
-	MOV	byte [ErrorMode],0	; Back from INT 24
+	MOV	SP,[ss:CONTSTK]
+	INC	byte [ss:INDOS]	; Back in the DOS
+	MOV	byte [ss:ErrorMode],0	; Back from INT 24
 	STI
 ;;	MOV	[ACT_PAGE],-1		;LB. invalidate DOS active page 	;AN000;
 ;;	invoke	SAVE_MAP		;LB. save user's EMS map                ;AN000;
 	fmt TypInt24,LevLog,<"INT 24: User reply = x$\n">,<AX>
 FAILRET:
-	LES	BP,[EXITHOLD]
+	LES	BP,[ss:EXITHOLD]
 ;ASSUME	ES:NOTHING
 ;
 ; Triage the user's reply.
@@ -559,20 +559,20 @@ FAILRET:
 ;
 ; The reply was fail.  See if we are allowed to fail.
 ;
-	TEST	byte [ALLOWED],Allowed_FAIL	; Can we?
+	TEST	byte [ss:ALLOWED],Allowed_FAIL	; Can we?
 	JZ	DoAbort 		; No, do abort
 DoFail:
 	MOV	AL,3			; just in case...
-	TEST	byte [EXTOPEN_ON],ext_open_I24_off ;AN000;EO. I24 error disabled
+	TEST	byte [ss:EXTOPEN_ON],ext_open_I24_off ;AN000;EO. I24 error disabled
 	JNZ	CleanUp 		      ;AN000;EO. no
-	INC	byte [FAILERR]		; Tell everybody
+	INC	byte [ss:FAILERR]		; Tell everybody
 CleanUp:
-	MOV	byte [WPErr],-1
-	CMP	word [SFN],-1
+	MOV	byte [ss:WPErr],-1
+	CMP	word [ss:SFN],-1
 	retz
 	SaveReg <DS,SI,AX>
-	MOV	AX,[SFN]
-	LDS	SI,[PJFN]
+	MOV	AX,[ss:SFN]
+	LDS	SI,[ss:PJFN]
 	MOV	[SI],AL
 	RestoreReg  <AX,SI,DS>
 	return
@@ -580,14 +580,14 @@ CleanUp:
 ; The reply was IGNORE.  See if we are allowed to ignore.
 ;
 CheckIgnore:
-	TEST	byte [ALLOWED],Allowed_IGNORE ; Can we?
+	TEST	byte [ss:ALLOWED],Allowed_IGNORE ; Can we?
 	JZ	DoFail			; No, do fail
 	JMP	CleanUp
 ;
 ; The reply was RETRY.	See if we are allowed to retry.
 ;
 CheckRetry:
-	TEST	byte [ALLOWED],Allowed_RETRY ; Can we?
+	TEST	byte [ss:ALLOWED],Allowed_RETRY ; Can we?
 	JZ	DoFail			; No, do fail
 	JMP	CleanUp
 ;
@@ -644,7 +644,7 @@ NOSWAP2:
 	MOV	AH,82h
 	INT	int_IBM
 
-	MOV	byte [fAborting],-1		; signal abort in progress
+	MOV	byte [ss:fAborting],-1		; signal abort in progress
 
 	CallInstall NetResetEnvironment, MultNET, 34  ;DOS 4.00 doesn't need it
 					; Allow REDIR to clear some stuff
@@ -655,7 +655,7 @@ NOSWAP2:
 	POP	CX			; get ThisPDB
 	SaveReg <ES,BX> 		; save return address
 
-	MOV	BX,[CurrentPDB] 	; get currentPDB
+	MOV	BX,[ss:CurrentPDB] 	; get currentPDB
 	MOV	DS,BX
 	MOV	AX,[Process_data_block.PDB_Parent_PID]	; get parentPDB
 
@@ -669,7 +669,7 @@ NOSWAP2:
 	CMP	BX,CX
 	JNZ	reset_return		; CurrentPDB <> ThisPDB
 	PUSH	AX			; save parent
-	CMP	byte [exit_type],Exit_Keep_process
+	CMP	byte [ss:exit_type],Exit_Keep_process
 	JZ	reset_to_parent 	; keeping this process
 ;
 ; We are truly removing a process.  Free all allocation blocks belonging to
@@ -684,7 +684,7 @@ NOSWAP2:
 	invoke	DOS_ABORT
 
 reset_to_parent:
-	POP	word [CurrentPDB]		; set up process as parent
+	POP	word [ss:CurrentPDB]		; set up process as parent
 
 reset_return:				; come here for normal return
 	PUSH	CS
@@ -722,15 +722,15 @@ end if
 ;	ASSUME	SS:NOTHING
 	invoke	restore_world
 ;	ASSUME	ES:NOTHING
-	MOV	[user_SP],AX
+	MOV	[cs:user_SP],AX
 	POP	AX			; suck off CS:IP of interrupt...
 	POP	AX
 	POP	AX
 	MOV	AX,0F202h		; STI
 	PUSH	AX
-	PUSH	word [EXITHOLD+2]
-	PUSH	word [EXITHOLD]
-	MOV	AX,[user_SP]
+	PUSH	word [cs:EXITHOLD+2]
+	PUSH	word [cs:EXITHOLD]
+	MOV	AX,[cs:user_SP]
 	IRET				; Long return back to user terminate address
 EndProc HardErr
 
@@ -750,10 +750,10 @@ Procedure SET_I24_EXTENDED_ERROR,NEAR
 	CMP	DI,AX
 	MOV	AX,DI
 	JAE	NoTrans
-	MOV	AL,[ErrMap24+DI]
+	MOV	AL,[cs:ErrMap24+DI]
 	XOR	AH,AH
 NoTrans:
-	MOV	[EXTERR],AX
+	MOV	[cs:EXTERR],AX
 	POP	AX
 ;
 ; Now Extended error is set correctly.	Translate it to get correct error

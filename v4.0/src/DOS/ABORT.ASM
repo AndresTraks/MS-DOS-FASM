@@ -51,7 +51,7 @@ Break   <DOS_ABORT -- Close all DOSINFO.files for process>
 	Procedure   DOS_ABORT,NEAR
 ;	ASSUME  DS:NOTHING,ES:NOTHING
 
-	MOV     ES,[CurrentPDB]
+	MOV     ES,[ss:CurrentPDB]
 	MOV     CX,[es:Process_data_block.PDB_JFN_Length]  ; Number of JFNs
 reset_free_jfn:
 	MOV     BX,CX
@@ -89,11 +89,11 @@ end if
 ; Scan the FCB cache for guys that belong to this process and zap their ref
 ; counts.
 ;
-	les     di,[sftFCB]               ; grab the pointer to the table
+	les     di,[ss:sftFCB]               ; grab the pointer to the table
 	mov     cx,[es:di+SF.SFCount]
 	jcxz    FCBScanDone
 	LEA     DI,[DI+SF.SFTable]         ; point at table
-	mov     ax,[PROC_ID]
+	mov     ax,[ss:PROC_ID]
 FCBTest:
 	cmp     [es:di+sf_entry.sf_PID],ax       ; is this one of ours
 	jnz     FCBNext                 ; no, skip it
@@ -117,10 +117,10 @@ Scan:
 ;
 ; we have a SFT that is not free.  See if it is for the current process
 ;
-	mov     ax,[PROC_ID]
+	mov     ax,[ss:PROC_ID]
 	cmp     [es:di+sf_entry.sf_PID],ax
 	jnz     next
-	mov     ax,[USER_ID]
+	mov     ax,[ss:USER_ID]
 	cmp     [es:di+sf_entry.sf_UID],ax
 	jnz     next
 ;

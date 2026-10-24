@@ -47,7 +47,7 @@ Installed = TRUE
 ;	ASSUME  ES:NOTHING
 
 if Installed
-	call    dword [JShare+1*4]
+	call    dword [ss:JShare+1*4]
 else
 	Call    MFT_Enter
 end if
@@ -73,9 +73,9 @@ EndProc SHARE_CHECK
 	PUSH    DS
 	PUSH    ES
 	PUSH    DI
-	MOV     byte [READOP],0                      ; All share errors are reading
-	MOV     byte [ALLOWED],Allowed_FAIL + Allowed_RETRY
-	LES     BP,[THISDPB]
+	MOV     byte [ss:READOP],0                      ; All share errors are reading
+	MOV     byte [ss:ALLOWED],Allowed_FAIL + Allowed_RETRY
+	LES     BP,[ss:THISDPB]
 	MOV     DI,1                            ; Fake some registers
 	MOV     CX,DI
 	MOV     DX,[es:BP+dpb.dpb_dir_sector]
@@ -103,7 +103,7 @@ EndProc SHARE_VIOLATION
 ;	ASSUME  ES:NOTHING
 
 if Installed
-	Call    dword [JShare+2*4]
+	Call    dword [ss:JShare+2*4]
 else
 	Call    MFTClose
 end if
@@ -129,9 +129,9 @@ Procedure   ShareEnter,NEAR
 
 	SaveReg <CX>
 retry:
-	mov     cx,[RetryCount]
+	mov     cx,[ss:RetryCount]
 attempt:
-	les     di,[THISSFT]              ; grab sft
+	les     di,[ss:THISSFT]              ; grab sft
 	XOR     AX,AX
 	MOV     [es:DI+sf_entry.sf_MFT],AX       ; indicate free SFT
 	SaveReg <CX>

@@ -66,7 +66,7 @@ Break <DOS_CLOSE -- Close FILE from SFT>
 	DOSAssume   CS,<DS>,"DOS_Close"
 ;	ASSUME	ES:NOTHING
 
-	LES	DI,[THISSFT]
+	LES	DI,[ss:THISSFT]
 	Assert	ISSFT,<ES,DI>,<"DOS_CLOSE">
 	fmt	TypAccess,LevBUSY,<"p$: CLOSE SFT: x$:x$\n">,<ES,DI>
 	MOV	BX,[es:DI+sf_entry.sf_flags]
@@ -169,7 +169,7 @@ CLOSE_GO:
 	JZ	nofcb			; no, set dir attr, sf_attr
 	MOV	CH,[es:DI+dir_entry.dir_attr]
 	MOV	AL,[SI+sf_entry.sf_attr]
-	MOV	[ATTRIB],AL
+	MOV	[ss:ATTRIB],AL
 	invoke	MatchAttributes
 	JNZ	Bye			; attributes do not match
 	JMP	SHORT setattr		;FT.
@@ -179,7 +179,7 @@ nofcb:
 setattr:
 	OR	byte [es:DI+dir_entry.dir_attr],attr_archive	;Set archive
 	MOV	AX,[es:DI+dir_entry.dir_first]	;AN011;F.O. save old first clusetr
-	MOV	[OLD_FIRSTCLUS],AX	;AN011;F.O. save old first clusetr
+	MOV	[ss:OLD_FIRSTCLUS],AX	;AN011;F.O. save old first clusetr
 
 	MOV	AX,[SI+sf_entry.sf_firclus]
 	MOV	[es:DI+dir_entry.dir_first],AX	;Set firclus pointer
@@ -208,7 +208,7 @@ setattr:
 yesdirty_CLOSE:
 	SaveReg  <DS,SI>
 	MOV	CX,[SI+sf_entry.sf_firclus]	; do this for Fastopen
-	MOV	AL,[THISDRV]
+	MOV	AL,[ss:THISDRV]
 ;;; 10/1/86  update fastopen cache
 	PUSH	DX
 	MOV	AH,0			; dir entry update
@@ -221,10 +221,10 @@ yesdirty_CLOSE:
 	MOV	DH,[SI+sf_entry.sf_dirpos]	     ;AN005; dh= dir pos
 	JMP	SHORT do_update 	;AN011;F.O.
 do_update2:				;AN011;F.O.
-	CMP	CX,[OLD_FIRSTCLUS]	;AN011;F.O. same as old first clusetr?
+	CMP	CX,[ss:OLD_FIRSTCLUS]	;AN011;F.O. same as old first clusetr?
 	JZ	do_update		;AN011;F.O. yes
 	MOV	AH,2			;AN011;F.O. delete the old entry
-	MOV	CX,[OLD_FIRSTCLUS]	;AN011;F.O.
+	MOV	CX,[ss:OLD_FIRSTCLUS]	;AN011;F.O.
 do_update:				  ;AN005;
 	Context DS
 	invoke	FastOpen_Update 	; invoke fastopen
@@ -324,7 +324,7 @@ Procedure   DirFromSFT,NEAR
 	JC	PopDone
 	RestoreReg  <SI,DS>		; Get back SFT pointer
 ;	ASSUME	DS:NOTHING
-	LES	DI,[CURBUF]
+	LES	DI,[ss:CURBUF]
 	OR	[es:DI+BUFFINFO.buf_flags],buf_isDIR
 	MOV	BX,DI			; ES:BX point to buffer header
 	LEA	DI,[DI+BUFINSIZ]	; Point to buffer
@@ -352,7 +352,7 @@ Break	<DOS_COMMIT - UPDATE directory entries>
 	DOSAssume   CS,<DS>,"DOS_Commit"
 ;	ASSUME	ES:NOTHING
 
-	LES	DI,[THISSFT]
+	LES	DI,[ss:THISSFT]
 	MOV	BX,[es:DI+sf_entry.sf_flags]
 	TEST	BX,devid_file_clean + devid_device	;Clears carry
 	retnz
@@ -420,7 +420,7 @@ Procedure   SetSFTTimes,NEAR
 	MOV	[es:DI+sf_entry.sf_time],DX
 	XOR	AX,AX
 if Installed
-	call	dword [JShare+14*4]
+	call	dword [ss:JShare+14*4]
 else
 	call	ShSU
 end if

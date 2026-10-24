@@ -50,11 +50,11 @@ EDITON:
 ; Top level.  We begin to read a line in.
 ;
 NEWLIN:
-	MOV	AL,[CARPOS]
-	MOV	[STARTPOS],AL	;Remember position in raw buffer
+	MOV	AL,[ss:CARPOS]
+	MOV	[ss:STARTPOS],AL	;Remember position in raw buffer
 	PUSH	SI
 	MOV	DI,INBUF	;Build the new line here
-	MOV	[INSMODE],CH	;Insert mode off
+	MOV	[ss:INSMODE],CH	;Insert mode off
 	MOV	BH,CH		;No chars from template yet
 	MOV	DH,CH		;No chars to new line yet
 	call	IntCNE0 	;AN000; Get first char			 2/17/KK
@@ -81,7 +81,7 @@ GOTCH:
 ;
 ; If the leading char is the function-key lead byte
 ;
-	CMP	AL,[ESCCHAR]
+	CMP	AL,[ss:ESCCHAR]
 	JNZ	ARM03		;AN000;; 2/17/KK
 	Jmp	ESCC		;AN000;; 2/17/KK
 ARM03:				;AN000;; 2/17/KK
@@ -129,7 +129,7 @@ ARM00:				;AN000;; 2/17/KK
 ;
 ; ^X (or ESC) deletes the line and starts over
 ;
-	CMP	AL,[CANCHAR]
+	CMP	AL,[ss:CANCHAR]
 	JNZ	SAVCH		;AN000;; 2/13/KK
 	JMP	KILNEW		;AN000;; 2/13/KK
 InterLoop:			;AN000;; 2/17/KK
@@ -178,7 +178,7 @@ ISNORM:
 	jmp	short InterLoop 	;AN000;; 2/17/KK
 CONTIN1:				;AN000;; 2/13/KK
 ;;;CONTIN:				;AN000;; 2/13/KK
-	CMP	byte [INSMODE],0
+	CMP	byte [ss:INSMODE],0
 	JNZ	GETCH0			; insertmode => don't advance template
 	CMP	BH,BL
 	JAE	GETCH0			; no more characters in template
@@ -275,7 +275,7 @@ GetChJ:
 	POP	SI		;Remember start of edit buffer
 PUTNEW:
 	invoke	CRLF		;Go to next line on screen
-	MOV	AL,[STARTPOS]
+	MOV	AL,[ss:STARTPOS]
 	invoke	TAB		;Tab over
 	JMP	NEWLIN		;Start over again
 
@@ -306,7 +306,7 @@ BackSpace:
 ;; 9/27/86 fix for ctrl-U backspace
 	CALL	BACKMES 	;Was a control char, zap the '^'
 OLDBAK:
-	CMP	byte [INSMODE],0
+	CMP	byte [ss:INSMODE],0
 	retnz			;In insert mode, done
 	OR	BH,BH
 	retz			;Not advanced in template, stay where we are
@@ -359,7 +359,7 @@ FNDPOS:
 CHKCNT:
 	LOOP	FNDPOS
 FIGTAB:
-	SUB	BL,[STARTPOS]
+	SUB	BL,[ss:STARTPOS]
 HAVTAB:
 	SUB	BL,DH
 	ADD	CL,BL
@@ -411,7 +411,7 @@ BACKMES:
 
 ;User really wants an ESC character in his line
 	entry	TwoEsc
-	MOV	AL,[ESCCHAR]
+	MOV	AL,[ss:ESCCHAR]
 	JMP	SAVCH
 
 ;Copy the rest of the template
@@ -434,7 +434,7 @@ BACKMES:
 
 ;Copy CX chars from template to line
 COPYEACH:
-	MOV	byte [INSMODE],0	;All copies turn off insert mode
+	MOV	byte [ss:INSMODE],0	;All copies turn off insert mode
 	CMP	DH,DL
 	JZ	GETCH2			;At end of line, can't do anything
 	CMP	BH,BL
@@ -508,9 +508,9 @@ KISTR001E:;AN000;; 2/17/KK
 end if;AN000;; 2/17/KK
 
 FINDOLD:
-	MOV	[LOOKSIZ],0		;AN000;; Initialize to byte    2/13/KK
+	MOV	[ss:LOOKSIZ],0		;AN000;; Initialize to byte    2/13/KK
 	call	IntCNE1 		;AN000;;		       2/17/KK
-	CMP	AL,[ESCCHAR]		;AN000;; did he type a function key?
+	CMP	AL,[ss:ESCCHAR]		;AN000;; did he type a function key?
 ;;;;;	JNZ	FindSetup		;AN000;; no, set up for scan   2/13/KK
 	JNZ	TryKanj 		;AN000;; no, continue testing  2/13/KK
 	call	IntCNE1 		;AN000;;		       2/17/KK
@@ -519,7 +519,7 @@ FINDOLD:
 TryKanj:				;AN000;; 2/13/KK
 	invoke	TESTKANJ		;AN000;; 2/13/KK
 	JZ	GOTLSIZ 		;AN000;; 2/13/KK
-	INC	[LOOKSIZ]		;AN000;; Gonna look for a word	2/13/KK
+	INC	[ss:LOOKSIZ]		;AN000;; Gonna look for a word	2/13/KK
 	PUSH	AX			;AN000;; Save first byte	2/13/KK
 	call	IntCNE1 		;AN000;;		       2/17/KK
 	POP	CX			;AN000;; 2/13/KK
@@ -556,7 +556,7 @@ NOTDUAL5:				;AN000;; 2/13/KK
 	INC	DI			;AN000;; We will skip at least something
 ONEINC5:				;AN000;
 	INC	DI			;AN000;
-	CMP	[LOOKSIZ],0		;AN000;
+	CMP	[ss:LOOKSIZ],0		;AN000;
 	JNZ	LOOKWORD		;AN000;
 LOOKBYTE:				;AN000;
 	PUSH	AX			;AN000;
@@ -630,7 +630,7 @@ entry	REEDIT
 
 	entry	EXITINS
 	entry	ENTERINS
-	NOT	byte [INSMODE]
+	NOT	byte [ss:INSMODE]
 	JMP	GETCH
 
 ;Put a real live ^Z in the buffer (embedded)
@@ -650,40 +650,40 @@ EndProc STD_CON_STRING_INPUT$
 ;-------------- Start of DBCS 2/17/KK
 ;PUBLIC	IntCNE0 			;AN000;
 procedure	IntCNE0,near		;AN000;
-	push	word [InterCon]	;AN000;
-	mov	[InterCon],01		;AN000;
+	push	word [ss:InterCon]	;AN000;
+	mov	[ss:InterCon],01		;AN000;
 get_com:				;AN000;
 	invoke	INTER_CON_INPUT_NO_ECHO ;AN000;; get a byte character
-	pop	word [InterCon]	;AN000;
+	pop	word [ss:InterCon]	;AN000;
 	ret				;AN000;
 ;IntCNE0 endp				;AN000;
 					;AN000;
 procedure	IntCNE1,near		;AN000;
-	push	word [InterCon]	;AN000;
-	mov	[InterCon],00		;AN000;
+	push	word [ss:InterCon]	;AN000;
+	mov	[ss:InterCon],00		;AN000;
 	jmp	short get_com		;AN000;
 ;IntCNE1 endp				;AN000;
 					;AN000;
 	procedure	outchax,near	;AN000;
 	pushf				;AN000;
-	mov	[SaveCurFlg],0		;AN000;
+	mov	[ss:SaveCurFlg],0		;AN000;
 	jnz	sj1			;AN000;
-	mov	[SaveCurFlg],1		;AN000;
+	mov	[ss:SaveCurFlg],1		;AN000;
 sj1:					;AN000;
 	CALL	OUTCHA			;AN000;
-	mov	[SaveCurFlg],0		;AN000;
+	mov	[ss:SaveCurFlg],0		;AN000;
 	popf				;AN000;
 	ret				;AN000;
 ;outchax endp				;AN000;
 					;AN000;
 	procedure	bufoutx,near	;AN000;
 	pushf				;AN000;
-	mov	[SaveCurFlg],0		;AN000;
+	mov	[ss:SaveCurFlg],0		;AN000;
 	jnz	sj2			;AN000;
-	mov	[SaveCurFlg],1		;AN000;
+	mov	[ss:SaveCurFlg],1		;AN000;
 sj2:					;AN000;
 	invoke	BUFOUT			;AN000;
-	mov	[SaveCurFlg],0		;AN000;
+	mov	[ss:SaveCurFlg],0		;AN000;
 	popf				;AN000;
 	ret				;AN000;
 ;bufoutx endp				;AN000;

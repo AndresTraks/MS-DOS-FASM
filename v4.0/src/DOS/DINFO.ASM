@@ -69,14 +69,14 @@ else
 end if
 
 LOCAL_INFO_DINFO:
-	MOV	byte [EXTERR_LOCUS],errLOC_Disk
+	MOV	byte [ss:EXTERR_LOCUS],errLOC_Disk
 	EnterCrit   critDisk
 	invoke	FATREAD_CDS		; perform media check.
 	JC	CRIT_LEAVE
 	MOV	BX,2
 	invoke	UNPACK			; Get first FAT sector into CURBUF
 	JC	CRIT_LEAVE
-	LDS	SI,[CURBUF]
+	LDS	SI,[ss:CURBUF]
 ;ASSUME	DS:NOTHING
 	MOV	AH,[SI+BUFINSIZ]	; get FAT ID BYTE
 	context DS

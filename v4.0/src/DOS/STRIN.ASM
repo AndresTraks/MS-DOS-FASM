@@ -45,11 +45,11 @@ EDITON:
 ; Top level.  We begin to read a line in.
 ;
 NEWLIN:
-        MOV     AL,[CARPOS]
-        MOV     [STARTPOS],AL   ;Remember position in raw buffer
+        MOV     AL,[ss:CARPOS]
+        MOV     [ss:STARTPOS],AL   ;Remember position in raw buffer
         PUSH    SI
         MOV     DI,INBUF        ;Build the new line here
-        MOV     [INSMODE],CH    ;Insert mode off
+        MOV     [ss:INSMODE],CH    ;Insert mode off
         MOV     BH,CH           ;No chars from template yet
         MOV     DH,CH           ;No chars to new line yet
         invoke  STD_CON_INPUT_NO_ECHO$          ;Get first char
@@ -75,7 +75,7 @@ GOTCH:
 ;
 ; If the leading char is the function-key lead byte
 ;
-        CMP     AL,[ESCCHAR]
+        CMP     AL,[ss:ESCCHAR]
         JZ      ESCape          ;change reserved keyword DBM 5-7-87
 ;
 ; Rubout and ^H are both destructive backspaces.
@@ -114,7 +114,7 @@ GOTCH:
 ;
 ; ^X (or ESC) deletes the line and starts over
 ;
-        CMP     AL,[CANCHAR]
+        CMP     AL,[ss:CANCHAR]
         JZ      KILNEW
 ;
 ; Otherwise, we save the input character.
@@ -125,7 +125,7 @@ SAVCH:
         STOSB
         INC     DH                      ; increment count in buffer.
         invoke  BUFOUT                  ;Print control chars nicely
-        CMP     byte [INSMODE],0
+        CMP     byte [ss:INSMODE],0
         JNZ     GETCH                   ; insertmode => don't advance template
         CMP     BH,BL
         JAE     GETCH                   ; no more characters in template
@@ -203,7 +203,7 @@ GetChJ:
         POP     SI              ;Remember start of edit buffer
 PUTNEW:
         invoke  CRLF            ;Go to next line on screen
-        MOV     AL,[STARTPOS]
+        MOV     AL,[ss:STARTPOS]
         invoke  TAB             ;Tab over
         JMP     NEWLIN          ;Start over again
 
@@ -232,7 +232,7 @@ BackSpace:
 ;; 9/27/86 fix for ctrl-U backspace
         CALL    BACKMES         ;Was a control char, zap the '^'
 OLDBAK:
-        CMP     byte [INSMODE],0
+        CMP     byte [ss:INSMODE],0
         retnz                   ;In insert mode, done
         OR      BH,BH
         retz                    ;Not advanced in template, stay where we are
@@ -258,7 +258,7 @@ FNDPOS:
 CHKCNT:
         LOOP    FNDPOS
 FIGTAB:
-        SUB     BL,[STARTPOS]
+        SUB     BL,[ss:STARTPOS]
 HAVTAB:
         SUB     BL,DH
         ADD     CL,BL
@@ -285,7 +285,7 @@ BACKMES:
 
 ;User really wants an ESC character in his line
         entry   TwoEsc
-        MOV     AL,[ESCCHAR]
+        MOV     AL,[ss:ESCCHAR]
         JMP     SAVCH
 
 ;Copy the rest of the template
@@ -303,7 +303,7 @@ BACKMES:
         MOV     CL,1
 ;Copy CX chars from template to line
 COPYEACH:
-        MOV     byte [INSMODE],0    ;All copies turn off insert mode
+        MOV     byte [ss:INSMODE],0    ;All copies turn off insert mode
         CMP     DH,DL
         JZ      GETCH2                  ;At end of line, can't do anything
         CMP     BH,BL
@@ -339,7 +339,7 @@ GETCH2:
 ;       is called!!! (no PUSHes before calling it).
 FINDOLD:
         invoke  STD_CON_INPUT_NO_ECHO$
-        CMP     AL,[ESCCHAR]            ; did he type a function key?
+        CMP     AL,[ss:ESCCHAR]            ; did he type a function key?
         JNZ     FindSetup               ; no, set up for scan
         invoke  STD_CON_INPUT_NO_ECHO$  ; eat next char
         JMP     NOTFND                  ; go try again
@@ -384,7 +384,7 @@ entry   REEDIT
 
         entry   EXITINS
         entry   ENTERINS
-        NOT     byte [INSMODE]
+        NOT     byte [ss:INSMODE]
         JMP     GETCH
 
 ;Put a real live ^Z in the buffer (embedded)

@@ -92,7 +92,7 @@ BREAK <LockOper$ - Lock Calls>
 	POP	DI			       ; Clean stack
 	error	error_invalid_handle
 lock_bad_func:
-	MOV	byte [EXTERR_LOCUS],errLOC_Unk        ; Extended Error Locus
+	MOV	byte [ss:EXTERR_LOCUS],errLOC_Unk        ; Extended Error Locus
 	error	error_invalid_function
 
 ; Align_buffer call has been deleted, since it corrupts the DTA  (6/5/88) P5013
@@ -118,11 +118,11 @@ old_33:
 ;;	MOV	DX,[Temp_Var]		;AN000;;MS. retore DX  (P5013) 6/5/88
 
 	MOV	BP, Lock_Buffer ;AN000;;MS. get DOS LOCK buffer
-	MOV	word [BP+Lock_position],DX	;AN000;;MS. set low offset
-	MOV	word [BP+Lock_position+2],CX;AN000;;MS. set high offset
+	MOV	word [BP+LockBuf.Lock_position],DX	;AN000;;MS. set low offset
+	MOV	word [BP+LockBuf.Lock_position+2],CX;AN000;;MS. set high offset
 	POP	CX				;AN000;;MS. get low length
-	MOV	word [BP+Lock_length],CX	;AN000;;MS. set low length
-	MOV	word [BP+Lock_length+2],SI	;AN000;;MS. set high length
+	MOV	word [BP+LockBuf.Lock_length],CX	;AN000;;MS. set low length
+	MOV	word [BP+LockBuf.Lock_length+2],SI	;AN000;;MS. set high length
 	MOV	CX,1				;AN000;;MS. one range
 	PUSH	CS				;AN000;;MS.
 	POP	DS				;AN000;;MS. DS:DX points to
@@ -191,7 +191,7 @@ DOS_Unlock:
 	JMP	SHORT ValChk
 LOCAL_UNLOCK:
 if Installed
-	Call	dword [JShare+7*4]
+	Call	dword [ss:JShare+7*4]
 else
 	Call	clr_block
 end if
@@ -200,7 +200,7 @@ ValChk:
 lockerror:
 	transfer SYS_RET_ERR
 Lock_OK:
-	MOV	AX,[TEMP_VAR]			 ;AN000;;MS. AX= number of bytes
+	MOV	AX,[ss:TEMP_VAR]			 ;AN000;;MS. AX= number of bytes
 	transfer SYS_RET_OK
 DOS_Lock:
 	TEST	[es:DI+sf_entry.sf_flags],sf_isnet
@@ -211,7 +211,7 @@ DOS_Lock:
 	JMP	ValChk
 LOCAL_LOCK:
 if Installed
-	Call	dword [JShare+6*4]
+	Call	dword [ss:JShare+6*4]
 else
 	Call	Set_Block
 end if
@@ -303,11 +303,11 @@ BREAK <Set_Lock_Buffer>
 	DOSAssume   CS,<DS>,"Lock_Check"
 ;	ASSUME	ES:NOTHING
 
-	MOV	BX,[RetryCount]		; Number retries
+	MOV	BX,[ss:RetryCount]		; Number retries
 LockRetry:
 	SaveReg <BX,AX> 		; MS. save regs 			;AN000;
 if Installed
-	call	dword [JShare+8*4]
+	call	dword [ss:JShare+8*4]
 else
 	Call	chk_block
 end if
@@ -340,8 +340,8 @@ EndProc LOCK_CHECK
 	PUSH	DI
 	PUSH	CX
 	MOV	AX,error_lock_violation
-	MOV	byte [ALLOWED],Allowed_FAIL + Allowed_RETRY
-	LES	BP,[THISDPB]
+	MOV	byte [ss:ALLOWED],Allowed_FAIL + Allowed_RETRY
+	LES	BP,[ss:THISDPB]
 	MOV	DI,1				; Fake some registers
 	MOV	CX,DI
 	MOV	DX,[es:BP+dpb.dpb_first_sector]
@@ -363,7 +363,7 @@ if  Installed
 ;
 Procedure   CheckShare,NEAR
 ;	ASSUME	CS:DOSGROUP,ES:NOTHING,DS:NOTHING,SS:NOTHING
-	CMP	byte [fShare],0
+	CMP	byte [cs:fShare],0
 	return
 EndProc CheckShare
 end if

@@ -129,15 +129,15 @@ if SEGSEL = S_CODE
 SET_STUFF:
 	MOV	SI,DX			; Point to DPL with DS:SI
 	MOV	BX,[SI+DPL.DPL_UID]
-	MOV	[USER_ID],BX		; Set UID
+	MOV	[ss:USER_ID],BX		; Set UID
 	MOV	BX,[SI+DPL.DPL_PID]
-	MOV	[PROC_ID],BX		; Set process ID
+	MOV	[ss:PROC_ID],BX		; Set process ID
 NO_SET_ID:
-	PUSH	word [SERVERLEAVE]		; push return address
-	PUSH	word [ServerTab]		; push table address
+	PUSH	word [ss:SERVERLEAVE]		; push return address
+	PUSH	word [ss:ServerTab]		; push table address
 	PUSH	AX
 	Invoke	TableDispatch
-	MOV	byte [EXTERR_LOCUS],errLOC_Unk ; Extended Error Locus
+	MOV	byte [ss:EXTERR_LOCUS],errLOC_Unk ; Extended Error Locus
 	error	error_invalid_function
 ServerReturn:
 	return
@@ -178,7 +178,7 @@ CLOSE_NAME:
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
 if Installed
-	Call	dword [JShare+5*4]
+	Call	dword [ss:JShare+5*4]
 else
 	Call	MFTcloN
 end if
@@ -192,7 +192,7 @@ CLOSE_UID:
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
 if Installed
-	Call	dword [JShare+3*4]
+	Call	dword [ss:JShare+3*4]
 else
 	Call	MFTclU
 end if
@@ -202,7 +202,7 @@ CLOSE_UID_PID:
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
 if Installed
-	Call	dword [JShare+4*4]
+	Call	dword [ss:JShare+4*4]
 else
 	Call	MFTCloseP
 end if
@@ -211,7 +211,7 @@ end if
 GET_LIST:
 ;ASSUME	DS:NOTHING,ES:NOTHING
 if Installed
-	Call	dword [JShare+9*4]
+	Call	dword [ss:JShare+9*4]
 else
 	Call	MFT_get
 end if
@@ -258,17 +258,17 @@ SRV_CALL:
 	PUSH	word [SI+DPL.DPL_SI]
 	MOV	DS,[SI+DPL.DPL_DS]
 	POP	SI
-	MOV	[SaveDS],DS
-	MOV	[SaveBX],BX
-	MOV	byte [fSharing],-1		; set no redirect flag
+	MOV	[ss:SaveDS],DS
+	MOV	[ss:SaveBX],BX
+	MOV	byte [ss:fSharing],-1		; set no redirect flag
 	transfer REDISP
 
 GET_DOS_DATA:
 ;ASSUME	DS:NOTHING,ES:NOTHING
-	LES	DI,[SWAP_ALWAYS_AREA]	     ;IFS. get beginning addr of swap ;AC000;
-	MOV	DX,[SWAP_ALWAYS_AREA_LEN]    ;IFS. get swap always area len   ;AC000;
+	LES	DI,[ss:SWAP_ALWAYS_AREA]	     ;IFS. get beginning addr of swap ;AC000;
+	MOV	DX,[ss:SWAP_ALWAYS_AREA_LEN]    ;IFS. get swap always area len   ;AC000;
 	AND	DX,7FFFH		     ;IFS. clear high bit	      ;AC000;
-	MOV	CX,[SWAP_AREA_LEN]	     ;IFS. get swap len 	      ;AC000;
+	MOV	CX,[ss:SWAP_AREA_LEN]	     ;IFS. get swap len 	      ;AC000;
 	invoke	get_user_stack
 	MOV	[SI+user_environ.user_DS],ES 	     ;	set user regs
 	MOV	[SI+user_environ.user_SI],DI 	     ;
@@ -297,15 +297,15 @@ Break	<SetExtendedError$ - Set extended error for later retrieval>
 SetExtendedError$:
 ;	ASSUME	DS:NOTHING,ES:NOTHING
 	MOV	AX,[SI+DPL.DPL_AX]
-	MOV	[EXTERR],AX
+	MOV	[ss:EXTERR],AX
 	MOV	AX,[SI+DPL.DPL_DI]
-	MOV	word [EXTERRPT],AX
+	MOV	word [ss:EXTERRPT],AX
 	MOV	AX,[SI+DPL.DPL_ES]
-	MOV	word [EXTERRPT+2],AX
+	MOV	word [ss:EXTERRPT+2],AX
 	MOV	AX,[SI+DPL.DPL_BX]
-	MOV	word [EXTERR_ACTION],AX
+	MOV	word [ss:EXTERR_ACTION],AX
 	MOV	AX,[SI+DPL.DPL_CX]
-	MOV	[EXTERR_LOCUS],AH
+	MOV	[ss:EXTERR_LOCUS],AH
 	return
 EndProc ServerCall$
 

@@ -129,11 +129,11 @@ INT19:
 ;	assume	ds:nothing
 ;	assume	es:nothing
 
-	LES	DI,[OLD13]
+	LES	DI,[cs:OLD13]
 	MOV	[13H*4],DI
 	MOV	[13H*4+2],ES
 
-	CMP	byte [INT19SEM], 0
+	CMP	byte [cs:INT19SEM], 0
 	JNZ	INT19VECS
 	JMP	DOINT19
 
@@ -171,7 +171,7 @@ skip_int#AA:
 	}
 
 DOINT19:
-	LES	DI,[ORIG19]
+	LES	DI,[cs:ORIG19]
 	MOV	[19H*4],DI
 	MOV	[19H*4+2],ES
 

@@ -142,9 +142,9 @@ else
 end if
 
 LOCAL_RENAME:
-	MOV	byte [EXTERR_LOCUS],errLOC_Disk
-	MOV	SI,[WFP_START]
-	MOV	DI,[REN_WFP]
+	MOV	byte [ss:EXTERR_LOCUS],errLOC_Disk
+	MOV	SI,[ss:WFP_START]
+	MOV	DI,[ss:REN_WFP]
 	MOV	AL,byte [SI]
 	MOV	AH,byte [DI]
 	OR	AX,2020H		; Lower case
@@ -155,11 +155,11 @@ LOCAL_RENAME:
 	return
 
 SAMEDRV:
-	PUSH	word [DMAADD+2]
-	PUSH	word [DMAADD]
-	MOV	word [DMAADD+2],DS
-	MOV	word [DMAADD],RENAMEDMA
-	MOV	byte [Found_dev],0		; Rename fails on DEVS, assume not a dev
+	PUSH	word [ss:DMAADD+2]
+	PUSH	word [ss:DMAADD]
+	MOV	word [ss:DMAADD+2],DS
+	MOV	word [ss:DMAADD],RENAMEDMA
+	MOV	byte [ss:Found_dev],0		; Rename fails on DEVS, assume not a dev
 	EnterCrit   critDisk
 	invoke	DOS_SEARCH_FIRST	; Sets [NoSetDir] to 1, [CURBUF+2]:BX
 					;    points to entry
@@ -170,8 +170,8 @@ SAMEDRV:
 GOTERR:
 	STC
 RENAME_POP:
-	POP	word [DMAADD]
-	POP	word [DMAADD+2]
+	POP	word [ss:DMAADD]
+	POP	word [ss:DMAADD+2]
 	LeaveCrit   critDisk
 	return
 
@@ -179,17 +179,17 @@ Check_dev:
 	MOV	AX,error_access_denied	; Assume error
 
 	PUSH	DS			      ;PTM.				;AN000;
-	LDS	SI,[DMAADD]		      ;PTM.  chek if source a dir	;AN000;
+	LDS	SI,[ss:DMAADD]		      ;PTM.  chek if source a dir	;AN000;
 	ADD	SI,find_buf.find_buf_attr	      ;PTM.				;AN000;
 	TEST	[SI+dir_entry.dir_attr],attr_directory  ;PTM.				;AN000;
 	JZ	notdir			      ;PTM.				;AN000;
-	MOV	SI,[REN_WFP]		      ;PTM.  if yes, make sure path	;AN000;
+	MOV	SI,[ss:REN_WFP]		      ;PTM.  if yes, make sure path	;AN000;
 	invoke	Check_PathLen2		      ;PTM.   length < 67		;AN000;
 notdir:
 	POP	DS			      ;PTM.				;AN000;
 	JA	GOTERR			      ;PTM.				;AN000;
 
-	CMP	byte [Found_dev],0
+	CMP	byte [ss:Found_dev],0
 	JNZ	GOTERR
 ; At this point a source has been found.  There is search continuation info (a
 ; la DOS_SEARCH_NEXT) for the source at RENAMEDMA, together with the first
@@ -207,10 +207,10 @@ notdir:
 
 REN_OK1:				;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	invoke	FastOpen_Delete 	; delete dir info in fastopen DOS 3.3
-	MOV	SI,[REN_WFP]		; Swap source and destination
-	MOV	[WFP_START],SI
-	MOV	word [CURR_DIR_END],-1	; No current dir on dest
-	MOV	word [CREATING],0E5FFH  ; Creating, not DEL *.*
+	MOV	SI,[ss:REN_WFP]		; Swap source and destination
+	MOV	[ss:WFP_START],SI
+	MOV	word [ss:CURR_DIR_END],-1	; No current dir on dest
+	MOV	word [ss:CREATING],0E5FFH  ; Creating, not DEL *.*
 					; A rename is like a CREATE_NEW as far
 					; as the destination is concerned.
 	invoke	GetPathNoSet
@@ -232,10 +232,10 @@ BAD_ACC_RENAME:
 RENAME_CLEAN:
 	PUSHF				; Save carry state
 	PUSH	AX			; and error code (if carry set)
-	MOV	AL,[THISDRV]
+	MOV	AL,[ss:THISDRV]
 	invoke	FlushBuf
 	POP	AX
-	CMP	byte [FAILERR],0
+	CMP	byte [ss:FAILERR],0
 	JNZ	BAD_ERR 		; User FAILed to I 24
 	POPF
 	JMP	RENAME_POP
@@ -247,7 +247,7 @@ BAD_ERR:
 
 NODEST:
 	JNZ	BAD_PATH
-	CMP	byte [FAILERR],0
+	CMP	byte [ss:FAILERR],0
 	JNZ	BAD_PATH	; Search for dest failed because user FAILed on
 				;	I 24
 	OR	CL,CL
@@ -263,8 +263,8 @@ SAVEDEST:
 	MOV	SI,NAME1
 	MOV	CX,11
 	REP	MOVSB			; Save dest with metas at NAME2
-	MOV	AX,[DIRSTART]
-	MOV	[DESTSTART],AX
+	MOV	AX,[ss:DIRSTART]
+	MOV	[ss:DESTSTART],AX
 BUILDDEST:
 	Context ES			; needed due to JMP BUILDDEST below
 	MOV	BX,RENAMEDMA+21   ; Source of replace chars
@@ -273,20 +273,20 @@ BUILDDEST:
 	MOV	CX,11
 	CALL	NEW_RENAME		    ;IFS. replace ? chars		;AN000;
 
-	MOV	byte [ATTRIB],attr_all	; Stop duplicates with any attributes
-	MOV	byte [CREATING],0FFH
+	MOV	byte [ss:ATTRIB],attr_all	; Stop duplicates with any attributes
+	MOV	byte [ss:CREATING],0FFH
 	invoke	DEVNAME 		; Check if we built a device name
 ;	ASSUME	ES:NOTHING
 	JNC	BAD_ACC_RENAME
-	MOV	BX,[DESTSTART]
-	LES	BP,[THISDPB]
+	MOV	BX,[ss:DESTSTART]
+	LES	BP,[ss:THISDPB]
 	invoke	SETDIRSRCH		; Reset search to start of dir
 	JC	BAD_ACC_RENAME 		; Screw up
 	invoke	FindEntry		; See if new name already exists
 	JNC	BAD_ACC_RENAME 		; Error if found
-	CMP	byte [FAILERR],0
+	CMP	byte [ss:FAILERR],0
 	JNZ	BAD_ACCJ		; Find failed because user FAILed to I 24
-	MOV	AX,[DESTSTART]		; DIRSTART of dest
+	MOV	AX,[ss:DESTSTART]		; DIRSTART of dest
 	CMP	AX,word [RENAMEDMA + 15]	; DIRSTART of source
 	JZ	SIMPLE_RENAME		; If =, just give new name
 
@@ -295,10 +295,10 @@ BUILDDEST:
 	JNZ	BAD_ACCJ		; Can only do a simple rename on dirs,
 					; otherwise the .  and ..  entries get
 					; wiped.
-	MOV	[ATTRIB],AL
-	MOV	word [THISSFT+2],DS
+	MOV	[ss:ATTRIB],AL
+	MOV	word [ss:THISSFT+2],DS
 	MOV	SI,AuxStack - sizeof.sf_entry
-	MOV	word [THISSFT],SI
+	MOV	word [ss:THISSFT],SI
 	MOV	[SI+sf_entry.sf_mode],sharing_compat+open_for_both
 	XOR	CX,CX			; Set "device ID" for call into makenode
 	invoke	RENAME_MAKE		; This is in mknode
@@ -308,12 +308,12 @@ BAD_ACCJ:
 
 GOT_DEST:
 	SaveReg <BX>
-	LES	DI,[THISSFT]		; Rename_make entered this into sharing
+	LES	DI,[ss:THISSFT]		; Rename_make entered this into sharing
 	Invoke	ShareEnd		; we need to remove it.
 	RestoreReg  <BX>
 ; A zero length entry with the correct new name has now been made at
 ;   [CURBUF+2]:BX.
-	LES	DI,[CURBUF]
+	LES	DI,[ss:CURBUF]
 	Assert	ISBUF,<ES,DI>,"Got_Dest"
 
 	TEST	[es:DI+BUFFINFO.buf_flags],buf_dirty  ;LB. if already dirty		;AN000;
@@ -329,7 +329,7 @@ yesdirty_RENAME:
 	CALL	GET_SOURCE
 	JC	RENAME_OVER
 	MOV	DI,BX
-	MOV	ES,word [CURBUF+2]
+	MOV	ES,word [ss:CURBUF+2]
 	MOV	AL,0E5H
 	STOSB				; "free" the source
 	JMP	SHORT DIRTY_IT
@@ -338,12 +338,12 @@ SIMPLE_RENAME:
 	CALL	GET_SOURCE		; Get the source back
 	JC	RENAME_OVER
 	MOV	DI,BX
-	MOV	ES,word [CURBUF+2]
+	MOV	ES,word [ss:CURBUF+2]
 	MOV	SI,NAME1    ; New Name
 	MOV	CX,11
 	REP	MOVSB
 DIRTY_IT:
-	MOV	DI,word [CURBUF]
+	MOV	DI,word [ss:CURBUF]
 
 	TEST	[es:DI+BUFFINFO.buf_flags],buf_dirty  ;LB. if already dirty		;AN000;
 	JNZ	yesdirty2_RENAME		  ;LB.	  don't increment dirty count   ;AN000;
@@ -358,7 +358,7 @@ NEXT_SOURCE:
 ; to enter it before going to RENAME_Next.
 ;
 	EnterCrit   critDisk
-	MOV	byte [CREATING],0	; Correct setting for search (we changed it
+	MOV	byte [ss:CREATING],0	; Correct setting for search (we changed it
 				;   to FF when we made the prev new file).
 	invoke	RENAME_NEXT
 ;
@@ -395,7 +395,7 @@ GET_SOURCE:
 ;	ASSUME	ES:NOTHING
 
 	MOV	BX,word [RENAMEDMA + 15]	; DirStart
-	LES	BP,[THISDPB]
+	LES	BP,[ss:THISDPB]
 	invoke	SETDIRSRCH
 	retc
 	invoke	StartSrch

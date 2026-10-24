@@ -514,10 +514,10 @@ Ioctl_Drive_attr:
 ;;;;;	JC	ioctl_drv_err		; drive not valid
 	call	Get_Driver_BL
 	JC	ioctl_drv_err		; drive not valid
-	MOV	AX,[TEMP_VAR2]		;AN000;IFS.
+	MOV	AX,[ss:TEMP_VAR2]		;AN000;IFS.
 	mov	dx,word [es:di+SYSDEV.SDEVATT]	; get device attribute word
 	MOV	BL,AL			; Phys letter to BL (A=0)
-	LES	DI,[THISCDS]
+	LES	DI,[ss:THISCDS]
 ;;;;;	TEST	ES:[DI.curdir_flags],curdir_isnet
 	CALL	TEST_IFS_REMOTE2	;AN000;IFS. test if remote
 	JZ	IOCTLShare
@@ -545,7 +545,7 @@ ioctl_set_DX:
 	transfer    SYS_RET_OK
 
 ioctl_drv_err:
-	MOV	AL,[DrvErr]		;AN000;IFS. DrvErr is saved in GetThisDrv
+	MOV	AL,[ss:DrvErr]		;AN000;IFS. DrvErr is saved in GetThisDrv
 	transfer SYS_RET_ERR		;AN000;IFS.
 
 ; Function 10
@@ -584,10 +584,10 @@ ioctl_setup_pkt:
 	MOV	word [IOCALL.REQLEN],AX
 	XOR	AX,AX
 	MOV	[IOCALL.REQSTAT],AX
-	MOV	[IOMED],AL
-	MOV	[IOSCNT],CX
-	MOV	word [IOXAD],DX
-	MOV	word [IOXAD+2],SI
+	MOV	[ss:IOMED],AL
+	MOV	[ss:IOSCNT],CX
+	MOV	word [ss:IOXAD],DX
+	MOV	word [ss:IOXAD+2],SI
 	PUSH	ES
 	POP	DS
 ;ASSUME	DS:NOTHING
@@ -599,7 +599,7 @@ ioctl_do_IO:
 	invoke	DEVIOCALL2
 	TEST	[IOCALL.REQSTAT],STERR	    ;Error?
 	JNZ	Ioctl_string_err
-	MOV	AX,[IOSCNT]		; Get actual bytes transferred
+	MOV	AX,[ss:IOSCNT]		; Get actual bytes transferred
 	transfer    SYS_RET_OK
 
 Ioctl_string_err:
@@ -628,18 +628,18 @@ Get_Driver_BL:
 	JMP	SHORT ioctl_bad_drv	;AN000;IFS.	 error
 ioctl_goodrv:
 	XOR	BL,BL			; Unit zero on Net device
-	MOV	byte [EXTERR_LOCUS],errLOC_Net
-	LES	DI,[THISCDS]
+	MOV	byte [ss:EXTERR_LOCUS],errLOC_Net
+	LES	DI,[ss:THISCDS]
 ;	TEST	ES:[DI.curdir_flags],curdir_isnet
 	CALL	TEST_IFS_REMOTE2	;AN000;;IFS. test if remote
 	LES	DI,[es:DI+curdir_list.curdir_devptr]; ES:DI -> Dpb or net dev
 	JNZ	got_dev_ptr		; Is net
-	MOV	byte [EXTERR_LOCUS],errLOC_Disk
+	MOV	byte [ss:EXTERR_LOCUS],errLOC_Disk
 	MOV	BL,[es:DI+dpb.dpb_UNIT]	; Unit number
 	LES	DI,[es:DI+dpb.dpb_driver_addr]  ; Driver addr
 got_dev_ptr:
 	CLC
-	MOV	[TEMP_VAR2],AX		     ;AN000;IFS.
+	MOV	[ss:TEMP_VAR2],AX		     ;AN000;IFS.
 ioctl_bad_drv:
 	POP	AX
 	return
@@ -663,7 +663,7 @@ Check_If_Net:
 entry TEST_IFS_REMOTE2
 	PUSH	ES
 	PUSH	DI
-	LES	DI,[THISCDS]
+	LES	DI,[ss:THISCDS]
 	TEST	[es:DI+curdir_list.curdir_flags],curdir_isnet
 	JZ	belocal 		       ;AN000;	 ;IFS.
 	LES	DI,[es:DI+curdir_list.curdir_ifs_hdr]      ;AN000;	 ;IFS.	test if remote

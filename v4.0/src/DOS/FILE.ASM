@@ -109,7 +109,7 @@ Entry Open2$				;AN000;
 	MOV	CX,DOS_Open ; address of routine to call
 	SaveReg <AX>			; Save mode on stack
 if DBCS 				;AN000;
-	MOV	[TEMP_VAR],0		;AN000;KK. set variable with 0
+	MOV	[ss:TEMP_VAR],0		;AN000;KK. set variable with 0
 end if					;AN000;
 
 AccessFile:
@@ -117,19 +117,19 @@ AccessFile:
 ; Grab a free SFT.
 ;
 if  DBCS				;AN000;
-	TEST	[TEMP_VAR],8		;AN000;;KK. volume id bit set		       ;AN000;
+	TEST	[ss:TEMP_VAR],8		;AN000;;KK. volume id bit set		       ;AN000;
 	JZ	novol			;AN000;;KK. no				       ;AN000;
-	OR	[DOS34_FLAG],DBCS_VOLID ;AN000;;KK. set bit for transpath	       ;AN000;
+	OR	[ss:DOS34_FLAG],DBCS_VOLID ;AN000;;KK. set bit for transpath	       ;AN000;
 novol:					;AN000;
 end if					;AN000;
 	EnterCrit   critSFT
 	invoke	SFNFree 		; get a free sfn
 	LeaveCrit   critSFT
 	JC	OpenFailJ		; oops, no free sft's
-	MOV	[SFN],BX			; save the SFN for later
+	MOV	[ss:SFN],BX			; save the SFN for later
 	fmt	TypAccess,LevSFN,<"AccessFile setting SFN to x$\n">,<BX>
-	MOV	word [THISSFT],DI	; save the SF offset
-	MOV	word [THISSFT+2],ES ; save the SF segment
+	MOV	word [ss:THISSFT],DI	; save the SF offset
+	MOV	word [ss:THISSFT+2],ES ; save the SF segment
 ;
 ; Find a free area in the user's JFN table.
 ;
@@ -138,24 +138,24 @@ end if					;AN000;
 OpenFailJ:
 	JMP	OpenFail		; there were free JFNs... try SFN
 SaveJFN:
-	MOV	word [PJFN],DI	; save the jfn offset
-	MOV	word [PJFN+2],ES	; save the jfn segment
-	MOV	[JFN],BX		; save the jfn itself
+	MOV	word [ss:PJFN],DI	; save the jfn offset
+	MOV	word [ss:PJFN+2],ES	; save the jfn segment
+	MOV	[ss:JFN],BX		; save the jfn itself
 ;
 ; We have been given an JFN.  We lock it down to prevent other tasks from
 ; reusing the same JFN.
 ;
-	MOV	BX,[SFN]
+	MOV	BX,[ss:SFN]
 	MOV	[es:DI],BL		; assign the JFN
 	MOV	SI,DX			; get name in appropriate place
 	MOV	DI,OPENBUF  ; appropriate buffer
 	SaveReg <CX>			; save routine to call
 	invoke	TransPath		; convert the path
 	RestoreReg  <BX>		; restore routine to call
-	LDS	SI,[THISSFT]
+	LDS	SI,[ss:THISSFT]
 ;	ASSUME	DS:NOTHING
 	JC	OpenCleanJ		; no error, go and open file
-	CMP	byte [cMeta],-1
+	CMP	byte [ss:cMeta],-1
 	JZ	SetSearch
 	MOV	AL,error_file_not_found ; no meta chars allowed
 OpenCleanJ:
@@ -221,14 +221,14 @@ OpenOK:
 ; Since this is only relevant on sharer systems, we stick this code into the
 ; sharer.
 ;
-	MOV	AX,[JFN]
+	MOV	AX,[ss:JFN]
 if Installed
-	Call	dword [JShare+12*4]
+	Call	dword [ss:JShare+12*4]
 else
 	Call	ShCol
 end if
 	fmt	TypAccess,LevSFN,<"AccessFile setting SFN to -1\n">
-	MOV	word [SFN],-1			; clear out sfn pointer
+	MOV	word [ss:SFN],-1			; clear out sfn pointer
 	fmt	TypSyscall,LevLog,<"Open/CreateXX: return x$\n">,<AX>
 	transfer    SYS_RET_OK		; bye with no errors
 ;Extended Open hooks check
@@ -246,7 +246,7 @@ OpenClean:
 	RestoreReg  <bx>		; clean off stack
 OpenE:
 	MOV	[SI+sf_entry.sf_ref_count],0	; release SFT
-	LDS	SI,[PJFN]
+	LDS	SI,[ss:PJFN]
 	MOV	byte [SI],0FFh	; free the SFN...
 	JMP	SHORT OpenCritLeave
 
@@ -254,7 +254,7 @@ OpenFail:
 	STI
 	RestoreReg  <CX>		; Clean stack
 OpenCritLeave:
-	MOV	word [SFN],-1			; remove mark.
+	MOV	word [ss:SFN],-1			; remove mark.
 	fmt TypSyscall,LevLog,<"Open/CreateXX: error x$\n">,<AX>
 ;; File Tagging DOS 4.00
 	CMP	word [cs:EXTERR],error_Code_Page_Mismatched	;AN000;;FT. code page mismatch
@@ -283,12 +283,12 @@ Procedure   Creat$,NEAR
 	fmt TypSyscall,LevLog,<"Create\n">
 	fmt TypSyscall,LevArgs,<" Att = x$ file = 'S$'\n">,<CX,DS,DX>
 if DBCS 				;AN000;
-	MOV	[TEMP_VAR],CX		;AN000;KK. set variable with attribute	      ;AN000;
+	MOV	[ss:TEMP_VAR],CX		;AN000;KK. set variable with attribute	      ;AN000;
 end if					;AN000;
 	SaveReg <CX>			; Save attributes on stack
 	MOV	CX,DOS_Create; routine to call
 AccessSet:
-	mov	byte [SATTRIB],attr_hidden+attr_system
+	mov	byte [ss:SATTRIB],attr_hidden+attr_system
 	JMP	AccessFile		; use good ol' open
 EndProc Creat$
 
@@ -360,7 +360,7 @@ BREAK <UNLINK$ - delete a file entry>
 	invoke	TransPathSet		; go get normalized path
 	RestoreReg <CX>
 	JC	ChModErr		; badly formed path
-	CMP	byte [cMeta],-1		; meta chars?
+	CMP	byte [ss:cMeta],-1		; meta chars?
 	JNZ	NotFound
 	Context DS
 	mov	ch,attr_hidden+attr_system   ; unlink appropriate files
@@ -399,15 +399,15 @@ BREAK <RENAME$ - move directory entries around>
 	MOV	SI,DI			; save for offsets
 	MOV	DI,RenBuf
 
-	MOV	word [NO_FILTER_DPATH],SI	;AN000;;IFS. save them for IFS
-	MOV	word [NO_FILTER_DPATH+2],DS ;AN000;;IFS.
+	MOV	word [ss:NO_FILTER_DPATH],SI	;AN000;;IFS. save them for IFS
+	MOV	word [ss:NO_FILTER_DPATH+2],DS ;AN000;;IFS.
 
 	invoke	TransPathSet		; munge the paths
-	PUSH	word [WFP_START]		; get pointer
-	POP	word [REN_WFP] 		; stash it
+	PUSH	word [ss:WFP_START]		; get pointer
+	POP	word [ss:REN_WFP] 		; stash it
 	RestoreReg <SI,DS,CX>		; get back source and possible CX arg
 epjc2:	JC	ChModErr		; get old error
-	CMP	byte [cMeta],-1
+	CMP	byte [ss:cMeta],-1
 	JNZ	NotFound
 	SaveReg <CX>			; Save possible CX arg
 	MOV	DI,OPENBUF  ; appropriate buffer
@@ -467,7 +467,7 @@ Break <CreateNewFile$ - Create a new directory entry>
 	fmt TypSyscall,LevLog,<"CreateNew\n">
 	fmt TypSyscall,LevArgs,<" Att = x$ file = 'S$'\n">,<CX,DS,DX>
 if DBCS 				;AN000;
-	MOV	[TEMP_VAR],CX		;AN000;KK. set variable with attribute
+	MOV	[ss:TEMP_VAR],CX		;AN000;KK. set variable with attribute
 end if					;AN000;
 	SaveReg <CX>			; Save attributes on stack
 	MOV	CX,DOS_Create_New   ; routine to call
@@ -607,7 +607,7 @@ CreateLoop:
 ; The operation failed and the error has been mapped in AX.  Grab the extended
 ; error and figure out what to do.
 ;
-	mov	ax,[EXTERR]
+	mov	ax,[ss:EXTERR]
 	cmp	al,error_file_exists
 	jz	CreateLoop		; file existed => try with new name
 	cmp	al,error_access_denied
@@ -645,11 +645,11 @@ Break	<SetAttrib - Set the SEARCH ATTRIB>
 
 procedure   SetAttrib,NEAR
 ;	assume	ds:nothing,es:nothing
-	test	byte [fSharing],-1
+	test	byte [ss:fSharing],-1
 	jnz	Set
 	mov	cl,ch
 Set:
-	mov	[SATTRIB],cl
+	mov	[ss:SATTRIB],cl
 	return
 EndProc SetAttrib
 
@@ -679,9 +679,9 @@ Break	<Extended_Open- Extended Open the file>
 procedure   Extended_Open$,NEAR 			       ;AN000;
 ;	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:DOSGROUP  ;AN000;
 
-	MOV	byte [XA_from],0		  ;AN000;EO. init for set XA
-	MOV	[EXTOPEN_FLAG],DX	  ;AN000;EO. save ext. open flag
-	MOV	word [EXTOPEN_IO_MODE],0	  ;AN000;EO. initialize IO mode
+	MOV	byte [ss:XA_from],0		  ;AN000;EO. init for set XA
+	MOV	[ss:EXTOPEN_FLAG],DX	  ;AN000;EO. save ext. open flag
+	MOV	word [ss:EXTOPEN_IO_MODE],0	  ;AN000;EO. initialize IO mode
 	TEST	DX,reserved_bits_mask	  ;AN000;EO. reserved bits 0  ?
 	JNZ	ext_inval2		  ;AN000;EO. no
 	MOV	AH,DL			  ;AN000;EO. make sure flag is right
@@ -714,14 +714,14 @@ procedure   Extended_Open$,NEAR 			       ;AN000;
 ;parmend:				  ;AN000;EO
 ;	POP	CX			  ;AN000;EO. restore CX
 ;no_parm:				  ;AN000;EO.
-	MOV	[SAVE_ES],ES		  ;AN000;EO. save API parms
-	MOV	[SAVE_DI],DI		  ;AN000;EO.
-	PUSH	word [EXTOPEN_FLAG]		  ;AN000;EO.
-	POP	word [SAVE_DX]		  ;AN000;EO.
-	MOV	[SAVE_CX],CX		  ;AN000;EO.
-	MOV	[SAVE_BX],BX		  ;AN000;EO.
-	MOV	[SAVE_DS],DS		  ;AN000;EO.
-	MOV	[SAVE_SI],SI		  ;AN000;EO.
+	MOV	[ss:SAVE_ES],ES		  ;AN000;EO. save API parms
+	MOV	[ss:SAVE_DI],DI		  ;AN000;EO.
+	PUSH	word [ss:EXTOPEN_FLAG]		  ;AN000;EO.
+	POP	word [ss:SAVE_DX]		  ;AN000;EO.
+	MOV	[ss:SAVE_CX],CX		  ;AN000;EO.
+	MOV	[ss:SAVE_BX],BX		  ;AN000;EO.
+	MOV	[ss:SAVE_DS],DS		  ;AN000;EO.
+	MOV	[ss:SAVE_SI],SI		  ;AN000;EO.
 	MOV	DX,SI			  ;AN000;EO. ds:dx points to file name
 	MOV	AX,BX			  ;AN000;EO. ax= mode
 
@@ -741,70 +741,70 @@ error_return:					 ;AN000;EO.
 goopen2:					 ;AN000;
 	TEST	BX,int_24_error 		 ;AN000;EO..  disable INT 24 error ?
 	JZ	goopen				 ;AN000;EO..  no
-	OR	byte [EXTOPEN_ON],ext_open_I24_off	 ;AN000;EO..  set bit to disable
+	OR	byte [ss:EXTOPEN_ON],ext_open_I24_off	 ;AN000;EO..  set bit to disable
 
 goopen: 					 ;AN000;
-	OR	byte [EXTOPEN_ON],ext_open_on	 ;AN000;EO..  set Extended Open active
-	AND	word [EXTOPEN_FLAG],0FFH		 ;AN000;EO.create new ?
-	CMP	word [EXTOPEN_FLAG],ext_exists_fail + ext_nexists_create ;AN000;FT.
+	OR	byte [ss:EXTOPEN_ON],ext_open_on	 ;AN000;EO..  set Extended Open active
+	AND	word [ss:EXTOPEN_FLAG],0FFH		 ;AN000;EO.create new ?
+	CMP	word [ss:EXTOPEN_FLAG],ext_exists_fail + ext_nexists_create ;AN000;FT.
 	JNZ	chknext 			 ;AN000;;EO.  no
 	invoke	CreateNewFile$			 ;AN000;;EO.  yes
 	JC	error_return			 ;AN000;;EO.  error
-	CMP	byte [EXTOPEN_ON],0			 ;AN000;;EO.  IFS does it
+	CMP	byte [ss:EXTOPEN_ON],0			 ;AN000;;EO.  IFS does it
 	JZ	ok_return2			 ;AN000;;EO.  yes
-	MOV	word [EXTOPEN_FLAG],action_created_opened ;AN000;EO. creted/opened
-	MOV	byte [XA_from],By_Create		 ;AN000;;EO.  for set xa
+	MOV	word [ss:EXTOPEN_FLAG],action_created_opened ;AN000;EO. creted/opened
+	MOV	byte [ss:XA_from],By_Create		 ;AN000;;EO.  for set xa
 	JMP	setXAttr			 ;AN000;;EO.  set XAs
 ok_return2:
 	transfer SYS_RET_OK			 ;AN000;;EO.
 chknext:
-	TEST	word [EXTOPEN_FLAG],ext_exists_open	 ;AN000;;EO.  exists open
+	TEST	word [ss:EXTOPEN_FLAG],ext_exists_open	 ;AN000;;EO.  exists open
 	JNZ	exist_open			 ;AN000;;EO.  yes
 	invoke	Creat$				 ;AN000;;EO.  must be replace open
 	JC	error_return			 ;AN000;;EO.  return with error
-	CMP	byte [EXTOPEN_ON],0			 ;AN000;;EO.  IFS does it
+	CMP	byte [ss:EXTOPEN_ON],0			 ;AN000;;EO.  IFS does it
 	JZ	ok_return2			 ;AN000;;EO.  yes
-	MOV	word [EXTOPEN_FLAG],action_created_opened  ;AN000;EO. prsume create/open
-	MOV	byte [XA_from],By_Create		 ;AN000;EO.  for set xa
-	TEST	byte [EXTOPEN_ON],ext_file_not_exists      ;AN000;;EO. file not exists ?
+	MOV	word [ss:EXTOPEN_FLAG],action_created_opened  ;AN000;EO. prsume create/open
+	MOV	byte [ss:XA_from],By_Create		 ;AN000;EO.  for set xa
+	TEST	byte [ss:EXTOPEN_ON],ext_file_not_exists      ;AN000;;EO. file not exists ?
 	JNZ	setXAttr			      ;AN000;;EO. no
-	MOV	word [EXTOPEN_FLAG],action_replaced_opened ;AN000;;EO. replaced/opened
-	MOV	byte [XA_from],0			      ;AN000;EO. for set xa
+	MOV	word [ss:EXTOPEN_FLAG],action_replaced_opened ;AN000;;EO. replaced/opened
+	MOV	byte [ss:XA_from],0			      ;AN000;EO. for set xa
 	JMP	SHORT setXAttr			      ;AN000;;EO. set XAs
 error_return2:
 	ret					 ;AN000;;EO.  return with error
 						 ;AN000;
 exist_open:					 ;AN000;
-	test	byte [fSharing],-1			 ;AN000;;EO. server doscall?
+	test	byte [ss:fSharing],-1			 ;AN000;;EO. server doscall?
 	jz	noserver			 ;AN000;;EO. no
 	MOV	CL,CH				 ;AN000;;EO. cl=search attribute
 
 noserver:
 	invoke	Open2$				 ;AN000;;EO.  do open
 	JNC	ext_ok				 ;AN000;;EO.
-	CMP	byte [EXTOPEN_ON],0			 ;AN000;;EO.  error and IFS call
+	CMP	byte [ss:EXTOPEN_ON],0			 ;AN000;;EO.  error and IFS call
 	JZ	error_return2			 ;AN000;;EO.  return with error
 local_extopen:
 
 	CMP	AX,error_file_not_found 	 ;AN000;;EO.  file not found error
 	JNZ	error_return2			 ;AN000;;EO.  no,
-	TEST	word [EXTOPEN_FLAG],ext_nexists_create;AN000;;EO.  want to fail
+	TEST	word [ss:EXTOPEN_FLAG],ext_nexists_create;AN000;;EO.  want to fail
 	JNZ	do_creat			 ;AN000;;EO.  yes
 	JMP	extexit 			 ;AN000;;EO.  yes
 do_creat:
-	MOV	byte [XA_from],By_Create		 ;AN000;;EO.  for set xa
-	MOV	CX,[SAVE_CX]			 ;AN000;;EO.  get ds:dx for file name
-	LDS	SI,dword [SAVE_SI]		 ;AN000;;EO.  cx = attribute
+	MOV	byte [ss:XA_from],By_Create		 ;AN000;;EO.  for set xa
+	MOV	CX,[ss:SAVE_CX]			 ;AN000;;EO.  get ds:dx for file name
+	LDS	SI,dword [ss:SAVE_SI]		 ;AN000;;EO.  cx = attribute
 	MOV	DX,SI				 ;AN000;;EO.
 	invoke	Creat$				 ;AN000;;EO.  do create
 	JC	extexit 			 ;AN000;;EO.  error
-	MOV	word [EXTOPEN_FLAG],action_created_opened  ;AN000;;EO. is created/opened
+	MOV	word [ss:EXTOPEN_FLAG],action_created_opened  ;AN000;;EO. is created/opened
 	JMP	SHORT setXAttr			      ;AN000;;EO.   set XAs
 
 ext_ok:
-	CMP	byte [EXTOPEN_ON],0			 ;AN000;;EO.  IFS call ?
+	CMP	byte [ss:EXTOPEN_ON],0			 ;AN000;;EO.  IFS call ?
 	JZ	ok_return			 ;AN000;;EO.  yes
-	MOV	word [EXTOPEN_FLAG],action_opened	 ;AN000;;EO.  opened
+	MOV	word [ss:EXTOPEN_FLAG],action_opened	 ;AN000;;EO.  opened
 setXAttr:
 ;	LES	DI,DWORD PTR [SAVE_DI]	;AN000;EO.
 	PUSH	AX			;AN000;;EO. save handle for final
@@ -823,7 +823,7 @@ setXAttr:
 ;	POP	DS			;AN000;;EO.
 ;	JC	extexit2		;AN000;;EO.
 	invoke	get_user_stack		;AN000;;EO.
-	MOV	AX,[EXTOPEN_FLAG]	;AN000;;EO.
+	MOV	AX,[ss:EXTOPEN_FLAG]	;AN000;;EO.
 	MOV	[SI+user_environ.user_CX],AX 	;AN000;;EO. set action code for cx
 	POP	AX			;AN000;;EO.
 	MOV	[SI+user_environ.user_AX],AX 	;AN000;;EO. set handle for ax
@@ -835,9 +835,9 @@ extexit2:				;AN000; ERROR RECOVERY
 
 	POP	BX			;AN000;EO. close the handle
 	PUSH	AX			;AN000;EO. save error code from set XA
-	CMP	word [EXTOPEN_FLAG],action_created_opened	;AN000;EO. from create
+	CMP	word [ss:EXTOPEN_FLAG],action_created_opened	;AN000;EO. from create
 	JNZ	justopen		;AN000;EO.
-	LDS	SI,dword [SAVE_SI]		 ;AN000;EO.  cx = attribute
+	LDS	SI,dword [ss:SAVE_SI]		 ;AN000;EO.  cx = attribute
 	LDS	DX,dword [SI]		 ;AN000;EO.
 	invoke	UNLINK$ 		;AN000;EO. delete the file
 	JMP	SHORT reserror		;AN000;EO.

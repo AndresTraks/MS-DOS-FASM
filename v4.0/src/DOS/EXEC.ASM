@@ -157,7 +157,7 @@ EXEC001E:
 	JNA	exec_check_2
 
 exec_bad_fun:
-	MOV	byte [EXTERR_LOCUS],errLOC_Unk ; Extended Error Locus
+	MOV	byte [ss:EXTERR_LOCUS],errLOC_Unk ; Extended Error Locus
 	mov	al,error_invalid_function
 
 exec_ret_err:
@@ -234,7 +234,7 @@ exec_check_environ:
 	MOV	AX,[SI+Exec1.Exec1_environ]	; address of environ
 	OR	AX,AX
 	JNZ	exec_scan_env
-	MOV	DS,[CurrentPDB]
+	MOV	DS,[ss:CurrentPDB]
 	MOV	AX,[Process_data_block.PDB_environ]
 	MOV	exec_environ,AX
 	OR	AX,AX
@@ -371,12 +371,12 @@ exec_allocate:
 	JA	exec_no_mem
 	TEST	exec_load_high,-1	; if load high, use max
 	JNZ	exec_BX_max		; use max
-	ADD	AX,[exec_min_BSS] 	; go for min allocation
+	ADD	AX,[ss:exec_min_BSS] 	; go for min allocation
 	JC	exec_no_mem		; oops! carry
 	CMP	AX,BX			; enough space?
 	JA	exec_no_mem		; nope...
-	SUB	AX,[exec_min_BSS]
-	ADD	AX,[exec_max_BSS] 	; go for the MAX
+	SUB	AX,[ss:exec_min_BSS]
+	ADD	AX,[ss:exec_max_BSS] 	; go for the MAX
 	JC	exec_BX_max
 	CMP	AX,BX
 	JBE	exec_got_block
@@ -406,7 +406,7 @@ exec_use_ax:
 ; Determine the location in the file of the beginning of the resident
 ;
 exec_find_res:
-	MOV	DX,[exec_par_dir]
+	MOV	DX,[ss:exec_par_dir]
 	PUSH	DX
 	MOV	CL,4
 	SHL	DX,CL			; low word of location
@@ -471,21 +471,21 @@ ExecCheckEnd:
 ;
 exec_do_reloc:
 	MOV	CX,exec_rel_fac
-	MOV	AX,[exec_SS]		; get initial SS
+	MOV	AX,[ss:exec_SS]		; get initial SS
 	ADD	AX,CX			; and relocate him
-	MOV	[exec_init_SS],AX
+	MOV	[ss:exec_init_SS],AX
 
-	MOV	AX,[exec_SP]		; initial SP
-	MOV	[exec_init_SP],AX
+	MOV	AX,[ss:exec_SP]		; initial SP
+	MOV	[ss:exec_init_SP],AX
 
-	LES	AX,dword [exec_IP]
-	MOV	[exec_init_IP],AX
+	LES	AX,dword [ss:exec_IP]
+	MOV	[ss:exec_init_IP],AX
 	MOV	AX,ES
 	ADD	AX,CX			; relocated...
-	MOV	[exec_init_CS],AX
+	MOV	[ss:exec_init_CS],AX
 
 	XOR	CX,CX
-	MOV	DX,[exec_rle_table]
+	MOV	DX,[ss:exec_rle_table]
 	MOV	BX,exec_fh
 	PUSH	DS
 	XOR	AX,AX
@@ -497,7 +497,7 @@ exec_bad_filej:
 	JMP	exec_bad_file
 
 exec_get_entries:
-	MOV	DX,[exec_rle_count]	; Number of entries left
+	MOV	DX,[ss:exec_rle_count]	; Number of entries left
 
 exec_read_reloc:
 ;	ASSUME	DS:NOTHING
@@ -602,14 +602,14 @@ OkRead:
 	JNZ	exec_set_PDB		; no starto, chumo!
 	MOV	AX,exec_dma
 	SUB	AX,10h
-	MOV	[exec_init_CS],AX
-	MOV	[exec_init_IP],100h	; initial IP is 100
+	MOV	[ss:exec_init_CS],AX
+	MOV	[ss:exec_init_IP],100h	; initial IP is 100
 ;
 ; SI is at most FF00h.	Add FE to account for PSP - word of 0 on stack.
 ;
 	ADD	SI,0FEh 		; make room for stack
-	MOV	[exec_init_SP],SI 	; max value for read is also SP!
-	MOV	[exec_init_SS],AX
+	MOV	[ss:exec_init_SP],SI 	; max value for read is also SP!
+	MOV	[ss:exec_init_SS],AX
 	MOV	DS,AX
 	MOV	word [SI],0 	; 0 for return
 
@@ -755,13 +755,13 @@ exec_set_return:
 	MOV	DS,AX
 	POP	word [addr_int_terminate] ; save them where we can get them later
 	POP	word [addr_int_terminate+2]   ; when the child exits.
-	MOV	word [DMAADD],80h
-	MOV	DS,[CurrentPDB]
-	MOV	word [DMAADD+2],DS
+	MOV	word [ss:DMAADD],80h
+	MOV	DS,[ss:CurrentPDB]
+	MOV	word [ss:DMAADD+2],DS
 	TEST	exec_func,exec_func_no_execute
 	JZ	exec_go
 
-	LDS	SI,dword [exec_init_SP]   ; get stack
+	LDS	SI,dword [ss:exec_init_SP]   ; get stack
 	LES	DI,exec_blk		; and block for return
 	MOV	[es:DI+Exec1.Exec1_SS],DS	; return SS
 
@@ -770,7 +770,7 @@ exec_set_return:
 	MOV	[SI],BX 		; save default AX reg
 	MOV	[es:DI+Exec1.Exec1_SP],SI	; return 'SP'
 
-	LDS	AX,dword [exec_init_IP]
+	LDS	AX,dword [ss:exec_init_IP]
 	MOV	[es:DI+Exec1.Exec1_CS],DS	; initial entry stuff
 
 	MOV	[es:DI+Exec1.Exec1_IP],AX
@@ -778,8 +778,8 @@ exec_set_return:
 	transfer    SYS_RET_OK
 
 exec_go:
-	LDS	SI,dword [exec_init_IP]   ; get entry point
-	LES	DI,dword [exec_init_SP]   ; new stack
+	LDS	SI,dword [ss:exec_init_IP]   ; get entry point
+	LES	DI,dword [ss:exec_init_SP]   ; new stack
 	MOV	AX,ES
 ;
 ; DS:SI points to entry point
@@ -788,7 +788,7 @@ exec_go:
 ; BX has initial AX value
 ;
 	CLI
-	MOV	byte [INDOS],0
+	MOV	byte [ss:INDOS],0
 ;	ASSUME	SS:NOTHING
 	MOV	SS,AX			; set up user's stack
 	MOV	SP,DI			; and SP
@@ -831,7 +831,7 @@ EndProc exec_dealloc
 
 procedure   exec_alloc,near
 	PUSH	    BX
-	MOV	    BX,[CurrentPDB]
+	MOV	    BX,[cs:CurrentPDB]
 	CALL	    ChangeOwners
 	LeaveCrit   critMem
 	POP	    BX

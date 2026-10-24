@@ -209,7 +209,7 @@ Dos_chk_ah32:								  ;AN000;
 	 CALL	 GET_DOS_INFO	 ; else get DOS information ;AN000;
 	 jmp	 SHORT Dos_Exit 			    ;AN000;		 ;AN000;
 str_cmp:								  ;AN000;
-	 mov	 DS,[TEMP_VAR]	  ; restore DS				  ;AN000;
+	 mov	 DS,[ss:TEMP_VAR]	  ; restore DS				  ;AN000;
 	 cmp	 ah,36					    ;AN000;
 	 jne	 str_cpy				    ;AN000;
 	 invoke  StrCmp 	 ; string compare	    ;AN000;
@@ -226,11 +226,11 @@ Dos_Error:								  ;AN000;
 Dos_Exit:								  ;AN000;
 	 CLI								  ;AN000;
 	 PUSHF								  ;AN000;
-	 AND	 word [DOS34_FLAG],NO_Force_I24_Fail 			  ;AN000;
-	 DEC	 byte [INDOS]	 ; exit DOS				  ;AN000;
-	 CMP	 byte [Callback_flag],0  ;from dosgroup
+	 AND	 word [ss:DOS34_FLAG],NO_Force_I24_Fail 			  ;AN000;
+	 DEC	 byte [ss:INDOS]	 ; exit DOS				  ;AN000;
+	 CMP	 byte [ss:Callback_flag],0  ;from dosgroup
 	 JZ	 noSS_SP	    ;yes				  ;AN000;
-	 MOV	 byte [Callback_flag],0  ;					  ;AN000;
+	 MOV	 byte [ss:Callback_flag],0  ;					  ;AN000;
 	 POPF						    ;AN000;
 	 MOV	 SP,[cs:Callback_SP];					     ;AN000;
 	 MOV	 SS,[cs:Callback_SS]; restore user's SS:SP                   ;AN000;
@@ -369,9 +369,9 @@ PROCEDURE  GET_DOS_INFO,NEAR						   ;AN000;
 	push	cx			; save time			   ;AN000;
 	push	dx							   ;AN000;
 
-	MOV	CX,[YEAR]						   ;AN000;
+	MOV	CX,[ss:YEAR]						   ;AN000;
 	ADD	CX,1980 						   ;AN000;
-	MOV	DX,word [DAY]	; fetch both day and month	   ;AN000;
+	MOV	DX,word [ss:DAY]	; fetch both day and month	   ;AN000;
 
 	pop	bx			; bh = seconds	bl = hundredths    ;AN000;
 	pop	ax			; ah = hour  al = minutes	   ;AN000;
@@ -382,8 +382,8 @@ PROCEDURE  GET_DOS_INFO,NEAR						   ;AN000;
 chk_al1:				; Active process info ??	   ;AN000;
 	cmp    al,1							   ;AN000;
 	jne    chk_al2			; no, try next			   ;AN000;
-	MOV	BX,[CurrentPDB]        ; BX = active process ID 	   ;AN000;
-	mov	DX,[USER_ID]	       ; User ID			   ;AN000;
+	MOV	BX,[ss:CurrentPDB]        ; BX = active process ID 	   ;AN000;
+	mov	DX,[ss:USER_ID]	       ; User ID			   ;AN000;
 	jmp	Get_Info_Exit	       ; exit				   ;AN000;
 
 

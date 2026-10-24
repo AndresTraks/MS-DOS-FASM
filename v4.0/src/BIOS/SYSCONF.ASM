@@ -689,11 +689,11 @@ NOPROB: 				;GET FILE SIZE (NOTE < 64K!!)
 	CALL	TEMPCDS 		; Finally get CDS to "safe" location
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
-	MOV	DX,[CONFBOT]
+	MOV	DX,[cs:CONFBOT]
 	MOV	DS,DX
 	MOV	ES,DX
 	XOR	DX,DX
-	MOV	CX,[COUNT_SYSINIT]
+	MOV	CX,[cs:COUNT_SYSINIT]
 	MOV	AH,Read
 	STC				;IN CASE OF INT 24
 	INT	21H			;Function request
@@ -720,7 +720,7 @@ PutEOL:
 	MOV	AL,LF
 	STOSB				; LF
 	SUB	DI,DX			; difference moved
-	MOV	[COUNT_SYSINIT],DI		; new count
+	MOV	[cs:COUNT_SYSINIT],DI		; new count
 ;
 ; Restore registers
 ;
@@ -1181,7 +1181,7 @@ SCF_EN28:
 	    mov    ax, CODE		;AN002;
 	    mov    ds, ax		;AN002;
 ;	    assume ds:Code
-	    cmp    [P_Mtrk], 0		;AN002;
+	    cmp    [cs:P_Mtrk], 0		;AN002;
 ;	    $IF    E			;AN002;
 	    JNE SCF_IF36
 	       mov    [MulTrk_Flag], MULTRK_OFF2	  ;AN002; 0001h
@@ -2675,8 +2675,8 @@ Set_DevMark:				;AN004;
 	mov	di, [cs:MEMHI]		;AN004;
 	mov	ds, di			;AN004;
 ;	assume	ds:nothing		;AN004;
-	mov	[DevMark_Addr], di	;AN004; save the DEVMARK address for the future.
-	test	[IFS_Flag], IS_IFS	;AN004;
+	mov	[cs:DevMark_Addr], di	;AN004; save the DEVMARK address for the future.
+	test	[cs:IFS_Flag], IS_IFS	;AN004;
 	jnz	SDVMK_IFS		;AN004;
 	mov	al, DEVMARK_DEVICE	;AN004; ='D'
 	jmp	short SDVMK_ID		;AN004;
@@ -3128,19 +3128,19 @@ Int67FilterInit:			;AN030;
 
 	call	GetHighestPage		;AN030;; get highest entry from table
 
-	mov	[EMSReservedArray_X+4],bx   ;AN030;; phys_page_segment
-	mov	[EMSReservedArray_X+6],ax   ;AN030;; phys_page_number
+	mov	[cs:EMSReservedArray_X+4],bx   ;AN030;; phys_page_segment
+	mov	[cs:EMSReservedArray_X+6],ax   ;AN030;; phys_page_number
 
 	cmp	cx,0			;AN033;; are the any pages left?
 	je	NoMoreEMSPages		;AN033;; no, don't bother looking any more
 
 	call	GetHighestPage		;AN030;; get next highest entry from table
 
-	mov	[EMSReservedArray_X+0],bx   ;AN030;; phys_page_segment
-	mov	[EMSReservedArray_X+2],ax   ;AN030;; phys_page_number
+	mov	[cs:EMSReservedArray_X+0],bx   ;AN030;; phys_page_segment
+	mov	[cs:EMSReservedArray_X+2],ax   ;AN030;; phys_page_number
 
 NoMoreEMSPages: 			;AN033;;
-	mov	[EMSPageCount],cx 	;AN030;; save new page count for INT 67 filter
+	mov	[cs:EMSPageCount],cx 	;AN030;; save new page count for INT 67 filter
 
 	pop	di
 	pop	es
@@ -3320,11 +3320,11 @@ EMS_Stub_Handler:				;AN030;
 	push	di			;AN030;
 	push	ax			;AN030;
 	push	cx			;AN030;
-	cmp	[EMS_Stub_Installed], 0	;AN030;
+	cmp	[cs:EMS_Stub_Installed], 0	;AN030;
 	je	EMS_Stub_X		;AN030;
 	jmp	EMS_SH_Ret		;AN030;
 EMS_Stub_X:				;AN030;
-	cmp	[Buffer_Slash_X], 0	;AN030;
+	cmp	[cs:Buffer_Slash_X], 0	;AN030;
 	je     EMS_SH_Ret		;AN030;
 	call	EMS_Install_Check	;AN030;
 	jc	EMS_SH_Ret		;AN030;
@@ -3334,9 +3334,9 @@ EMS_Stub_Do:
 	xor	ax,ax			;AN030;save current Int 2fh, 67h vectors.
 	mov	es, ax			;AN030;
 	mov	ax, word [es:2fh*4] ;AN030;
-	mov	[IntV2FO], ax		;AN030;
+	mov	[cs:IntV2FO], ax		;AN030;
 	mov	ax, word [es:2fh*4+2]	;AN030;
-	mov	[IntV2FS], ax			;AN030;
+	mov	[cs:IntV2FS], ax			;AN030;
 	mov	ax, word [es:67h*4] 	;AN030;
 	mov	word [cs:OldInt67], ax	;AN030;
 	mov	ax, word [es:67h*4+2]	;AN030;
@@ -3352,7 +3352,7 @@ end if
 	call	ROUND				;AN030;
 	mov	ax, DEVMARK_EMS_STUB		;AN030;
 	call	SetDevMark			;AN030;
-	mov	ax, [MEMHI]			;AN030;
+	mov	ax, [cs:MEMHI]			;AN030;
 	mov	es, ax				;AN030;
 ;	assume	es:nothing			;AN030;
 	xor	di, di				;AN030;
@@ -3361,11 +3361,11 @@ end if
 	mov	cx, EMS_STUB_END 	;AN030;
 	mov	si, EMS_STUB_START	;AN030;
 	sub	cx, si				;AN030;cx = size in byte
-	mov	[MEMLO], cx			;AN030;
+	mov	[cs:MEMLO], cx			;AN030;
 	rep	movsb				;AN030;
-	or	[SetDevMarkFlag], FOR_DEVMARK	;AN030;set the devmark_size for MEM command.
+	or	[cs:SetDevMarkFlag], FOR_DEVMARK	;AN030;set the devmark_size for MEM command.
 	call	ROUND				;AN030;and get the next [memhi] avaiable.
-	mov	[EMS_Stub_Installed], 1		;AN030;
+	mov	[cs:EMS_Stub_Installed], 1		;AN030;
 
 	xor	ax, ax				;AN030;
 	mov	ds, ax				;AN030;

@@ -144,10 +144,10 @@ else
 end if
 
 LOCAL_DELETE:
-	MOV	byte [FoundDel],00	; No files found and no files deleted
+	MOV	byte [ss:FoundDel],00	; No files found and no files deleted
 	EnterCrit   critDisk
-	MOV	word [CREATING],0E500H  ; Assume not del *.*
-	MOV	SI,[WFP_START]
+	MOV	word [ss:CREATING],0E500H  ; Assume not del *.*
+	MOV	SI,[ss:WFP_START]
 SKPNUL:
 	LODSB
 	OR	AL,AL
@@ -173,7 +173,7 @@ TEST_QUEST:
 	CMP	AX,"??"
 	JNZ	NOT_ALL
 CHECK_ATTS:
-	MOV	AL,byte [SATTRIB]
+	MOV	AL,byte [ss:SATTRIB]
 	AND	AL,attr_hidden+attr_system+attr_directory+attr_volume_id+attr_read_only
 					; Look only at hidden bits
 	CMP	AL,attr_hidden+attr_system+attr_directory+attr_volume_id+attr_read_only
@@ -185,9 +185,9 @@ CHECK_ATTS:
 ;	It should ONLY be used by FORMAT in the ROOT directory.
 ;
 
-	MOV	byte [DELALL],0	     ; DEL *.* - flag deleting all
+	MOV	byte [ss:DELALL],0	     ; DEL *.* - flag deleting all
 NOT_ALL:
-	MOV	byte [NoSetDir],1
+	MOV	byte [ss:NoSetDir],1
 	invoke	GetPathNoSet
 ;	ASSUME	ES:NOTHING
 	JNC	Del_found
@@ -207,7 +207,7 @@ bad_path_DELETE:
 
 Del_found:
 	JNZ	NOT_DIR 		; Check for dir specified
-	CMP	byte [DELALL],0		; DelAll = 0 allows delete of dir.
+	CMP	byte [ss:DELALL],0		; DelAll = 0 allows delete of dir.
 	JZ	NOT_DIR
 Del_access_err:
 	MOV	AX,error_access_denied
@@ -220,14 +220,14 @@ NOT_DIR:
 ; Main delete loop.  CURBUF+2:BX points to a matching directory entry.
 ;
 DELFILE:
-	OR	byte [FoundDel],fileFound	; file found, not deleted yet
+	OR	byte [ss:FoundDel],fileFound	; file found, not deleted yet
 ;
 ; If we are deleting the Volume ID, then we set VOLUME_CHNG flag to make
 ; DOS issue a build BPB call the next time this drive is accessed.
 ;
 	PUSH	DS
-	MOV	AH,[DELALL]
-	LDS	DI,[CURBUF]
+	MOV	AH,[ss:DELALL]
+	LDS	DI,[ss:CURBUF]
 ;ASSUME	DS:NOTHING
 ;; Extended Attributes
 ;	PUSH	AX			 ;FT. save cluster of XA		;AN000;
@@ -236,7 +236,7 @@ DELFILE:
 ;	POP	AX			 ;FT,					;AN000;
 
 ;; Extended Attributes
-	TEST	byte [ATTRIB],attr_read_only ; are we deleting RO files too?
+	TEST	byte [ss:ATTRIB],attr_read_only ; are we deleting RO files too?
 	JNZ	DoDelete		; yes
 	TEST	[BX+dir_entry.dir_attr],attr_read_only
 	JZ	DoDelete		; not read only
@@ -260,7 +260,7 @@ yesdirty_DELETE:
 	MOV	BX,[SI] 		; Get firclus pointer
 	POP	DS
 	DOSAssume   CS,<DS>,"Del_Share_OK"
-	OR	byte [FoundDel],fileDeleted	; Deleted file
+	OR	byte [ss:FoundDel],fileDeleted	; Deleted file
 	CMP	BX,2
 	JB	DELEXT			; File has invalid FIRCLUS (too small)
 	CMP	BX,[es:BP+dpb.dpb_max_cluster]
@@ -290,7 +290,7 @@ DELEXT:
 
 ;; Extended Attributes
 DELNXT:
-	LES	BP,[THISDPB]		; Possible to get here without this set
+	LES	BP,[ss:THISDPB]		; Possible to get here without this set
 	invoke	GETENTRY		; Registers need to be reset
 	JC	No_fileJ
 	invoke	NEXTENT
@@ -301,7 +301,7 @@ flsh:
 else
 	JNC	DELFILE
 end if
-	LES	BP,[THISDPB]		; NEXTENT sets ES=DOSGROUP
+	LES	BP,[ss:THISDPB]		; NEXTENT sets ES=DOSGROUP
 	MOV	AL,[es:BP+dpb.dpb_drive]
 	invoke	FlushBuf
 	JC	No_fileJ
@@ -313,20 +313,20 @@ end if
 ;	found not deleted		access denied (read-only)
 ;	found	  deleted		no error
 ;
-	TEST	byte [FoundDel],fileDeleted	; did we delete a file?
+	TEST	byte [ss:FoundDel],fileDeleted	; did we delete a file?
 	JZ	DelError		; no, figure out what's wrong.
 ; We set VOLCHNG_FLAG to indicate that we have changed the volume label
 ; and to force the DOS to issue a media check.
-	TEST	byte [ATTRIB],attr_volume_id
+	TEST	byte [ss:ATTRIB],attr_volume_id
 	jz	No_Set_Flag
 	PUSH	AX
 	PUSH	ES
 	PUSH	DI
-	LES	DI,[THISCDS]
+	LES	DI,[ss:THISCDS]
 ;ASSUME	ES:NOTHING
 	MOV	AH,byte [es:DI]	; Get drive
 	SUB	AH,'a'                  ; Convert to 0-based
-	mov	byte [VOLCHNG_FLAG],AH
+	mov	byte [ss:VOLCHNG_FLAG],AH
 	XOR	BH,BH			;>32mb delte volume id from boot record ;AN000;
 	invoke	Set_Media_ID		;>32mb set voulme id to boot record	;AN000;
 	invoke	FATREAD_CDS		; force media check
@@ -337,7 +337,7 @@ No_Set_Flag:
 	LeaveCrit   critDisk		; carry is clear
 	return
 DelError:
-	TEST	byte [FoundDel],fileFound	; not deleted.	Did we find file?
+	TEST	byte [ss:FoundDel],fileFound	; not deleted.	Did we find file?
 	JNZ	Del_Access_errJ 	; yes. Access denied
 No_fileJ:
 	JMP	No_file 		; Nope
@@ -380,9 +380,9 @@ Break	<REN_DEL_Check - check for access for Rename and delete>
 	PUSH	SI		; Save CURBUF pointers
 	context ES
 ;ASSUME	ES:DOSGROUP
-	MOV	DI,[WFP_START]	; ES:DI -> WFP
+	MOV	DI,[ss:WFP_START]	; ES:DI -> WFP
 	MOV	SI,BX
-	MOV	DS,word [CURBUF+2]	; DS:SI -> entry (FCB style name)
+	MOV	DS,word [ss:CURBUF+2]	; DS:SI -> entry (FCB style name)
 	MOV	BX,DI		; Set backup limit for skipback
 	ADD	BX,2		; Skip over d: to point to leading '\'
 	invoke	StrLen		; CX is length of ES:DI including NUL
@@ -390,7 +390,7 @@ Break	<REN_DEL_Check - check for access for Rename and delete>
 	ADD	DI,CX		; Point to NUL at end of string
 	invoke	SkipBack	; Back up one element
 	INC	DI		; Point to start of last element
-	MOV	[SAVE_BX],DI	;IFS. save for DOS_RENAME			   ;AN000;
+	MOV	[ss:SAVE_BX],DI	;IFS. save for DOS_RENAME			   ;AN000;
 	invoke	PackName	; Transfer name from entry to ASCIZ tail.
 	POP	SI		; Get back entry pointers
 	POP	BX
@@ -449,7 +449,7 @@ Break	<FastOpen_Delete - delete dir info in fastopen>
 	PUSH	BX
 	PUSH	AX
 
-	MOV	SI,[WFP_START]			       ; ds:si points to path name
+	MOV	SI,[ss:WFP_START]			       ; ds:si points to path name
 	MOV	AL,FONC_delete			       ; al = 3
 fastinvoke:
 	MOV	BX,FastTable+2
@@ -505,7 +505,7 @@ Break	<FastSeek_Open - create a file extent cache entry>
 	procedure  FastSeek_Open,NEAR						;AN000;
 ;ASSUME	DS:NOTHING,ES:NOTHING							;AN000;
 										;AN000;
-	TEST	byte [FastSeekFlg],Fast_yes	       ; Fastseek installed ?		;AN000;
+	TEST	byte [ss:FastSeekFlg],Fast_yes	       ; Fastseek installed ?		;AN000;
 	JZ	fs_no11 		       ; no				;AN000;
 	PUSH	SI			       ; save regs			;AN000;
 	PUSH	AX								;AN000;
@@ -560,7 +560,7 @@ Break	<FastSeek_Close -  Close a file extent entry>
 	procedure  FastSeek_Close,NEAR
 ;ASSUME	DS:NOTHING,ES:NOTHING							;AN000;
 
-	TEST	byte [FastSeekFlg],Fast_yes	       ; Fastseek installed ?		;AN000;
+	TEST	byte [ss:FastSeekFlg],Fast_yes	       ; Fastseek installed ?		;AN000;
 	JZ	fs_no2			       ; no				;AN000;
 	PUSH	SI			       ; save regs			;AN000;
 	PUSH	AX			       ;				;AN000;
@@ -583,7 +583,7 @@ Break	<FastSeek_Delete - delete a file extent  entry>
 	procedure  FastSeek_Delete,NEAR
 ;ASSUME	DS:NOTHING,ES:NOTHING							;AN000;
 										;AN000;
-	TEST	byte [FastSeekFlg],Fast_yes	       ; Fastseek installed ?		;AN000;
+	TEST	byte [ss:FastSeekFlg],Fast_yes	       ; Fastseek installed ?		;AN000;
 	JZ	fs_no2			       ; no				;AN000;
 	PUSH	SI			       ; save regs			;AN000;
 	PUSH	AX								;AN000;
@@ -604,7 +604,7 @@ EndProc FastSeek_Delete 							;AN000;
 
 	procedure  Delete_FSeek,NEAR						;AN000;
 ;ASSUME	DS:NOTHING,ES:NOTHING							;AN000;
-	TEST	byte [FastSeekFlg],Fast_yes	       ; Fastseek installed ?		;AN000;
+	TEST	byte [ss:FastSeekFlg],Fast_yes	       ; Fastseek installed ?		;AN000;
 	JZ	fs_no2			       ; no				;AN000;
 	PUSH	CX			; save regs				;AN000;
 	PUSH	DX								;AN000;
@@ -638,7 +638,7 @@ Break	<FastSeek_Lookup - look up a cluster number>
 	MOV	AL,FSEC_lookup		; al = 14				;AN000;
 	PUSH	BX			; save bx				;AN000;
 	CALL	FS_doit 		; call fastseek 			;AN000;
-	MOV	[FSeek_logsave],BX	; save returned BX			;AN000;
+	MOV	[ss:FSeek_logsave],BX	; save returned BX			;AN000;
 	POP	BX			; restore bx				;AN000;
 	POP	AX			; restore ax				;AN000;
 	return									;AN000;
@@ -661,7 +661,7 @@ Break	<FastSeek_Insert - insert a cluster number>
 	procedure  FastSeek_Insert,NEAR
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
-	TEST	byte [FastSeekFlg],FS_insert 	; insert mode set ?		;AN000;
+	TEST	byte [ss:FastSeekFlg],FS_insert 	; insert mode set ?		;AN000;
 	JZ	no_insert			; no				;AN000;
 										;AN000;
 	PUSH	AX				; save regs			;AN000;
@@ -690,7 +690,7 @@ Break	<FastSeek_Truncate - truncate cluster numbers>
 	procedure  FastSeek_Truncate,NEAR
 ;ASSUME	DS:NOTHING,ES:NOTHING
 										;AN000;
-	TEST	byte [FastSeekFlg],Fast_yes	       ; Fastseek installed ?		;AN000;
+	TEST	byte [ss:FastSeekFlg],Fast_yes	       ; Fastseek installed ?		;AN000;
 	JZ	fs_no			       ; no				;AN000;
 	PUSH	AX			       ; save regs			;AN000;
 	PUSH	BX								;AN000;
@@ -715,9 +715,9 @@ EndProc FastSeek_Truncate							;AN000;
 	PUSH	CX			; save regs				;AN000;
 	PUSH	DX								;AN000;
 	PUSH	SI								;AN000;
-	MOV	DL,[FSeek_drive]	; set drive #				;AN000;
-	MOV	CX,[FSeek_firclus]	; set 1st cluster #			;AN000;
-	MOV	BX,[FSeek_logclus]	; set logical cluster # 		;AN000;
+	MOV	DL,[ss:FSeek_drive]	; set drive #				;AN000;
+	MOV	CX,[ss:FSeek_firclus]	; set 1st cluster #			;AN000;
+	MOV	BX,[ss:FSeek_logclus]	; set logical cluster # 		;AN000;
 										;AN000;
 	CALL	FSeek_dispatch		; call fastseek 			;AN000;
 										;AN000;

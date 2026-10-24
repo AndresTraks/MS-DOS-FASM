@@ -177,7 +177,7 @@ pcont1: cmp     al,'.'
 	jmp     rcont
 pcont2: cmp     al,'a'                  ; if token may start with a drive
 	jge     drive                   ; designator, go to drive. otherwise
-	jmp     [Name1]                   ; parse a file name.
+	jmp     [ss:Name1]                   ; parse a file name.
 
 drive:  cmp     byte [si],':'       ; if there is a drive designator, parse
 	jne     name1                   ; and verify it. otherwise parse a file
@@ -273,7 +273,7 @@ Endproc PathParse$
 ; Is current character the beginning of a switch?
 
 isswit:
-	cmp     al,[chSwitch]
+	cmp     al,[ss:chSwitch]
 	jne     swret
 	stosb
 swret:  ret
@@ -354,7 +354,7 @@ psret:  ret
 ; Set ZF if the character in AL is a path separator.
 
 pasep:
-	cmp     [chSwitch],'/'
+	cmp     [ss:chSwitch],'/'
 	je      bkslash
 	cmp     al,'/'
 	retz

@@ -50,7 +50,7 @@ BREAK <DOS_DUP -- DUP SFT across network>
 	procedure   DOS_DUP,NEAR
 ;	ASSUME	ES:NOTHING,SS:NOTHING
 
-	LES	DI,[THISSFT]
+	LES	DI,[cs:THISSFT]
 	Entry	Dos_Dup_Direct
 	Assert	ISSFT,<ES,DI>,"DOSDup"
 	invoke	IsSFTNet

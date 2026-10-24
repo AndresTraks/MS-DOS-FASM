@@ -93,7 +93,7 @@ Create_inter:
 	JNZ	AttErr
 	TEST	AL,attr_volume_id
 	JZ	NoReset
-	OR	word [DOS34_FLAG],DBCS_VOLID      ;AN000;FOR dbcs volid
+	OR	word [ss:DOS34_FLAG],DBCS_VOLID      ;AN000;FOR dbcs volid
 	MOV	AL,attr_volume_id
 NoReset:
 	OR	AL,attr_archive ; File changed
@@ -101,26 +101,26 @@ NoReset:
 	JZ	ATT_OK
 AttErr:
 	MOV	AX,5		; Attribute problem
-	MOV	byte [EXTERR_LOCUS],errLOC_Unk
+	MOV	byte [ss:EXTERR_LOCUS],errLOC_Unk
 	JMP	SHORT SET_MKND_ERR ; Gotta use MKDIR to make dirs, NEVER allow
 				   ;	attr_device to be set.
 ATT_OK:
-	LES	DI,[THISSFT]
+	LES	DI,[ss:THISSFT]
 	PUSH	ES
-	LES	SI,[THISCDS]
+	LES	SI,[ss:THISCDS]
 	CMP	SI,-1
 	JNZ	TEST_RE_NET_CREATE
 	POP	ES
 
 ;Extended open hooks
-	TEST	byte [EXTOPEN_ON],ext_open_on    ;AN000;EO. from extnded open
+	TEST	byte [ss:EXTOPEN_ON],ext_open_on    ;AN000;EO. from extnded open
 	JZ	NOEXTOP_CREATE 		    ;AN000;EO. no, do normal
 IFS_extopen_CREATE:				    ;AN000;EO.
 	PUSH	AX			    ;AN000;EO. pass create attr
 	MOV	AX,(MultNET SHL 8) OR 46    ;AN000;EO. issue extended open verb
 	INT	2FH			    ;AN000;EO.
 	POP	BX			    ;AN000;EO. trash bx
-	MOV	byte [EXTOPEN_ON],0		    ;AN000;EO.
+	MOV	byte [ss:EXTOPEN_ON],0		    ;AN000;EO.
 	return				    ;AN000;EO.
 NOEXTOP_CREATE:				    ;AN000;
 ;Extended open hooks
@@ -148,7 +148,7 @@ dochk:
  ;	JC	nomore_CREATE			    ;AN000;IFS. share violation
 
 ;Extended open hooks
-	TEST	byte [EXTOPEN_ON],ext_open_on    ;AN000;EO. from extnded open
+	TEST	byte [ss:EXTOPEN_ON],ext_open_on    ;AN000;EO. from extnded open
 	JNZ	IFS_extopen_CREATE		    ;AN000;EO. yes, issue extended open
 ;Extended open hooks
 
@@ -171,7 +171,7 @@ setdone:
 	EnterCrit   critDisk
 	invoke	MakeNode
 	JNC	Create_ok
-	mov	byte [VOLCHNG_FLAG],-1	; indicate no change in volume label
+	mov	byte [ss:VOLCHNG_FLAG],-1	; indicate no change in volume label
 	LeaveCrit   critDisk
 
 	entry	SET_MKND_ERR
@@ -220,13 +220,13 @@ Create_ok:
 ;;; FASTOPEN 8/29/86
 	invoke	FastOpen_Delete
 ;;; FASTOPEN 8/29/86
-	mov	al,[SATTRIB]
+	mov	al,[ss:SATTRIB]
 	test	al,attr_volume_id
 	jz	NoVolLabel
-	LES	DI,[THISCDS]
+	LES	DI,[ss:THISCDS]
 	mov	ah,byte [es:DI]	; get drive letter
 	sub	ah,'a'                  ; convert to drive letter
-	mov	[VOLCHNG_FLAG],ah	;Set flag to indicate volid change
+	mov	[ss:VOLCHNG_FLAG],ah	;Set flag to indicate volid change
 	MOV	BH,1			;AN000;>32mb set volume id to boot record
 	CALL	Set_Media_ID		;AN000;>32mb
 
@@ -235,9 +235,9 @@ Create_ok:
 	LeaveCrit critDisk
 NoVolLabel:
 	MOV	ax,2
-	LES	DI,[THISSFT]
+	LES	DI,[ss:THISSFT]
 if Installed
-	call	dword [JShare+14*4]
+	call	dword [ss:JShare+14*4]
 else
 	Call	ShSU
 end if
@@ -370,10 +370,10 @@ end if
 	procedure   Set_EXT_mode,NEAR	    ;AN000;
 ;	ASSUME	ES:NOTHING,DS:NOTHING	    ;AN000;
 
-	TEST	byte [EXTOPEN_ON],ext_open_on    ;AN000;EO. from extnded open
+	TEST	byte [ss:EXTOPEN_ON],ext_open_on    ;AN000;EO. from extnded open
 	JZ	NOTEX			    ;AN000;EO. no, do normal
 	PUSH	AX			    ;AN000;EO.
-	MOV	AX,[SAVE_BX]		    ;AN000;EO.
+	MOV	AX,[ss:SAVE_BX]		    ;AN000;EO.
 	OR	[es:DI+sf_entry.sf_mode],AX	    ;AN000;EO.
 	POP	AX			    ;AN000;EO.
 	STC				    ;AN000;EO.

@@ -364,8 +364,8 @@ BREAK <CREATE_PROCESS_DATA_BLOCK$,SETMEM -- Set up process data Block>
 ;
 	procedure   Dup_PDB$,NEAR
 ;ASSUME	DS:NOTHING,ES:NOTHING,SS:NOTHING
-	MOV	byte [CreatePDB],0FFH		; indicate a new process
-	MOV	DS,[CurrentPDB]
+	MOV	byte [cs:CreatePDB],0FFH		; indicate a new process
+	MOV	DS,[cs:CurrentPDB]
 	PUSH	SI
 	JMP	SHORT	CreateCopy
 EndProc Dup_PDB$
@@ -400,7 +400,7 @@ CreateCopy:
 	POP	DS
 
 ; DOS 3.3 7/9/86
-	TEST	byte [CreatePDB],0FFh		; Shall we create a process?
+	TEST	byte [cs:CreatePDB],0FFh		; Shall we create a process?
 	JZ	Create_PDB_cont 	; nope, old style call
 ;
 ; Here we set up for a new process...
@@ -430,8 +430,8 @@ Create_dup_jfn:
 ; The handle we have found is duplicatable (and inheritable).  Perform
 ; duplication operation.
 ;
-	MOV	word [THISSFT],DI
-	MOV	word [THISSFT+2],ES
+	MOV	word [cs:THISSFT],DI
+	MOV	word [cs:THISSFT+2],ES
 	invoke	DOS_DUP 		; signal duplication
 ;
 ; get the old sfn for copy
@@ -447,16 +447,16 @@ CreateStash:
 	INC	BX			; next jfn...
 	LOOP	Create_dup_jfn
 
-	MOV	BX,[CurrentPDB]		; get current process
+	MOV	BX,[cs:CurrentPDB]		; get current process
 	MOV	[es:Process_data_block.PDB_Parent_PID],BX	; stash in child
-	MOV	[CurrentPDB],ES
+	MOV	[cs:CurrentPDB],ES
 ;	ASSUME	DS:NOTHING
 	MOV	DS,BX
 ;
 ; end of new process create
 ;
 Create_PDB_cont:
-	MOV	byte [CreatePDB],0h ; reset flag
+	MOV	byte [cs:CreatePDB],0h ; reset flag
 	POP	AX
 
 	entry	SETMEM

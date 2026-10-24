@@ -95,14 +95,14 @@ procedure   GetSet_XA,near					   ;AN000;
 ;	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:DOSGROUP	   ;AN000;
 
 
-	LES    DI,dword [SAVE_DI]  ;AN000;;FT. ES:DI -> query list
+	LES    DI,dword [ss:SAVE_DI]  ;AN000;;FT. ES:DI -> query list
 ;;	MOV    [SAVE_BX],2	       ;AN000;;FT. size returned
 ;;	XOR    DX,DX		       ;AN000;;FT. dx=0, codepage id
 
-	CMP    byte [XA_type],2	       ;AN000;;FT. get EA  ?
+	CMP    byte [ss:XA_type],2	       ;AN000;;FT. get EA  ?
 	JNZ    eaname		       ;AN000;;FT. no
 getEAs: 			       ;AN000;
-	CMP    word [SAVE_CX],0	       ;AN000;;FT. get max data size
+	CMP    word [ss:SAVE_CX],0	       ;AN000;;FT. get max data size
 	JNZ    notmax		       ;AN000;;FT. no
 ;;	CALL   Get_max_EA_size	       ;AN000;;FT.
 
@@ -110,7 +110,7 @@ getEAs: 			       ;AN000;
 	JNC    set_user_cx	       ;AN000;;FT.
 	JMP    OKexit		       ;AN000;;FT. error
 notmax:
-	CMP    word [SAVE_CX],1	       ;AN000;;FT. buffer size =1   ?
+	CMP    word [ss:SAVE_CX],1	       ;AN000;;FT. buffer size =1   ?
 	JNZ    goodsiz		       ;AN000;;FT. no
 errout: 			       ;AN000;
 	JMP    insuff_space	       ;AN000;;FT. no error
@@ -141,12 +141,12 @@ goodsiz:			       ;AN000;
 ;
 ;	JMP    OKexit		       ;AN000;;FT.
 eaname:
-	CMP    byte [XA_type],3	       ;AN000;;FT. get EA name?`
+	CMP    byte [ss:XA_type],3	       ;AN000;;FT. get EA name?`
 	JZ     geteaname	       ;AN000;;FT. yes
 	JMP    setea		       ;AN000;;FT.
 geteaname:
 ;	MOV    [SAVE_SI],-1	       ;AN000;;FT. make get all
-	CMP    word [SAVE_CX],0	       ;AN000;;FT. get max data size
+	CMP    word [ss:SAVE_CX],0	       ;AN000;;FT. get max data size
 	JNZ    notmax		       ;AN000;;FT. no
 	MOV    CX,2		       ;AN000;;FT. FAKE FAKE ......................
 ;;	MOV    CX,[MAX_EANAME_SIZE]    ;AN000;;FT. get name size

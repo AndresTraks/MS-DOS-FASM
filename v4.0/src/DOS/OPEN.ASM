@@ -113,29 +113,29 @@ Break	<DOS_Open - internal file access>
 	DOSAssume   CS,<DS>,"DOS_Open"
 ;	ASSUME	ES:NOTHING
 
-	MOV	byte [NoSetDir],0
+	MOV	byte [ss:NoSetDir],0
 	CALL	Check_Access_AX
 	retc
-	LES	DI,[THISSFT]
+	LES	DI,[ss:THISSFT]
 	XOR	AH,AH
 ; sleaze! move only access/sharing mode in.  Leave sf_isFCB unchanged
 	MOV	byte [es:DI+sf_entry.sf_mode],AL ; For moment do this on FCBs too
 	PUSH	ES
-	LES	SI,[THISCDS]
+	LES	SI,[ss:THISCDS]
 	CMP	SI,-1
 	JNZ	TEST_RE_NET_OPEN
 	POP	ES
 ;Extended open hooks
 
-	TEST	byte [EXTOPEN_ON],ext_open_on    ;FT. from extnded open		;AN000;
+	TEST	byte [ss:EXTOPEN_ON],ext_open_on    ;FT. from extnded open		;AN000;
 	JZ	NOEXTOP_OPEN 		    ;FT. no, do normal			;AN000;
 IFS_extopen_OPEN:									;AN000;
-	MOV	AL,byte [SAVE_CX]	    ;FT. al= create attribute		;AN000;
+	MOV	AL,byte [ss:SAVE_CX]	    ;FT. al= create attribute		;AN000;
 	PUSH	AX			    ;FT. pass create attr to IFS	;AN000;
 	MOV	AX,(MultNET SHL 8) OR 46    ;FT. issue extended open verb	;AN000;
 	INT	2FH			    ;FT.				;AN000;
 	POP	BX			    ;FT. trash bx			;AN000;
-	MOV	byte [EXTOPEN_ON],0		    ;FT.				;AN000;
+	MOV	byte [ss:EXTOPEN_ON],0		    ;FT.				;AN000;
 	JNC	update_size		    ;IFS. file may be opened		;AN000;
 	return				    ;FT.				;AN000;
 NOEXTOP_OPEN:
@@ -160,7 +160,7 @@ TEST_RE_NET_OPEN:
 ;	JC	nomore_OPEN			;IFS. share violation			;AN000;
 ;Extended open hooks
 
-	TEST	byte [EXTOPEN_ON],ext_open_on    ;FT. from extnded open		;AN000;
+	TEST	byte [ss:EXTOPEN_ON],ext_open_on    ;FT. from extnded open		;AN000;
 	JNZ	IFS_extopen_OPEN		    ;FT. isuue extended open		;AN000;
 ;Extended open hooks
 
@@ -189,7 +189,7 @@ LOCAL_OPEN:
 
 ; DOS 3.3 FastOPen 6/16/86
 
-	OR	byte [FastOpenFlg],FastOpen_Set+Special_Fill_Set   ;  only open can
+	OR	byte [ss:FastOpenFlg],FastOpen_Set+Special_Fill_Set   ;  only open can
 	invoke	GETPATH
 
 
@@ -219,7 +219,7 @@ Open_found:
 	JZ	open_bad_access 	; test for directories
 	OR	AH,AH
 	JS	open_ok 		; Devices don't have attributes
-	MOV	ES,word [CURBUF+2]	; get buffer location
+	MOV	ES,word [ss:CURBUF+2]	; get buffer location
 	MOV	AL,[es:BX+dir_entry.dir_attr]
 	TEST	AL,attr_volume_id	; can't open volume ids
 	JNZ	open_bad_access
@@ -236,7 +236,7 @@ Open_found:
 ; If not open for read then error.
 ;
 	SaveReg <DS,SI>
-	LDS	SI,[THISSFT]
+	LDS	SI,[ss:THISSFT]
 	MOV	CX,[SI+sf_entry.sf_mode]
 	TEST	CX,sf_isfcb		; is it FCB?
 	JNZ	ResetAccess		; yes, reset the access
@@ -295,14 +295,14 @@ NORM0:
 
 SHARE_OK:
 	MOV	AX,3
-	LES	DI,[THISSFT]
+	LES	DI,[ss:THISSFT]
 if Installed
-	call	dword [JShare+14*4]
+	call	dword [ss:JShare+14*4]
 else
 	Call	ShSU
 end if
 ;; DOS 4.00 10/27/86
-	LES	DI,[THISSFT]			   ; if this is a newly 	;AN000;
+	LES	DI,[ss:THISSFT]			   ; if this is a newly 	;AN000;
 	CMP	[es:DI+sf_entry.sf_firclus],0		   ; created file then		;AN000;
 	JZ	no_fastseek			   ; do nothing 		;AN000;
 	MOV	CX,[es:DI+sf_entry.sf_firclus]		   ; first cluster #		;AN000;
@@ -329,11 +329,11 @@ no_fastseek:
 	DOSAssume   CS,<DS>,"Set_SFT_Mode"
 ;	ASSUME	ES:NOTHING
 
-	LES	DI,[THISSFT]
+	LES	DI,[ss:THISSFT]
 	invoke	DEV_OPEN_SFT
 	TEST	[es:DI+sf_entry.sf_mode],sf_isfcb; Clears carry
 	retz				; sf_mode correct
-	MOV	AX,[CurrentPDB]
+	MOV	AX,[ss:CurrentPDB]
 	MOV	[es:DI+sf_entry.sf_PID],AX	; For FCB sf_PID=PID
 
 Clear_FastOpen:
@@ -378,7 +378,7 @@ procedure DO_SHARE_CHECK,NEAR
 	EnterCrit   critDisk		; enter critical section
 
 OPN_RETRY:
-	MOV	CX,[RetryCount]		; Get # tries to do
+	MOV	CX,[ss:RetryCount]		; Get # tries to do
 OpenShareRetry:
 	SaveReg <CX>			; Save number left to do
 	invoke	SHARE_CHECK		; Final Check
@@ -387,7 +387,7 @@ OpenShareRetry:
 	Invoke	Idle
 	LOOP	OpenShareRetry		; One more retry used up
 OpenShareFail:
-	LES	DI,[THISSFT]
+	LES	DI,[ss:THISSFT]
 	invoke	SHARE_ERROR
 	JNC	OPN_RETRY		; User wants more retry
 Share_Ok2:
@@ -510,14 +510,14 @@ EndProc IFS_SHARE_CHECK 		;AN000;
 	DOSAssume   CS,<DS>,"Check_Access"
 ;	ASSUME	ES:NOTHING
 
-	MOV	[open_access],AL
+	MOV	[ss:open_access],AL
 	PUSH	BX
 ;
 ; If sharing, then test for special sharing mode for FCBs
 ;
 	MOV	BL,AL
 	AND	BL,sharing_mask
-	CMP	byte [fSharing],-1
+	CMP	byte [ss:fSharing],-1
 	JNZ	CheckShareMode		; not through server call, must be ok
 	CMP	BL,sharing_net_FCB
 	JZ	CheckAccessMode 	; yes, we have an FCB

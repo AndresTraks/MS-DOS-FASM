@@ -226,7 +226,7 @@ Procedure   ExtHandle$,NEAR
 	MOV	BX,FilPerProc		;  bx = 20
 
 getpdb:
-	MOV	ES,[CurrentPDB] 	; get user process data block
+	MOV	ES,[ss:CurrentPDB] 	; get user process data block
 	MOV	CX,[es:Process_data_block.PDB_JFN_Length]	; get number of handle allowed
 	CMP	BX,CX			; the requested == current
 	JE	ok_done 		; yes and exit
@@ -267,7 +267,7 @@ larger:
 	MOV	ES,AX			; es:di points to new table memory
 	XOR	DI,DI
 movhandl:
-	MOV	DS,[CurrentPDB] 	; get user PDB address
+	MOV	DS,[ss:CurrentPDB] 	; get user PDB address
 
 	TEST	BP,3			; enlarge ?
 	JZ	enlarge 		; yes
@@ -293,7 +293,7 @@ copy_hand:
 	MOV	AL,-1			; set availability to handles
 	REP	STOSB
 
-	MOV	DS,[CurrentPDB] 	; get user process data block
+	MOV	DS,[ss:CurrentPDB] 	; get user process data block
 	CMP	word [Process_data_block.PDB_JFN_Pointer],0  ; check if original table pointer
 	JNZ	update_info		; yes, go update PDB entries
 	PUSH	BP
@@ -355,16 +355,16 @@ ReadError:
 	fmt TypSyscall,LevLog,<"Read/Write error x$\n">,<AX>
 	transfer    SYS_RET_ERR 	; go to error traps
 ReadSetup:
-	MOV	word [THISSFT],DI	; save offset of pointer
-	MOV	word [THISSFT+2],ES ; save segment value
+	MOV	word [ss:THISSFT],DI	; save offset of pointer
+	MOV	word [ss:THISSFT+2],ES ; save segment value
 ;; Extended Open
 	TEST	[es:DI+sf_entry.sf_mode],int_24_error  ;AN000;;EO. need i24
 	JZ	needi24 		      ;AN000;;EO. yes
-	OR	byte [EXTOPEN_ON],ext_open_I24_off ;AN000;;EO. set it off
+	OR	byte [ss:EXTOPEN_ON],ext_open_I24_off ;AN000;;EO. set it off
 needi24:				      ;AN000;
 
 ;; Extended Open
-	SaveReg <word [DMAADD], word [DMAADD+2]>
+	SaveReg <word [ss:DMAADD], word [ss:DMAADD+2]>
 ;;;;;	BAD SPOT FOR 286!!! SEGMENT ARITHMETIC!!!
 	CALL	Align_Buffer		;AN000;MS. align user's buffer
 ;;;;;	END BAD SPOT FOR 286!!! SEGMENT ARITHMETIC!!!
@@ -439,8 +439,8 @@ procedure   Align_Buffer,NEAR		;AN000;
 	ADD	AX,BX			; get new segment
 	MOV	DS,AX			; in seg register
 	AND	DX,0Fh			; normalize offset
-	MOV	word [DMAADD],DX	; use user DX as offset
-	MOV	word [DMAADD+2],DS	; use user DS as segment for DMA
+	MOV	word [ss:DMAADD],DX	; use user DX as offset
+	MOV	word [ss:DMAADD+2],DS	; use user DS as segment for DMA
 	return				;AN000;
 EndProc Align_Buffer			;AN000;
 
@@ -496,7 +496,7 @@ else
 end if
 	CMP	AL,2			; is the seek value correct?
 	JBE	LSeekDisp		; yes, go dispatch
-	MOV	byte [EXTERR_LOCUS],errLOC_Unk ; Extended Error Locus
+	MOV	byte [ss:EXTERR_LOCUS],errLOC_Unk ; Extended Error Locus
 	error	error_invalid_function	; invalid method
 LSeekDisp:
 	CMP	AL,1			; best way to dispatch; check middle
@@ -591,12 +591,12 @@ funcerr:				;AN000;
 	JMP	inval_func		;AN000;;FT. invalid function
 					;AN000;
 gshandle:				;AN000;
-	MOV	[SAVE_ES],ES		;AN000;;FT. save regs
-	MOV	[SAVE_DI],DI		;AN000;;FT.
-	MOV	[SAVE_DS],DS		;AN000;;FT. save regs
-	MOV	[SAVE_SI],SI		;AN000;;FT.
-	MOV	[SAVE_CX],CX		;AN000;;FT.
-	MOV	[XA_type],AL		;AN000;;FT.
+	MOV	[ss:SAVE_ES],ES		;AN000;;FT. save regs
+	MOV	[ss:SAVE_DI],DI		;AN000;;FT.
+	MOV	[ss:SAVE_DS],DS		;AN000;;FT. save regs
+	MOV	[ss:SAVE_SI],SI		;AN000;;FT.
+	MOV	[ss:SAVE_CX],CX		;AN000;;FT.
+	MOV	[ss:XA_type],AL		;AN000;;FT.
 					;AN000;
 ;	MOV	[XA_handle],BX		;AN000;    ;FT. save handle
 	CALL	CheckOwner		;AN000;    ;FT. get sf pointer
@@ -605,8 +605,8 @@ gshandle:				;AN000;
 	JMP	LSeekError		;AN000;    ;FT. turkey handle
 					;AN000;
 getsetit:				;AN000;
-	MOV	word [THISSFT],DI	;AN000;       ;FT. set ThisSFT
-	MOV	word [THISSFT+2],ES ;AN000;       ;FT. set ThisSFT
+	MOV	word [ss:THISSFT],DI	;AN000;       ;FT. set ThisSFT
+	MOV	word [ss:THISSFT+2],ES ;AN000;       ;FT. set ThisSFT
 ;	TEST	ES:[DI.sf_mode],INT_24_ERROR   ;AN000;;FT. mask INT 24
 ;	JZ	nomask			       ;AN000;;FT. no
 ;	OR	[EXTOPEN_ON],EXT_OPEN_I24_OFF  ;AN000;;FT. set bit for I24 handler
@@ -615,7 +615,7 @@ nomask: 				       ;AN000;
 	JZ	localhandle		       ;AN000;;FT. no
 	LeaveCrit   critSFT		       ;AN000;;FT. doesn't support Network
 
-	MOV	BL,[XA_type]		       ;AN000;;FT.
+	MOV	BL,[ss:XA_type]		       ;AN000;;FT.
 IFSsearch:				       ;AN000;
 	MOV	AX,(MultNET SHL 8) or 45       ;AN000;;FT. Get/Set XA support
 	INT	2FH			       ;AN000;
@@ -659,7 +659,7 @@ getseterror:				       ;AN000;
 inval_func:
 
 ;;;;; DOS 4.00
-	MOV	byte [EXTERR_LOCUS],errLOC_Unk ; Extended Error Locus
+	MOV	byte [ss:EXTERR_LOCUS],errLOC_Unk ; Extended Error Locus
 	error	error_invalid_function	; give bad return
 filetimes_ok:
 	call	CheckOwner		; get sf pointer
@@ -684,7 +684,7 @@ filetimes_set:
 	XOR	AX,AX
 do_share:
 if Installed
-	Call	dword [JShare+14*4]
+	Call	dword [ss:JShare+14*4]
 else
 	Call	ShSU
 end if
@@ -768,7 +768,7 @@ Procedure   CheckOwner,NEAR
 	invoke	SFFromHandle
 	retc
 	push	ax
-	mov	ax,[USER_ID]
+	mov	ax,[ss:USER_ID]
 	cmp	ax,[es:di+sf_entry.sf_UID]
 	pop	ax
 	retz

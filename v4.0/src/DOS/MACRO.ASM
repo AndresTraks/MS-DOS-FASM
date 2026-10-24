@@ -193,7 +193,7 @@ Break <FIND_DPB - Find a dpb from a drive number>
 ;   registers modified: DS,SI
 Procedure FIND_DPB,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
-	LDS	SI,[DPBHEAD]
+	LDS	SI,[ss:DPBHEAD]
 DPB_LOOP:
 	CMP	SI,-1
 	JZ	NO_DPB
@@ -220,9 +220,9 @@ Procedure InitCDS,NEAR
 	MOV	AH,':'
 	PUSH	AX
 	SUB	AL,"a"-1                ; A = 1
-	CMP	[NUMIO],AL
+	CMP	[ss:NUMIO],AL
 	POP	AX
-	LES	DI,[THISCDS]
+	LES	DI,[ss:THISCDS]
 	MOV	[es:DI+curdir_list.curdir_flags],0	; "free" CDS
 	JB	RET_OK			; Drive does not map a physical drive
 	MOV	word [es:DI+curdir_list.curdir_text],AX
@@ -276,7 +276,7 @@ Procedure   UserOper$,NEAR
 	JZ	UserSet 		; set the current user
 	CMP	AL,5			; test for 2,3,4 or 5
 	JBE	UserPrint		; yep
-	MOV	byte [EXTERR_LOCUS],errLOC_Unk ; Extended Error Locus
+	MOV	byte [ss:EXTERR_LOCUS],errLOC_Unk ; Extended Error Locus
 	error	error_invalid_function	; not 0,1,2,3
 
 UserGet:
@@ -285,7 +285,7 @@ UserGet:
 	PUSH	DS			; switch registers
 	POP	ES
 	MOV	DI,DX			; destination
-	MOV	CX,[MYNUM]		; Get number
+	MOV	CX,[ss:MYNUM]		; Get number
 	invoke	get_user_stack
 	MOV	[SI+user_environ.user_CX],CX 	; Set number return
 	Context DS			; point to DOSGroup
@@ -304,11 +304,11 @@ UserSet:
 ;ASSUME	DS:NOTHING
 ; Transfer DS:DX to MYNAME
 ; CX to MYNUM
-	MOV	[MYNUM],CX
+	MOV	[ss:MYNUM],CX
 	MOV	SI,DX			; user space has source
 	Context ES
 	MOV	DI,MYNAME   ; point dest to user string
-	INC	byte [DIFFNAM]		  ; signal change
+	INC	byte [ss:DIFFNAM]		  ; signal change
 	JMP	UserMove
 
 UserPrint:
@@ -345,11 +345,11 @@ Procedure   GetVisDrv,NEAR
 	CALL	GetThisDrv		; get inuse drive
 	retc
 	SaveReg <DS,SI>
-	LDS	SI,[THISCDS]
+	LDS	SI,[ss:THISCDS]
 	TEST	[SI+curdir_list.curdir_flags],curdir_splice
 	RestoreReg  <SI,DS>
 	retz				; if not spliced, return OK
-	MOV	byte [DrvErr],error_invalid_drive ;IFS.				;AN000;
+	MOV	byte [ss:DrvErr],error_invalid_drive ;IFS.				;AN000;
 	STC				; signal error
 	return
 EndProc GetVisDrv
@@ -371,17 +371,17 @@ Procedure   GetThisDrv,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	OR	AL,AL			; are we using default drive?
 	JNZ	GetMap			; no, go get the CDS pointers
-	MOV	AL,[CURDRV]		; get the current drive
+	MOV	AL,[ss:CURDRV]		; get the current drive
 	INC	AL			; Counteract next instruction
 GetMap:
 	DEC	AL			; 0 = A
 	SaveReg <DS,SI> 		; save world
-	mov	byte [EXTERR_LOCUS],errLOC_Disk
-	TEST	byte [fSharing],-1		; Logical or Physical?
+	mov	byte [ss:EXTERR_LOCUS],errLOC_Disk
+	TEST	byte [ss:fSharing],-1		; Logical or Physical?
 	JZ	Not_SRVC		; Logical
 	SaveReg <AX,ES,DI>
-	MOV	word [THISCDS],DummyCDS
-	MOV	word [THISCDS+2],CS	;	ThisCDS = &DummyCDS;
+	MOV	word [ss:THISCDS],DummyCDS
+	MOV	word [ss:THISCDS+2],CS	;	ThisCDS = &DummyCDS;
 	ADD	AL,'a'
 	CALL	InitCDS 		;	InitCDS(c);
 	TEST	[es:DI+curdir_list.curdir_flags],curdir_inuse	; Clears carry
@@ -401,8 +401,8 @@ GetBerr:
 GetBerr2:
 	MOV	AL,error_invalid_drive	;AN000;;IFS. invalid FAT drive
 notfat: 				;AN000;
-	MOV	[DrvErr],AL		;AN000;;IFS. save this for IOCTL
-	mov	byte [EXTERR_LOCUS],errLOC_Unk
+	MOV	[ss:DrvErr],AL		;AN000;;IFS. save this for IOCTL
+	mov	byte [ss:EXTERR_LOCUS],errLOC_Unk
 	STC
 GetBye_MACRO: RestoreReg  <SI,DS>		; restore world
 	return
@@ -424,18 +424,18 @@ Break <GetCDSFromDrv - convert a drive number to a CDS pointer>
 
 Procedure   GetCDSFromDrv,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
-	CMP	AL,[CDSCOUNT]		; is this a valid designator
+	CMP	AL,[ss:CDSCOUNT]		; is this a valid designator
 	JB	GetCDS			; yes, go get the macro
 	STC				; signal error
 	return				; bye
 GetCDS:
 	SaveReg <BX,AX>
-	LDS	SI,[CDSADDR]		; get pointer to table
+	LDS	SI,[ss:CDSADDR]		; get pointer to table
 	MOV	BL,sizeof.curdir_list	; size in convenient spot
 	MUL	BL			; get net offset
 	ADD	SI,AX			; convert to true pointer
-	MOV	word [THISCDS],SI	; store convenient offset
-	MOV	word [THISCDS+2],DS ; store convenient segment
+	MOV	word [ss:THISCDS],SI	; store convenient offset
+	MOV	word [ss:THISCDS+2],DS ; store convenient segment
 	RestoreReg  <AX,BX>
 	CLC				; no error
 	return				; bye!

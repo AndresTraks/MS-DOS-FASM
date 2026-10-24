@@ -159,13 +159,13 @@ MACRO001E:
 	Context ES			; get DOSGroup addressability
 	SaveReg <ES,DI> 		; save away final destination
 	LEA	DI,FCBTmp		; point to FCB temp area
-	MOV	byte [EXTFCB],0		; no extended FCB found
-	MOV	byte [SATTRIB],0		; default search attributes
+	MOV	byte [ss:EXTFCB],0		; no extended FCB found
+	MOV	byte [ss:SATTRIB],0		; default search attributes
 	invoke	GetExtended		; get FCB, extended or not
 	JZ	GetDrive		; not an extended FCB, get drive
 	MOV	AL,[SI-1]		; get attributes
-	MOV	[SATTRIB],AL		; store search attributes
-	MOV	byte [EXTFCB],-1		; signal extended FCB
+	MOV	[ss:SATTRIB],AL		; store search attributes
+	MOV	byte [ss:EXTFCB],-1		; signal extended FCB
 GetDrive:
 	LODSB				; get drive byte
 	invoke	GetThisDrv
@@ -187,9 +187,9 @@ FCBScan:LODSB				;AN000;; get a byte
 	LODSB				;AN000;; second kanji byte
 	jmp	short NextCh		;AN000;
 VolidChck:				;AN000;
-	TEST	[SATTRIB],attr_volume_id ;AN000;; volume id ?
+	TEST	[ss:SATTRIB],attr_volume_id ;AN000;; volume id ?
 	JZ	BadPack 		 ;AN000;; no, error
-	OR	[DOS34_FLAG],DBCS_VOLID  ;AN000;; no, error
+	OR	[ss:DOS34_FLAG],DBCS_VOLID  ;AN000;; no, error
 	DEC	CX			 ;AN000;; cx=-1
 	INC	SI			 ;AN000;; next char
 	JMP	SHORT FCBScango 	 ;AN000;
@@ -314,23 +314,23 @@ Procedure   TransPath,NEAR
 	Entry	TransPathSet
 	MOV	AL,-1
 SetSplice:
-	MOV	[NoSetDir],AL		;   NoSetDir = !fExact;
+	MOV	[ss:NoSetDir],AL		;   NoSetDir = !fExact;
 	MOV	AL,-1
 	Entry	TransPathNoSet
-	MOV	word [NO_FILTER_PATH],SI   ;AN000;;IFS. save old path for IFS
-	MOV	word [NO_FILTER_PATH+2],DS ;AN000;;IFS.
+	MOV	word [ss:NO_FILTER_PATH],SI   ;AN000;;IFS. save old path for IFS
+	MOV	word [ss:NO_FILTER_PATH+2],DS ;AN000;;IFS.
 
-	MOV	[fSplice],AL		;   fSplice = TRUE;
-	MOV	byte [cMeta],-1
-	MOV	[WFP_START],DI
-	MOV	word [CURR_DIR_END],-1 	; crack from start
+	MOV	[ss:fSplice],AL		;   fSplice = TRUE;
+	MOV	byte [ss:cMeta],-1
+	MOV	[ss:WFP_START],DI
+	MOV	word [ss:CURR_DIR_END],-1 	; crack from start
 	Context ES
 	LEA	BP,[DI+TEMPLEN] 	; end of buffer
 ;
 ; if this is through the server dos call, fsharing is set.  We set up a
 ; dummy cds and let the operation go.
 ;
-	TEST	byte [fSharing],-1		; if no sharing
+	TEST	byte [ss:fSharing],-1		; if no sharing
 	JZ	CheckUnc		; skip to UNC check
 ;
 ; ES:DI point to buffer
@@ -365,7 +365,7 @@ NoPath:
 ; the name if so.
 ;
 CheckUnc:
-	MOV	word [THISCDS],-1	; NULL thisCDS
+	MOV	word [ss:THISCDS],-1	; NULL thisCDS
 	CallInstall NetSpoolCheck,MultNET,35
 	JNC	UNCDone
 ;
@@ -480,9 +480,9 @@ CheckPath:
 ; sharing DOS call.  We know by getting here that we are NOT in a sharing DOS
 ; call.
 ;
-	MOV	byte [fSharing],-1		; simulate sharing dos call
+	MOV	byte [ss:fSharing],-1		; simulate sharing dos call
 	invoke	GetThisDrv		; set ThisCDS and init DUMMYCDS
-	MOV	byte [fSharing],0		;
+	MOV	byte [ss:fSharing],0		;
 ;
 ; Now that we have noted that we have a device, we put it into a form that
 ; getpath can understand.  Normally getpath requires d:\ to begin the input
@@ -520,7 +520,7 @@ DoFile:
 ; current directory.  Copy it in.
 ;
 	SaveReg <DS,SI>
-	LDS	SI,[THISCDS]		; point to CDS
+	LDS	SI,[ss:THISCDS]		; point to CDS
 	MOV	BX,DI			; point to destination
 	ADD	BX,[SI+curdir_list.curdir_end]	; point to backup limit
 ;	LEA	SI,[SI].curdir_text	; point to text
@@ -607,7 +607,7 @@ DoCanon:
 ; station. Check for a leading \\ in the path buffer and call TP_check05 to
 ; reconvert if found.
 
-	MOV	DI,[WFP_START]		;AN000;; ES:DI points to string
+	MOV	DI,[ss:WFP_START]		;AN000;; ES:DI points to string
 	MOV	AX,word [es:DI]	;AN000;; Get leading 2 chars from path buffer
 	invoke	PATHCHRCMP		;AN000;; First char a path char?
 	JNZ	TP_notremote		;AN000;; Not remote if not.
@@ -636,7 +636,7 @@ TP_notremote:				;AN000;
 ;---------------------------- Start of DBCS 2/13/KK
 	PUSH	BX			;AN000;
 	MOV	BX,SI			;AN000;
-	MOV	SI,word [THISCDS]	;AN000;; point to CDS
+	MOV	SI,word [ss:THISCDS]	;AN000;; point to CDS
 LOOKDUAL:				;AN000;
 	MOV	AL,byte [SI]	;AN000;
 	invoke	TESTKANJ		;AN000;
@@ -662,7 +662,7 @@ Pathline:				; 2/13/KK
 	CMP	byte [es:DI],0	; end at NUL?
 	JZ	DoSplice_MACRO2
 	INC	DI			; point to after current path char
-	MOV	[CURR_DIR_END],DI 	; point to correct spot
+	MOV	[ss:CURR_DIR_END],DI 	; point to correct spot
 ;
 ; Splice the result.
 ;
@@ -762,7 +762,7 @@ chk_last_colon:				;AN000;
 	push	si			;AN000;
 	push	ax			;AN000;
 	push	bx			;AN000;
-	mov	si,[WFP_START]		;AN000;;PTM. for cd ..	use beginning of buf
+	mov	si,[ss:WFP_START]		;AN000;;PTM. for cd ..	use beginning of buf
 	cmp	si,di			;AN000;; no data stored ?
 	jb	CLC02			;AN000;;PTM. for cd ..
 	inc	si			;AN000;; make NZ flag
@@ -993,10 +993,10 @@ NormalComp:				;   else {
 	Invoke	NameTrans		;	s = NameTrans (s, Name1);
 	CMP	SI,CopySoff		;	if (s == CopySOff)
 	JZ	CopyBad 		;	    return (-1);
-	TEST	byte [fSharing],-1		;	if (!fSharing) {
+	TEST	byte [ss:fSharing],-1		;	if (!fSharing) {
 	JNZ	DoPack
 	AND	DL,1			;	    cMeta += fMeta;
-	ADD	[cMeta],DL		;	    if (cMeta > 0)
+	ADD	[ss:cMeta],DL		;	    if (cMeta > 0)
 	JG	CopyBad 		;		return (-1);
 	JNZ	DoPack			;	    else
 	OR	DL,DL			;	    if (cMeta == 0 && fMeta == 0)
@@ -1058,9 +1058,9 @@ Break <Splice - pseudo mount by string substitution>
 
 Procedure   Splice,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
-	TEST	byte [Splices],-1
+	TEST	byte [ss:Splices],-1
 	JZ	AllDone
-	SaveReg <word [THISCDS],word [THISCDS+2]>   ; TmpCDS = ThisCDS
+	SaveReg <word [ss:THISCDS],word [ss:THISCDS+2]>   ; TmpCDS = ThisCDS
 	SaveReg <DS,SI>
 	RestoreReg <DI,ES>
 	XOR	AX,AX			;   for (i=1; s = GetCDSFromDrv (i); i++)
@@ -1079,19 +1079,19 @@ SpliceSkip:
 SpliceFound:
 	CMP	byte [es:DI],0	;	    if (*s || NoSetDir) {
 	JNZ	SpliceDo
-	TEST	byte [NoSetDir],-1
+	TEST	byte [ss:NoSetDir],-1
 	JNZ	SpliceSkip
 SpliceDo:
 	MOV	SI,DI			;		p = src + strlen (p);
 	SaveReg <ES>
 	RestoreReg  <DS,DI>
 	CALL	TextFromDrive1		;		src = TextFromDrive1(src,i);
-	MOV	AX,[CURR_DIR_END]
+	MOV	AX,[ss:CURR_DIR_END]
 	OR	AX,AX
 	JS	NoPoke
 	ADD	AX,DI			;		curdirend += src-p;
 	SUB	AX,SI
-	MOV	[CURR_DIR_END],AX
+	MOV	[ss:CURR_DIR_END],AX
 NoPoke:
 	CMP	byte [SI],0 	;		if (*p)
 	JNZ	SpliceCopy		;		    *src++ = '\\';
@@ -1104,14 +1104,14 @@ SpliceCopy:				;		strcpy (src, p);
 	JMP	SHORT DoSet		;		return;
 SpliceDone:				;		}
 ;	ASSUME	DS:NOTHING		;   ThisCDS = TmpCDS;
-	RestoreReg  <word [THISCDS+2],word [THISCDS]>
+	RestoreReg  <word [ss:THISCDS+2],word [ss:THISCDS]>
 AllDone:
 	XOR	CX,CX
 DoSet:
-	LDS	SI,[THISCDS]		;   ThisDPB = ThisCDS->devptr;
+	LDS	SI,[ss:THISCDS]		;   ThisDPB = ThisCDS->devptr;
 	LES	DI,[SI+curdir_list.curdir_devptr]
-	MOV	word [THISDPB],DI
-	MOV	word [THISDPB+2],ES
+	MOV	word [ss:THISDPB],DI
+	MOV	word [ss:THISDPB+2],ES
 	return
 EndProc Splice
 

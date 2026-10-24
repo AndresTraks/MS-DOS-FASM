@@ -90,7 +90,7 @@ Break	<FindEntry -- LOOK FOR AN ENTRY>
 ;	ASSUME	ES:NOTHING
 
 	invoke	StartSrch
-	MOV	AL,[ATTRIB]
+	MOV	AL,[ss:ATTRIB]
 	AND	AL,NOT attr_ignore	; Ignore useless bits
 	CMP	AL,attr_volume_id	; Looking for vol ID only ?
 	JNZ	NOTVOLSRCH		; No
@@ -103,17 +103,17 @@ NOTVOLSRCH:
 	entry	Srch
 
 	PUSH	DS
-	MOV	DS,word [CURBUF+2]
+	MOV	DS,word [ss:CURBUF+2]
 ;ASSUME	DS:NOTHING
 	MOV	AH,byte [BX]
 	OR	AH,AH			; End of directory?
 	JZ	FREE
-	CMP	AH,byte [DELALL]	; Free entry?
+	CMP	AH,byte [ss:DELALL]	; Free entry?
 	JZ	FREE
 	TEST	byte [BX+11],attr_volume_id
 					; Volume ID file?
 	JZ	CHKFNAM 		; NO
-	INC	byte [VOLID]
+	INC	byte [ss:VOLID]
 CHKFNAM:
 ;	Context ES
 ;	ASSUME	ES:DOSGroup
@@ -122,9 +122,9 @@ CHKFNAM:
 	MOV	SI,BX
 	MOV	DI,NAME1
 ;;;;; 7/29/86
-	CMP	byte [NAME1],0E5H	 ; special char check
+	CMP	byte [ss:NAME1],0E5H	 ; special char check
 	JNZ	NO_E5
-	MOV	byte [NAME1],05H
+	MOV	byte [ss:NAME1],05H
 NO_E5:
 ;;;;; 7/29/86
 	CALL	MetaCompare
@@ -134,8 +134,8 @@ NO_E5:
 	entry	NEXTENT
 	DOSAssume   CS,<DS>,"NextEnt"
 
-	Assert	ISDPB,<<word [THISDPB+2]>,<word [THISDPB]>>,"NextEnt"
-	LES	BP,[THISDPB]
+	Assert	ISDPB,<<word [ss:THISDPB+2]>,<word [ss:THISDPB]>>,"NextEnt"
+	LES	BP,[ss:THISDPB]
 ;ASSUME	ES:NOTHING
 	CALL	NextEntry
 	JNC	Srch
@@ -144,15 +144,15 @@ NO_E5:
 FREE:
 	POP	DS
 	DOSAssume   CS,<DS>,"DIR/Free"
-	MOV	CX,[LASTENT]
-	CMP	CX,[ENTFREE]
+	MOV	CX,[ss:LASTENT]
+	CMP	CX,[ss:ENTFREE]
 	JAE	TSTALL
-	MOV	[ENTFREE],CX
+	MOV	[ss:ENTFREE],CX
 TSTALL:
-	CMP	AH,byte [DELALL]	; At end of directory?
+	CMP	AH,byte [ss:DELALL]	; At end of directory?
 NextEntJ:
 	JZ	NEXTENT 		; No - continue search
-	MOV	[ENTLAST],CX
+	MOV	[ss:ENTLAST],CX
 	STC
 	JMP	SHORT SETESRET
 
@@ -168,7 +168,7 @@ FOUND:
 	MOV	CH,[SI] 		; Attributes of file
 	POP	DS
 	DOSAssume   CS,<DS>,"DIR/found"
-	MOV	AH,[ATTRIB]		; Attributes of search
+	MOV	AH,[ss:ATTRIB]		; Attributes of search
 	AND	AH,NOT attr_ignore
 	LEA	SI,[SI+dir_entry.dir_first-dir_entry.dir_attr]  ; point to firclus field
 	TEST	CH,attr_volume_id	; Volume ID file?
@@ -182,10 +182,10 @@ check_one_volume_id:
 	JZ	NextEntJ		; Yes, continue search
 	invoke	MatchAttributes
 	JZ	RETFF
-	TEST	byte [CREATING],-1	; Pass back mismatch if creating
+	TEST	byte [ss:CREATING],-1	; Pass back mismatch if creating
 	JZ	NextEntJ		; Otherwise continue searching
 RETFF:
-	LES	BP,[THISDPB]
+	LES	BP,[ss:THISDPB]
 	MOV	AH,[es:BP+dpb.dpb_drive]
 SETESRET:
 	PUSH	SS
@@ -272,18 +272,18 @@ Procedure NextEntry
 	DOSAssume   CS,<DS>,"NextEntry"
 ;	ASSUME	ES:NOTHING
 
-	MOV	AX,[LASTENT]
-	CMP	AX,[ENTLAST]
+	MOV	AX,[ss:LASTENT]
+	CMP	AX,[ss:ENTLAST]
 	JZ	NONE
 	INC	AX
 	LEA	BX,[BX+32]
 	CMP	BX,DX
 	JB	HAVIT
-	MOV	BL,byte [SECCLUSPOS]
+	MOV	BL,byte [ss:SECCLUSPOS]
 	INC	BL
-	CMP	BL,byte [CLUSFAC]
+	CMP	BL,byte [ss:CLUSFAC]
 	JB	SAMECLUS
-	MOV	BX,[NXTCLUSNUM]
+	MOV	BX,[ss:NXTCLUSNUM]
 	Invoke	IsEof
 	JAE	NONE
 	CMP	BX,2
@@ -295,22 +295,22 @@ NONE:
 	return
 
 HAVIT:
-	MOV	[LASTENT],AX
+	MOV	[ss:LASTENT],AX
 	CLC
 	return
 
 SAMECLUS:
-	MOV	byte [SECCLUSPOS],BL
-	MOV	[LASTENT],AX
+	MOV	byte [ss:SECCLUSPOS],BL
+	MOV	[ss:LASTENT],AX
 	PUSH	DS
-	LDS	DI,[CURBUF]
+	LDS	DI,[ss:CURBUF]
 ;ASSUME	DS:NOTHING
 	MOV	DX,word [DI+BUFFINFO.buf_sector+2]	;AN000; >32mb
-	MOV	[HIGH_SECTOR],DX		;AN000; >32mb
+	MOV	[ss:HIGH_SECTOR],DX		;AN000; >32mb
 	MOV	DX,word [DI+BUFFINFO.buf_sector]	;AN000; >32mb
 
 	ADD	DX,1				;AN000; >32mb
-	ADC	word [HIGH_SECTOR],0 		;AN000; >32mb
+	ADC	word [ss:HIGH_SECTOR],0 		;AN000; >32mb
 	POP	DS
 	DOSAssume   CS,<DS>,"DIR/SameClus"
 	invoke	FIRSTCLUSTER
@@ -336,12 +336,12 @@ Procedure GETENTRY,NEAR
 	DOSAssume   CS,<DS>,"GetEntry"
 ;	ASSUME	ES:NOTHING
 
-	MOV	AX,[LASTENT]
+	MOV	AX,[ss:LASTENT]
 
 	entry	GETENT
 
 	Assert	ISDPB,<ES,BP>,"GetEntry/GetEnt"
-	MOV	[LASTENT],AX
+	MOV	[ss:LASTENT],AX
 ;
 ; Convert the entry number in AX into a byte offset from the beginning of the
 ; directory.
@@ -365,7 +365,7 @@ Procedure GETENTRY,NEAR
 	POP	BX
 	retc
 SETENTRY:
-	MOV	DX,word [CURBUF]
+	MOV	DX,word [ss:CURBUF]
 	ADD	DX,BUFINSIZ
 	ADD	BX,DX
 	ADD	DX,[es:BP+dpb.dpb_sector_size]  ; Always clears carry
@@ -393,13 +393,13 @@ Break	<SETDIRSRCH SETROOTSRCH -- Set SEARCH environments>
 	Assert	ISDPB,<ES,BP>,"SetDirSrch"
 	OR	BX,BX
 	JZ	SETROOTSRCH
-	MOV	[DIRSTART],BX
+	MOV	[ss:DIRSTART],BX
 	MOV	AL,[es:BP+dpb.dpb_cluster_mask]
 	INC	AL
-	MOV	byte [CLUSFAC],AL
+	MOV	byte [ss:CLUSFAC],AL
 ; DOS 3.3 for FastOPen	F.C. 6/12/86
 	SaveReg <SI>
-	TEST	byte [FastOpenFlg],Lookup_Success
+	TEST	byte [ss:FastOpenFlg],Lookup_Success
 	JNZ	UNP_OK
 
 ; DOS 3.3 for FastOPen	F.C. 6/12/86
@@ -409,17 +409,17 @@ Break	<SETDIRSRCH SETROOTSRCH -- Set SEARCH environments>
 	return
 
 UNP_OK:
-	MOV	[CLUSNUM],DI
+	MOV	[ss:CLUSNUM],DI
 	MOV	DX,BX
 	XOR	BL,BL
-	MOV	byte [SECCLUSPOS],BL
+	MOV	byte [ss:SECCLUSPOS],BL
 	invoke	FIGREC
 	RestoreReg  <SI>
 	PUSH	DX			   ;AN000; >32mb
-	MOV	DX,[HIGH_SECTOR]	   ;AN000; >32mb
-	MOV	word [DIRSEC+2],DX	   ;AN000; >32mb
+	MOV	DX,[ss:HIGH_SECTOR]	   ;AN000; >32mb
+	MOV	word [ss:DIRSEC+2],DX	   ;AN000; >32mb
 	POP	DX			   ;AN000; >32mb
-	MOV	word [DIRSEC],DX
+	MOV	word [ss:DIRSEC],DX
 	CLC
 	return
 
@@ -427,16 +427,16 @@ entry	SETROOTSRCH
 	DOSAssume   CS,<DS>,"SetRootSrch"
 ;	ASSUME	ES:NOTHING
 	XOR	AX,AX
-	MOV	[DIRSTART],AX
-	MOV	byte [SECCLUSPOS],AL
+	MOV	[ss:DIRSTART],AX
+	MOV	byte [ss:SECCLUSPOS],AL
 	DEC	AX
-	MOV	[CLUSNUM],AX
+	MOV	[ss:CLUSNUM],AX
 	MOV	AX,[es:BP+dpb.dpb_first_sector]
 	MOV	DX,[es:BP+dpb.dpb_dir_sector]
 	SUB	AX,DX
-	MOV	byte [CLUSFAC],AL
-	MOV	word [DIRSEC],DX		      ;F.C. >32mb
-	MOV	word [DIRSEC+2],0		      ;F.C. >32mb
+	MOV	byte [ss:CLUSFAC],AL
+	MOV	word [ss:DIRSEC],DX		      ;F.C. >32mb
+	MOV	word [ss:DIRSEC+2],0		      ;F.C. >32mb
 	CLC
 	return
 EndProc SETDIRSRCH

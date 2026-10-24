@@ -139,7 +139,7 @@ HURTFAT:
 	MOV	[es:BP+dpb.dpb_free_cnt],-1 ; Err in FAT must force recomp of freespace
 	PUSH	AX
 	MOV	AH,Allowed_FAIL + 80h
-	MOV	byte [ALLOWED],Allowed_FAIL
+	MOV	byte [ss:ALLOWED],Allowed_FAIL
 ;
 ; Signal Bad FAT to INT int_fatal_abort handler.  We have an invalid cluster.
 ;
@@ -193,13 +193,13 @@ Pack16:
 PACKIN:
 	OR	SI,DX
 	MOV	[DI],SI
-	LDS	SI,[CURBUF]
+	LDS	SI,[ss:CURBUF]
 	TEST	[SI+BUFFINFO.buf_flags],buf_dirty  ;LB. if already dirty 		;AN000;
 	JNZ	yesdirty_FAT		  ;LB.	  don't increment dirty count   ;AN000;
 	invoke	INC_DIRTY_COUNT 	  ;LB.					;AN000;
 	OR	[SI+BUFFINFO.buf_flags],buf_dirty  ;LB.					;AN000;
 yesdirty_FAT:				  ;LB.					;AN000;
-	CMP	byte [CLUSSPLIT],0
+	CMP	byte [ss:CLUSSPLIT],0
 	Context DS
 	retz				; Carry clear
 	PUSH	AX
@@ -263,7 +263,7 @@ Break	<MAPCLUSTER - BUFFER a FAT SECTOR>
 ;	ASSUME	ES:NOTHING
 
 	Assert	    ISDPB,<ES,BP>,"MapCluster"
-	MOV	byte [CLUSSPLIT],0
+	MOV	byte [ss:CLUSSPLIT],0
 	SaveReg <AX,BX,CX,DX>
 	MOV	AX,BX			; AX = BX
 	MOV	CX,4096-10
@@ -308,13 +308,13 @@ DivDone:
 	DEC	CX			; CX is sector size - 1
 	SaveReg <AX,DX,CX>
 	MOV	DX,AX
-	MOV	word [HIGH_SECTOR],0 	;F.C. >32mb  low sector #
+	MOV	word [ss:HIGH_SECTOR],0 	;F.C. >32mb  low sector #
 	XOR	AL,AL
 	MOV	SI,1
 	invoke	GETBUFFRB
 	RestoreReg  <CX,AX,DX>		; CX is sec siz-1, AX is offset in sec
 	JC	MAP_POP
-	LDS	SI,[CURBUF]
+	LDS	SI,[ss:CURBUF]
 ;ASSUME	DS:NOTHING
 	LEA	DI,[SI+BUFINSIZ]
 	ADD	DI,AX
@@ -433,7 +433,7 @@ MED_CHANGE:
 	XOR	CH,CH			; CX is number of structures
 	LDS	SI,[es:DI+curdir_list.curdir_devptr] ; Find all CDS with this devptr
 ;ASSUME	DS:NOTHING
-	LES	DI,[CDSADDR]		; Start here
+	LES	DI,[ss:CDSADDR]		; Start here
 CHECK_CDS:
 	TEST	[es:DI+curdir_list.curdir_flags],curdir_isnet
 	JNZ	NEXTCDS 		; Leave NET guys alone!!
@@ -453,7 +453,7 @@ NEXTCDS:
 	POP	DS
 	DOSAssume   CS,<DS>,"FAT/NextCDS"
 NO_CHANGE:
-	LES	BP,[THISDPB]
+	LES	BP,[ss:THISDPB]
 	CLC
 	return
 EndProc FATREAD_CDS
@@ -465,11 +465,11 @@ FATERR:
 	DOSAssume   CS,<DS>,"FATERR"
 	MOV	[es:BP+dpb.dpb_free_cnt],-1 ; Err in FAT must force recomp of freespace
 	AND	DI,STECODE		; Put error code in DI
-	MOV	byte [ALLOWED],Allowed_FAIL + Allowed_RETRY
+	MOV	byte [ss:ALLOWED],Allowed_FAIL + Allowed_RETRY
 	MOV	AH,2 + Allowed_FAIL + Allowed_RETRY ; While trying to read FAT
-	MOV	AL,byte [THISDRV]	 ; Tell which drive
+	MOV	AL,byte [ss:THISDRV]	 ; Tell which drive
 	invoke	FATAL1
-	LES	BP,[THISDPB]
+	LES	BP,[ss:THISDPB]
 	CMP	AL,3
 	JNZ	FAT_GOT_DPB		; User said retry
 	STC				; User said FAIL
@@ -549,8 +549,8 @@ CHKBUFFDIRT:
 ;	LDS	DI,[BUFFHEAD]
 ;ASSUME	DS:NOTHING
 	XOR	DX,DX				 ;LB.				;AN000;
-	LDS	DI,[BUF_HASH_PTR]		 ;LB. scan from 1st entry	;AN000;
-	MOV	CX,[BUF_HASH_COUNT]		 ;LB. get Hash entry count	;AN000;
+	LDS	DI,[ss:BUF_HASH_PTR]		 ;LB. scan from 1st entry	;AN000;
+	MOV	CX,[ss:BUF_HASH_COUNT]		 ;LB. get Hash entry count	;AN000;
 
 scan_dirty:
 	CMP	[DI+BUFFER_HASH_ENTRY.DIRTY_COUNT],0		 ;LB. if not dirty		;AN000;
@@ -577,7 +577,7 @@ FAIL_OP:
 ;ASSUME	DS:NOTHING
 LFNXT:
 	mov	DI,[DI+BUFFINFO.buf_next]	    ;; 1/19/88
-	CMP	DI,[FIRST_BUFF_ADDR]	    ;; 1/19/88
+	CMP	DI,[ss:FIRST_BUFF_ADDR]	    ;; 1/19/88
 	JNZ	NBUFFER
 	POP	DI				  ;LB. restore regs		 ;AN000;
 	POP	DS				  ;LB.				 ;AN000;
@@ -590,8 +590,8 @@ NEWDSK:
 					; NOTE: It is TECHNICALLY more correct
 ;ASSUME DS:NOTHING
 	XOR	DX,DX			;LB.					  ;AN000;
-	MOV	[HIGH_SECTOR],DX	;LB. scan from 1st entry		  ;AN000;
-	MOV	CX,[BUF_HASH_COUNT]	;LB. get Hash entry count		  ;AN000;
+	MOV	[ss:HIGH_SECTOR],DX	;LB. scan from 1st entry		  ;AN000;
+	MOV	CX,[ss:BUF_HASH_COUNT]	;LB. get Hash entry count		  ;AN000;
 
 NxtHash:
 	invoke	GETCURHEAD		;LB. get Hash entry buffer header	  ;AN000;
@@ -610,15 +610,15 @@ OLDDRV:
 	MOV	word [DI+BUFFINFO.buf_ID],(buf_visit SHL 8) OR 0FFH	; Free up buffer
 	invoke	ScanPlace
 SKPBUFF:
-	CMP	DI,[FIRST_BUFF_ADDR]	;LB.  end of chain  1/19/88		  ;AN000;
+	CMP	DI,[ss:FIRST_BUFF_ADDR]	;LB.  end of chain  1/19/88		  ;AN000;
 	JNZ	NXBUFFER		;LB.  no				  ;AN000;
 	INC	DX			;LB.					  ;AN000;
 	LOOP	NxtHash 		;LB.					  ;AN000;
-	CMP	word [SC_CACHE_COUNT],0	;LB.  look ahead buffers ?		  ;AN001;
+	CMP	word [ss:SC_CACHE_COUNT],0	;LB.  look ahead buffers ?		  ;AN001;
 	JZ	GOGETBPB		;LB.  no				  ;AN001;
-	CMP	AL,[CurSC_DRIVE]	;LB.  same as changed drive		  ;AN001;
+	CMP	AL,[ss:CurSC_DRIVE]	;LB.  same as changed drive		  ;AN001;
 	JNZ	GOGETBPB		;LB.  no				  ;AN001;
-	MOV	byte [CurSC_DRIVE],-1	;LB.  invalidate look ahead buffers	  ;AN000;
+	MOV	byte [ss:CurSC_DRIVE],-1	;LB.  invalidate look ahead buffers	  ;AN000;
 GOGETBPB:
 	LDS	DI,[es:BP+dpb.dpb_driver_addr]
 	TEST	[DI+SYSDEV.SDEVATT],ISFATBYDEV
@@ -638,7 +638,7 @@ GETFREEBUF:
 	PUSH	BP
 ;	LDS	DI,[BUFFHEAD]
 	XOR	DX,DX			     ;LB.  fake to get 1st		  ;AN000;
-	MOV	[HIGH_SECTOR],DX	     ;LB.  buffer addr			  ;AN000;
+	MOV	[ss:HIGH_SECTOR],DX	     ;LB.  buffer addr			  ;AN000;
 	invoke	GETCURHEAD		     ;LB.				  ;AN000;
 
 	invoke	BufWrite
@@ -647,7 +647,7 @@ GETFREEBUF:
 	JC	FAIL_OPJ
 GOTGETBUF:
 	ADD	DI,BUFINSIZ
-	MOV	word [CALLXAD+2],DS
+	MOV	word [ss:CALLXAD+2],DS
 	Context DS
 	MOV	word [CALLXAD],DI
 	MOV	AL,DBPBHL
@@ -677,7 +677,7 @@ GOTGETBUF:
 ;ASSUME	DS:NOTHING
 	MOV	[es:BP+dpb.dpb_next_free],0 ; recycle scanning pointer
 	invoke	SETDPB$
-	LDS	DI,[CALLXAD]		; Get back buffer pointer
+	LDS	DI,[ss:CALLXAD]		; Get back buffer pointer
 	MOV	AL,byte [es:BP+dpb.dpb_FAT_count]
 	MOV	[DI+BUFFINFO.buf_wrtcnt-BUFINSIZ],AL   ;>32mb				;AN000;
 	MOV	AX,[es:BP+dpb.dpb_FAT_size]       ;>32mb				;AC000;

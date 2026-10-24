@@ -53,49 +53,49 @@ Daycnt_to_day:				;J.K. 4/30/86 for real time clock support
 ;Entry: [DAYCNT] = number of days since 1-1-80
 ;Return: CH - centry in BCD, CL - year in BCD, DH - month in BCD, DL - day in BCD
 
-	push	[DAYCNT]		;save daycnt
-	cmp	[DAYCNT], (365*20+(20/4)) ;# of days from 1-1-1980 to 1-1-2000
+	push	[cs:DAYCNT]		;save daycnt
+	cmp	[cs:DAYCNT], (365*20+(20/4)) ;# of days from 1-1-1980 to 1-1-2000
 	jae	century20
-	mov	[base_century], 19
-	mov	[base_year], 80
+	mov	[cs:base_century], 19
+	mov	[cs:base_year], 80
 	jmp	years
 century20:				;20th century
-	mov	[base_century], 20
-	mov	[base_year], 0
-	sub	[DAYCNT], (365*20+(20/4)) ;adjust daycnt
+	mov	[cs:base_century], 20
+	mov	[cs:base_year], 0
+	sub	[cs:DAYCNT], (365*20+(20/4)) ;adjust daycnt
 years:
 	xor	dx, dx
-	mov	ax, [DAYCNT]
+	mov	ax, [cs:DAYCNT]
 	mov	bx, (366+365*3) 	;# of days in a Leap year block
 	div	bx			;AX = # of leap block, DX = daycnt
-	mov	[DAYCNT], dx		;save daycnt left
+	mov	[cs:DAYCNT], dx		;save daycnt left
 ;	or	ah, ah			;ax should be less than 256
 ;	jz	OK1
 ;	 jmp	 Erroroccur
 ;OK1:
 	mov	bl,4
 	mul	bl			;AX = # of years. Less than 100 years!
-	add	[base_year], al		;So, ah = 0. Adjust year accordingly.
-	inc	[DAYCNT]			;set daycnt to 1 base
-	cmp	[DAYCNT], 366		;the daycnt here is the remainder of the leap year block.
+	add	[cs:base_year], al		;So, ah = 0. Adjust year accordingly.
+	inc	[cs:DAYCNT]			;set daycnt to 1 base
+	cmp	[cs:DAYCNT], 366		;the daycnt here is the remainder of the leap year block.
 	jbe	Leapyear		;So, it should within 366+355+355+355 days.
-	inc	[base_year]		;First if daycnt <= 366, then leap year
-	sub	[DAYCNT], 366		;else daycnt--, base_year++;
+	inc	[cs:base_year]		;First if daycnt <= 366, then leap year
+	sub	[cs:DAYCNT], 366		;else daycnt--, base_year++;
 					;And the next three years are regular years.
 	mov	cx, 3
 Regularyear:
-	cmp	[DAYCNT], 365		;for(i=1; i>3 or daycnt <=365;i++)
+	cmp	[cs:DAYCNT], 365		;for(i=1; i>3 or daycnt <=365;i++)
 	jbe	Yeardone		;{if (daycnt > 365)
-	inc	[base_year]		;  { daycnt -= 365
-	sub	[DAYCNT], 365		;  }
+	inc	[cs:base_year]		;  { daycnt -= 365
+	sub	[cs:DAYCNT], 365		;  }
 	loop	Regularyear		;}
 ;	 jmp	 Erroroccur		 ;cannot come to here
 Leapyear:
-	mov	byte [month_tab+1],29 ;leap year. change the month table.
+	mov	byte [cs:month_tab+1],29 ;leap year. change the month table.
 Yeardone:
 	xor	bx,bx
 	xor	dx,dx
-	mov	ax, [DAYCNT]
+	mov	ax, [cs:DAYCNT]
 	mov	si, month_tab
 	mov	cx, 12
 Months:
@@ -108,24 +108,24 @@ Months:
 	loop	Months
 ;	 jmp	 Erroroccur
 Month_done:
-	mov	byte [month_tab+1], 28 ;restore month table value
+	mov	byte [cs:month_tab+1], 28 ;restore month table value
 	mov	dl, bl
-	mov	dh, [base_year]
-	mov	cl, [base_century]	;now, al=day, dl=month,dh=year,cl=century
-	call	word [BinToBCD]	;Oh my!!! To save 15 bytes, Bin_To_BCD proc
+	mov	dh, [cs:base_year]
+	mov	cl, [cs:base_century]	;now, al=day, dl=month,dh=year,cl=century
+	call	word [cs:BinToBCD]	;Oh my!!! To save 15 bytes, Bin_To_BCD proc
 					;was relocated seperately from Daycnt_to_Day proc.
 ;	call Bin_to_bcd 		;convert "day" to bcd
 	xchg	dl, al			;dl = bcd day, al = month
-	call	word [BinToBCD]
+	call	word [cs:BinToBCD]
 ;	call Bin_to_bcd
 	xchg	dh, al			;dh = bcd month, al = year
-	call	word [BinToBCD]
+	call	word [cs:BinToBCD]
 ;	call Bin_to_bcd
 	xchg	cl, al			;cl = bcd year, al = century
-	call	word [BinToBCD]
+	call	word [cs:BinToBCD]
 ;	call Bin_to_bcd
 	mov	ch, al			;ch = bcd century
-	pop	[DAYCNT]		;restore original value
+	pop	[cs:DAYCNT]		;restore original value
 	ret
 ;Daycnt_to_day	endp
 
@@ -426,11 +426,11 @@ INIT:
 ; ROM INT13 ROUTINE, WE MUST HAVE THAT ROM ADDRESS ALSO STORED AWAY.
 ;
 	MOV	AX,[13H*4]
-	MOV	word [OLD13],AX
-	MOV	word [ORIG13],AX
+	MOV	word [cs:OLD13],AX
+	MOV	word [cs:ORIG13],AX
 	MOV	AX,[13H*4+2]
-	MOV	word [OLD13+2],AX
-	MOV	word [ORIG13+2],AX
+	MOV	word [cs:OLD13+2],AX
+	MOV	word [cs:ORIG13+2],AX
 ;
 ; SET UP INT 13 FOR NEW ACTION
 ;
@@ -440,9 +440,9 @@ INIT:
 ; PRESERVE ORIGINAL INT 19 VECTOR
 ;
 	MOV	AX,[19H*4]
-	MOV	word [ORIG19],AX
+	MOV	word [cs:ORIG19],AX
 	MOV	AX,[19H*4+2]
-	MOV	word [ORIG19+2],AX
+	MOV	word [cs:ORIG19+2],AX
 ;
 ; SET UP INT 19 FOR NEW ACTION
 ;
@@ -528,15 +528,15 @@ GOTHRD:
 	cmp	ah, 0			; double check
 	jne	No_Rom_System_Conf
 	mov	al, [es:BX+BIOS_SYSTEM_DESCRIPTOR.bios_SD_modelbyte] ;get the model byte
-	mov	[MODEL_BYTE], al
+	mov	[cs:MODEL_BYTE], al
 	mov	al, [es:BX+BIOS_SYSTEM_DESCRIPTOR.bios_SD_scnd_modelbyte] ;secondary model byte
-	mov	[Secondary_Model_Byte], al
+	mov	[cs:Secondary_Model_Byte], al
 	jmp	short Turn_Timer_On
 No_Rom_System_Conf:
 	MOV	SI,0FFFFH		;MJB001
 	MOV	ES,SI			;MJB001
 	MOV	AL,[es:0EH]		; GET MODEL BYTE ARR 2.41
-	MOV	[MODEL_BYTE],AL	      ; SAVE MODEL BYTE ARR 2.41
+	MOV	[cs:MODEL_BYTE],AL	      ; SAVE MODEL BYTE ARR 2.41
 Turn_Timer_On:
 	MOV	AL,EOI
 	OUT	AKPORT,AL		;TURN ON THE TIMER
@@ -646,7 +646,7 @@ Skip_Patch_DoubleWordMov:		;AN003;
 	mov	al,[SEC9+DISK_PARMS.DISK_MOTOR_STRT]
 	mov	[cs:MOTORSTARTUP],al
 ;SB34INIT002******************************************************************
-	CMP	[MODEL_BYTE],0FDH       ; IS THIS AN OLD ROM?	ARR 2.41
+	CMP	[cs:MODEL_BYTE],0FDH       ; IS THIS AN OLD ROM?	ARR 2.41
 	JB	NO_DIDDLE		; NO			  ARR 2.41
 	MOV	word [SEC9 + DISK_PARMS.DISK_HEAD_STTL],0200H+NORMSETTLE
 					; SET HEAD SETTLE AND MOTOR START
@@ -659,7 +659,7 @@ NO_DIDDLE:				;			  ARR 2.41
 	MOV	CL,6
 	SHL	AX,CL			;CONVERT TO 16-BYTE BLOCKS(SEGMENT NO.)
 	POP	CX			; RETREIVE BOOT DRIVE NUMBER, AND FAT ID
-	MOV	[DRVFAT],CX	      ;SAVE DRIVE TO LOAD DOS, AND FAT ID
+	MOV	[cs:DRVFAT],CX	      ;SAVE DRIVE TO LOAD DOS, AND FAT ID
 
 	PUSH	AX
 ;J.K. Don't have to look at the boot addr.
@@ -680,9 +680,9 @@ NO_DIDDLE:				;			  ARR 2.41
 ;	 SHL	 DX,1
 ;	 SUB	 AX,DX			 ; ROOM FOR FAT
 	sub	ax, 64			;AN004; Room for FATLOC segment. (1 KB buffer)
-	MOV	[FATLOC],AX		; LOCATION TO READ FAT
+	MOV	[cs:FATLOC],AX		; LOCATION TO READ FAT
 	sub	ax, 64			;Room for Boot Record buffer segment (1 KB)
-	mov	[Init_BootSeg], ax	;AN015;
+	mov	[cs:Init_BootSeg], ax	;AN015;
 	POP	AX
 
 	MOV	DX,SYSINITSEG
@@ -761,8 +761,8 @@ KEEPINTF:
 	mov	cl,[0496h]			; get keyboard flag
 	test	cl,00010000b
 	jz	ORG_KEY				; orginal keyboard
-	mov	byte [KEYRD_Func],10h		; extended keyboard
-	mov	byte [KEYSTS_Func],11h	; change for extended keyboard functions
+	mov	byte [cs:KEYRD_Func],10h		; extended keyboard
+	mov	byte [cs:KEYSTS_Func],11h	; change for extended keyboard functions
 ORG_KEY:
 
 ;SB34INIT003****************************************************************

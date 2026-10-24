@@ -55,11 +55,11 @@
 
 STRUC rom_header
 {
-    Signature1	DB  0
-    Signature2	DB  0
-    rom_length	DB  0
-    init_jmp	DB  3 dup (0)
-    name_list	DB  0
+    .Signature1	DB  0
+    .Signature2	DB  0
+    .rom_length	DB  0
+    .init_jmp	DB  3 dup (0)
+    .name_list	DB  0
 }
 match =rom_header_LAID_OUT, rom_header_LAID_OUT
 {
@@ -72,9 +72,9 @@ match =rom_header_LAID_OUT, rom_header_LAID_OUT
 
 STRUC name_struc
 {
-    name_len	DB  0
-    name_text	DB  1 dup (0)
-    name_jmp	DB  3 dup (0)
+    .name_len	DB  0
+    .name_text	DB  1 dup (0)
+    .name_jmp	DB  3 dup (0)
 }
 match =name_struc_LAID_OUT, name_struc_LAID_OUT
 {

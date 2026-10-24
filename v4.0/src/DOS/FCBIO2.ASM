@@ -258,11 +258,11 @@ GetRec:
 	MOV	AX,cRec 		;   cByte = cRec * RecSize;
 	MUL	BX
 	MOV	cByte,AX
-	ADD	AX,word [DMAADD]	;   if (cByte+DMA > 64K) {
+	ADD	AX,word [ss:DMAADD]	;   if (cByte+DMA > 64K) {
 	ADC	DX,0
 	JZ	DoOper_FCBIO2
 	MOV	FCBErr,FTRIM		;	FCBErr = FTRIM;
-	MOV	AX,word [DMAADD]	;	cRec = (64K-DMA)/RecSize;
+	MOV	AX,word [ss:DMAADD]	;	cRec = (64K-DMA)/RecSize;
 	NEG	AX
 	JNZ	DoDiv_FCBIO2
 	DEC	AX
@@ -347,9 +347,9 @@ end if
 
 	JC	FCBDeath
 
-	CMP	byte [DISK_FULL],0	; treat disk full as error
+	CMP	byte [ss:DISK_FULL],0	; treat disk full as error
 	JZ	NODSKFULL
-	MOV	byte [DISK_FULL],0	; clear the flag
+	MOV	byte [ss:DISK_FULL],0	; clear the flag
 	MOV	FCBErr,FEOF		; set disk full flag
 NODSKFULL:
 ;; Fix for disk full
@@ -396,7 +396,7 @@ TryBlank:				;
 	MOV	CX,RecSize		;	Blank (RecSize-cResult%RecSize,
 	SUB	CX,DX			;	       DMA+cResult);
 	XOR	AL,AL
-	LES	DI,[DMAADD]
+	LES	DI,[ss:DMAADD]
 	ADD	DI,cResult
 	REP	STOSB			;   }	}
 SetExt_FCBIO2:
@@ -486,7 +486,7 @@ FindFCB:
 	CALL	SI			; go open the file
 	RestoreReg  <BX,SI,DS>		; get fcb
 ;	ASSUME	DS:NOTHING
-	LES	DI,[THISSFT]		; get sf pointer
+	LES	DI,[ss:THISSFT]		; get sf pointer
 	JNC	FCBOK			; operation succeeded
 	Assert	ISSFT,<ES,DI>,"DeadFCB"
 failopen:
@@ -542,7 +542,7 @@ FCBNoDrive:
 ; We must scan the set of FCB SFTs for one that appears to match the current
 ; one.	We cheat and use CheckFCB to match the FCBs.
 ;
-	LES	DI,[sftFCB]		; get the pointer to head of the list
+	LES	DI,[ss:sftFCB]		; get the pointer to head of the list
 	MOV	AH,byte [es:DI+SF.SFCount] ; get number of SFTs to scan
 OpenScan:
 	CMP	AL,[SI+fcb_sfn] 	; don't compare ourselves
@@ -581,7 +581,7 @@ OpenDone:
 OpenFound:
 	MOV	[SI+fcb_sfn],AL 	; assign with this
 	INC	[es:DI+sf_entry.sf_ref_count]	; remember this new invocation
-	MOV	AX,[FCBLRU]		; update LRU counts
+	MOV	AX,[ss:FCBLRU]		; update LRU counts
 	MOV	word [es:DI+sf_LRU],AX
 ;
 ; We have an FCB sft that is now of no use.  We release sharing info and then

@@ -93,7 +93,7 @@ Installed = TRUE
 	DOSAssume   CS,<DS>,"DOS_Search_First"
 ;	ASSUME	ES:NOTHING
 
-	LES	DI,[THISCDS]
+	LES	DI,[ss:THISCDS]
 	CMP	DI,-1
 	JNZ	TEST_RE_NET_ISEARCH
 if NOT Installed
@@ -117,14 +117,14 @@ end if
 
 LOCAL_SEARCH_FIRST:
 	EnterCrit   critDisk
-	TEST	word [DOS34_FLAG],SEARCH_FASTOPEN  ;AN000;
+	TEST	word [ss:DOS34_FLAG],SEARCH_FASTOPEN  ;AN000;
 	JZ	NOFN			      ;AN000;
-	OR	byte [FastOpenFlg],FastOpen_Set    ;AN000;
+	OR	byte [ss:FastOpenFlg],FastOpen_Set    ;AN000;
 NOFN:					      ;AN000;
-	MOV	byte [NoSetDir],1		; if we find a dir, don't change to it
+	MOV	byte [ss:NoSetDir],1		; if we find a dir, don't change to it
 	CALL	CHECK_QUESTION		;AN000;;FO. is '?' in path
 	JNC	norm_getpath		;AN000;;FO. no
-	AND	byte [FastOpenFlg],Fast_yes	;AN000;;FO. reset fastopen
+	AND	byte [ss:FastOpenFlg],Fast_yes	;AN000;;FO. reset fastopen
 norm_getpath:
 	invoke	GETPATH
 getdone:
@@ -148,26 +148,26 @@ bad_path_ISEARCH:
 find_check_dev:
 	OR	AH,AH
 	JNS	found_entry
-	MOV	word [LASTENT],-1		; Cause DOS_SEARCH_NEXT to fail
-	INC	byte [Found_dev]		; Tell DOS_RENAME we found a device
+	MOV	word [ss:LASTENT],-1		; Cause DOS_SEARCH_NEXT to fail
+	INC	byte [ss:Found_dev]		; Tell DOS_RENAME we found a device
 found_entry:
 ;
 ; We set the physical drive byte here Instead of after found_it; Doing
 ; a search-next may not have wfp_start set correctly
 ;
-	LES	DI,[DMAADD]
-	MOV	SI,[WFP_START]		; get pointer to beginning
+	LES	DI,[ss:DMAADD]
+	MOV	SI,[ss:WFP_START]		; get pointer to beginning
 	LODSB
 	SUB	AL,'a'-1                ; logical drive
 	STOSB				; High bit not set (local)
 found_it:
-	LES	DI,[DMAADD]
+	LES	DI,[ss:DMAADD]
 	INC	DI
 	PUSH	DS			;FO.;AN001; save ds
-	TEST	byte [FastOpenFlg],Set_For_Search	  ;FO.;AN001; from fastopen
+	TEST	byte [ss:FastOpenFlg],Set_For_Search	  ;FO.;AN001; from fastopen
 	JZ	notfast 			  ;FO.;AN001;
 	MOV	SI,BX				  ;FO.;AN001;
-	MOV	DS,word [CURBUF+2]		  ;FO.;AN001;
+	MOV	DS,word [ss:CURBUF+2]		  ;FO.;AN001;
 	JMP	SHORT movmov			  ;FO.;AN001;
 
 
@@ -186,21 +186,21 @@ NOTKANJB:
 	POP	DS			;FO.;AN001; restore ds
 
 
-	MOV	AL,[ATTRIB]
+	MOV	AL,[ss:ATTRIB]
 	STOSB
 	PUSH	AX			; Save AH device info
-	MOV	AX,[LASTENT]
+	MOV	AX,[ss:LASTENT]
 	STOSW
-	MOV	AX,[DIRSTART]
+	MOV	AX,[ss:DIRSTART]
 	STOSW
 ; 4 bytes of 21 byte cont structure left for NET stuff
 	ADD	DI,4
 	POP	AX			; Recover AH device info
 	OR	AH,AH
 	JS	DOSREL			; Device entry is DOSGROUP relative
-	CMP	word [CURBUF],-1
+	CMP	word [ss:CURBUF],-1
 	JNZ	OKSTORE
-	TEST	byte [FastOpenFlg],Set_For_Search ;AN000;;FO. from fastopen and is good
+	TEST	byte [ss:FastOpenFlg],Set_For_Search ;AN000;;FO. from fastopen and is good
 	JNZ	OKSTORE 		     ;AN000;;FO.
 
 
@@ -212,7 +212,7 @@ NOTKANJB:
 	JMP	find_no_more
 
 OKSTORE:
-	MOV	DS,word [CURBUF+2]
+	MOV	DS,word [ss:CURBUF+2]
 ;ASSUME	DS:NOTHING
 DOSREL:
 	MOV	SI,BX			; SI-> start of entry
@@ -306,7 +306,7 @@ LOCAL_SEARCH_NEXT:
 	MOV	CX,11
 	REP	MOVSB			; Search name
 	LODSB				; Attribute
-	MOV	[ATTRIB],AL
+	MOV	[ss:ATTRIB],AL
 	LODSW				; LastEnt
 	OR	AX,AX
 	JNS	cont_load
@@ -347,7 +347,7 @@ EndProc DOS_SEARCH_NEXT
 
 	PUSH	CS			;AN000;;FO.
 	POP	DS			;AN000;;FO. ds:si -> final path
-	MOV	SI,[WFP_START]		;AN000;;FO.
+	MOV	SI,[ss:WFP_START]		;AN000;;FO.
 getnext_ISEARCH:				;AN000;
 	LODSB				;AN000;;FO. get char
 	OR	AL,AL			;AN000;;FO. is it null

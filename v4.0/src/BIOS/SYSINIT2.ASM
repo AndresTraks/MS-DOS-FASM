@@ -410,13 +410,13 @@ NOCHAR1: STC
 	 return
 
 ORGANIZE:
-	MOV	CX,[COUNT_SYSINIT]
+	MOV	CX,[cs:COUNT_SYSINIT]
 	JCXZ	NOCHAR1
 	CALL	MAPCASE
 	XOR	SI,SI
 	MOV	DI,SI
 	xor	ax,ax
-	mov	[COM_Level], 0
+	mov	[cs:COM_Level], 0
 
 ;ORG1:	 CALL	 GET			 ;SKIP LEADING CONTROL CHARACTERS
 ;	 CMP	 AL,' '
@@ -432,7 +432,7 @@ Org1:
 	jmp	Findit			;AN000;
 End_Commd_Line: 			;AN000;
 	stosb				;AN000; store line feed char in buffer for the LineCount.
-	mov	[COM_Level], 0		;AN000; reset the command level.
+	mov	[cs:COM_Level], 0		;AN000; reset the command level.
 	jmp	Org1			;AN000;
 Findit: 				;AN000;
 	PUSH	CX
@@ -481,7 +481,7 @@ Skip_Line:				;AN000;
 	jmp	End_Commd_Line		;AN000; handle next command line
 
 GOTCOM: STOSB				;SAVE INDICATOR CHAR IN BUFFER
-	mov	[Cmd_Indicator], al	;AN000; save it for the future use.
+	mov	[cs:Cmd_Indicator], al	;AN000; save it for the future use.
 
 ORG2:	CALL	GET2			;SKIP the commad name UNTIL DELIMITER
 	cmp	al, LF			;AN011;
@@ -508,17 +508,17 @@ Org21:					;AN011;if CR or LF then
 ;	 MOV	 BYTE PTR ES:[DI-1],0
 
 Org3:
-	cmp	[Cmd_Indicator], 'Y'      ;AN000; Comment= command?
+	cmp	[cs:Cmd_Indicator], 'Y'      ;AN000; Comment= command?
 	je	Get_Cmt_token		;AN000;
-	cmp	[Cmd_Indicator], 'I'      ;AN000; Install= command?
+	cmp	[cs:Cmd_Indicator], 'I'      ;AN000; Install= command?
 	je	Org_file		;AN000;
-	cmp	[Cmd_Indicator], 'D'      ;AN000; Device= command?
+	cmp	[cs:Cmd_Indicator], 'D'      ;AN000; Device= command?
 	je	Org_file		;AN000;
-	cmp	[Cmd_Indicator], 'J'      ;AN000; IFS= command?
+	cmp	[cs:Cmd_Indicator], 'J'      ;AN000; IFS= command?
 	je	Org_file		;AN000;
-	cmp	[Cmd_Indicator], 'S'      ;AN000; Shell= is a special one!!!
+	cmp	[cs:Cmd_Indicator], 'S'      ;AN000; Shell= is a special one!!!
 	je	Org_file		;AN000;
-	cmp	[Cmd_Indicator], '1'      ;AN013; SWITCHES= command?
+	cmp	[cs:Cmd_Indicator], '1'      ;AN013; SWITCHES= command?
 	je	Org_Switch		;AN013;
 	jmp	Org4			;AN000;
 Org_Switch:
@@ -560,8 +560,8 @@ Get_Cmt_token:				;AN000; get the token. Just max. 2 char.
 	je	Get_Cmt_End		;AN000; cannot accept the carridge return
 	cmp	al, LF			;AN000;
 	je	Get_Cmt_End		;AN000;
-	mov	[CMMT1], al		;AN000; store it
-	mov	[CMMT], 1 		;AN000; 1 char. so far.
+	mov	[cs:CMMT1], al		;AN000; store it
+	mov	[cs:CMMT], 1 		;AN000; 1 char. so far.
 	call	GET2			;AN000;
 	cmp	al, ' '                 ;AN000;
 	je	Get_Cmt_End		;AN000;
@@ -571,8 +571,8 @@ Get_Cmt_token:				;AN000; get the token. Just max. 2 char.
 	je	Get_Cmt_End		;AN000;
 	cmp	al, LF			;AN000;
 	je	End_Commd_Line_Brdg	;AN000;
-	mov	[CMMT2], al		;AN000;
-	inc	[CMMT]			;AN000;
+	mov	[cs:CMMT2], al		;AN000;
+	inc	[cs:CMMT]			;AN000;
 Get_Cmt_End:				;AN000;
 	call	GET2			;AN000;
 	cmp	al, LF			;AN000;
@@ -617,12 +617,12 @@ Org51:					;AN000;
 	jmp	Org5			;AN000; handles next char in this line.
 Org1_brdg: jmp	 Org1			;AN000;
 At_Quote:				;AN000;
-	cmp	[COM_Level], 0		;AN000;
+	cmp	[cs:COM_Level], 0		;AN000;
 	je	Up_Level		;AN000;
-	mov	[COM_Level], 0		;AN000; reset it.
+	mov	[cs:COM_Level], 0		;AN000; reset it.
 	jmp	Org5			;AN000;
 Up_Level:				;AN000;
-	inc	[COM_Level]		;AN000; set it.
+	inc	[cs:COM_Level]		;AN000; set it.
 	jmp	Org5			;AN000;
 
 
@@ -669,18 +669,18 @@ Skip_Comment:
 ;J.K.	  If found, SI, CX register adjusted accordingly.
 
 	jcxz	NOGET		;AN000; Get out of the Organize routine.
-	cmp	[COM_Level], 0	;AN000; only check it if parameter level is 0.
+	cmp	[cs:COM_Level], 0	;AN000; only check it if parameter level is 0.
 	jne	No_Commt	;AN000;  (Not inside quotations)
 
-	cmp	[CMMT], 1 	;AN000;
+	cmp	[cs:CMMT], 1 	;AN000;
 	jb	No_Commt	;AN000;
 	mov	al, [es:si]	;AN000;
-	cmp	[CMMT1], al	;AN000;
+	cmp	[cs:CMMT1], al	;AN000;
 	jne	No_Commt	;AN000;
-	cmp	[CMMT], 2 	;AN000;
+	cmp	[cs:CMMT], 2 	;AN000;
 	jne	Skip_Cmmt	;AN000;
 	mov	al, [es:si+1]	;AN000;
-	cmp	[CMMT2], al	;AN000;
+	cmp	[cs:CMMT2], al	;AN000;
 	jne	No_Commt	;AN000;
 Skip_Cmmt:			;AN000;
 	jcxz	NOGET		;AN000; get out of Organize routine.
@@ -712,10 +712,10 @@ Org_Delim:			;AN000;  Used by Organize routine except for getting
 
 
 NOGET:	POP	CX
-	MOV	[COUNT_SYSINIT],DI
-	mov	[Org_Count], DI	;AN012;
+	MOV	[cs:COUNT_SYSINIT],DI
+	mov	[cs:Org_Count], DI	;AN012;
 	XOR	SI,SI
-	MOV	[CHRPTR],SI
+	MOV	[cs:CHRPTR],SI
 	return
 
 ;Get3:	 jcxz	 NOGET		 ;J.K.do not consider '/',',' as a delim.
@@ -821,21 +821,21 @@ SET_BREAK:
 ;of the drives.
 
 	PUSH	AX
-	MOV	AX,word [BREAK_ADDR+2]  ;REMOVE THE INIT CODE
-	cmp	[MultDeviceFlag], 0	    ;AN001;
+	MOV	AX,word [cs:BREAK_ADDR+2]  ;REMOVE THE INIT CODE
+	cmp	[cs:MultDeviceFlag], 0	    ;AN001;
 	jne	Set_Break_Continue	    ;AN001;Do not check it.
-	cmp	ax, [MEMHI]
+	cmp	ax, [cs:MEMHI]
 	jne	Set_Break_Continue	    ;if not same, then O.K.
 
-	cmp	word [BREAK_ADDR],0
+	cmp	word [cs:BREAK_ADDR],0
 	je	Yes_Break_Failed	    ;[Break_addr+2]=[MEMHI] & [Break_addr]=0
 
 Set_Break_Continue:
-	MOV	[MEMHI],AX
-	MOV	AX,word [BREAK_ADDR]
-	MOV	[MEMLO],AX
+	MOV	[cs:MEMHI],AX
+	MOV	AX,word [cs:BREAK_ADDR]
+	MOV	[cs:MEMLO],AX
 	POP	AX			    ; NOTE FALL THROUGH
-	or	[SetDevMarkFlag], SETBRKDONE	;AN005; Signal the successful Set_break
+	or	[cs:SetDevMarkFlag], SETBRKDONE	;AN005; Signal the successful Set_break
 
 ;
 ; Round the values in MEMLO and MEMHI to paragraph boundary.
@@ -843,14 +843,14 @@ Set_Break_Continue:
 ;
 ROUND:
 	PUSH	AX
-	MOV	AX,[MEMLO]
+	MOV	AX,[cs:MEMLO]
 
 	invoke	ParaRound		; para round up
 
-	ADD	[MEMHI],AX
-	MOV	[MEMLO],0
-	mov	ax,[MEMHI]		; ax = new memhi
-	CMP	AX,[ALLOCLIM]		; if new memhi >= alloclim, error
+	ADD	[cs:MEMHI],AX
+	MOV	[cs:MEMLO],0
+	mov	ax,[cs:MEMHI]		; ax = new memhi
+	CMP	AX,[cs:ALLOCLIM]		; if new memhi >= alloclim, error
 	JAE	MEM_ERR
 	test	[cs:SetDevMarkFlag], FOR_DEVMARK	    ;AN005;
 	jz	Skip_Set_DEVMARKSIZE			;AN005;
@@ -882,12 +882,12 @@ CALLDEV:MOV	DS,word [cs:ENTRY_POINT+2]
 	PUSH	word [cs:ENTRY_POINT]
 	MOV	word [cs:ENTRY_POINT],AX
 	MOV	BX,PACKET
-	CALL	dword [ENTRY_POINT]
+	CALL	dword [cs:ENTRY_POINT]
 	POP	word [cs:ENTRY_POINT]
 	return
 
 BADNUM:
-	MOV	[SepChr],0
+	MOV	[cs:SepChr],0
 	XOR	AX,AX		; Set Zero flag, and AX = 0
 	pop	bx		; J.K.
 	stc			; AND carry set
@@ -928,7 +928,7 @@ B2:	CALL	ToDigit 		; do we have a digit
 	jz	b15			;J.K. 5/23/86 then end of digits.
 	cmp	al, TAB 		;J.K. 5/23/86 TAB
 	jz	b15			;J.K.
-	CMP	AL,[SepChr]		; allow 0 or special separators
+	CMP	AL,[cs:SepChr]		; allow 0 or special separators
 	JZ	b15
 	cmp	al,SWTCHR		; See if another switch follows
 	JZ	b15
@@ -938,8 +938,8 @@ B2:	CALL	ToDigit 		; do we have a digit
 	jz	b15
 	OR	AL,AL			; end of line separator?
 	JNZ	B2			; no, try as a valid char...
-b15:	INC	[COUNT_SYSINIT]			; one more character to s...
-	DEC	[CHRPTR]			; back up over separator
+b15:	INC	[cs:COUNT_SYSINIT]			; one more character to s...
+	DEC	[cs:CHRPTR]			; back up over separator
 B1:	MOV	AX,BX			; get proper count
 	OR	AX,AX			; Clears carry, sets Zero accordingly
 	pop	bx
@@ -1325,7 +1325,7 @@ PRN1:	MOV	DL,[es:SI]
 	JMP	PRN1
 PRN2:	MOV	DX,BX
 	call	PRINT
-	cmp	[DoNotShowNum], 1 	;AN000;  suppress line number when handling COMMAND.COM
+	cmp	[cs:DoNotShowNum], 1 	;AN000;  suppress line number when handling COMMAND.COM
 	je	PRNEXIT
 	call	Error_Line
 PRNEXIT:
@@ -1376,7 +1376,7 @@ DOSIZE:
 	mov	dx,ax
 
 	ADD	CX,DX
-	CMP	CX,[ALLOCLIM]
+	CMP	CX,[cs:ALLOCLIM]
 	JB	OKLD_SYSINIT2
 	JMP	MEM_ERR
 

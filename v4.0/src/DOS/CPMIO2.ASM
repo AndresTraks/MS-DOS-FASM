@@ -62,18 +62,18 @@ Break
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
  if  DBCS					;AN000;
-	push	word [InterCon]		;AN000;
-	mov	[InterCon],01H			;AN000;
+	push	word [ss:InterCon]		;AN000;
+	mov	[ss:InterCon],01H			;AN000;
 	invoke	INTER_CON_INPUT_NO_ECHO 	;AN000;
-	pop	word [InterCon]		;AN000;
+	pop	word [ss:InterCon]		;AN000;
 	pushf					;AN000;
 	push	AX				;AN000;
-	mov	[SaveCurFlg],0			;AN000;
+	mov	[ss:SaveCurFlg],0			;AN000;
 	jnz	sj0_CPMIO2				;AN000;
-	mov	[SaveCurFlg],1			;AN000;
+	mov	[ss:SaveCurFlg],1			;AN000;
 sj0_CPMIO2:						;AN000;
 	invoke	OUTT				;AN000;
-	mov	[SaveCurFlg],0			;AN000;
+	mov	[ss:SaveCurFlg],0			;AN000;
 	pop	AX				;AN000;
 	popf					;AN000;
 	jz	STD_CON_INPUT$			;AN000;
@@ -107,12 +107,12 @@ Break
 	CMP	AL,c_DEL
 	JZ	OUTCH
 OUTCHA: 				   ;AN000;
-	INC	byte [CARPOS]
+	INC	byte [ss:CARPOS]
 OUTCH:
 	PUSH	DS
 	PUSH	SI
-	INC	byte [CharCo]		;invoke  statchk...
-	AND	byte [CharCo],00111111B	;AN000; every 64th char
+	INC	byte [ss:CharCo]		;invoke  statchk...
+	AND	byte [ss:CharCo],00111111B	;AN000; every 64th char
 	JNZ	OUTSKIP
 	PUSH	AX
 	invoke	STATCHK
@@ -122,10 +122,10 @@ OUTSKIP:
 	POP	SI
 	POP	DS
  if  DBCS				;AN000;
-	TEST	[SaveCurFlg],01H	;AN000;print but no cursor adv? 2/13/KK
+	TEST	[ss:SaveCurFlg],01H	;AN000;print but no cursor adv? 2/13/KK
 	retnz				;AN000;if so then do not send to prt2/13/KK
  end if
-	TEST	byte [PFLAG],-1
+	TEST	byte [ss:PFLAG],-1
 	retz
 	PUSH	BX
 	PUSH	DS
@@ -143,7 +143,7 @@ OUTSKIP:
 	JC	TRIPOPJ
 	TEST	[SI+sf_entry.sf_flags],sf_net_spool	; StdPrn redirected?
 	JZ	LISSTRT2J			; No, OK to echo
-	MOV	byte [PFLAG],0		; If a spool, NEVER echo
+	MOV	byte [ss:PFLAG],0		; If a spool, NEVER echo
 TRIPOPJ:
 	JMP	TRIPOP
 
@@ -157,7 +157,7 @@ CTRLOUT:
 	JZ	BACKPOS
 	CMP	AL,c_HT
 	JNZ	OUTCH
-	MOV	AL,[CARPOS]
+	MOV	AL,[ss:CARPOS]
 	OR	AL,0F8H
 	NEG	AL
 
@@ -176,12 +176,12 @@ POPTAB:
 	return
 
 ZERPOS:
-	MOV	byte [CARPOS],0
+	MOV	byte [ss:CARPOS],0
 	JMP	OUTCH
 OUTJ:	JMP	OUTT
 
 BACKPOS:
-	DEC	byte [CARPOS]
+	DEC	byte [ss:CARPOS]
 	JMP	OUTCH
 
 	entry	BUFOUT
@@ -343,7 +343,7 @@ BADJFNCON:
 
 REDISPJ:
  if  DBCS			  ;AN000;
-	mov	ds,[CurrentPDB]   ;AN000;
+	mov	ds,[ss:CurrentPDB]   ;AN000;
 				  ;AN000; set DS same as one from COMMAND entry
  end if
 	CLI
