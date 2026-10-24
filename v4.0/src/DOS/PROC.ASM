@@ -38,13 +38,13 @@ SAVEXIT 	EQU	10
 
     i_need  CurrentPDB,WORD
     i_need  CreatePDB,BYTE
-    i_need  Exit_type,BYTE
+    i_need  exit_type,BYTE
     i_need  INDOS,BYTE
     i_need  DMAADD,DWORD
     i_need  DidCTRLC,BYTE
     i_need  exit_type,BYTE
     i_need  exit_code,WORD
-    i_need  OpenBuf,128
+    i_need  OPENBUF,128
     I_need  EXTERR_LOCUS,BYTE		; Extended Error Locus
 
 SUBTTL WAIT$ - return previous process error code
@@ -66,7 +66,13 @@ PAGE
 	transfer    SYS_RET_OK
 EndProc WAIT$
 
+; EXEC.ASM has a piece of the table segment in it, so it opens and closes
+; the passes it contributes to itself.
+end if
+
 INCLUDE 'EXEC.ASM'
+
+if SEGSEL = S_CODE
 
 SUBTTL Terminate and stay resident handler
 PAGE
@@ -82,10 +88,10 @@ PAGE
 ;	ASSUME DS:NOTHING,ES:NOTHING,SS:DOSGROUP
 
 	PUSH	AX			; keep exit code around
-	MOV	byte [Exit_type],Exit_keep_process
+	MOV	byte [exit_type],Exit_Keep_process
 	MOV	ES,[CurrentPDB]
 	CMP	DX,6h			; keep enough space around for system
-	JAE	Keep_shrink		; info
+	JAE	keep_shrink		; info
 	MOV	DX,6h
 keep_shrink:
 	MOV	BX,DX
@@ -97,17 +103,17 @@ keep_shrink:
 	JC	keep_done		; failed on modification
 	MOV	AX,DS
 	ADD	AX,BX
-	MOV	[PDB_block_len],AX
+	MOV	[Process_data_block.PDB_block_len],AX
 
 keep_done:
 	POP	AX
-	JMP	SHORT exit_inner	; and let abort take care of the rest
+	JMP	SHORT Exit_inner	; and let abort take care of the rest
 
 EndProc Keep_process$
 
 	procedure   Stay_resident,NEAR
 ;	ASSUME	DS:NOTHING,ES:NOTHING,SS:NOTHING
-	MOV	AX,(Keep_process SHL 8) + 0 ; Lower part is return code
+	MOV	AX,(Keep_Process SHL 8) + 0 ; Lower part is return code
 	ADD	DX,15
 	RCR	DX,1
 	MOV	CL,3
@@ -131,15 +137,15 @@ PAGE
 	XOR	AH,AH
 	XCHG	AH,byte [DidCTRLC]
 	OR	AH,AH
-	MOV	byte [Exit_type],exit_terminate
-	JZ	exit_inner
-	MOV	byte [Exit_type],exit_ctrl_c
+	MOV	byte [exit_type],Exit_terminate
+	JZ	Exit_inner
+	MOV	byte [exit_type],Exit_Ctrl_C
 
 	entry	Exit_inner
 
 	invoke	get_user_stack
-	PUSH	[CurrentPDB]
-	POP	[SI+user_environ.user_CS]
+	PUSH	word [CurrentPDB]
+	POP	word [SI+user_environ.user_CS]
 	JMP	SHORT abort_inner
 EndProc EXIT$
 
@@ -157,7 +163,7 @@ BREAK <ABORT$ -- Terminate a process>
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
 	XOR	AL,AL
-	MOV	[exit_type],exit_abort
+	MOV	byte [exit_type],Exit_abort
 
 ;
 ; abort_inner must have AL set as the exit code!  The exit type is retrieved
@@ -168,7 +174,7 @@ BREAK <ABORT$ -- Terminate a process>
 
 	MOV	AH,[exit_type]
 	MOV	[exit_code],AX
-	invoke	Get_user_stack
+	invoke	get_user_stack
 	MOV	DS,[SI+user_environ.user_CS] 	; set up old interrupts
 	XOR	AX,AX
 	MOV	ES,AX

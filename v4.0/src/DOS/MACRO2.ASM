@@ -107,26 +107,33 @@ INCLUDE '../INC/DEVSYM.INC'
 Installed = TRUE
 
 	I_need	Splices,BYTE		; TRUE => splices are being done.
-	I_need	WFP_Start,WORD		; pointer to beginning of expansion
-	I_need	Curr_Dir_End,WORD	; offset to end of current dir
-	I_need	ThisCDS,DWORD		; pointer to CDS used
-	I_need	ThisDPB,DWORD		; pointer to DPB used
+	I_need	WFP_START,WORD		; pointer to beginning of expansion
+	I_need	CURR_DIR_END,WORD	; offset to end of current dir
+	I_need	THISCDS,DWORD		; pointer to CDS used
+	I_need	THISDPB,DWORD		; pointer to DPB used
 	I_need	NAME1,11		; Parse output of NameTrans
-	I_need	OpenBuf,128		; ususal destination of strings
-	I_need	ExtFCB,BYTE		; flag for extended FCBs
-	I_need	Sattrib,BYTE		; attribute of search
+	I_need	OPENBUF,128		; ususal destination of strings
+	I_need	EXTFCB,BYTE		; flag for extended FCBs
+	I_need	SATTRIB,BYTE		; attribute of search
 	I_need	fSplice,BYTE		; TRUE => do splice after canonicalize
 	I_need	fSharing,BYTE		; TRUE => no redirection allowed
 	I_Need	NoSetDir,BYTE		; TRUE => syscall is interested in
 					; entry, not contents.	We splice only
 					; inexact matches
 	I_Need	cMeta,BYTE		; count of meta chars in path
-	I_Need	Temp_Var,WORD		;AN000; variable for temporary use 3/31/KK
+	I_Need	TEMP_VAR,WORD		;AN000; variable for temporary use 3/31/KK
 	I_Need	DOS34_FLAG,WORD 	;AN000; variable for dos34
 	I_Need	NO_FILTER_PATH,DWORD	;AN000; pointer to orignal path
+; MASM let the table segment be opened inside the code segment and the
+; assembler sorted the pieces out; here the code segment's pass has to be
+; closed first, or the table would be laid down in the wrong one.
+end if
+
 if SEGSEL = S_TABLE
 ;	EXTRN	CharType:BYTE
 end if
+
+if SEGSEL = S_CODE
 
 BREAK <TransFCB - convert an FCB into a path, doing substitution>
 
@@ -152,13 +159,13 @@ MACRO001E:
 	Context ES			; get DOSGroup addressability
 	SaveReg <ES,DI> 		; save away final destination
 	LEA	DI,FCBTmp		; point to FCB temp area
-	MOV	[ExtFCB],0		; no extended FCB found
-	MOV	[Sattrib],0		; default search attributes
+	MOV	byte [EXTFCB],0		; no extended FCB found
+	MOV	byte [SATTRIB],0		; default search attributes
 	invoke	GetExtended		; get FCB, extended or not
 	JZ	GetDrive		; not an extended FCB, get drive
 	MOV	AL,[SI-1]		; get attributes
-	MOV	[SAttrib],AL		; store search attributes
-	MOV	[ExtFCB],-1		; signal extended FCB
+	MOV	[SATTRIB],AL		; store search attributes
+	MOV	byte [EXTFCB],-1		; signal extended FCB
 GetDrive:
 	LODSB				; get drive byte
 	invoke	GetThisDrv
@@ -173,21 +180,21 @@ GetDrive:
 	SaveReg <SI>			;AN000;; back over name, ext
 	MOV	CX,8			;AN000;; 8 chars in main part of name
 FCBScan:LODSB				;AN000;; get a byte
-	invoke	testkanj		;AN000;
-	jz	notkanj2		;AN000;
+	invoke	TESTKANJ		;AN000;
+	jz	notkanj2_MACRO2		;AN000;
 	DEC	CX			;AN000;
 	JCXZ	VolidChck		;AN000;; Kanji half char screw up
 	LODSB				;AN000;; second kanji byte
-	jmp	short Nextch		;AN000;
+	jmp	short NextCh		;AN000;
 VolidChck:				;AN000;
-	TEST	[SAttrib],attr_volume_id ;AN000;; volume id ?
-	JZ	Badpack 		 ;AN000;; no, error
+	TEST	[SATTRIB],attr_volume_id ;AN000;; volume id ?
+	JZ	BadPack 		 ;AN000;; no, error
 	OR	[DOS34_FLAG],DBCS_VOLID  ;AN000;; no, error
 	DEC	CX			 ;AN000;; cx=-1
 	INC	SI			 ;AN000;; next char
 	JMP	SHORT FCBScango 	 ;AN000;
-notkanj2:				 ;AN000;
-	XLAT	ES:CharType		 ;AN000;;get bits
+notkanj2_MACRO2:				 ;AN000;
+	XLAT	byte [es:BX]		 ;AN000;;get bits
 	TEST	AL,fFCB 		 ;AN000;
 	JZ	BadPack 		 ;AN000;
 NextCh: 				 ;AN000;
@@ -196,14 +203,14 @@ FCBScango:				 ;AN000;
 	ADD	CX,3			;AN000;; Three chars in extension
 FCBScanE:				;AN000;
 	LODSB				;AN000;
-	invoke	testkanj		;AN000;
+	invoke	TESTKANJ		;AN000;
 	jz	notkanj3		;AN000;
 	DEC	CX			;AN000;
 	JCXZ	BadPack 		;AN000;; Kanji half char problem
 	LODSB				;AN000;; second kanji byte
 	jmp	short NextChE		;AN000;
 notkanj3:				;AN000;
-	XLAT	ES:CharType		;AN000;; get bits
+	XLAT	byte [es:BX]		;AN000;; get bits
 	TEST	AL,fFCB 		;AN000;
 	JZ	BadPack 		;AN000;
 NextChE:				;AN000;
@@ -214,7 +221,7 @@ NextChE:				;AN000;
 	MOV	CX,11
 	SaveReg <SI>			; back over name, ext
 FCBScan:LODSB				; get a byte
-	XLAT	ES:CharType		; get bits
+	XLAT	byte [es:BX]		; get bits
 	TEST	AL,fFCB
 	JZ	BadPack
 NextCh: LOOP	FCBScan
@@ -314,17 +321,17 @@ SetSplice:
 	MOV	word [NO_FILTER_PATH+2],DS ;AN000;;IFS.
 
 	MOV	[fSplice],AL		;   fSplice = TRUE;
-	MOV	[cMeta],-1
+	MOV	byte [cMeta],-1
 	MOV	[WFP_START],DI
-	MOV	[Curr_Dir_End],-1 	; crack from start
+	MOV	word [CURR_DIR_END],-1 	; crack from start
 	Context ES
 	LEA	BP,[DI+TEMPLEN] 	; end of buffer
 ;
 ; if this is through the server dos call, fsharing is set.  We set up a
 ; dummy cds and let the operation go.
 ;
-	TEST	[fSharing],-1		; if no sharing
-	JZ	CheckUNC		; skip to UNC check
+	TEST	byte [fSharing],-1		; if no sharing
+	JZ	CheckUnc		; skip to UNC check
 ;
 ; ES:DI point to buffer
 ;
@@ -340,14 +347,14 @@ SetSplice:
 ;
 	Context DS
 	MOV	SI,[WFP_START]		; point to name
-	TEST	[fSplice],-1
+	TEST	byte [fSplice],-1
 	JZ	NoServerSplice
 	CALL	Splice
 NoServerSplice:
 	Context DS			; for FATREAD
-	LES	DI,[ThisCDS]		; for fatread
+	LES	DI,[THISCDS]		; for fatread
 	EnterCrit   critDisk
-	Invoke	FatRead_CDS
+	Invoke	FATREAD_CDS
 	LeaveCrit   critDisk
 NoPath:
 	MOV	AL,error_path_not_found ; Set up for possible bad path error
@@ -358,8 +365,8 @@ NoPath:
 ; the name if so.
 ;
 CheckUnc:
-	MOV	word [ThisCDS],-1	; NULL thisCDS
-	CallInstall NetSpoolCheck,multNet,35
+	MOV	word [THISCDS],-1	; NULL thisCDS
+	CallInstall NetSpoolCheck,MultNET,35
 	JNC	UNCDone
 ;
 ; At this point the name is either a UNC-style name (prefixed with two leading
@@ -371,9 +378,9 @@ NO_CHECK:
 	CALL	DriveFromText		; eat drive letter
 	PUSH	AX			; save it
 	MOV	AX,word [SI]	; get first two bytes of path
-	Invoke	PathChrCmp		; convert to normal form
+	Invoke	PATHCHRCMP		; convert to normal form
 	XCHG	AH,AL			; swap for second byte
-	Invoke	PathChrCmp		; convert to normal form
+	Invoke	PATHCHRCMP		; convert to normal form
 	JNZ	CheckDevice		; not a path char
 	CMP	AH,AL			; are they same?
 	JNZ	CheckDevice		; nope
@@ -387,21 +394,21 @@ NO_CHECK:
 UNCCpy: LODSB				; get a byte
  if  DBCS				;AN000;
 ;----------------------------- Start of DBCS 2/23/KK
-	invoke	testkanj		;AN000;
-	jz	notkanj1		;AN000;
+	invoke	TESTKANJ		;AN000;
+	jz	notkanj1_MACRO2		;AN000;
 	STOSB				;AN000;
 	LODSB				;AN000;
 	OR	AL,AL			;AN000;
 	JZ	UNCTerm 		;AN000;; Ignore half kanji error for now
 	STOSB				;AN000;
 	jmp	UNCCpy			;AN000;
-notkanj1:				;AN000;
+notkanj1_MACRO2:				;AN000;
 ;----------------------------- End of DBCS 2/23/KK
  end if					;AN000;
-	invoke	UCase			;AN000;; convert the char
+	invoke	uCase			;AN000;; convert the char
 	OR	AL,AL
 	JZ	UNCTerm 		; end of string.  All done.
-	Invoke	PathChrCmp		; is it a path char?
+	Invoke	PATHCHRCMP		; is it a path char?
 	MOV	BX,DI			; backup position
 	STOSB
 	JNZ	UNCCpy			; no, go copy
@@ -430,12 +437,12 @@ TP_check05:				;AN000;
 	MOV	AL,byte [es:DI]	;AN000;; Get character from path
 	OR	AL,AL			;AN000;; End of null terminated path?
 	JZ	TP_end05		;AN000;; Finished, CF =0 from OR (ret success)
-	invoke	testkanj		;AN000;; Kanji lead character?
+	invoke	TESTKANJ		;AN000;; Kanji lead character?
 	JZ	TP_notK 		;AN000;; Check for path seperator if not
 	INC	DI			;AN000;; Bypass Kanji second byte
 	JMP	TP_nxt05		;AN000;; Go to check next character
 TP_notK:				;AN000;
-	invoke	PathChrCmp		;AN000;; Is it a path seperator char?
+	invoke	PATHCHRCMP		;AN000;; Is it a path seperator char?
 	JNZ	TP_nxt05		;AN000;; Check next character if not
 	CMP	byte [es:DI+1],05	;AN000;; 05 following path sep char?
 	JNZ	TP_nxt05		;AN000;; Check next character if not
@@ -473,9 +480,9 @@ CheckPath:
 ; sharing DOS call.  We know by getting here that we are NOT in a sharing DOS
 ; call.
 ;
-	MOV	[fSharing],-1		; simulate sharing dos call
+	MOV	byte [fSharing],-1		; simulate sharing dos call
 	invoke	GetThisDrv		; set ThisCDS and init DUMMYCDS
-	MOV	[fSharing],0		;
+	MOV	byte [fSharing],0		;
 ;
 ; Now that we have noted that we have a device, we put it into a form that
 ; getpath can understand.  Normally getpath requires d:\ to begin the input
@@ -513,16 +520,16 @@ DoFile:
 ; current directory.  Copy it in.
 ;
 	SaveReg <DS,SI>
-	LDS	SI,[ThisCDS]		; point to CDS
+	LDS	SI,[THISCDS]		; point to CDS
 	MOV	BX,DI			; point to destination
-	ADD	BX,[SI+curdir_end]	; point to backup limit
+	ADD	BX,[SI+curdir_list.curdir_end]	; point to backup limit
 ;	LEA	SI,[SI].curdir_text	; point to text
 	LEA	BP,[DI+TEMPLEN] 	; regenerate end of buffer
  if  DBCS				;AN000;
 ;------------------------ Start of DBCS 2/13/KK
 Kcpylp: 				;AN000;
 	LODSB				;AN000;
-	invoke	TestKanj		;AN000;
+	invoke	TESTKANJ		;AN000;
 	jz	Notkanjf		;AN000;
 	STOSB				;AN000;
 	MOVSB				;AN000;
@@ -572,7 +579,7 @@ GetOrig:
 	MOV	DI,BX			; back up to root point.
 SkipPath:
 	LODSB
-	invoke PathChrCmp
+	invoke PATHCHRCMP
 	JZ	SkipPath
 	DEC	SI
 	OR	AL,AL
@@ -602,9 +609,9 @@ DoCanon:
 
 	MOV	DI,[WFP_START]		;AN000;; ES:DI points to string
 	MOV	AX,word [es:DI]	;AN000;; Get leading 2 chars from path buffer
-	invoke	PathChrCmp		;AN000;; First char a path char?
+	invoke	PATHCHRCMP		;AN000;; First char a path char?
 	JNZ	TP_notremote		;AN000;; Not remote if not.
-	invoke	PathChrCmp		;AN000;; Second char a path char?
+	invoke	PATHCHRCMP		;AN000;; Second char a path char?
 	JNZ	TP_notremote		;AN000;; Not remote if not
 	CALL	TP_check05		;AN000;; Remote so convert 05 back to e5
 TP_notremote:				;AN000;
@@ -617,11 +624,11 @@ TP_notremote:				;AN000;
 ;
 	Context DS
 	MOV	DI,[WFP_START]		; DS:SI point to string
-	LDS	SI,[ThisCDS]		; point to CDS
+	LDS	SI,[THISCDS]		; point to CDS
 ;	ASSUME	DS:NOTHING
 ;	LEA	SI,[SI].curdir_text	; point to text
 	CALL	PathPref		; is there a prefix?
-	JNZ	DoSplice		; no, do splice
+	JNZ	DoSplice_MACRO2		; no, do splice
 ;
 ; We have a match. Check to see if we ended in a path char.
 ;
@@ -629,7 +636,7 @@ TP_notremote:				;AN000;
 ;---------------------------- Start of DBCS 2/13/KK
 	PUSH	BX			;AN000;
 	MOV	BX,SI			;AN000;
-	MOV	SI,word [ThisCDS]	;AN000;; point to CDS
+	MOV	SI,word [THISCDS]	;AN000;; point to CDS
 LOOKDUAL:				;AN000;
 	MOV	AL,byte [SI]	;AN000;
 	invoke	TESTKANJ		;AN000;
@@ -649,21 +656,21 @@ ONEINC: 				;AN000;
 ;------------------------ End of DBCS 2/13/KK
  end if					;AN000;
 	MOV	AL,[SI-1]		; last char to match
-	Invoke	PathChrCmp		; did we end on a path char? (root)
-	JZ	DoSplice		; yes, no current dir here.
+	Invoke	PATHCHRCMP		; did we end on a path char? (root)
+	JZ	DoSplice_MACRO2		; yes, no current dir here.
 Pathline:				; 2/13/KK
 	CMP	byte [es:DI],0	; end at NUL?
-	JZ	DoSplice
+	JZ	DoSplice_MACRO2
 	INC	DI			; point to after current path char
-	MOV	[Curr_Dir_End],DI 	; point to correct spot
+	MOV	[CURR_DIR_END],DI 	; point to correct spot
 ;
 ; Splice the result.
 ;
-DoSplice:
+DoSplice_MACRO2:
 	Context DS			; back to DOSGROUP
 	MOV	SI,[WFP_START]		; point to beginning of string
 	XOR	CX,CX
-	TEST	[fSplice],-1
+	TEST	byte [fSplice],-1
 	JZ	SkipSplice
 	CALL	Splice			; replaces in place.
 SkipSplice:
@@ -673,12 +680,12 @@ SkipSplice:
 ; device.
 ;
 	Context DS
-	LES	DI,[ThisCDS]		; point to correct drive
-	TEST	[es:DI+curdir_flags],curdir_isnet
+	LES	DI,[THISCDS]		; point to correct drive
+	TEST	[es:DI+curdir_list.curdir_flags],curdir_isnet
 	retnz				; net, no fatread necessary
 	JCXZ	Done
 	EnterCrit   critDisk
-	invoke	FatRead_CDS
+	invoke	FATREAD_CDS
 	LeaveCrit   critDisk
 	MOV	AL,error_path_not_found ; Set up for possible bad path error
 Done:	return				; any errors in carry flag.
@@ -706,7 +713,7 @@ Procedure Canonicalize,NEAR
 ; We copy all leading path separators.
 ;
 	LODSB				;   while (PathChr (*s))
-	Invoke	PathChrCmp
+	Invoke	PATHCHRCMP
  if  DBCS
 	JNZ	CanonDec0		; 2/19/KK
  else
@@ -773,7 +780,7 @@ CLC01:					;AN000;
 CLC00:					;AN000;
 	mov	al,[es:si]		;AN000;
 	inc	si			;AN000;
-	invoke	testkanj		;AN000;
+	invoke	TESTKANJ		;AN000;
 	je	CLC_lop 		;AN000;
 	inc	si			;AN000;
 	jmp	CLC_lop 		;AN000;
@@ -830,7 +837,7 @@ CanonPath:
 ; Copy the first path char we see.
 ;
 	LODSB				; get the char
-	Invoke	PathChrCmp		; is it path char?
+	Invoke	PATHCHRCMP		; is it path char?
 	JNZ	CanonDec		; no, go test for nul
 	CMP	DI,BP			; beyond buffer end?
 	JAE	CanonBad		; yep, error.
@@ -840,7 +847,7 @@ CanonPath:
 ;
 CanonPathLoop:
 	LODSB				; get next byte
-	Invoke	PathChrCmp		; path char again?
+	Invoke	PATHCHRCMP		; path char again?
 	JZ	CanonPathLoop		; yep, grab another
 	DEC	SI			; back up
 	JMP	CanonLoop		; go copy component
@@ -862,7 +869,7 @@ Procedure   PathSep,NEAR
 	entry	PathSepGotCh		; already have character
 	OR	AL,AL			; test for zero
 	retz				; return if equal to zero (NUL)
-	invoke	PathChrCmp		; check for path character
+	invoke	PATHCHRCMP		; check for path character
 	return				; and return HIS determination
 EndProc PathSep
 
@@ -890,7 +897,7 @@ Procedure   SkipBack,NEAR
 	MOV	SI,BX		;AN000;; DS:SI -> start of ES:DI string
 	MOV	CX,DI		;AN000;; Limit of forward scan is input DI
 	MOV	AL,[SI] 	;AN000;
-	invoke	PathChrCmp	;AN000;
+	invoke	PATHCHRCMP	;AN000;
 	JNZ	SkipBadP	;AN000;; Backup limit MUST be path char
 	CMP	DI,BX		;AN000;
 	JBE	SkipBadP	;AN000;
@@ -899,12 +906,12 @@ Skiplp: 			;AN000;
 	CMP	SI,CX		;AN000;
 	JAE	SkipOK		;AN000;; Done, DI is correct backup point
 	LODSB			;AN000;
-	invoke	Testkanj	;AN000;
-	jz	Notkanjv	;AN000;
+	invoke	TESTKANJ	;AN000;
+	jz	NotKanjv	;AN000;
 	lodsb			;AN000;; Skip over second kanji byte
 	JMP	Skiplp		;AN000;
 NotKanjv:			;AN000;
-	invoke	PathChrCmp	;AN000;
+	invoke	PATHCHRCMP	;AN000;
 	JNZ	Skiplp		;AN000;; New backup point
 	MOV	DI,SI		;AN000;; DI point to path sep
 	DEC	DI		;AN000;
@@ -927,7 +934,7 @@ SkipBadP:			;AN000;
 	JB	SkipBad 		;	if (d < dlim)
 	DEC	DI			;	    goto err;
 	MOV	AL,[es:DI]		;	if (pathchr (*--d))
-	invoke	PathChrCmp		;	    break;
+	invoke	PATHCHRCMP		;	    break;
 	JNZ	SkipBack		;	}
 	CLC				;   return (0);
 	return				;
@@ -953,12 +960,12 @@ Break <CopyComponent - copy out a file path component>
 
 Procedure   CopyComponent,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
-CopyBP	    EQU     WORD PTR [BP]
-CopyD	    EQU     DWORD PTR [BP+2]
-CopyDoff    EQU     WORD PTR [BP+2]
-CopyS	    EQU     DWORD PTR [BP+6]
-CopySoff    EQU     WORD PTR [BP+6]
-CopyTemp    EQU     BYTE PTR [BP+10]
+CopyBP	    EQU     word [BP]
+CopyD	    EQU     dword [BP+2]
+CopyDoff    EQU     word [BP+2]
+CopyS	    EQU     dword [BP+6]
+CopySoff    EQU     word [BP+6]
+CopyTemp    EQU     byte [BP+10]
 	SUB	SP,14			; room for temp buffer
 	SaveReg <DS,SI,ES,DI,BP>
 	MOV	BP,SP
@@ -980,13 +987,13 @@ NulTerm:				;		return -1;
 	XOR	AL,AL			;	*d++ = 0;
 	STOSB
 	MOV	CopySoff,SI
-	JMP	SHORT GoodRet		;	}
+	JMP	SHORT GoodRet_MACRO2		;	}
 NormalComp:				;   else {
 	MOV	SI,CopySoff
 	Invoke	NameTrans		;	s = NameTrans (s, Name1);
-	CMP	SI,CopySOff		;	if (s == CopySOff)
+	CMP	SI,CopySoff		;	if (s == CopySOff)
 	JZ	CopyBad 		;	    return (-1);
-	TEST	[fSharing],-1		;	if (!fSharing) {
+	TEST	byte [fSharing],-1		;	if (!fSharing) {
 	JNZ	DoPack
 	AND	DL,1			;	    cMeta += fMeta;
 	ADD	[cMeta],DL		;	    if (cMeta > 0)
@@ -997,7 +1004,7 @@ NormalComp:				;   else {
 DoPack: 				;	    }
 	MOV	CopySoff,SI
 	Context DS
-	MOV	SI,Name1
+	MOV	SI,NAME1
 	LEA	DI,CopyTemp
 	SaveReg <DI>
 	Invoke	PackName		;	PackName (Name1, temp);
@@ -1010,7 +1017,7 @@ DoPack: 				;	    }
 	MOV	SI,DI			;	strcpy (d, temp);
 	LES	DI,CopyD
 	Invoke	FStrCpy
-GoodRet:				;	}
+GoodRet_MACRO2:				;	}
 	CLC
 	JMP	SHORT CopyEnd		;   return 0;
 CopyBad:
@@ -1025,7 +1032,7 @@ CopyEnd:
 	RestoreReg  <BP,DI,ES,SI,DS>
 	LAHF
 	ADD	SP,14			; reclaim temp buffer
-	Invoke	Strlen
+	Invoke	StrLen
 	DEC	CX
 	SAHF
 	return
@@ -1051,9 +1058,9 @@ Break <Splice - pseudo mount by string substitution>
 
 Procedure   Splice,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
-	TEST	[Splices],-1
+	TEST	byte [Splices],-1
 	JZ	AllDone
-	SaveReg <word [ThisCDS],word [ThisCDS+2]>   ; TmpCDS = ThisCDS
+	SaveReg <word [THISCDS],word [THISCDS+2]>   ; TmpCDS = ThisCDS
 	SaveReg <DS,SI>
 	RestoreReg <DI,ES>
 	XOR	AX,AX			;   for (i=1; s = GetCDSFromDrv (i); i++)
@@ -1061,7 +1068,7 @@ SpliceScan:
 	invoke	GetCDSFromDrv
 	JC	SpliceDone
 	INC	AL
-	TEST	[SI+curdir_flags],curdir_splice
+	TEST	[SI+curdir_list.curdir_flags],curdir_splice
 	JZ	SpliceScan		;	if ( Spliced (i) ) {
 	SaveReg <DI>
 	CALL	PathPref		;	    if (!PathPref (s, d))
@@ -1072,19 +1079,19 @@ SpliceSkip:
 SpliceFound:
 	CMP	byte [es:DI],0	;	    if (*s || NoSetDir) {
 	JNZ	SpliceDo
-	TEST	[NoSetDir],-1
+	TEST	byte [NoSetDir],-1
 	JNZ	SpliceSkip
 SpliceDo:
 	MOV	SI,DI			;		p = src + strlen (p);
 	SaveReg <ES>
 	RestoreReg  <DS,DI>
 	CALL	TextFromDrive1		;		src = TextFromDrive1(src,i);
-	MOV	AX,[Curr_Dir_End]
+	MOV	AX,[CURR_DIR_END]
 	OR	AX,AX
 	JS	NoPoke
 	ADD	AX,DI			;		curdirend += src-p;
 	SUB	AX,SI
-	MOV	[Curr_Dir_End],AX
+	MOV	[CURR_DIR_END],AX
 NoPoke:
 	CMP	byte [SI],0 	;		if (*p)
 	JNZ	SpliceCopy		;		    *src++ = '\\';
@@ -1097,12 +1104,12 @@ SpliceCopy:				;		strcpy (src, p);
 	JMP	SHORT DoSet		;		return;
 SpliceDone:				;		}
 ;	ASSUME	DS:NOTHING		;   ThisCDS = TmpCDS;
-	RestoreReg  <word [ThisCDS+2],word [ThisCDS]>
+	RestoreReg  <word [THISCDS+2],word [THISCDS]>
 AllDone:
 	XOR	CX,CX
 DoSet:
-	LDS	SI,[ThisCDS]		;   ThisDPB = ThisCDS->devptr;
-	LES	DI,[SI+curdir_devptr]
+	LDS	SI,[THISCDS]		;   ThisDPB = ThisCDS->devptr;
+	LES	DI,[SI+curdir_list.curdir_devptr]
 	MOV	word [THISDPB],DI
 	MOV	word [THISDPB+2],ES
 	return
@@ -1129,17 +1136,17 @@ Break <NameTrans$ - partially process a name>
 Procedure   NameTrans$,Near
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	SaveReg <DS,SI,ES,DI>
-	MOV	DI,OpenBuf
+	MOV	DI,OPENBUF
 	CALL	TransPath		; to translation (everything)
 	RestoreReg  <DI,ES,SI,DS>
 	JNC	TransOK
-	transfer    SYS_Ret_Err
+	transfer    SYS_RET_ERR
 TransOK:
-	MOV	SI,OpenBuf
+	MOV	SI,OPENBUF
 	Context DS
 GotText:
 	Invoke	FStrCpy
-	Transfer    SYS_Ret_OK
+	Transfer    SYS_RET_OK
 EndProc NameTrans$
 
 Break	<DriveFromText - return drive number from a text string>
@@ -1164,14 +1171,14 @@ Procedure   DriveFromText,NEAR
 ;--------------------- Start of DBCS 2/18/KK
 	push	ax		       ;AN000;
 	mov	al,[si] 	       ;AN000;
-	invoke	testkanj	       ;AN000;
+	invoke	TESTKANJ	       ;AN000;
 	pop	ax		       ;AN000;
 	retnz			       ;AN000;
 ;--------------------- End of DBCS 2/18/KK
  end if				       ;AN000;
 	LODSW				;	    drive = (*s | 020) - 'a'+1;
 	OR	AL,020h
-	SUB	AL,'[a]'-1                ;           s += 2;
+	SUB	AL,'a'-1                ;           s += 2;
 	retnz
 	MOV	AL,-1			; nuke AL...
 	return				;	    }
@@ -1191,13 +1198,13 @@ Procedure TextFromDrive,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
 	INC	AL
 	Entry	TextFromDrive1
-	ADD	AL,'[a]'-1                ;   *d++ = drive-1+'A';
+	ADD	AL,'a'-1                ;   *d++ = drive-1+'A';
 	MOV	AH,":"                  ;   strcat (d, ":");
 	STOSW
 	return
 EndProc TextFromDrive
 
-Break	<PathPref - see if one path is a prefix of another>
+Break	<PathPref - see if one path is a Prefix of another>
 
 ;
 ;   PathPref - compare DS:SI with ES:DI to see if one is the prefix of the
@@ -1219,7 +1226,7 @@ Procedure   PathPref,NEAR
 	SaveReg <AX>			;AN000;; save char register
 CmpLp:					;AN000;
 	MOV	AL,[SI] 		;AN000;
-	invoke	Testkanj		;AN000;
+	invoke	TESTKANJ		;AN000;
 	jz	NotKanj9		;AN000;
 	CMPSW				;AN000;
 	JNZ	Prefix			;AN000;
@@ -1237,7 +1244,7 @@ NotKanj9:				;AN000;
 	SaveReg <AX>			; save char register
  end if					;AN000;
 	MOV	AL,[SI-1]		; get last byte to match
-	Invoke	PathChrCmp		; is it a path char (Root!)
+	Invoke	PATHCHRCMP		; is it a path char (Root!)
 	JZ	Prefix			; yes, match root (I hope)
 NotSep: 				; 2/13/KK
 	MOV	AL,[es:DI]		; get next char to match
@@ -1261,7 +1268,7 @@ Break	<ScanPathChar - see if there is a path character in a string>
 Procedure     ScanPathChar,NEAR
 	LODSB				; fetch a character
  if  DBCS				;AN000;
-	invoke	TestKanj		;AN000;; 2/13/KK
+	invoke	TESTKANJ		;AN000;; 2/13/KK
 	jz	NotKanjr		;AN000;; 2/13/KK
 	LODSB				;AN000;; 2/13/KK
 	OR	AL,AL			;AN000;; 2/13/KK  3/31/removed
@@ -1273,7 +1280,7 @@ NotKanjr:				;AN000;; 2/13/KK
  end if					;AN000;
 	call	PathSepGotCh
 	JNZ	ScanPathChar		; not \, / or NUL => go back for more
-	invoke	PathChrCmp		; path separator?
+	invoke	PATHCHRCMP		; path separator?
 	return
 EndProc       ScanPathChar
 

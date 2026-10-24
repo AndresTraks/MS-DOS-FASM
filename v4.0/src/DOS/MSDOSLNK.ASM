@@ -40,6 +40,23 @@ macro NAME [x] {
 include '../INC/DOSSYM.INC'	; the structures and the numbers
 include '../INC/DEVSYM.INC'	; the device driver interface
 
+; The rest of the headers, read here for the same reason, and for one more:
+; a module's own INCLUDE of them stands inside the segment's IF, and fasm's
+; preprocessor reads an INCLUDE inside a macro whichever way the IF went --
+; so the guard that keeps a structure from being laid out twice was being set
+; on a pass that laid it out not at all.  Read once here, outside the walk,
+; each structure is laid out exactly once and every pass can see it.
+include '../INC/VERSION.INC'	; the switches that say which release this is
+include '../INC/DOSCNTRY.INC'	; the country and code page tables
+include '../INC/FASTOPEN.INC'	; the fastopen cache
+include '../INC/FASTSEEK.INC'
+include '../INC/FASTXXXX.INC'
+include '../INC/EA.INC'		; extended attributes
+include '../INC/IOCTL.INC'	; the IOCTL subfunctions
+include '../INC/IFSSYM.INC'	; the installable file system interface
+include '../INC/LOCK.INC'	; the record locking calls
+include '../INC/DPL.ASM'	; the server call parameter list
+
 S_START     = 1
 S_CONSTANTS = 2
 S_DATA      = 3

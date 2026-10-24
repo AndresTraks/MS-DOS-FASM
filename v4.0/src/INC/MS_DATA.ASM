@@ -1,5 +1,5 @@
 ;       SCCSID = @(#)msdata.asm 1.8 85/09/12
-        AsmVars <Kanji, Debug, Redirector, ShareF>
+        AsmVars <KANJI, debug, Redirector, ShareF>
  
 Break <Uninitialized data overlayed by initialization code>
  
@@ -47,7 +47,7 @@ DEVFCB:; Uses NAME1, NAME2, combined
         I_am    NAME1,12                ; File name buffer
         I_am    NAME2,13                ;
         I_am    DESTSTART,WORD          ;
-        DB      (sizeof.DIR_ENTRY - ($ - DEVFCB)) DUP (?)
+        DB      (sizeof.dir_entry - ($ - DEVFCB)) DUP (?)
 ;
 ; End Temporary directory entry.
 ;
@@ -195,7 +195,7 @@ SWAP_END:
 ;   to include this byte.
         DB      ?
  
-            DB      (512+80+32-(SWAP_END-ibmpatch)) DUP (?)
+            DB      (512+80+32-(SWAP_END-IBMPATCH)) DUP (?)
  
 MSDAT001e:
  

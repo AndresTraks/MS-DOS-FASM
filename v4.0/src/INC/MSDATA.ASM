@@ -26,7 +26,7 @@ INCLUDE 'MI.INC'
 TITLE   IBMDATA - DATA segment for DOS
 NAME    IBMDATA
 
-installed = TRUE
+Installed = TRUE
 
 INCLUDE 'MS_DATA.ASM'
 INCLUDE '../DOS/MSINIT.ASM'

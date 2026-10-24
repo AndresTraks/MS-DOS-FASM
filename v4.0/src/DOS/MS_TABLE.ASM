@@ -13,7 +13,7 @@ INCLUDE '../INC/DOSSYM.INC'
 ;.cref
 ;.list
 
-        AsmVars <Kanji, Debug, Redirector, ShareF>
+        AsmVars <KANJI, debug, Redirector, ShareF>
 
 if SEGSEL = S_TABLE
 TableZero:
@@ -75,7 +75,7 @@ I21_MAP_E_TAB:
     DB          error_access_denied
     DB  Open,6,error_path_not_found,error_file_not_found,error_invalid_access
     DB          error_too_many_open_files
-    DB          error_not_dos_disk,error_access_denied
+    DB          error_not_DOS_disk,error_access_denied
     DB  Close,1,error_invalid_handle
     DB  Read,2,error_invalid_handle,error_access_denied
     DB  Write,2,error_invalid_handle,error_access_denied
@@ -115,7 +115,7 @@ I21_MAP_E_TAB:
     DB  ExtOpen,10
     DB    error_path_not_found,error_file_not_found,error_invalid_access
     DB          error_too_many_open_files,error_file_exists,error_not_enough_memory
-    DB          error_not_dos_disk,error_invalid_data
+    DB          error_not_DOS_disk,error_invalid_data
     DB              error_invalid_function,error_access_denied
     DB  GetSetMediaID,4,error_invalid_drive,error_invalid_data
     DB          error_invalid_function,error_access_denied
@@ -130,54 +130,48 @@ I21_MAP_E_TAB:
 ; A value of 0FFh indicates a call specific value (ie.  should already
 ; be set).  AN ERROR CODE NOT IN THE TABLE FALLS THROUGH TO THE CATCH ALL AT
 ; THE END, IT IS ASSUMES THAT CLASS, ACTION, LOCUS IS ALREADY SET.
-; One row of the error table.  A locus of 0FFh means the call has already
-; set it; anything else is a name to be joined to errLOC_.  fasm cannot ask
-; MATCH for "anything but", so the first case says it has dealt with the
-; row and the second looks.
+; One row of the error table.  MASM joined each column to its errCLASS_,
+; errACT_ or errLOC_ prefix; the names are written out in full here, because
+; a name built by pasting is a name no reader of the sources can look up and
+; one nothing can check the spelling of.
 macro ErrTab    err,class,action,locus
 {
-    ERRTAB_SET = 0
-    match =0FFh, locus \{
-    DB  error_#err,errCLASS_#class,errACT_#action,0FFh
-    ERRTAB_SET = 1 \}
-    if ERRTAB_SET = 0
-    DB  error_#err,errCLASS_#class,errACT_#action,errLOC_#locus
-    end if
+    DB  err,class,action,locus
 }
 
 ;PUBLIC  ERR_TABLE_21
 ERR_TABLE_21:
-    ErrTab  invalid_function,       Apperr,     Abort,      0FFh
-    ErrTab  file_not_found,         NotFnd,     User,       Disk
-    ErrTab  path_not_found,         NotFnd,     User,       Disk
-    ErrTab  too_many_open_files,    OutRes,     Abort,      Unk
-    ErrTab  access_denied,          Auth,       User,       0FFh
-    ErrTab  invalid_handle,         Apperr,     Abort,      Unk
-    ErrTab  arena_trashed,          Apperr,     Panic,      Mem
-    ErrTab  not_enough_memory,      OutRes,     Abort,      Mem
-    ErrTab  invalid_block,          Apperr,     Abort,      Mem
-    ErrTab  bad_environment,        Apperr,     Abort,      Mem
-    ErrTab  bad_format,             BadFmt,     User,       Unk
-    ErrTab  invalid_access,         Apperr,     Abort,      Unk
-    ErrTab  invalid_data,           BadFmt,     Abort,      Unk
-    ErrTab  invalid_drive,          NotFnd,     User,       Disk
-    ErrTab  current_directory,      Auth,       User,       Disk
-    ErrTab  not_same_device,        Unk,        User,       Disk
-    ErrTab  no_more_files,          NotFnd,     User,       Disk
-    ErrTab  file_exists,            Already,    User,       Disk
-    ErrTab  sharing_violation,      Locked,     DlyRet,     Disk
-    ErrTab  lock_violation,         Locked,     DlyRet,     Disk
-    ErrTab  out_of_structures,      OutRes,     Abort,      0FFh
-    ErrTab  invalid_password,       Auth,       User,       Unk
-    ErrTab  cannot_make,            OutRes,     Abort,      Disk
-    ErrTab  Not_supported,          BadFmt,     User,       Net
-    ErrTab  Already_assigned,       Already,    User,       Net
-    ErrTab  Invalid_Parameter,      BadFmt,     User,       Unk
-    ErrTab  FAIL_I24,               Unk,        Abort,      Unk
-    ErrTab  Sharing_buffer_exceeded,OutRes,     Abort,      Mem
-    ErrTab  Handle_EOF,             OutRes,     Abort,      Unk     ;AN000;
-    ErrTab  Handle_DISK_FULL,       OutRes,     Abort,      Unk     ;AN000;
-    ErrTab  sys_comp_not_loaded,    Unk,        Abort,      Disk    ;AN001;
+    ErrTab  error_invalid_function,      errCLASS_Apperr,  errACT_Abort,   0FFh
+    ErrTab  error_file_not_found,        errCLASS_NotFnd,  errACT_User,    errLOC_Disk
+    ErrTab  error_path_not_found,        errCLASS_NotFnd,  errACT_User,    errLOC_Disk
+    ErrTab  error_too_many_open_files,   errCLASS_OutRes,  errACT_Abort,   errLOC_Unk
+    ErrTab  error_access_denied,         errCLASS_Auth,    errACT_User,    0FFh
+    ErrTab  error_invalid_handle,        errCLASS_Apperr,  errACT_Abort,   errLOC_Unk
+    ErrTab  error_arena_trashed,         errCLASS_Apperr,  errACT_Panic,   errLOC_Mem
+    ErrTab  error_not_enough_memory,     errCLASS_OutRes,  errACT_Abort,   errLOC_Mem
+    ErrTab  error_invalid_block,         errCLASS_Apperr,  errACT_Abort,   errLOC_Mem
+    ErrTab  error_bad_environment,       errCLASS_Apperr,  errACT_Abort,   errLOC_Mem
+    ErrTab  error_bad_format,            errCLASS_BadFmt,  errACT_User,    errLOC_Unk
+    ErrTab  error_invalid_access,        errCLASS_Apperr,  errACT_Abort,   errLOC_Unk
+    ErrTab  error_invalid_data,          errCLASS_BadFmt,  errACT_Abort,   errLOC_Unk
+    ErrTab  error_invalid_drive,         errCLASS_NotFnd,  errACT_User,    errLOC_Disk
+    ErrTab  error_current_directory,     errCLASS_Auth,    errACT_User,    errLOC_Disk
+    ErrTab  error_not_same_device,       errCLASS_Unk,     errACT_User,    errLOC_Disk
+    ErrTab  error_no_more_files,         errCLASS_NotFnd,  errACT_User,    errLOC_Disk
+    ErrTab  error_file_exists,           errCLASS_Already, errACT_User,    errLOC_Disk
+    ErrTab  error_sharing_violation,     errCLASS_Locked,  errACT_DlyRet,  errLOC_Disk
+    ErrTab  error_lock_violation,        errCLASS_Locked,  errACT_DlyRet,  errLOC_Disk
+    ErrTab  error_out_of_structures,     errCLASS_OutRes,  errACT_Abort,   0FFh
+    ErrTab  error_invalid_password,      errCLASS_Auth,    errACT_User,    errLOC_Unk
+    ErrTab  error_cannot_make,           errCLASS_OutRes,  errACT_Abort,   errLOC_Disk
+    ErrTab  error_not_supported,         errCLASS_BadFmt,  errACT_User,    errLOC_Net
+    ErrTab  error_Already_assigned,      errCLASS_Already, errACT_User,    errLOC_Net
+    ErrTab  error_invalid_parameter,     errCLASS_BadFmt,  errACT_User,    errLOC_Unk
+    ErrTab  error_FAIL_I24,              errCLASS_Unk,     errACT_Abort,   errLOC_Unk
+    ErrTab  error_sharing_buffer_exceeded, errCLASS_OutRes,  errACT_Abort,   errLOC_Mem
+    ErrTab  error_handle_EOF,            errCLASS_OutRes,  errACT_Abort,   errLOC_Unk;AN000;
+    ErrTab  error_handle_Disk_Full,      errCLASS_OutRes,  errACT_Abort,   errLOC_Unk;AN000;
+    ErrTab  error_sys_comp_not_loaded,   errCLASS_Unk,     errACT_Abort,   errLOC_Disk;AN001;
     DB      0FFh,                   0FFH,       0FFH,       0FFh
 
 ;
@@ -192,25 +186,25 @@ ERR_TABLE_21:
 
 ;PUBLIC  ERR_TABLE_24
 ERR_TABLE_24:
-    ErrTab  write_protect,          Media,      IntRet,     Disk
-    ErrTab  bad_unit,               Intrn,      Panic,      Unk
-    ErrTab  not_ready,              HrdFail,    IntRet,     0FFh
-    ErrTab  bad_command,            Intrn,      Panic,      Unk
-    ErrTab  CRC,                    Media,      Abort,      Disk
-    ErrTab  bad_length,             Intrn,      Panic,      Unk
-    ErrTab  Seek,                   HrdFail,    Retry,      Disk
-    ErrTab  not_DOS_disk,           Media,      IntRet,     Disk
-    ErrTab  sector_not_found,       Media,      Abort,      Disk
-    ErrTab  out_of_paper,           TempSit,    IntRet,     SerDev
-    ErrTab  write_fault,            HrdFail,    Abort,      0FFh
-    ErrTab  read_fault,             HrdFail,    Abort,      0FFh
-    ErrTab  gen_failure,            Unk,        Abort,      0FFh
-    ErrTab  sharing_violation,      Locked,     DlyRet,     Disk
-    ErrTab  lock_violation,         Locked,     DlyRet,     Disk
-    ErrTab  wrong_disk,             Media,      IntRet,     Disk
-    ErrTab  not_supported,          BadFmt,     User,       Net
-    ErrTab  FCB_unavailable,        Apperr,     Abort,      Unk
-    ErrTab  Sharing_buffer_exceeded,OutRes,     Abort,      Mem
+    ErrTab  error_write_protect,         errCLASS_Media,   errACT_IntRet,  errLOC_Disk
+    ErrTab  error_bad_unit,              errCLASS_Intrn,   errACT_Panic,   errLOC_Unk
+    ErrTab  error_not_ready,             errCLASS_HrdFail, errACT_IntRet,  0FFh
+    ErrTab  error_bad_command,           errCLASS_Intrn,   errACT_Panic,   errLOC_Unk
+    ErrTab  error_CRC,                   errCLASS_Media,   errACT_Abort,   errLOC_Disk
+    ErrTab  error_bad_length,            errCLASS_Intrn,   errACT_Panic,   errLOC_Unk
+    ErrTab  error_Seek,                  errCLASS_HrdFail, errACT_Retry,   errLOC_Disk
+    ErrTab  error_not_DOS_disk,          errCLASS_Media,   errACT_IntRet,  errLOC_Disk
+    ErrTab  error_sector_not_found,      errCLASS_Media,   errACT_Abort,   errLOC_Disk
+    ErrTab  error_out_of_paper,          errCLASS_TempSit, errACT_IntRet,  errLOC_SerDev
+    ErrTab  error_write_fault,           errCLASS_HrdFail, errACT_Abort,   0FFh
+    ErrTab  error_read_fault,            errCLASS_HrdFail, errACT_Abort,   0FFh
+    ErrTab  error_gen_failure,           errCLASS_Unk,     errACT_Abort,   0FFh
+    ErrTab  error_sharing_violation,     errCLASS_Locked,  errACT_DlyRet,  errLOC_Disk
+    ErrTab  error_lock_violation,        errCLASS_Locked,  errACT_DlyRet,  errLOC_Disk
+    ErrTab  error_wrong_disk,            errCLASS_Media,   errACT_IntRet,  errLOC_Disk
+    ErrTab  error_not_supported,         errCLASS_BadFmt,  errACT_User,    errLOC_Net
+    ErrTab  error_FCB_unavailable,       errCLASS_Apperr,  errACT_Abort,   errLOC_Unk
+    ErrTab  error_sharing_buffer_exceeded, errCLASS_OutRes,  errACT_Abort,   errLOC_Mem
     DB      0FFh,                   errCLASS_Unk, errACT_Panic, 0FFh
 
 ;
@@ -262,16 +256,16 @@ DISPATCH:
         short_addr  STD_CON_INPUT_FLUSH$            ; 12      C
         short_addr  DISK_RESET$                     ; 13      D
         short_addr  SET_DEFAULT_DRIVE$              ; 14      E
-        short_addr  FCB_OPEN$                       ; 15      F
-        short_addr  FCB_CLOSE$                      ; 16     10
+        short_addr  FCB_Open$                       ; 15      F
+        short_addr  FCB_Close$                      ; 16     10
         short_addr  DIR_SEARCH_FIRST$               ; 17     11
         short_addr  DIR_SEARCH_NEXT$                ; 18     12
-        short_addr  FCB_DELETE$                     ; 19     13
-        short_addr  FCB_SEQ_READ$                   ; 20     14
-        short_addr  FCB_SEQ_WRITE$                  ; 21     15
-        short_addr  FCB_CREATE$                     ; 22     16
-        short_addr  FCB_RENAME$                     ; 23     17
-        short_addr  CPMFUNC                         ; 24     18
+        short_addr  FCB_Delete$                     ; 19     13
+        short_addr  FCB_Seq_Read$                   ; 20     14
+        short_addr  FCB_Seq_Write$                  ; 21     15
+        short_addr  FCB_Create$                     ; 22     16
+        short_addr  FCB_Rename$                     ; 23     17
+        short_addr  CPMFunc                         ; 24     18
         short_addr  GET_DEFAULT_DRIVE$              ; 25     19
         short_addr  SET_DMA$                        ; 26     1A
 
@@ -284,8 +278,8 @@ DISPATCH:
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 
-        short_addr  CPMFUNC                         ; 29     1D
-        short_addr  CPMFUNC                         ; 30     1E
+        short_addr  CPMFunc                         ; 29     1D
+        short_addr  CPMFunc                         ; 30     1E
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
@@ -293,11 +287,11 @@ DISPATCH:
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
-        short_addr  CPMFUNC                         ; 32     20
-        short_addr  FCB_RANDOM_READ$                ; 33     21
-        short_addr  FCB_RANDOM_WRITE$               ; 34     22
-        short_addr  GET_FCB_FILE_LENGTH$            ; 35     23
-        short_addr  GET_FCB_POSITION$               ; 36     24
+        short_addr  CPMFunc                         ; 32     20
+        short_addr  FCB_Random_Read$                ; 33     21
+        short_addr  FCB_Random_Write$               ; 34     22
+        short_addr  Get_FCB_File_Length$            ; 35     23
+        short_addr  Get_FCB_Position$               ; 36     24
 VAL1    =       ($-DISPATCH)/2 - 1
 
 ; Extended Functions
@@ -309,8 +303,8 @@ VAL1    =       ($-DISPATCH)/2 - 1
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
-        short_addr  FCB_RANDOM_READ_BLOCK$          ; 39     27
-        short_addr  FCB_RANDOM_WRITE_BLOCK$         ; 40     28
+        short_addr  FCB_Random_Read_Block$          ; 39     27
+        short_addr  FCB_Random_Write_Block$         ; 40     28
         short_addr  PARSE_FILE_DESCRIPTOR$          ; 41     29
         short_addr  GET_DATE$                       ; 42     2A
         short_addr  SET_DATE$                       ; 43     2B
@@ -321,7 +315,7 @@ VAL1    =       ($-DISPATCH)/2 - 1
 ; Extended functionality group
         short_addr  GET_DMA$                        ; 47     2F
         short_addr  GET_VERSION$                    ; 48     30
-        short_addr  Keep_Process$                   ; 49     31
+        short_addr  Keep_process$                   ; 49     31
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
@@ -341,9 +335,9 @@ VAL1    =       ($-DISPATCH)/2 - 1
         short_addr  RMDIR$                          ; 58     3A
         short_addr  CHDIR$                          ; 59     3B
 ;   File Group
-        short_addr  CREAT$                          ; 60     3C
-        short_addr  OPEN$                           ; 61     3D
-        short_addr  CLOSE$                          ; 62     3E
+        short_addr  Creat$                          ; 60     3C
+        short_addr  Open$                           ; 61     3D
+        short_addr  Close$                          ; 62     3E
         short_addr  READ$                           ; 63     3F
         short_addr  WRITE$                          ; 64     40
         short_addr  UNLINK$                         ; 65     41
@@ -351,14 +345,14 @@ VAL1    =       ($-DISPATCH)/2 - 1
         short_addr  CHMOD$                          ; 67     43
         short_addr  IOCTL$                          ; 68     44
         short_addr  DUP$                            ; 69     45
-        short_addr  DUP2$                           ; 70     46
+        short_addr  Dup2$                           ; 70     46
         short_addr  CURRENT_DIR$                    ; 71     47
 ;    Memory Group
         short_addr  ALLOC$                          ; 72     48
         short_addr  DEALLOC$                        ; 73     49
         short_addr  SETBLOCK$                       ; 74     4A
 ;    Process Group
-        short_addr  EXEC$                           ; 75     4B
+        short_addr  Exec$                           ; 75     4B
         short_addr  EXIT$                           ; 76     4C
         short_addr  WAIT$                           ; 77     4D
         short_addr  FIND_FIRST$                     ; 78     4E
@@ -379,12 +373,12 @@ VAL1    =       ($-DISPATCH)/2 - 1
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
-        short_addr  DUP_PDB$                        ; 85     55
+        short_addr  Dup_PDB$                        ; 85     55
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
         short_addr  RENAME$                         ; 86     56
-        short_addr  FILE_TIMES$                     ; 87     57
+        short_addr  File_Times$                     ; 87     57
         short_addr  AllocOper$                      ; 88     58
 ; Network extention system calls
         short_addr  GetExtendedError$               ; 89     59
@@ -396,9 +390,9 @@ VAL1    =       ($-DISPATCH)/2 - 1
         short_addr  AssignOper$                     ; 95     5F
         short_addr  NameTrans$                      ; 96     60
         short_addr  CPMFunc                         ; 97     61
-        short_addr  Get_Current_PDB$                ; 98     62
+        short_addr  GET_CURRENT_PDB$                ; 98     62
 ; the next call is reserved for hangool sys call
-        short_addr  ECS_Call$                       ; 99     63
+        short_addr  ECS_call$                       ; 99     63
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
@@ -431,28 +425,28 @@ DOSTable:
         Short_addr  DOSInstall          ;   0 install check
         Short_addr  DOS_CLOSE           ;   1   DOS_CLOSE
         Short_addr  RECSET              ;   2   RECSET
-        Short_addr  DOSGetGroup         ;   3   Get DOSGROUP
+        Short_addr  DosGetGroup         ;   3   Get DOSGROUP
         Short_addr  PATHCHRCMP          ;   4   PATHCHRCMP
         Short_addr  OUTT                ;   5   OUT
         Short_addr  NET_I24_ENTRY       ;   6   NET_I24_ENTRY
         Short_addr  PLACEBUF            ;   7   PLACEBUF
         Short_addr  FREE_SFT            ;   8   FREE_SFT
-        Short_addr  BUFWRITE            ;   9   BUFWRITE
+        Short_addr  BufWrite            ;   9   BUFWRITE
         Short_addr  SHARE_VIOLATION     ;   10  SHARE_VIOLATION
         Short_addr  SHARE_ERROR         ;   11  SHARE_ERROR
         Short_addr  SET_SFT_MODE        ;   12  SET_SFT_MODE
         Short_addr  DATE16              ;   13  DATE16
-        Short_addr  idle                ;   14      empty slot
-        Short_addr  SCANPLACE           ;   15  SCANPLACE
-        Short_addr  idle                ;   16      empty slot
+        Short_addr  Idle                ;   14      empty slot
+        Short_addr  ScanPlace           ;   15  SCANPLACE
+        Short_addr  Idle                ;   16      empty slot
         Short_addr  StrCpy              ;   17  StrCpy
         Short_addr  StrLen              ;   18  StrLen
-        Short_addr  Ucase               ;   19  Ucase
-        Short_addr  POINTCOMP           ;   20  POINTCOMP
+        Short_addr  uCase               ;   19  Ucase
+        Short_addr  PointComp           ;   20  POINTCOMP
         Short_addr  CHECKFLUSH          ;   21  CHECKFLUSH
         Short_addr  SFFromSFN           ;   22  SFFromSFN
         Short_addr  GetCDSFromDrv       ;   23  GetCDSFromDrv
-        Short_addr  Get_User_Stack      ;   24  Get_User_Stack
+        Short_addr  get_user_stack      ;   24  Get_User_Stack
         Short_addr  GetThisDrv          ;   25  GetThisDrv
         Short_addr  DriveFromText       ;   26  DriveFromText
         Short_addr  SETYEAR             ;   27  SETYEAR
@@ -467,7 +461,7 @@ DOSTable:
         Short_addr  Idle                ;   36  Idle
         Short_addr  DStrLen             ;   37  DStrLen
         Short_addr  NLS_OPEN            ;   38  NLS_OPEN      DOS 3.3
-        Short_addr  CLOSE$              ;   39  $CLOSE        DOS 3.3
+        Short_addr  Close$              ;   39  $CLOSE        DOS 3.3
         Short_addr  NLS_LSEEK           ;   40  NLS_LSEEK     DOS 3.3
         Short_addr  READ$               ;   41  $READ         DOS 3.3
         Short_addr  FastInit            ;   42  FastInit      DOS 3.4  ;AN000;
@@ -475,7 +469,7 @@ DOSTable:
         Short_addr  GetDevList          ;   44  GetDevList    DOS 3.3
         Short_addr  NLS_GETEXT          ;   45  NLS_GETEXT    DOS 3.3
         Short_addr  MSG_RETRIEVAL       ;   46  MSG_RETRIEVAL DOS 4.0  ;AN000;
-        Short_addr  Fake_Version        ;   47  Fake_Version  DOS 4.0  ;AN006;
+        Short_addr  Fake_version        ;   47  Fake_Version  DOS 4.0  ;AN006;
 
 DOSTableEnd:
 
@@ -503,7 +497,7 @@ SaveCurFlg      db      0                                                       
 
 ;        PUBLIC  HEADER
 Header:
-        if      DEBUG
+        if      debug
         DB      13,10,"Debugging DOS version "
         DB      MAJOR_VERSION + "0"
         DB      "."
@@ -525,7 +519,7 @@ Header:
 	DB	13,10, "Copyright 1981,82,83,84,88 Microsoft Corp.",13,10,"$"
 	end if
 
-if DEBUG
+if debug
         DB      13,10,"$"
 end if
 

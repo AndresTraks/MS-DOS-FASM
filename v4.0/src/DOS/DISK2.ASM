@@ -45,19 +45,19 @@ Installed = TRUE
 	i_need	THISSFT,DWORD
 	i_need	DMAADD,DWORD
 	i_need	NEXTADD,WORD
-	i_need	ThisDrv,BYTE
-	i_need	SecClusPos,BYTE
-	i_need	ClusNum,WORD
-	i_need	ReadOp,BYTE
-	i_need	Trans,BYTE
-	i_need	BytPos,4
-	i_need	SecPos,DWORD		 ; DOS 4.00 >32mb			;AN000;
-	i_need	BytSecPos,WORD
-	i_need	BytCnt1,WORD
-	i_need	BytCnt2,WORD
-	i_need	SecCnt,WORD
-	i_need	ThisDPB,DWORD
-	i_need	LastPos,WORD
+	i_need	THISDRV,BYTE
+	i_need	SECCLUSPOS,BYTE
+	i_need	CLUSNUM,WORD
+	i_need	READOP,BYTE
+	i_need	TRANS,BYTE
+	i_need	BYTPOS,4
+	i_need	SECPOS,DWORD		 ; DOS 4.00 >32mb			;AN000;
+	i_need	BYTSECPOS,WORD
+	i_need	BYTCNT1,WORD
+	i_need	BYTCNT2,WORD
+	i_need	SECCNT,WORD
+	i_need	THISDPB,DWORD
+	i_need	LASTPOS,WORD
 	i_need	EXTERRPT,DWORD
 	i_need	CALLVIDRW,DWORD
 	i_need	ALLOWED,BYTE
@@ -87,7 +87,7 @@ if	BUFFERFLAG
 end if
 
 
-Break	<DSKREAD -- PHYSICAL DISK READ>
+Break	<DskRead -- PHYSICAL DISK Read>
 
 ; Inputs:
 ;	DS:BX = Transfer addr
@@ -110,8 +110,8 @@ Break	<DSKREAD -- PHYSICAL DISK READ>
 
 	Assert	ISDPB,<ES,BP>,"DskRead"
 	PUSH	CX
-	MOV	AH,[es:BP+dpb_media]
-	MOV	AL,[es:BP+dpb_UNIT]
+	MOV	AH,[es:BP+dpb.dpb_media]
+	MOV	AL,[es:BP+dpb.dpb_UNIT]
 	PUSH	BX
 	PUSH	ES
 	invoke	SETREAD
@@ -150,7 +150,7 @@ Break	<DWRITE -- SEE ABOUT WRITING>
 NO_CAR2:
 	return
 
-Break	<DSKWRITE -- PHYSICAL DISK WRITE>
+Break	<DSKWRITE -- PHYSICAL DISK Write>
 
 ; Inputs:
 ;	DS:BX = Transfer addr
@@ -173,8 +173,8 @@ Break	<DSKWRITE -- PHYSICAL DISK WRITE>
 
 	Assert	ISDPB,<ES,BP>,"DskWrite"
 	PUSH	CX
-	MOV	AH,[es:BP+dpb_media]
-	MOV	AL,[es:BP+dpb_UNIT]
+	MOV	AH,[es:BP+dpb.dpb_media]
+	MOV	AL,[es:BP+dpb.dpb_UNIT]
 	PUSH	BX
 	PUSH	ES
 	invoke	SETWRITE
@@ -182,7 +182,7 @@ DODSKOP:
 	MOV	CX,DS		; Save DS
 	POP	DS		; DS:BP points to DPB
 	PUSH	DS
-	LDS	SI,[ds:BP+dpb_driver_addr]
+	LDS	SI,[ds:BP+dpb.dpb_driver_addr]
 	invoke	DEVIOCALL2
 	MOV	DS,CX		; Restore DS
 	POP	ES		; Restore ES
@@ -199,7 +199,7 @@ EndProc DskRead
 
 
 
-Break	<HardErrRW - map extended errors and call harderr>
+Break	<HARDERRRW - map extended errors and call HardErr>
 
 ; Inputs:
 ;	AX is error code from read or write
@@ -226,12 +226,12 @@ Break	<HardErrRW - map extended errors and call harderr>
 	POP	SI
 	POP	DS
 DO_ERR:
-	invoke	HARDERR
+	invoke	HardErr
 	return
 
 EndProc HARDERRRW
 
-Break	<SETUP -- SETUP A DISK READ OR WRITE FROM USER>
+Break	<SETUP -- SETUP a DISK Read OR Write FROM USER>
 
 ; Inputs:
 ;	ES:DI point to SFT (value also in THISSFT)
@@ -267,7 +267,7 @@ Break	<SETUP -- SETUP A DISK READ OR WRITE FROM USER>
 ;	ASSUME	ES:NOTHING
 
 	Assert	    ISSFT,<ES,DI>,"SetUp"
-	LDS	SI,[es:DI+sf_devptr]
+	LDS	SI,[es:DI+sf_entry.sf_devptr]
 ;ASSUME	DS:NOTHING
 	MOV	word [THISDPB+2],DS
 	context DS
@@ -275,18 +275,18 @@ Break	<SETUP -- SETUP A DISK READ OR WRITE FROM USER>
 	MOV	BX,word [DMAADD]
 	MOV	[NEXTADD],BX		;Set NEXTADD to start of Xaddr
 	MOV	byte [TRANS],0	;No transferes
-	MOV	AX,word [es:DI+sf_Position]
-	MOV	DX,word [es:DI+sf_Position+2]
+	MOV	AX,word [es:DI+sf_entry.sf_position]
+	MOV	DX,word [es:DI+sf_entry.sf_position+2]
 	MOV	word [BYTPOS+2],DX	;Set it
 	MOV	word [BYTPOS],AX
-	TEST	[es:DI+sf_flags],sf_isnet + devid_device
+	TEST	[es:DI+sf_entry.sf_flags],sf_isnet + devid_device
 	JNZ	NOSETSTUFF		;Following not done on devs or NET
 	PUSH	ES
 	LES	BP,[THISDPB]		;Point at the DPB
 	Assert	ISDPB,<ES,BP>,"Setup"
-	MOV	BL,[es:BP+dpb_drive]
+	MOV	BL,[es:BP+dpb.dpb_drive]
 	MOV	[THISDRV],BL		;Set THISDRV
-	MOV	BX,[es:BP+dpb_sector_size]
+	MOV	BX,[es:BP+dpb.dpb_sector_size]
 ;	CMP	DX,BX		; See if divide will overflow
 ;	JNC	EOFERR		; for 16 bit sector
 ;; 32 bit divide
@@ -297,12 +297,12 @@ Break	<SETUP -- SETUP A DISK READ OR WRITE FROM USER>
 
 	MOV	[BYTSECPOS],DX
 	MOV	DX,AX
-	AND	AL,[es:BP+dpb_cluster_mask]
+	AND	AL,[es:BP+dpb.dpb_cluster_mask]
 	MOV	[SECCLUSPOS],AL
 	MOV	AX,CX		; Save byte count
 ;	MOV	CL,ES:[BP.dpb_cluster_shift]
 	PUSH	word [SECPOS+2]	     ; F.C. >32mb	   ;AN000;
-	POP	[HIGH_SECTOR]		     ; F.C. >32mb	   ;AN000;
+	POP	word [HIGH_SECTOR]		     ; F.C. >32mb	   ;AN000;
 	PUSH	AX			     ; F.C. >32mb save ax  ;AN000;
 	MOV	AX,DX			     ; F.C. >32mb ax=dx    ;AN000;
 	invoke	SHR32			     ; F.C. >32mb shift ax ;AN000;
@@ -310,7 +310,7 @@ Break	<SETUP -- SETUP A DISK READ OR WRITE FROM USER>
 	POP	AX			     ; F.C. >32mb restore dx ;AN000;
 
 ;	SHR	DX,CL
-	CMP	DX,[es:BP+dpb_max_cluster]   ;>32mb  if > disk size ;AN000;	;AN000;
+	CMP	DX,[es:BP+dpb.dpb_max_cluster]   ;>32mb  if > disk size ;AN000;	;AN000;
 	JA	EOFERR			     ;>32mb    then EOF     ;AN000;	;AN000;
 
 	MOV	[CLUSNUM],DX
@@ -344,7 +344,7 @@ NOROOM:
 	return			; RETURN TO CALLER OF CALLER
 EndProc SETUP
 
-Break	<BREAKDOWN -- CUT A USER READ OR WRITE INTO PIECES>
+Break	<BREAKDOWN -- CUT a USER Read OR Write INTO PIECES>
 
 ; Inputs:
 ;	CX = Length of disk transfer in bytes
@@ -365,7 +365,7 @@ Break	<BREAKDOWN -- CUT A USER READ OR WRITE INTO PIECES>
 	MOV	BX,CX
 	OR	AX,AX
 	JZ	SAVFIR		; Partial first sector?
-	SUB	AX,[es:BP+dpb_sector_size]
+	SUB	AX,[es:BP+dpb.dpb_sector_size]
 	NEG	AX		; Max number of bytes left in first sector
 	SUB	BX,AX		; Subtract from total length
 	JAE	SAVFIR
@@ -375,19 +375,19 @@ SAVFIR:
 	MOV	[BYTCNT1],AX
 	MOV	AX,BX
 	XOR	DX,DX
-	DIV	[es:BP+dpb_sector_size]  ; How many whole sectors?
+	DIV	[es:BP+dpb.dpb_sector_size]  ; How many whole sectors?
 	MOV	[SECCNT],AX
 	MOV	[BYTCNT2],DX	; Bytes remaining for last sector
 	OR	DX,[BYTCNT1]
 	retnz			; NOT (BYTCNT1 = BYTCNT2 = 0)
 	CMP	AX,1
 	retnz
-	MOV	AX,[es:BP+dpb_sector_size]	 ; Buffer EXACT one sector I/O
+	MOV	AX,[es:BP+dpb.dpb_sector_size]	 ; Buffer EXACT one sector I/O
 	MOV	[BYTCNT2],AX
 	MOV	[SECCNT],DX		; DX = 0
 RET45:
 	return
-EndProc BreakDown
+EndProc BREAKDOWN
 
 ; ES:DI points to SFT. This entry used by NET_READ
 ; Carry set if to return error (CX=0,AX=error_sharing_violation).
@@ -400,20 +400,20 @@ EndProc BreakDown
 
 	Assert	    ISSFT,<ES,DI>,"ReadLockViolation"
 
-	MOV	[READOP],0
+	MOV	byte [READOP],0
 ERR_ON_CHECK:
-	TEST	[es:DI+sf_mode],sf_isfcb
-	JNZ	HARD_ERR
+	TEST	[es:DI+sf_entry.sf_mode],sf_isfcb
+	JNZ	HARD_ERR_DISK2
 	PUSH	CX
-	MOV	CL,byte [es:DI+sf_mode]
+	MOV	CL,byte [es:DI+sf_entry.sf_mode]
 	AND	CL,sharing_mask
 	CMP	CL,sharing_compat
 	POP	CX
-	JNE	NO_HARD_ERR
-HARD_ERR:
+	JNE	NO_HARD_ERR_DISK2
+HARD_ERR_DISK2:
 	invoke	LOCK_VIOLATION
 	retnc				; User wants Retrys
-NO_HARD_ERR:
+NO_HARD_ERR_DISK2:
 	XOR	CX,CX			;No bytes transferred
 	MOV	AX,error_lock_violation
 	STC
@@ -428,13 +428,13 @@ EndProc READ_LOCK_VIOLATION
 ;	ASSUME	ES:NOTHING
 	Assert	    ISSFT,<ES,DI>,"WriteLockViolation"
 
-	MOV	[READOP],1
+	MOV	byte [READOP],1
 	JMP	ERR_ON_CHECK
 
 EndProc WRITE_LOCK_VIOLATION
 
 
-Break	<DISKREAD -- PERFORM USER DISK READ>
+Break	<DISKREAD -- PERFORM USER DISK Read>
 
 ; Inputs:
 ;	Outputs of SETUP
@@ -455,11 +455,11 @@ Break	<DISKREAD -- PERFORM USER DISK READ>
 ;	ASSUME	ES:NOTHING
 
 	Assert	ISSFT,<ES,DI>,"DISKREAD"
-	PUSH	[es:DI+sf_firclus]	; set up 1st cluster # for FastSeek
-	POP	[FSeek_firclus] 	; 11/5/86
+	PUSH	word [es:DI+sf_entry.sf_firclus]	; set up 1st cluster # for FastSeek
+	POP	word [FSeek_firclus] 	; 11/5/86
 
-	MOV	AX,word [es:DI+sf_size]
-	MOV	BX,word [es:DI+sf_size+2]
+	MOV	AX,word [es:DI+sf_entry.sf_size]
+	MOV	BX,word [es:DI+sf_entry.sf_size+2]
 	SUB	AX,word [BYTPOS]
 	SBB	BX,word [BYTPOS+2]
 	JB	RDERR			;Read starts past EOF
@@ -471,13 +471,13 @@ Break	<DISKREAD -- PERFORM USER DISK READ>
 	MOV	CX,AX			;Limit read to up til EOF
 ENUF:
 	invoke	CHECK_READ_LOCK 	;IFS. check read lock			 ;AN000;
-	JNC	Read_Ok 		; There are no locks
+	JNC	READ_OK_DISK2 		; There are no locks
 	return
 
-READ_OK:
+READ_OK_DISK2:
 	LES	BP,[THISDPB]
 	Assert	ISDPB,<ES,BP>,"DISKREAD/ReadOK"
-	MOV	AL,[es:BP+dpb_drive]	; set up drive # for FastSeek
+	MOV	AL,[es:BP+dpb.dpb_drive]	; set up drive # for FastSeek
 	MOV	[FSeek_drive],AL	; 11/5/86  ;AN000;
 
 	CALL	BREAKDOWN
@@ -492,7 +492,7 @@ end if
 	OR	CX,CX
 	JZ	SKIPERR
 RDERR:
-	MOV	[DISK_FULL],1		;MS. EOF detection  ;AN000;
+	MOV	byte [DISK_FULL],1		;MS. EOF detection  ;AN000;
 	MOV	AH,0EH			;MS. read/data/fail ;AN000;
 	transfer WRTERR22
 RDLASTJ:JMP	RDLAST
@@ -518,12 +518,12 @@ CANOT_READ:
 SKIPERR:
 	MOV	[LASTPOS],DX
 	MOV	[CLUSNUM],BX
-	CMP	[BYTCNT1],0
+	CMP	word [BYTCNT1],0
 	JZ	RDMID
 	invoke	BUFRD
 	JC	SET_ACC_ERR_DS
 RDMID:
-	CMP	[SECCNT],0
+	CMP	word [SECCNT],0
 	JZ	RDLASTJ
 	invoke	NEXTSEC
 	JC	SETSFTJ2
@@ -538,7 +538,7 @@ RDLP:
 	PUSH	DI
 	PUSH	AX
 	PUSH	BX
-	MOV	[ALLOWED],allowed_RETRY + allowed_FAIL + allowed_IGNORE
+	MOV	byte [ALLOWED],Allowed_RETRY + Allowed_FAIL + Allowed_IGNORE
 	MOV	DS,word [DMAADD+2]
 ;ASSUME	DS:NOTHING
 	PUSH	DX
@@ -547,10 +547,10 @@ RDLP:
 
 if	BUFFERFLAG
 	pushf
-	cmp	[BUF_EMS_SAFE_FLAG], 1
+	cmp	byte [BUF_EMS_SAFE_FLAG], 1
 	je	safe_read
-	call	save_map
-	call	restore_user_map
+	call	SAVE_MAP
+	call	RESTORE_USER_MAP
 safe_read:
 	popf
 end if
@@ -559,10 +559,10 @@ end if
 
 if	BUFFERFLAG
 	pushf
-	cmp	[BUF_EMS_SAFE_FLAG], 1
+	cmp	byte [BUF_EMS_SAFE_FLAG], 1
 	je	safe_mapping
-	call	save_user_map
-	call	restore_map
+	call	SAVE_USER_MAP
+	call	RESTORE_MAP
 safe_mapping:
 	popf
 end if
@@ -582,15 +582,15 @@ SCAN_NEXT:
 	MOV	AX,DX			  ;LB.
 ;	MOV	DX,[HIGH_SECTOR]	  ;LB. HASH(sector#) and get entry #	;AN000;
 	XOR	DX,DX			  ;LB. to avoid divide overflow 	;AN000;
-	DIV	[BUF_HASH_COUNT]	  ;LB. get remainder			;AN000;
+	DIV	word [BUF_HASH_COUNT]	  ;LB. get remainder			;AN000;
 	ADD	DX,DX			  ;LB. 8 bytes per entry		;AN000;
 	ADD	DX,DX			  ;LB.					;AN000;
 	ADD	DX,DX			  ;LB. times 8				;AN000;
 
 	LDS	DI,[BUF_HASH_PTR]	  ;LB. get Hash Table addr		;AN000;
 	ADD	DI,DX			  ;LB position to entry 		;AN000;
-	CMP	[DI+Dirty_Count],0	  ;LB dirty hash entry ?		;AN000;
-	JNZ	yesdirty		  ;LB yes and map it			;AN000;
+	CMP	[DI+BUFFER_HASH_ENTRY.DIRTY_COUNT],0	  ;LB dirty hash entry ?		;AN000;
+	JNZ	yesdirty_DISK2		  ;LB yes and map it			;AN000;
 	POP	BX			  ;LB.					;AN000;
 	POP	AX			  ;LB.					;AN000;
 	POP	DX			  ;LB.					;AN000;
@@ -598,17 +598,17 @@ SCAN_NEXT:
 if	NOT	BUFFERFLAG
 	JMP	SHORT end_scan		  ;LB.					;AN000;
 else
-	JMP	END_SCAN
+	JMP	end_scan
 end if
 
-yesdirty:
+yesdirty_DISK2:
 	MOV	word [CurHashEntry+2],DS ;LB. update current Hash entry ptr ;AN000;
 	MOV	word [CurHashEntry],DI ;LB. 				;AN000;
-	MOV	word [LASTBUFFER],-1   ;LB. invalidate last buffer		;AN000;
-	MOV	BX,[DI+EMS_PAGE_NUM]	  ;LB. logical page			;AN000;
+	MOV	word [LastBuffer],-1   ;LB. invalidate last buffer		;AN000;
+	MOV	BX,[DI+BUFFER_HASH_ENTRY.EMS_PAGE_NUM]	  ;LB. logical page			;AN000;
 
 if	NOT	BUFFERFLAG
-	LDS	DI,[DI+BUFFER_BUCKET]	  ;LB. ds:di is 1st buffer addr 	;AN000;
+	LDS	DI,[DI+BUFFER_HASH_ENTRY.BUFFER_BUCKET]	  ;LB. ds:di is 1st buffer addr 	;AN000;
 	MOV	[FIRST_BUFF_ADDR],DI	  ;LB. save first buff addr 1/19/88	;AN000;
 	invoke	SET_MAP_PAGE		  ;LB. activate handle if EMS there	;AN000;
 else
@@ -616,7 +616,7 @@ else
 	push	ds
 	push	di		; save hash ptr
 
-	LDS	DI,[DI+BUFFER_BUCKET]	  ;ds:di is 1st buffer addr
+	LDS	DI,[DI+BUFFER_HASH_ENTRY.BUFFER_BUCKET]	  ;ds:di is 1st buffer addr
 	POP	AX		; Recall transfer address
 	PUSH	AX
 	PUSH	DI		; Save search environment
@@ -624,11 +624,11 @@ else
 	push	cx
 
 	MOV	DX,[TEMP_VAR2]	     ;LB. get 1st sector #
-	SUB	DX,word [DI+buf_sector]   ; How far into transfer?
+	SUB	DX,word [DI+BUFFINFO.buf_sector]   ; How far into transfer?
 	NEG	DX
 	MOV	DI,AX
 	MOV	AX,DX
-	MOV	CX,[es:BP+dpb_sector_size]
+	MOV	CX,[es:BP+dpb.dpb_sector_size]
 	MUL	CX
 	ADD	DI,AX		; Put the buffer here
 	mov	[CURADD], di
@@ -640,7 +640,7 @@ else
 	invoke	SET_MAP_PAGE		  ;LB. activate handle if EMS there	;AN000;
 	pop	di			; restore hash ptr.
 	pop	ds
-	LDS	DI,[DI+BUFFER_BUCKET]	  ;LB. ds:di is 1st buffer addr 	;AN000;
+	LDS	DI,[DI+BUFFER_HASH_ENTRY.BUFFER_BUCKET]	  ;LB. ds:di is 1st buffer addr 	;AN000;
 	MOV	[FIRST_BUFF_ADDR],DI	  ;LB. save first buff addr 1/19/88	;AN000;
 end if
 										;AN000;
@@ -650,14 +650,14 @@ end if
 
 
 	Assert	ISDPB,<ES,BP>,"DISKREAD/RdLp"
-	MOV	AL,[es:BP+dpb_drive]
+	MOV	AL,[es:BP+dpb.dpb_drive]
 NXTBUF: 			; Must see if one of these sectors is buffered
 	invoke	BUFF_RANGE_CHECK			   ;F.C. >32mb
 	JNC	inrange 		   ;LB. 				;AN000;
-	mov	DI,[DI+buf_next]	   ;LB. get next buffer 1/19/88 	;AN000;
+	mov	DI,[DI+BUFFINFO.buf_next]	   ;LB. get next buffer 1/19/88 	;AN000;
 	JMP	DONXTBUF		   ;LB. 				;AN000;
 inrange:
-	TEST	[DI+buf_flags],buf_dirty
+	TEST	[DI+BUFFINFO.buf_flags],buf_dirty
 	JZ	CLBUFF			; Buffer is clean, so OK
 ; A sector has been read in when a dirty copy of it is in a buffer
 ; The buffered sector must now be read into the right place
@@ -667,12 +667,12 @@ inrange:
 	PUSH	DX		     ; F.C. no need for high sector, <64K
 
 	MOV	DX,[TEMP_VAR2]	     ;LB. get 1st sector #
-	SUB	DX,word [DI+buf_sector]   ; How far into transfer?
+	SUB	DX,word [DI+BUFFINFO.buf_sector]   ; How far into transfer?
 	NEG	DX
 	MOV	SI,DI
 	MOV	DI,AX
 	MOV	AX,DX
-	MOV	CX,[es:BP+dpb_sector_size]
+	MOV	CX,[es:BP+dpb.dpb_sector_size]
 	MUL	CX
 	ADD	DI,AX		; Put the buffer here
 	LEA	SI,[SI+BUFINSIZ]
@@ -686,18 +686,18 @@ EVENMOV:
 	POP	ES
 	POP	DX
 	POP	DI
-	MOV	AL,[es:BP+dpb_drive]
-	invoke	SCANPLACE		 ;LB. done with this chain		;AN000;
+	MOV	AL,[es:BP+dpb.dpb_drive]
+	invoke	ScanPlace		 ;LB. done with this chain		;AN000;
 	JMP	SHORT end_scan		 ;LB.					;AN000;
 CLBUFF:
-	invoke	SCANPLACE
+	invoke	ScanPlace
 DONXTBUF:
 	CMP	DI,[FIRST_BUFF_ADDR]	 ;LB. end of buffers			;AN000;
 	JNZ	NXTBUF
 end_scan:
 	ADD	DX,1			 ;LB. next sector #			;AN000;
-	ADC	[HIGH_SECTOR],0 	 ;LB.					;AN000;
-	DEC	[TEMP_VAR]		 ;LB. decrement count			;AN000;
+	ADC	word [HIGH_SECTOR],0 	 ;LB.					;AN000;
+	DEC	word [TEMP_VAR]		 ;LB. decrement count			;AN000;
 	JZ	SCAN_DONE		 ;LB. scan next sector			;AN000;
 	JMP	SCAN_NEXT		 ;LB. scan next sector			;AN000;
 SCAN_DONE:
@@ -706,10 +706,10 @@ SCAN_DONE:
 	POP	CX
 	POP	BX
 	JCXZ	RDLAST
-	invoke	IsEOF			; test for eof on fat size
+	invoke	IsEof			; test for eof on fat size
 	JAE	SETSFT
 	MOV	DL,0
-	INC	[LASTPOS]	; We'll be using next cluster
+	INC	word [LASTPOS]	; We'll be using next cluster
 	JMP	RDLP
 
 RDLAST:
@@ -719,7 +719,7 @@ RDLAST:
 	MOV	[BYTCNT1],AX
 	invoke	NEXTSEC
 	JC	SETSFT
-	MOV	[BYTSECPOS],0
+	MOV	word [BYTSECPOS],0
 	invoke	BUFRD
 	JNC	SETSFT
 	JMP	SET_ACC_ERR_DS
@@ -736,7 +736,7 @@ RDLAST:
 ;	Carry clear
 
 	entry	SETSFT
-	DOSAssume   CS,<DS>,"SetSFT"
+	DOSAssume   CS,<DS>,"SETSFT"
 ;	ASSUME	ES:NOTHING
 
 	LES	DI,[THISSFT]
@@ -749,12 +749,12 @@ RDLAST:
 	Assert	ISSFT,<ES,DI>,"SetClus"
 	MOV	CX,[NEXTADD]
 	SUB	CX,word [DMAADD]	 ; Number of bytes transfered
-	TEST	[es:DI+sf_flags],devid_device
-	JNZ	ADDREC			 ; don't set clusters if device
+	TEST	[es:DI+sf_entry.sf_flags],devid_device
+	JNZ	AddRec			 ; don't set clusters if device
 	MOV	AX,[CLUSNUM]
-	MOV	[es:DI+sf_lstclus],AX
+	MOV	[es:DI+sf_entry.sf_lstclus],AX
 	MOV	AX,[LASTPOS]
-	MOV	[es:DI+sf_cluspos],AX
+	MOV	[es:DI+sf_entry.sf_cluspos],AX
 
 ; Inputs:
 ;	ES:DI points to SFT
@@ -773,8 +773,8 @@ RDLAST:
 
 	Assert	ISSFT,<ES,DI>,"AddRec"
 	JCXZ	RET28		; If no records read,  don't change position
-	ADD	word [es:DI+sf_position],CX  ; Update current position
-	ADC	word [es:DI+sf_position+2],0
+	ADD	word [es:DI+sf_entry.sf_position],CX  ; Update current position
+	ADC	word [es:DI+sf_entry.sf_position+2],0
 RET28:	CLC
 	return
 EndProc DISKREAD

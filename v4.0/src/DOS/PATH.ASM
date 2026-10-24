@@ -1,6 +1,6 @@
 ;	SCCSID = @(#)path.asm	1.1 85/04/10
-TITLE	PATH - Directory related system calls
-NAME	PATH
+TITLE	path - Directory related system calls
+NAME	path
 
 ;
 ; Directory related system calls.  These will be passed direct text of the
@@ -40,10 +40,10 @@ INCLUDE '../INC/DEVSYM.INC'
 
 ;	EXTRN	DOS_MkDir:NEAR,DOS_RmDir:NEAR
 
-	I_Need	ThisCDS,DWORD		; pointer to Current CDS
-	I_Need	WFP_Start,WORD		; pointer to beginning of directory text
-	I_Need	Curr_Dir_End,WORD	; offset to end of directory part
-	I_Need	OpenBuf,128		; temp spot for translated name
+	I_Need	THISCDS,DWORD		; pointer to Current CDS
+	I_Need	WFP_START,WORD		; pointer to beginning of directory text
+	I_Need	CURR_DIR_END,WORD	; offset to end of directory part
+	I_Need	OPENBUF,128		; temp spot for translated name
 	I_need	fSplice,BYTE		; TRUE => do splice
 	I_Need	NoSetDir,BYTE		; TRUE => no exact match on splice
 	I_Need	cMeta,BYTE
@@ -73,24 +73,24 @@ CurdirErr:
 	transfer SYS_RET_ERR		;IFS. make noise			;AN000;
 CurrentValidate:
 	SaveReg <DS,SI> 		; save destination
-	LDS	SI,[ThisCDS]
-	TEST	[SI+curdir_flags],curdir_isnet
+	LDS	SI,[THISCDS]
+	TEST	[SI+curdir_list.curdir_flags],curdir_isnet
 	JNZ	DoCheck
 ; Random optimization nuked due to some utilities using GetCurrentDir to do
 ; media check.
 ;	CMP	[SI].curdir_id,0
 ;	JZ	GetDst
 DoCheck:
-	MOV	[NoSetDir],0		; interested only in contents
-	MOV	DI,OpenBuf
+	MOV	byte [NoSetDir],0		; interested only in contents
+	MOV	DI,OPENBUF
 	Invoke	ValidateCDS		; output is ES:DI -> CDS
 	SaveReg <ES,DI> 		; swap source and destination
 	RestoreReg  <SI,DS>
 GetDst:
 	RestoreReg  <DI,ES>		; get real destination
 	JC	CurdirErr
-	ADD	SI,curdir_text
-	ADD	SI,[SI+curdir_END]
+	ADD	SI,curdir_list.curdir_text
+	ADD	SI,[SI+curdir_list.curdir_end]
 	CMP	byte [SI],'\'       ; root or subdirs present?
 	JNZ	CurrentCopy
 	INC	SI
@@ -124,10 +124,10 @@ FOK:
 ;; 10/29/86 E5 char
 	xor	AL,AL			; MZ 19 Jan 84
 	LeaveCrit   critDisk
-	transfer    Sys_Ret_OK		; no more, bye!
-EndProc Current_Dir$
+	transfer    SYS_RET_OK		; no more, bye!
+EndProc CURRENT_DIR$
 
-BREAK <RmDir$ -- Remove a directory>
+BREAK <RMDIR$ -- Remove a directory>
 
 ; Inputs:
 ;	DS:DX Points to asciz name
@@ -150,7 +150,7 @@ BREAK <RmDir$ -- Remove a directory>
 	push	dx			; Save ptr to name
 	push	ds
 	mov	si,dx			; Load ptr into si
-	mov	di,OpenBuf	; di = ptr to buf for trans name
+	mov	di,OPENBUF	; di = ptr to buf for trans name
 	push	di
 	Invoke	TransPathNoSet		; Translate the name
 	pop	di			; di = ptr to buf for trans name
@@ -160,7 +160,7 @@ BREAK <RmDir$ -- Remove a directory>
 	error	error_path_not_found	; Otherwise, return an error
 
 rmlset:
-	CMP	[cMeta],-1		;   if (cMeta >= 0)
+	CMP	byte [cMeta],-1		;   if (cMeta >= 0)
 	Jnz	rmerr			;	return (-1);
 	Context ES
 	xor	al,al			; al = 0 , ie drive a:
@@ -179,11 +179,11 @@ rmerr:
 rmcont:
 	pop	ds
 	pop	dx			; Restore the	 name
-	MOV	SI,DOS_RmDIR
+	MOV	SI,DOS_RMDIR
 	JMP	DoDirCall
 EndProc RMDIR$
 
-BREAK <ChDir$ -- Change current directory on a drive>
+BREAK <CHDIR$ -- Change current directory on a drive>
 
 ;
 ; $ChDir - Top-level change directory system call.  This call is responsible
@@ -213,47 +213,47 @@ BREAK <ChDir$ -- Change current directory on a drive>
 
 	procedure CHDIR$,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
-	MOV	DI,OpenBuf  ; spot for translated name
+	MOV	DI,OPENBUF  ; spot for translated name
 	MOV	SI,DX			; get source
 	Invoke	TransPath		; go munge the path and get real CDS
 	JNC	ChDirCrack		; no errors, try path
 ChDirErrP:
 	MOV	AL,error_path_not_found
 ChdirErr:
-	transfer    SYS_Ret_Err 	; oops!
+	transfer    SYS_RET_ERR 	; oops!
 
 ChDirCrack:
 ;	Assume	DS:DOSGroup
-	CMP	[cMeta],-1		; No meta chars allowed.
+	CMP	byte [cMeta],-1		; No meta chars allowed.
 	JNZ	ChDirErrP
 ;
 ; We cannot do a ChDir (yet) on a raw CDS.  This is treated as a path not
 ; found.
 ;
-	LES	DI,[ThisCDS]
+	LES	DI,[THISCDS]
 	CMP	DI,-1			;   if (ThisCDS == NULL)
 	JZ	ChDirErrP		;	error ();
  ;
  ; Find out if the directory exists.
  ;
-	Invoke	DOS_ChDir
-	JC	ChDirErr
+	Invoke	DOS_CHDIR
+	JC	ChdirErr
 ;
 ; Get back CDS to see if a join as seen.  Set the currency pointer (only if
 ; not network).  If one was seen, all we need to do is copy in the text
 ;
-	LES	DI,[ThisCDS]
-	TEST	[es:DI+curdir_flags],curdir_splice
+	LES	DI,[THISCDS]
+	TEST	[es:DI+curdir_list.curdir_flags],curdir_splice
 	JZ	GotCDS
 ;
 ; The CDS was joined.  Let's go back and grab the logical CDS.
 ;
 	SaveReg <ES,DI,CX>		; save CDS and cluster...
-	Invoke	Get_User_Stack		; get original text
+	Invoke	get_user_stack		; get original text
 ;	ASSUME	DS:NOTHING
 	MOV	DI,[SI+user_environ.user_DX]
 	MOV	DS,[SI+user_environ.user_DS]
-	MOV	SI,OpenBuf  ; spot for translated name
+	MOV	SI,OPENBUF  ; spot for translated name
 	XCHG	SI,DI
 	XOR	AL,AL			; do no splicing
 	SaveReg <DI>
@@ -264,12 +264,12 @@ ChDirCrack:
 ; There should NEVER be an error here.
 ;
 if FALSE
-	JNC SKipErr
+	JNC SkipErr
 	fmt <>,<>,<"p$: Internal CHDIR error\n">
 SkipErr:
 end if
-	LES	DI,[ThisCDS]		; get new CDS
-	MOV	[es:DI+curdir_ID],-1	; no valid cluster here...
+	LES	DI,[THISCDS]		; get new CDS
+	MOV	[es:DI+curdir_list.curdir_ID],-1	; no valid cluster here...
 	RestoreReg  <CX,DI,ES>
 ;
 ; ES:DI point to the physical CDS, CX is the ID (local only)
@@ -280,21 +280,21 @@ GotCDS:
 ;
 	CALL	Check_PathLen		;PTM.					;AN000;
 	JA	ChDirErrP
-	TEST	[es:DI+curdir_flags],curdir_isnet
+	TEST	[es:DI+curdir_list.curdir_flags],curdir_isnet
 	JNZ	SkipRecency
-	TEST	[es:DI+curdir_flags],curdir_splice   ;PTM. for Join and Subst	;AN000;
-	JZ	setdirclus			     ;PTM.			;AN000;
+	TEST	[es:DI+curdir_list.curdir_flags],curdir_splice   ;PTM. for Join and Subst	;AN000;
+	JZ	setdirclus_PATH			     ;PTM.			;AN000;
 	MOV	CX,-1				     ;PTM.			;AN000;
-setdirclus:
-	MOV	[es:DI+curdir_id],CX
-	LES	DI,[ThisCDS]		; get logical CDS
+setdirclus_PATH:
+	MOV	[es:DI+curdir_list.curdir_ID],CX
+	LES	DI,[THISCDS]		; get logical CDS
 SkipRecency:
 	invoke	FStrCpy
 	XOR	AL,AL
-	transfer    Sys_Ret_OK
+	transfer    SYS_RET_OK
 EndProc CHDIR$
 
-BREAK <MkDir$ - Make a directory entry>
+BREAK <MKDIR$ - Make a directory entry>
 ; Inputs:
 ;	DS:DX Points to asciz name
 ; Function:
@@ -310,33 +310,33 @@ BREAK <MkDir$ - Make a directory entry>
 
 	procedure MKDIR$,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
-	MOV	SI,DOS_MkDir
+	MOV	SI,DOS_MKDIR
 DoDirCall:
-	MOV	DI,OpenBuf  ; spot for translated name
+	MOV	DI,OPENBUF  ; spot for translated name
 	SaveReg <SI>
 	MOV	SI,DX			; get source
 	Invoke	TransPath		; go munge the path
 	RestoreReg  <SI>
 	JNC	MkDirCrack		; no errors, try path
 MkErrP:
-	MOV	AL,error_Path_Not_Found    ; oops!
+	MOV	AL,error_path_not_found    ; oops!
 MkErr:
-	transfer    Sys_Ret_Err
+	transfer    SYS_RET_ERR
 MkDirCrack:
-	CMP	[cMeta],-1
+	CMP	byte [cMeta],-1
 	JNZ	MkErrP
 
 	PUSH	SI			;PTM.					;AN000;
 	CALL	Check_PathLen		;PTM.  check path len > 67 ?		;AN000;
 	POP	SI			;PTM.					;AN000;
 	JBE	pathok			;PTM.					;AN000;
-	MOV	AL,error_Access_Denied	;PTM. ops!
-	transfer Sys_Ret_Err		;PTM.
+	MOV	AL,error_access_denied	;PTM. ops!
+	transfer SYS_RET_ERR		;PTM.
 pathok:
 	CALL	SI			; go get file
 ;	ASSUME	ES:NOTHING
 	JC	MkErr			; no errors
-	transfer    Sys_Ret_OK
+	transfer    SYS_RET_OK
 EndProc MKDIR$
 
 ; Inputs:
@@ -354,7 +354,7 @@ EndProc MKDIR$
 	Context <DS>
 	SaveReg <CX>
 	invoke	DStrLen
-	CMP	CX,DirStrLen
+	CMP	CX,DIRSTRLEN
 	RestoreReg  <CX>
 	ret
 EndProc Check_PathLen

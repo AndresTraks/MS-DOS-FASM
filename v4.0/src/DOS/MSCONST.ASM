@@ -22,7 +22,7 @@ Break <Initialized data and data used at DOS initialization>
 ; describing that data item.
 ;
 
-	AsmVars <Kanji, Debug, Redirector, ShareF>
+	AsmVars <KANJI, debug, Redirector, ShareF>
 
 if SEGSEL = S_CONSTANTS
 
@@ -57,7 +57,7 @@ INCLUDE '../INC/BUGTYP.ASM'
 ;	PUBLIC	OEM_HANDLER
 OEM_HANDLER	DD	-1		; [SYSTEM] Pointer to OEM handler code
 ; One group, so an offset in it is just the offset.
-	I_am	LeaveAddr,WORD,<LeaveDOS>	; [SYSTEM]
+	I_am	LeaveAddr,WORD,<LEAVEDOS>	; [SYSTEM]
 	I_am	RetryCount,WORD,<3>	; [SYSTEM] Share retries
 	I_am	RetryLoop,WORD,<1>	; [SYSTEM] Share retries
 	I_am	LastBuffer,DWORD,<-1,-1>; [SYSTEM] Buffer queue recency pointer
@@ -68,7 +68,7 @@ OEM_HANDLER	DD	-1		; [SYSTEM] Pointer to OEM handler code
 ;	PUBLIC	SYSINITVAR		; [SYSTEM]
 SYSINITVAR:; [SYSTEM]
 	I_am	DPBHEAD,DWORD		; [SYSTEM] Pointer to head of DPB-FAT list
-	I_am	sft_addr,DWORD,<<sfTabl>,?> ; [SYSTEM] Pointer to first SFT table
+	I_am	sft_addr,DWORD,<<sftabl>,?> ; [SYSTEM] Pointer to first SFT table
 	I_am	BCLOCK,DWORD		; [SYSTEM] The CLOCK device
 	I_am	BCON,DWORD		; [SYSTEM] Console device entry points
 	I_am	MAXSEC,WORD,<128>	; [SYSTEM] Maximum allowed sector size

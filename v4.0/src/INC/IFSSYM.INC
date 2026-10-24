@@ -702,7 +702,7 @@ match =DFL_LAID_OUT, DFL_LAID_OUT
     end virtual
 }
 											 ;AN000;
-SUBTTL	Search Continuation Information 						 ;AN000;
+SUBTTL	SEARCH Continuation Information 						 ;AN000;
 PAGE											 ;AN000;
 STRUC CONTINFO
 {

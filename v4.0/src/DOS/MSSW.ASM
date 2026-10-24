@@ -2,7 +2,7 @@
 
 INCLUDE '../INC/VERSION.INC'
 
-IBM		EQU	ibmver
+IBM		EQU	IBMVER
 WANG		EQU	FALSE
 
 ; Set this switch to cause DOS to move itself to the end of memory

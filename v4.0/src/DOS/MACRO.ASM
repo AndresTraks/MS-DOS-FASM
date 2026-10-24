@@ -96,10 +96,10 @@ INCLUDE '../INC/DEVSYM.INC'
 
 Installed = TRUE
 
-	I_need	ThisCDS,DWORD		; pointer to CDS used
-	I_need	CDSAddr,DWORD		; pointer to CDS table
-	I_need	CDSCount,BYTE		; number of CDS entries
-	I_need	CurDrv,BYTE		; current macro assignment (old
+	I_need	THISCDS,DWORD		; pointer to CDS used
+	I_need	CDSADDR,DWORD		; pointer to CDS table
+	I_need	CDSCOUNT,BYTE		; number of CDS entries
+	I_need	CURDRV,BYTE		; current macro assignment (old
 					; current drive)
 	I_need	NUMIO,BYTE		; Number of physical drives
 	I_need	fSharing,BYTE		; TRUE => no redirection allowed
@@ -150,14 +150,14 @@ srinuse:									;AN000;
 	CALL	GetCDSFromDrv			      ; ds:si -> cds		;AN000;
 	POP	AX				      ; 			;AN000;
 	JC	baddrv				      ; bad drive		;AN000;
-	CMP	word [SI+curdir_devptr],0	      ; dpb ptr =0 ?		;AN000;
+	CMP	word [SI+curdir_list.curdir_devptr],0	      ; dpb ptr =0 ?		;AN000;
 	JZ	baddrv				      ;     no			;AN000;
 	CMP	AL,7				      ; set ?			;AN000;
 	JNZ	resetdrv			      ; no			;AN000;
-	OR	[SI+curdir_flags],curdir_inuse	      ; set in_use		;AN000;
+	OR	[SI+curdir_list.curdir_flags],curdir_inuse	      ; set in_use		;AN000;
 	JMP	SHORT okdone			      ; 			;AN000;
 resetdrv:									;AN000;
-	AND	[SI+curdir_flags],NOT curdir_inuse    ; reset in_use		;AN000;
+	AND	[SI+curdir_list.curdir_flags],NOT curdir_inuse    ; reset in_use		;AN000;
 	JMP	SHORT okdone			      ; 			;AN000;
 baddrv: 									;AN000;
 	MOV	AX,error_invalid_drive		      ; error			;AN000;
@@ -166,11 +166,11 @@ chk08:										;AN000;
 	CMP	AL,8				      ; reset inuse ?		;AN000;
 	JZ	srinuse 			      ; yes			;AN000;
 
-	if	NOT INSTALLED
+	if	NOT Installed
 	transfer NET_ASSOPER
 	else
 	PUSH	AX
-	MOV	AX,(multnet SHL 8) OR 30
+	MOV	AX,(MultNET SHL 8) OR 30
 	INT	2FH
 	POP	BX			; Don't zap error code in AX
 	JC	ASS_ERR
@@ -183,7 +183,7 @@ ASS_ERR:
 
 EndProc AssignOper$
 
-Break <FIND_DPB - Find a DPB from a drive number>
+Break <FIND_DPB - Find a dpb from a drive number>
 
 ;   Inputs:	AL has drive number A = 0
 ;   Outputs:	Carry Set
@@ -197,9 +197,9 @@ Procedure FIND_DPB,NEAR
 DPB_LOOP:
 	CMP	SI,-1
 	JZ	NO_DPB
-	CMP	AL,[SI+dpb_drive]
+	CMP	AL,[SI+dpb.dpb_drive]
 	retz				; Carry clear
-	LDS	SI,[SI+dpb_next_dpb]
+	LDS	SI,[SI+dpb.dpb_next_dpb]
 	JMP	DPB_LOOP
 
 NO_DPB:
@@ -207,7 +207,7 @@ NO_DPB:
 	return
 EndProc FIND_DPB
 
-Break <InitCDS - set up an empty CDS>
+Break <InitCDS - Set up an empty CDS>
 
 ;   Inputs:	ThisCDS points to CDS
 ;		AL has uppercase drive letter
@@ -219,29 +219,29 @@ Procedure InitCDS,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	MOV	AH,':'
 	PUSH	AX
-	SUB	AL,"[a]"-1                ; A = 1
+	SUB	AL,"a"-1                ; A = 1
 	CMP	[NUMIO],AL
 	POP	AX
 	LES	DI,[THISCDS]
-	MOV	[es:DI+curdir_flags],0	; "free" CDS
+	MOV	[es:DI+curdir_list.curdir_flags],0	; "free" CDS
 	JB	RET_OK			; Drive does not map a physical drive
-	MOV	word [es:DI+curdir_text],AX
+	MOV	word [es:DI+curdir_list.curdir_text],AX
 	PUSH	AX
 	MOV	AX,"\"
-	MOV	word [es:DI+curdir_text+2],AX   ; NUL terminate
+	MOV	word [es:DI+curdir_list.curdir_text+2],AX   ; NUL terminate
 	POP	AX
-	OR	[es:DI+curdir_flags],curdir_inuse
-	MOV	[es:DI+curdir_END],2	; MZ 3 Nov 83
-	MOV	[es:DI+curdir_ID],0
-	MOV	[es:DI+curdir_ID+2],0
+	OR	[es:DI+curdir_list.curdir_flags],curdir_inuse
+	MOV	[es:DI+curdir_list.curdir_end],2	; MZ 3 Nov 83
+	MOV	[es:DI+curdir_list.curdir_ID],0
+	MOV	[es:DI+curdir_list.curdir_ID+2],0
 	PUSH	AX
 	PUSH	DS
 	PUSH	SI
-	SUB	AL,"[a]"                  ; A = 0
+	SUB	AL,"a"                  ; A = 0
 	invoke	FIND_DPB
 	JC	PRET			; OOOOPPPPPSSSS!!!!
-	MOV	word [es:DI+curdir_devptr],SI
-	MOV	word [es:DI+curdir_devptr+2],DS
+	MOV	word [es:DI+curdir_list.curdir_devptr],SI
+	MOV	word [es:DI+curdir_list.curdir_devptr+2],DS
 PRET:
 	POP	SI
 	POP	DS
@@ -249,7 +249,7 @@ PRET:
 RET_OK: return
 EndProc InitCDS
 
-Break <UserOper$ - get/set current user ID (for net)>
+Break <UserOper$ - Get/Set current user ID (for net)>
 
 ;
 ;   $UserOper - retrieve or initiate a user id string.	MSDOS will only
@@ -276,8 +276,8 @@ Procedure   UserOper$,NEAR
 	JZ	UserSet 		; set the current user
 	CMP	AL,5			; test for 2,3,4 or 5
 	JBE	UserPrint		; yep
-	MOV	[ExtErr_locus],errLoc_Unk ; Extended Error Locus
-	error	error_Invalid_Function	; not 0,1,2,3
+	MOV	byte [EXTERR_LOCUS],errLOC_Unk ; Extended Error Locus
+	error	error_invalid_function	; not 0,1,2,3
 
 UserGet:
 ; Transfer MYNAME to DS:DX
@@ -298,7 +298,7 @@ UserMove:
 	XOR	AX,AX			; 16th byte is 0
 	STOSB
 UserBye:
-	transfer    sys_ret_ok		; no errors here
+	transfer    SYS_RET_OK		; no errors here
 
 UserSet:
 ;ASSUME	DS:NOTHING
@@ -308,7 +308,7 @@ UserSet:
 	MOV	SI,DX			; user space has source
 	Context ES
 	MOV	DI,MYNAME   ; point dest to user string
-	INC	[DiffNam]		  ; signal change
+	INC	byte [DIFFNAM]		  ; signal change
 	JMP	UserMove
 
 UserPrint:
@@ -317,7 +317,7 @@ if NOT Installed
 	transfer PRINTER_GETSET_STRING
 else
 	PUSH	AX
-	MOV	AX,(multNET SHL 8) OR 31
+	MOV	AX,(MultNET SHL 8) OR 31
 	INT	2FH
 	POP	DX			; Clean stack
 	JNC	OKPA
@@ -345,16 +345,16 @@ Procedure   GetVisDrv,NEAR
 	CALL	GetThisDrv		; get inuse drive
 	retc
 	SaveReg <DS,SI>
-	LDS	SI,[ThisCDS]
-	TEST	[SI+curdir_flags],curdir_splice
+	LDS	SI,[THISCDS]
+	TEST	[SI+curdir_list.curdir_flags],curdir_splice
 	RestoreReg  <SI,DS>
 	retz				; if not spliced, return OK
-	MOV	[DrvErr],error_invalid_drive ;IFS.				;AN000;
+	MOV	byte [DrvErr],error_invalid_drive ;IFS.				;AN000;
 	STC				; signal error
 	return
 EndProc GetVisDrv
 
-Break <Getthisdrv - map a drive designator (0=def, 1=A...)>
+Break <GetThisDrv - map a drive designator (0=def, 1=a...)>
 
 ;
 ;   GetThisDrv - look through a set of macros and return the current drive and
@@ -371,40 +371,40 @@ Procedure   GetThisDrv,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	OR	AL,AL			; are we using default drive?
 	JNZ	GetMap			; no, go get the CDS pointers
-	MOV	AL,[CurDrv]		; get the current drive
+	MOV	AL,[CURDRV]		; get the current drive
 	INC	AL			; Counteract next instruction
 GetMap:
 	DEC	AL			; 0 = A
 	SaveReg <DS,SI> 		; save world
-	mov	[EXTERR_LOCUS],errLOC_Disk
-	TEST	[fSharing],-1		; Logical or Physical?
+	mov	byte [EXTERR_LOCUS],errLOC_Disk
+	TEST	byte [fSharing],-1		; Logical or Physical?
 	JZ	Not_SRVC		; Logical
 	SaveReg <AX,ES,DI>
-	MOV	word [ThisCDS],DummyCDS
-	MOV	word [ThisCDS+2],CS	;	ThisCDS = &DummyCDS;
-	ADD	AL,'[a]'
+	MOV	word [THISCDS],DummyCDS
+	MOV	word [THISCDS+2],CS	;	ThisCDS = &DummyCDS;
+	ADD	AL,'a'
 	CALL	InitCDS 		;	InitCDS(c);
-	TEST	[es:DI+curdir_flags],curdir_inuse	; Clears carry
+	TEST	[es:DI+curdir_list.curdir_flags],curdir_inuse	; Clears carry
 	RestoreReg  <DI,ES,AX>
 	JZ	GetBerr 		; Not a physical drive.
-	JMP	SHORT GetBye		; carry clear
+	JMP	SHORT GetBye_MACRO		; carry clear
 
 Not_SRVC:
 	invoke	GetCDSFromDrv
 	JC	GetBerr2		; Unassigned CDS -> return error already set
-	TEST	[SI+curdir_flags],curdir_inuse	; Clears Carry
-	JNZ	GetBye			; carry clear
+	TEST	[SI+curdir_list.curdir_flags],curdir_inuse	; Clears Carry
+	JNZ	GetBye_MACRO			; carry clear
 GetBerr:
 	MOV	AL,error_not_DOS_disk	;AN000;IFS. Formatted IFS drive
-	CMP	word [SI+curdir_devptr],0	 ;AN000;IFS. dpb ptr =0 ?
+	CMP	word [SI+curdir_list.curdir_devptr],0	 ;AN000;IFS. dpb ptr =0 ?
 	JNZ	notfat			;AN000;IFS. no
 GetBerr2:
 	MOV	AL,error_invalid_drive	;AN000;;IFS. invalid FAT drive
 notfat: 				;AN000;
 	MOV	[DrvErr],AL		;AN000;;IFS. save this for IOCTL
-	mov	[EXTERR_LOCUS],errLOC_UNK
+	mov	byte [EXTERR_LOCUS],errLOC_Unk
 	STC
-GetBye: RestoreReg  <SI,DS>		; restore world
+GetBye_MACRO: RestoreReg  <SI,DS>		; restore world
 	return
 EndProc GetThisDrv
 
@@ -424,18 +424,18 @@ Break <GetCDSFromDrv - convert a drive number to a CDS pointer>
 
 Procedure   GetCDSFromDrv,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
-	CMP	AL,[CDSCount]		; is this a valid designator
+	CMP	AL,[CDSCOUNT]		; is this a valid designator
 	JB	GetCDS			; yes, go get the macro
 	STC				; signal error
 	return				; bye
 GetCDS:
 	SaveReg <BX,AX>
-	LDS	SI,[CDSAddr]		; get pointer to table
-	MOV	BL,sizeof.CurDir_list	; size in convenient spot
+	LDS	SI,[CDSADDR]		; get pointer to table
+	MOV	BL,sizeof.curdir_list	; size in convenient spot
 	MUL	BL			; get net offset
 	ADD	SI,AX			; convert to true pointer
-	MOV	word [ThisCDS],SI	; store convenient offset
-	MOV	word [ThisCDS+2],DS ; store convenient segment
+	MOV	word [THISCDS],SI	; store convenient offset
+	MOV	word [THISCDS+2],DS ; store convenient segment
 	RestoreReg  <AX,BX>
 	CLC				; no error
 	return				; bye!

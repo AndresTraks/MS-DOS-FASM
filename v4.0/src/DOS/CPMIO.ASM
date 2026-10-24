@@ -64,7 +64,7 @@ end if
 ;    EXTRN   EscChar:BYTE		; lead byte for function keys
 ;    EXTRN   CanChar:BYTE		; Cancel character
 ;    EXTRN   OUTCHA:NEAR 		;AN000 char out with status check 2/11/KK
-    i_need  Printer_Flag,BYTE
+    i_need  PRINTER_FLAG,BYTE
     i_need  SCAN_FLAG,BYTE
     i_need  DATE_FLAG,WORD
     i_need  Packet_Temp,WORD		; temporary packet used by readtime
@@ -125,11 +125,11 @@ INTEST:
 	invoke	STATCHK
 	JNZ	Get
 ;*************************************************************************
-	cmp	[Printer_Flag],0	; is printer idle?
-	jnz	no_sys_wait
+	cmp	byte [PRINTER_FLAG],0	; is printer idle?
+	jnz	no_sys_wait_CPMIO
 	mov	ah,5			; get input status with system wait
 	invoke	IOFUNC
-no_sys_wait:
+no_sys_wait_CPMIO:
 ;**************************************************************************
 	MOV	AH,84h
 	INT	int_IBM
@@ -170,10 +170,10 @@ check_ok:
 	POP	BX
 	POP	AX
 NoUpdate:
-	INC	[DATE_FLAG]
+	INC	word [DATE_FLAG]
 
 ;;; 7/15/86 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	JMP	Intest
+	JMP	INTEST
 Get:
 	XOR	AH,AH
 	invoke	IOFUNC
@@ -254,11 +254,11 @@ Break
 RAW22:						      ;AN000;
 	LES	DI,dword [user_SP]		      ; Get pointer to register save area
 	XOR	BX,BX
-	invoke	GET_IO_SFT
+	invoke	get_io_sft
 	retc
  if  DBCS				;AN000;
-	push	word [Intercon]	;AN000;
-	mov	[Intercon],0		;AN000; disable interim characters
+	push	word [InterCon]	;AN000;
+	mov	[InterCon],0		;AN000; disable interim characters
  end if					;AN000;
 	MOV	AH,1
 	invoke	IOFUNC
@@ -294,7 +294,7 @@ RILP:
 
 	PUSH	BX
 	XOR	BX,BX
-	invoke	GET_IO_SFT
+	invoke	get_io_sft
 	POP	BX
 	retc
 	MOV	AH,1
@@ -318,7 +318,7 @@ entry	InterApRet			;AN000; 		2/11/KK 	;AN000;
 	push	ds			;AN000; 3/16/KK
 	push	bx			;AN000; 3/16/KK
 	Context DS			;AN000; 3/16/KK
-	MOV	BX,COUNTRY_CDPG+ccDosCodePage
+	MOV	BX,COUNTRY_CDPG+DOS_country_cdpg_info.ccDosCodePage
 	cmp	word [bx],934	;AN000; 3/16/KK       korean code page ?
 	pop	bx			;AN000; 3/16/KK
 	pop	ds			;AN000; 3/16/KK
@@ -328,10 +328,10 @@ entry	InterApRet			;AN000; 		2/11/KK 	;AN000;
 do_koren:				;AN000; 3/16/KK
 	popf				;AN000;
 	LES	DI,dword [user_SP]	;AN000; Get pointer to register save area KK
-	jnz	sj0			;AN000; 		      2/11/KK
+	jnz	sj0_CPMIO			;AN000; 		      2/11/KK
 	OR	byte [es:DI+user_environ.user_F],40H	;AN000; Set user's zero flag  2/11/KK
 	return				;AN000; 		2/11/KK
-sj0:					;AN000; 		2/11/KK
+sj0_CPMIO:					;AN000; 		2/11/KK
 	AND	byte [es:DI+user_environ.user_F],0FFH-40H ;AN000; Reset user's zero flag 2/KK
  end if						 ;AN000;
 	return					 ;AN000;
@@ -343,19 +343,19 @@ sj0:					;AN000; 		2/11/KK
 	PUSH	BX
 	MOV	BX,1
 
-	invoke	GET_IO_SFT
+	invoke	get_io_sft
 	JC	RAWRET1
 
-	MOV	BX,[SI+sf_flags]
+	MOV	BX,[SI+sf_entry.sf_flags]
 
  ;
  ; If we are a network handle OR if we are not a local device then go do the
  ; output the hard way.
  ;
 
-	AND	BX,sf_isNet + devid_device
+	AND	BX,sf_isnet + devid_device
 	CMP	BX,devid_device
-	JNZ	RawNorm
+	JNZ	RAWNORM
  if  DBCS					;AN000;
 	TEST	[SaveCurFlg],01H		;AN000; print but no cursor adv?
 	JNZ	RAWNORM 			;AN000;    2/11/KK
@@ -367,8 +367,8 @@ sj0:					;AN000; 		2/11/KK
 ;	JZ	RAWNORM 			; if so, do normally
 
 	PUSH	DS
-	LDS	BX,[SI+sf_devptr]		; output to special?
-	TEST	byte [BX+SDEVATT],ISSPEC
+	LDS	BX,[SI+sf_entry.sf_devptr]		; output to special?
+	TEST	byte [BX+SYSDEV.SDEVATT],ISSPEC
 	POP	DS
 	JZ	RAWNORM 			; if not, do normally
 	INT	int_fastcon			; quickly output the char
@@ -386,14 +386,14 @@ RAWNORM:
 ;
 	entry	RAWOUT2
 
-	invoke	GET_IO_SFT
+	invoke	get_io_sft
 	retc
 RAWOUT3:
 	PUSH	AX
 	JMP	SHORT RAWOSTRT
 ROLP:
 	invoke	SPOOLINT
-	OR	[DOS34_FLAG],CTRL_BREAK_FLAG ;AN002; set control break
+	OR	word [DOS34_FLAG],CTRL_BREAK_FLAG ;AN002; set control break
 	invoke	DSKSTATCHK		     ;AN002; check control break
 RAWOSTRT:
 	MOV	AH,3
@@ -425,11 +425,11 @@ EndProc RAW_CON_IO$
 	JZ	save_packet
 restore_packet:
 	MOV	SI,Packet_Temp	 ;sourec
-	MOV	DI,Devcall	 ;destination
+	MOV	DI,DEVCALL	 ;destination
 	JMP	set_seg
 save_packet:
 	MOV	DI,Packet_Temp	 ;destination
-	MOV	SI,Devcall	 ;source
+	MOV	SI,DEVCALL	 ;source
 set_seg:
 	MOV	AX,CS		; set DS,ES to DOSGROUP
 	MOV	DS,AX

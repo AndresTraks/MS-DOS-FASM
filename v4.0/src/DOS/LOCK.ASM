@@ -36,7 +36,7 @@ Installed = TRUE
 	I_Need	EXTERR_LOCUS,BYTE	; Extended Error Locus
 	i_need	JShare,DWORD
 	i_need	Lock_Buffer,DWORD	;AN000; DOS 4.00
-	i_need	Temp_Var,WORD		;AN000; DOS 4.00
+	i_need	TEMP_VAR,WORD		;AN000; DOS 4.00
 
 BREAK <LockOper$ - Lock Calls>
 
@@ -92,7 +92,7 @@ BREAK <LockOper$ - Lock Calls>
 	POP	DI			       ; Clean stack
 	error	error_invalid_handle
 lock_bad_func:
-	MOV	[ExtErr_locus],errLoc_Unk        ; Extended Error Locus
+	MOV	byte [EXTERR_LOCUS],errLOC_Unk        ; Extended Error Locus
 	error	error_invalid_function
 
 ; Align_buffer call has been deleted, since it corrupts the DTA  (6/5/88) P5013
@@ -182,16 +182,16 @@ old_33:
 ;	JMP	WriteUnlock			 ;AN000;;MS. do write unlock
 						 ;AN000;;MS.
 DOS_Unlock:
-	TEST	[es:DI+sf_flags],sf_isnet
+	TEST	[es:DI+sf_entry.sf_flags],sf_isnet
 	JZ	LOCAL_UNLOCK
 ;;	invoke	OWN_SHARE			 ;AN000;;MS. IFS owns share ?
 ;;	JNZ	LOCAL_UNLOCK			 ;AN000;;MS. no
 
-	CallInstall Net_Xlock,multNet,10
+	CallInstall Net_Xlock,MultNET,10
 	JMP	SHORT ValChk
 LOCAL_UNLOCK:
-if installed
-	Call	dword [JSHARE+7*4]
+if Installed
+	Call	dword [JShare+7*4]
 else
 	Call	clr_block
 end if
@@ -200,18 +200,18 @@ ValChk:
 lockerror:
 	transfer SYS_RET_ERR
 Lock_OK:
-	MOV	AX,[Temp_VAR]			 ;AN000;;MS. AX= number of bytes
-	transfer SYS_Ret_OK
+	MOV	AX,[TEMP_VAR]			 ;AN000;;MS. AX= number of bytes
+	transfer SYS_RET_OK
 DOS_Lock:
-	TEST	[es:DI+sf_flags],sf_isnet
+	TEST	[es:DI+sf_entry.sf_flags],sf_isnet
 	JZ	LOCAL_LOCK
 ;;	invoke	OWN_SHARE			 ;AN000;;MS. IFS owns share ?
 ;;	JNZ	LOCAL_LOCK			 ;AN000;;MS. no
-	CallInstall NET_XLock,multNet,10
+	CallInstall NET_XLock,MultNET,10
 	JMP	ValChk
 LOCAL_LOCK:
-if installed
-	Call	dword [JSHARE+6*4]
+if Installed
+	Call	dword [JShare+6*4]
 else
 	Call	Set_Block
 end if
@@ -306,8 +306,8 @@ BREAK <Set_Lock_Buffer>
 	MOV	BX,[RetryCount]		; Number retries
 LockRetry:
 	SaveReg <BX,AX> 		; MS. save regs 			;AN000;
-if installed
-	call	dword [JSHARE+8*4]
+if Installed
+	call	dword [JShare+8*4]
 else
 	Call	chk_block
 end if
@@ -340,12 +340,12 @@ EndProc LOCK_CHECK
 	PUSH	DI
 	PUSH	CX
 	MOV	AX,error_lock_violation
-	MOV	[ALLOWED],allowed_FAIL + allowed_RETRY
+	MOV	byte [ALLOWED],Allowed_FAIL + Allowed_RETRY
 	LES	BP,[THISDPB]
 	MOV	DI,1				; Fake some registers
 	MOV	CX,DI
-	MOV	DX,[es:BP+dpb_first_sector]
-	invoke	HARDERR
+	MOV	DX,[es:BP+dpb.dpb_first_sector]
+	invoke	HardErr
 	POP	CX
 	POP	DI
 	POP	ES
@@ -357,13 +357,13 @@ EndProc LOCK_CHECK
 
 EndProc LOCK_VIOLATION
 
-if  INSTALLED
+if  Installed
 ;
 ; do a retz to return error
 ;
 Procedure   CheckShare,NEAR
 ;	ASSUME	CS:DOSGROUP,ES:NOTHING,DS:NOTHING,SS:NOTHING
-	CMP	[fShare],0
+	CMP	byte [fShare],0
 	return
 EndProc CheckShare
 end if

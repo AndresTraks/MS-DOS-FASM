@@ -182,7 +182,7 @@ DPBLoop:CMP     DI,-1
 	JZ      DPBNotFound
 	invoke  PointComp
 	JZ      DPBRet
-	LES     DI,[es:DI+dpb_next_dpb]
+	LES     DI,[es:DI+dpb.dpb_next_dpb]
 	JMP     DPBLoop
 DPBNotFound:
 	MOV     AX,[BP].[Astmes]
@@ -231,7 +231,7 @@ DPBRETJ:JZ      DPBRet
 ; areas.
 ;
 	Context ES
-	MOV     DI,[AUXStack-sizeof].SF_ENTRY
+	MOV     DI,AUXStack - sizeof.SF_ENTRY
 	Invoke  PointComp
 	JZ      DPBRet
 	MOV     DI,renbuf
@@ -255,7 +255,7 @@ Procedure   BUFCheck,NEAR
 ;
 ; CheckDisk - make sure that we are in the disk critical section...
 ;
-	MOV     byte AL,ECritDisk
+	MOV     AL,ECritDisk
 	CMP     AL,[CritNOP]
 	JZ      CheckDone
 	MOV     AX,[CURRENTPDB]

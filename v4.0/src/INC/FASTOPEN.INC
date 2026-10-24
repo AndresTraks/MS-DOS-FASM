@@ -122,8 +122,8 @@ STRUC NAME_RECORD
 .nChild_ptr	dw	-1
 .nSibling_ptr	dw	-1
 .nBackward_ptr	dw	-1		;points to preceding node
-.nCmpct_Dir_Info db	sizeof.Cmpct_Dir_Info dup (' ')
-.nExtended_Info	db	sizeof.Fastopen_Extended_Info dup (0)
+.nCmpct_Dir_Info db	sizeof.CMPCT_DIR_INFO dup (' ')
+.nExtended_Info	db	sizeof.FASTOPEN_EXTENDED_INFO dup (0)
 }
 match =NAME_RECORD_LAID_OUT, NAME_RECORD_LAID_OUT
 {

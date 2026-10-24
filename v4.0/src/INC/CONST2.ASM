@@ -22,7 +22,7 @@ Break <Initialized data and data used at DOS initialization>
 ; describing that data item.
 ;
 
-	AsmVars <Kanji, Debug, Redirector, ShareF>
+	AsmVars <KANJI, debug, Redirector, ShareF>
 
 if SEGSEL = S_CONSTANTS
 
@@ -85,7 +85,7 @@ sftabl:; [SYSTEM] file table
 CritPatch:
 irp sect,critDisk,critDevice
 {
-if (NOT REDIRECTOR) AND (NOT SHAREF)
+if (NOT Redirector) AND (NOT ShareF)
 	Short_Addr  E#sect
 	Short_Addr  L#sect
 else

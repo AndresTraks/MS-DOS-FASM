@@ -9,7 +9,7 @@ INCLUDE 'MSSW.ASM'
 ;.cref
 ;.list
 
-TITLE	Control C detection, Hard error and EXIT routines
+TITLE	Control C detection, Hard error and Exit routines
 NAME	IBMCTRLC
 
 INCLUDE 'CTRLC.ASM'

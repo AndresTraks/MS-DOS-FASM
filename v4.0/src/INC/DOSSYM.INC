@@ -1,13 +1,17 @@
 ;	SCCSID = @(#)dossym.asm 1.1 85/04/10
 ;	SCCSID = @(#)dossym.asm 1.1 85/04/10
 	PAGE 80,132
-TRUE	    EQU 0FFFFh
+; MASM worked an expression out sixteen bits wide, so NOT TRUE was zero and a
+; switch written "if NOT IBM" asked the right question.  fasm's arithmetic is
+; wider than that, and NOT 0FFFFh is not zero; TRUE is therefore -1 here,
+; which writes the same 0FFFFh into a word and leaves NOT TRUE zero.
+TRUE	    EQU -1
 FALSE	    EQU 0
 
 Installed   = TRUE
 ; fasm's = is an assembly-time constant and DEFINED looks forward as well
 ; as back, so the question is asked of the preprocessor instead.
-match =DEBUG, DEBUG { DEBUG	= FALSE }
+match =debug, debug { debug	= FALSE }
 
 include 'DBCS.SW'
 include 'DOSMAC.INC'

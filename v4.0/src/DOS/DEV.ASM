@@ -45,23 +45,23 @@ INCLUDE '../INC/VERSION.INC'
 	i_need	IOMED,BYTE
 	i_need	IORCHR,BYTE
 	i_need	CALLSCNT,WORD
-	i_need	DMAAdd,DWORD
-	i_need	CallDevAd,DWORD
-	i_need	CallXAD,DWORD
-	i_need	DPBHead,DWORD
-	i_need	ThisSFT,DWORD
-	i_need	ThisDPB,DWORD
-	i_need	DevCall,DWORD
-	i_need	VerFlg,BYTE
+	i_need	DMAADD,DWORD
+	i_need	CALLDEVAD,DWORD
+	i_need	CALLXAD,DWORD
+	i_need	DPBHEAD,DWORD
+	i_need	THISSFT,DWORD
+	i_need	THISDPB,DWORD
+	i_need	DEVCALL,DWORD
+	i_need	VERFLG,BYTE
 	i_need	HIGH_SECTOR,WORD	       ;AN000;
 	i_need	CALLSSEC,WORD		       ;AN000;
 	i_need	CALLNEWSC,DWORD 	       ;AN000;
 	i_need	SC_CACHE_COUNT,WORD	       ;AN000;
 	i_need	SC_CACHE_PTR,DWORD	       ;AN000;
-	i_need	CURSC_SECTOR,WORD	       ;AN000;
+	i_need	CurSC_SECTOR,WORD	       ;AN000;
 	i_need	SEQ_SECTOR,DWORD	       ;AN000;
 	i_need	SC_SECTOR_SIZE,WORD	       ;AN000;
-	i_need	CURSC_DRIVE,BYTE	       ;AN000;
+	i_need	CurSC_DRIVE,BYTE	       ;AN000;
 	i_need	SC_DRIVE,BYTE		       ;AN000;
 	i_need	SC_STATUS,WORD		       ;AN000;
 	i_need	SC_FLAG,BYTE		       ;AN000;
@@ -72,7 +72,7 @@ INCLUDE '../INC/VERSION.INC'
 	i_need	SaveCurFlg,BYTE ;AN000; Console out mode(1:print & don't adv cursor) 2 /13/KK
 	i_need	DDMOVE,BYTE	;AN000; flag for DWORD move
 	i_need	DOS34_FLAG,WORD ;AN000;
-	i_need	fshare,BYTE	;AN010; share flag
+	i_need	fShare,BYTE	;AN010; share flag
 
 Break	<IOFUNC -- DO FUNCTION 1-12 I/O>
 
@@ -110,15 +110,15 @@ Break	<IOFUNC -- DO FUNCTION 1-12 I/O>
 
 	Assert	ISSFT,<DS,SI>,"IOFUNC"
 	MOV	word [IOXAD+2],SS
-	MOV	word [IOXAD],DevIOBuf
+	MOV	word [IOXAD],DEVIOBUF
 	MOV	word [IOSCNT],1
 	MOV	word [DEVIOBUF],AX
-	TEST	[SI+sf_flags],sf_isnet
+	TEST	[SI+sf_entry.sf_flags],sf_isnet
 	JZ	IOTO22								;AN000;
 	JMP	IOTOFILE							;AN000;
 IOTO22:
-	TEST	[SI+sf_flags],devid_device
-	JNZ	IOTo33								;AN000;
+	TEST	[SI+sf_entry.sf_flags],devid_device
+	JNZ	IOTO33								;AN000;
 	JMP	IOTOFILE							;AN000;
 IOTO33:
 	invoke	save_world
@@ -129,14 +129,19 @@ IOTO33:
 ;	ASSUME	DS:DOSGroup
 	XOR	BX,BX
 	cmp	ah,5		    ; system wait enabled?
-	jnz	no_sys_wait
+	jnz	no_sys_wait_DEV
 	or	bx,0400H	    ; Set bit 10 in status word for driver
 				    ; It is up to device driver to carry out
 				    ; appropriate action.
-no_sys_wait:
+no_sys_wait_DEV:
 	MOV	[IOCALL.REQSTAT],BX
 	XOR	BX,BX
 	MOV	byte [IOMED],BL
+
+; MASM let the table segment be opened inside the code segment and the
+; assembler sorted the pieces out; here the code segment's pass has to be
+; closed first, or the table would be laid down in the wrong one.
+end if
 
 if SEGSEL = S_TABLE
 ;Public DEV001S, DEV001E 		; Pathgen labels
@@ -155,6 +160,8 @@ CmdTab	DB	86h,	DEVRD		; 0 input
 DEV001E:
 end if
 
+if SEGSEL = S_CODE
+
 	MOV	BL,AH			; get function
 	MOV	AH,[LenTab+BX]
 	SHL	BX,1
@@ -172,12 +179,12 @@ end if
 	JZ	SETIN			;AN000;
 	CMP	CH, DEVRDND		;AN000; 1(5) input status without(with) system WAIT
 	JZ	SETIN			;AN000;
-	MOV	CL, [SaveCurflg]	;AN000;
+	MOV	CL, [SaveCurFlg]	;AN000;
 	CMP	CH, DEVWRT		;AN000; 2 output
 	JZ	CHKERROUT		;AN000;
 	XOR	CL,CL			;AN000; else, do normal
 SETIN:					;AN000;
-	MOV	byte [IoMed], CL	;AN000; set interim I/O indication
+	MOV	byte [IOMED], CL	;AN000; set interim I/O indication
 	POP	CX			;AN000;
 ;----------------------------- End of DBCS 2/13/KK
  end if					;AN000;
@@ -219,7 +226,7 @@ QuickReturn:				;AN000; 2/13/KK
 ;------------------------------ Start of DBCS 2/13/KK
 CHKERROUT:				;AN000;
 	MOV	DS, DX			;AN000;
-	TEST	[SI+sf_flags], devid_device_con_out	;AN000; output to console ?
+	TEST	[SI+sf_entry.sf_flags], devid_device_con_out	;AN000; output to console ?
 	JNZ	GOOD			;AN000; yes
 	CMP	CL, 01			;AN000; write interim ?
 	JNZ	GOOD			;AN000; no,
@@ -233,7 +240,7 @@ GOOD:					;AN000;
 ;------------------------------ End of DBCS 2/13/KK
  end if					;AN000;
 DevErr:
-	TEST	[cs:DOS34_FLAG],X25_Special ;AN000; from disk.asm
+	TEST	word [cs:DOS34_FLAG],X25_special ;AN000; from disk.asm
 	JZ	notx25			 ;AN000; no
 	PUSH	AX			 ;AN000; unknown command ?
 	MOV	AX,DI			 ;AN000;
@@ -241,21 +248,21 @@ DevErr:
 	CMP	AL,error_I24_bad_command ;AN000;
 	POP	AX			 ;AN000;
 	JNZ	notx25			 ;AN000; no, then error
-	JMP	okDevIO 		 ;AN000;
+	JMP	OkDevIO 		 ;AN000;
 notx25:
 	MOV	AH,CL
 	invoke	CHARHARD
 	CMP	AL,1
-	JNZ	NO_RETRY
+	JNZ	NO_RETRY_DEV
 	invoke	restore_world
 	JMP	IOFUNC
 
-NO_RETRY:
+NO_RETRY_DEV:
 ;   Know user must have wanted Ignore OR Fail.	Make sure device shows ready
 ;   so that DOS doesn't get caught in a status loop when user simply wants
 ;   to ignore the error.
 	AND	byte [IOCALL.REQSTAT+1], NOT (STBUI SHR 8)
-	JMP	OKDevIO
+	JMP	OkDevIO
 
 IOTOFILE:
 ;ASSUME	DS:NOTHING
@@ -268,11 +275,11 @@ IOTOFILE:
 	return				; NON ZERO FLAG FOR OUTPUT STATUS
 
 IOIST:
-	PUSH	word [SI+sf_position]   ; Save position
-	PUSH	word [SI+sf_position+2]
+	PUSH	word [SI+sf_entry.sf_position]   ; Save position
+	PUSH	word [SI+sf_entry.sf_position+2]
 	CALL	IOIN
-	POP	word [SI+sf_position+2] ; Restore position
-	POP	word [SI+sf_position]
+	POP	word [SI+sf_entry.sf_position+2] ; Restore position
+	POP	word [SI+sf_entry.sf_position]
 	return
 
 IOUT:
@@ -284,9 +291,9 @@ IOUT:
 
 IOIN:
 	CALL	SETXADDR
-	OR	[DOS34_FLAG],Disable_EOF_I24   ;AN000;
+	OR	word [DOS34_FLAG],Disable_EOF_I24   ;AN000;
 	invoke	DOS_READ
-	AND	[DOS34_FLAG],NO_Disable_EOF_I24   ;AN000;
+	AND	word [DOS34_FLAG],NO_Disable_EOF_I24   ;AN000;
 	OR	CX,CX			; Check EOF
 	CALL	RESTXADDR
 	MOV	AL,[DEVIOBUF]		; Get byte from trans addr
@@ -319,7 +326,7 @@ RESTXADDR:
 RESTRET:JMP	word [CALLSCNT]	; Return address
 EndProc IOFUNC
 
-Break <DEV_OPEN_SFT, DEV_CLOSE_SFT - OPEN or CLOSE A DEVICE>
+Break <DEV_OPEN_SFT, DEV_CLOSE_SFT - Open or Close a DEVICE>
 
 ; Inputs:
 ;	ES:DI Points to SFT
@@ -333,7 +340,7 @@ Break <DEV_OPEN_SFT, DEV_CLOSE_SFT - OPEN or CLOSE A DEVICE>
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
 	Assert	ISSFT,<ES,DI>,"Dev_Open_SFT"
-	invoke	Save_World
+	invoke	save_world
 	MOV	AL,DEVOPN
 	JMP	SHORT DO_OPCLS
 
@@ -351,7 +358,7 @@ EndProc DEV_OPEN_SFT
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
 	Assert	ISSFT,<ES,DI>,"Dev_Close_SFT"
-	invoke	Save_World
+	invoke	save_world
 	MOV	AL,DEVCLS
 
 ;
@@ -364,22 +371,22 @@ EndProc DEV_OPEN_SFT
 ;
 ; Is the SFT for the net?  If so, no action necessary.
 ;
-	invoke	Test_IFS_Remote 						;AC000;
+	invoke	TEST_IFS_REMOTE 						;AC000;
 	JNZ	OPCLS_DONE		; NOP on net SFTs
 	XOR	AH,AH			; Unit
-	TEST	[es:DI+sf_flags],devid_device
-	LES	DI,[es:DI+sf_devptr]	; Get DPB or device
-	JNZ	Got_Dev_Addr
+	TEST	[es:DI+sf_entry.sf_flags],devid_device
+	LES	DI,[es:DI+sf_entry.sf_devptr]	; Get DPB or device
+	JNZ	GOT_DEV_ADDR
 ;
 ; We are about to call device open/close on a block driver.  If no sharing
 ; then just short circuit to done.
 ;
 ;;;;;	invoke	CheckShare
-	CMP	[fShare],1		;AN010; /NC or no SHARE
-	JBE	opCLs_Done		;AN010; yes
-	MOV	AH,[es:DI+dpb_UNIT]
-	MOV	CL,[es:DI+dpb_drive]
-	LES	DI,[es:DI+dpb_driver_addr]  ; Get device
+	CMP	byte [fShare],1		;AN010; /NC or no SHARE
+	JBE	OPCLS_DONE		;AN010; yes
+	MOV	AH,[es:DI+dpb.dpb_UNIT]
+	MOV	CL,[es:DI+dpb.dpb_drive]
+	LES	DI,[es:DI+dpb.dpb_driver_addr]  ; Get device
 GOT_DEV_ADDR:				; ES:DI -> device
 	TEST	[es:DI+SYSDEV.SDEVATT],DEVOPCL
 	JZ	OPCLS_DONE		; Device can't
@@ -388,7 +395,7 @@ GOT_DEV_ADDR:				; ES:DI -> device
 	MOV	SI,DI			; DS:SI -> device
 OPCLS_RETRY:
 	Context ES
-	MOV	DI,Devcall
+	MOV	DI,DEVCALL
 	MOV	BX,DI
 	PUSH	AX
 	MOV	AL,DOPCLHL
@@ -423,12 +430,12 @@ HRDERR:
 OPCLS_DONEP:
 	POP	AX			; Clean stack
 OPCLS_DONE:
-	invoke	Restore_World
+	invoke	restore_world
 	return
 
 EndProc DEV_CLOSE_SFT
 
-Break	<DEVIOCALL, DEVIOCALL2 - CALL A DEVICE>
+Break	<DEVIOCALL, DEVIOCALL2 - CALL a DEVICE>
 
 ; Inputs:
 ;	DS:SI Points to device SFT
@@ -443,20 +450,20 @@ Break	<DEVIOCALL, DEVIOCALL2 - CALL A DEVICE>
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
 	Assert	ISSFT,<DS,SI>,"DevIOCall"
-	LDS	SI,[SI+sf_devptr]
+	LDS	SI,[SI+sf_entry.sf_devptr]
 
 	entry	DEVIOCALL2
 
 	EnterCrit   critDevice
 
-	TEST	[SI+SYSDEV.SDEVATT],DevTyp    ;AN000; >32mb   block device ?
-	JNZ	chardev2	       ;AN000; >32mb   no
+	TEST	[SI+SYSDEV.SDEVATT],DEVTYP    ;AN000; >32mb   block device ?
+	JNZ	chardev2_DEV	       ;AN000; >32mb   no
 	CMP	[es:BX+SRHEAD.REQFUNC],DEVRD  ;AN000; >32mb   read ?
 	JZ	chkext		       ;AN000; >32mb   yes
 	CMP	[es:BX+SRHEAD.REQFUNC],DEVWRT ;AN000; >32mb   write ?
 	JZ	chkext		       ;AN000; >32mb   yes
 	CMP	[es:BX+SRHEAD.REQFUNC],DEVWRTV;AN000; >32mb   write/verify ?
-	JNZ	chardev2	       ;AN000; >32mb   no
+	JNZ	chardev2_DEV	       ;AN000; >32mb   no
 chkext:
 	CALL	RW_SC		       ;AN000;LB. use secondary cache if there
 	JC	dev_exit	       ;AN000;LB. done
@@ -465,18 +472,18 @@ chkext:
 	JZ	chksector	       ;AN000;>32mb   no
 	ADD	byte [es:BX],8     ;AN000;>32mb   make length to 30
 	MOV	AX,[CALLSSEC]	       ;AN000;>32mb
-	MOV	[CALLSSEC],-1	       ;AN000;>32mb   old sector  =-1
+	MOV	word [CALLSSEC],-1	       ;AN000;>32mb   old sector  =-1
 	MOV	word [CALLNEWSC],AX   ;AN000;>32mb	 new sector  =
 	MOV	AX,[HIGH_SECTOR]       ;AN000; >32mb   low sector,high sector
 	MOV	word [CALLNEWSC+2],AX  ;AN000; >32mb
-	JMP	chardev2	       ;AN000; >32mb
+	JMP	chardev2_DEV	       ;AN000; >32mb
 chksector:			       ;AN000; >32mb
-	CMP	[HIGH_SECTOR],0        ;AN000; >32mb   if >32mb
-	JZ	chardev2	       ;AN000; >32mb   then fake error
-	MOV	[es:BX+SRHEAD.REQSTAT],STERR+STDON+ERROR_I24_NOT_DOS_DISK  ;AN000; >32mb
+	CMP	word [HIGH_SECTOR],0        ;AN000; >32mb   if >32mb
+	JZ	chardev2_DEV	       ;AN000; >32mb   then fake error
+	MOV	[es:BX+SRHEAD.REQSTAT],STERR+STDON+error_I24_not_DOS_disk  ;AN000; >32mb
 	JMP	SHORT dev_exit	       ;AN000; >32mb
 
-chardev2:			       ;AN000;
+chardev2_DEV:			       ;AN000;
 ; As above only DS:SI points to device header on entry, and DS:SI is preserved
 	MOV	AX,[SI+SYSDEV.SDEVSTRAT]
 	MOV	word [CALLDEVAD],AX
@@ -486,13 +493,13 @@ chardev2:			       ;AN000;
 	MOV	word [CALLDEVAD],AX
 	CALL	dword [CALLDEVAD]
 	CALL	VIRREAD 		;AN000;LB. move data from SC to buffer
-	JC	chardev2		;AN000;LB. bad sector or exceeds max sec
+	JC	chardev2_DEV		;AN000;LB. bad sector or exceeds max sec
 dev_exit:
 	LeaveCrit   critDevice
 	return
 EndProc DEVIOCALL
 
-Break	<SETREAD, SETWRITE -- SET UP HEADER BLOCK>
+Break	<SETREAD, SETWRITE -- Set UP Header Block>
 
 ; Inputs:
 ;	DS:BX = Transfer Address
@@ -517,7 +524,7 @@ SETCALLHEAD:
 	MOV	AL,DRDWRHL
 	PUSH	SS
 	POP	ES
-	MOV	DI,Devcall
+	MOV	DI,DEVCALL
 	STOSB				; length
 	POP	AX
 	STOSB				; Unit
@@ -544,7 +551,7 @@ SETCALLHEAD:
 	XCHG	AX,CX
 	XCHG	DX,CX
 	POP	DI
-	MOV	BX,Devcall
+	MOV	BX,DEVCALL
 	return
 
 	entry	SETWRITE
@@ -589,9 +596,9 @@ Break	<RW_SC -- Read Write Secondary Cache>
 	procedure   RW_SC,NEAR		;AN000;
 ;ASSUME	DS:NOTHING,ES:NOTHING		;AN000;
 
-	CMP	[SC_CACHE_COUNT],0	;AN000;LB. secondary cache exists?
+	CMP	word [SC_CACHE_COUNT],0	;AN000;LB. secondary cache exists?
 	JZ	scexit4 		;AN000;LB. no, do nothing
-	CMP	[CALLSCNT],1		;AN000;LB. sector count = 1 (buffer I/O)
+	CMP	word [CALLSCNT],1		;AN000;LB. sector count = 1 (buffer I/O)
 	JNZ	scexit4 		;AN000;LB. no, do nothing
 	PUSH	CX			    ;AN000;;LB.
 	PUSH	DX			    ;AN000;;LB. yes
@@ -601,13 +608,13 @@ Break	<RW_SC -- Read Write Secondary Cache>
 	PUSH	DI			    ;AN000;;LB.
 	MOV	DX,word [CALLSSEC]	    ;AN000;;LB.  starting sector
 	CMP	byte [DEVCALL.REQFUNC],DEVRD ;AN000;LB. read ?		      ;AN000;
-	JZ	doread			;AN000;LB. yes				      ;AN000;
+	JZ	doread_DEV			;AN000;LB. yes				      ;AN000;
 	CALL	INVALIDATE_SC		    ;AN000;LB. invalidate SC		      ;AN000;
 	JMP	scexit2 		    ;AN000;LB. back to normal		      ;AN000;
 scexit4:				    ;AN000;				       ;AN000;
 	CLC				    ;AN000;LB. I/O not done yet 	  ;AN000;
 	return				    ;AN000;LB.				  ;AN000;
-doread: 				    ;AN000;				       ;AN000;
+doread_DEV: 				    ;AN000;				       ;AN000;
 	CALL	SC2BUF			    ;AN000;LB. check if in SC		      ;AN000;
 	JC	readSC			    ;AN000;LB.					  ;AN000;
 	MOV	[DEVCALL.REQSTAT],STDON     ;AN000;LB. fake done and ok 	  ;AN000;
@@ -623,7 +630,7 @@ readSC: 				    ;AN000;
 chklow: 									;AN000;
 	CMP	CX,1			    ;AN000;;LB. <= 1
 	JA	saveseq2		    ;AN000;;LB. no, not sequential
-	MOV	[SC_STATUS],-1		    ;AN000;;LB. prsume all SC valid
+	MOV	word [SC_STATUS],-1		    ;AN000;;LB. prsume all SC valid
 	MOV	AX,[SC_CACHE_COUNT]	    ;AN000;;LB. yes, sequential
 	MOV	[CALLSCNT],AX		    ;AN000;;LB. read continuous sectors
 readsr:
@@ -636,13 +643,13 @@ readsr:
 	MOV	word [CALLXAD],AX	    ;AN000;LB. transfer addr		      ;AN000;
 	MOV	AX,word [SC_CACHE_PTR+2]  ;AN000;LB.			      ;AN000;
 	MOV	word [CALLXAD+2],AX       ;AN000;LB.			      ;AN000;
-	MOV	[SC_FLAG],1		      ;AN000;LB. flag it for later	      ;AN000;
+	MOV	byte [SC_FLAG],1		      ;AN000;LB. flag it for later	      ;AN000;
 	MOV	AL,[SC_DRIVE]		    ;AN000;;LB. current drive
-	MOV	[CURSC_DRIVE],AL	    ;AN000;;LB. set current drive
+	MOV	[CurSC_DRIVE],AL	    ;AN000;;LB. set current drive
 	MOV	AX,word [CALLSSEC]	    ;AN000;;LB. current sector
-	MOV	[CURSC_SECTOR],AX	    ;AN000;;LB. set current sector
+	MOV	[CurSC_SECTOR],AX	    ;AN000;;LB. set current sector
 	MOV	AX,word [CALLSSEC+2]    ;AN000;;LB.
-	MOV	[CURSC_SECTOR+2],AX	    ;AN000;;LB.
+	MOV	[CurSC_SECTOR+2],AX	    ;AN000;;LB.
 saveseq2:				    ;AN000;
 	CLC				    ;AN000;LB. clear carry		      ;AN000;
 saveseq:				    ;AN000;				       ;AN000;
@@ -684,12 +691,12 @@ Break	<IN_SC -- check if in secondary cache>
 ;ASSUME	DS:NOTHING,ES:NOTHING		    ;AN000;
 
 	MOV	AL,[SC_DRIVE]		    ;AN000;;LB. current drive
-	CMP	AL,[CURSC_DRIVE]	    ;AN000;;LB. same as SC drive
+	CMP	AL,[CurSC_DRIVE]	    ;AN000;;LB. same as SC drive
 	JNZ	outrange2		    ;AN000;;LB. no
 	MOV	AX,word [HIGH_SECTOR]   ;AN000;;LB. subtract sector num from
 	MOV	CX,DX			    ;AN000;;LB. secondary starting sector
-	SUB	CX,word [CURSC_SECTOR]    ;AN000;;LB. number
-	SBB	AX,word [CURSC_SECTOR+2]  ;AN000;;LB.
+	SUB	CX,word [CurSC_SECTOR]    ;AN000;;LB. number
+	SBB	AX,word [CurSC_SECTOR+2]  ;AN000;;LB.
 	CMP	AX,0			    ;AN000;;LB. greater than 64K
 	JNZ	outrange2		    ;AN000;;LB. yes
 	CMP	CX,[SC_CACHE_COUNT]	    ;AN000;;LB. greater than SC count
@@ -733,7 +740,7 @@ outrange:				    ;AN000;;LB.
 EndProc INVALIDATE_SC			    ;AN000;
 
 
-Break	<VIRREAD- virtually read data into buffer>
+Break	<VIRREAD- virtually Read data into buffer>
 
 ; Inputs:  SC_FLAG = 0 , no sectors were read into SC
 ;		     1, continous sectors were read into SC
@@ -750,14 +757,14 @@ Break	<VIRREAD- virtually read data into buffer>
 	procedure   VIRREAD,NEAR	    ;AN000;
 ;ASSUME	DS:NOTHING,ES:NOTHING		    ;AN000;
 
-	CMP	[SC_FLAG],0		    ;AN000;;LB.  from SC fill
+	CMP	byte [SC_FLAG],0		    ;AN000;;LB.  from SC fill
 	JZ	sc2end			    ;AN000;;LB.  no
 	MOV	AX,[TEMP_VAR2]		    ;AN000;;LB. restore buffer addr
 	MOV	word [CALLXAD+2],AX     ;AN000;;LB.
 	MOV	AX,[TEMP_VAR]		    ;AN000;;LB.
 	MOV	word [CALLXAD],AX	    ;AN000;;LB.
-	MOV	[SC_FLAG],0		    ;AN000;;LB.  reset sc_flag
-	MOV	[CALLSCNT],1		    ;AN000;;LB.  one sector transferred
+	MOV	byte [SC_FLAG],0		    ;AN000;;LB.  reset sc_flag
+	MOV	word [CALLSCNT],1		    ;AN000;;LB.  one sector transferred
 
 	TEST	[DEVCALL.REQSTAT],STERR     ;AN000;;LB.  error?
 	JNZ	scerror 		    ;AN000;;LB. yes
@@ -778,9 +785,9 @@ Break	<VIRREAD- virtually read data into buffer>
 	JMP	SHORT sc2end		    ;AN000;;LB. return
 
 scerror:				    ;AN000;
-	MOV	[CALLSCNT],1		    ;AN000;;LB. reset sector count to 1
-	MOV	[SC_STATUS],0		    ;AN000;;LB. invalidate all SC sectors
-	MOV	[CURSC_DRIVE],-1	    ;AN000;;LB. invalidate drive
+	MOV	word [CALLSCNT],1		    ;AN000;;LB. reset sector count to 1
+	MOV	word [SC_STATUS],0		    ;AN000;;LB. invalidate all SC sectors
+	MOV	byte [CurSC_DRIVE],-1	    ;AN000;;LB. invalidate drive
 	STC				    ;AN000;;LB. carry set
 	return				    ;AN000;;LB.
 
@@ -812,7 +819,7 @@ Break	<SC2BUF- move data from SC to buffer>
 	JZ	noSC			    ;AN000;;LB. invalid
 entry SC2BUF2				    ;AN000;
 	MOV	AX,CX			    ;AN000;;LB. times index with
-	MUL	[SC_SECTOR_SIZE]	    ;AN000;;LB. sector size
+	MUL	word [SC_SECTOR_SIZE]	    ;AN000;;LB. sector size
 	ADD	AX,word [SC_CACHE_PTR]  ;AN000;;LB. add SC starting addr
 	ADC	DX,word [SC_CACHE_PTR+2];AN000;;LB.
 	MOV	DS,DX			    ;AN000;    ;LB. DS:SI-> SC sector addr
@@ -822,7 +829,7 @@ entry SC2BUF2				    ;AN000;
 	MOV	CX,[SC_SECTOR_SIZE]	    ;AN000;    ;LB. count= sector size
 	SHR	CX,1			    ;AN000;    ;LB. may use DWORD move for 386
 entry MOVWORDS				    ;AN000;
-	CMP	[DDMOVE],0		    ;AN000;    ;LB. 386 ?
+	CMP	byte [DDMOVE],0		    ;AN000;    ;LB. 386 ?
 	JZ	nodd			    ;AN000;    ;LB. no
 	SHR	CX,1			    ;AN000;    ;LB. words/2
 	DB	66H			    ;AN000;    ;LB. use double word move

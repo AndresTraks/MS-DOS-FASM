@@ -212,7 +212,7 @@ EndProc DATE16
 	DOSAssume   CS,<DS>,"ReadTime"
 ;	ASSUME	ES:NOTHING
 
-	MOV	[DATE_FLAG],0		; reset date flag for CPMIO
+	MOV	word [DATE_FLAG],0		; reset date flag for CPMIO
 	PUSH	SI
 	PUSH	BX
 	MOV	BX,TIMEBUF
@@ -367,7 +367,7 @@ EndProc DODATE
 
 	procedure   DSUM,NEAR
 	MOV	AH,0
-	JCXZ	RET25
+	JCXZ	Ret25
 DSUM1:
 	LODSB
 	ADD	DX,AX

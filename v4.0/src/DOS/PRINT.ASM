@@ -183,7 +183,7 @@ DLoop:  SaveReg <CX>
 	ADD     AL,'0'
 	CMP     AL,'9'
 	JBE     Nok
-	ADD     AL,'[a]'-'0'-10
+	ADD     AL,'a'-'0'-10
 Nok:    STOSB                           ;       *p++ = "0123456789ABCDEF"[n];
 	LOOP    DLoop
 	XOR     AL,AL

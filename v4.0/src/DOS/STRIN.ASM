@@ -133,7 +133,7 @@ SAVCH:
         INC     BH                      ; remember position in template
         JMP     SHORT GETCH
 
-BACKSPJ: JMP    SHORT BACKSP
+BACKSPJ: JMP    SHORT BackSp
 
 BUFFUL:
         MOV     AL,7                    ; Bell to signal full buffer
@@ -168,7 +168,7 @@ PHYCRLF:
 ;
 LineDel:
         OR      DH,DH
-        JZ      GetCh
+        JZ      GETCH
         Call    BackSpace
         JMP     LineDel
 
@@ -182,16 +182,16 @@ WordLoop:
         JZ      GetChJ
         MOV     AL,[es:DI-1]
         cmp     al,'0'
-        jb      GetChj
+        jb      GetChJ
         cmp     al,'9'
         jbe     WordLoop
         OR      AL,20h
-        CMP     AL,'[a]'
+        CMP     AL,'a'
         JB      GetChJ
         CMP     AL,'z'
         JBE     WordLoop
 GetChJ:
-        JMP     GetCh
+        JMP     GETCH
 ;
 ; The user wants to throw away what he's typed in and wants to start over.  We
 ; print the backslash and then go to the next line and tab to the correct spot
@@ -213,7 +213,7 @@ PUTNEW:
 ;
 entry   BackSp
         Call    BackSpace
-        JMP     GetCh
+        JMP     GETCH
 
 BackSpace:
         OR      DH,DH
@@ -342,7 +342,7 @@ FINDOLD:
         CMP     AL,[ESCCHAR]            ; did he type a function key?
         JNZ     FindSetup               ; no, set up for scan
         invoke  STD_CON_INPUT_NO_ECHO$  ; eat next char
-        JMP     NotFnd                  ; go try again
+        JMP     NOTFND                  ; go try again
 FindSetup:
         MOV     CL,BL
         SUB     CL,BH           ;CX is number of chars to end of template

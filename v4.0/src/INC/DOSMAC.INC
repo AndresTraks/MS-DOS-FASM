@@ -17,7 +17,11 @@
 ; switch, there is one definition here with the switch inside it.
 ;
 
-TRUE    EQU 0FFFFh
+; MASM worked an expression out sixteen bits wide, so NOT TRUE was zero and a
+; switch written "if NOT IBM" asked the right question.  fasm's arithmetic is
+; wider than that, and NOT 0FFFFh is not zero; TRUE is therefore -1 here,
+; which writes the same 0FFFFh into a word and leaves NOT TRUE zero.
+TRUE    EQU -1
 FALSE   EQU 0
 
 ;SUBTTL BREAK a listing into pages and give new subtitles
@@ -53,7 +57,7 @@ macro AsmVar var
 {
 }
 
-BREAK <I_NEED: declare a variable external, if necessary, and allocate a size>
+BREAK <I_NEED: declare a variable external, if necessary, and ALLOCATE a size>
 
 ;
 ; declare a variable external and allocate a size
@@ -279,21 +283,21 @@ macro condret cc,ncc
   skip:
 }
 
-BREAK <RETZ - return if zero, links up shortwise if necessary>
+BREAK <RETZ - return if Zero, links up shortwise if necessary>
 
 macro retz
 {
     condret z,nz
 }
 
-BREAK <RETNZ - return if not zero, links up shortwise if necessary>
+BREAK <RETNZ - return if not Zero, links up shortwise if necessary>
 
 macro retnz
 {
     condret nz,z
 }
 
-BREAK <RETC - return if carry set, links up shortwise if necessary>
+BREAK <RETC - return if carry Set, links up shortwise if necessary>
 
 macro retc
 {
@@ -325,7 +329,7 @@ macro RETNC
     retnc
 }
 
-BREAK <CONTEXT - set the DOS context to a particular register>
+BREAK <CONTEXT - Set the DOS context to a particular register>
 
 macro context   r
 {
@@ -334,7 +338,7 @@ macro context   r
 ;	ASSUME  r:DOSGROUP
 }
 
-BREAK <SaveReg - save a set of registers>
+BREAK <SaveReg - save a Set of registers>
 
 macro SaveReg reglist			;; push those registers
 {
@@ -369,8 +373,7 @@ Break   <message - display a message>
 match =ShareF, ShareF { ShareF = FALSE }
 match =Cargs, Cargs { Cargs = FALSE }
 match =Redirector, Redirector { Redirector = FALSE }
-match =Debug, Debug { Debug = FALSE }
-match =DEBUG, DEBUG { DEBUG = FALSE }
+match =debug, debug { debug = FALSE }
 
 ; The debugging aids.  DEBUG is FALSE in the release, which is the ELSE of
 ; each of the three IFs these stood under, so each of them is the empty one.
@@ -406,28 +409,58 @@ macro CallInstall   name,mpx,fn,save,restore
     end if
 }
 
+;
+; MASM's EVEN, and the alignment the linker gave a segment, fill with zeros.
+; fasm's own ALIGN writes NOPs, which is what MASM did in code and not what
+; it did in data -- and every place this stands for here is data.
+;
+macro align_zero   boundary
+{
+	times ((boundary - ($ mod boundary)) mod boundary) db 0
+}
+
 Break   <Stack frame manipulators>
 
 ; A local variable is a name for a place below BP and an argument a name for
 ; one above it; both are memory operands, so in fasm the size goes in front
 ; of the brackets.  ?frame and ?aframe count the bytes as the names are
 ; declared, which is why a procedure's declarations have to be read in order.
+;
+; The count cannot go into the name's definition itself: EQU keeps the text
+; it is given, and ?frame in that text would be read where the name is used
+; -- by then the procedure has declared its other variables and the count has
+; moved on.  So each name takes a constant of its own, name__frame, fixed at
+; the count it was declared at, and the name stands for a place relative to
+; that.  A second procedure declaring the same name gives that constant a new
+; value, and a use takes the value standing before it, which is what MASM's
+; own redefinition did.
+; A length that is not one of the three size words is a count of bytes, and
+; the name then stands for the first of them.  fasm's match has no "anything
+; else" case, so the byte count is worked out first and the name defined at
+; byte width; WORD and DWORD say so again afterwards, and the later
+; definition is the one a use finds.
 macro localvar    name,length
 {
-	match =BYTE, length \{
-	    ?frame =  ?frame + 1
-	    name EQU  byte [BP-?frame] \}
+	LV_BYTES equ length
+	match =BYTE, length \{ restore LV_BYTES
+	    LV_BYTES equ 1 \}
+	match =WORD, length \{ restore LV_BYTES
+	    LV_BYTES equ 2 \}
+	match =DWORD, length \{ restore LV_BYTES
+	    LV_BYTES equ 4 \}
+	?frame =  ?frame + LV_BYTES
+	restore LV_BYTES
+	name#__frame = ?frame
+	name EQU  byte [BP-name#__frame]
 	match =WORD, length \{
-	    ?frame =  ?frame + 2
-	    name EQU  word [BP-?frame] \}
+	    name EQU  word [BP-name#__frame] \}
 	match =DWORD, length \{
-	    ?frame =  ?frame + 4
-	    name EQU  dword [BP-?frame]
+	    name EQU  dword [BP-name#__frame]
 	    ; the two halves, in either case: MASM read NAMEL and NAMEl as one
-	    name#l EQU  word [BP-?frame]
-	    name#L EQU  word [BP-?frame]
-	    name#h EQU  word [BP-?frame+2]
-	    name#H EQU  word [BP-?frame+2] \}
+	    name#l EQU  word [BP-name#__frame]
+	    name#L EQU  word [BP-name#__frame]
+	    name#h EQU  word [BP-name#__frame+2]
+	    name#H EQU  word [BP-name#__frame+2] \}
 }
 
 ; ENTER and LEAVE are instructions of the 286 as well; a macro of the same
@@ -447,19 +480,25 @@ macro leave
 
 macro Argvar  name,length
 {
-	match =BYTE, length \{
-	    name EQU  byte [BP+?aframe]
-	    ?aframe =  ?aframe + 1 \}
+	LV_BYTES equ length
+	match =BYTE, length \{ restore LV_BYTES
+	    LV_BYTES equ 1 \}
+	match =WORD, length \{ restore LV_BYTES
+	    LV_BYTES equ 2 \}
+	match =DWORD, length \{ restore LV_BYTES
+	    LV_BYTES equ 4 \}
+	name#__frame = ?aframe
+	?aframe =  ?aframe + LV_BYTES
+	restore LV_BYTES
+	name EQU  byte [BP+name#__frame]
 	match =WORD, length \{
-	    name EQU  word [BP+?aframe]
-	    ?aframe =  ?aframe + 2 \}
+	    name EQU  word [BP+name#__frame] \}
 	match =DWORD, length \{
-	    name EQU  dword [BP+?aframe]
-	    name#l EQU  word [BP+?aframe]
-	    name#L EQU  word [BP+?aframe]
-	    name#h EQU  word [BP+?aframe+2]
-	    name#H EQU  word [BP+?aframe+2]
-	    ?aframe =  ?aframe + 4 \}
+	    name EQU  dword [BP+name#__frame]
+	    name#l EQU  word [BP+name#__frame]
+	    name#L EQU  word [BP+name#__frame]
+	    name#h EQU  word [BP+name#__frame+2]
+	    name#H EQU  word [BP+name#__frame+2] \}
 }
 
 BREAK   <errnz - generate compilation errors>

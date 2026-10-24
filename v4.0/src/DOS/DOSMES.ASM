@@ -253,6 +253,11 @@ PAGE
 ; entry in ESCFUNC, and the last entry in ESCTAB to the first entry in ESCFUNC.
 
 
+; MASM let the table segment be opened inside the code segment and the
+; assembler sorted the pieces out; here the code segment's pass has to be
+; closed first, or the table would be laid down in the wrong one.
+end if
+
 if SEGSEL = S_TABLE
 ;	PUBLIC	CANCHAR
 CANCHAR DB	CANCEL			;Cancel line character
@@ -315,21 +320,23 @@ ESCTABLEN EQU	ESCEND-ESCTAB
 
 ESCFUNC:
 	short_addr  GETCH		; Ignore the escape sequence
-	short_addr  TWOESC
+	short_addr  TwoEsc
 	short_addr  EXITINS
 	short_addr  ENTERINS
-	short_addr  BACKSP
+	short_addr  BackSp
 	short_addr  REEDIT
 	short_addr  KILNEW
 	short_addr  COPYLIN
 	short_addr  SKIPSTR
-	short_addr  COPYSTR
+	short_addr  CopyStr
 	short_addr  SKIPONE
 	short_addr  COPYONE
 	short_addr  COPYONE
 	short_addr  CTRLZ
 	end if
 end if
+
+if SEGSEL = S_CODE
 
 ;
 ; OEMFunction key is expected to process a single function
@@ -362,7 +369,7 @@ Procedure   OEMFunctionKey,NEAR
 ;extrn	intCNE0:near			;AN000; 2/17/KK
 	CALL	intCNE0 		;AN000; 2/17/KK
  else					;AN000;
-	invoke	std_con_input_no_echo$	; Get the second byte of the sequence
+	invoke	STD_CON_INPUT_NO_ECHO$	; Get the second byte of the sequence
  end if					;AN000;
 	if NOT Rainbow
 	MOV	CL,ESCTABLEN		; length of table for scan
@@ -372,7 +379,7 @@ Procedure   OEMFunctionKey,NEAR
 	POP	DI			; restore DI
 	SHL	CX,1			; convert byte offset to word
 	MOV	BP,CX			; move to indexable register
-	JMP	[BP+ESCFUNC]	; Go to the right routine
+	JMP	word [BP+ESCFUNC]	; Go to the right routine
 	end if
 	if Rainbow
 
@@ -387,15 +394,15 @@ ENDM
 	CMP	AL,'['                  ; is it second lead char
 	JZ	EatParm 		; yes, go walk tree
 GoGetCh:
-	transfer    GetCh		; no, ignore sequence
+	transfer    GETCH		; no, ignore sequence
 EatParm:
-	invoke	std_con_input_no_echo$	; get argument
-	CMP	AL,'[a]'                  ; is it alphabetic arg?
+	invoke	STD_CON_INPUT_NO_ECHO$	; get argument
+	CMP	AL,'a'                  ; is it alphabetic arg?
 	JAE	EatAlpha		; yes, go snarf one up
 	XOR	BP,BP			; init digit counter
 	JMP	InDigit 		; jump into internal eat digit routine
 EatNum:
-	invoke	std_con_input_no_echo$	; get next digit
+	invoke	STD_CON_INPUT_NO_ECHO$	; get next digit
 InDigit:
 	CMP	AL,'9'                  ; still a digit?
 	JA	CheckNumEnd		; no, go check for end char
@@ -413,25 +420,25 @@ CheckNumEnd:
 	CMP	AL,7Eh			; is it end char ~
 	JNZ	GoGetCh 		; nope, ignore key sequence
 	MOV	AX,BP
-	transferIf  1,SkipStr		; FIND key
-	transferIf  2,EnterIns		; INSERT HERE key
+	transferIf  1,SKIPSTR		; FIND key
+	transferIf  2,ENTERINS		; INSERT HERE key
 	transferIf  3,SkipOne		; REMOVE
 	transferIf  4,CopyStr		; SELECT
 	transferIf  17,TwoEsc		; INTERRUPT
-	transferIf  18,ReEdit		; RESUME
-	transferIf  19,KilNew		; CANCEL
-	transferIf  21,CtrlZ		; EXIT
-	transferIf  29,CopyLin		; DO
+	transferIf  18,REEDIT		; RESUME
+	transferIf  19,KILNEW		; CANCEL
+	transferIf  21,CTRLZ		; EXIT
+	transferIf  29,COPYLIN		; DO
 	JMP	GoGetCh
 EatAlpha:
 	CMP	AL,'O'                  ; is it O?
 	JA	GoGetCh 		; no, after assume bogus
 	JZ	EatPQRS 		; eat the rest of the bogus key
-	transferIf  'C',CopyOne         ; RIGHT
+	transferIf  'C',COPYONE         ; RIGHT
 	transferIf  'D',BackSp          ; LEFT
 	JMP	GoGetCh
 EatPQRS:
-	invoke	std_con_input_no_echo$	; eat char after O
+	invoke	STD_CON_INPUT_NO_ECHO$	; eat char after O
 	JMP	GoGetCh
 	end if
 

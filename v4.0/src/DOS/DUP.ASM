@@ -50,7 +50,7 @@ BREAK <DOS_DUP -- DUP SFT across network>
 	procedure   DOS_DUP,NEAR
 ;	ASSUME	ES:NOTHING,SS:NOTHING
 
-	LES	DI,[ThisSFT]
+	LES	DI,[THISSFT]
 	Entry	Dos_Dup_Direct
 	Assert	ISSFT,<ES,DI>,"DOSDup"
 	invoke	IsSFTNet
@@ -58,7 +58,7 @@ BREAK <DOS_DUP -- DUP SFT across network>
 	invoke	DEV_OPEN_SFT
 DO_INC:
 	Assert	ISSFT,<ES,DI>,"DOSDup/DoInc"
-	INC	[es:DI+sf_ref_count]	; Clears carry (if this ever wraps
+	INC	[es:DI+sf_entry.sf_ref_count]	; Clears carry (if this ever wraps
 					;   we're in big trouble anyway)
 	return
 

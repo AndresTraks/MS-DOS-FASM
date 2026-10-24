@@ -57,8 +57,8 @@ INCLUDE '../INC/DOSCNTRY.INC'
 	i_need	CURDRV,BYTE
 	i_need	chSwitch,BYTE
 	i_need	COUNTRY_CDPG,byte	      ;DOS 3.3
-	I_need	CDSCount,BYTE
-	I_need	ThisCDS,DWORD
+	I_need	CDSCOUNT,BYTE
+	I_need	THISCDS,DWORD
 	i_need	EXTERR,WORD
 	i_need	EXTERR_ACTION,BYTE
 	i_need	EXTERR_CLASS,BYTE
@@ -67,17 +67,17 @@ INCLUDE '../INC/DOSCNTRY.INC'
 	i_need	UCASE_TAB,BYTE
 	i_need	FILE_UCASE_TAB,BYTE
 	i_need	InterCon,BYTE
-	i_need	CURRENTPDB,WORD
+	i_need	CurrentPDB,WORD
 	i_need	DBCS_TAB,BYTE			   ;AN000;
-	i_need	Special_version,WORD		   ;AN006;
-	i_need	Fake_Count,BYTE 		   ;AN008;
+	i_need	SPECIAL_VERSION,WORD		   ;AN006;
+	i_need	FAKE_COUNT,BYTE 		   ;AN008;
 	i_need	NLS_YES,BYTE			   ;AN000;
 	i_need	NLS_yes2,BYTE			   ;AN000;
 	i_need	NLS_NO,BYTE			   ;AN000;
 	i_need	NLS_no2,BYTE			   ;AN000;
 
 
-BREAK <Get_Version$ -- Return DOS version number>
+BREAK <GET_VERSION$ -- Return DOS version number>
 	procedure   GET_VERSION$,NEAR
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
@@ -99,21 +99,21 @@ BREAK <Get_Version$ -- Return DOS version number>
 ;ASSUME	DS:NOTHING
 	MOV	[SI+user_environ.user_BX],BX
 	MOV	[SI+user_environ.user_CX],CX
-	CMP	[cs:Fake_Count],0FFH		   ;AN008;
+	CMP	byte [cs:FAKE_COUNT],0FFH		   ;AN008;
 	JZ	reg				   ;AN008;
-	CMP	[cs:Fake_Count],0		   ;AN008;
+	CMP	byte [cs:FAKE_COUNT],0		   ;AN008;
 	JZ	usual				   ;AN008;
-	DEC	[cs:Fake_Count] 		   ;AN008;
+	DEC	byte [cs:FAKE_COUNT] 		   ;AN008;
 reg:						   ;AN008;
-	CMP	[cs:Special_version],0		   ;AN006;
+	CMP	word [cs:SPECIAL_VERSION],0		   ;AN006;
 	JZ	usual				   ;AN006;
-	MOV	AX,[cs:Special_version] 	   ;AN006;
+	MOV	AX,[cs:SPECIAL_VERSION] 	   ;AN006;
 usual:						   ;AN006;
 	MOV	[SI+user_environ.user_AX],AX 	; Really only sets AH
 	return
 EndProc GET_VERSION$
 
-BREAK <Get_Verify_on_Write$ - return verify-after-write flag>
+BREAK <GET_VERIFY_ON_WRITE$ - return verify-after-Write flag>
 	procedure   GET_VERIFY_ON_WRITE$,NEAR
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
@@ -128,7 +128,7 @@ BREAK <Get_Verify_on_Write$ - return verify-after-write flag>
 	return
 EndProc GET_VERIFY_ON_WRITE$
 
-BREAK <Set_Verify_on_Write$ - Toggle verify-after-write flag>
+BREAK <SET_VERIFY_ON_WRITE$ - Toggle verify-after-Write flag>
 	procedure   SET_VERIFY_ON_WRITE$,NEAR
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
@@ -144,7 +144,7 @@ BREAK <Set_Verify_on_Write$ - Toggle verify-after-write flag>
 	return
 EndProc SET_VERIFY_ON_WRITE$
 
-BREAK <International$ - return country-dependent information>
+BREAK <INTERNATIONAL$ - return country-dependent information>
 ;
 ; Inputs:
 ;	MOV	AH,International
@@ -227,7 +227,7 @@ international_find:
 
 international_get:
 	MOV	SI,COUNTRY_CDPG
-	CMP	BX,[SI+ccDosCountry]	 ; = current country id
+	CMP	BX,[SI+DOS_country_cdpg_info.ccDosCountry]	 ; = current country id
 	retz				 ; return if equal
 	MOV	DX,BX
 	XOR	BX,BX			 ; bx = 0, default code page
@@ -251,8 +251,8 @@ interr:
 	JMP	setcarry
 
 international_copy:
-	MOV	BX,[SI+ccDosCountry]	 ; = current country id
-	MOV	SI,COUNTRY_CDPG+ccDFormat
+	MOV	BX,[SI+DOS_country_cdpg_info.ccDosCountry]	 ; = current country id
+	MOV	SI,COUNTRY_CDPG+DOS_country_cdpg_info.ccDFormat
 	MOV	CX,OLD_COUNTRY_SIZE
 	REP	MOVSB			 ;copy country info
 international_ok3:
@@ -273,7 +273,7 @@ errtn:
 	JZ	errtn2
 	transfer SYS_RET_ERR	     ; return what we got from NLSFUNC
 errtn2:
-	error	error_Invalid_Function	; NLSFUNC not existent
+	error	error_invalid_function	; NLSFUNC not existent
 
 
 EndProc INTERNATIONAL$
@@ -329,7 +329,7 @@ capit:					;AN000;
 	CMP	AL,CAP_ONE_CHAR 	;AN000;;MS.cap one char ?
 	JNZ	chkyes			;AN000;;MS. no
 	MOV	AL,DL			;AN000;;MS. set up AL
-	invoke	GETLET3 		;AN000;;MS. upper case it
+	invoke	GetLet3 		;AN000;;MS. upper case it
 	invoke	get_user_stack		;AN000;;MS. get user stack
 	MOV	byte [SI+user_environ.user_DX],AL;AN000;;MS. user's DL=AL
 	JMP	SHORT nono		;AN000;;MS. done
@@ -369,15 +369,15 @@ concap: 				;AN000;
 	LODSB				;AN000;;MS. get char
  if  DBCS				;AN000;;MS.
 	invoke	TESTKANJ		;AN000;;MS. DBCS ?
-	JZ	notdbcs 		;AN000;;MS. no
+	JZ	notdbcs_GETSET 		;AN000;;MS. no
 	INC	SI			;AN000;;MS. skip 2 chars
 	DEC	CX			;AN000;;MS. bad input, one DBCS char at end
 	JZ	nono			;AN000;;MS. yes
 	JMP	SHORT next99		;AN000;;MS.
-notdbcs:				;AN000;
+notdbcs_GETSET:				;AN000;
  end if					;AN000;
 
-	invoke	GETLET3 		;AN000;;MS. upper case it
+	invoke	GetLet3 		;AN000;;MS. upper case it
 	MOV	byte [SI-1],AL	;AN000;;MS. store back
 next99: 				;AN000;
 	LOOP	concap			;AN000;;MS. continue
@@ -398,7 +398,7 @@ concap2:				;AN000;
 	JMP	concap2 		;AN000;;MS.
 notdbcs2:				;AN000;
  end if					;AN000;
-	invoke	GETLET3 		;AN000;;MS. upper case it
+	invoke	GetLet3 		;AN000;;MS. upper case it
 	MOV	byte [SI-1],AL	;AN000;;MS. store back
 	JMP	concap2 		;AN000;;MS. continue
 
@@ -410,25 +410,25 @@ notcap:
 	MOV	SI,COUNTRY_CDPG
 	CMP	DX,-1			; active country ?
 	JNZ	GETCDPG 		; no
-	MOV	DX,[SI+ccDosCountry]	; get active country id
+	MOV	DX,[SI+DOS_country_cdpg_info.ccDosCountry]	; get active country id
 GETCDPG:
 	CMP	BX,-1			; active code page?
 	JNZ	CHKAGAIN		; no, check again
-	MOV	BX,[SI+ccDosCodePage]	; get active code page id
+	MOV	BX,[SI+DOS_country_cdpg_info.ccDosCodePage]	; get active code page id
 CHKAGAIN:
-	CMP	DX,[SI+ccDosCountry]	; same as active country id?
+	CMP	DX,[SI+DOS_country_cdpg_info.ccDosCountry]	; same as active country id?
 	JNZ	CHKNLS			; no
-	CMP	BX,[SI+ccDosCodePage]	; same as active code page id?
+	CMP	BX,[SI+DOS_country_cdpg_info.ccDosCodePage]	; same as active code page id?
 	JNZ	CHKNLS			; no
 CHKTYPE:
-	MOV	BX,[SI+ccSysCodePage]	; bx = sys code page id
+	MOV	BX,[SI+DOS_country_cdpg_info.ccSysCodePage]	; bx = sys code page id
 ;	CMP	AL,SetALL		; select all?
 ;	JNZ	SELONE
 ;	MOV	SI,OFFSET DOSGROUP:COUNTRY_CDPG.ccNumber_of_entries
 SELONE:
 	PUSH	CX			; save cx
-	MOV	CX,[SI+ccNumber_of_entries]
-	MOV	SI,COUNTRY_CDPG+ccSetUcase
+	MOV	CX,[SI+DOS_country_cdpg_info.ccNumber_of_entries]
+	MOV	SI,COUNTRY_CDPG+DOS_country_cdpg_info.ccSetUcase
 NXTENTRY:
 	CMP	AL,[SI] 		; compare info type
 	JZ	FOUNDIT
@@ -436,7 +436,7 @@ NXTENTRY:
 	LOOP	NXTENTRY
 	POP	CX
 capinval:
-	error	error_Invalid_Function	; info type not found
+	error	error_invalid_function	; info type not found
 FOUNDIT:
 	MOVSB				; move info id byte
 	POP	CX			; retsore char count
@@ -472,18 +472,18 @@ CHKNLS:
 	CMP	AL,0FFH
 	JZ	NLSNXT			   ;	 in memory
 sizeerror:
-	error	error_Invalid_Function
+	error	error_invalid_function
 NLSNXT: CallInstall GetExtInfo,NLSFUNC,2  ;get extended info
 	CMP	AL,0			   ; success ?
 	JNZ	NLSERROR
-	MOV	AX,[SI+ccSysCodePage]	; ax = sys code page id
+	MOV	AX,[SI+DOS_country_cdpg_info.ccSysCodePage]	; ax = sys code page id
 	JMP	GETDONE
 NLSERROR:
 	transfer SYS_RET_ERR		; return what is got from NLSFUNC
 
 EndProc GetExtCntry$
 
-BREAK <GetSetCdPg$ - get or set global code page>
+BREAK <GetSetCdPg$ - Get or Set global code page>
 ;
 ; Inputs:
 ;	MOV	AH,GetSetCdPg	; DOS 3.3
@@ -507,8 +507,8 @@ BREAK <GetSetCdPg$ - get or set global code page>
 	MOV	SI,COUNTRY_CDPG
 	CMP	AL,1		       ; get global code page
 	JNZ	setglpg 	       ; set global cod epage
-	MOV	BX,[SI+ccDosCodePage]  ; get active code page id
-	MOV	DX,[SI+ccSysCodePage]  ; get sys code page id
+	MOV	BX,[SI+DOS_country_cdpg_info.ccDosCodePage]  ; get active code page id
+	MOV	DX,[SI+DOS_country_cdpg_info.ccSysCodePage]  ; get sys code page id
 	invoke	get_user_stack
 ;ASSUME DS:NOTHING
 	MOV	[SI+user_environ.user_BX],BX        ; update returned bx
@@ -521,7 +521,7 @@ setglpg:
 	JNZ	nomem
 ;;;;;;; CMP	BX,[SI.ccDosCodePage]  ; same as active code page
 ;;;;;;; JZ	OK_RETURN	       ; yes
-	MOV	DX,[SI+ccDosCountry]
+	MOV	DX,[SI+DOS_country_cdpg_info.ccDosCountry]
 	CallInstall NLSInstall,NLSFUNC,0 ; check if NLSFUNC in memory
 	CMP	AL,0FFH
 	JNZ	nomem			   ; not in memory
@@ -532,22 +532,22 @@ setglpg:
 	JNZ	seterr
 	MOV	AX,65
 	MOV	[EXTERR],AX
-	MOV	[EXTERR_ACTION],errACT_Ignore
-	MOV	[EXTERR_CLASS],errCLASS_HrdFail
-	MOV	[EXTERR_LOCUS],errLOC_SerDev
+	MOV	byte [EXTERR_ACTION],errACT_Ignore
+	MOV	byte [EXTERR_CLASS],errCLASS_HrdFail
+	MOV	byte [EXTERR_LOCUS],errLOC_SerDev
 	transfer   From_GetSet
 
 seterr:
 	transfer  SYS_RET_ERR
 nomem:
-	error	error_Invalid_Function ; function not defined
+	error	error_invalid_function ; function not defined
 ;
 EndProc GetSetCdPg$
 
 
 
 
-BREAK <Get_Drive_Freespace$ -- Return bytes of free disk space on a drive>
+BREAK <GET_DRIVE_FREESPACE$ -- Return bytes of FREE disk space on a drive>
 	procedure   GET_DRIVE_FREESPACE$,NEAR
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
@@ -588,7 +588,7 @@ BADFDRV:
 	JMP	DoSt
 EndProc GET_DRIVE_FREESPACE$
 
-BREAK <Get_DMA$, Set_DMA$ -- Get/Set current DMA address>
+BREAK <GET_DMA$, SET_DMA$ -- Get/Set current DMA address>
 	procedure   GET_DMA$,NEAR
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
@@ -622,7 +622,7 @@ EndProc GET_DMA$
 	return
 EndProc SET_DMA$
 
-BREAK <Get_Default_Drive$, Set_Default_Drive$ -- Set/Get default drive>
+BREAK <GET_DEFAULT_DRIVE$, SET_DEFAULT_DRIVE$ -- Set/Get default drive>
 	procedure   GET_DEFAULT_DRIVE$,NEAR
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
@@ -650,17 +650,17 @@ EndProc GET_DEFAULT_DRIVE$
 	MOV	AL,DL
 	INC	AL			; A=1, b=2...
 	invoke	GetVisDrv		; see if visible drive
-	JC	SETRET			; errors do not set
+	JC	SETRET_GETSET			; errors do not set
 ;	LDS	SI,ThisCDS		; get CDS
 ;	TEST	[SI].curdir_flags,curdir_splice ; was it spliced?
 ;	JNZ	SetRet			; yes, do not set
 	MOV	[CURDRV],AL		; no, set
-SETRET:
+SETRET_GETSET:
 	MOV	AL,[CDSCOUNT]		; let user see what the count really is
 RET17:	return
 EndProc SET_DEFAULT_DRIVE$
 
-BREAK <Get_Interrupt_Vector$ - Get/Set interrupt vectors>
+BREAK <GET_INTERRUPT_VECTOR$ - Get/Set interrupt vectors>
 	procedure   GET_INTERRUPT_VECTOR$,NEAR
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
@@ -698,6 +698,11 @@ EndProc GET_INTERRUPT_VECTOR$
 	return
 EndProc SET_INTERRUPT_VECTOR$
 
+; MASM let the table segment be opened inside the code segment and the
+; assembler sorted the pieces out; here the code segment's pass has to be
+; closed first, or the table would be laid down in the wrong one.
+end if
+
 	if	ALTVECT
 if SEGSEL = S_TABLE
 VECIN:
@@ -723,6 +728,8 @@ GSET001E:
 end if
 	end if
 
+if SEGSEL = S_CODE
+
 procedure   RECSET,NEAR
 
 	if	ALTVECT
@@ -741,9 +748,9 @@ procedure   RECSET,NEAR
 	SHL	BX,1
 	SHL	BX,1
 	return
-EndProc recset
+EndProc RECSET
 
-BREAK <Char_Oper$ - hack on paths, switches so that xenix can look like PCDOS>
+BREAK <CHAR_OPER$ - hack on paths, switches so that xenix can look like PCDOS>
 ;
 ; input:    AL = function:
 ;		    0 - read switch char
@@ -774,7 +781,7 @@ CharSetSw:
 CharGetDev:
 	MOV	DL,-1
 CharSet:
-	Invoke	Get_User_Stack
+	Invoke	get_user_stack
 ;	ASSUME	DS:NOTHING
 	MOV	[SI+user_environ.user_DX],DX
 CharSetDev:
@@ -815,13 +822,13 @@ BREAK <Get_Global_CdPg$  - Return Global Code Page>
 ;	ASSUME	DS:NOTHING,ES:NOTHING
 	PUSH	SI
 	MOV	SI,COUNTRY_CDPG
-	MOV	AX,[cs:SI+ccDosCodePage]
+	MOV	AX,[cs:SI+DOS_country_cdpg_info.ccDosCodePage]
 	POP	SI
 	return
 EndProc Get_Global_CdPg
 
 ;-------------------------------Start of DBCS 2/13/KK
-BREAK	<ECS_call - Extended Code System support function>
+BREAK	<ECS_CALL - Extended Code System support function>
 
 ;ASSUME	DS:NOTHING, ES:NOTHING
 
@@ -859,7 +866,7 @@ get_lbt:				; get lead byte table			;AN000;
 	push	bx								;AN000;
 	push	ds								;AN000;
 	context DS								;AN000;
-	MOV	BX,COUNTRY_CDPG+ccSetDBCS			;AN000;
+	MOV	BX,COUNTRY_CDPG+DOS_country_cdpg_info.ccSetDBCS			;AN000;
 	MOV	AX,[BX+1]		; set EV address to DS:SI		;AN000;
 	MOV	BX,[BX+3]							;AN000;
 	ADD	AX,2			; Skip Lemgth				;AN000;
@@ -895,13 +902,13 @@ get_interim:									;AN000;
 	transfer SYS_RET_OK							;AN000;
  else										;AN000;
 	or	al, al			; AL = 0 (get table)?  ;AN000;
-	jnz	okok					       ;AN000;
+	jnz	okok_GETSET					       ;AN000;
 get_lbt:						       ;AN000;
 	invoke	get_user_stack				       ;AN000;
 ; assume ds:nothing					       ;AN000;
 	MOV	[SI+user_environ.user_SI], DBCS_TAB+2	       ;AN000; the address
 	MOV	[SI+user_environ.user_DS], CS			       ;AN000;
-okok:							       ;AN000;
+okok_GETSET:							       ;AN000;
 	transfer SYS_RET_OK		;		       ;AN000;
 
  end if							       ;AN000;

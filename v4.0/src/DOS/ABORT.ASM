@@ -1,5 +1,5 @@
 ;	SCCSID = @(#)abort.asm	1.4 85/10/02
-TITLE   DOS_ABORT - Internal SFT close all files for proc call for MSDOS
+TITLE   DOS_ABORT - Internal SFT Close all DOSINFO.files for proc call for MSDOS
 NAME    DOS_ABORT
 
 ; Internal Abort call closes all handles and FCBs associated with a process.
@@ -35,10 +35,10 @@ Installed = TRUE
 	i_need  CurrentPDB,WORD
 	i_need  sft_addr,DWORD
 	i_need  THISSFT,DWORD
-	i_need  JSHARE,DWORD
+	i_need  JShare,DWORD
 	I_need  sftFCB,DWORD            ; pointer to SFTs for FCB cache
 
-Break   <DOS_ABORT -- CLOSE all files for process>
+Break   <DOS_ABORT -- Close all DOSINFO.files for process>
 
 ; Inputs:
 ;       [CurrentPDB] set to PID of process aborting
@@ -52,13 +52,13 @@ Break   <DOS_ABORT -- CLOSE all files for process>
 ;	ASSUME  DS:NOTHING,ES:NOTHING
 
 	MOV     ES,[CurrentPDB]
-	MOV     CX,[es:PDB_JFN_Length]  ; Number of JFNs
+	MOV     CX,[es:Process_data_block.PDB_JFN_Length]  ; Number of JFNs
 reset_free_jfn:
 	MOV     BX,CX
 	PUSH    CX
 	DEC     BX                      ; get jfn (start with last one)
 
-	invoke  close$
+	invoke  Close$
 	POP     CX
 	LOOP    reset_free_jfn          ; and do 'em all
 ;
@@ -78,9 +78,9 @@ reset_free_jfn:
 ; Sleazy, eh?
 ;
 	context DS
-	CallInstall Net_Abort, multNet, 29
-if installed
-	call    dword [JSHARE+4*4]
+	CallInstall Net_Abort, MultNET, 29
+if Installed
+	call    dword [JShare+4*4]
 else
 	call    mftCloseP
 end if
@@ -90,16 +90,16 @@ end if
 ; counts.
 ;
 	les     di,[sftFCB]               ; grab the pointer to the table
-	mov     cx,[es:di+sfCount]
+	mov     cx,[es:di+SF.SFCount]
 	jcxz    FCBScanDone
-	LEA     DI,[DI+sfTable]         ; point at table
+	LEA     DI,[DI+SF.SFTable]         ; point at table
 	mov     ax,[PROC_ID]
 FCBTest:
-	cmp     [es:di+sf_PID],ax       ; is this one of ours
+	cmp     [es:di+sf_entry.sf_PID],ax       ; is this one of ours
 	jnz     FCBNext                 ; no, skip it
-	mov     [es:di+sf_ref_count],0  ; yes, blast ref count
+	mov     [es:di+sf_entry.sf_ref_count],0  ; yes, blast ref count
 FCBNext:
-	add     di,sizeof.sf_Entry
+	add     di,sizeof.sf_entry
 	loop    FCBTest
 FCBScanDone:
 
@@ -112,26 +112,26 @@ Scan:
 	invoke  SFFromSFN
 	pop     bx
 	retc
-	cmp     [es:di+sf_ref_count],0
+	cmp     [es:di+sf_entry.sf_ref_count],0
 	jz      next
 ;
 ; we have a SFT that is not free.  See if it is for the current process
 ;
 	mov     ax,[PROC_ID]
-	cmp     [es:di+sf_pid],ax
+	cmp     [es:di+sf_entry.sf_PID],ax
 	jnz     next
-	mov     ax,[User_ID]
-	cmp     [es:di+sf_uid],ax
+	mov     ax,[USER_ID]
+	cmp     [es:di+sf_entry.sf_UID],ax
 	jnz     next
 ;
 ; This SFT is labelled as ours.
 ;
-	mov     [es:di+sf_ref_count],0
+	mov     [es:di+sf_entry.sf_ref_count],0
 next:
 	inc     bx
-	jmp     scan
+	jmp     Scan
 
-EndProc DOS_Abort
+EndProc DOS_ABORT
 
 end if
 ;    END

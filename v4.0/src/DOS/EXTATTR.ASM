@@ -50,7 +50,7 @@ INCLUDE '../INC/EA.INC'				     ;AN000;
 ;	I_need	XA_TEMP,WORD		;AN000;
 ;	I_need	XA_COUNT,WORD		;AN000;
 ;	I_need	XA_DEVICE,BYTE		;AN000;
-	I_need	XA_TYPE,BYTE		;AN000;
+	I_need	XA_type,BYTE		;AN000;
 	I_need	SAVE_ES,WORD		;AN000;
 	I_need	SAVE_DI,WORD		;AN000;
 	I_need	SAVE_DS,WORD		;AN000;
@@ -71,7 +71,7 @@ INCLUDE '../INC/EA.INC'				     ;AN000;
 										;AN000;
 										;AN000;
 										;AN000;
-BREAK <GetSet_EA get or set extended attributes by handle>			;AN000;
+BREAK <GetSet_EA Get or Set extended attributes by handle>			;AN000;
 										;AN000;
 ;      Input: [XA_type] = function code, (e.g., get,set)			;AN000;
 ;	      [ThisSFT] points to SFT						;AN000;
@@ -99,10 +99,10 @@ procedure   GetSet_XA,near					   ;AN000;
 ;;	MOV    [SAVE_BX],2	       ;AN000;;FT. size returned
 ;;	XOR    DX,DX		       ;AN000;;FT. dx=0, codepage id
 
-	CMP    [XA_type],2	       ;AN000;;FT. get EA  ?
+	CMP    byte [XA_type],2	       ;AN000;;FT. get EA  ?
 	JNZ    eaname		       ;AN000;;FT. no
 getEAs: 			       ;AN000;
-	CMP    [SAVE_CX],0	       ;AN000;;FT. get max data size
+	CMP    word [SAVE_CX],0	       ;AN000;;FT. get max data size
 	JNZ    notmax		       ;AN000;;FT. no
 ;;	CALL   Get_max_EA_size	       ;AN000;;FT.
 
@@ -110,7 +110,7 @@ getEAs: 			       ;AN000;
 	JNC    set_user_cx	       ;AN000;;FT.
 	JMP    OKexit		       ;AN000;;FT. error
 notmax:
-	CMP    [SAVE_CX],1	       ;AN000;;FT. buffer size =1   ?
+	CMP    word [SAVE_CX],1	       ;AN000;;FT. buffer size =1   ?
 	JNZ    goodsiz		       ;AN000;;FT. no
 errout: 			       ;AN000;
 	JMP    insuff_space	       ;AN000;;FT. no error
@@ -141,12 +141,12 @@ goodsiz:			       ;AN000;
 ;
 ;	JMP    OKexit		       ;AN000;;FT.
 eaname:
-	CMP    [XA_type],3	       ;AN000;;FT. get EA name?`
+	CMP    byte [XA_type],3	       ;AN000;;FT. get EA name?`
 	JZ     geteaname	       ;AN000;;FT. yes
 	JMP    setea		       ;AN000;;FT.
 geteaname:
 ;	MOV    [SAVE_SI],-1	       ;AN000;;FT. make get all
-	CMP    [SAVE_CX],0	       ;AN000;;FT. get max data size
+	CMP    word [SAVE_CX],0	       ;AN000;;FT. get max data size
 	JNZ    notmax		       ;AN000;;FT. no
 	MOV    CX,2		       ;AN000;;FT. FAKE FAKE ......................
 ;;	MOV    CX,[MAX_EANAME_SIZE]    ;AN000;;FT. get name size

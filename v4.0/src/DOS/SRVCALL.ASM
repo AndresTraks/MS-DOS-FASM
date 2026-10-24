@@ -38,14 +38,14 @@ Installed = TRUE
 	i_need	SaveBX,WORD
 	i_need	SaveDS,WORD
 	i_need	SWAP_START,BYTE
-	i_need	SWAP_ALWAYS,BYTE
+	i_need	Swap_Always,BYTE
 	i_need	SWAP_END,BYTE
-	I_Need	ThisSFT,DWORD
+	I_Need	THISSFT,DWORD
 	I_need	fSharing,BYTE
-	i_need	OpenBuf,128
-	I_Need	ExtErr,WORD
-	I_Need	ExtErr_Action,BYTE
-	I_Need	ExtErrPt,DWORD
+	i_need	OPENBUF,128
+	I_Need	EXTERR,WORD
+	I_Need	EXTERR_ACTION,BYTE
+	I_Need	EXTERRPT,DWORD
 	I_Need	EXTERR_LOCUS,BYTE	; Extended Error Locus
 	i_need	JShare,DWORD
 	i_need	SWAP_AREA_TABLE,BYTE
@@ -55,11 +55,16 @@ Installed = TRUE
 
 BREAK <ServerCall -- Server DOS call>
 
+; MASM let the table segment be opened inside the code segment and the
+; assembler sorted the pieces out; here the code segment's pass has to be
+; closed first, or the table would be laid down in the wrong one.
+end if
+
 if SEGSEL = S_TABLE
 ;Public SRVC001S,SRVC001E
 SRVC001S:
 
-ServerTab	DW	Server_Disp
+ServerTab	DW	SERVER_DISP
 SERVERLEAVE	DW	ServerReturn
 SERVER_DISP	DB	(SERVER_DISP_END-SERVER_DISP-1)/2
 		DW	SRV_CALL	; 0
@@ -72,12 +77,14 @@ SERVER_DISP	DB	(SERVER_DISP_END-SERVER_DISP-1)/2
 		DW	SPOOL_OPER	; 7
 		DW	SPOOL_OPER	; 8
 		DW	SPOOL_OPER	; 9
-		DW	setExtendedError$   ; 10
+		DW	SetExtendedError$   ; 10
 SERVER_DISP_END:
 
 SRVC001E:
 
 end if
+
+if SEGSEL = S_CODE
 
 ; Inputs:
 ;	DS:DX -> DPL  (except calls 7,8,9)
@@ -115,22 +122,22 @@ end if
 	MOV	DI,SWAP_AREA_TABLE ;IFS.			;AN000;
 	PUSH	SS				   ;IFS.			;AN000;
 	POP	ES				   ;IFS.			;AN000;
-	invoke	GET_USER_STACK			   ;IFS.			;AN000;
+	invoke	get_user_stack			   ;IFS.			;AN000;
 	MOV	[SI+user_environ.user_DS],ES 		   ;IFS.   ds:si -> swap tab	;AN000;
 	MOV	[SI+user_environ.user_SI],DI 		   ;IFS.			;AN000;
 	transfer SYS_RET_OK			   ;IFS.			;AN000;
 SET_STUFF:
 	MOV	SI,DX			; Point to DPL with DS:SI
-	MOV	BX,[SI+DPL_UID]
+	MOV	BX,[SI+DPL.DPL_UID]
 	MOV	[USER_ID],BX		; Set UID
-	MOV	BX,[SI+DPL_PID]
+	MOV	BX,[SI+DPL.DPL_PID]
 	MOV	[PROC_ID],BX		; Set process ID
 NO_SET_ID:
-	PUSH	[SERVERLEAVE]		; push return address
-	PUSH	[ServerTab]		; push table address
+	PUSH	word [SERVERLEAVE]		; push return address
+	PUSH	word [ServerTab]		; push table address
 	PUSH	AX
 	Invoke	TableDispatch
-	MOV	[ExtErr_locus],errLoc_Unk ; Extended Error Locus
+	MOV	byte [EXTERR_LOCUS],errLOC_Unk ; Extended Error Locus
 	error	error_invalid_function
 ServerReturn:
 	return
@@ -147,17 +154,17 @@ CommitLoop:
 	SaveReg <BX>
 	Invoke	SFFromSFN
 	JC	CommitDone
-	CMP	[es:DI+sf_Ref_Count],0	;	if (ThisSFT->refcount != 0)
+	CMP	[es:DI+sf_entry.sf_ref_count],0	;	if (ThisSFT->refcount != 0)
 	JZ	CommitNext
-	CMP	[es:DI+sf_Ref_Count],sf_busy  ; BUSY SFTs have god knows what
+	CMP	[es:DI+sf_entry.sf_ref_count],sf_busy  ; BUSY SFTs have god knows what
 	JZ	CommitNext		      ;   in them.
 ;	TEST	ES:[DI].sf_flags,sf_isnet
-	invoke	Test_IFS_Remote 	;IFS.					;AN000;
+	invoke	TEST_IFS_REMOTE 	;IFS.					;AN000;
 	JNZ	CommitNext		;  Skip Network SFTs so the SERVER
 					;	doesn't deadlock
-	MOV	word [ThisSFT],DI
-	MOV	word [ThisSFT+2],ES
-	Invoke	DOS_Commit		;	    DOSCommit ();
+	MOV	word [THISSFT],DI
+	MOV	word [THISSFT+2],ES
+	Invoke	DOS_COMMIT		;	    DOSCommit ();
 CommitNext:
 	RestoreReg  <BX>
 	INC	BX
@@ -165,13 +172,13 @@ CommitNext:
 CommitDone:
 	LeaveCrit   critSFT
 	RestoreReg  <BX>
-	transfer    Sys_Ret_OK
+	transfer    SYS_RET_OK
 
 CLOSE_NAME:
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
-if installed
-	Call	dword [JSHARE+5*4]
+if Installed
+	Call	dword [JShare+5*4]
 else
 	Call	MFTcloN
 end if
@@ -184,8 +191,8 @@ func_err:
 CLOSE_UID:
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
-if installed
-	Call	dword [JSHARE+3*4]
+if Installed
+	Call	dword [JShare+3*4]
 else
 	Call	MFTclU
 end if
@@ -194,8 +201,8 @@ end if
 CLOSE_UID_PID:
 ;ASSUME	DS:NOTHING,ES:NOTHING
 
-if installed
-	Call	dword [JSHARE+4*4]
+if Installed
+	Call	dword [JShare+4*4]
 else
 	Call	MFTCloseP
 end if
@@ -203,8 +210,8 @@ end if
 
 GET_LIST:
 ;ASSUME	DS:NOTHING,ES:NOTHING
-if installed
-	Call	dword [JSHARE+9*4]
+if Installed
+	Call	dword [JShare+9*4]
 else
 	Call	MFT_get
 end if
@@ -221,7 +228,7 @@ SRV_CALL:
 ;ASSUME	DS:NOTHING,ES:NOTHING
 	POP	AX			; get rid of call to $srvcall
 	SaveReg <DS,SI>
-	invoke	GET_USER_STACK
+	invoke	get_user_stack
 	RestoreReg  <DI,ES>
 ;
 ; DS:SI point to stack
@@ -242,18 +249,18 @@ SRV_CALL:
 	MOVSW				; DS
 	MOVSW				; ES
 	RestoreReg  <SI>		; DS:SI -> DPL
-	MOV	AX,[SI+DPL_AX]
-	MOV	BX,[SI+DPL_BX]
-	MOV	CX,[SI+DPL_CX]
-	MOV	DX,[SI+DPL_DX]
-	MOV	DI,[SI+DPL_DI]
-	MOV	ES,[SI+DPL_ES]
-	PUSH	[SI+DPL_SI]
-	MOV	DS,[SI+DPL_DS]
+	MOV	AX,[SI+DPL.DPL_AX]
+	MOV	BX,[SI+DPL.DPL_BX]
+	MOV	CX,[SI+DPL.DPL_CX]
+	MOV	DX,[SI+DPL.DPL_DX]
+	MOV	DI,[SI+DPL.DPL_DI]
+	MOV	ES,[SI+DPL.DPL_ES]
+	PUSH	word [SI+DPL.DPL_SI]
+	MOV	DS,[SI+DPL.DPL_DS]
 	POP	SI
 	MOV	[SaveDS],DS
 	MOV	[SaveBX],BX
-	MOV	[fSharing],-1		; set no redirect flag
+	MOV	byte [fSharing],-1		; set no redirect flag
 	transfer REDISP
 
 GET_DOS_DATA:
@@ -262,7 +269,7 @@ GET_DOS_DATA:
 	MOV	DX,[SWAP_ALWAYS_AREA_LEN]    ;IFS. get swap always area len   ;AC000;
 	AND	DX,7FFFH		     ;IFS. clear high bit	      ;AC000;
 	MOV	CX,[SWAP_AREA_LEN]	     ;IFS. get swap len 	      ;AC000;
-	invoke	GET_USER_STACK
+	invoke	get_user_stack
 	MOV	[SI+user_environ.user_DS],ES 	     ;	set user regs
 	MOV	[SI+user_environ.user_SI],DI 	     ;
 	MOV	[SI+user_environ.user_DX],DX 	     ;
@@ -270,13 +277,13 @@ GET_DOS_DATA:
 
 SPOOL_OPER:
 ;ASSUME	DS:NOTHING,ES:NOTHING
-	CallInstall NETSpoolOper,multNet,37,AX,BX
+	CallInstall NETSpoolOper,MultNET,37,AX,BX
 	JC	func_err2
 	transfer SYS_RET_OK
 func_err2:
 	transfer SYS_RET_ERR
 
-Break	<SetExtendedError$ - set extended error for later retrieval>
+Break	<SetExtendedError$ - Set extended error for later retrieval>
 
 ;
 ; $SetExtendedError takes extended error information and loads it up for the
@@ -289,15 +296,15 @@ Break	<SetExtendedError$ - set extended error for later retrieval>
 
 SetExtendedError$:
 ;	ASSUME	DS:NOTHING,ES:NOTHING
-	MOV	AX,[SI+dpl_AX]
+	MOV	AX,[SI+DPL.DPL_AX]
 	MOV	[EXTERR],AX
-	MOV	AX,[SI+dpL_di]
+	MOV	AX,[SI+DPL.DPL_DI]
 	MOV	word [EXTERRPT],AX
-	MOV	AX,[SI+dpL_ES]
+	MOV	AX,[SI+DPL.DPL_ES]
 	MOV	word [EXTERRPT+2],AX
-	MOV	AX,[SI+dpL_BX]
+	MOV	AX,[SI+DPL.DPL_BX]
 	MOV	word [EXTERR_ACTION],AX
-	MOV	AX,[SI+dpL_CX]
+	MOV	AX,[SI+DPL.DPL_CX]
 	MOV	[EXTERR_LOCUS],AH
 	return
 EndProc ServerCall$

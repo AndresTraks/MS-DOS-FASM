@@ -33,7 +33,7 @@ INCLUDE '../INC/FASTXXXX.INC'
 Installed = TRUE
 
 	i_need	NoSetDir,BYTE
-	i_need	Creating,BYTE
+	i_need	CREATING,BYTE
 	i_need	THISCDS,DWORD
 	i_need	CURBUF,DWORD
 	i_need	DMAADD,DWORD
@@ -44,10 +44,10 @@ Installed = TRUE
 	i_need	ATTRIB,BYTE
 	i_need	DIRSTART,WORD
 	i_need	LASTENT,WORD
-	i_need	FOUND_DEV,BYTE
-	I_need	WFP_Start,WORD
+	i_need	Found_dev,BYTE
+	I_need	WFP_START,WORD
 	i_need	EXTERR_LOCUS,BYTE
-	i_need	FastopenFlg,BYTE
+	i_need	FastOpenFlg,BYTE
 	I_need	DOS34_FLAG,WORD
 
 ; Inputs:
@@ -95,61 +95,61 @@ Installed = TRUE
 
 	LES	DI,[THISCDS]
 	CMP	DI,-1
-	JNZ	TEST_RE_NET
+	JNZ	TEST_RE_NET_ISEARCH
 if NOT Installed
 	transfer NET_SEQ_SEARCH_FIRST
 else
-	MOV	AX,(multNET SHL 8) OR 25
+	MOV	AX,(MultNET SHL 8) OR 25
 	INT	2FH
 	return
 end if
 
-TEST_RE_NET:
-	TEST	[es:DI+curdir_flags],curdir_isnet
+TEST_RE_NET_ISEARCH:
+	TEST	[es:DI+curdir_list.curdir_flags],curdir_isnet
 	JZ	LOCAL_SEARCH_FIRST
 if NOT Installed
 	transfer NET_SEARCH_FIRST
 else
-	MOV	AX,(multNET SHL 8) OR 27
+	MOV	AX,(MultNET SHL 8) OR 27
 	INT	2FH
 	return
 end if
 
 LOCAL_SEARCH_FIRST:
 	EnterCrit   critDisk
-	TEST	[DOS34_FLAG],SEARCH_FASTOPEN  ;AN000;
+	TEST	word [DOS34_FLAG],SEARCH_FASTOPEN  ;AN000;
 	JZ	NOFN			      ;AN000;
-	OR	[FastOpenflg],Fastopen_Set    ;AN000;
+	OR	byte [FastOpenFlg],FastOpen_Set    ;AN000;
 NOFN:					      ;AN000;
-	MOV	[NoSetDir],1		; if we find a dir, don't change to it
+	MOV	byte [NoSetDir],1		; if we find a dir, don't change to it
 	CALL	CHECK_QUESTION		;AN000;;FO. is '?' in path
 	JNC	norm_getpath		;AN000;;FO. no
-	AND	[FastOpenflg],Fast_yes	;AN000;;FO. reset fastopen
+	AND	byte [FastOpenFlg],Fast_yes	;AN000;;FO. reset fastopen
 norm_getpath:
-	invoke	GetPath
+	invoke	GETPATH
 getdone:
 	JNC	find_check_dev
-	JNZ	bad_path
+	JNZ	bad_path_ISEARCH
 	OR	CL,CL
-	JZ	bad_path
+	JZ	bad_path_ISEARCH
 find_no_more:
 	MOV	AX,error_no_more_files
 BadBye:
-	AND	[cs:FastOpenflg],Fast_yes  ;AN000;;FO. reset fastopen
+	AND	byte [cs:FastOpenFlg],Fast_yes  ;AN000;;FO. reset fastopen
 
 	STC
 	LeaveCrit   critDisk
 	return
 
-bad_path:
+bad_path_ISEARCH:
 	MOV	AX,error_path_not_found
 	JMP	BadBye
 
 find_check_dev:
 	OR	AH,AH
 	JNS	found_entry
-	MOV	[LastEnt],-1		; Cause DOS_SEARCH_NEXT to fail
-	INC	[Found_Dev]		; Tell DOS_RENAME we found a device
+	MOV	word [LASTENT],-1		; Cause DOS_SEARCH_NEXT to fail
+	INC	byte [Found_dev]		; Tell DOS_RENAME we found a device
 found_entry:
 ;
 ; We set the physical drive byte here Instead of after found_it; Doing
@@ -158,13 +158,13 @@ found_entry:
 	LES	DI,[DMAADD]
 	MOV	SI,[WFP_START]		; get pointer to beginning
 	LODSB
-	SUB	AL,'[a]'-1                ; logical drive
+	SUB	AL,'a'-1                ; logical drive
 	STOSB				; High bit not set (local)
 found_it:
 	LES	DI,[DMAADD]
 	INC	DI
 	PUSH	DS			;FO.;AN001; save ds
-	TEST	[Fastopenflg],Set_For_Search	  ;FO.;AN001; from fastopen
+	TEST	byte [FastOpenFlg],Set_For_Search	  ;FO.;AN001; from fastopen
 	JZ	notfast 			  ;FO.;AN001;
 	MOV	SI,BX				  ;FO.;AN001;
 	MOV	DS,word [CURBUF+2]		  ;FO.;AN001;
@@ -172,7 +172,7 @@ found_it:
 
 
 notfast:
-	MOV	SI,Name1; find_buf 2 = formatted name
+	MOV	SI,NAME1; find_buf 2 = formatted name
 movmov:
 ; Special E5 code
 	MOVSB
@@ -186,12 +186,12 @@ NOTKANJB:
 	POP	DS			;FO.;AN001; restore ds
 
 
-	MOV	AL,[Attrib]
+	MOV	AL,[ATTRIB]
 	STOSB
 	PUSH	AX			; Save AH device info
-	MOV	AX,[LastEnt]
+	MOV	AX,[LASTENT]
 	STOSW
-	MOV	AX,[DirStart]
+	MOV	AX,[DIRSTART]
 	STOSW
 ; 4 bytes of 21 byte cont structure left for NET stuff
 	ADD	DI,4
@@ -200,7 +200,7 @@ NOTKANJB:
 	JS	DOSREL			; Device entry is DOSGROUP relative
 	CMP	word [CURBUF],-1
 	JNZ	OKSTORE
-	TEST	[FastOPenFlg],Set_For_Search ;AN000;;FO. from fastopen and is good
+	TEST	byte [FastOpenFlg],Set_For_Search ;AN000;;FO. from fastopen and is good
 	JNZ	OKSTORE 		     ;AN000;;FO.
 
 
@@ -230,7 +230,7 @@ DOSREL:
 NO05:
 
 ;;;;; 7/29/86
-	AND	[cs:FastOpenflg],Fast_yes  ;AN000;;FO. reset fastopen
+	AND	byte [cs:FastOpenFlg],Fast_yes  ;AN000;;FO. reset fastopen
 	context DS
 	CLC
 	LeaveCrit   critDisk
@@ -238,7 +238,7 @@ NO05:
 
 EndProc DOS_SEARCH_FIRST
 
-BREAK <DOS_SEARCH_NEXT - scan for subsequent matches>
+BREAK <DOS_SEARCH_NEXT - Scan for subsequent matches>
 
 ; Inputs:
 ;	[DMAADD] Points to 53 byte buffer returned by DOS_SEARCH_FIRST
@@ -266,32 +266,32 @@ BREAK <DOS_SEARCH_NEXT - scan for subsequent matches>
 if NOT Installed
 	transfer NET_SEARCH_NEXT
 else
-	MOV	AX,(multNET SHL 8) OR 28
+	MOV	AX,(MultNET SHL 8) OR 28
 	INT	2FH
 	return
 end if
 
 LOCAL_SEARCH_NEXT:
 ;AL is drive A=1
-	MOV	[EXTERR_LOCUS],errLOC_Disk
+	MOV	byte [EXTERR_LOCUS],errLOC_Disk
 	EnterCrit   critDisk
-	MOV	word [ThisCDS],DummyCDS
-	MOV	word [ThisCDS+2],CS
-	ADD	AL,'[a]'-1
+	MOV	word [THISCDS],DummyCDS
+	MOV	word [THISCDS+2],CS
+	ADD	AL,'a'-1
 	invoke	InitCDS
 
 ;	invoke	GetThisDrv		; Set CDS pointer
 
 	JC	No_files		; Bogus drive letter
 	LES	DI,[THISCDS]		; Get CDS pointer
-	LES	BP,[es:DI+curdir_devptr]; Get DPB pointer
+	LES	BP,[es:DI+curdir_list.curdir_devptr]; Get DPB pointer
 	invoke	GOTDPB			; [THISDPB] = ES:BP
 
-	mov	AL,[es:BP+dpb_drive]
-	mov	[ThisDRV],AL
+	mov	AL,[es:BP+dpb.dpb_drive]
+	mov	[THISDRV],AL
 
 	MOV	word [CREATING],0E500H
-	MOV	[NoSetDir],1		; if we find a dir, don't change to it
+	MOV	byte [NoSetDir],1		; if we find a dir, don't change to it
 	LDS	SI,[DMAADD]
 ;ASSUME	DS:NOTHING
 	LODSB				; Drive Byte
@@ -302,7 +302,7 @@ LOCAL_SEARCH_NEXT:
 	entry	RENAME_NEXT		; Entry used by DOS_RENAME
 
 	context ES			; THIS BLOWS ES:BP POINTER TO DPB
-	MOV	DI,Name1
+	MOV	DI,NAME1
 	MOV	CX,11
 	REP	MOVSB			; Search name
 	LODSB				; Attribute
@@ -319,7 +319,7 @@ cont_load:
 	MOV	BX,AX
 	context DS
 	LES	BP,[THISDPB]		; Recover ES:BP
-	invoke	SetDirSrch
+	invoke	SETDIRSRCH
 	JNC	SEARCH_GOON
 	POP	AX			; Clean stack
 	JMP	No_files
@@ -327,9 +327,9 @@ cont_load:
 SEARCH_GOON:
 	invoke	StartSrch
 	POP	AX
-	invoke	GetEnt
+	invoke	GETENT
 	JC	No_files
-	invoke	NextEnt
+	invoke	NEXTENT
 	JC	No_files
 	XOR	AH,AH			; If Search_Next, can't be a DEV
 	JMP	found_it
@@ -348,12 +348,12 @@ EndProc DOS_SEARCH_NEXT
 	PUSH	CS			;AN000;;FO.
 	POP	DS			;AN000;;FO. ds:si -> final path
 	MOV	SI,[WFP_START]		;AN000;;FO.
-getnext:				;AN000;
+getnext_ISEARCH:				;AN000;
 	LODSB				;AN000;;FO. get char
 	OR	AL,AL			;AN000;;FO. is it null
 	JZ	NO_Question		;AN000;;FO. yes
 	CMP	AL,'?'                  ;AN000;;FO. is '?'
-	JNZ	getnext 		;AN000;;FO. no
+	JNZ	getnext_ISEARCH 		;AN000;;FO. no
 	STC				;AN000;;FO.
 NO_Question:				;AN000;
 	return				;AN000;;FO.

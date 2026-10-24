@@ -42,7 +42,7 @@ INCLUDE '../INC/DEVSYM.INC'
 ; references to be SS or CS relative which is desired.
 
     i_need  CARPOS,BYTE
-    i_need  CHARCO,BYTE
+    i_need  CharCo,BYTE
     i_need  PFLAG,BYTE
     i_need  CurrentPDB,WORD			 ;AN000;
     i_need  InterCon,BYTE			 ;AN000;
@@ -69,11 +69,11 @@ Break
 	pushf					;AN000;
 	push	AX				;AN000;
 	mov	[SaveCurFlg],0			;AN000;
-	jnz	sj0				;AN000;
+	jnz	sj0_CPMIO2				;AN000;
 	mov	[SaveCurFlg],1			;AN000;
-sj0:						;AN000;
+sj0_CPMIO2:						;AN000;
 	invoke	OUTT				;AN000;
-	mov	[SaveCurFLg],0			;AN000;
+	mov	[SaveCurFlg],0			;AN000;
 	pop	AX				;AN000;
 	popf					;AN000;
 	jz	STD_CON_INPUT$			;AN000;
@@ -111,8 +111,8 @@ OUTCHA: 				   ;AN000;
 OUTCH:
 	PUSH	DS
 	PUSH	SI
-	INC	byte [CHARCO]		;invoke  statchk...
-	AND	byte [CHARCO],00111111B	;AN000; every 64th char
+	INC	byte [CharCo]		;invoke  statchk...
+	AND	byte [CharCo],00111111B	;AN000; every 64th char
 	JNZ	OUTSKIP
 	PUSH	AX
 	invoke	STATCHK
@@ -131,17 +131,17 @@ OUTSKIP:
 	PUSH	DS
 	PUSH	SI
 	MOV	BX,1
-	invoke	GET_IO_SFT
+	invoke	get_io_sft
 	JC	TRIPOPJ
-	MOV	BX,[SI+sf_flags]
+	MOV	BX,[SI+sf_entry.sf_flags]
 	TEST	BX,sf_isnet			; output to NET?
 	JNZ	TRIPOPJ 			; if so, no echo
 	TEST	BX,devid_device 		; output to file?
 	JZ	TRIPOPJ 			; if so, no echo
 	MOV	BX,4
-	invoke	GET_IO_SFT
+	invoke	get_io_sft
 	JC	TRIPOPJ
-	TEST	[SI+sf_flags],sf_net_spool	; StdPrn redirected?
+	TEST	[SI+sf_entry.sf_flags],sf_net_spool	; StdPrn redirected?
 	JZ	LISSTRT2J			; No, OK to echo
 	MOV	byte [PFLAG],0		; If a spool, NEVER echo
 TRIPOPJ:
@@ -222,7 +222,7 @@ Break
 
 	invoke	STATCHK
 	MOV	BX,3
-	invoke	GET_IO_SFT
+	invoke	get_io_sft
 	retc
 	JMP	SHORT TAISTRT
 AUXILP:
@@ -319,7 +319,7 @@ Break
 	PUSH	AX
 	PUSH	DX
 	XOR	BX,BX
-	invoke	GET_IO_SFT
+	invoke	get_io_sft
 	JC	BADJFNCON
 	MOV	AH,4
 	invoke	IOFUNC

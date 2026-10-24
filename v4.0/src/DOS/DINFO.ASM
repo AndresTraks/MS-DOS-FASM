@@ -38,7 +38,7 @@ if debug
 INCLUDE '../INC/BUGTYP.ASM'
 end if
 
-Break	<DISK_INFO -- Get Disk Drive Information>
+Break	<DISK_INFO -- Get Disk drive Information>
 
 ; Inputs:
 ;	[THISCDS] Points to the Macro List Structure of interest
@@ -59,17 +59,17 @@ Break	<DISK_INFO -- Get Disk Drive Information>
 ;	ASSUME	ES:NOTHING
 
 	Invoke	TestNet
-	JNC	LOCAL_INFO
+	JNC	LOCAL_INFO_DINFO
 if NOT Installed
 	transfer NET_DISK_INFO
 else
-	MOV	AX,(multNET SHL 8) OR 12
+	MOV	AX,(MultNET SHL 8) OR 12
 	INT	2FH
 	return
 end if
 
-LOCAL_INFO:
-	MOV	[EXTERR_LOCUS],errLOC_Disk
+LOCAL_INFO_DINFO:
+	MOV	byte [EXTERR_LOCUS],errLOC_Disk
 	EnterCrit   critDisk
 	invoke	FATREAD_CDS		; perform media check.
 	JC	CRIT_LEAVE
@@ -78,14 +78,14 @@ LOCAL_INFO:
 	JC	CRIT_LEAVE
 	LDS	SI,[CURBUF]
 ;ASSUME	DS:NOTHING
-	MOV	AH,[SI+bufinsiz]	; get FAT ID BYTE
+	MOV	AH,[SI+BUFINSIZ]	; get FAT ID BYTE
 	context DS
-	MOV	CX,[es:BP+dpb_max_cluster]
+	MOV	CX,[es:BP+dpb.dpb_max_cluster]
 ;
 ; Examine the current free count.  If it indicates that we have an invalid
 ; count, do the expensive calculation.
 ;
-	MOV	DX,[es:BP+dpb_free_cnt] ; get free count
+	MOV	DX,[es:BP+dpb.dpb_free_cnt] ; get free count
 	CMP	DX,-1			; is it valid?
 	JZ	DoScan
 ;
@@ -101,7 +101,7 @@ DoScan:
 	DEC	CX
 SCANFREE:
 	invoke	UNPACK
-	JC	Crit_Leave
+	JC	CRIT_LEAVE
 	JNZ	NOTFREECLUS
 	INC	DX			; A free one
 NOTFREECLUS:
@@ -110,10 +110,10 @@ NOTFREECLUS:
 	DEC	BX			; BX was next cluster.	Convert to
 ReturnVals:
 	DEC	BX			; count
-	MOV	AL,[es:BP+dpb_cluster_mask]
+	MOV	AL,[es:BP+dpb.dpb_cluster_mask]
 	INC	AL			; Sectors/cluster
-	MOV	CX,[es:BP+dpb_sector_size]  ; Bytes/sector
-	MOV	[es:BP+dpb_free_cnt],DX
+	MOV	CX,[es:BP+dpb.dpb_sector_size]  ; Bytes/sector
+	MOV	[es:BP+dpb.dpb_free_cnt],DX
 	CLC
 CRIT_LEAVE:
 	LeaveCrit   critDisk

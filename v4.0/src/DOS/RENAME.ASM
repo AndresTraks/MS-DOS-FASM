@@ -1,5 +1,5 @@
 ;	SCCSID = @(#)rename.asm 1.1 85/04/10
-TITLE	DOS_RENAME - Internal RENAME call for MS-DOS
+TITLE	DOS_RENAME - Internal Rename call for MS-DOS
 NAME	DOS_RENAME
 ; Low level routine for renaming files
 ;
@@ -28,7 +28,7 @@ INCLUDE '../INC/DEVSYM.INC'
 Installed = TRUE
 
 	i_need	RENAMEDMA,BYTE
-	i_need	AUXSTACK,BYTE
+	i_need	AuxStack,BYTE
 	i_need	DESTSTART,WORD
 	i_need	DIRSTART,WORD
 	i_need	CURBUF,DWORD
@@ -44,7 +44,7 @@ Installed = TRUE
 	i_need	CREATING,BYTE
 	i_need	THISDRV,BYTE
 	i_need	ATTRIB,BYTE
-	i_need	FOUND_DEV,BYTE
+	i_need	Found_dev,BYTE
 	i_need	FAILERR,BYTE
 	i_need	EXTERR_LOCUS,BYTE
 	i_need	SAVE_BX,WORD
@@ -94,18 +94,18 @@ Installed = TRUE
 	Invoke	TestNet
 	JNC	LOCAL_RENAME
 ;	invoke	OWN_SHARE2		       ;IFS.  IFS owns share ?		;AN000;
-;	JZ	ifsshare		       ;IFS.  yes			;AN000;
+;	JZ	ifsshare_RENAME		       ;IFS.  yes			;AN000;
 ;	PUSH	WORD PTR [DMAADD+2]	       ;IFS.  save DMAADD		;AN000;
 ;	PUSH	WORD PTR [DMAADD]	       ;IFS.				;AN000;
 ;
 ;	invoke	IFS_SEARCH_FIRST	       ;IFS.  search source name	;AN000;
-;	JC	nofiles 		       ;IFS.  not found 		;AN000;
+;	JC	nofiles_RENAME 		       ;IFS.  not found 		;AN000;
 rename_next_file:
 ;	invoke	IFS_REN_DEL_CHECK	       ;IFS.  do share check		;AN000;
-;	JNC	share_okok		       ;IFS.  share ok			;AN000;
+;	JNC	share_okok_RENAME		       ;IFS.  share ok			;AN000;
 ;	MOV	AX,error_sharing_violation     ;IFS.  share error		;AN000;
-;	JMP	SHORT nofiles		       ;IFS.				;AN000;
-share_okok:
+;	JMP	SHORT nofiles_RENAME		       ;IFS.				;AN000;
+share_okok_RENAME:
 ;	PUSH	CS			       ;IFS.				;AN000;
 ;	POP	ES			       ;IFS.				;AN000;
 ;	MOV	SI,[REN_WFP]		       ;IFS. ds:si -> destination name	;AN000;
@@ -123,26 +123,26 @@ fndnxt: 				       ;IFS.				;AN000;
 ;	CALL	NEW_RENAME		       ;IFS.	      source		;AN000;
 ;	MOV	AX,(multNET SHL 8) OR 17       ;IFS.  replace ? chars with	;AN000;
 ;	INT	2FH			       ;IFS.  source and issue RENAME	;AN000;
-;	JC	nofiles 		       ;IFS.  error			;AN000;
+;	JC	nofiles_RENAME 		       ;IFS.  error			;AN000;
 ;	invoke	DOS_SEARCH_NEXT 	       ;IFS.  serch next source 	;AN000;
 ;	JNC	rename_next_file	       ;IFS.  rename next		;AN000;
 ;	CLC				       ;IFS.  no more files		;AN000;
-nofiles:
+nofiles_RENAME:
 ;	POP	WORD PTR [DMAADD]	       ;IFS. restore DMAADD		;AN000;
 ;	POP	WORD PTR [DMAADD+2]	       ;IFS.				;AN000;
 ;	ret				       ;IFS. return			;AN000;
-ifsshare:
+ifsshare_RENAME:
 
 if NOT Installed
 	transfer NET_RENAME
 else
-	MOV	AX,(multNET SHL 8) OR 17
+	MOV	AX,(MultNET SHL 8) OR 17
 	INT	2FH
 	return
 end if
 
 LOCAL_RENAME:
-	MOV	[EXTERR_LOCUS],errLOC_Disk
+	MOV	byte [EXTERR_LOCUS],errLOC_Disk
 	MOV	SI,[WFP_START]
 	MOV	DI,[REN_WFP]
 	MOV	AL,byte [SI]
@@ -159,11 +159,11 @@ SAMEDRV:
 	PUSH	word [DMAADD]
 	MOV	word [DMAADD+2],DS
 	MOV	word [DMAADD],RENAMEDMA
-	MOV	[Found_dev],0		; Rename fails on DEVS, assume not a dev
+	MOV	byte [Found_dev],0		; Rename fails on DEVS, assume not a dev
 	EnterCrit   critDisk
 	invoke	DOS_SEARCH_FIRST	; Sets [NoSetDir] to 1, [CURBUF+2]:BX
 					;    points to entry
-	JNC	Check_Dev
+	JNC	Check_dev
 	CMP	AX,error_no_more_files
 	JNZ	GOTERR
 	MOV	AX,error_file_not_found
@@ -180,16 +180,16 @@ Check_dev:
 
 	PUSH	DS			      ;PTM.				;AN000;
 	LDS	SI,[DMAADD]		      ;PTM.  chek if source a dir	;AN000;
-	ADD	SI,find_buf_attr	      ;PTM.				;AN000;
-	TEST	[SI+dir_attr],attr_directory  ;PTM.				;AN000;
+	ADD	SI,find_buf.find_buf_attr	      ;PTM.				;AN000;
+	TEST	[SI+dir_entry.dir_attr],attr_directory  ;PTM.				;AN000;
 	JZ	notdir			      ;PTM.				;AN000;
 	MOV	SI,[REN_WFP]		      ;PTM.  if yes, make sure path	;AN000;
-	invoke	Check_Pathlen2		      ;PTM.   length < 67		;AN000;
+	invoke	Check_PathLen2		      ;PTM.   length < 67		;AN000;
 notdir:
 	POP	DS			      ;PTM.				;AN000;
 	JA	GOTERR			      ;PTM.				;AN000;
 
-	CMP	[Found_dev],0
+	CMP	byte [Found_dev],0
 	JNZ	GOTERR
 ; At this point a source has been found.  There is search continuation info (a
 ; la DOS_SEARCH_NEXT) for the source at RENAMEDMA, together with the first
@@ -199,7 +199,7 @@ notdir:
 ; destination are both on the same device.
 ; [SATTRIB] is also set.
 	MOV	SI,BX
-	ADD	SI,dir_first
+	ADD	SI,dir_entry.dir_first
 	invoke	REN_DEL_Check
 	JNC	REN_OK1
 	MOV	AX,error_sharing_violation
@@ -209,7 +209,7 @@ REN_OK1:				;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	invoke	FastOpen_Delete 	; delete dir info in fastopen DOS 3.3
 	MOV	SI,[REN_WFP]		; Swap source and destination
 	MOV	[WFP_START],SI
-	MOV	[CURR_DIR_END],-1	; No current dir on dest
+	MOV	word [CURR_DIR_END],-1	; No current dir on dest
 	MOV	word [CREATING],0E5FFH  ; Creating, not DEL *.*
 					; A rename is like a CREATE_NEW as far
 					; as the destination is concerned.
@@ -223,19 +223,19 @@ REN_OK1:				;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;   spec with metas is in [NAME1] and the explicit source name is at RENAMEDMA
 ;   in the directory entry part.
 	JC	NODEST
-;;	JZ	BAD_ACC 		; Dest string is a directory		;AC000;
+;;	JZ	BAD_ACC_RENAME 		; Dest string is a directory		;AC000;
 	OR	AH,AH			; Device?
 	JNS	SAVEDEST		; No, continue
-BAD_ACC:
+BAD_ACC_RENAME:
 	MOV	AX,error_access_denied
 	STC
 RENAME_CLEAN:
 	PUSHF				; Save carry state
 	PUSH	AX			; and error code (if carry set)
 	MOV	AL,[THISDRV]
-	invoke	FLUSHBUF
+	invoke	FlushBuf
 	POP	AX
-	CMP	[FAILERR],0
+	CMP	byte [FAILERR],0
 	JNZ	BAD_ERR 		; User FAILed to I 24
 	POPF
 	JMP	RENAME_POP
@@ -247,7 +247,7 @@ BAD_ERR:
 
 NODEST:
 	JNZ	BAD_PATH
-	CMP	[FAILERR],0
+	CMP	byte [FAILERR],0
 	JNZ	BAD_PATH	; Search for dest failed because user FAILed on
 				;	I 24
 	OR	CL,CL
@@ -260,7 +260,7 @@ BAD_PATH:
 SAVEDEST:
 	Context ES
 	MOV	DI,NAME2
-	MOV	SI,Name1
+	MOV	SI,NAME1
 	MOV	CX,11
 	REP	MOVSB			; Save dest with metas at NAME2
 	MOV	AX,[DIRSTART]
@@ -268,47 +268,47 @@ SAVEDEST:
 BUILDDEST:
 	Context ES			; needed due to JMP BUILDDEST below
 	MOV	BX,RENAMEDMA+21   ; Source of replace chars
-	MOV	DI,Name1    ; Real dest name goes here
+	MOV	DI,NAME1    ; Real dest name goes here
 	MOV	SI,NAME2    ; Raw dest
 	MOV	CX,11
 	CALL	NEW_RENAME		    ;IFS. replace ? chars		;AN000;
 
-	MOV	[ATTRIB],attr_all	; Stop duplicates with any attributes
-	MOV	[CREATING],0FFH
+	MOV	byte [ATTRIB],attr_all	; Stop duplicates with any attributes
+	MOV	byte [CREATING],0FFH
 	invoke	DEVNAME 		; Check if we built a device name
 ;	ASSUME	ES:NOTHING
-	JNC	BAD_ACC
+	JNC	BAD_ACC_RENAME
 	MOV	BX,[DESTSTART]
 	LES	BP,[THISDPB]
-	invoke	SetDirSrch		; Reset search to start of dir
-	JC	BAD_ACC 		; Screw up
-	invoke	FINDENTRY		; See if new name already exists
-	JNC	BAD_ACC 		; Error if found
-	CMP	[FAILERR],0
+	invoke	SETDIRSRCH		; Reset search to start of dir
+	JC	BAD_ACC_RENAME 		; Screw up
+	invoke	FindEntry		; See if new name already exists
+	JNC	BAD_ACC_RENAME 		; Error if found
+	CMP	byte [FAILERR],0
 	JNZ	BAD_ACCJ		; Find failed because user FAILed to I 24
 	MOV	AX,[DESTSTART]		; DIRSTART of dest
 	CMP	AX,word [RENAMEDMA + 15]	; DIRSTART of source
 	JZ	SIMPLE_RENAME		; If =, just give new name
 
-	MOV	AL,[RENAMEDMA + 21 + dir_attr]
+	MOV	AL,[RENAMEDMA + 21 + dir_entry.dir_attr]
 	TEST	AL,attr_directory
 	JNZ	BAD_ACCJ		; Can only do a simple rename on dirs,
 					; otherwise the .  and ..  entries get
 					; wiped.
 	MOV	[ATTRIB],AL
 	MOV	word [THISSFT+2],DS
-	MOV	SI,[AUXStack-sizeof].SF_ENTRY
+	MOV	SI,AuxStack - sizeof.sf_entry
 	MOV	word [THISSFT],SI
-	MOV	[SI+sf_mode],sharing_compat+open_for_both
+	MOV	[SI+sf_entry.sf_mode],sharing_compat+open_for_both
 	XOR	CX,CX			; Set "device ID" for call into makenode
 	invoke	RENAME_MAKE		; This is in mknode
 	JNC	GOT_DEST
 BAD_ACCJ:
-	JMP	BAD_ACC
+	JMP	BAD_ACC_RENAME
 
 GOT_DEST:
 	SaveReg <BX>
-	LES	DI,[ThisSFT]		; Rename_make entered this into sharing
+	LES	DI,[THISSFT]		; Rename_make entered this into sharing
 	Invoke	ShareEnd		; we need to remove it.
 	RestoreReg  <BX>
 ; A zero length entry with the correct new name has now been made at
@@ -316,15 +316,15 @@ GOT_DEST:
 	LES	DI,[CURBUF]
 	Assert	ISBUF,<ES,DI>,"Got_Dest"
 
-	TEST	[es:DI+buf_flags],buf_dirty  ;LB. if already dirty		;AN000;
-	JNZ	yesdirty		  ;LB.	  don't increment dirty count   ;AN000;
+	TEST	[es:DI+BUFFINFO.buf_flags],buf_dirty  ;LB. if already dirty		;AN000;
+	JNZ	yesdirty_RENAME		  ;LB.	  don't increment dirty count   ;AN000;
 	invoke	INC_DIRTY_COUNT 	  ;LB.					;AN000;
-	OR	[es:DI+buf_flags],buf_dirty
-yesdirty:
+	OR	[es:DI+BUFFINFO.buf_flags],buf_dirty
+yesdirty_RENAME:
 	MOV	DI,BX
-	ADD	DI,dir_attr		; Skip name
-	MOV	SI,RENAMEDMA+21 + dir_attr
-	MOV	CX,(sizeof.dir_entry) - dir_attr
+	ADD	DI,dir_entry.dir_attr		; Skip name
+	MOV	SI,RENAMEDMA+21 + dir_entry.dir_attr
+	MOV	CX,(sizeof.dir_entry) - dir_entry.dir_attr
 	REP	MOVSB
 	CALL	GET_SOURCE
 	JC	RENAME_OVER
@@ -339,17 +339,17 @@ SIMPLE_RENAME:
 	JC	RENAME_OVER
 	MOV	DI,BX
 	MOV	ES,word [CURBUF+2]
-	MOV	SI,Name1    ; New Name
+	MOV	SI,NAME1    ; New Name
 	MOV	CX,11
 	REP	MOVSB
 DIRTY_IT:
 	MOV	DI,word [CURBUF]
 
-	TEST	[es:DI+buf_flags],buf_dirty  ;LB. if already dirty		;AN000;
-	JNZ	yesdirty2		  ;LB.	  don't increment dirty count   ;AN000;
+	TEST	[es:DI+BUFFINFO.buf_flags],buf_dirty  ;LB. if already dirty		;AN000;
+	JNZ	yesdirty2_RENAME		  ;LB.	  don't increment dirty count   ;AN000;
 	invoke	INC_DIRTY_COUNT 	  ;LB.					;AN000;
-	OR	[es:DI+buf_flags],buf_dirty
-yesdirty2:
+	OR	[es:DI+BUFFINFO.buf_flags],buf_dirty
+yesdirty2_RENAME:
 	Assert	ISBUF,<ES,DI>,"Dirty_it"
 NEXT_SOURCE:
 	MOV	SI,RENAMEDMA+1    ;Name
@@ -358,7 +358,7 @@ NEXT_SOURCE:
 ; to enter it before going to RENAME_Next.
 ;
 	EnterCrit   critDisk
-	MOV	[CREATING],0	; Correct setting for search (we changed it
+	MOV	byte [CREATING],0	; Correct setting for search (we changed it
 				;   to FF when we made the prev new file).
 	invoke	RENAME_NEXT
 ;
@@ -366,7 +366,7 @@ NEXT_SOURCE:
 ; we were before.
 ;
 	JC	RENAME_OVER
-	LEA	SI,[BX+dir_First]
+	LEA	SI,[BX+dir_entry.dir_first]
 	invoke	REN_DEL_Check
 	JNC	REN_OK2
 	MOV	AX,error_sharing_violation
@@ -396,11 +396,11 @@ GET_SOURCE:
 
 	MOV	BX,word [RENAMEDMA + 15]	; DirStart
 	LES	BP,[THISDPB]
-	invoke	SetDirSrch
+	invoke	SETDIRSRCH
 	retc
 	invoke	StartSrch
 	MOV	AX,word [RENAMEDMA + 13]	; Lastent
-	invoke	GetEnt
+	invoke	GETENT
 	return
 
 EndProc DOS_RENAME

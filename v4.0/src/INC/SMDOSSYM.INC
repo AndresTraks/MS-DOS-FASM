@@ -1,13 +1,19 @@
 ;	SCCSID = @(#)dossym.asm 1.1 85/04/10
 ;	SCCSID = @(#)dossym.asm 1.1 85/04/10
 	PAGE 80,132
-TRUE	    EQU 0FFFFh
+; MASM worked an expression out sixteen bits wide, so NOT TRUE was zero and a
+; switch written "if NOT IBM" asked the right question.  fasm's arithmetic is
+; wider than that, and NOT 0FFFFh is not zero; TRUE is therefore -1 here,
+; which writes the same 0FFFFh into a word and leaves NOT TRUE zero.
+TRUE	    EQU -1
 FALSE	    EQU 0
 
 Installed   = TRUE
-if ~ defined DEBUG
-    DEBUG	= FALSE
-end if
+; DEFINED answers differently on fasm's first pass and its later ones, so a
+; default given under it makes the assembly oscillate; MATCH asks the
+; preprocessor whether the name has been given a meaning yet, which is the
+; question MASM's IFNDEF asked.
+match =debug, debug { debug = FALSE }
 
 INCLUDE 'DOSMAC.INC'
 INCLUDE 'VERSIONA.INC'		;DEFINE THE MAJOR AND MINOR VERSION NUMBERS

@@ -35,28 +35,28 @@ INCLUDE '../INC/DOSSYM.INC'
 ;.cref
 ;.list
 
-asmvar	Kanji
+asmvar	KANJI
 
-	i_need	EntFree,WORD
-	i_need	DirStart,WORD
-	i_need	LastEnt,WORD
-	i_need	ClusNum,WORD
-	i_need	CurBuf,DWORD
-	i_need	Attrib,BYTE
-	i_need	DelAll,BYTE
-	i_need	VolID,BYTE
-	i_need	Name1,BYTE
-	i_need	ThisDPB,DWORD
-	i_need	EntLast,WORD
-	i_need	Creating,BYTE
-	i_need	SecClusPos,BYTE
-	i_need	ClusFac,BYTE
-	i_need	NxtClusNum,WORD
-	i_need	DirSec,DWORD			;AN000;
+	i_need	ENTFREE,WORD
+	i_need	DIRSTART,WORD
+	i_need	LASTENT,WORD
+	i_need	CLUSNUM,WORD
+	i_need	CURBUF,DWORD
+	i_need	ATTRIB,BYTE
+	i_need	DELALL,BYTE
+	i_need	VOLID,BYTE
+	i_need	NAME1,BYTE
+	i_need	THISDPB,DWORD
+	i_need	ENTLAST,WORD
+	i_need	CREATING,BYTE
+	i_need	SECCLUSPOS,BYTE
+	i_need	CLUSFAC,BYTE
+	i_need	NXTCLUSNUM,WORD
+	i_need	DIRSEC,DWORD			;AN000;
 	I_need	FastOpenFlg,BYTE		;AN000;
 	I_need	HIGH_SECTOR,WORD		;AN000;
 
-Break	<FINDENTRY -- LOOK FOR AN ENTRY>
+Break	<FindEntry -- LOOK FOR AN ENTRY>
 
 ; Inputs:
 ;	[THISDPB] set
@@ -89,7 +89,7 @@ Break	<FINDENTRY -- LOOK FOR AN ENTRY>
 	DOSAssume   CS,<DS>,"FindEntry"
 ;	ASSUME	ES:NOTHING
 
-	invoke	STARTSRCH
+	invoke	StartSrch
 	MOV	AL,[ATTRIB]
 	AND	AL,NOT attr_ignore	; Ignore useless bits
 	CMP	AL,attr_volume_id	; Looking for vol ID only ?
@@ -120,7 +120,7 @@ CHKFNAM:
 	MOV	SI,SS
 	MOV	ES,SI
 	MOV	SI,BX
-	MOV	DI,Name1
+	MOV	DI,NAME1
 ;;;;; 7/29/86
 	CMP	byte [NAME1],0E5H	 ; special char check
 	JNZ	NO_E5
@@ -134,11 +134,11 @@ NO_E5:
 	entry	NEXTENT
 	DOSAssume   CS,<DS>,"NextEnt"
 
-	Assert	ISDPB,<<WORD PTR THISDPB+2>,<WORD PTR THISDPB>>,"NextEnt"
+	Assert	ISDPB,<<word [THISDPB+2]>,<word [THISDPB]>>,"NextEnt"
 	LES	BP,[THISDPB]
 ;ASSUME	ES:NOTHING
-	CALL	NEXTENTRY
-	JNC	SRCH
+	CALL	NextEntry
+	JNC	Srch
 	JMP	SHORT SETESRET
 
 FREE:
@@ -170,28 +170,28 @@ FOUND:
 	DOSAssume   CS,<DS>,"DIR/found"
 	MOV	AH,[ATTRIB]		; Attributes of search
 	AND	AH,NOT attr_ignore
-	LEA	SI,[SI+Dir_First-Dir_Attr]  ; point to firclus field
+	LEA	SI,[SI+dir_entry.dir_first-dir_entry.dir_attr]  ; point to firclus field
 	TEST	CH,attr_volume_id	; Volume ID file?
 	JZ	check_one_volume_id	; Nope check other attributes
 	TEST	AH,attr_volume_id	; Can we find Volume ID?
-	JZ	NEXTENTJ		; Nope, (not even $FCB_CREATE)
+	JZ	NextEntJ		; Nope, (not even $FCB_CREATE)
 	XOR	AH,AH			; Set zero flag for $FCB_CREATE
 	JMP	SHORT RETFF		; Found Volume ID
 check_one_volume_id:
 	CMP	AH,attr_volume_id	; Looking only for Volume ID?
-	JZ	NEXTENTJ		; Yes, continue search
+	JZ	NextEntJ		; Yes, continue search
 	invoke	MatchAttributes
 	JZ	RETFF
 	TEST	byte [CREATING],-1	; Pass back mismatch if creating
-	JZ	NEXTENTJ		; Otherwise continue searching
+	JZ	NextEntJ		; Otherwise continue searching
 RETFF:
 	LES	BP,[THISDPB]
-	MOV	AH,[es:BP+dpb_drive]
+	MOV	AH,[es:BP+dpb.dpb_drive]
 SETESRET:
 	PUSH	SS
 	POP	ES
 	return
-EndProc Search
+EndProc SEARCH
 
 ; Inputs:
 ;	DS:SI -> 11 character FCB style name NO '?'
@@ -222,7 +222,7 @@ cagain: 				;AN000;;KK.
 	CMP	CX,0			;AN000;;KK. end of compare ?
 	JLE	metaend2		;AN000;;KK. yes
 	MOV	AL,[SI] 		;AN000;;KK. is it a Kanji
-	invoke	testkanj		;AN000;;KK.
+	invoke	TESTKANJ		;AN000;;KK.
 	JZ	notdb			;AN000;;KK. no
 	MOV	AX,'??'                 ;AN000;;KK.
 	CMP	[es:DI],AX		;AN000;;KK. is es:di pointing to '??'
@@ -254,13 +254,13 @@ WILDCRD:
 	JZ	MetaRet 		; most of the time we will fail.
 CHECK_META:
 	CMP	byte [es:DI-1],"?"
-	JZ	WildCrd
+	JZ	WILDCRD
 MetaRet:
  end if					;AN000;
 	return				; Zero set, Match
 EndProc MetaCompare
 
-Break	<NEXTENTRY -- STEP THROUGH DIRECTORY>
+Break	<NextEntry -- STEP THROUGH DIRECTORY>
 
 ; Inputs:
 ;	Same as outputs of GETENTRY, above
@@ -284,7 +284,7 @@ Procedure NextEntry
 	CMP	BL,byte [CLUSFAC]
 	JB	SAMECLUS
 	MOV	BX,[NXTCLUSNUM]
-	Invoke	IsEOF
+	Invoke	IsEof
 	JAE	NONE
 	CMP	BX,2
 	JB	NONE
@@ -305,12 +305,12 @@ SAMECLUS:
 	PUSH	DS
 	LDS	DI,[CURBUF]
 ;ASSUME	DS:NOTHING
-	MOV	DX,word [DI+buf_sector+2]	;AN000; >32mb
+	MOV	DX,word [DI+BUFFINFO.buf_sector+2]	;AN000; >32mb
 	MOV	[HIGH_SECTOR],DX		;AN000; >32mb
-	MOV	DX,word [DI+buf_sector]	;AN000; >32mb
+	MOV	DX,word [DI+BUFFINFO.buf_sector]	;AN000; >32mb
 
 	ADD	DX,1				;AN000; >32mb
-	ADC	[HIGH_SECTOR],0 		;AN000; >32mb
+	ADC	word [HIGH_SECTOR],0 		;AN000; >32mb
 	POP	DS
 	DOSAssume   CS,<DS>,"DIR/SameClus"
 	invoke	FIRSTCLUSTER
@@ -356,23 +356,23 @@ Procedure GETENTRY,NEAR
 ; beginning of the directory.  Convert this to a sector number.  Round the
 ; sector size down to a multiple of 32.
 ;
-	MOV	BX,[es:BP+dpb_sector_size]
+	MOV	BX,[es:BP+dpb.dpb_sector_size]
 	AND	BL,255-31		; Must be multiple of 32
 	DIV	BX
 	MOV	BX,DX			; Position within sector
 	PUSH	BX
-	invoke	DIRREAD
+	invoke	DirRead
 	POP	BX
 	retc
 SETENTRY:
 	MOV	DX,word [CURBUF]
 	ADD	DX,BUFINSIZ
 	ADD	BX,DX
-	ADD	DX,[es:BP+dpb_sector_size]  ; Always clears carry
+	ADD	DX,[es:BP+dpb.dpb_sector_size]  ; Always clears carry
 	return
-EndProc GetEntry
+EndProc GETENTRY
 
-Break	<SETDIRSRCH SETROOTSRCH -- Set Search environments>
+Break	<SETDIRSRCH SETROOTSRCH -- Set SEARCH environments>
 
 ; Inputs:
 ;	BX cluster number of start of directory
@@ -394,12 +394,12 @@ Break	<SETDIRSRCH SETROOTSRCH -- Set Search environments>
 	OR	BX,BX
 	JZ	SETROOTSRCH
 	MOV	[DIRSTART],BX
-	MOV	AL,[es:BP+dpb_cluster_mask]
+	MOV	AL,[es:BP+dpb.dpb_cluster_mask]
 	INC	AL
 	MOV	byte [CLUSFAC],AL
 ; DOS 3.3 for FastOPen	F.C. 6/12/86
 	SaveReg <SI>
-	TEST	[FastOpenFlg],Lookup_Success
+	TEST	byte [FastOpenFlg],Lookup_Success
 	JNZ	UNP_OK
 
 ; DOS 3.3 for FastOPen	F.C. 6/12/86
@@ -431,8 +431,8 @@ entry	SETROOTSRCH
 	MOV	byte [SECCLUSPOS],AL
 	DEC	AX
 	MOV	[CLUSNUM],AX
-	MOV	AX,[es:BP+dpb_first_sector]
-	MOV	DX,[es:BP+dpb_dir_sector]
+	MOV	AX,[es:BP+dpb.dpb_first_sector]
+	MOV	DX,[es:BP+dpb.dpb_dir_sector]
 	SUB	AX,DX
 	MOV	byte [CLUSFAC],AL
 	MOV	word [DIRSEC],DX		      ;F.C. >32mb

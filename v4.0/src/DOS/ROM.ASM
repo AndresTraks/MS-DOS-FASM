@@ -61,14 +61,14 @@ INCLUDE '../INC/EA.INC'
         i_need  FSeek_logclus,WORD                   ; DOS 3.4
         i_need  FSeek_logsave,WORD                   ; DOS 3.4
         i_need  FastSeekFlg,BYTE                     ; DOS 3.4
-        i_need  XA_condition,BYTE                    ; DOS 3.4
+        i_need  XA_CONDITION,BYTE                    ; DOS 3.4
         i_need  HIGH_SECTOR,WORD                     ; DOS 3.4
         i_need  DISK_FULL,BYTE                       ; DOS 3.4
-        i_need  Temp_VAR2,WORD                       ; DOS 3.4
+        i_need  TEMP_VAR2,WORD                       ; DOS 3.4
 
 
 
-Break   <FNDCLUS -- Skip over allocation units>
+Break   <FNDCLUS -- skip over allocation units>
 
 ; Inputs:
 ;       CX = No. of clusters to skip
@@ -91,8 +91,8 @@ Break   <FNDCLUS -- Skip over allocation units>
         LES     DI,[THISSFT]
         Assert      ISSFT,<ES,DI>,"FndClus"
         MOV     [FSeek_logclus],CX                ; presume CX is the position  ;AN000;
-        MOV     BX,[es:DI+sf_lstclus]
-        MOV     DX,[es:DI+sf_cluspos]
+        MOV     BX,[es:DI+sf_entry.sf_lstclus]
+        MOV     DX,[es:DI+sf_entry.sf_cluspos]
 ;; 10/31/86 FastSeek
         OR      BX,BX
         JNZ     YCLUS
@@ -102,54 +102,54 @@ YCLUS:
         JNB     FINDIT
         ADD     CX,DX
         XOR     DX,DX
-        MOV     BX,[es:DI+sf_firclus]
+        MOV     BX,[es:DI+sf_entry.sf_firclus]
 FINDIT:
 ;; 10/31/86 FastSeek
 
 
         POP     ES
         OR      CX,CX
-        JNZ     skpclp
+        JNZ     SKPCLP
         JMP     RET10
 
 entry   SKPCLP
-        TEST    [FastSeekflg],Fast_yes            ; fastseek installed?         ;AN000;
+        TEST    byte [FastSeekFlg],Fast_yes            ; fastseek installed?         ;AN000;
         JZ      do_norm                           ; no                          ;AN000;
-        TEST    [FastSeekflg],FS_begin            ; do fastseek                 ;AN000;
+        TEST    byte [FastSeekFlg],FS_begin            ; do fastseek                 ;AN000;
         JZ      do_norm                           ; no                          ;AN000;
-        TEST    [FastSeekflg],FS_insert           ; is in insert mode ?         ;AN000;
+        TEST    byte [FastSeekFlg],FS_insert           ; is in insert mode ?         ;AN000;
         JNZ     do_norm                           ; yes                         ;AN000;
-        MOV     [Temp_Var2],BX                    ; save physical cluster       ;AN000;
+        MOV     [TEMP_VAR2],BX                    ; save physical cluster       ;AN000;
                                                   ; PTR P005079
 SKPCLP2:
         invoke  FastSeek_Lookup                   ; ask for next cluster #      ;AN000;
         JNC     clusfound                         ; yes, we got it              ;AN000;
         CMP     DI,1                              ; valid drive ,e.g. C,D...    ;AN000;
         JNZ     par_found                         ; yes,                        ;AN000;
-        AND     [FastSeekflg],Fast_yes            ; no more, fastseek           ;AN000;
+        AND     byte [FastSeekFlg],Fast_yes            ; no more, fastseek           ;AN000;
         JMP     SHORT do_norm                                                   ;AN000;
                                                                                 ;AN000;
 par_found:
-        CALL    FS_Trunc_EOF                      ; check EOF and truncate      ;AN000;
+        CALL    FS_TRUNC_EOF                      ; check EOF and truncate      ;AN000;
         JNC     SKPCLP2                           ; redo lookup                 ;AN000;
 noteof:
-        OR      [FastSeekflg],FS_insert           ; no, start to insert         ;AN000;
+        OR      byte [FastSeekFlg],FS_insert           ; no, start to insert         ;AN000;
         CMP     DX,[FSeek_logsave]                ; is current better than new? ;AN000;
         JBE     OnCache                           ; no, let's use new           ;AN000;
         MOV     [FSeek_logclus],DX                ; use current                 ;AN000;
-        MOV     BX,[Temp_Var2]                    ; retore pysical cluster      ;AN000;
+        MOV     BX,[TEMP_VAR2]                    ; retore pysical cluster      ;AN000;
         MOV     DI,BX                             ; insert cureent cluster      ;AN000;
         invoke  FastSeek_Insert                   ; insert cluster # to         ;AN000;
-        INC     [FSeek_logclus]                   ; get next inserted position  ;AN000;
+        INC     word [FSeek_logclus]                   ; get next inserted position  ;AN000;
         JMP     SHORT do_norm
 OnCache:
         MOV     CX,[FSeek_logclus]                ; get the number of clusters  ;AN000;
         SUB     CX,[FSeek_logsave]                ; we need to skip             ;AN000;
         MOV     DX,[FSeek_logsave]                ; cluster position            ;AN000;
 dodo:
-        INC     [FSeek_logsave]                   ; get next inserted position  ;AN000;
-        PUSH    [FSeek_logsave]                   ; logclus=logsave             ;AN000;
-        POP     [FSeek_logclus]                                                 ;AN000;
+        INC     word [FSeek_logsave]                   ; get next inserted position  ;AN000;
+        PUSH    word [FSeek_logsave]                   ; logclus=logsave             ;AN000;
+        POP     word [FSeek_logclus]                                                 ;AN000;
 
 do_norm:
 
@@ -160,18 +160,18 @@ do_norm:
 cluss:                                                                          ;AN000;
         PUSH    BX                                ; FastSeek                    ;AN000;
         MOV     BX,DI
-        Invoke  IsEOF
+        Invoke  IsEof
         POP     BX
         JAE     RET10
         XCHG    BX,DI
         INC     DX
-        INC     [FSeek_logclus]                  ; increment for next inserted  ;AN000;
+        INC     word [FSeek_logclus]                  ; increment for next inserted  ;AN000;
         LOOP    SKPCLPX
         JMP     short  RET10
 SKPCLPX:
         JMP     SKPCLP
 RET10:                                                                          ;AN000;
-        AND     [FastSeekflg],FS_no_insert       ; clear insert mode
+        AND     byte [FastSeekFlg],FS_no_insert       ; clear insert mode
         CLC
         return
 NOCLUS:
@@ -189,7 +189,7 @@ clusfound:
 
 EndProc FNDCLUS
 
-Break  <BUFSEC -- BUFFER A SECTOR AND SET UP A TRANSFER>
+Break  <BUFSEC -- BUFFER a SECTOR AND Set UP a TRANSFER>
 
 ; Inputs:
 ;       AH = priority of buffer
@@ -216,7 +216,7 @@ Break  <BUFSEC -- BUFFER A SECTOR AND SET UP A TRANSFER>
         Assert      ISDPB,<ES,BP>,"BufSec"
         MOV     DX,[CLUSNUM]
         MOV     BL,[SECCLUSPOS]
-        MOV     [ALLOWED],allowed_FAIL + allowed_RETRY + allowed_IGNORE
+        MOV     byte [ALLOWED],Allowed_FAIL + Allowed_RETRY + Allowed_IGNORE
         CALL    FIGREC
         invoke  GETBUFFR
         retc
@@ -228,14 +228,14 @@ Break  <BUFSEC -- BUFFER A SECTOR AND SET UP A TRANSFER>
         MOV     [NEXTADD],DI
         LES     DI,[CURBUF]
         Assert  ISBUF,<ES,DI>,"BufSec"
-        OR      [es:DI+buf_flags],buf_isDATA
+        OR      [es:DI+BUFFINFO.buf_flags],buf_isDATA
         LEA     DI,[DI+BUFINSIZ]        ; Point to buffer
         ADD     DI,[BYTSECPOS]
         CLC
         return
 EndProc BUFSEC
 
-Break   <BUFRD, BUFWRT -- PERFORM BUFFERED READ AND WRITE>
+Break   <BUFRD, BUFWRT -- PERFORM BUFFERED Read AND Write>
 
 ; Do a partial sector read via one of the system buffers
 ; ES:BP Points to DPB
@@ -268,11 +268,11 @@ EVENRD:
         POP     ES
         LDS     DI,[CURBUF]
         Assert  ISBUF,<DS,DI>,"BufRD/EvenRD"
-        LEA     BX,[DI+BufInSiz]
+        LEA     BX,[DI+BUFINSIZ]
         SUB     SI,BX                   ; Position in buffer
         invoke  PLACEBUF
         Assert  ISDPB,<ES,BP>,"BufRD/EvenRD"
-        CMP     SI,[es:BP+dpb_sector_size] ; Read Last byte?
+        CMP     SI,[es:BP+dpb.dpb_sector_size] ; Read Last byte?
         JB      RBUFPLACEDC             ; No, leave buf where it is
         invoke  PLACEHEAD               ; Make it prime candidate for chucking
                                         ;  even though it is MRU.
@@ -301,12 +301,12 @@ EndProc BUFRD
         CMP     AX,word [VALSEC+2]    ;F.C. >32mb                           ;AN000;
         MOV     AL,1                      ;F.C. >32mb                           ;AN000;
         JA      NOREAD                    ;F.C. >32mb                           ;AN000;
-        JB      doread                    ;F.C. >32mb                           ;AN000;
+        JB      doread_ROM                    ;F.C. >32mb                           ;AN000;
         MOV     AX,word [SECPOS]      ;F.C. >32mb                           ;AN000;
         CMP     AX,word [VALSEC]     ; Has sector been written before?
         MOV     AL,1
         JA      NOREAD          ; Skip preread if SECPOS>VALSEC
-doread:
+doread_ROM:
         XOR     AL,AL
 NOREAD:
         PUSH    ES
@@ -323,18 +323,18 @@ EVENWRT:
         LDS     BX,[CURBUF]
         Assert  ISBUF,<DS,BX>,"BufWrt/EvenWrt"
 
-        TEST    [BX+buf_flags],buf_dirty  ;LB. if already dirty                 ;AN000;
-        JNZ     yesdirty                  ;LB.    don't increment dirty count   ;AN000;
+        TEST    [BX+BUFFINFO.buf_flags],buf_dirty  ;LB. if already dirty                 ;AN000;
+        JNZ     yesdirty_ROM                  ;LB.    don't increment dirty count   ;AN000;
         invoke  INC_DIRTY_COUNT           ;LB.                                  ;AN000;
-        OR      [BX+buf_flags],buf_dirty
-yesdirty:
-        LEA     SI,[BX+BufInSiz]
+        OR      [BX+BUFFINFO.buf_flags],buf_dirty
+yesdirty_ROM:
+        LEA     SI,[BX+BUFINSIZ]
         SUB     DI,SI                   ; Position in buffer
         MOV     SI,DI
         MOV     DI,BX
         invoke  PLACEBUF
         Assert  ISDPB,<ES,BP>,"BufWrt/EvenWrt"
-        CMP     SI,[es:BP+dpb_sector_size]  ; Written last byte?
+        CMP     SI,[es:BP+dpb.dpb_sector_size]  ; Written last byte?
         JB      WBUFPLACED              ; No, leave buf where it is
         invoke  PLACEHEAD               ; Make it prime candidate for chucking
                                         ;  even though it is MRU.
@@ -345,7 +345,7 @@ WBUFPLACED:
         return
 EndProc BUFWRT
 
-Break   <NEXTSEC -- Compute next sector to read or write>
+Break   <NEXTSEC -- Compute next sector to Read or Write>
 
 ; Compute the next sector to read or write
 ; ES:BP Points to DPB
@@ -359,19 +359,19 @@ Break   <NEXTSEC -- Compute next sector to read or write>
         JZ      CLRET
         MOV     AL,[SECCLUSPOS]
         INC     AL
-        CMP     AL,[es:BP+dpb_cluster_mask]
+        CMP     AL,[es:BP+dpb.dpb_cluster_mask]
         JBE     SAVPOS
         MOV     BX,[CLUSNUM]
-        Invoke  IsEOF
+        Invoke  IsEof
         JAE     NONEXT
 ;; 11/5/86 FastSeek
-        TEST    [FastSeekflg],Fast_yes            ; fastseek installed?         ;AN000;
+        TEST    byte [FastSeekFlg],Fast_yes            ; fastseek installed?         ;AN000;
         JZ      do_norm2                          ; no                          ;AN000;
-        PUSH    [LASTPOS]               ; save logical cluster #                ;AN000;
-        POP     [FSeek_logclus]                                                 ;AN000;
-        INC     [FSeek_logclus]         ; get next cluster                      ;AN000;
+        PUSH    word [LASTPOS]               ; save logical cluster #                ;AN000;
+        POP     word [FSeek_logclus]                                                 ;AN000;
+        INC     word [FSeek_logclus]         ; get next cluster                      ;AN000;
                                                                                 ;AN000;
-        TEST    [FastSeekflg],FS_begin  ; from R/W                              ;AN000;
+        TEST    byte [FastSeekFlg],FS_begin  ; from R/W                              ;AN000;
         JZ      do_norm2                ; no                                    ;AN000;
 look2:                                                                          ;AN000;
         invoke  FastSeek_Lookup         ; call lookup                           ;AN000;
@@ -379,24 +379,24 @@ look2:                                                                          
 
         CMP     DI,1                              ; valid drive ,e.g. C,D...    ;AN000;
         JNZ     parfound2                         ; yes,                        ;AN000;
-        AND     [FastSeekflg],Fast_yes            ; no more, fastseek           ;AN000;
+        AND     byte [FastSeekFlg],Fast_yes            ; no more, fastseek           ;AN000;
         JMP     SHORT do_norm2                                                  ;AN000;
 parfound2:
         CALL    FS_TRUNC_EOF            ; check EOF                             ;AN000;
         MOV     BX,[CLUSNUM]            ; don't need partially found cluster
-        OR      [FastSeekflg],FS_insert ; prepared for cluster insertion        ;AN000;
+        OR      byte [FastSeekFlg],FS_insert ; prepared for cluster insertion        ;AN000;
                                         ; use the old bx                        ;AN000;
                                                                                 ;AN000;
 do_norm2:
         invoke  UNPACK
         JC      NONEXT
         invoke  FastSeek_Insert         ; call insert                           ;AN000;
-        AND     [FastSeekflg],FS_no_insert  ; clear insert flag                 ;AN000;
+        AND     byte [FastSeekFlg],FS_no_insert  ; clear insert flag                 ;AN000;
                                                                                 ;AN000;
 clusgot:
 ;; 11/5/86 FastSeek
         MOV     [CLUSNUM],DI
-        INC     [LASTPOS]
+        INC     word [LASTPOS]
         MOV     AL,0
 SAVPOS:
         MOV     [SECCLUSPOS],AL
@@ -408,7 +408,7 @@ NONEXT:
         return
 EndProc NEXTSEC
 
-Break   <OPTIMIZE -- DO A USER DISK REQUEST WELL>
+Break   <OPTIMIZE -- DO a USER DISK REQUEST WELL>
 
 ; Inputs:
 ;       BX = Physical cluster
@@ -435,16 +435,16 @@ Break   <OPTIMIZE -- DO A USER DISK REQUEST WELL>
         Assert      ISDPB,<ES,BP>,"Optimize"
         PUSH    DX
         PUSH    BX
-        MOV     AL,[es:BP+dpb_cluster_mask]
+        MOV     AL,[es:BP+dpb.dpb_cluster_mask]
         INC     AL              ; Number of sectors per cluster
         MOV     AH,AL
         SUB     AL,DL           ; AL = Number of sectors left in first cluster
         MOV     DX,CX
         MOV     CX,0
 ;;; 11/5/86 FastSeek
-        PUSH    [LASTPOS]               ; save logical cluster #                ;AN000;
-        POP     [FSeek_logclus]                                                 ;AN000;
-        INC     [FSeek_logclus]         ; get next cluster                      ;AN000;
+        PUSH    word [LASTPOS]               ; save logical cluster #                ;AN000;
+        POP     word [FSeek_logclus]                                                 ;AN000;
+        INC     word [FSeek_logclus]         ; get next cluster                      ;AN000;
                                                                                 ;AN000;
 OPTCLUS:
 ; AL has number of sectors available in current cluster
@@ -455,31 +455,31 @@ OPTCLUS:
 ; ES:BP Points to DPB
 ; ES:SI has FAT pointer
 
-        TEST    [FastSeekflg],Fast_yes            ; fastseek installed?         ;AN000;
+        TEST    byte [FastSeekFlg],Fast_yes            ; fastseek installed?         ;AN000;
         JZ      do_norm3                          ; no                          ;AN000;
-        TEST    [FastSeekflg],FS_begin            ; from R/W                    ;AN000;
+        TEST    byte [FastSeekFlg],FS_begin            ; from R/W                    ;AN000;
         JZ      do_norm3                          ; no                          ;AN000;
-        TEST    [FastSeekflg],FS_insert           ; is in insert mode ?         ;AN000;
+        TEST    byte [FastSeekFlg],FS_insert           ; is in insert mode ?         ;AN000;
         JNZ     do_norm3                          ; yes                         ;AN000;
         invoke  FastSeek_Lookup                   ; call lookup                 ;AN000;
         JNC     clusgot2                          ; found one                   ;AN000;
 
         CMP     DI,1                              ; valid drive ,e.g. C,D...    ;AN000;
         JNZ     par_found3                        ; yes,                        ;AN000;
-        AND     [FastSeekflg],Fast_yes            ; no more, fastseek           ;AN000;
+        AND     byte [FastSeekFlg],Fast_yes            ; no more, fastseek           ;AN000;
         JMP     SHORT do_norm3                                                  ;AN000;
 par_found3:
         PUSH    BX
         CALL    FS_TRUNC_EOF                      ; file entry not existing     ;AN000;
         POP     BX                                                              ;AN000;
-        OR      [FastSeekflg],FS_insert           ; prepare for insertion       ;AN000;
+        OR      byte [FastSeekFlg],FS_insert           ; prepare for insertion       ;AN000;
                                                   ; use old bx                  ;AN000;
 do_norm3:
         invoke  UNPACK
         JC      OP_ERR
 clusgot2:
         invoke  FastSeek_Insert         ; call insert                           ;AN000;
-        INC     [FSeek_logclus]         ; insert to next position               ;AN000;
+        INC     word [FSeek_logclus]         ; insert to next position               ;AN000;
 ;;; 11/5/86 FastSeek                                                            ;AN000;
         ADD     CL,AL
         ADC     CH,0
@@ -495,7 +495,7 @@ FINCLUS:
         SUB     DX,CX           ; Number of sectors still needed
         PUSH    DX
         MOV     AX,CX
-        MUL     [es:BP+dpb_sector_size]  ; Number of sectors times sector size
+        MUL     [es:BP+dpb.dpb_sector_size]  ; Number of sectors times sector size
         MOV     SI,[NEXTADD]
         ADD     AX,SI           ; Adjust by size of transfer
         MOV     [NEXTADD],AX
@@ -506,13 +506,13 @@ FINCLUS:
         POP     BX              ; BL = sector postion within cluster
         invoke  FIGREC
         MOV     BX,SI
-        AND     [FastSeekflg],FS_no_insert  ; clear insert flag
+        AND     byte [FastSeekFlg],FS_no_insert  ; clear insert flag
         CLC
         return
 
 OP_ERR:
         ADD     SP,4
-        AND     [FastSeekflg],FS_no_insert  ; clear insert flag
+        AND     byte [FastSeekFlg],FS_no_insert  ; clear insert flag
         STC
         return
 
@@ -541,24 +541,24 @@ Break   <FIGREC -- Figure sector in allocation unit>
 
         Assert      ISDPB,<ES,BP>,"FigRec"
         PUSH    CX
-        MOV     CL,[es:BP+dpb_cluster_shift]
+        MOV     CL,[es:BP+dpb.dpb_cluster_shift]
         DEC     DX
         DEC     DX
-        MOV     [HIGH_SECTOR],0              ;F.C. >32mb
+        MOV     word [HIGH_SECTOR],0              ;F.C. >32mb
         OR      CL,CL                        ;F.C. >32mb
         JZ      noshift                      ;F.C. >32mb
         XOR     CH,CH                        ;F.C. >32mb
 rotleft:                                     ;F.C. >32mb
         CLC                                  ;F.C. >32mb
         RCL     DX,1                         ;F.C. >32mb
-        RCL     [HIGH_SECTOR],1              ;F.C. >32mb
+        RCL     word [HIGH_SECTOR],1              ;F.C. >32mb
         LOOP    rotleft                      ;F.C. >32mb
 noshift:
 
 ;       SHL     DX,CL
         OR      DL,BL
-        ADD     DX,[es:BP+dpb_first_sector]
-        ADC     [HIGH_SECTOR],0              ;F.C. >32mb
+        ADD     DX,[es:BP+dpb.dpb_first_sector]
+        ADC     word [HIGH_SECTOR],0              ;F.C. >32mb
         POP     CX
         return
 EndProc FIGREC
@@ -660,16 +660,16 @@ Break   <ALLOCATE -- Assign disk space>
 
         MOV     DX,BX
         Assert      ISDPB,<ES,BP>,"Allocate/Unpack"
-        mov     bx,[es:bp+dpb_next_free]
+        mov     bx,[es:bp+dpb.dpb_next_free]
         cmp     bx,2
-        ja      findfre
+        ja      FINDFRE
 
 ;   couldn't find enough free space beyond dpb_next_free, or dpb_next_free is
 ;   <2 or >dpb_max_clus.  Reset it and restart the scan
 
 ads1:
         Assert      ISDPB,<ES,BP>,"Alloc/ads1"
-        mov     [es:bp+dpb_next_free],2
+        mov     [es:bp+dpb.dpb_next_free],2
         mov     bx,1                    ; Counter next instruction so first
                                         ;       cluster examined is 2
 
@@ -683,27 +683,27 @@ ads1:
 FINDFRE:
         INC     BX
         Assert      ISDPB,<ES,BP>,"Alloc/findfre"
-        CMP     BX,[es:BP+dpb_max_cluster]
+        CMP     BX,[es:BP+dpb.dpb_max_cluster]
         JBE     aupk
         jmp     ads7            ; at end of disk
 aupk:
         invoke  UNPACK          ; check out this cluster
         jc      ads4            ; FAT error             [INTERR?]
-        jnz     findfre         ; not free, keep on truckin
+        jnz     FINDFRE         ; not free, keep on truckin
 
 ;   Have found a free cluster.  Chain it to the file
 ;
 ;       (BX) = found free cluster #
 ;       (DX) = current last cluster in file
 
-        mov     [es:bp+dpb_next_free],bx        ; next time start search here
+        mov     [es:bp+dpb.dpb_next_free],bx        ; next time start search here
         xchg    ax,dx           ; save (dx) in ax
         mov     dx,1            ; mark this free guy as "1"
         invoke  PACK            ; set special "temporary" mark
         jc      ads4            ; FAT error             [INTERR?]
-        CMP     [es:BP+dpb_free_cnt],-1 ; Free count valid?
+        CMP     [es:BP+dpb.dpb_free_cnt],-1 ; Free count valid?
         JZ      NO_ALLOC                ; No
-        DEC     [es:BP+dpb_free_cnt]    ; Reduce free count by 1
+        DEC     [es:BP+dpb.dpb_free_cnt]    ; Reduce free count by 1
 NO_ALLOC:
         xchg    ax,dx           ; (dx) = current last cluster in file
         XCHG    BX,DX
@@ -714,7 +714,7 @@ NO_ALLOC:
         jc      ads4            ; FAT error             [INTERR?]
         xchg    BX,AX           ; (BX) = last one we looked at
         mov     dx,bx           ; (dx) = current end of file
-        LOOP    findfre         ; alloc more if needed
+        LOOP    FINDFRE         ; alloc more if needed
 
 ;   We've successfully extended the file.  Clean up and exit
 ;
@@ -752,17 +752,17 @@ ads4:   POP     BX
 ;; 11/6/86 FastSeek
 dofastk:
         PUSH    DX
-        MOV     DL,[es:BP+dpb_drive]              ; get drive #
+        MOV     DL,[es:BP+dpb.dpb_drive]              ; get drive #
 
         PUSH    ES
         LES     DI,[THISSFT]
         Assert  ISSFT,<ES,DI>,"Allocate/ads4"
-        MOV     [es:DI+sf_firclus],BX
-        MOV     [es:DI+sf_lstclus],BX
+        MOV     [es:DI+sf_entry.sf_firclus],BX
+        MOV     [es:DI+sf_entry.sf_lstclus],BX
 
-        TEST    [FastSeekflg],Fast_yes           ; fastseek installed
+        TEST    byte [FastSeekFlg],Fast_yes           ; fastseek installed
         JZ      do_norm5                         ; no
-        TEST    [FastSeekflg],FS_begin           ; do fastseek
+        TEST    byte [FastSeekFlg],FS_begin           ; do fastseek
         JZ      do_norm5                          ; no
         PUSH    CX
         MOV     CX,BX                             ; set up firclus #
@@ -779,7 +779,7 @@ do_norm5:
 ;** we're at the end of the disk, and not satisfied.  See if we've scanned ALL
 ;   of the disk...
 
-ads7:   cmp     [es:bp+dpb_next_free],2
+ads7:   cmp     [es:bp+dpb.dpb_next_free],2
 if not debug
         jz      tmplab2         ;
         jmp     ads1            ; start scan from front of disk
@@ -811,7 +811,7 @@ end if
         invoke  RESTFATBYT      ; Don't "retc". We are setting Carry anyway,
                                 ;   Alloc failed.
 ;       fmt     <>,<>,<"$p: disk full in allocate\n">
-        MOV     [DISK_FULL],1   ;MS. indicating disk full
+        MOV     byte [DISK_FULL],1   ;MS. indicating disk full
         STC
         return
 
@@ -868,14 +868,14 @@ entry   RELBLKS
         retc
         OR      DX,DX
         JNZ     NO_DEALLOC              ; Was putting EOF mark
-        CMP     [es:BP+dpb_free_cnt],-1 ; Free count valid?
+        CMP     [es:BP+dpb.dpb_free_cnt],-1 ; Free count valid?
         JZ      NO_DEALLOC              ; No
-        INC     [es:BP+dpb_free_cnt]    ; Increase free count by 1
+        INC     [es:BP+dpb.dpb_free_cnt]    ; Increase free count by 1
 NO_DEALLOC:
         MOV     BX,AX
         dec     ax              ; check for "1"
         retz                    ; is last cluster of incomplete chain
-        Invoke  IsEOF
+        Invoke  IsEof
         JB      RELEASE         ; Carry clear if JMP not taken
 ret12:  return
 EndProc RELEASE
@@ -900,9 +900,9 @@ Break   <GETEOF -- Find the end of a file>
         retc
         PUSH    BX
         MOV     BX,DI
-        Invoke  IsEOF
+        Invoke  IsEof
         POP     BX
-        JAE     RET12           ; Carry clear if jmp
+        JAE     ret12           ; Carry clear if jmp
         MOV     BX,DI
         JMP     GETEOF
 EndProc GETEOF
@@ -921,13 +921,13 @@ Break   <FS_TRUNC_EOF - truncate EOF for Fastseek>
 ;        ASSUME  ES:NOTHING,DS:NOTHING
 
         MOV     BX,DI                             ; get beginning physical#     ;AN000;
-        invoke  IsEOF                             ; is EOF                      ;AN000;
+        invoke  IsEof                             ; is EOF                      ;AN000;
         JB      noteof2                           ; no                          ;AN000;
-        PUSH    [FSeek_logclus]                   ;                             ;AN000;
-        PUSH    [FSeek_logsave]                   ; logclus=logsave             ;AN000;
-        POP     [FSeek_logclus]                   ; delete EOF                  ;AN000;
+        PUSH    word [FSeek_logclus]                   ;                             ;AN000;
+        PUSH    word [FSeek_logsave]                   ; logclus=logsave             ;AN000;
+        POP     word [FSeek_logclus]                   ; delete EOF                  ;AN000;
         invoke  FastSeek_Truncate                 ;                             ;AN000;
-        POP     [FSeek_logclus]                   ; redo the look up            ;AN000;
+        POP     word [FSeek_logclus]                   ; redo the look up            ;AN000;
         CLC                                                                     ;AN000;
 noteof2:                                                                        ;AN000;
         return                                                                  ;AN000;

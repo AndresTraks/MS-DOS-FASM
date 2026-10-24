@@ -51,7 +51,7 @@ Installed = TRUE
 	i_need	WFP_START,WORD			  ; DOS 3.3
 	i_need	HIGH_SECTOR,WORD		  ; F.C. >32mb
 
-BREAK <DOS_MkDir - Make a directory entry>
+BREAK <DOS_MKDIR - Make a directory entry>
 
 ; Inputs:
 ;	[WFP_START] Points to WFP string ("d:/" must be first 3 chars, NUL
@@ -81,18 +81,18 @@ BREAK <DOS_MkDir - Make a directory entry>
 ;	ASSUME	ES:NOTHING
 
 	Invoke	TestNet
-	JNC	local_mkdir
+	JNC	LOCAL_MKDIR
 if NOT Installed
 	transfer NET_MKDIR
 else
-	MOV	AX,(multNET SHL 8) OR 3
+	MOV	AX,(MultNET SHL 8) OR 3
 	INT	2FH
 	return
 end if
 
 NODEACCERRJ:
 	MOV	AX,error_access_denied
-BadRet:
+BadRet_DIRCALL:
 	STC
 	LeaveCrit   critDisk
 	return
@@ -107,14 +107,14 @@ LOCAL_MKDIR:
 ; MakeNode requires an SFT to fiddle with.  We Use a temp spot (RENBUF)
 ;
 	MOV	word [THISSFT+2],SS
-	MOV	word [THISSFT],renbuf
+	MOV	word [THISSFT],RenBuf
 ;
 ;  NOTE: Need WORD PTR because MASM takes type of
 ;   TempSFT (byte) instead of type of sf_mft (word).
 ;
-	MOV	word [renbuf+sf_mft],0    ; make sure SHARER won't complain.
+	MOV	word [RenBuf+sf_entry.sf_MFT],0    ; make sure SHARER won't complain.
 	MOV	AL,attr_directory
-	invoke	MAKENODE
+	invoke	MakeNode
 
 	JC	PATHNFJ
 	CMP	AX,3
@@ -124,11 +124,11 @@ LOCAL_MKDIR:
 ;ASSUME	DS:NOTHING
 	SUB	SI,DI
 	PUSH	SI		; Pointer to dir_first
-	PUSH	word [DI+buf_sector+2]	    ;F.C. >32mb
+	PUSH	word [DI+BUFFINFO.buf_sector+2]	    ;F.C. >32mb
 
-	PUSH	word [DI+buf_sector] ; Sector of new node
+	PUSH	word [DI+BUFFINFO.buf_sector] ; Sector of new node
 	context DS
-	PUSH	[DIRSTART]	; Parent for .. entry
+	PUSH	word [DIRSTART]	; Parent for .. entry
 	XOR	AX,AX
 	MOV	[DIRSTART],AX	; Null directory
 	invoke	NEWDIR
@@ -137,11 +137,11 @@ LOCAL_MKDIR:
 	JC	NODEEXISTSPOPDEL    ; Screw up
 	LES	DI,[CURBUF]
 
-	TEST	[es:DI+buf_flags],buf_dirty  ;LB. if already dirty		;AN000;
-	JNZ	yesdirty		  ;LB.	  don't increment dirty count   ;AN000;
+	TEST	[es:DI+BUFFINFO.buf_flags],buf_dirty  ;LB. if already dirty		;AN000;
+	JNZ	yesdirty_DIRCALL		  ;LB.	  don't increment dirty count   ;AN000;
 	invoke	INC_DIRTY_COUNT 	  ;LB.					;AN000;
-	OR	[es:DI+buf_flags],buf_dirty
-yesdirty:
+	OR	[es:DI+BUFFINFO.buf_flags],buf_dirty
+yesdirty_DIRCALL:
 	ADD	DI,BUFINSIZ	; Point at buffer
 	MOV	AX,202EH	; ". "
 	MOV	DX,[DIRSTART]	; Point at itself
@@ -150,9 +150,9 @@ yesdirty:
 	POP	DX		; Parent
 	invoke	SETDOTENT
 	LES	BP,[THISDPB]
-	MOV	[ALLOWED],allowed_FAIL + allowed_RETRY
+	MOV	byte [ALLOWED],Allowed_FAIL + Allowed_RETRY
 	POP	DX		; Entry sector
-	POP	[HIGH_SECTOR]	;F.C. >32mb
+	POP	word [HIGH_SECTOR]	;F.C. >32mb
 
 	XOR	AL,AL		; Pre read
 	invoke	GETBUFFR
@@ -160,7 +160,7 @@ yesdirty:
 	MOV	DX,[DIRSTART]
 	LDS	DI,[CURBUF]
 ;ASSUME	DS:NOTHING
-	OR	[DI+buf_flags],buf_isDIR
+	OR	[DI+BUFFINFO.buf_flags],buf_isDIR
 	POP	SI		; dir_first pointer
 	ADD	SI,DI
 	MOV	[SI],DX
@@ -168,14 +168,14 @@ yesdirty:
 	MOV	[SI+2],DX	; Zero size
 	MOV	[SI+4],DX
 DIRUP:
-	TEST	[DI+buf_flags],buf_dirty  ;LB. if already dirty 		;AN000;
-	JNZ	yesdirty2		  ;LB.	  don't increment dirty count   ;AN000;
+	TEST	[DI+BUFFINFO.buf_flags],buf_dirty  ;LB. if already dirty 		;AN000;
+	JNZ	yesdirty2_DIRCALL		  ;LB.	  don't increment dirty count   ;AN000;
 	invoke	INC_DIRTY_COUNT 	  ;LB.					;AN000;
-	OR	[DI+buf_flags],buf_dirty	; Dirty buffer
-yesdirty2:
+	OR	[DI+BUFFINFO.buf_flags],buf_dirty	; Dirty buffer
+yesdirty2_DIRCALL:
 	context DS
-	MOV	AL,[es:BP+dpb_drive]
-	invoke	FLUSHBUF
+	MOV	AL,[es:BP+dpb.dpb_drive]
+	invoke	FlushBuf
 	MOV	AX,error_access_denied
 	LeaveCrit   critDisk
 	return
@@ -183,19 +183,19 @@ yesdirty2:
 NODEEXISTSPOPDEL:
 	POP	DX		; Parent
 	POP	DX		; Entry sector
-	POP	[HIGH_SECTOR]	; F.C. >32mb
+	POP	word [HIGH_SECTOR]	; F.C. >32mb
 
 	LES	BP,[THISDPB]
-	MOV	[ALLOWED],allowed_FAIL + allowed_RETRY
+	MOV	byte [ALLOWED],Allowed_FAIL + Allowed_RETRY
 	XOR	AL,AL		; Pre read
 	invoke	GETBUFFR
 	JC	NODEEXISTSP
 	LDS	DI,[CURBUF]
 ;ASSUME	DS:NOTHING
-	OR	[DI+buf_flags],buf_isDIR
+	OR	[DI+BUFFINFO.buf_flags],buf_isDIR
 	POP	SI		; dir_first pointer
 	ADD	SI,DI
-	SUB	SI,dir_first	;Point back to start of dir entry
+	SUB	SI,dir_entry.dir_first	;Point back to start of dir entry
 	MOV	byte [SI],0E5H    ; Free the entry
 	CALL	DIRUP		; Error doesn't matter since erroring anyway
 NODEEXISTS:
@@ -207,7 +207,7 @@ NODEEXISTSP:
 
 EndProc DOS_MKDIR
 
-BREAK <DOS_ChDir -- Verify a directory>
+BREAK <DOS_CHDIR -- Verify a directory>
 
 ; Inputs:
 ;	[WFP_START] Points to WFP string ("d:/" must be first 3 chars, NUL
@@ -241,26 +241,26 @@ BREAK <DOS_ChDir -- Verify a directory>
 if NOT Installed
 	transfer NET_CHDIR
 else
-	MOV	AX,(multNET SHL 8) OR 5
+	MOV	AX,(MultNET SHL 8) OR 5
 	INT	2FH
 	return
 end if
 
 LOCAL_CHDIR:
 	EnterCrit   critDisk
-	TEST	[es:DI+curdir_flags],curdir_splice ;PTM.
+	TEST	[es:DI+curdir_list.curdir_flags],curdir_splice ;PTM.
 	JZ	nojoin				   ;PTM.
-	MOV	[es:DI+curdir_ID],0FFFFH	   ;PTM.
+	MOV	[es:DI+curdir_list.curdir_ID],0FFFFH	   ;PTM.
 nojoin:
-	MOV	[NoSetDir],FALSE
-	MOV	[SATTRIB],attr_directory+attr_system+attr_hidden
+	MOV	byte [NoSetDir],FALSE
+	MOV	byte [SATTRIB],attr_directory+attr_system+attr_hidden
 				; Dir calls can find these
 ; DOS 3.3  6/24/86 FastOpen
 
-	OR	[FastOpenFlg],FastOpen_Set	   ; set fastopen flag
-	invoke	GetPath
+	OR	byte [FastOpenFlg],FastOpen_Set	   ; set fastopen flag
+	invoke	GETPATH
 	PUSHF									;AN000;
-	AND	[FastOpenFlg],Fast_yes		   ; clear it all		;AC000;
+	AND	byte [FastOpenFlg],Fast_yes		   ; clear it all		;AC000;
 	POPF									;AN000;
 ; DOS 3.3  6/24/86 FastOpen
 	MOV	AX,error_path_not_found
@@ -274,7 +274,7 @@ ChDirDone:
 
 EndProc DOS_CHDIR
 
-BREAK <DOS_RmDir -- Remove a directory>
+BREAK <DOS_RMDIR -- Remove a directory>
 
 ; Inputs:
 ;	[WFP_START] Points to WFP string ("d:/" must be first 3 chars, NUL
@@ -308,21 +308,21 @@ BREAK <DOS_RmDir -- Remove a directory>
 ;	ASSUME	ES:NOTHING
 
 	Invoke	TestNet
-	JNC	Local_RmDIR
+	JNC	LOCAL_RMDIR
 if NOT Installed
 	transfer NET_RMDIR
 else
-	MOV	AX,(multNET SHL 8) OR 1
+	MOV	AX,(MultNET SHL 8) OR 1
 	INT	2FH
 	return
 end if
 
 LOCAL_RMDIR:
 	EnterCrit   critDisk
-	MOV	[NoSetDir],0
-	MOV	[SATTRIB],attr_directory+attr_system+attr_hidden
+	MOV	byte [NoSetDir],0
+	MOV	byte [SATTRIB],attr_directory+attr_system+attr_hidden
 				; Dir calls can find these
-	invoke	GetPath
+	invoke	GETPATH
 	JC	NOPATH		; Path not found
 	JNZ	NOTDIRPATH	; Path not a DIR
 	MOV	DI,[DIRSTART]
@@ -332,7 +332,7 @@ LOCAL_RMDIR:
 
 NOPATH:
 	MOV	AX,error_path_not_found
-	JMP	BadRet
+	JMP	BadRet_DIRCALL
 
 NOTDIRPATHPOP:
 	POP	AX			  ;F.C. >32mb
@@ -340,24 +340,24 @@ NOTDIRPATHPOP:
 NOTDIRPATHPOP2:
 	POP	AX
 NOTDIRPATH:
-	JMP	NodeAccErrJ
+	JMP	NODEACCERRJ
 
 rmdir_get_buf:
 	LDS	DI,[CURBUF]
 ;ASSUME	DS:NOTHING
 	SUB	BX,DI		; Compute true offset
 	PUSH	BX		; Save entry pointer
-	PUSH	word [DI+buf_sector+2] ;F.C. >32mb
-	PUSH	word [DI+buf_sector] ; Save sector number
+	PUSH	word [DI+BUFFINFO.buf_sector+2] ;F.C. >32mb
+	PUSH	word [DI+BUFFINFO.buf_sector] ; Save sector number
 	context DS
 	context ES
-	MOV	DI,Name1
+	MOV	DI,NAME1
 	MOV	AL,'?'
 	MOV	CX,11
 	REP	STOSB
 	XOR	AL,AL
 	STOSB			; Nul terminate it
-	invoke	STARTSRCH	; Set search
+	invoke	StartSrch	; Set search
 	invoke	GETENTRY	; Get start of directory
 	JC	NOTDIRPATHPOP	; Screw up
 	MOV	DS,word [CURBUF+2]
@@ -371,13 +371,13 @@ rmdir_get_buf:
 	CMP	AX,('.' SHL 8) OR '.'   ; Second entry '..'?
 	JNZ	NOTDIRPATHPOP		; Nope
 	context DS
-	MOV	[LASTENT],2		; Skip . and ..
+	MOV	word [LASTENT],2		; Skip . and ..
 	invoke	GETENTRY		; Get next entry
 	JC	NOTDIRPATHPOP		; Screw up
-	MOV	[ATTRIB],attr_directory+attr_hidden+attr_system
-	invoke	SRCH			; Do a search
+	MOV	byte [ATTRIB],attr_directory+attr_hidden+attr_system
+	invoke	Srch			; Do a search
 	JNC	NOTDIRPATHPOP		; Found another entry!
-	CMP	[FAILERR],0
+	CMP	byte [FAILERR],0
 	JNZ	NOTDIRPATHPOP		; Failure of search due to I 24 FAIL
 	LES	BP,[THISDPB]
 	MOV	BX,[DIRSTART]
@@ -387,15 +387,15 @@ rmdir_get_buf:
 	invoke	RELEASE 		; Release data in sub dir
 	JC	NOTDIRPATHPOP		; Screw up
 	POP	DX			; Sector # of entry
-	POP	[HIGH_SECTOR]		; F.C. >32mb
+	POP	word [HIGH_SECTOR]		; F.C. >32mb
 
-	MOV	[ALLOWED],allowed_FAIL + allowed_RETRY
+	MOV	byte [ALLOWED],Allowed_FAIL + Allowed_RETRY
 	XOR	AL,AL			; Pre read
 	invoke	GETBUFFR		; Get sector back
 	JC	NOTDIRPATHPOP2		; Screw up
 	LDS	DI,[CURBUF]
 ;ASSUME	DS:NOTHING
-	OR	[DI+buf_flags],buf_isDIR
+	OR	[DI+BUFFINFO.buf_flags],buf_isDIR
 	POP	BX			; Pointer to start of entry
 	ADD	BX,DI			; Corrected
 	MOV	byte [BX],0E5H	; Free the entry

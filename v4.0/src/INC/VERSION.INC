@@ -2,7 +2,11 @@
 ; fasm's EQU is a preprocessor definition, so an IF around one would not
 ; stop it being made; MATCH asks the same question where it counts -- the
 ; name stands for itself only while nothing else has defined it.
-match =TRUE, TRUE { TRUE EQU 0FFFFh }
+; MASM worked an expression out sixteen bits wide, so NOT TRUE was zero and a
+; switch written "if NOT IBM" asked the right question.  fasm's arithmetic is
+; wider than that, and NOT 0FFFFh is not zero; TRUE is therefore -1 here,
+; which writes the same 0FFFFh into a word and leaves NOT TRUE zero.
+match =TRUE, TRUE { TRUE EQU -1 }
 match =TRUEBYTE, TRUEBYTE { TRUEBYTE EQU 0FFh }
 match =FALSE, FALSE { FALSE EQU 0 }
 

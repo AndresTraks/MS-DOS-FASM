@@ -16,12 +16,12 @@ INCLUDE '../INC/DEVSYM.INC'
 
 AsmVars <IBM, Installed>
 
-Installed = True
+Installed = TRUE
 
 	i_need  THISDPB,DWORD
 	i_need  EXTERR,WORD
-	i_need  ReadOp,BYTE
-	i_need  ThisSFT,DWORD
+	i_need  READOP,BYTE
+	i_need  THISSFT,DWORD
 	i_need  ALLOWED,BYTE
 	I_need  RetryCount,WORD
 	i_need  JShare,DWORD
@@ -46,8 +46,8 @@ Installed = True
 	DOSAssume   CS,<DS>,"Share_Check"
 ;	ASSUME  ES:NOTHING
 
-if installed
-	call    dword [JSHARE+1*4]
+if Installed
+	call    dword [JShare+1*4]
 else
 	Call    MFT_Enter
 end if
@@ -73,13 +73,13 @@ EndProc SHARE_CHECK
 	PUSH    DS
 	PUSH    ES
 	PUSH    DI
-	MOV     [READOP],0                      ; All share errors are reading
-	MOV     [ALLOWED],allowed_FAIL + allowed_RETRY
+	MOV     byte [READOP],0                      ; All share errors are reading
+	MOV     byte [ALLOWED],Allowed_FAIL + Allowed_RETRY
 	LES     BP,[THISDPB]
 	MOV     DI,1                            ; Fake some registers
 	MOV     CX,DI
-	MOV     DX,[es:BP+dpb_dir_sector]
-	invoke  HARDERR
+	MOV     DX,[es:BP+dpb.dpb_dir_sector]
+	invoke  HardErr
 	POP     DI
 	POP     ES
 	POP     DS
@@ -102,8 +102,8 @@ EndProc SHARE_VIOLATION
 	DOSAssume   CS,<DS>,"ShareEnd"
 ;	ASSUME  ES:NOTHING
 
-if installed
-	Call    dword [JSHARE+2*4]
+if Installed
+	Call    dword [JShare+2*4]
 else
 	Call    MFTClose
 end if
@@ -111,7 +111,7 @@ end if
 
 EndProc ShareEnd
 
-break <ShareEnter - attempt to enter a node into the sharing set>
+break <ShareEnter - attempt to enter a node into the sharing Set>
 
 ;
 ;   ShareEnter - perform a retried entry of a nodde into the sharing set.  If
@@ -131,18 +131,18 @@ Procedure   ShareEnter,NEAR
 retry:
 	mov     cx,[RetryCount]
 attempt:
-	les     di,[ThisSFT]              ; grab sft
+	les     di,[THISSFT]              ; grab sft
 	XOR     AX,AX
-	MOV     [es:DI+sf_MFT],AX       ; indicate free SFT
+	MOV     [es:DI+sf_entry.sf_MFT],AX       ; indicate free SFT
 	SaveReg <CX>
-	call    Share_Check             ; attempt to enter into the sharing set
+	call    SHARE_CHECK             ; attempt to enter into the sharing set
 	RestoreReg  <CX>
-	jnc     done                    ; success, let the user see this
+	jnc     done_SHARE                    ; success, let the user see this
 	invoke  Idle                    ; wait a while
 	loop    attempt                 ; go back for another attempt
-	call    Share_violation         ; signal the problem to the user
+	call    SHARE_VIOLATION         ; signal the problem to the user
 	jnc     retry                   ; user said to retry, go do it
-done:
+done_SHARE:
 	RestoreReg  <CX>
 	return
 EndProc ShareEnter

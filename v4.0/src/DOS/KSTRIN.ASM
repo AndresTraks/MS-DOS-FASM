@@ -258,7 +258,7 @@ WordLoop:
 	cmp	al,'9'
 	jbe	WordLoop
 	OR	AL,20h
-	CMP	AL,'[a]'
+	CMP	AL,'a'
 	JB	GetChJ
 	CMP	AL,'z'
 	JBE	WordLoop

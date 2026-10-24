@@ -31,7 +31,7 @@ BOGUS =FALSE
 ;.lall
 	I_Need  chSwitch,BYTE
 
-BREAK <Parse_File_Descriptor$ -- Parse an arbitrary string into an FCB>
+BREAK <PARSE_FILE_DESCRIPTOR$ -- Parse an arbitrary string into an FCB>
 
 ; Inputs:
 ;       DS:SI Points to a command line
@@ -53,10 +53,10 @@ BREAK <Parse_File_Descriptor$ -- Parse an arbitrary string into an FCB>
 	procedure   PARSE_FILE_DESCRIPTOR$,NEAR
 ;ASSUME  DS:NOTHING,ES:NOTHING
 
-	invoke  MAKEFCB
+	invoke  MakeFcb
 	PUSH    SI
 	invoke  get_user_stack
-	POP     [SI+user_environ.user_SI]
+	POP     word [SI+user_environ.user_SI]
 	return
 EndProc PARSE_FILE_DESCRIPTOR$
 
@@ -121,7 +121,7 @@ if SEGSEL = S_TABLE
 ;Public PRS001S,PRS001E
 PRS001S:
 sepchrs db      9,10,13,' ','+',',',';','='     ; tab cr lf sp + , ; =
-seplen  equ     $-sepchrs
+seplen  =       $-sepchrs
 PRS001E:
 end if
 
@@ -144,7 +144,7 @@ Procedure PathParse$,NEAR
 	call    isinval
 	je      inval
 	stosb
-	jmp     done
+	jmp     done_PARSE
 
 inval:  or      bx,ParsePathName        ; an invalid character/path token
 	or      bx,ParsePathSynErr      ; was found, set the appropriate
@@ -175,7 +175,7 @@ pcont1: cmp     al,'.'
 	dec     si
 	dec     di
 	jmp     rcont
-pcont2: cmp     al,'[a]'                  ; if token may start with a drive
+pcont2: cmp     al,'a'                  ; if token may start with a drive
 	jge     drive                   ; designator, go to drive. otherwise
 	jmp     [Name1]                   ; parse a file name.
 
@@ -186,7 +186,7 @@ drive:  cmp     byte [si],':'       ; if there is a drive designator, parse
 	jle     dcont1
 	sub     al,' '
 dcont1: sub     al,'@'
-	invoke  GetthisDrv
+	invoke  GetThisDrv
 	lodsb
 	stosb
 	jc      dcont2
@@ -204,7 +204,7 @@ repeat_: mov     al,byte [si-2]      ; repeat and rcont test for //, \\, .,
 	inc     si                      ; been completely parsed.
 	jmp     inval
 rcont:  call    dirdot
-	je      done
+	je      done_PARSE
 	jc      inval
 	mov     cx,8
 	mov     dx,8
@@ -242,16 +242,16 @@ echeck: cmp     cx,dx
 dcheck: call    ispsep                  ; do the checks need to make sure
 	je      repeat_                  ; a file name or extension ended
 	call    issep                   ; correctly and checks to see if
-	je      bkboth                  ; we're done
+	je      bkboth                  ; we're done_PARSE
 	call    ischrnull
-	je      done
+	je      done_PARSE
 	jmp     inval
 
 ptosep: lodsb                           ; parse everything to the next separator
 	call    issep
 	je      bkboth
 	call    ischrnull
-	je      done
+	je      done_PARSE
 	call    isinval
 	jne     ptcont
 	or      bx,ParsePathSynErr
@@ -260,13 +260,13 @@ ptcont: stosb
 
 bkboth: dec     di                      ; clean up when the end of the token
 bksi:   dec     si                      ; is found, stick a terminating null
-done:   xor     al,al                   ; byte at the end of buf, and exit
+done_PARSE:   xor     al,al                   ; byte at the end of buf, and exit
 	stosb
 	push    si
-	invoke  Get_user_stack
+	invoke  get_user_stack
 	mov     [si+user_environ.user_AX],bx
-	pop     [si+user_environ.user_SI]
-	Transfer sys_ret_ok
+	pop     word [si+user_environ.user_SI]
+	Transfer SYS_RET_OK
 
 Endproc PathParse$
 
@@ -411,7 +411,7 @@ nulret: ret
 
 ; Check for . and ..  Before returning, CF and ZF are set to indicate whether
 ; the token is invalid (found . or .. followed by an invalid char - CF on),
-; we're done (found . or .. followed by null or a separator - ZF on), or the
+; we're done_PARSE (found . or .. followed by null or a separator - ZF on), or the
 ; token continues (. and .. not found or found and followed by a path
 ; separator - both flags off).
 

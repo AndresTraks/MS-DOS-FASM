@@ -4,6 +4,29 @@
 ;.xlist									  ;AN000;
 INCLUDE    '../INC/DOSSEG.ASM'							  ;AN000;
 
+; The structure is laid out here, before the segment's own pass: the layout
+; is read once however many times the module is, and inside a pass that the
+; first reading skips it would never be read at all.
+STRUC DOSINFO								  ;AN000;
+{
+.bsize	  dw	0							  ;AN000;
+.files	  dw	0							  ;AN000;
+.fcbs1	  dw	0							  ;AN000;
+.fcbs2	  dw	0							  ;AN000;
+.buffers  dw	0							  ;AN000;
+	  dw	0							  ;AN000;
+.lastdrv  dw	0							  ;AN000;
+.secsize  dw	0							  ;AN000;
+}
+match =DOSINFO_LAID_OUT, DOSINFO_LAID_OUT
+{
+    DOSINFO_LAID_OUT equ 1
+    virtual at 0
+      DOSINFO DOSINFO
+      sizeof.DOSINFO = $ - DOSINFO
+    end virtual
+}
+
 if SEGSEL = S_CODE;AN000;
 ;	ASSUME	CS:DOSGROUP,  SS:DOSGROUP				  ;AN000;
 ;.xcref									  ;AN000;
@@ -17,7 +40,7 @@ StackSize   =	180h			; gross but effective
 	i_need	VERFLG		       ; verify status flag		  ;AN000;
 	i_need	CNTCFLAG	       ; break status flag		  ;AN000;
 	i_need	CPSWFLAG	       ; CP switch logic ON/OFF 	  ;AN000;
-	I_need	CURRENTPDB,WORD        ; Current process identifier	  ;AN000;
+	I_need	CurrentPDB,WORD        ; Current process identifier	  ;AN000;
 	I_need	HIGH_SECTOR,WORD					  ;AN000;
 	I_need	BUF_HASH_COUNT,WORD					  ;AN000;
 	I_need	FAILERR,WORD						  ;AN000;
@@ -25,7 +48,7 @@ StackSize   =	180h			; gross but effective
 	I_need	CALLDEVAD,DWORD       ; 				  ;AN000;
 	I_need	SYSINITVAR,WORD 					  ;AN000;
 	I_need	MYNAME,16	      ; NetBIOS name			  ;AN000;
-	I_need	RETRYCOUNT,WORD       ; retry count			  ;AN000;
+	I_need	RetryCount,WORD       ; retry count			  ;AN000;
 	I_need	COUNTRY_CDPG,BYTE					  ;AN000;
 	i_need	DAY,BYTE	      ; date				  ;AN000;
 	i_need	MONTH,BYTE						  ;AN000;
@@ -36,22 +59,12 @@ StackSize   =	180h			; gross but effective
 	i_need	Callback_SS,WORD      ; 				  ;AN000;
 	i_need	Callback_SP,WORD					  ;AN000;
 	i_need	SaveBX,WORD						  ;AN000;
-	i_need	Temp_Var,WORD						  ;AN000;
+	i_need	TEMP_VAR,WORD						  ;AN000;
 	i_need	INDOS,BYTE						  ;AN000;
 	i_need	DskStack,BYTE						  ;AN000;
 	i_need	IOStack,BYTE						  ;AN000;
 	i_need	Callback_flag,BYTE					  ;AN000;
 
-DOSINFO     STRUC							  ;AN000;
-bsize	  dw	0							  ;AN000;
-files	  dw	0							  ;AN000;
-fcbs1	  dw	0							  ;AN000;
-fcbs2	  dw	0							  ;AN000;
-buffers   dw	0							  ;AN000;
-	  dw	0							  ;AN000;
-lastdrv   dw	0							  ;AN000;
-secsize   dw	0							  ;AN000;
-;DosInfo       ENDS							  ;AN000;
 ;
 
 
@@ -112,12 +125,12 @@ PROCEDURE   IFS_DOSCALL,FAR						  ;AN000;
 	 CLI			;					  ;AN000;
 	 CMP	 AH,39		;					  ;AN000;
 	 JNZ	 others 	;					  ;AN000;
-	 INC	 [cs:INDOS]	; in DOS				  ;AN000;
+	 INC	 byte [cs:INDOS]	; in DOS				  ;AN000;
 	 JMP	 Dosend 	;					  ;AN000;
 others:
 	 CMP	 AH,40		;					  ;AN000;
 	 JNZ	 others2	;					  ;AN000;
-	 DEC	 [cs:INDOS]	; out DOS				  ;AN000;
+	 DEC	 byte [cs:INDOS]	; out DOS				  ;AN000;
 	 JMP	 Dosend 	;					  ;AN000;
 others2:
 	 CMP	 AH,38		;					  ;AN000;
@@ -125,15 +138,15 @@ others2:
 	 PUSH	 CS		;					  ;AN000;
 	 POP	 DS		;					  ;AN000;
 	 MOV	 SI,IOStack				  ;AN000;
-	 MOV	 CX,stacksize						  ;AN000;
+	 MOV	 CX,StackSize						  ;AN000;
 	 JMP	 Dosend 	;					  ;AN000;
 				;					  ;AN000;
 not_stack:			;					  ;AN000;
-	 MOV	 [cs:Temp_Var],DS; save ds for strcmp strcpy		  ;AN000;
+	 MOV	 [cs:TEMP_VAR],DS; save ds for strcmp strcpy		  ;AN000;
 	 PUSH	 CS		;					  ;AN000;
 	 POP	 DS		;					  ;AN000;
 ; assume DS:DOSGROUP							  ;AN000;
-	 INC	 [INDOS]	; in DOS				  ;AN000;
+	 INC	 byte [INDOS]	; in DOS				  ;AN000;
 	 PUSH	 CX		; save cx				  ;AN000;
 	 PUSH	 DX		; save cx				  ;AN000;
 	 MOV	 CX,SS		; cx=stack				  ;AN000;
@@ -147,9 +160,9 @@ not_stack:			;					  ;AN000;
 	 MOV	 [SaveBX],BX	;					  ;AN000;
 	 MOV	 BX,CS		; prepare system stack			  ;AN000;
 	 MOV	 SS,BX		;					  ;AN000;
-	 MOV	 SP,DSKSTACK				  ;AN000;
+	 MOV	 SP,DskStack				  ;AN000;
 	 MOV	 BX,[SaveBX]	;					  ;AN000;
-	 MOV	 [Callback_flag],1  ;set flag				  ;AN000;
+	 MOV	 byte [Callback_flag],1  ;set flag				  ;AN000;
 withSS_SP:			;					  ;AN000;
 	 STI								  ;AN000;
 ; ASSUME DS:NOTHING							  ;AN000;
@@ -194,18 +207,18 @@ Dos_chk_ah32:								  ;AN000;
 	 cmp	 ah,32
 	 jne	 str_cmp				    ;AN000;
 	 CALL	 GET_DOS_INFO	 ; else get DOS information ;AN000;
-	 jmp	 SHORT dos_exit 			    ;AN000;		 ;AN000;
+	 jmp	 SHORT Dos_Exit 			    ;AN000;		 ;AN000;
 str_cmp:								  ;AN000;
-	 mov	 DS,[Temp_Var]	  ; restore DS				  ;AN000;
+	 mov	 DS,[TEMP_VAR]	  ; restore DS				  ;AN000;
 	 cmp	 ah,36					    ;AN000;
 	 jne	 str_cpy				    ;AN000;
-	 invoke  strcmp 	 ; string compare	    ;AN000;
-	 jmp	 SHORT dos_exit 					  ;AN000;
+	 invoke  StrCmp 	 ; string compare	    ;AN000;
+	 jmp	 SHORT Dos_Exit 					  ;AN000;
 str_cpy:								  ;AN000;
 	 cmp	 ah,37					    ;AN000;
-	 jne	 dos_error				    ;AN000;
-	 invoke  strcpy 	 ; string copy		    ;AN000;
-	 jmp	 SHORT dos_exit 					  ;AN000;
+	 jne	 Dos_Error				    ;AN000;
+	 invoke  StrCpy 	 ; string copy		    ;AN000;
+	 jmp	 SHORT Dos_Exit 					  ;AN000;
 
 Dos_Error:								  ;AN000;
 	 stc
@@ -213,15 +226,15 @@ Dos_Error:								  ;AN000;
 Dos_Exit:								  ;AN000;
 	 CLI								  ;AN000;
 	 PUSHF								  ;AN000;
-	 AND	 [DOS34_FLAG],No_Force_I24_Fail 			  ;AN000;
-	 DEC	 [INDOS]	 ; exit DOS				  ;AN000;
-	 CMP	 [Callback_flag],0  ;from dosgroup
+	 AND	 word [DOS34_FLAG],NO_Force_I24_Fail 			  ;AN000;
+	 DEC	 byte [INDOS]	 ; exit DOS				  ;AN000;
+	 CMP	 byte [Callback_flag],0  ;from dosgroup
 	 JZ	 noSS_SP	    ;yes				  ;AN000;
-	 MOV	 [Callback_flag],0  ;					  ;AN000;
+	 MOV	 byte [Callback_flag],0  ;					  ;AN000;
 	 POPF						    ;AN000;
 	 MOV	 SP,[cs:Callback_SP];					     ;AN000;
 	 MOV	 SS,[cs:Callback_SS]; restore user's SS:SP                   ;AN000;
-	 JMP	 SHORT DOSend				    ;AN000;
+	 JMP	 SHORT Dosend				    ;AN000;
 noSS_SP:						    ;AN000;
 	 POPF
 Dosend:
@@ -351,7 +364,7 @@ PROCEDURE  GET_DOS_INFO,NEAR						   ;AN000;
 	cmp    al,0			; TIME and DATE ??		   ;AN000;
 	jne    chk_al1							   ;AN000;
 
-	Invoke	ReadTime		; get time in CX:DX		   ;AN000;
+	Invoke	READTIME		; get time in CX:DX		   ;AN000;
 
 	push	cx			; save time			   ;AN000;
 	push	dx							   ;AN000;
@@ -363,15 +376,15 @@ PROCEDURE  GET_DOS_INFO,NEAR						   ;AN000;
 	pop	bx			; bh = seconds	bl = hundredths    ;AN000;
 	pop	ax			; ah = hour  al = minutes	   ;AN000;
 					; cx = year  dh = month 	   ;AN000;
-	jmp	get_info_exit						   ;AN000;
+	jmp	Get_Info_Exit						   ;AN000;
 
 
 chk_al1:				; Active process info ??	   ;AN000;
 	cmp    al,1							   ;AN000;
 	jne    chk_al2			; no, try next			   ;AN000;
 	MOV	BX,[CurrentPDB]        ; BX = active process ID 	   ;AN000;
-	mov	DX,[User_ID]	       ; User ID			   ;AN000;
-	jmp	get_info_exit	       ; exit				   ;AN000;
+	mov	DX,[USER_ID]	       ; User ID			   ;AN000;
+	jmp	Get_Info_Exit	       ; exit				   ;AN000;
 
 
 chk_al2:								   ;AN000;
@@ -401,33 +414,33 @@ chk_al5:
 	cmp    al,5		      ; Config.sys info ??		   ;AN000;
 	jne    chk_al6							   ;AN000;
 
-	mov	si,SysInitVar	 ; DS:SI-->SysInitVar	   ;AN000;
+	mov	si,SYSINITVAR	 ; DS:SI-->SysInitVar	   ;AN000;
 	push	ds							   ;AN000;
 	push	si							   ;AN000;
-	lds	si,[si+Sysi_SFT]      ; get SFT address 		   ;AN000;
-	mov	ax,[si+SFCount]       ; get number of files		   ;AN000;
-	lds	si,[si+SFlink]	      ; get next SFT table		   ;AN000;
+	lds	si,[si+SysInitVars.SYSI_SFT]      ; get SFT address 		   ;AN000;
+	mov	ax,[si+SF.SFCount]       ; get number of files		   ;AN000;
+	lds	si,[si+SF.SFLink]	      ; get next SFT table		   ;AN000;
 	cmp	si,-1		      ; end of table			   ;AN000;
-	jz	nomore		      ; 				   ;AN000;
-	add	ax,[si+SFCount]       ; 				   ;AN000;
-nomore: 			      ; 				   ;AN000;
-	mov	[es:di].[files],ax	 ; save files= value		   ;AN000;
+	jz	nomore_IFS		      ; 				   ;AN000;
+	add	ax,[si+SF.SFCount]       ; 				   ;AN000;
+nomore_IFS: 			      ; 				   ;AN000;
+	mov	[es:di+DOSINFO.files],ax	 ; save files= value		   ;AN000;
 	pop	si							   ;AN000;
 	pop	ds							   ;AN000;
-	mov	ax,[si+Sysi_MaxSec]	 ; get maximum sector size	   ;AN000;
-	mov	[es:di].[secsize],ax	 ; save files= value		   ;AN000;
-	mov	ax,[si+Sysi_Keep]	 ;				   ;AN000;
-	mov	[es:di].[fcbs2],ax	 ;				   ;AN000;
-	lds	si,[si+Sysi_FCB]      ; get FCB address 		   ;AN000;
-	mov	ax,[si+SFCount]       ; get number of fcbs		   ;AN000;
-	mov	[es:di].[fcbs1],ax	 ; save fcbs=  value		   ;AN000;
-	jmp	get_info_exit						   ;AN000;
+	mov	ax,[si+SysInitVars.SYSI_MAXSEC]	 ; get maximum sector size	   ;AN000;
+	mov	[es:di+DOSINFO.secsize],ax	 ; save files= value		   ;AN000;
+	mov	ax,[si+SysInitVars.SYSI_Keep]	 ;				   ;AN000;
+	mov	[es:di+DOSINFO.fcbs2],ax	 ;				   ;AN000;
+	lds	si,[si+SysInitVars.SYSI_FCB]      ; get FCB address 		   ;AN000;
+	mov	ax,[si+SF.SFCount]       ; get number of fcbs		   ;AN000;
+	mov	[es:di+DOSINFO.fcbs1],ax	 ; save fcbs=  value		   ;AN000;
+	jmp	Get_Info_Exit						   ;AN000;
 
 ;
 
 chk_al6:								  ;AN000;
 	cmp    al,6			; get machine name ??		  ;AN000;
-	jne    chk_al7			; no, check next function	  ;AN000;
+	jne    Chk_Al7			; no, check next function	  ;AN000;
 	context  DS							  ;AN000;
 	mov	si,MYNAME   ; DS:SI-->name string	  ;AN000;
 					; ES:DI-->return buffer 	  ;AN000;
@@ -437,7 +450,7 @@ Chk6_Loop:								  ;AN000;
 	rep	movsb			; copy machine name to return buffer;AN000;
 	xor	al,al			; set 16th byte is 0		   ;AN000;
 	stosb								   ;AN000;
-	jmp	get_info_exit		; return			   ;AN000;
+	jmp	Get_Info_Exit		; return			   ;AN000;
 									   ;AN000;
 									   ;AN000;
 Chk_Al7:								   ;AN000;
@@ -453,7 +466,7 @@ Chk_Al7:								   ;AN000;
 
 Chk_Al8:								   ;AN000;
 	cmp	al,8			; get share retry count ??	   ;AN000;
-	jne	bad_param		; no, Bad parameter		   ;AN000;
+	jne	Bad_Param		; no, Bad parameter		   ;AN000;
 	mov	bx,[RetryCount]		; BX = Share retry count	   ;AN000;
 	jmp	SHORT Get_Info_Exit	      ; exit			   ;AN000;
 
@@ -504,7 +517,7 @@ ENDPROC   GET_DOS_INFO							   ;AN000;
 PROCEDURE  IFS_IOCTL$,NEAR						   ;AN000;
 
 	PUSH	AX							   ;AN000;
-	MOV	AX,(multnet SHL 8) OR 47    ; pass control to IFS Func	   ;AN000;
+	MOV	AX,(MultNET SHL 8) OR 47    ; pass control to IFS Func	   ;AN000;
 	INT	2FH							   ;AN000;
 	POP	BX							   ;AN000;
 	JC	ABB_ERR 						   ;AN000;

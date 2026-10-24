@@ -11,40 +11,40 @@ INCLUDE '../INC/DOSSEG.ASM'
 ;.cref
 ;.list
 
-AsmVars <Kanji, Debug>
+AsmVars <KANJI, debug>
 
 BREAK   <Copyright notice and version>
 if SEGSEL = S_CODE
 
 
         I_need  CurrentPDB,WORD
-        I_need  CntCFlag,BYTE
-        I_need  User_SS,WORD
-        I_need  User_SP,WORD
+        I_need  CNTCFLAG,BYTE
+        I_need  user_SS,WORD
+        I_need  user_SP,WORD
         I_need  NSS,WORD
         I_need  NSP,WORD
-        I_need  MaxCall,BYTE
-        I_need  MaxCom,BYTE
+        I_need  MAXCALL,BYTE
+        I_need  MAXCOM,BYTE
         I_need  SaveDS,WORD
         I_need  SaveBX,WORD
         I_need  INDOS,BYTE
-        I_need  User_ID,WORD
-        I_need  Proc_ID,WORD
+        I_need  USER_ID,WORD
+        I_need  PROC_ID,WORD
         I_need  AuxStack,BYTE
-        I_need  IOSTACK,BYTE
-        I_need  DSKSTACK,BYTE
-        I_need  fsharing,BYTE
+        I_need  IOStack,BYTE
+        I_need  DskStack,BYTE
+        I_need  fSharing,BYTE
         I_need  NoSetDir,BYTE
-        I_need  FailERR,BYTE
-        I_need  Errormode,BYTE
+        I_need  FAILERR,BYTE
+        I_need  ErrorMode,BYTE
         I_need  restore_tmp,WORD
-        I_need  WPERR,BYTE
-        I_need  Dispatch,WORD
-        I_need  ConSwap,BYTE
-        I_need  User_In_AX,WORD
+        I_need  WPErr,BYTE
+        I_need  DISPATCH,WORD
+        I_need  CONSWAP,BYTE
+        I_need  USER_IN_AX,WORD
         I_need  EXTERR_LOCUS,BYTE
-        I_need  IdleInt,BYTE
-        I_need  Printer_Flag,BYTE
+        I_need  IDLEINT,BYTE
+        I_need  PRINTER_FLAG,BYTE
         I_need  CPSWFLAG,BYTE              ;AN000;
         I_need  CPSWSAVE,BYTE              ;AN000;
         I_need  DISK_FULL,BYTE             ;AN000;
@@ -70,7 +70,7 @@ if SEGSEL = S_CODE
 BREAK   <System call entry points and dispatcher>
 ;ASSUME  CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
-BREAK <Set_CTRL_C_Trapping$ -- En/Disable ^C check in dispatcher>
+BREAK <SET_CTRL_C_TRAPPING$ -- En/Disable ^C check in dispatcher>
 
 ; Inputs:
 ;       AL = 0 read ^C status
@@ -88,7 +88,7 @@ BREAK <Set_CTRL_C_Trapping$ -- En/Disable ^C check in dispatcher>
 ;ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
         OR      AL,AL
         JNZ     Check1
-        MOV     DL,[CntCFlag]
+        MOV     DL,[CNTCFLAG]
         IRET
 Check1:
         CMP     AL,2
@@ -101,7 +101,7 @@ Check1:
         IRET
 SetAndRet:
         AND     DL,01h
-        XCHG    [CntCFlag],DL
+        XCHG    [CNTCFLAG],DL
         IRET
 BadVal:
         MOV     AL,0FFH
@@ -140,7 +140,7 @@ QueryDOSboot:                            ;AN000;
 
 EndProc SET_CTRL_C_TRAPPING$
 
-BREAK <Get_current_PDB$ -- Set/Get PDB value>
+BREAK <GET_CURRENT_PDB$ -- Set/Get PDB value>
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
@@ -175,7 +175,7 @@ EndProc GET_CURRENT_PDB$
 ;
 Procedure Set_Printer_Flag$
 ;ASSUME DS:NOTHING, ES:NOTHING, SS:NOTHING
-        mov     [Printer_Flag],al
+        mov     [PRINTER_FLAG],al
         IRET
 EndProc Set_Printer_Flag$
 
@@ -207,18 +207,18 @@ BADCALL:
         entry   CALL_ENTRY              ; System call entry point and dispatcher
         POP     AX                      ; IP from the long call at 5
         POP     AX                      ; Segment from the long call at 5
-        POP     [User_SP]               ; IP from the CALL 5
+        POP     word [user_SP]               ; IP from the CALL 5
 ;
 ; Re order the stack to simulate an interrupt 21.
 ;
         PUSHF                           ; Start re-ordering the stack
         CLI
         PUSH    AX                      ; Save segment
-        PUSH    [User_SP]               ; Stack now ordered as if INT had been used
+        PUSH    word [user_SP]               ; Stack now ordered as if INT had been used
         CMP     CL,[MAXCALL]              ; This entry point doesn't get as many calls
         JA      BADCALL
         MOV     AH,CL
-        JMP     SHORT SavRegs
+        JMP     SHORT SAVREGS
 ;
 ; This is the normal INT 21 entry point.  We first perform a quick test to see
 ; if we need to perform expensive DOS-entry functions.  Certain system calls
@@ -228,14 +228,14 @@ BADCALL:
 entry   COMMAND                         ; Interrupt call entry point (INT 21H)
 
         if      NOT IBM
-        CMP     AH,SET_OEM_HANDLER
+        CMP     AH,Set_Oem_Handler
         JB      NOTOEM
         JMP     SET_OEM_HANDLER$
 NOTOEM:
         end if
 
         CMP     AH,[MAXCOM]
-        JA      BadCall
+        JA      BADCALL
 
 ;
 ; The following set of calls are issued by the server at *arbitrary* times
@@ -243,17 +243,17 @@ NOTOEM:
 ; interrupts off.
 ;
 SAVREGS:
-        CMP     AH,GET_CURRENT_PDB
+        CMP     AH,Get_Current_PDB
         JZ      GET_CURRENT_PDB$
         CMP     AH,GetCurrentPSP
         JZ      GET_CURRENT_PDB$
-        CMP     AH,SET_CURRENT_PDB
+        CMP     AH,Set_Current_PDB
         JZ      SET_CURRENT_PDB$
         CMP     AH,Set_CTRL_C_Trapping
         JNZ     chkprt
-        JMP     Set_CTRL_C_Trapping$
+        JMP     SET_CTRL_C_TRAPPING$
 chkprt:
-        CMP     AH,SET_PRINTER_FLAG
+        CMP     AH,Set_Printer_Flag
         JZ      Set_Printer_Flag$
 ;
 ; Preserve all user's registers on his own stack.
@@ -264,10 +264,10 @@ chkprt:
         MOV     BX,CS
         MOV     DS,BX
 ;        ASSUME  DS:DOSGROUP
-        INC     [INDOS]                 ; Flag that we're in the DOS
+        INC     byte [INDOS]                 ; Flag that we're in the DOS
         XOR     AX,AX
         MOV     [USER_ID],AX
-        MOV     AX,[CURRENTPDB]           ; current process
+        MOV     AX,[CurrentPDB]           ; current process
         MOV     [PROC_ID],AX            ; Assume local machine for the moment
 ;
 ; Provide one level of reentrancy for INT 24 recallability.
@@ -285,17 +285,17 @@ chkprt:
 ;
         MOV     DS,[CurrentPDB]
 ;ASSUME  DS:NOTHING
-        MOV     word [PDB_User_stack],SP
-        MOV     word [PDB_User_stack+2],SS
+        MOV     word [Process_data_block.PDB_User_stack],SP
+        MOV     word [Process_data_block.PDB_User_stack+2],SS
 
-        MOV     [fSharing],0              ; allow redirection
+        MOV     byte [fSharing],0              ; allow redirection
 
         MOV     BX,CS                   ; no holes here.
         MOV     SS,BX
 ;ASSUME  SS:DOSGROUP
 
 entry   REDISP
-        MOV     SP,AUXStack ; Enough stack for interrupts
+        MOV     SP,AuxStack ; Enough stack for interrupts
         STI                             ; stack is in our space now...
  if  DBCS                                       ;AN000;
         MOV     BH, byte [PDB_InterCon]  ;AN000;; get interim mode  2/13/KK
@@ -307,14 +307,14 @@ entry   REDISP
 ;; DOS 3.4 INIT
 ;       MOV     BL,[CPSWSAVE]           ;AN000;;FT. DOS 3.4
 ;       MOV     [CPSWFLAG],BL           ;AN000;;FT. DOS 3.4 in case ABORT
-        MOV     [DISK_FULL],0           ;AN000;;MS. no disk full
-        MOV     [EXTOPEN_ON],0          ;AN000;;EO. clear extended open flag
-        MOV     [DOS34_FLAG],0          ;AN000;;MS. clear common flag
-        MOV     [ACT_PAGE],-1           ;BN000;BL;AN000;;LB. invalidate active page
+        MOV     byte [DISK_FULL],0           ;AN000;;MS. no disk full
+        MOV     byte [EXTOPEN_ON],0          ;AN000;;EO. clear extended open flag
+        MOV     word [DOS34_FLAG],0          ;AN000;;MS. clear common flag
+        MOV     word [ACT_PAGE],-1           ;BN000;BL;AN000;;LB. invalidate active page
 ;; DOS 4.00 INIT
         XOR     BH,BH
         MOV     [CONSWAP],BH            ; random clean up of possibly mis-set flags
-        MOV     [IDLEINT],1             ; presume that we can issue INT 28
+        MOV     byte [IDLEINT],1             ; presume that we can issue INT 28
         MOV     byte [NoSetDir],BH  ; set directories on search
         MOV     byte [FAILERR],BH   ; FAIL not in progress
         MOV     BL,AH
@@ -342,7 +342,7 @@ entry   REDISP
 ;
         CMP     AH,12
         JA      DSKROUT
-        CMP     [ERRORMODE],0           ; Are we in an INT 24?
+        CMP     byte [ErrorMode],0           ; Are we in an INT 24?
         JNZ     DISPCALL                ; Stay on AUXSTACK if INT 24.
         MOV     SP,IOStack
         JMP     SHORT DISPCALL
@@ -357,9 +357,9 @@ entry   REDISP
 ;
 DSKROUT:
         MOV     [USER_IN_AX],AX         ; Remember what user is doing
-        MOV     [EXTERR_LOCUS],errLOC_Unk ; Default
-        MOV     [ERRORMODE],0           ; Cannot make non 1-12 calls in
-        MOV     [WPERR],-1              ; error mode, so good place to make
+        MOV     byte [EXTERR_LOCUS],errLOC_Unk ; Default
+        MOV     byte [ErrorMode],0           ; Cannot make non 1-12 calls in
+        MOV     byte [WPErr],-1              ; error mode, so good place to make
 ;
 ; Release all resource information
 ;
@@ -372,31 +372,31 @@ DSKROUT:
 ; Since we are going to be running on the DSKStack and since INT 28 people
 ; will use the DSKStack, we must turn OFF the generation of INT 28's.
 ;
-        MOV     [IdleInt],0
-        MOV     SP,DSKSTACK
-        TEST    [CNTCFLAG],-1
+        MOV     byte [IDLEINT],0
+        MOV     SP,DskStack
+        TEST    byte [CNTCFLAG],-1
         JZ      DISPCALL                ; Extra ^C checking is disabled
         PUSH    AX
         invoke  DSKSTATCHK
         POP     AX
 DISPCALL:
-        MOV     BX,[cs:Dispatch+BX]
+        MOV     BX,[cs:DISPATCH+BX]
         XCHG    BX,[SaveBX]
         MOV     DS,[SaveDS]
 
 if	BUFFERFLAG
-	mov	[cs:SETVECTFLAG], 0
+	mov	byte [cs:SETVECTFLAG], 0
 	cmp	ah, 25h
 	jne	saveuser
 	cmp	ah, 35h
 	jne	saveuser
-	mov	[cs:SETVECTFLAG], 1
+	mov	byte [cs:SETVECTFLAG], 1
 saveuser:
 	invoke	SAVE_USER_MAP		    ;AN000;LB.	save EMS map
 end if
 
 ;        ASSUME  DS:NOTHING
-        CALL    [SaveBX]
+        CALL    word [SaveBX]
 
 if	BUFFERFLAG
       invoke  RESTORE_USER_MAP            ;AN000;LB.  retsore EMS map
@@ -405,7 +405,7 @@ end if
         entry   LEAVEDOS
 ;ASSUME  SS:NOTHING                      ; User routines may misbehave
         CLI
-        DEC     [INDOS]
+        DEC     byte [INDOS]
         MOV     SS,[user_SS]
         MOV     SP,[user_SP]
         MOV     BP,SP
@@ -424,7 +424,7 @@ EndProc SYSTEM_CALL
 ;
 ;        ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
         procedure   restore_world,NEAR
-        POP     [restore_tmp]             ; POP     restore_tmp
+        POP     word [restore_tmp]             ; POP     restore_tmp
         POP     AX                      ; PUSH    ES
         POP     BX                      ; PUSH    DS
         POP     CX                      ; PUSH    BP
@@ -434,7 +434,7 @@ EndProc SYSTEM_CALL
         POP     BP                      ; PUSH    CX
         POP     DS                      ; PUSH    BX
         POP     ES                      ; PUSH    AX
-        JMP     [restore_tmp]             ; PUSH    restore_tmp
+        JMP     word [restore_tmp]             ; PUSH    restore_tmp
 EndProc restore_world
 
 ;
@@ -442,7 +442,7 @@ EndProc restore_world
 ;
 ;        ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
         procedure   save_world,NEAR
-        POP     [restore_tmp]
+        POP     word [restore_tmp]
         PUSH    ES
         PUSH    DS
         PUSH    BP
@@ -452,7 +452,7 @@ EndProc restore_world
         PUSH    CX
         PUSH    BX
         PUSH    AX
-        JMP     [restore_tmp]             ; PUSH    restore_tmp
+        JMP     word [restore_tmp]             ; PUSH    restore_tmp
 EndProc save_world
 
 if BUFFERFLAG
@@ -469,9 +469,9 @@ Break	<SAVE_USER_MAP - save map >							;AN000;
 Procedure   SAVE_USER_MAP,NEAR							 ;AN000;
 ;	ASSUME	DS:NOTHING,ES:NOTHING						;AN000;
 										;AN000;
-	CMP	[cs:BUF_EMS_MODE],-1	  ;LB. EMS support			;AN000;
+	CMP	byte [cs:BUF_EMS_MODE],-1	  ;LB. EMS support			;AN000;
 	JZ	No_user_save 		  ;LB. no				;AN000;
-	CMP	[cs:SETVECTFLAG], 1
+	CMP	byte [cs:SETVECTFLAG], 1
 	jz	No_user_save
 ;	MOV	[ACT_PAGE],-1		  ;LB. invalidate active page		;AN000;
 ;	MOV	WORD PTR [LASTBUFFER],-1  ;LB.	and last buffer pointer 	;AN000;
@@ -514,9 +514,9 @@ Break	<RESTORE_USER_MAP- retore map >						;AN000;
 Procedure   RESTORE_USER_MAP,NEAR							 ;AN000;
 ;	ASSUME	DS:NOTHING,ES:NOTHING						;AN000;
 	
-	CMP	[cs:BUF_EMS_MODE],-1	  ;LB. EMS support			;AN000;
+	CMP	byte [cs:BUF_EMS_MODE],-1	  ;LB. EMS support			;AN000;
 	JZ	No_user_restore		  ;LB. no				;AN000;
-	CMP	[cs:SETVECTFLAG], 1
+	CMP	byte [cs:SETVECTFLAG], 1
 	jz	No_user_restore
 	PUSH	AX			  ;LB. save regs			;AN000;
 	PUSH	DS			  ;LB. save regs			;AN000;
@@ -548,7 +548,7 @@ end if
 EndProc get_user_stack
 
         if      NOT IBM
-BREAK <Set_OEM_Handler -- Set OEM sys call address and handle OEM Calls>
+BREAK <Set_Oem_Handler -- Set OEM sys call address and handle OEM Calls>
 
 SET_OEM_HANDLER$:
 ;ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING

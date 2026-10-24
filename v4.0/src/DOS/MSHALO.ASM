@@ -221,14 +221,14 @@ ROM_EXEC:
 ; copy in environment info
 ;
 	MOV	AX,[ENVIRSEG]
-	MOV	[PDB_environ],AX
+	MOV	[Process_data_block.PDB_environ],AX
 ;
 ; set up correct size of block
 ;
 	POP	BX			; BX has size, DS has segment
 	MOV	DX,DS
 	ADD	DX,BX
-	MOV	[PDB_block_len],DX
+	MOV	[Process_data_block.PDB_block_len],DX
 ;
 ; change ownership of block
 ;
@@ -236,7 +236,7 @@ ROM_EXEC:
 	DEC	DX
 	MOV	DS,DX
 	INC	DX
-	MOV	[arena_owner],DX
+	MOV	[arena.arena_owner],DX
 	MOV	DS,DX
 ;
 ; set up correct stack

@@ -1,6 +1,6 @@
 ;	SCCSID = @(#)create.asm 1.6 85/08/19
-TITLE	DOS_CREATE/DOS_CREATE_NEW - Internal CREATE calls for MS-DOS
-NAME	DOS_CREATE
+TITLE	DOS_Create/DOS_Create_New - Internal CREATE calls for MS-DOS
+NAME	DOS_Create
 ; Internal Create and Create new to create a local or NET file and SFT.
 ;
 ;   DOS_CREATE
@@ -36,12 +36,12 @@ Installed = TRUE
 	i_need	THISSFT,DWORD
 	i_need	THISCDS,DWORD
 	I_need	EXTERR,WORD
-	I_Need	ExtErr_locus,BYTE
+	I_Need	EXTERR_LOCUS,BYTE
 	I_need	JShare,DWORD
 	I_need	VOLCHNG_FLAG,BYTE
 	I_need	SATTRIB,BYTE
 	I_need	CALLVIDM,DWORD
-	I_need	OpenBuf,128
+	I_need	OPENBUF,128
 	I_need	EXTOPEN_ON,BYTE 		  ;AN000; extended open
 	I_need	NAME1,BYTE			  ;AN000;
 	I_need	NO_NAME_ID,BYTE 		  ;AN000;
@@ -93,7 +93,7 @@ Create_inter:
 	JNZ	AttErr
 	TEST	AL,attr_volume_id
 	JZ	NoReset
-	OR	[DOS34_FLAG],DBCS_VOLID      ;AN000;FOR dbcs volid
+	OR	word [DOS34_FLAG],DBCS_VOLID      ;AN000;FOR dbcs volid
 	MOV	AL,attr_volume_id
 NoReset:
 	OR	AL,attr_archive ; File changed
@@ -101,7 +101,7 @@ NoReset:
 	JZ	ATT_OK
 AttErr:
 	MOV	AX,5		; Attribute problem
-	MOV	[ExtErr_locus],errLOC_Unk
+	MOV	byte [EXTERR_LOCUS],errLOC_Unk
 	JMP	SHORT SET_MKND_ERR ; Gotta use MKDIR to make dirs, NEVER allow
 				   ;	attr_device to be set.
 ATT_OK:
@@ -109,69 +109,69 @@ ATT_OK:
 	PUSH	ES
 	LES	SI,[THISCDS]
 	CMP	SI,-1
-	JNZ	TEST_RE_NET
+	JNZ	TEST_RE_NET_CREATE
 	POP	ES
 
 ;Extended open hooks
-	TEST	[EXTOPEN_ON],ext_open_on    ;AN000;EO. from extnded open
-	JZ	NOEXTOP 		    ;AN000;EO. no, do normal
-IFS_extopen:				    ;AN000;EO.
+	TEST	byte [EXTOPEN_ON],ext_open_on    ;AN000;EO. from extnded open
+	JZ	NOEXTOP_CREATE 		    ;AN000;EO. no, do normal
+IFS_extopen_CREATE:				    ;AN000;EO.
 	PUSH	AX			    ;AN000;EO. pass create attr
-	MOV	AX,(multNET SHL 8) OR 46    ;AN000;EO. issue extended open verb
+	MOV	AX,(MultNET SHL 8) OR 46    ;AN000;EO. issue extended open verb
 	INT	2FH			    ;AN000;EO.
 	POP	BX			    ;AN000;EO. trash bx
-	MOV	[EXTOPEN_ON],0		    ;AN000;EO.
+	MOV	byte [EXTOPEN_ON],0		    ;AN000;EO.
 	return				    ;AN000;EO.
-NOEXTOP:				    ;AN000;
+NOEXTOP_CREATE:				    ;AN000;
 ;Extended open hooks
 
 if NOT Installed
 	transfer NET_SEQ_CREATE
 else
 	PUSH	AX
-	MOV	AX,(multNET SHL 8) OR 24
+	MOV	AX,(MultNET SHL 8) OR 24
 	INT	2FH
 	POP	BX			; BX is trashed anyway
 	return
 end if
 
-TEST_RE_NET:
-	TEST	[es:SI+curdir_flags],curdir_isnet
+TEST_RE_NET_CREATE:
+	TEST	[es:SI+curdir_list.curdir_flags],curdir_isnet
 	POP	ES
 	JZ	LOCAL_CREATE
 
 	CALL	Set_EXT_mode		    ;AN000;EO.
 	JC	SHORT dochk		    ;AN000;EO.
-	OR	[es:DI+sf_mode],sharing_compat + open_for_both ;IFS.
+	OR	[es:DI+sf_entry.sf_mode],sharing_compat + open_for_both ;IFS.
 dochk:
  ;	invoke	IFS_SHARE_CHECK 	    ;AN000;IFS. check share
- ;	JC	nomore			    ;AN000;IFS. share violation
+ ;	JC	nomore_CREATE			    ;AN000;IFS. share violation
 
 ;Extended open hooks
-	TEST	[EXTOPEN_ON],ext_open_on    ;AN000;EO. from extnded open
-	JNZ	IFS_extopen		    ;AN000;EO. yes, issue extended open
+	TEST	byte [EXTOPEN_ON],ext_open_on    ;AN000;EO. from extnded open
+	JNZ	IFS_extopen_CREATE		    ;AN000;EO. yes, issue extended open
 ;Extended open hooks
 
 if NOT Installed
 	transfer NET_CREATE
 else
 	PUSH	AX
-	MOV	AX,(multNET SHL 8) OR 23
+	MOV	AX,(MultNET SHL 8) OR 23
 	INT	2FH
 	POP	BX			; BX is trashed anyway
-nomore:
+nomore_CREATE:
 	return
 end if
 
 LOCAL_CREATE:
 	CALL	Set_EXT_mode	       ;AN000;EO. set mode if from extended open
 	JC	setdone 	       ;AN000;EO.
-	OR	[es:DI+sf_mode],sharing_compat+open_for_both
+	OR	[es:DI+sf_entry.sf_mode],sharing_compat+open_for_both
 setdone:
 	EnterCrit   critDisk
 	invoke	MakeNode
 	JNC	Create_ok
-	mov	[VOLCHNG_FLAG],-1	; indicate no change in volume label
+	mov	byte [VOLCHNG_FLAG],-1	; indicate no change in volume label
 	LeaveCrit   critDisk
 
 	entry	SET_MKND_ERR
@@ -185,6 +185,11 @@ setdone:
 CreatBadRet:
 	STC
 	return
+
+; MASM let the table segment be opened inside the code segment and the
+; assembler sorted the pieces out; here the code segment's pass has to be
+; closed first, or the table would be laid down in the wrong one.
+end if
 
 if SEGSEL = S_TABLE
 ;Public CREAT001S,CREAT001E
@@ -200,6 +205,8 @@ CRTERRTAB:; Lookup table for MakeNode returns
 	DB	error_file_not_found	; MakeNode error 7
 CREAT001E:
 end if
+
+if SEGSEL = S_CODE
 
 ;
 ; We have just created a new file.  This results in the truncation of old
@@ -218,19 +225,19 @@ Create_ok:
 	jz	NoVolLabel
 	LES	DI,[THISCDS]
 	mov	ah,byte [es:DI]	; get drive letter
-	sub	ah,'[a]'                  ; convert to drive letter
+	sub	ah,'a'                  ; convert to drive letter
 	mov	[VOLCHNG_FLAG],ah	;Set flag to indicate volid change
 	MOV	BH,1			;AN000;>32mb set volume id to boot record
 	CALL	Set_Media_ID		;AN000;>32mb
 
-	EnterCrit CritDisk
-	invoke	FatRead_CDS		; force a media check
-	LeaveCrit CritDisk
+	EnterCrit critDisk
+	invoke	FATREAD_CDS		; force a media check
+	LeaveCrit critDisk
 NoVolLabel:
 	MOV	ax,2
-	LES	DI,[ThisSFT]
-if installed
-	call	dword [JSHARE+14*4]
+	LES	DI,[THISSFT]
+if Installed
+	call	dword [JShare+14*4]
 else
 	Call	ShSU
 end if
@@ -317,14 +324,14 @@ EndProc DOS_Create_New
 	JC	geterr		;AN000;;>32mb
 
 	OR	BH,BH		;AN000;;>32mb delete volume id
-	JZ	NoName		;AN000;>32mb yes
-	MOV	SI,Name1   ;AN000;>32mb
+	JZ	Noname		;AN000;>32mb yes
+	MOV	SI,NAME1   ;AN000;>32mb
 	JMP	SHORT doset	;AN000;>32mb yes
 Noname: 			;AN000;
 	MOV	SI,NO_NAME_ID  ;AN000;>32mb
 doset:					       ;AN000;
 	MOV	DI,DX		;AN000;;>32mb
-	ADD	DI,MEDIA_LABEL	;AN000;;>32mb
+	ADD	DI,MEDIA_ID_INFO.MEDIA_Label	;AN000;;>32mb
 	PUSH	CS		;AN000;;>32mb  move new volume id to packet
 	POP	DS		;AN000;;>32mb
 	PUSH	CS		;AN000;;>32mb
@@ -363,11 +370,11 @@ end if
 	procedure   Set_EXT_mode,NEAR	    ;AN000;
 ;	ASSUME	ES:NOTHING,DS:NOTHING	    ;AN000;
 
-	TEST	[EXTOPEN_ON],ext_open_on    ;AN000;EO. from extnded open
+	TEST	byte [EXTOPEN_ON],ext_open_on    ;AN000;EO. from extnded open
 	JZ	NOTEX			    ;AN000;EO. no, do normal
 	PUSH	AX			    ;AN000;EO.
 	MOV	AX,[SAVE_BX]		    ;AN000;EO.
-	OR	[es:DI+sf_mode],AX	    ;AN000;EO.
+	OR	[es:DI+sf_entry.sf_mode],AX	    ;AN000;EO.
 	POP	AX			    ;AN000;EO.
 	STC				    ;AN000;EO.
 NOTEX:					    ;AN000;

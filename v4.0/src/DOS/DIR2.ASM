@@ -38,23 +38,23 @@ INCLUDE '../INC/FASTOPEN.INC'		       ;DOS 3.3
 ;.cref
 ;.list
 
-asmvar	Kanji
+asmvar	KANJI
 
 	i_need	NoSetDir,BYTE
-	i_need	EntFree,WORD
-	i_need	DirStart,WORD
-	i_need	LastEnt,WORD
+	i_need	ENTFREE,WORD
+	i_need	DIRSTART,WORD
+	i_need	LASTENT,WORD
 	i_need	WFP_START,WORD
 	i_need	CURR_DIR_END,WORD
-	i_need	CurBuf,DWORD
+	i_need	CURBUF,DWORD
 	i_need	THISCDS,DWORD
-	i_need	Attrib,BYTE
-	i_need	SAttrib,BYTE
-	i_need	VolID,BYTE
-	i_need	Name1,BYTE
-	i_need	ThisDPB,DWORD
-	i_need	EntLast,WORD
-	i_need	Creating,BYTE
+	i_need	ATTRIB,BYTE
+	i_need	SATTRIB,BYTE
+	i_need	VOLID,BYTE
+	i_need	NAME1,BYTE
+	i_need	THISDPB,DWORD
+	i_need	ENTLAST,WORD
+	i_need	CREATING,BYTE
 	i_need	NULDEV,DWORD
 	i_need	DEVPT,DWORD
 	i_need	DEVFCB,BYTE
@@ -70,7 +70,7 @@ asmvar	Kanji
 	I_need	DOS34_FLAG,WORD 	  ;AN000;>32mb
 
 
-Break	<GETPATH -- PARSE A WFP>
+Break	<GETPATH -- PARSE a WFP>
 
 ; Inputs:
 ;	[WFP_START] Points to WFP string ("d:\" must be first 3 chars, NUL
@@ -134,7 +134,7 @@ Break	<GETPATH -- PARSE A WFP>
 
 ;Same as GetPath only CREATING and DELALL already set
 	entry	GetPathNoSet
-	MOV	[EXTERR_LOCUS],errLOC_Disk
+	MOV	byte [EXTERR_LOCUS],errLOC_Disk
 	MOV	word [CURBUF],-1	; initial setting
 ;
 ; See if the input indicates a device that has already been detected.  If so,
@@ -148,12 +148,12 @@ Break	<GETPATH -- PARSE A WFP>
 ;
 	ADD	DI,3
 	MOV	SI,DI			; let CHKDEV see the original name
-	CALL	CHKDEV
+	CALL	ChkDev
 	JC	InternalError
 Build_devJ:
 	MOV	AL,[SATTRIB]
 	MOV	[ATTRIB],AL
-	MOV	[EXTERR_LOCUS],errLOC_Unk ; In the particular case of
+	MOV	byte [EXTERR_LOCUS],errLOC_Unk ; In the particular case of
 					; "finding" a char device
 					; set LOCUS to Unknown. This makes
 					; certain idiotic problems reported
@@ -168,7 +168,7 @@ Build_devJ:
 ; non-space seen +1.  This position is kept in DX.
 ;
 	Context ES
-	mov	si,Name1
+	mov	si,NAME1
 	mov	di,[WFP_START]
 	mov	dx,di
 	mov	cx,8			; 8 chars in device name
@@ -176,7 +176,7 @@ MoveLoop:
 	lodsb
 	stosb
 	cmp	al," "
-	jz	nosave
+	jz	NoSave
  if  DBCS				;AN000;;
 ;	cmp	al,81h			;AN000;; 2/23/KK
 ;	jne	notKanji		;AN000;; 2/23/KK
@@ -217,12 +217,12 @@ CrackIt:
 	JNZ	LOOK_SING		; Yes, use it.
 	LEA	SI,[DI+3]		; skip D:\
 LOOK_SING:
-	Assert	ISDPB,<<WORD PTR THISDPB+2>,<WORD PTR THISDPB>>,"Crackit"
-	MOV	[ATTRIB],attr_directory+attr_system+attr_hidden
+	Assert	ISDPB,<<word [THISDPB+2]>,<word [THISDPB]>>,"Crackit"
+	MOV	byte [ATTRIB],attr_directory+attr_system+attr_hidden
 					; Attributes to search through Dirs
 	LES	DI,[THISCDS]
 	MOV	AX,-1
-	MOV	BX,[es:DI+curdir_ID]
+	MOV	BX,[es:DI+curdir_list.curdir_ID]
 	MOV	SI,[CURR_DIR_END]
 ;
 ; AX = -1
@@ -237,24 +237,24 @@ LOOK_SING:
 
 ; DOS 3.3  6/25/86
 	JZ	NO_CURR_D		; no, crack form the root
-	TEST	[FastOpenFlg],FastOpen_Set     ; for fastopen ?
+	TEST	byte [FastOpenFlg],FastOpen_Set     ; for fastopen ?
 	JZ	GOT_SEARCH_CLUSTER	       ; no
 	PUSH	ES			; save registers
 	PUSH	DI
 	PUSH	CX
-	PUSH	[SI-1]			; save \ and 1st char of next element
+	PUSH	word [SI-1]			; save \ and 1st char of next element
 	PUSH	SI
 	PUSH	BX
 
 	MOV	byte [SI-1],0	; call fastopen to look up cur dir info
-	MOV	SI,[Wfp_Start]
+	MOV	SI,[WFP_START]
 	MOV	BX,FastOpenTable
 	MOV	DI,Dir_Info_Buff
-	MOV	CX,FastOpen_Ext_info
-	MOV	AL,FONC_look_up
+	MOV	CX,FastOpen_Ext_Info
+	MOV	AL,FONC_Look_up
 	PUSH	DS
 	POP	ES
-	CALL	dword [BX+FASTOPEN_NAME_CACHING]
+	CALL	dword [BX+Fastopen_Entry.Fastopen_Name_Caching]
 	JC	GO_Chk_end1			;fastopen not installed, or wrong drive. Go to Got_Srch_cluster
 	CMP	byte [SI],0 		;fastopen has current dir info?
 	JE	GO_Chk_end			;yes. Go to got_serch_cluster
@@ -265,7 +265,7 @@ GO_Chk_end1:
 GO_Chk_end:					; restore registers
 	POP	BX
 	POP	SI
-	POP	[SI-1]
+	POP	word [SI-1]
 	POP	CX
 	POP	DI
 	POP	ES
@@ -310,16 +310,16 @@ Procedure   ChkDev,NEAR
 	MOV	ES,DI
 ;	ASSUME	ES:DOSGroup		; Now here is where ES is DOSGroup
 
-	MOV	DI,Name1
+	MOV	DI,NAME1
 	MOV	CX,9
 TESTLOOP:
-	invoke	GETLET
+	invoke	GetLet
  if  DBCS				;AN000;
-	invoke	Testkanj		;AN000;; 2/13/KK
+	invoke	TESTKANJ		;AN000;; 2/13/KK
 	jz	Notkanja		;AN000;; 2/13/KK
 	stosb				;AN000;; Skip second byte   2/13/KK
 	dec	cx			;AN000;; 2/13/KK
-	jcxz	notdev			;AN000;; 2/13/KK
+	jcxz	NOTDEV			;AN000;; 2/13/KK
 	lodsb				;AN000;; 2/13/KK
 	jmp	short stowit		;AN000;; 2/13/KK
 Notkanja:				;AN000;
@@ -347,7 +347,7 @@ TESTDEVICE:
 	return
 EndProc ChkDev
 
-Break	<ROOTPATH, FINDPATH -- PARSE A PATH>
+Break	<ROOTPATH, FINDPATH -- PARSE a path>
 
 ; Inputs:
 ;	Same as FINDPATH but,
@@ -442,12 +442,12 @@ Break	<ROOTPATH, FINDPATH -- PARSE A PATH>
 	PUSH	SI
 	MOV	DI,SI
 	MOV	CX,[DIRSTART]		; Get start clus of dir being searched
-	CMP	[CURR_DIR_END],-1
+	CMP	word [CURR_DIR_END],-1
 	JZ	NOIDS			; No current dir part
 	CMP	DI,[CURR_DIR_END]
 	JNZ	NOIDS			; Not to current dir end yet
 	LES	DI,[THISCDS]
-	MOV	[es:DI+curdir_ID],CX	; Set current directory currency
+	MOV	[es:DI+curdir_list.curdir_ID],CX	; Set current directory currency
 NOIDS:
 ;
 ; Parse the name off of DS:SI into NAME1.  AL = 1 if there was a meta
@@ -462,7 +462,7 @@ NOIDS:
 ;
 	MOV	AX,SS
 	MOV	ES,AX
-	MOV	DI,Name1
+	MOV	DI,NAME1
 	MOV	AX,'  '
 	STOSB
 	STOSW
@@ -470,7 +470,7 @@ NOIDS:
 	STOSW
 	STOSW
 	STOSW
-	MOV	DI,Name1
+	MOV	DI,NAME1
 	XOR	AH,AH			; bits for CL
  if  DBCS				;AN000;
 ;-------------------------- Start of DBC;AN000;S 2/13/KK
@@ -480,7 +480,7 @@ NOIDS:
 	JNE	GetNam2 		;AN000;;IBMJ fix 9/04/86
 	PUSH	AX			;AN000;        ;IBMJ fix 9/04/86
 	MOV	AL,0E5h 		;AN000;;IBMJ fix 9/04/86
-	Invoke	TestKanj		;AN000;;IBMJ fix 9/04/86
+	Invoke	TESTKANJ		;AN000;;IBMJ fix 9/04/86
 	POP	AX			;AN000;        ;IBMJ fix 9/04/86
 	JZ	Notkanjb		;AN000;        ;IBMJ fix 9/04/86
 	JMP	SHORT GetNam3		;AN000;;IBMJ fix 9/04/86
@@ -491,7 +491,7 @@ GetNam:
 	LODSB
  if  DBCS				;AN000;
 GetNam2:				;AN000;; 2/13/KK
-	invoke	Testkanj		;AN000;; 2/13/KK
+	invoke	TESTKANJ		;AN000;; 2/13/KK
 	jz	Notkanjb		;AN000;; 2/13/KK
 GetNam3:				;AN000;; 2/13/KK
 	STOSB				;AN000;; 2/13/KK
@@ -509,7 +509,7 @@ notvol: 				;AN000;
 Notkanjb:				;AN000;; 2/13/KK
  end if					;AN000;
 	CMP	AL,'.'
-	JZ	setExt
+	JZ	SetExt_DIR2
 	OR	AL,AL
 	JZ	GetDone
 	CMP	AL,'\'
@@ -519,12 +519,12 @@ Notkanjb:				;AN000;; 2/13/KK
 	OR	AH,1
 StoNam: STOSB
 	JMP	GetNam
-SetExt:
-	MOV	DI,Name1+8
+SetExt_DIR2:
+	MOV	DI,NAME1+8
 GetExt:
 	LODSB
  if  DBCS				;AN000;
-	invoke	TestKanj		;AN000;; 2/13/KK
+	invoke	TESTKANJ		;AN000;; 2/13/KK
 	jz	Notkanjc		;AN000;; 2/13/KK
 	STOSB				;AN000;; 2/13/KK
 	LODSB				;AN000;; 2/13/KK
@@ -569,13 +569,13 @@ NOT_LAST:
 ;
 	PUSH	ES			; Save ES:BP
 	context ES
-	invoke	DevName 		; blast BX
+	invoke	DEVNAME 		; blast BX
 	POP	ES			; Restore ES:BP
 ;	ASSUME	ES:NOTHING
 	JC	FindFile		; Not a device
 	OR	AL,AL			; Test next char again
 	JZ	GO_BDEV
-	JMP	FileInPath		; Device name in middle of path
+	JMP	FILEINPATH		; Device name in middle of path
 
 GO_BDEV:
 	POP	SI			; Points to NUL at end of path
@@ -599,7 +599,7 @@ NOE5:
 	JNC	DIR_FOUND		; found dir entry
 
 ;DOS 3.3 FastOPen 6/12/86 F.C.
-	invoke	FINDENTRY
+	invoke	FindEntry
 DIR_FOUND:
 	POP	CX
 	POP	ES
@@ -610,9 +610,9 @@ DIR_FOUND:
 LOAD_BUF:
 	LDS	DI,[CURBUF]
 ;ASSUME	DS:NOTHING
-	TEST	byte [BX+dir_attr],attr_directory
+	TEST	byte [BX+dir_entry.dir_attr],attr_directory
 	JNZ	GO_NEXT 		; DOS 3.3
-	JMP	FileInPath		; Error or end of path
+	JMP	FILEINPATH		; Error or end of path
 ;
 ; if we are not setting the directory, then check for end of string
 ;
@@ -623,15 +623,15 @@ GO_NEXT:
 	MOV	CX,DS
 	context DS
 	POP	DI			; Start of next element
-	TEST   [FastOpenFlg],FastOpen_Set     ;only DOSOPEN can take advantage of
-	JZ     nofast			      ; the FastOpen
-	TEST   [FastOpenFlg],Lookup_Success   ; Lookup just happened
-	JZ     nofast			      ; no
+	TEST   byte [FastOpenFlg],FastOpen_Set     ;only DOSOPEN can take advantage of
+	JZ     nofast_DIR2			      ; the FastOpen
+	TEST   byte [FastOpenFlg],Lookup_Success   ; Lookup just happened
+	JZ     nofast_DIR2			      ; no
 	MOV    DI,[Next_Element_Start]	      ; no need to insert it again
-nofast:
+nofast_DIR2:
 	CMP	byte [DI],0
 	JNZ	NEXT_ONE		; DOS 3.3
-	JMP	SetRet			; Got it
+	JMP	SETRET_DIR2			; Got it
 NEXT_ONE:
 	PUSH	DI			; Put start of next element back on stack
 	MOV	DI,DX
@@ -645,7 +645,7 @@ SetDir:
 
 	PUSH	DS		      ; save [curbuf+2]
 	context DS		      ; set DS Dosgroup
-	TEST	[FastOpenFlg],Lookup_Success   ;
+	TEST	byte [FastOpenFlg],Lookup_Success   ;
 	JZ	DO_NORMAL	      ; fastopen not in memory or path not
 	MOV	BX,DX		      ; not found
 	MOV	DI,[CLUSNUM]	      ; clusnum was set in LookupPath
@@ -666,16 +666,16 @@ DO_NORMAL:
 	PUSH	AX
 	PUSH	SI
 	PUSH	CX
-	PUSH	word [DI+buf_sector]     ;AN000;>32mb
-	PUSH	word [DI+buf_sector+2]   ;AN000;>32mb
+	PUSH	word [DI+BUFFINFO.buf_sector]     ;AN000;>32mb
+	PUSH	word [DI+BUFFINFO.buf_sector+2]   ;AN000;>32mb
 	MOV	BX,DX
 	context DS
 	invoke	SETDIRSRCH		; This uses UNPACK which might blow
 					; the entry sector buffer
-	POP	[HIGH_SECTOR]
+	POP	word [HIGH_SECTOR]
 	POP	DX
 	JC	SKIP_GETB
-	MOV	[ALLOWED],allowed_RETRY + allowed_FAIL
+	MOV	byte [ALLOWED],Allowed_RETRY + Allowed_FAIL
 	XOR	AL,AL
 	invoke	GETBUFFR		; Get the entry buffer back
 SKIP_GETB:
@@ -705,7 +705,7 @@ FAST_OPEN_SKIP:
 
 	MOV	AL,[DI]
 	OR	AL,AL
-	JZ	SETRET			; At end
+	JZ	SETRET_DIR2			; At end
 	INC	DI			; Skip over "/"
 	MOV	SI,DI			; Point with SI
 	invoke	PATHCHRCMP
@@ -723,9 +723,9 @@ FILEINPATH:
 	context DS			; Got to from one place with DS gone
 ; DOS 3.3 FastOpen
 
-	TEST	[FastOpenFlg],FastOpen_Set  ; do this here is we don't want to
+	TEST	byte [FastOpenFlg],FastOpen_Set  ; do this here is we don't want to
 	JZ	NO_FAST 		    ; device info to fastopen
-	TEST	[FastOpenFlg],Lookup_Success
+	TEST	byte [FastOpenFlg],Lookup_Success
 	JZ	NO_FAST
 	MOV	DI,[Next_Element_Start]  ; This takes care of one time lookup
 					 ; success
@@ -746,7 +746,7 @@ INCRET:
 
 ; DOS 3.3 FasOpen 6/12/86  F.C.
 	INC	AL			; Reset zero
-SETRET:
+SETRET_DIR2:
 	return
 
 BADPATHPOP:
@@ -761,7 +761,7 @@ BADPRET:
 	return
 EndProc ROOTPATH
 
-Break	<STARTSRCH -- INITIATE DIRECTORY SEARCH>
+Break	<StartSrch -- INITIATE DIRECTORY SEARCH>
 
 ; Inputs:
 ;	[THISDPB] Set
@@ -776,7 +776,7 @@ Break	<STARTSRCH -- INITIATE DIRECTORY SEARCH>
 	DOSAssume   CS,<DS>,"StartSrch"
 ;	ASSUME	ES:NOTHING
 
-	Assert	ISDPB,<<WORD PTR THISDPB+2>,<WORD PTR THISDPB>>,"StartSrch"
+	Assert	ISDPB,<<word [THISDPB+2]>,<word [THISDPB]>>,"StartSrch"
 	LES	BP,[THISDPB]
 	XOR	AX,AX
 	MOV	[LASTENT],AX
@@ -811,7 +811,7 @@ BREAK <MatchAttributes - the final check for attribute matching>
 	return
 EndProc MatchAttributes
 
-Break <DevName - Look for name of device>
+Break <DEVNAME - Look for name of device>
 
 ; Inputs:
 ;	DS,ES:DOSGROUP
@@ -838,21 +838,21 @@ Break <DevName - Look for name of device>
 
 ; E5 special code
 	PUSH	word [NAME1]
-	CMP	[NAME1],5
+	CMP	byte [NAME1],5
 	JNZ	NOKTR
-	MOV	[NAME1],0E5H
+	MOV	byte [NAME1],0E5H
 NOKTR:
 
-	TEST	[ATTRIB],attr_volume_id	; If looking for VOL id don't find devs
+	TEST	byte [ATTRIB],attr_volume_id	; If looking for VOL id don't find devs
 	JNZ	RET31
-	MOV	SI,NulDev
+	MOV	SI,NULDEV
 LOOKIO:
 ;ASSUME	DS:NOTHING
 	TEST	[SI+SYSDEV.SDEVATT],DEVTYP
 	JZ	SKIPDEV 		; Skip block devices (NET and LOCAL)
 	MOV	AX,SI
-	ADD	SI,SDEVNAME
-	MOV	DI,Name1
+	ADD	SI,SYSDEV.SDEVNAME
+	MOV	DI,NAME1
 	MOV	CX,4			; All devices are 8 letters
 	REPE	CMPSW			; Check for name in list
 	MOV	SI,AX
@@ -880,7 +880,7 @@ IOCHK:
 	AND	BH,NOT 020H		; Clears Carry
 	MOV	word [DEVPT],SI
 	JMP	RETNV
-EndProc DevName
+EndProc DEVNAME
 
 BREAK <Build_device_ent - Make a Directory entry>
 
@@ -921,7 +921,7 @@ BREAK <Build_device_ent - Make a Directory entry>
 ;
 	REP	STOSW			; Fill rest with zeros
 	invoke	DATE16
-	MOV	DI,DEVFCB+dir_time
+	MOV	DI,DEVFCB+dir_entry.dir_time
 	XCHG	AX,DX
 ;
 ; Fill dir_time
@@ -974,35 +974,35 @@ DIR2001S:
 DIR2001E:
 	Enter
 	MOV	Temp,DI
-	LDS	SI,[ThisCDS]
+	LDS	SI,[THISCDS]
 	MOV	SaveCDSl,SI
 	MOV	SaveCDSh,DS
 	EnterCrit   critDisk
-	TEST	[SI+curdir_flags],curdir_isnet	; Clears carry
-	JZ	DoSplice
+	TEST	[SI+curdir_list.curdir_flags],curdir_isnet	; Clears carry
+	JZ	DoSplice_DIR2
 	JMP	FatFail
-DoSplice:
+DoSplice_DIR2:
 	XOR	DL,DL
 	XCHG	DL,[NoSetDir]
 	Context ES
-	Invoke	FStrcpy
+	Invoke	FStrCpy
 	MOV	SI,Temp
 	Context DS
 	Invoke	Splice
 ;	ASSUME	DS:NOTHING
 	Context DS			;   FatReadCDS (ThisCDS);
 	MOV	[NoSetDir],DL
-	LES	DI,[ThisCDS]
+	LES	DI,[THISCDS]
 	SaveReg <BP>
-	Invoke	FatRead_CDS
+	Invoke	FATREAD_CDS
 	RestoreReg  <BP>
 	JC	FatFail
-	LDS	SI,[ThisCDS]		;   if (ThisCDS->ID == -1) {
+	LDS	SI,[THISCDS]		;   if (ThisCDS->ID == -1) {
 ;	ASSUME	DS:NOTHING
-	CMP	[SI+curdir_ID],-1
+	CMP	[SI+curdir_list.curdir_ID],-1
 	JNZ	RestoreCDS
 	Context ES
-	SaveReg <wfp_Start>		;	t = wfp_Start;
+	SaveReg <word [WFP_START]>		;	t = wfp_Start;
 	CMP	SI,SaveCDSl		; if not spliced
 	JNZ	DoChdir
 	MOV	DI,Temp
@@ -1010,29 +1010,29 @@ DoSplice:
 	Invoke	FStrCpy 		;	strcpy (d, ThisCDS->Text);
 DoChdir:
 	Context DS
-	SaveReg <word [SAttrib],BP> ;	c = DOSChDir ();
-	Invoke	DOS_ChDir
-	RestoreReg  <BP,BX,wfp_start>	;	wfp_Start = t;
+	SaveReg <word [SATTRIB],BP> ;	c = DOSChDir ();
+	Invoke	DOS_CHDIR
+	RestoreReg  <BP,BX,word [WFP_START]>	;	wfp_Start = t;
 	MOV	[SATTRIB],BL
 	LDS	SI,SaveCDS
 ;	ASSUME	DS:NOTHING
 	JNC	SetCluster		;	if (c == -1) {
-	MOV	word [ThisCDS],SI	;	    ThisCDS = TmpCDS;
-	MOV	word [ThisCDS+2],DS
+	MOV	word [THISCDS],SI	;	    ThisCDS = TmpCDS;
+	MOV	word [THISCDS+2],DS
 	XOR	CX,CX			;	    TmpCDS->text[3] = c = 0;
 	MOV	[SI+3],CL		;	    }
 SetCluster:
-	MOV	[SI+curdir_ID],-1	;	TmpCDS->ID = -1;
-	LDS	SI,[ThisCDS]		;	ThisCDS->ID = c;
-	TEST	[SI+curdir_flags],curdir_splice      ;AN000;;MS.  for Join and Subst
-	JZ	setdirclus			     ;AN000;;MS.
+	MOV	[SI+curdir_list.curdir_ID],-1	;	TmpCDS->ID = -1;
+	LDS	SI,[THISCDS]		;	ThisCDS->ID = c;
+	TEST	[SI+curdir_list.curdir_flags],curdir_splice      ;AN000;;MS.  for Join and Subst
+	JZ	setdirclus_DIR2			     ;AN000;;MS.
 	MOV	CX,-1				     ;AN000;;MS.
-setdirclus:
-	MOV	[SI+curdir_ID],CX	;	}
+setdirclus_DIR2:
+	MOV	[SI+curdir_list.curdir_ID],CX	;	}
 RestoreCDS:
 	LES	DI,SaveCDS
-	MOV	word [ThisCDS],DI
-	MOV	word [ThisCDS+2],ES
+	MOV	word [THISCDS],DI
+	MOV	word [THISCDS+2],ES
 	CLC
 FatFail:
 	LeaveCrit   critDisk
@@ -1076,19 +1076,19 @@ PathSkip:
 	OR	AL,AL
 	JZ	FoundEnd
  if  DBCS			;AN000;
-	invoke	Testkanj	;AN000;; 2/13/KK
-	jz	Notkanje	;AN000;; 2/13/KK
+	invoke	TESTKANJ	;AN000;; 2/13/KK
+	jz	NotKanje	;AN000;; 2/13/KK
 	lodsb			;AN000;; 2/13/KK
 	or	al,al		;AN000;; Skip second byte 2/13/KK  removed
 	jz	FoundEnd	;AN000;; 2/13/KK		   removed
-	jmp	Short Pathskip	;AN000;; Ignore missing second byte for now.
+	jmp	Short PathSkip	;AN000;; Ignore missing second byte for now.
 NotKanje:			;AN000;
   end if 			;AN000;
 ;kanji load of next char too	  2/13/KK
-if Kanji
- kanji load of next char too
+if KANJI
+ KANJI load of next char too
 end if
-	invoke	PathChrCmp		; is it a path char?
+	invoke	PATHCHRCMP		; is it a path char?
 	JNZ	PathSkip
 	MOV	DI,SI
 	JMP	PathSkip
@@ -1103,7 +1103,7 @@ FoundEnd:
 	STC				; simulate a Carry return from DevName
 	JNZ	SkipSearch		; no parse.  simulate a file return.
 	Context DS
-	Invoke	DevName
+	Invoke	DEVNAME
 ;	ASSUME	DS:NOTHING
 SkipSearch:
 	RestoreReg  <SI,DS>
@@ -1113,9 +1113,9 @@ SkipSearch:
 ; original value.  At this point Carry set indicates FILE.
 ;
 	RestoreReg  <DI>		; get original SI
-	JNC	CheckDone		; if device then do not reset pointer
+	JNC	CheckDone_DIR2		; if device then do not reset pointer
 	MOV	SI,DI
-CheckDone:
+CheckDone_DIR2:
 	RestoreReg  <DI>
 	CMC				; invert carry.  Carry => device
 	return
@@ -1129,7 +1129,7 @@ Procedure   CheckThisDevice,NEAR
 ; Check for presence of \dev\ (Dam multiplan!)
 ;
 	MOV	AL,[SI]
-	Invoke	PathChrCmp		; is it a path char?
+	Invoke	PATHCHRCMP		; is it a path char?
 	JNZ	ParseDev		; no, go attempt to parse device
 	INC	SI			; simulate LODSB
 ;
@@ -1144,7 +1144,7 @@ Procedure   CheckThisDevice,NEAR
 	CMP	AL,"v"                  ; Not "v", assume not device
 	JNZ	NotDevice
 	LODSB
-	invoke	PathChrCmp		; do we have the last path separator?
+	invoke	PATHCHRCMP		; do we have the last path separator?
 	JNZ	NotDevice		; no. go for it.
 ;
 ; DS:SI now points to a potential drive.  Preserve them as NameTrans advances
@@ -1157,7 +1157,7 @@ ParseDev:
 	STC				; simulate a Carry return from DevName
 	JNZ	SkipSearch		; no parse.  simulate a file return.
 	Context DS
-	Invoke	DevName
+	Invoke	DEVNAME
 ;	ASSUME	DS:NOTHING
 SkipSearch:
 	RestoreReg  <SI,DS>
@@ -1168,9 +1168,9 @@ SkipSearch:
 ;
 CheckReturn:
 	RestoreReg  <DI>		; get original SI
-	JNC	CheckDone		; if device then do not reset pointer
+	JNC	CheckDone_DIR2		; if device then do not reset pointer
 	MOV	SI,DI
-CheckDone:
+CheckDone_DIR2:
 	RestoreReg  <DI>
 	CMC				; invert carry.  Carry => device
 	return
@@ -1181,7 +1181,7 @@ end if
 
 EndProc CheckThisDevice
 
-BREAK <LookupPath - call fastopen to get dir entry info>
+BREAK <LookupPath - call fastopen to Get dir entry info>
 
 ;
 ; Output  DS:SI -> path name,
@@ -1198,26 +1198,26 @@ BREAK <LookupPath - call fastopen to get dir entry info>
 ;	ASSUME	ES:NOTHING
 
 ;	PUSH	AX
-	TEST	[FastOpenFlg],FastOpen_Set	    ; flg is set in DOSPEN
+	TEST	byte [FastOpenFlg],FastOpen_Set	    ; flg is set in DOSPEN
 	JNZ	FASTINST			    ; and this routine is
 NOLOOK:
 	JMP	NOLOOKUP			    ; executed once
 FASTINST:
-	TEST	[FastOpenFlg],No_Lookup 	    ; no more lookup?
+	TEST	byte [FastOpenFlg],No_Lookup 	    ; no more lookup?
 	JNZ	NOLOOK				    ; yes
 
 	MOV	BX,FastOpenTable    ; get fastopen related tab
-	MOV	SI,[Wfp_Start]			    ; si points to path name
+	MOV	SI,[WFP_START]			    ; si points to path name
 	MOV	DI,Dir_Info_Buff
-	MOV	CX,FastOpen_Ext_info
-	MOV	AL,FONC_look_up 		    ; al = 1
+	MOV	CX,FastOpen_Ext_Info
+	MOV	AL,FONC_Look_up 		    ; al = 1
 	PUSH	DS
 	POP	ES
-	CALL	dword [BX+FASTOPEN_NAME_CACHING] ;call fastopen
+	CALL	dword [BX+Fastopen_Entry.Fastopen_Name_Caching] ;call fastopen
 	JC	NOTFOUND			    ; fastopen not in memory
 
 	LEA	BX,[SI-2]
-	CMP	BX,[Wfp_Start]			    ; path found ?
+	CMP	BX,[WFP_START]			    ; path found ?
 	JZ	NOTFOUND			    ; no
 						    ; fully or partially found
 	CMP	byte [SI],0 		    ;AN000;FO.
@@ -1226,40 +1226,40 @@ FASTINST:
 	MOV	CL,[ATTRIB]			    ;AN000;FO.;
 	MOV	CH,[SATTRIB]			    ;AN000;FO.; attrib=sattrib
 	MOV	[ATTRIB],CH			    ;AN000;FO.;
-	MOV	CH,[es:DI+dir_attr]		    ;AN000;FO.;
-	invoke	Matchattributes 		    ;AN000;FO.;
+	MOV	CH,[es:DI+dir_entry.dir_attr]		    ;AN000;FO.;
+	invoke	MatchAttributes 		    ;AN000;FO.;
 ;;;	MOV	Attrib,CL			    ;AN001;FO.; retore attrib
 	POP	CX				    ;AN000;FO.;
 	JNZ	NOLOOKUP			    ;AN000;FO.; not matched
 parfnd:
 	MOV	[Next_Element_Start],SI 		   ; save si
 	MOV	BX,CX
-	MOV	AX,[BX+FEI_lastent]		    ;AN000;;FO. restore lastentry
+	MOV	AX,[BX+FASTOPEN_EXTENDED_INFO.FEI_lastent]		    ;AN000;;FO. restore lastentry
 	MOV	[LASTENT],AX			    ;AN000;;FO.
-	MOV	AX,[BX+FEI_dirstart]		    ;AN001;;FO. restore dirstart
+	MOV	AX,[BX+FASTOPEN_EXTENDED_INFO.FEI_dirstart]		    ;AN001;;FO. restore dirstart
 	MOV	[DIRSTART],AX			    ;AN001;;FO.
-	MOV	AX,[BX+FEI_clusnum]		    ; restore next cluster num
+	MOV	AX,[BX+FASTOPEN_EXTENDED_INFO.FEI_clusnum]		    ; restore next cluster num
 	MOV	[CLUSNUM],AX			    ;
 
 	PUSH	ES				    ; save ES
 	LES	BX,[THISDPB]			    ; put drive id
-	MOV	AH,[es:BX+dpb_drive]		    ; in AH for DOOPEN
+	MOV	AH,[es:BX+dpb.dpb_drive]		    ; in AH for DOOPEN
 	POP	ES				    ; pop ES
 
 	MOV	word [CURBUF+2],ES		    ; [curbuf+2].bx points to
 	MOV	BX,DI				    ; start of entry
-	LEA	SI,[DI+dir_first]		    ; [curbuf+2]:si points to
+	LEA	SI,[DI+dir_entry.dir_first]		    ; [curbuf+2]:si points to
 						    ; dir_first field in the
 						    ; dir entry
-	OR	[FastOpenFlg],Lookup_Success + set_for_search
+	OR	byte [FastOpenFlg],Lookup_Success + Set_For_Search
 ;	POP	AX
 	RET
 NOTFOUND:
 	CMP	AX,-1				    ; not in memory ?
 	JNZ	Partial_Success 		    ; yes, in memory
-	MOV	[FastOpenFlg],0 		    ; no more fastopen
+	MOV	byte [FastOpenFlg],0 		    ; no more fastopen
 Partial_Success:
-	AND	[FastOpenFlg],Special_Fill_Reset
+	AND	byte [FastOpenFlg],Special_Fill_Reset
 NOLOOKUP:
 ;	POP	AX
 	STC
@@ -1278,11 +1278,11 @@ BREAK <InsertPath - call fastopen to insert dir entry info>
 ;	ASSUME	ES:NOTHING
 
 	PUSHF
-	TEST   [FastOpenFlg],FastOpen_Set     ;only DOSOPEN can take advantage of
+	TEST   byte [FastOpenFlg],FastOpen_Set     ;only DOSOPEN can take advantage of
 	JZ     GET_NEXT_ELEMENT 	      ; the FastOpen
-	TEST   [FastOpenFlg],Lookup_Success   ; Lookup just happened
+	TEST   byte [FastOpenFlg],Lookup_Success   ; Lookup just happened
 	JZ     INSERT_DIR_INFO		      ; no
-	AND    [FastOpenFlg],Lookup_Reset     ; we got dir info from fastopen so
+	AND    byte [FastOpenFlg],Lookup_Reset     ; we got dir info from fastopen so
 	MOV    DI,[Next_Element_Start]	      ; no need to insert it again
 	JMP    GET_NEXT2
 INSERT_DIR_INFO:			      ; save registers
@@ -1296,18 +1296,18 @@ INSERT_DIR_INFO:			      ; save registers
 ;  int 3
 	LDS    DI,[CURBUF]		; DS:DI -> buffer header
 ;ASSUME DS:NOTHING
-	MOV    SI,FastOpen_Ext_info
-	MOV    AX,word [DI+buf_sector]  ; get directory sector
-	MOV    word [cs:SI+FEI_dirsec],AX ;AN000; >32mb save dir sector
-	MOV    AX,word [DI+buf_sector+2]  ;AN000; >32mb
+	MOV    SI,FastOpen_Ext_Info
+	MOV    AX,word [DI+BUFFINFO.buf_sector]  ; get directory sector
+	MOV    word [cs:SI+FASTOPEN_EXTENDED_INFO.FEI_dirsec],AX ;AN000; >32mb save dir sector
+	MOV    AX,word [DI+BUFFINFO.buf_sector+2]  ;AN000; >32mb
 	context DS
-	MOV    word [SI+FEI_dirsec+2],AX  ;AN000;>32mb save high dir sector
+	MOV    word [SI+FASTOPEN_EXTENDED_INFO.FEI_dirsec+2],AX  ;AN000;>32mb save high dir sector
 	MOV    AX,[CLUSNUM]		; save next cluster number
-	MOV    [SI+FEI_clusnum],AX
+	MOV    [SI+FASTOPEN_EXTENDED_INFO.FEI_clusnum],AX
 	MOV    AX,[LASTENT]		;AN000;FO. save lastentry for search first
-	MOV    [SI+FEI_lastent],AX	;AN000;FO.
+	MOV    [SI+FASTOPEN_EXTENDED_INFO.FEI_lastent],AX	;AN000;FO.
 	MOV    AX,[DIRSTART]		;AN001;FO. save  for search first
-	MOV    [SI+FEI_dirstart],AX	;AN001;FO.
+	MOV    [SI+FASTOPEN_EXTENDED_INFO.FEI_dirstart],AX	;AN001;FO.
 
 	MOV    AX,BX
 	ADD    DI,BUFINSIZ		; DS:DI -> start of data in buffer
@@ -1315,7 +1315,7 @@ INSERT_DIR_INFO:			      ; save registers
 	MOV    CL,sizeof.dir_entry
 ;invoke debug_DOS
 	DIV    CL
-	MOV    [SI+FEI_dirpos],AL	; save directory entry # in buffer
+	MOV    [SI+FASTOPEN_EXTENDED_INFO.FEI_dirpos],AL	; save directory entry # in buffer
 
 	PUSH   DS
 	POP    ES
@@ -1323,7 +1323,7 @@ INSERT_DIR_INFO:			      ; save registers
 	MOV    DS,word [CURBUF+2]
 	MOV    DI,BX			; DS:DI -> dir entry info
 ;ASSUME DS:NOTHING
-	CMP    [DI+dir_first],0	; never insert info when file is empty
+	CMP    [DI+dir_entry.dir_first],0	; never insert info when file is empty
 	JZ     SKIP_INSERT		; e.g. newly created file
 
 	PUSH   SI			; ES:BX -> extended info
@@ -1331,7 +1331,7 @@ INSERT_DIR_INFO:			      ; save registers
 
 	MOV    AL,FONC_insert		; call fastopen insert operation
 	MOV    SI,FastOpenTable
-	CALL   dword [es:SI+FASTOPEN_NAME_CACHING]
+	CALL   dword [es:SI+Fastopen_Entry.Fastopen_Name_Caching]
 
 	CLC
 SKIP_INSERT:
@@ -1343,7 +1343,7 @@ SKIP_INSERT:
 	POP    ES
 	POP    DS
 GET_NEXT2:
-	OR     [FastOpenFlg],No_Lookup	      ; we got dir info from fastopen so
+	OR     byte [FastOpenFlg],No_Lookup	      ; we got dir info from fastopen so
 GET_NEXT_ELEMENT:
 	POPF
 	RET

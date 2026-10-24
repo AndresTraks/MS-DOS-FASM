@@ -25,7 +25,7 @@ INCLUDE '../INC/DOSSYM.INC'
 ;.cref
 ;.list
 
-	I_need  User_In_AX,WORD
+	I_need  USER_IN_AX,WORD
 	i_need  CurrentPDB,WORD
 if debug
 	I_need  BugLev,WORD
@@ -44,13 +44,13 @@ Break   <Critical section handlers>
 Procedure   EcritDisk,NEAR
 ;	public  EcritMem
 ;	public  EcritSFT
-ECritMEM:
-ECritSFT:
+EcritMem:
+EcritSFT:
 	RET
 ;       PUSH    AX
 	fmt     TypSect,LevReq,<"PDB x$ entering x$">,<CurrentPDB,sect>
 	MOV     AX,8000h+critDisk
-	INT     int_ibm
+	INT     int_IBM
 	POP     AX
 	return
 EndProc EcritDisk
@@ -58,13 +58,13 @@ EndProc EcritDisk
 Procedure   LcritDisk,NEAR
 ;	public  LcritMem
 ;	public  LcritSFT
-LCritMEM:
-LCritSFT:
+LcritMem:
+LcritSFT:
 	RET
 ;       PUSH    AX
 	fmt     TypSect,LevReq,<"PDB x$ entering x$">,<CurrentPDB,sect>
 	MOV     AX,8100h+critDisk
-	INT     int_ibm
+	INT     int_IBM
 	POP     AX
 	return
 EndProc LcritDisk
@@ -74,7 +74,7 @@ Procedure   EcritDevice,NEAR
 ;       PUSH    AX
 	fmt     TypSect,LevReq,<"PDB x$ entering x$">,<CurrentPDB,sect>
 	MOV     AX,8000h+critDevice
-	INT     int_ibm
+	INT     int_IBM
 	POP     AX
 	return
 EndProc EcritDevice
@@ -83,7 +83,7 @@ Procedure   LcritDevice,NEAR
 	RET
 ;       PUSH    AX
 	MOV     AX,8100h+critDevice
-	INT     int_ibm
+	INT     int_IBM
 	POP     AX
 	return
 EndProc LcritDevice

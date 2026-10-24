@@ -7,25 +7,25 @@ INCLUDE '../INC/SYSVAR.INC'
 INCLUDE '../INC/DOSCNTRY.INC'
 INCLUDE '../INC/FASTOPEN.INC'
 
-	I_need	DMAAdd,DWORD		; current dma address
-	I_need	DPBHead,DWORD		; long pointer to DPB chain
-	I_need	SFT_Addr,DWORD		; pointer to open file list
-	I_need	NumIO,BYTE		; number of physical drives
-	I_need	BuffHead,DWORD		; pointer to buffer chain
+	I_need	DMAADD,DWORD		; current dma address
+	I_need	DPBHEAD,DWORD		; long pointer to DPB chain
+	I_need	sft_addr,DWORD		; pointer to open file list
+	I_need	NUMIO,BYTE		; number of physical drives
+	I_need	BUFFHEAD,DWORD		; pointer to buffer chain
 	I_need	EndMem,WORD		; first unavailable address in memory
 	I_need	CurrentPDB,WORD 	; current process ID
 	I_need	CreatePDB,BYTE		; TRUE => create a new PDB
-	I_need	Arena_Head,WORD 	; paragraph address of head of arena
-	I_need	sfTabl,BYTE		; internal file table
-	I_need	SysInitVar,BYTE 	; label for internal structures
-	I_need	NulDev,DWORD		; long pointer to device chain
-	I_need	BCon,DWORD		; pointer to console device
-	I_need	BClock,DWORD		; pointer to clock device
-	I_need	CallUnit,BYTE		; unit field in dd packet
-	I_need	CallBPB,DWORD		; returned BPB from DD
-	I_need	Maxsec,WORD
-	I_need	Dskchret,BYTE
-	I_need	Devcall,BYTE
+	I_need	arena_head,WORD 	; paragraph address of head of arena
+	I_need	sftabl,BYTE		; internal file table
+	I_need	SYSINITVAR,BYTE 	; label for internal structures
+	I_need	NULDEV,DWORD		; long pointer to device chain
+	I_need	BCON,DWORD		; pointer to console device
+	I_need	BCLOCK,DWORD		; pointer to clock device
+	I_need	CALLUNIT,BYTE		; unit field in dd packet
+	I_need	CALLBPB,DWORD		; returned BPB from DD
+	I_need	MAXSEC,WORD
+	I_need	DSKCHRET,BYTE
+	I_need	DEVCALL,BYTE
 	i_need	Header,BYTE
 	I_need	JShare,DWORD
 	I_need	COUNTRY_CDPG,BYTE	 ; country info table, DOS 3.3
@@ -43,7 +43,7 @@ INCLUDE '../INC/FASTOPEN.INC'
 	I_need	SWAP_IN_DOS_LEN,WORD	 ; swap in dos area length  ;AN000;
 	I_need	SWAP_AREA_LEN,WORD	 ; swap area length	    ;AN000;
 	I_need	SWAP_START,BYTE 	 ; swap start addr	    ;AN000;
-	I_need	SWAP_ALWAYS,BYTE	 ; swap always addr	    ;AN000;
+	I_need	Swap_Always,BYTE	 ; swap always addr	    ;AN000;
 	I_need	Hash_Temp,WORD		 ; temporary Hash table     ;AN000;
 
 if SEGSEL = S_CODE
@@ -80,12 +80,12 @@ MOVDPB:
 	MOV	CL,[NUMIO]	; Number of DPBs
 	XOR	CH,CH
 SETFINDPB:
-	MOV	word [es:SI+dpb_next_dpb+2],ES
-	MOV	[es:SI+dpb_first_access],-1	 ; Never accessed before
+	MOV	word [es:SI+dpb.dpb_next_dpb+2],ES
+	MOV	[es:SI+dpb.dpb_first_access],-1	 ; Never accessed before
 	ADD	SI,DPBSIZ	; Point to next DPB
 	LOOP	SETFINDPB
 	SUB	SI,DPBSIZ
-	MOV	word [es:SI+dpb_next_dpb+2],-1
+	MOV	word [es:SI+dpb.dpb_next_dpb+2],-1
 
 ;;	PUSH	ES
 ;;	MOV	DI,OFFSET DOSGroup:SYSBUF + 0Fh
@@ -112,7 +112,7 @@ SETFINDPB:
 ;;	POP	ES
 	MOV	SI,Version_Fake_Table ;MS.;AN007;move special
 	MOV	DI,[es:Special_Entries] 	      ;MS.;AN007;entries
-	MOV	CX,[es:Temp_Var]		      ;MS.;AN007;
+	MOV	CX,[es:TEMP_VAR]		      ;MS.;AN007;
 	REP	MOVSB				      ;MS.;AN007;
 
 ;	ASSUME	ES:DOSGroup
@@ -140,15 +140,15 @@ SETFINDPB:
 	MOV	[es:arena_head],AX
 	PUSH	DS
 	MOV	DS,AX
-	MOV	[arena_signature],arena_signature_end
-	MOV	[arena_owner],arena_owner_system
-	SUB	AX,[es:ENDMEM]
+	MOV	[arena.arena_signature],arena_signature_end
+	MOV	[arena.arena_owner],arena_owner_system
+	SUB	AX,[es:EndMem]
 	NEG	AX
 	DEC	AX
-	MOV	[arena_size],AX
+	MOV	[arena.arena_size],AX
 	POP	DS
 
-	MOV	DI,sftabl+SFTable   ; Point to sft 0
+	MOV	DI,sftabl+SF.SFTable   ; Point to sft 0
 	MOV	AX,3
 	STOSW		; Adjust Refcount
 	MOV	DI,SysInitTable
@@ -182,7 +182,7 @@ INITIRET:			; Temp IRET instruction
 	entry	DOSINIT
 	CLI
 	CLD
-	MOV	[ENDMEM],DX
+	MOV	[EndMem],DX
 	MOV	[INITSP],SP
 	MOV	[INITSS],SS
 	MOV	AX,CS
@@ -206,40 +206,40 @@ INITIRET:			; Temp IRET instruction
 	PUSH	CS
 	POP	ES
 ;	ASSUME	ES:DOSGROUP
-	MOV	DI,sftabl+SFTable   ; Point to sft 0
+	MOV	DI,sftabl+SF.SFTable   ; Point to sft 0
 	MOV	AX,3
 	STOSW		; Refcount
 	DEC	AL
-	errnz	sf_mode-(sf_ref_count+2)
+	errnz	sf_entry.sf_mode-(sf_entry.sf_ref_count+2)
 	STOSW		; Access rd/wr, compatibility
 	XOR	AL,AL
-	errnz	sf_attr-(sf_mode+2)
+	errnz	sf_entry.sf_attr-(sf_entry.sf_mode+2)
 	STOSB		; attribute
 	MOV	AL,devid_device_EOF OR devid_device OR ISCIN OR ISCOUT
-	errnz	sf_flags-(sf_attr+1)
+	errnz	sf_entry.sf_flags-(sf_entry.sf_attr+1)
 	STOSW		; Flags
 	MOV	AX,SI
-	errnz	sf_devptr-(sf_flags+2)
+	errnz	sf_entry.sf_devptr-(sf_entry.sf_flags+2)
 	STOSW			; Device pointer in devptr
 	MOV	AX,DS
 	STOSW
 	XOR	AX,AX
-	errnz	sf_firclus-(sf_devptr+4)
+	errnz	sf_entry.sf_firclus-(sf_entry.sf_devptr+4)
 	STOSW			; firclus
-	errnz	sf_time-(sf_firclus+2)
+	errnz	sf_entry.sf_time-(sf_entry.sf_firclus+2)
 	STOSW			; time
-	errnz	sf_date-(sf_time+2)
+	errnz	sf_entry.sf_date-(sf_entry.sf_time+2)
 	STOSW			; date
 	DEC	AX
-	errnz	sf_size-(sf_date+2)
+	errnz	sf_entry.sf_size-(sf_entry.sf_date+2)
 	STOSW			; size
 	STOSW
 	INC	AX
-	errnz	sf_position-(sf_size+4)
+	errnz	sf_entry.sf_position-(sf_entry.sf_size+4)
 	STOSW			; position
 	STOSW
-	ADD	DI,sf_name - sf_cluspos ;Point at name
-	ADD	SI,SDEVNAME		; Point to name
+	ADD	DI,sf_entry.sf_name - sf_entry.sf_cluspos ;Point at name
+	ADD	SI,SYSDEV.SDEVNAME		; Point to name
 	MOV	CX,4
 	REP	MOVSW	; Name
 	MOV	CL,3
@@ -277,13 +277,13 @@ PERUNIT:
 	MOV	SI,[BX] 		; DS:SI Points to BPB
 	INC	BX
 	INC	BX			; On to next BPB
-	MOV	[es:BP+dpb_drive],DL
-	MOV	[es:BP+dpb_UNIT],DH
+	MOV	[es:BP+dpb.dpb_drive],DL
+	MOV	[es:BP+dpb.dpb_UNIT],DH
 	PUSH	BX
 	PUSH	CX
 	PUSH	DX
 	invoke	SETDPB$
-	MOV	AX,[es:BP+dpb_sector_size]
+	MOV	AX,[es:BP+dpb.dpb_sector_size]
 	CMP	AX,[MAXSEC]
 	JBE	NOTMAX
 	MOV	[MAXSEC],AX
@@ -295,8 +295,8 @@ NOTMAX:
 	MOV	AX,DS			; Save DS
 	POP	SI
 	POP	DS
-	MOV	word [es:BP+dpb_driver_addr],SI
-	MOV	word [es:BP+dpb_driver_addr+2],DS
+	MOV	word [es:BP+dpb.dpb_driver_addr],SI
+	MOV	word [es:BP+dpb.dpb_driver_addr+2],DS
 	PUSH	DS
 	PUSH	SI
 	INC	DH
@@ -339,7 +339,7 @@ CONTINIT:
 	SUB	BP,ADJFAC		; True address of free memory
 	PUSH	BP
 	MOV	DI,MEMSTRT    ; Current start of DPBs
-	ADD	DI,dpb_next_dpb 	; Point at dpb_next_dpb field
+	ADD	DI,dpb.dpb_next_dpb 	; Point at dpb_next_dpb field
 	MOV	CL,[NUMIO]
 	XOR	CH,CH
 TRUEDPBAD:
@@ -355,16 +355,16 @@ TRUEDPBAD:
 	MOV	SI,Version_Fake_Table	;MS.;AN007
 	MOV	DX,SI		     ;MS.;AN007
 	XOR	AH,AH		     ;MS.;AN007
-NextEntry:			     ;MS.;AN007
+NextEntry_MSINIT:			     ;MS.;AN007
 	LODSB			     ;MS.;AN007  get name length
 	OR	AL,AL		     ;MS.;AN007  end of list
 	JZ	endlist 	     ;MS.;AN007  yes
 	ADD	SI,AX		     ;MS.;AN007  position to
 	ADD	SI,3		     ;MS.;AN007  next entry
-	JMP	NextEntry	     ;MS.;AN007
+	JMP	NextEntry_MSINIT	     ;MS.;AN007
 endlist:			     ;MS.;AN007
 	SUB	SI,DX		     ;MS.;AN007
-	MOV	[Temp_Var],SI	     ;MS.;AN007  si = total table length
+	MOV	[TEMP_VAR],SI	     ;MS.;AN007  si = total table length
 	ADD	BP,SI		     ;MS.;AN007
 
 
@@ -376,7 +376,7 @@ endlist:			     ;MS.;AN007
 	MOV	DX,CS
 	ADD	DX,BP		; First free segment
 	MOV	BX,0FH
-	MOV	CX,[ENDMEM]
+	MOV	CX,[EndMem]
 
 	if	HIGHMEM
 	SUB	CX,BP
@@ -391,7 +391,7 @@ endlist:			     ;MS.;AN007
 ; BP has segment of DOS (whether to load high or run in place)
 ; DX has program segment (whether after DOS or overlaying DOS)
 ; CX has size of memory in paragraphs (reduced by DOS size if HIGHMEM)
-	MOV	[ENDMEM],CX
+	MOV	[EndMem],CX
 	MOV	ES,BP
 ;ASSUME	ES:DOSGROUP
 
@@ -451,7 +451,7 @@ ISET2:
 
 	MOV	AX,BP		; Final DOS segment to AX
 
-if installed
+if Installed
 ; the following two are in the Code segment, thus the CS
 ; overrides
 	MOV	word [02FH * 4],INT2F
@@ -485,7 +485,7 @@ end if
 ;
 ; Initialize the jump table for the sharer...
 ;
-	MOV	DI,JSHARE
+	MOV	DI,JShare
 	MOV	AX,CS
 	MOV	CX,15
 JumpTabLoop:
@@ -503,7 +503,7 @@ JumpTabLoop:
 	MOV	[CurrentPDB],DI
 	PUSH	BP
 	PUSH	DX		; Save COMMAND address
-	MOV	AX,[ENDMEM]
+	MOV	AX,[EndMem]
 	MOV	DX,DI
 
 	invoke	SETMEM		; Basic Header
@@ -511,7 +511,7 @@ JumpTabLoop:
 	PUSH	CS
 	POP	DS
 ;ASSUME	DS:DOSGROUP
-	MOV	DI,PDB_JFN_Table
+	MOV	DI,Process_data_block.PDB_JFN_Table
 	XOR	AX,AX
 	STOSW
 	STOSB			; 0,1 and 2 are CON device
@@ -526,7 +526,7 @@ JumpTabLoop:
 ; After this points the char device functions for CON will work for
 ; printing messages
 
-	if	(NOT IBM) OR (DEBUG)
+	if	(NOT IBM) OR (debug)
 	if	NOT ALTVECT
 	MOV	SI,Header
 OUTMES:
@@ -546,16 +546,16 @@ OUTDONE:
 ;F.C Modification start  DOS 3.3
 	MOV	SI,COUNTRY_CDPG  ;F.C. for DOS 3.3 country info
 						 ; table address
-	MOV	word [es:SI+ccUcase_ptr + 2],ES    ; initialize double word
-	MOV	word [es:SI+ccFileUcase_ptr + 2],ES ; pointers with DOSGROUP
-	MOV	word [es:SI+ccFileChar_ptr + 2],ES
-	MOV	word [es:SI+ccCollate_ptr + 2],ES
-	MOV	word [es:SI+ccMono_ptr + 2],ES
-	MOV	word [es:SI+ccDBCS_ptr + 2],ES	; 2/16/KK
+	MOV	word [es:SI+DOS_country_cdpg_info.ccUcase_ptr + 2],ES    ; initialize double word
+	MOV	word [es:SI+DOS_country_cdpg_info.ccFileUcase_ptr + 2],ES ; pointers with DOSGROUP
+	MOV	word [es:SI+DOS_country_cdpg_info.ccFileChar_ptr + 2],ES
+	MOV	word [es:SI+DOS_country_cdpg_info.ccCollate_ptr + 2],ES
+	MOV	word [es:SI+DOS_country_cdpg_info.ccMono_Ptr + 2],ES
+	MOV	word [es:SI+DOS_country_cdpg_info.ccDBCS_ptr + 2],ES	; 2/16/KK
 
 	MOV	SI,SysInitTable
-	MOV	word [es:SI+SYSI_Country_Tab + 2],ES
-	MOV	word [es:SI+SYSI_InitVars + 2],ES
+	MOV	word [es:SI+SysInitVars_Ext.SYSI_Country_Tab + 2],ES
+	MOV	word [es:SI+SysInitVars_Ext.SYSI_InitVars + 2],ES
 
 	MOV	word [es:BUFFHEAD+2],ES	  ;LB. DOS 4.00 buffer head pointer ;AN000;
 	MOV	SI,HASHINITVAR	  ;LB. points to Hashinitvar	   ;AN000;
@@ -565,8 +565,8 @@ OUTDONE:
 	MOV	word [es:BUF_HASH_PTR],SI	  ;LB.				   ;AN000;
 
 	MOV	SI,FastOpenTable
-	MOV	word [es:SI+FASTOPEN_NAME_CACHING + 2],ES
-	MOV	[es:FETCHI_TAG],22642	  ; TAG for IBM,
+	MOV	word [es:SI+Fastopen_Entry.Fastopen_Name_Caching + 2],ES
+	MOV	word [es:FETCHI_TAG],22642	  ; TAG for IBM,
 					  ; Fetchi's serial # = 822642
 	MOV	word [es:IFS_DOS_CALL+2],ES   ;IFS. 			;AN000;
 	MOV	SI,IFS_DOSCALL	  ;IFS. 			;AN000;
@@ -574,7 +574,7 @@ OUTDONE:
 
 	MOV	DI,SWAP_START	  ;IFS. 			;AN000;
 	MOV	CX,SWAP_END	  ;IFS. 			;AN000;
-	MOV	DX,SWAP_ALWAYS	  ;IFS. 			;AN000;
+	MOV	DX,Swap_Always	  ;IFS. 			;AN000;
 	MOV	BP,CX			;IFS.					;AN000;
 	SUB	BP,DI			;IFS.					;AN000;
 	SHR	BP,1			;IFS. div by 2, remainder in carry	;AN000;
@@ -592,7 +592,7 @@ OUTDONE:
 	MOV	word [es:SWAP_ALWAYS_AREA+2],ES ;IFS.			;AN000;
 	OR	DX,8000H			    ;IFS.			;AN000;
 	MOV	[es:SWAP_ALWAYS_AREA_LEN],DX	    ;IFS.			;AN000;
-	MOV	DI,SWAP_ALWAYS	    ;IFS.			;AN000;
+	MOV	DI,Swap_Always	    ;IFS.			;AN000;
 	MOV	word [es:SWAP_IN_DOS],DI	    ;IFS.			;AN000;
 	MOV	word [es:SWAP_IN_DOS+2],ES	    ;IFS.			;AN000;
 
@@ -629,7 +629,7 @@ CHARINIT:
 	PUSH	ES
 	PUSH	BX
 	PUSH	AX
-	MOV	BX,Devcall
+	MOV	BX,DEVCALL
 	PUSH	CS
 	POP	ES
 	invoke	DEVIOCALL2

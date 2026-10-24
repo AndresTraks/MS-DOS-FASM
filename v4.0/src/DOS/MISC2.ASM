@@ -36,6 +36,27 @@ NAME  MISC2
 ;
 INCLUDE '../INC/DOSSEG.ASM'
 
+; The structure is laid out here, before the segment's own pass: the layout
+; is read once however many times the module is, and inside a pass that the
+; first reading skips it would never be read at all.
+STRUC TableFrame
+{
+.OldBP	DW  0
+.OldRet	DW  0
+.Index	DB  0
+.Pad	DB  0
+.TAB	DW  0
+.NewRet	DW  0
+}
+match =TableFrame_LAID_OUT, TableFrame_LAID_OUT
+{
+    TableFrame_LAID_OUT equ 1
+    virtual at 0
+      TableFrame TableFrame
+      sizeof.TableFrame = $ - TableFrame
+    end virtual
+}
+
 if SEGSEL = S_CODE
 ;	ASSUME	SS:DOSGROUP,CS:DOSGROUP
 
@@ -51,21 +72,21 @@ INCLUDE '../INC/FASTXXXX.INC'		       ;AN000;
 	I_need	fSharing,BYTE		; TRUE => server-issued call
 	I_need	FastTable,BYTE		;AN000;
 	I_need	FastFlg,BYTE		;AN000;
-	I_need	User_SP_2F,WORD 	;AN000;
-	I_need	User_SP,WORD		;AN000;
-	I_need	User_SS,WORD		;AN000;
+	I_need	USER_SP_2F,WORD 	;AN000;
+	I_need	user_SP,WORD		;AN000;
+	I_need	user_SS,WORD		;AN000;
 	I_need	SysInitTable,BYTE	;AN000;
 	I_need	EXTERR,WORD		;AN000;
 	I_need	MSG_EXTERROR,DWORD	;AN000;
-	I_need	fshare,byte		;AN001;
-	I_need	Special_version,WORD	;AN006;
+	I_need	fShare,byte		;AN001;
+	I_need	SPECIAL_VERSION,WORD	;AN006;
 if debug
 	I_need	BugLev,WORD
 	I_need	BugTyp,WORD
 INCLUDE '../INC/BUGTYP.ASM'
 end if
 
-Break <STRCMP - compare two ASCIZ strings DS:SI to ES:DI>
+Break <StrCmp - compare two ASCIZ strings DS:SI to ES:DI>
 
 ;
 ;   Strcmp - compare ASCIZ DS:SI to ES:DI. Case INSENSITIVE. '/' = '\'
@@ -80,8 +101,8 @@ Procedure   StrCmp,NEAR
 Cmplp:
 	LODSB
  if  DBCS				;AN000;
-	invoke	testkanj		;AN000;; 2/13/KK
-	jz	notkanj1		;AN000;; 2/13/KK
+	invoke	TESTKANJ		;AN000;; 2/13/KK
+	jz	notkanj1_MISC2		;AN000;; 2/13/KK
 	dec	si			;AN000;; Do source again 2/13/KK
 	cmpsb				;AN000;; First byte	 2/13/KK
 	JNZ	PopRet			;AN000;; Strings dif	 2/13/KK
@@ -89,15 +110,15 @@ Cmplp:
 	JNZ	PopRet			;AN000;; Strings dif	 2/13/KK
 	mov	al,byte [SI-1]	;AN000;; Need last byte in AL  2/13/KK
 	jmp	short Tend		;AN000;
-notkanj1:				;AN000;; 2/13/KK
+notkanj1_MISC2:				;AN000;; 2/13/KK
  end if					;AN000;
 	CALL	uCase			; convert to upper case
-	Invoke	PathChrCmp		; convert / to \
+	Invoke	PATHCHRCMP		; convert / to \
 	MOV	AH,AL
 	MOV	AL,[es:DI]
 	INC	DI
 	CALL	uCase			; convert to upper case
-	Invoke	PathChrCmp		; convert / to \
+	Invoke	PATHCHRCMP		; convert / to \
 	CMP	AH,AL
 	JNZ	PopRet			; Strings dif
 Tend:
@@ -108,7 +129,7 @@ PopRet:
 	return
 EndProc StrCmp
 
-Break <STRCPY - copy ASCIZ string from DS:SI to ES:DI>
+Break <StrCpy - copy ASCIZ string from DS:SI to ES:DI>
 
 ;
 ;   Strcpy - copy an ASCIZ string from DS:SI to ES:DI and make uppercase
@@ -127,17 +148,17 @@ Procedure   StrCpy,NEAR
 CPYLoop:
 	LODSB
  if  DBCS			;AN000;
-	invoke	testkanj	;AN000;; 2/13/KK
-	jz	notkanj2	;AN000;; 2/13/KK
+	invoke	TESTKANJ	;AN000;; 2/13/KK
+	jz	notkanj2_MISC2	;AN000;; 2/13/KK
 	STOSB			;AN000;; 2/13/KK
 	LODSB			;AN000;; 2/13/KK
 	STOSB			;AN000;; 2/13/KK
 	jmp	short CPYLoop	;AN000;; 3/31/KK
 
-notkanj2:			;AN000;; 2/13/KK
+notkanj2_MISC2:			;AN000;; 2/13/KK
  end if				;AN000;
 	CALL	uCase			; convert to upper case
-	Invoke	PathChrCmp		; convert / to \
+	Invoke	PATHCHRCMP		; convert / to \
 	STOSB
 Tend2:
 	OR	AL,AL
@@ -230,7 +251,7 @@ Break	<Idle - wait for a specified amount of time>
 
 Procedure   Idle,NEAR
 ;	ASSUME	CS:DOSGroup,SS:DOSGROUP,DS:NOTHING,ES:NOTHING
-	TEST	[fSharing],-1
+	TEST	byte [fSharing],-1
 	retnz
 	SaveReg <CX>
 	MOV	CX,[RetryLoop]
@@ -244,7 +265,7 @@ Idle3:	RestoreReg  <CX>
 	return
 EndProc Idle
 
-Break	<TableDispatch - dispatch to a table>
+Break	<TableDispatch - DISPATCH to a table>
 
 ;
 ;   TableDispatch - given a table and an index, jmp to the approptiate
@@ -257,30 +278,13 @@ Break	<TableDispatch - dispatch to a table>
 ;		return indicates invalid index
 ;   Registers modified: none.
 
-STRUC TableFrame
-{
-.OldBP	DW  0
-.OldRet	DW  0
-.Index	DB  0
-.Pad	DB  0
-.Tab	DW  0
-.NewRet	DW  0
-}
-match =TableFrame_LAID_OUT, TableFrame_LAID_OUT
-{
-    TableFrame_LAID_OUT equ 1
-    virtual at 0
-      TableFrame TableFrame
-      sizeof.TableFrame = $ - TableFrame
-    end virtual
-}
 
 procedure   TableDispatch,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,SS:NOTHING,SS:NOTHING
 	PUSH	BP
 	MOV	BP,SP
 	PUSH	BX			; save BX
-	MOV	BX,[BP+TableFrame.Tab]		; get pointer to table
+	MOV	BX,[BP+TableFrame.TAB]		; get pointer to table
 	MOV	BL,[cs:BX]		; maximum index
 	CMP	[BP+TableFrame.Index],BL		; table error?
 	JAE	TableError		; yes
@@ -288,9 +292,9 @@ procedure   TableDispatch,NEAR
 	XOR	BH,BH			; convert to word
 	SHL	BX,1			; convert to word pointer
 	INC	BX			; point past first length byte
-	ADD	BX,[BP+TableFrame.Tab]		; get real offset
+	ADD	BX,[BP+TableFrame.TAB]		; get real offset
 	MOV	BX,[cs:BX]		; get contents of table entry
-	MOV	[BP+TableFrame.Tab],BX		; put table entry into return address
+	MOV	[BP+TableFrame.TAB],BX		; put table entry into return address
 	POP	BX			; restore BX
 	POP	BP			; restore BP
 	ADD	SP,4			; clean off Index and our return addr
@@ -318,8 +322,8 @@ Procedure   TestNet,NEAR
 	LES	DI,[THISCDS]
 	CMP	DI,-1
 	JZ	CMCRet			; UNC? carry is clear
-	TEST	[es:DI+curdir_flags],curdir_isnet
-	JNZ	CMCret			; jump has carry clear
+	TEST	[es:DI+curdir_list.curdir_flags],curdir_isnet
+	JNZ	CMCRet			; jump has carry clear
 	return				; carry is clear
 CMCRet: CMC
 	return
@@ -340,7 +344,7 @@ Break	<IsSFTNet - see if an sft is for the network>
 
 Procedure   IsSFTNet,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
-	TEST	[es:DI+sf_flags],sf_isnet
+	TEST	[es:DI+sf_entry.sf_flags],sf_isnet
 	return
 EndProc IsSFTNet
 
@@ -408,7 +412,7 @@ Procedure   FastRet,FAR
 	RET
 EndProc FastRet
 
-Break	<NLS_OPEN - do open$ for NLSFUNC   >
+Break	<NLS_OPEN - do Open$ for NLSFUNC   >
 
 ;   DOS 3.3   6/10/86
 ;   NLS_OPEN	- call $OPEN for NLSFUNC
@@ -425,7 +429,7 @@ Procedure   NLS_OPEN,NEAR
 ;	PUSH	BX		 ; save current state
 
 	MOV	AL,CL		 ; set up correct interface for $OPEN
-	invoke	OPEN$
+	invoke	Open$
 
  ;	POP	BX		 ; restore current state
  ;	MOV	[CPSWFLAG],BL
@@ -444,13 +448,13 @@ Break	<NLS_LSEEK - do LSEEK$ for NLSFUNC   >
 Procedure   NLS_LSEEK,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
-	PUSH	[user_SP]	 ; save user stack
-	PUSH	[user_SS]
+	PUSH	word [user_SP]	 ; save user stack
+	PUSH	word [user_SS]
 	CALL	Fake_User_Stack
 	MOV	AX,BP	     ; set up correct interface for $LSEEK
 	invoke	LSEEK$
-	POP	[user_SS]	 ; restore user stack
-	POP	[user_SP]
+	POP	word [user_SS]	 ; restore user stack
+	POP	word [user_SP]
 	RET
 EndProc NLS_LSEEK
 
@@ -465,7 +469,7 @@ Break	<Fake_User_Stack - save uesr stack >
 Procedure   Fake_User_Stack,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
-	MOV	AX,[User_SP_2F] 	      ; replace with INT 2F stack
+	MOV	AX,[USER_SP_2F] 	      ; replace with INT 2F stack
 	MOV	[user_SP],AX
 
 	MOV	AX,CS
@@ -475,7 +479,7 @@ Procedure   Fake_User_Stack,NEAR
 EndProc Fake_User_Stack
 
 ;
-Break	<GetDevList - get device header list pointer>
+Break	<GetDevList - Get device Header list pointer>
 
 
 ;   DOS 3.3   7/25/86
@@ -487,10 +491,10 @@ Procedure   GetDevList,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGROUP
 
 	MOV	SI,[SysInitTable]
-	LDS	SI,[cs:SI+SYSI_InitVars]
+	LDS	SI,[cs:SI+SysInitVars_Ext.SYSI_InitVars]
 
-	MOV	AX,word [SI+SYSI_DEV]
-	MOV	BX,word [SI+SYSI_DEV+2]
+	MOV	AX,word [SI+SysInitVars.SYSI_DEV]
+	MOV	BX,word [SI+SysInitVars.SYSI_DEV+2]
 
 	RET
 EndProc GetDevList
@@ -507,17 +511,17 @@ Break	<NLS_IOCTL - do IOCTL$ for NLSFUNC   >
 Procedure   NLS_IOCTL,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
-	PUSH	[user_SP]	 ; save user stack
-	PUSH	[user_SS]
+	PUSH	word [user_SP]	 ; save user stack
+	PUSH	word [user_SS]
 	CALL	Fake_User_Stack
 	MOV	AX,BP	     ; set up correct interface for $LSEEK
 	invoke	IOCTL$
-	POP	[user_SS]	 ; restore user stack
-	POP	[user_SP]
+	POP	word [user_SS]	 ; restore user stack
+	POP	word [user_SP]
 	RET
 EndProc NLS_IOCTL
 
-Break	<NLS_GETEXT- get extended error for NLSFUNC>
+Break	<NLS_GETEXT- Get extended error for NLSFUNC>
 
 ;   DOS 3.3   7/25/86
 ;   NLS_GETEXT	-
@@ -533,7 +537,7 @@ Procedure   NLS_GETEXT,NEAR
 	RET
 EndProc NLS_GETEXT
 
-Break	<MSG_RETRIEVAL- get beginning addr of system and parser messages>
+Break	<MSG_RETRIEVAL- Get beginning addr of system and parser messages>
 
 ;   DOS 4.00
 ;
@@ -566,11 +570,11 @@ toget:				    ;AN000;
 	XOR	AH,AH		    ;AN000;;MS.
 	ADD	SI,AX		    ;AN000;;MS. position to the entry
 	TEST	DL,1		    ;AN000;;MS. get ?
-	JZ	getget			     ;AN000;;MS. yes
+	JZ	getget_MISC2			     ;AN000;;MS. yes
 	MOV	word [cs:SI],DI    ;AN000;;MS. set MSG
 	MOV	word [cs:SI+2],ES  ;AN000;;MS. address to ES:DI
 	JMP	SHORT MSGret		     ;AN000;;MS. exit
-getget: 				     ;AN000;
+getget_MISC2: 				     ;AN000;
 	LES	DI,dword [cs:SI]	     ;AN000;;MS. get msg addr
 MSGret: 				     ;AN000;
 	POP	SI			     ;AN000;;MS.
@@ -580,7 +584,7 @@ MSGret: 				     ;AN000;
 EndProc MSG_RETRIEVAL			     ;AN000;
 
 
-Break	<Fake_version - set/reset version flag>
+Break	<Fake_version - Set/reset version flag>
 
 ;
 ;   Inputs:	DL=0 current version number
@@ -592,7 +596,7 @@ Break	<Fake_version - set/reset version flag>
 Procedure   Fake_version,NEAR					  ;AN000;
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING	  ;AN000;
 
-	MOV	[Special_version],DX   ;AN006;MS.
+	MOV	[SPECIAL_VERSION],DX   ;AN006;MS.
 	return			       ;AN006;;MS. exit
 
 EndProc Fake_version		       ;AN006;;MS.

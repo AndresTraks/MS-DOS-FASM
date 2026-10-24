@@ -1,5 +1,5 @@
 ;	SCCSID = @(#)alloc.asm	1.1 85/04/09
-TITLE ALLOC.ASM - memory arena manager
+TITLE Alloc.ASM - memory arena manager
 NAME Alloc
 ;
 ; Memory related system calls and low level routines for MSDOS 2.X.
@@ -56,17 +56,17 @@ PAGE
 ;
 	procedure   arena_free_process,NEAR
 ;	ASSUME  DS:NOTHING,ES:NOTHING
-	MOV     DI,arena_signature
+	MOV     DI,arena.arena_signature
 	MOV     AX,[arena_head]
-	CALL    Check_Signature         ; ES <- AX, check for valid block
+	CALL    check_signature         ; ES <- AX, check for valid block
 
 arena_free_process_loop:
 	retc
 	PUSH    ES
 	POP     DS
-	CMP     [arena_owner],BX     ; is block owned by pid?
+	CMP     [arena.arena_owner],BX     ; is block owned by pid?
 	JNZ     arena_free_next         ; no, skip to next
-	MOV     [arena_owner],DI     ; yes... free him
+	MOV     [arena.arena_owner],DI     ; yes... free him
 
 arena_free_next:
 	CMP     byte [DI],arena_signature_end
@@ -86,7 +86,7 @@ EndProc arena_free_process
 	procedure   arena_next,NEAR
 ;	ASSUME  DS:NOTHING,ES:NOTHING
 	MOV     AX,DS                   ; AX <- current block
-	ADD     AX,[arena_size]      ; AX <- AX + current block length
+	ADD     AX,[arena.arena_size]      ; AX <- AX + current block length
 	INC     AX                      ; remember that header!
 ;
 ;       fall into check_signature and return
@@ -112,7 +112,7 @@ EndProc arena_next
 	STC                             ; set error
 	return
 
-EndProc Check_signature
+EndProc check_signature
 
 ;
 ; Coalesce - combine free blocks ahead with current block
@@ -129,17 +129,17 @@ EndProc Check_signature
 	retc                            ; IF no error THEN GOTO check
 
 coalesce_check:
-	CMP     [es:arena_owner],DI
+	CMP     [es:arena.arena_owner],DI
 	retnz                           ; IF next block isnt free THEN return
-	MOV     CX,[es:arena_size]      ; CX <- next block size
+	MOV     CX,[es:arena.arena_size]      ; CX <- next block size
 	INC     CX                      ; CX <- CX + 1 (for header size)
-	ADD     [arena_size],CX      ; current size <- current size + CX
+	ADD     [arena.arena_size],CX      ; current size <- current size + CX
 	MOV     CL,[es:DI]              ; move up signature
 	MOV     [DI],CL
-	JMP     coalesce                ; try again
+	JMP     Coalesce                ; try again
 EndProc Coalesce
 
-SUBTTL Alloc$ - allocate space in memory
+SUBTTL ALLOC$ - ALLOCATE space in memory
 PAGE
 ;
 ;   Assembler usage:
@@ -170,13 +170,13 @@ PAGE
 
 	PUSH    AX                      ; alloc_max <- 0
 	MOV     AX,[arena_head]         ; AX <- beginning of arena
-	CALL    Check_signature         ; ES <- AX, carry set if error
+	CALL    check_signature         ; ES <- AX, carry set if error
 	JC      alloc_err               ; IF error THEN GOTO err
 
 alloc_scan:
 	PUSH    ES
 	POP     DS                      ; DS <- ES
-	CMP     [arena_owner],DI
+	CMP     [arena.arena_owner],DI
 	JZ      alloc_free              ; IF current block is free THEN examine
 
 alloc_next:
@@ -194,7 +194,7 @@ alloc_trashed:
 	error   error_arena_trashed
 
 alloc_end:
-	CMP     [FirstArena],0
+	CMP     word [FirstArena],0
 	JNZ     alloc_do_split
 
 alloc_fail:
@@ -205,9 +205,9 @@ alloc_fail:
 	error   error_not_enough_memory
 
 alloc_free:
-	CALL    coalesce                ; add following free block to current
+	CALL    Coalesce                ; add following free block to current
 	JC      alloc_err               ; IF error THEN GOTO err
-	MOV     CX,[arena_size]
+	MOV     CX,[arena.arena_size]
 
 	POP     DX                      ; check for max found size
 	CMP     CX,DX
@@ -219,15 +219,15 @@ alloc_test:
 	CMP     BX,CX                   ; IF BX > size of current block THEN
 	JA      alloc_next              ;   GOTO next
 
-	CMP     [FirstArena],0
+	CMP     word [FirstArena],0
 	JNZ     alloc_best
 	MOV     [FirstArena],DS         ; save first one found
 alloc_best:
-	CMP     [BestArena],0
+	CMP     word [BestArena],0
 	JZ      alloc_make_best         ; initial best
 	PUSH    ES
 	MOV     ES,[BestArena]
-	CMP     [es:arena_size],CX      ; is size of best larger than found?
+	CMP     [es:arena.arena_size],CX      ; is size of best larger than found?
 	POP     ES
 	JBE     alloc_last
 alloc_make_best:
@@ -241,7 +241,7 @@ alloc_last:
 ;
 alloc_do_split_high:
 	MOV     DS,[LastArena]
-	MOV     CX,[arena_size]
+	MOV     CX,[arena.arena_size]
 	SUB     CX,BX
 	MOV     DX,DS
 	JE      alloc_set_owner         ; sizes are equal, no split
@@ -263,7 +263,7 @@ alloc_do_split:
 	JB      alloc_get_size
 	MOV     DS,[BestArena]
 alloc_get_size:
-	MOV     CX,[arena_size]
+	MOV     CX,[arena.arena_size]
 	SUB     CX,BX                   ; get room left over
 	MOV     AX,DS
 	MOV     DX,AX                   ; save for owner setting
@@ -273,26 +273,26 @@ alloc_get_size:
 	MOV     ES,AX                   ; ES <- DS + BX (new header location)
 	DEC     CX                      ; CX <- size of split block
 alloc_set_sizes:
-	MOV     [arena_size],BX      ; current size <- BX
-	MOV     [es:arena_size],CX      ; split size <- CX
+	MOV     [arena.arena_size],BX      ; current size <- BX
+	MOV     [es:arena.arena_size],CX      ; split size <- CX
 	MOV     BL,arena_signature_normal
 	XCHG    BL,[DI]              ; current signature <- 4D
 	MOV     [es:DI],BL              ; new block sig <- old block sig
-	MOV     [es:arena_owner],DI
+	MOV     [es:arena.arena_owner],DI
 
 alloc_set_owner:
 	MOV     DS,DX
 	MOV     AX,[CurrentPDB]
-	MOV     [arena_owner],AX
+	MOV     [arena.arena_owner],AX
 	MOV     AX,DS
 	INC     AX
 	POP     BX
 	LeaveCrit   critMem
 	transfer    SYS_RET_OK
 
-EndProc alloc$
+EndProc ALLOC$
 
-SUBTTL SETBLOCK$ - change sizeof.of an allocated block (if possible)
+SUBTTL SETBLOCK$ - change sizeof.of an allocated Block (if possible)
 PAGE
 ;
 ;   Assembler usage:
@@ -311,7 +311,7 @@ PAGE
 	procedure   SETBLOCK$,NEAR
 ;	ASSUME  DS:NOTHING,ES:NOTHING
 	EnterCrit   critMem
-	MOV     DI,arena_signature
+	MOV     DI,arena.arena_signature
 	MOV     AX,ES
 	DEC     AX
 	CALL    check_signature
@@ -322,16 +322,16 @@ setblock_bad:
 
 setblock_grab:
 	MOV     DS,AX
-	CALL    coalesce
+	CALL    Coalesce
 	JC      setblock_bad
-	MOV     CX,[arena_size]
+	MOV     CX,[arena.arena_size]
 	PUSH    CX
 	CMP     BX,CX
 	JBE     alloc_get_size
 	JMP     alloc_fail
-EndProc setblock$
+EndProc SETBLOCK$
 
-SUBTTL DEALLOC$ - free previously allocated piece of memory
+SUBTTL DEALLOC$ - FREE previously allocated piece of memory
 PAGE
 ;
 ;   Assembler usage:
@@ -346,12 +346,12 @@ PAGE
 	procedure   DEALLOC$,NEAR
 ;	ASSUME  DS:NOTHING,ES:NOTHING
 	EnterCrit   critMem
-	MOV     DI,arena_signature
+	MOV     DI,arena.arena_signature
 	MOV     AX,ES
 	DEC     AX
 	CALL    check_signature
 	JC      dealloc_err
-	MOV     [es:arena_owner],DI
+	MOV     [es:arena.arena_owner],DI
 	LeaveCrit   critMem
 	transfer    SYS_RET_OK
 
@@ -360,7 +360,7 @@ dealloc_err:
 	error   error_invalid_block
 EndProc DEALLOC$
 
-SUBTTL AllocOper$ - get/set allocation mechanism
+SUBTTL AllocOper$ - Get/Set allocation mechanism
 PAGE
 ;
 ;   Assembler usage:
@@ -377,7 +377,7 @@ PAGE
 	CMP     AL,1
 	JB      AllocOperGet
 	JZ      AllocOperSet
-	MOV     [ExtErr_locus],errLoc_mem ; Extended Error Locus
+	MOV     byte [EXTERR_LOCUS],errLOC_Mem ; Extended Error Locus
 	error   error_invalid_function
 AllocOperGet:
 	MOV     AL,byte [AllocMethod]

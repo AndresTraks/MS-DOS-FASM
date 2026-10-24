@@ -1,5 +1,5 @@
 ;	SCCSID = @(#)search.asm 1.1 85/04/10
-TITLE	SEARCH - Directory scan system calls
+TITLE	SEARCH - Directory Scan system calls
 NAME	SEARCH
 
 ;
@@ -40,12 +40,12 @@ INCLUDE '../INC/FASTXXXX.INC'
 
 	i_need	SEARCHBUF,53
 	i_need	SATTRIB,BYTE
-	I_Need	OpenBuf,128
-	I_need	DMAAdd,DWORD
+	I_Need	OPENBUF,128
+	I_need	DMAADD,DWORD
 	I_need	THISFCB,DWORD
-	I_need	CurDrv,BYTE
+	I_need	CURDRV,BYTE
 	I_need	EXTFCB,BYTE
-	I_need	Fastopenflg,BYTE
+	I_need	FastOpenFlg,BYTE
 	I_need	DOS34_FLAG,WORD
 
 ; Inputs:
@@ -66,30 +66,30 @@ INCLUDE '../INC/FASTXXXX.INC'
 	JNZ	NORMFCB4
 	ADD	SI,7			; Point to drive select byte
 NORMFCB4:
-	SaveReg <[SI]>			; Save original drive byte for later
+	SaveReg <word [SI]>			; Save original drive byte for later
 	Context ES			; get es to address DOSGroup
-	MOV	DI,OpenBuf  ; appropriate buffer
+	MOV	DI,OPENBUF  ; appropriate buffer
 	invoke	TransFCB		; convert the FCB, set SATTRIB EXTFCB
 	JNC	SearchIt		; no error, go and look
 	RestoreReg <BX> 		; Clean stack
 ;
 ; Error code is in AX
 ;
-	transfer FCB_Ret_Err		; error
+	transfer FCB_RET_ERR		; error
 
 SearchIt:
 	Context DS			; get ready for search
-	SaveReg <word [DMAAdd], word [DMAAdd+2]>
-	MOV	word [DMAAdd],SEARCHBUF
-	MOV	word [DMAAdd+2],DS
+	SaveReg <word [DMAADD], word [DMAADD+2]>
+	MOV	word [DMAADD],SEARCHBUF
+	MOV	word [DMAADD+2],DS
 	invoke	GET_FAST_SEARCH 	; search
-	RestoreReg <word [DMAAdd+2], word [DMAAdd]>
+	RestoreReg <word [DMAADD+2], word [DMAADD]>
 	JNC	SearchSet		; no error, transfer info
 	RestoreReg <BX> 		; Clean stack
 ;
 ; Error code is in AX
 ;
-	transfer FCB_Ret_Err
+	transfer FCB_RET_ERR
 
 ;
 ; The search was successful (or the search-next).  We store the information
@@ -98,14 +98,14 @@ SearchIt:
 SearchSet:
 	MOV	SI,SEARCHBUF
 	LES	DI,[THISFCB]		; point to the FCB
-	TEST	[EXTFCB],0FFH		;
+	TEST	byte [EXTFCB],0FFH		;
 	JZ	NORMFCB1
 	ADD	DI,7			; Point past the extension
 NORMFCB1:
 	RestoreReg <BX> 		; Get original drive byte
 	OR	BL,BL
 	JNZ	SearchDrv
-	MOV	BL,[CurDrv]
+	MOV	BL,[CURDRV]
 	INC	BL
 SearchDrv:
 	LODSB				; Get correct search contin drive byte
@@ -119,8 +119,8 @@ SearchDrv:
 					;   byte to AL
 	STOSB				; Search contin drive byte at end of
 					;   contin info
-	LES	DI,[DMAAdd]
-	TEST	[EXTFCB],0FFH
+	LES	DI,[DMAADD]
+	TEST	byte [EXTFCB],0FFH
 	JZ	NORMFCB2
 	MOV	AL,0FFH
 	STOSB
@@ -143,7 +143,7 @@ NOTKTRAN:				; 2/13/KK				;AN000;
 	MOV	CX,16			; 32 / 2 words of dir entry		;AN000;
  end if										;AN000;
 	REP	MOVSW
-	transfer FCB_Ret_OK
+	transfer FCB_RET_OK
 
 EndProc DIR_SEARCH_FIRST$
 
@@ -160,8 +160,8 @@ EndProc DIR_SEARCH_FIRST$
 
 	MOV	word [THISFCB],DX
 	MOV	word [THISFCB+2],DS
-	MOV	[SATTRIB],0
-	MOV	[EXTFCB],0
+	MOV	byte [SATTRIB],0
+	MOV	byte [EXTFCB],0
 	Context ES
 	MOV	DI,SEARCHBUF
 	MOV	SI,DX
@@ -170,7 +170,7 @@ EndProc DIR_SEARCH_FIRST$
 	ADD	SI,6
 	LODSB
 	MOV	[SATTRIB],AL
-	DEC	[EXTFCB]
+	DEC	byte [EXTFCB]
 NORMFCB6:
 	LODSB				; Get original user drive byte
 	SaveReg <AX>			; Put it on stack
@@ -179,17 +179,17 @@ NORMFCB6:
 	MOV	CX,20/2
 	REP	MOVSW			; Transfer in rest of search contin info
 	Context DS
-	SaveReg <word [DMAAdd], word [DMAAdd+2]>
-	MOV	word [DMAAdd],SEARCHBUF
-	MOV	word [DMAAdd+2],DS
+	SaveReg <word [DMAADD], word [DMAADD+2]>
+	MOV	word [DMAADD],SEARCHBUF
+	MOV	word [DMAADD+2],DS
 	invoke	DOS_SEARCH_NEXT 	; Find it
-	RestoreReg <word [DMAAdd+2], word [DMAAdd]>
+	RestoreReg <word [DMAADD+2], word [DMAADD]>
 	JC	SearchNoMore
 	JMP	SearchSet		; Ok set return
 
 SearchNoMore:
 	LES	DI,[THISFCB]
-	TEST	[EXTFCB],0FFH
+	TEST	byte [EXTFCB],0FFH
 	JZ	NORMFCB8
 	ADD	DI,7			; Point past the extension
 NORMFCB8:
@@ -199,7 +199,7 @@ NORMFCB8:
 ;
 ; error code is in AX
 ;
-	transfer FCB_Ret_Err
+	transfer FCB_RET_ERR
 
 EndProc DIR_SEARCH_NEXT$
 
@@ -219,30 +219,30 @@ EndProc DIR_SEARCH_NEXT$
 
 	MOV	SI,DX			; get name in appropriate place
 	MOV	[SATTRIB],CL		; Search attribute to correct loc
-	MOV	DI,OpenBuf  ; appropriate buffer
+	MOV	DI,OPENBUF  ; appropriate buffer
 	invoke	TransPathSet		; convert the path
 	JNC	Find_it 		; no error, go and look
 FindError:
 	error	error_path_not_found	; error and map into one.
 Find_it:
 	Context DS
-	SaveReg <word [DMAAdd], word [DMAAdd+2]>
-	MOV	word [DMAAdd],SEARCHBUF
-	MOV	word [DMAAdd+2],DS
+	SaveReg <word [DMAADD], word [DMAADD+2]>
+	MOV	word [DMAADD],SEARCHBUF
+	MOV	word [DMAADD+2],DS
 	invoke	GET_FAST_SEARCH 	; search
-	RestoreReg <word [DMAAdd+2], word [DMAAdd]>
+	RestoreReg <word [DMAADD+2], word [DMAADD]>
 	JNC	FindSet 		; no error, transfer info
-	transfer Sys_Ret_Err
+	transfer SYS_RET_ERR
 
 FindSet:
 	MOV	SI,SEARCHBUF
-	LES	DI,[DMAAdd]
+	LES	DI,[DMAADD]
 	MOV	CX,21
 	REP	MOVSB
 	PUSH	SI			; Save pointer to start of entry
-	MOV	AL,[SI+dir_attr]
+	MOV	AL,[SI+dir_entry.dir_attr]
 	STOSB
-	ADD	SI,dir_time
+	ADD	SI,dir_entry.dir_time
 	MOVSW				; dir_time
 	MOVSW				; dir_date
 	INC	SI
@@ -261,7 +261,7 @@ FNXXX:					; 2/13/KK				;AN000;
  else										;AN000;
 	CALL	PackName
  end if
-	transfer    Sys_Ret_OK		; bye with no errors
+	transfer    SYS_RET_OK		; bye with no errors
 EndProc FIND_FIRST$
 
 	procedure FIND_NEXT$,NEAR
@@ -278,18 +278,18 @@ EndProc FIND_FIRST$
 
 	Context ES
 	MOV	DI,SEARCHBUF
-	LDS	SI,[DMAAdd]
+	LDS	SI,[DMAADD]
 	MOV	CX,21
 	REP	MOVSB			; Put the search continuation info
 					;  in the right place
 	Context DS			; get ready for search
-	SaveReg <word [DMAAdd], word [DMAAdd+2]>
-	MOV	word [DMAAdd],SEARCHBUF
-	MOV	word [DMAAdd+2],DS
+	SaveReg <word [DMAADD], word [DMAADD+2]>
+	MOV	word [DMAADD],SEARCHBUF
+	MOV	word [DMAADD+2],DS
 	invoke	DOS_SEARCH_NEXT 	; Find it
-	RestoreReg <word [DMAAdd+2], word [DMAAdd]>
+	RestoreReg <word [DMAADD+2], word [DMAADD]>
 	JNC	FindSet 		; No error, set info
-	transfer Sys_Ret_Err
+	transfer SYS_RET_ERR
 
 EndProc FIND_NEXT$
 
@@ -337,7 +337,7 @@ EndProc PackName
 	procedure   GET_FAST_SEARCH,NEAR
 ;	ASSUME	DS:NOTHING,ES:NOTHING
 
-	OR	[DOS34_FLAG],SEARCH_FASTOPEN  ;FO.trigger fastopen		;AN000;
+	OR	word [DOS34_FLAG],SEARCH_FASTOPEN  ;FO.trigger fastopen		;AN000;
 	invoke	DOS_SEARCH_FIRST
 	return
 

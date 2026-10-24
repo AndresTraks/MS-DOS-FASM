@@ -14,34 +14,34 @@ INCLUDE '../INC/FASTXXXX.INC'
 ;.cref
 ;.list
 
-AsmVars <Kanji, Debug>
+AsmVars <KANJI, debug>
 
 if SEGSEL = S_CODE
 
 ;ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
-    I_need  InDos,BYTE			; TRUE => we are in dos, no interrupt
-    I_need  OpenBuf,128 		; temp name buffer
-    I_need  ExtErr,WORD 		; extended error code
-    I_need  User_SS,WORD		; stack segment from user
-    I_need  User_SP,WORD		; stack pointer from user
+    I_need  INDOS,BYTE			; TRUE => we are in dos, no interrupt
+    I_need  OPENBUF,128 		; temp name buffer
+    I_need  EXTERR,WORD 		; extended error code
+    I_need  user_SS,WORD		; stack segment from user
+    I_need  user_SP,WORD		; stack pointer from user
     I_need  DskStack,BYTE		; stack segment inside DOS
-    I_need  ThisCDS,DWORD		; Currently referenced CDS pointer
-    I_need  ThisDPB,DWORD		; Currently referenced DPB pointer
-    I_need  Err_Table_21		; allowed return map table for errors
-    I_need  FailErr,BYTE		; TRUE => system call is being failed
-    I_need  ExtErr_Action,BYTE		; recommended action
-    I_need  ExtErr_Class,BYTE		; error classification
-    I_need  ExtErr_Locus,BYTE		; error location
-    I_need  I21_Map_E_Tab,BYTE		; mapping extended error table
-    I_need  User_In_AX,WORD		; initial input user AX
+    I_need  THISCDS,DWORD		; Currently referenced CDS pointer
+    I_need  THISDPB,DWORD		; Currently referenced DPB pointer
+    I_need  ERR_TABLE_21		; allowed return map table for errors
+    I_need  FAILERR,BYTE		; TRUE => system call is being failed
+    I_need  EXTERR_ACTION,BYTE		; recommended action
+    I_need  EXTERR_CLASS,BYTE		; error classification
+    I_need  EXTERR_LOCUS,BYTE		; error location
+    I_need  I21_MAP_E_TAB,BYTE		; mapping extended error table
+    I_need  USER_IN_AX,WORD		; initial input user AX
     I_need  FOO,WORD			; return address for dos 2f dispatch
-    I_need  DTAB,WORD			; dos 2f dispatch table
+    I_need  DTab,WORD			; dos 2f dispatch table
     I_need  HIGH_SECTOR,WORD		; >32mb
     I_need  IFS_DRIVER_ERR,WORD 	; >32mb
     I_need  FastOpenFlg,BYTE		;
     I_need  FastSeekFlg,BYTE		;
-    I_need  CURSC_DRIVE,BYTE		;
+    I_need  CurSC_DRIVE,BYTE		;
 
 BREAK <NullDev -- Driver for null device>
 
@@ -52,8 +52,13 @@ entry INULDEV
 	RET				; MUST NOT BE A RETURN!
 EndProc SNULDEV
 
-BREAK <AbsDRD, AbsDWRT -- INT int_disk_read, int_disk_write handlers>
+BREAK <ABSDRD, ABSDWRT -- INT int_disk_read, int_disk_write handlers>
 
+
+; MASM let the table segment be opened inside the code segment and the
+; assembler sorted the pieces out; here the code segment's pass has to be
+; closed first, or the table would be laid down in the wrong one.
+end if
 
 if SEGSEL = S_TABLE
 ;Public MSC001S,MSC001E
@@ -76,30 +81,32 @@ ERROUT:
 	DB	4			; SECTOR NOT FOUND
 	DB	3			; WRITE ATTEMPT TO WRITE-PROTECT DISK
 
-NUMERR	EQU	$-ERROUT
+NUMERR	=	$-ERROUT
 	end if
 MSC001E:
 
 end if
 
+if SEGSEL = S_CODE
+
 ;   AbsSetup - setup for abs disk functions
 
 Procedure   AbsSetup,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
-	INC	[INDOS]
+	INC	byte [INDOS]
 	STI
 	CLD
 	PUSH	DS
 	Context DS
 	CALL	GETBP
 	JC	errdriv 		;PM. error drive			;AN000;
-	MOV	[es:BP+dpb_free_cnt],-1 ; do not trust user at all.
+	MOV	[es:BP+dpb.dpb_free_cnt],-1 ; do not trust user at all.
 errdriv:
 	POP	DS
 ;ASSUME	DS:NOTHING
 	retc
 
-	MOV	[HIGH_SECTOR],0 	;>32mb	from API			;AN000;
+	MOV	word [HIGH_SECTOR],0 	;>32mb	from API			;AN000;
 	CALL	RW32_CONVERT		;>32mb convert 32bit format to 16bit	;AN000;
 	retc
 
@@ -108,9 +115,9 @@ errdriv:
 	PUSH	SI
 	PUSH	AX
 	Context DS
-	MOV	SI,OpenBuf
+	MOV	SI,OPENBUF
 	MOV	[SI],AL
-	ADD	byte [SI],"[a]"
+	ADD	byte [SI],"a"
 	MOV	word [SI+1],003AH	; ":",0
 	MOV	AX,0300H
 	CLC
@@ -120,7 +127,7 @@ errdriv:
 	POP	DS
 ;ASSUME	DS:NOTHING
 	retnc
-	MOV	[EXTERR],error_not_supported
+	MOV	word [EXTERR],error_not_supported
 	return
 EndProc AbsSetup
 
@@ -143,12 +150,12 @@ EndProc AbsSetup
 	PUSH	CS
 	POP	SS
 ;ASSUME	SS:DOSGROUP
-	MOV	SP,DSKSTACK
-	invoke	Save_World		      ;>32mb save all regs		;AN000;
+	MOV	SP,DskStack
+	invoke	save_world		      ;>32mb save all regs		;AN000;
 	PUSH	ES
 	CALL	AbsSetup
 	JC	ILEAVE
-if not ibmcopyright
+if not IBMCOPYRIGHT
 ; Here is a gross temporary fix to get around a serious design flaw in
 ;  the secondary cache.  The secondary cache does not check for media
 ;  changed (it should).  Hence, you can change disks, do an absolute
@@ -156,10 +163,10 @@ if not ibmcopyright
 ;  we just won't use the secondary cache for absolute disk reads.
 ;                                                      -mw 8/5/88
 	EnterCrit   critDisk
-	MOV	[CURSC_DRIVE],-1	      ; invalidate SC			;AN000;
+	MOV	byte [CurSC_DRIVE],-1	      ; invalidate SC			;AN000;
 	LeaveCrit   critDisk
 end if
-	invoke	DSKREAD
+	invoke	DskRead
 TLEAVE:
 	JZ	ILEAVE
 
@@ -181,9 +188,9 @@ LEAVECODE:
 	STC
 ILEAVE:
 	POP	ES
-	invoke	Restore_World		     ;>32mb				;AN000;
+	invoke	restore_world		     ;>32mb				;AN000;
 	CLI
-	DEC	[INDOS]
+	DEC	byte [INDOS]
 	MOV	SS,[user_SS]
 ;ASSUME	SS:NOTHING
 	MOV	SP,[user_SP]
@@ -211,15 +218,15 @@ EndProc ABSDRD
 	PUSH	CS
 	POP	SS
 ;ASSUME	SS:DOSGROUP
-	MOV	SP,DSKSTACK
-	invoke	Save_World		      ;>32mb save all regs		;AN000;
+	MOV	SP,DskStack
+	invoke	save_world		      ;>32mb save all regs		;AN000;
 
 	PUSH	ES
 	CALL	AbsSetup
 	JC	ILEAVE
 
 	EnterCrit   critDisk
-	MOV	[CURSC_DRIVE],-1	      ; invalidate SC			;AN000;
+	MOV	byte [CurSC_DRIVE],-1	      ; invalidate SC			;AN000;
 	CALL	Fastxxx_Purge		      ; purge fatopen			;AN000;
 	LeaveCrit   critDisk
 
@@ -248,27 +255,27 @@ Procedure GETBP,NEAR
 	invoke	GetThisDrv
 	JNC	SkipGet 		   ;PM. good drive			;AN000;
 	XOR	AH,AH			   ;DCR. ax= error code 		;AN000;
-	CMP	AX,error_not_dos_disk	   ;DCR. is unknown media ?		;AN000;
+	CMP	AX,error_not_DOS_disk	   ;DCR. is unknown media ?		;AN000;
 	JZ	SkipGet 		   ;DCR. yes, let it go 		;AN000;
 	STC				   ;DCR.				;AN000;
 	MOV	[EXTERR],AX		   ;PM. invalid drive or Non DOS drive	;AN000;
-	MOV	[IFS_DRIVER_ERR],0201H	   ;PM. other errors/unknown unit	;AN000;
+	MOV	word [IFS_DRIVER_ERR],0201H	   ;PM. other errors/unknown unit	;AN000;
 SkipGet:
 	POP	AX
 	retc
 	LES	BP,[THISCDS]
-	TEST	[es:BP+curdir_flags],curdir_isnet   ; Clears carry
+	TEST	[es:BP+curdir_list.curdir_flags],curdir_isnet   ; Clears carry
 	JZ	GETBP_CDS
-	LES	BP,[es:BP+curdir_ifs_hdr]	    ;IFS. if remote file	;AN000;
-	TEST	[es:BP+ifs_attribute],IFSREMOTE     ;IFS.			;AN000;
+	LES	BP,[es:BP+curdir_list.curdir_ifs_hdr]	    ;IFS. if remote file	;AN000;
+	TEST	[es:BP+IFSHEADER.IFS_ATTRIBUTE],IFSREMOTE     ;IFS.			;AN000;
 	LES	BP,[THISCDS]
 	JZ	GETBP_CDS			    ;IFS. then error		;AN000;
-	MOV	[EXTERR],error_not_supported
+	MOV	word [EXTERR],error_not_supported
 	STC
 	return
 
 GETBP_CDS:
-	LES	BP,[es:BP+curdir_devptr]
+	LES	BP,[es:BP+curdir_list.curdir_devptr]
 
 	entry	GOTDPB
 	DOSAssume   CS,<DS>,"GotDPB"
@@ -277,9 +284,9 @@ GETBP_CDS:
 	MOV	word [THISDPB],BP
 	MOV	word [THISDPB+2],ES
 	return
-EndProc GetBP
+EndProc GETBP
 
-BREAK <SYS_RET_OK SYS_RET_ERR CAL_LK ETAB_LK set system call returns>
+BREAK <SYS_RET_OK SYS_RET_ERR CAL_LK ETAB_LK Set system call returns>
 
 ;ASSUME	SS:DOSGROUP
 
@@ -300,7 +307,7 @@ entry	SYS_RET_OK
 entry	SYS_RET_ERR
 	XOR	AH,AH			; hack to allow for smaller error rets
 	invoke	ETAB_LK 		; Make sure code is OK, EXTERR gets set
-	CALL	ErrorMap
+	CALL	errorMap
 entry	From_GetSet
 	invoke	get_user_stack
 	OR	[SI+user_environ.user_F],f_Carry	; signal carry to user
@@ -317,16 +324,16 @@ DO_RET:
 	entry	FCB_RET_ERR
 	XOR	AH,AH
 	mov	[EXTERR],AX
-	CALL	ErrorMap
+	CALL	errorMap
 	MOV	AL,-1
 	return
 
 	entry	errorMap
 	PUSH	SI
 	MOV	SI,ERR_TABLE_21
-	CMP	[FAILERR],0		; Check for SPECIAL case.
+	CMP	byte [FAILERR],0		; Check for SPECIAL case.
 	JZ	EXTENDED_NORMAL 	; All is OK.
-	MOV	[EXTERR],error_FAIL_I24 ; Ooops, this is the REAL reason
+	MOV	word [EXTERR],error_FAIL_I24 ; Ooops, this is the REAL reason
 	MOV	SI,ERR_TABLE_21
 EXTENDED_NORMAL:
 	invoke	CAL_LK			; Set CLASS,ACTION,LOCUS for EXTERR
@@ -442,7 +449,7 @@ EndProc ETAB_LK
 
 BREAK <DOS 2F Handler and default NET 2F handler>
 
-if installed
+if Installed
 
 ;
 ; SetBad sets up info for bad functions
@@ -450,7 +457,7 @@ if installed
 Procedure   SetBad,NEAR
 ;	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 	MOV	AX,error_invalid_function	; ALL NET REQUESTS get inv func
-	MOV	[ExtErr_locus],errLoc_UNK
+	MOV	byte [EXTERR_LOCUS],errLOC_Unk
 	STC
 	ret
 EndProc SetBad
@@ -483,7 +490,7 @@ INT2F:
 INT2FNT:
 ;	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 	STI
-	CMP	AH,multNET
+	CMP	AH,MultNET
 	JNZ	INT2FSHR
 TestInstall:
 	OR	AL,AL
@@ -494,7 +501,7 @@ BadFunc:
 	RETF	2			; long return + clear flags off stack
 
 INT2FSHR:
-	CMP	AH,multSHARE		; is this a share request
+	CMP	AH,MultSHARE		; is this a share request
 	JZ	TestInstall		; yes, check for installation
 
 INT2FNLS:
@@ -503,15 +510,15 @@ INT2FNLS:
 
 INT2FDOS:
 ;	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
-	CMP	AH,multDOS
+	CMP	AH,MultDOS
 	JZ	DispatchDOS
 	IRET				; This assume that we are at the head
 					; of the list
 ;INT2F	ENDP
 
 DispatchDOS:
-	PUSH	[FOO]			; push return address
-	PUSH	[DTab]			; push table address
+	PUSH	word [FOO]			; push return address
+	PUSH	word [DTab]			; push table address
 	PUSH	AX			; push index
 	PUSH	BP
 	MOV	BP,SP
@@ -553,8 +560,8 @@ Procedure   RW32_CONVERT,NEAR
 	JZ	new32format		     ;>32mb  yes			;AN000;
 	PUSH	AX			     ;>32mb  save ax			;AN000;
 	PUSH	DX			     ;>32mb  save dx			;AN000;
-	MOV	AX,[es:BP+dpb_max_cluster]   ;>32mb  get max cluster #		;AN000;
-	MOV	DL,[es:BP+dpb_cluster_mask]  ;>32mb				;AN000;
+	MOV	AX,[es:BP+dpb.dpb_max_cluster]   ;>32mb  get max cluster #		;AN000;
+	MOV	DL,[es:BP+dpb.dpb_cluster_mask]  ;>32mb				;AN000;
 	CMP	DL,0FEH 		     ;>32mb  removable ?		;AN000;
 	JZ	letold			     ;>32mb  yes			;AN000;
 	INC	DL			     ;>32mb				;AN000;
@@ -565,7 +572,7 @@ letold:
 	POP	DX			     ;>32mb  retore dx			;AN000;
 	POP	AX			     ;>32mb  restore ax 		;AN000;
 	JZ	old_style		     ;>32mb  no 			;AN000;
-	MOV	[IFS_DRIVER_ERR],0207H	     ;>32mb  error			;AN000;
+	MOV	word [IFS_DRIVER_ERR],0207H	     ;>32mb  error			;AN000;
 	STC				     ;>32mb				;AN000;
 	return				     ;>32mb				;AN000;
 new32format:
@@ -590,19 +597,19 @@ Procedure   Fastxxx_Purge,NEAR
 	PUSH	AX			      ; save regs.			;AN000;
 	PUSH	SI								;AN000;
 	PUSH	DX								;AN000;
-	TEST	[FastSeekflg],Fast_yes	      ; fastseek installed ?		;AN000;
+	TEST	byte [FastSeekFlg],Fast_yes	      ; fastseek installed ?		;AN000;
 	JZ	topen			      ; no				;AN000;
 	MOV	AH,FastSeek_ID		      ; set fastseek id 		;AN000;
 	JMP	SHORT dofast		      ; 				;AN000;
 topen:
-	TEST	[Fastopenflg],Fast_yes	      ; fastopen installed ?		;AN000;
-	JZ	nofast			      ; no				;AN000;
+	TEST	byte [FastOpenFlg],Fast_yes	      ; fastopen installed ?		;AN000;
+	JZ	nofast_MSCODE			      ; no				;AN000;
 	MOV	AH,FastOpen_ID		      ; set fastseek installed		;AN000;
 dofast:
 	MOV	AL,FONC_purge		      ; purge				;AN000;
-	MOV	DL,[es:BP+dpb_drive]	      ; set up drive number		;AN000;
+	MOV	DL,[es:BP+dpb.dpb_drive]	      ; set up drive number		;AN000;
 	invoke	Fast_Dispatch		      ; call fastopen/seek		;AN000;
-nofast:
+nofast_MSCODE:
 	POP	DX								;AN000;
 	POP	SI			      ; restore regs			;AN000;
 	POP	AX			      ; 				;AN000;

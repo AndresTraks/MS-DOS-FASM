@@ -32,7 +32,7 @@ INCLUDE '../INC/DEVSYM.INC'
 ;.sall
 
 	I_need  CurrentPDB,WORD         ; current process data block location
-	I_need  SFT_Addr,DWORD          ; pointer to beginning of table
+	I_need  sft_addr,DWORD          ; pointer to beginning of table
 	I_Need  PROC_ID,WORD            ; current process ID
 	I_Need  USER_ID,WORD            ; current user ID
 if debug
@@ -59,14 +59,14 @@ BREAK   <pJFNFromHandle - return pointer to JFN table entry>
 procedure   pJFNFromHandle,NEAR
 ;	ASSUME  CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 	MOV     ES,[CurrentPDB]         ; get user process data block
-	CMP     BX,[es:PDB_JFN_Length]  ; is handle greater than allocated
+	CMP     BX,[es:Process_data_block.PDB_JFN_Length]  ; is handle greater than allocated
 	JB      JFNAdd                  ; no, get offset
 	fmt     TypAccess,LevSFN,<"p$: Illegal JFN %x\n">,<BX>
 	MOV     AL,error_invalid_handle ; appropriate error
 ReturnCarry:
 	STC                             ; signal error
 	return                          ; go back
-JFNAdd: LES     DI,[es:PDB_JFN_Pointer] ; get pointer to beginning of table
+JFNAdd: LES     DI,[es:Process_data_block.PDB_JFN_Pointer] ; get pointer to beginning of table
 	ADD     DI,BX                   ; add in offset
 ReturnNoCarry:
 	CLC                             ; no holes
@@ -105,7 +105,7 @@ GetSF:
 	return                          ; say goodbye
 EndProc SFFromHandle
 
-BREAK <SFFromSFN - index into SF table for SFN>
+BREAK <SFFromSFN - TableFrame.Index into SF table for SFN>
 
 ;
 ; SFFromSFN - index into SF tables for SFN.
@@ -118,29 +118,29 @@ BREAK <SFFromSFN - index into SF table for SFN>
 ;       at DOSINIT time with SS NOT DOSGROUP
 procedure   SFFromSFN,NEAR
 ;	ASSUME  CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
-	LES     DI,[SFT_Addr]           ; get pointer to beginning of table
+	LES     DI,[sft_addr]           ; get pointer to beginning of table
 ScanLoop:
-	CMP     BX,[es:DI+SFCount]      ; is handle in this table?
+	CMP     BX,[es:DI+SF.SFCount]      ; is handle in this table?
 	JB      GetOffset               ; yes, go grab it
-	SUB     BX,[es:DI+SFCount]
-	LES     DI,[es:DI+SFLink]       ; get next table segment
+	SUB     BX,[es:DI+SF.SFCount]
+	LES     DI,[es:DI+SF.SFLink]       ; get next table segment
 	CMP     DI,-1                   ; end of tables?
 	JNZ     ScanLoop                ; no, try again
 	STC                             ; error...
 	JMP     SHORT Restore_           ; go restore
 GetOffset:
 	SaveReg <AX>                    ; save AX
-	MOV     AX,sizeof.SF_Entry        ; put it in a nice place
+	MOV     AX,sizeof.sf_entry        ; put it in a nice place
 	MUL     BL                      ; times size
 	ADD     DI,AX                   ; offset by size
 	RestoreReg  <AX>                ; get world back
-	ADD     DI,SFTable              ; offset into structure
+	ADD     DI,SF.SFTable              ; offset into structure
 	CLC                             ; no holes
 Restore_:
 	return                          ; bye!
 EndProc SFFromSFN
 
-BREAK <JFNFree - return a jfn pointer if one is free>
+BREAK <JFNFree - return a JFN pointer if one is FREE>
 
 ;
 ; JFNFree - scan through the JFN table and return a pointer to a free slot
@@ -167,7 +167,7 @@ JFNFound:
 	return                          ; bye
 EndProc JFNFree
 
-BREAK <SFNFree - find a free SFN>
+BREAK <SFNFree - find a FREE SFN>
 
 ;
 ;   SFNFree - scan through the sf table looking for free entries
@@ -189,23 +189,23 @@ SFNFreeLoop:
 	MOV     AL,error_too_many_open_files    ; appropriate error
 	JMP     SFNDone
 SFNCheck:
-	CMP     [es:DI+sf_Ref_Count],0  ; free?
-if NOT DEBUG
+	CMP     [es:DI+sf_entry.sf_ref_count],0  ; free?
+if NOT debug
 	JZ      SFNGot                  ; yep, got return him
 else
 	JNZ     NoGot
 	JMP     SFNGot
 NoGot:
 end if
-	CMP     [es:DI+sf_ref_count],sf_busy
+	CMP     [es:DI+sf_entry.sf_ref_count],sf_busy
 	JNZ     SFNNext                 ; not marked busy...
 	fmt     TypAccess,LevSFN,<"p$: SFT x$:x$(x$)is busy, owner x$:x$\n">,<ES,DI,BX,ES:[DI].sf_UID,ES:[DI].sf_pid>
 	SaveReg <BX>
-	MOV     BX,[User_ID]
-	CMP     [es:DI+sf_UID],BX
+	MOV     BX,[USER_ID]
+	CMP     [es:DI+sf_entry.sf_UID],BX
 	JNZ     SFNNextP
 	MOV     BX,[PROC_ID]
-	CMP     [es:DI+sf_PID],BX
+	CMP     [es:DI+sf_entry.sf_PID],BX
 	JZ      SFNGotP
 SFNNextP:
 	fmt     TypAccess,LevSFN,<"p$: SFT unusable\n">
@@ -218,11 +218,11 @@ SFNGot:
 SFNGotP:
 	CLC                             ; no error
 	fmt     TypAccess,LevSFN,<"p$: SFT x$:x$(x$) marked busy\n">,<ES,DI,BX>
-	MOV     [es:DI+sf_ref_count],sf_busy    ; make sure that this is allocated
-	MOV     BX,[User_ID]
-	MOV     [es:DI+sf_UID],BX
+	MOV     [es:DI+sf_entry.sf_ref_count],sf_busy    ; make sure that this is allocated
+	MOV     BX,[USER_ID]
+	MOV     [es:DI+sf_entry.sf_UID],BX
 	MOV     BX,[PROC_ID]
-	MOV     [es:DI+sf_PID],BX
+	MOV     [es:DI+sf_entry.sf_PID],BX
 	RestoreReg  <BX>
 SFNDone:
 	return                          ; bye

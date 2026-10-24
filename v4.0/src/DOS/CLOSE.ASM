@@ -1,5 +1,5 @@
 ;	SCCSID = @(#)close.asm	1.1 85/04/09
-TITLE	DOS_CLOSE/COMMIT - Internal SFT close and commit call for MSDOS
+TITLE	DOS_CLOSE/Commit - Internal SFT Close and Commit call for MSDOS
 NAME	DOS_CLOSE
 ; Internal Close and Commit calls to close a local or NET SFT.
 ;
@@ -31,13 +31,13 @@ INCLUDE '../INC/DEVSYM.INC'
 
 Installed = TRUE
 
-	I_need	Attrib,BYTE
+	I_need	ATTRIB,BYTE
 	i_need	THISSFT,DWORD
 	i_need	CURBUF,DWORD
 	i_need	THISDRV,BYTE
 	i_need	ALLOWED,BYTE
 	i_need	EXTERR_LOCUS,BYTE
-	I_need	FailErr,BYTE
+	I_need	FAILERR,BYTE
 	I_Need	PROC_ID,WORD
 	I_Need	USER_ID,WORD
 	i_need	JShare,DWORD
@@ -49,7 +49,7 @@ if debug
 INCLUDE '../INC/BUGTYP.ASM'
 end if
 
-Break <DOS_CLOSE -- CLOSE FILE from SFT>
+Break <DOS_CLOSE -- Close FILE from SFT>
 
 ; Inputs:
 ;	[THISSFT] set to the SFT for the file being used
@@ -69,7 +69,7 @@ Break <DOS_CLOSE -- CLOSE FILE from SFT>
 	LES	DI,[THISSFT]
 	Assert	ISSFT,<ES,DI>,<"DOS_CLOSE">
 	fmt	TypAccess,LevBUSY,<"p$: CLOSE SFT: x$:x$\n">,<ES,DI>
-	MOV	BX,[es:DI+sf_flags]
+	MOV	BX,[es:DI+sf_entry.sf_flags]
 ;
 ; Network closes are handled entirely by the net code.
 ;
@@ -81,12 +81,12 @@ Break <DOS_CLOSE -- CLOSE FILE from SFT>
 ;	CALL	SetSFTTimes		    ;IFS. set time for all SFT		;AN000;
 ;	LeaveCrit   critDisk		    ;IFS.				;AN000;
 noshare:
-	CallInstall Net_Close,multnet,6
-;	JC	nomore			    ;IFS. error 			;AN000;
+	CallInstall Net_Close,MultNET,6
+;	JC	nomore_CLOSE			    ;IFS. error 			;AN000;
 ;	invoke	OWN_SHARE		    ;IFS. IFS owns share ?		;AN000;
-;	JZ	nomore			    ;IFS. yes				;AN000;
+;	JZ	nomore_CLOSE			    ;IFS. yes				;AN000;
 ;	invoke	ShareEnd		    ;IFS. remove SFT entry from share	;AN000;
-nomore:
+nomore_CLOSE:
 	return
 
 ;
@@ -99,15 +99,15 @@ nomore:
 LocalClose:
 	EnterCrit   critDisk
 	CALL	SetSFTTimes
-	CALL	Free_SFT		; dec ref count or mark as busy
+	CALL	FREE_SFT		; dec ref count or mark as busy
 
 	TEST	BX,devid_device        ;FS. device ?				;AN000;
 	JNZ	nofastsk	       ;FS. yes 				;AN000;
-	MOV	CX,[es:DI+sf_firclus]  ;FS. cx= first cluster			;AN000;
+	MOV	CX,[es:DI+sf_entry.sf_firclus]  ;FS. cx= first cluster			;AN000;
 	OR	CX,CX		       ;FS. cx=0 ?				;AN000;
 	JZ	nofastsk	       ;FS. yes, dont do it			;AN000;
-	LDS	SI,[es:DI+sf_devptr]   ;FS.					;AN000;
-	MOV	DL,[SI+dpb_drive]      ;FS. dl= drive				;AN000;
+	LDS	SI,[es:DI+sf_entry.sf_devptr]   ;FS.					;AN000;
+	MOV	DL,[SI+dpb.dpb_drive]      ;FS. dl= drive				;AN000;
 	invoke	FastSeek_Close	       ;FS. invoke fastseek			;AN000;
 nofastsk:
 	Context DS
@@ -124,7 +124,7 @@ CloseEntry:
 ;
 	TEST	BX,devid_file_clean + devid_device
 	JZ	rdir
-	JMP	Free_SFT_OK		; either clean or device
+	JMP	FREE_SFT_OK		; either clean or device
 ;
 ; Retrieve the directory entry for the file
 ;
@@ -141,7 +141,7 @@ clook:
 ; ES:BX points to buffer header
 ;
 	SaveReg <DI,SI>
-	LEA	SI,[SI+sf_name]
+	LEA	SI,[SI+sf_entry.sf_name]
 ;
 ; ES:DI point to directory entry
 ; DS:SI point to unpacked name
@@ -165,32 +165,32 @@ Bye:	MOV	DI,SI
 	JMP	CloseFinish
 
 CLOSE_GO:
-	TEST	[SI+sf_mode],sf_isfcb	; FCB ?
+	TEST	[SI+sf_entry.sf_mode],sf_isfcb	; FCB ?
 	JZ	nofcb			; no, set dir attr, sf_attr
-	MOV	CH,[es:DI+dir_attr]
-	MOV	AL,[SI+sf_attr]
+	MOV	CH,[es:DI+dir_entry.dir_attr]
+	MOV	AL,[SI+sf_entry.sf_attr]
 	MOV	[ATTRIB],AL
 	invoke	MatchAttributes
 	JNZ	Bye			; attributes do not match
 	JMP	SHORT setattr		;FT.
 nofcb:
-	MOV	AL,[SI+sf_attr] 	;FT.					;AN000;
-	MOV	[es:DI+dir_attr],AL	;FT.					;AN000;
+	MOV	AL,[SI+sf_entry.sf_attr] 	;FT.					;AN000;
+	MOV	[es:DI+dir_entry.dir_attr],AL	;FT.					;AN000;
 setattr:
-	OR	byte [es:DI+dir_attr],attr_archive	;Set archive
-	MOV	AX,[es:DI+dir_first]	;AN011;F.O. save old first clusetr
+	OR	byte [es:DI+dir_entry.dir_attr],attr_archive	;Set archive
+	MOV	AX,[es:DI+dir_entry.dir_first]	;AN011;F.O. save old first clusetr
 	MOV	[OLD_FIRSTCLUS],AX	;AN011;F.O. save old first clusetr
 
-	MOV	AX,[SI+sf_firclus]
-	MOV	[es:DI+dir_first],AX	;Set firclus pointer
-	MOV	AX,word [SI+sf_size]
-	MOV	[es:DI+dir_size_l],AX	;Set size
-	MOV	AX,word [SI+sf_size+2]
-	MOV	[es:DI+dir_size_h],AX
-	MOV	AX,[SI+sf_date]
-	MOV	[es:DI+dir_date],AX	;Set date
-	MOV	AX,[SI+sf_time]
-	MOV	[es:DI+dir_time],AX	;Set time
+	MOV	AX,[SI+sf_entry.sf_firclus]
+	MOV	[es:DI+dir_entry.dir_first],AX	;Set firclus pointer
+	MOV	AX,word [SI+sf_entry.sf_size]
+	MOV	[es:DI+dir_entry.dir_size_l],AX	;Set size
+	MOV	AX,word [SI+sf_entry.sf_size+2]
+	MOV	[es:DI+dir_entry.dir_size_h],AX
+	MOV	AX,[SI+sf_entry.sf_date]
+	MOV	[es:DI+dir_entry.dir_date],AX	;Set date
+	MOV	AX,[SI+sf_entry.sf_time]
+	MOV	[es:DI+dir_entry.dir_time],AX	;Set time
 ;; File Tagging
 
 ;	MOV	AX,[SI.sf_codepage]	   ;AN000;
@@ -201,13 +201,13 @@ setattr:
 ;	MOV	ES:[DI.dir_attr2],AL	   ;AN000;   ;Set high attr
 
 ;; File Tagging
-	TEST	[es:BX+buf_flags],buf_dirty  ;LB. if already dirty		;AN000;
-	JNZ	yesdirty		  ;LB.	  don't increment dirty count   ;AN000;
+	TEST	[es:BX+BUFFINFO.buf_flags],buf_dirty  ;LB. if already dirty		;AN000;
+	JNZ	yesdirty_CLOSE		  ;LB.	  don't increment dirty count   ;AN000;
 	invoke	INC_DIRTY_COUNT 	  ;LB.					;AN000;
-	OR	[es:BX+buf_flags],buf_dirty ;Buffer dirty
-yesdirty:
+	OR	[es:BX+BUFFINFO.buf_flags],buf_dirty ;Buffer dirty
+yesdirty_CLOSE:
 	SaveReg  <DS,SI>
-	MOV	CX,[SI+sf_firclus]	; do this for Fastopen
+	MOV	CX,[SI+sf_entry.sf_firclus]	; do this for Fastopen
 	MOV	AL,[THISDRV]
 ;;; 10/1/86  update fastopen cache
 	PUSH	DX
@@ -216,9 +216,9 @@ yesdirty:
 	OR	CX,CX			  ;AN005; first cluster 0; may be truncated
 	JNZ	do_update2		  ;AN005; no, do update
 	MOV	AH,3			  ;AN005; do a delete cache entry
-	MOV	DI,word [SI+sf_dirsec]   ;AN005; cx:di = dir sector
-	MOV	CX,word [SI+sf_dirsec+2] ;AN005;
-	MOV	DH,[SI+sf_dirpos]	     ;AN005; dh= dir pos
+	MOV	DI,word [SI+sf_entry.sf_dirsec]   ;AN005; cx:di = dir sector
+	MOV	CX,word [SI+sf_entry.sf_dirsec+2] ;AN005;
+	MOV	DH,[SI+sf_entry.sf_dirpos]	     ;AN005; dh= dir pos
 	JMP	SHORT do_update 	;AN011;F.O.
 do_update2:				;AN011;F.O.
 	CMP	CX,[OLD_FIRSTCLUS]	;AN011;F.O. same as old first clusetr?
@@ -231,7 +231,7 @@ do_update:				  ;AN005;
 	POP	DX
 
 ;;; 10/1/86  update fastopen cache
-	invoke	FLUSHBUF		; flush all relevant buffers
+	invoke	FlushBuf		; flush all relevant buffers
 	RestoreReg  <DI,ES>
 	MOV	AL,error_access_denied
 	JC	CloseFinish
@@ -243,7 +243,7 @@ CloseFinish:
 ;
 ;;;; 7/21/86
 	PUSHF				; save flag from DirFromSFT
-	invoke	Dev_Close_SFT
+	invoke	DEV_CLOSE_SFT
 	POPF
 ;;;; 7/21/86
 ;
@@ -255,14 +255,14 @@ CloseFinish:
 	PUSHF
 	fmt	TypAccess,LevBUSY,<"p$: DOSFreeSFT: x$:x$ from x$\n">,<ES,DI,AX>
 	DEC	CX			; if cx != 1
-	JNZ	NoFree			; then do NOT free SFT
+	JNZ	NoFree_CLOSE			; then do NOT free SFT
 	Assert	ISSFT,<ES,DI>,"DOS_FREE_SFT"
-	MOV	[es:DI+sf_ref_Count],CX
-NoFree:
+	MOV	[es:DI+sf_entry.sf_ref_count],CX
+NoFree_CLOSE:
 	LeaveCrit   critDisk
 	POPF
 	return
-EndProc DOS_Close
+EndProc DOS_CLOSE
 
 ;
 ; ES:DI -> SFT. Decs sft_ref_count.  If the count goes to 0, mark it as busy.
@@ -275,16 +275,16 @@ Procedure   FREE_SFT,NEAR
 ;	ASSUME	ES:NOTHING
 
 	PUSHF		; Save carry state
-	MOV	AX,[es:DI+sf_ref_count]
+	MOV	AX,[es:DI+sf_entry.sf_ref_count]
 	DEC	AX
 	JNZ	SetCount
 	DEC	AX
 SetCount:
-	XCHG	AX,[es:DI+sf_ref_count]
+	XCHG	AX,[es:DI+sf_entry.sf_ref_count]
 	POPF
 	return
 
-EndProc Free_SFT
+EndProc FREE_SFT
 
 ;
 ;   DirFromSFT - locate a directory entry given an SFT.
@@ -305,31 +305,31 @@ EndProc Free_SFT
 Procedure   DirFromSFT,NEAR
 ;	ASSUME	DS:DOSGroup,ES:NOTHING
 
-	MOV	[EXTERR_LOCUS],errLOC_Disk
+	MOV	byte [EXTERR_LOCUS],errLOC_Disk
 	SaveReg <ES,DI>
-	MOV	DX,word [es:DI+sf_dirsec+2]  ;F.C. >32mb
+	MOV	DX,word [es:DI+sf_entry.sf_dirsec+2]  ;F.C. >32mb
 	MOV	[HIGH_SECTOR],DX		 ;F.C. >32mb
-	MOV	DX,word [es:DI+sf_dirsec]
+	MOV	DX,word [es:DI+sf_entry.sf_dirsec]
 
-	PUSH	[HIGH_SECTOR]			 ;F.C. >32mb
+	PUSH	word [HIGH_SECTOR]			 ;F.C. >32mb
 	PUSH	DX
 	invoke	FATREAD_SFT		; ES:BP points to DPB, [THISDRV] set
 					; [THISDPB] set
 	POP	DX
-	POP	[HIGH_SECTOR]			 ;F.C. >32mb
+	POP	word [HIGH_SECTOR]			 ;F.C. >32mb
 	JC	PopDone
 	XOR	AL,AL			; Pre read
-	MOV	[ALLOWED],allowed_FAIL + allowed_RETRY
+	MOV	byte [ALLOWED],Allowed_FAIL + Allowed_RETRY
 	invoke	GETBUFFR
 	JC	PopDone
 	RestoreReg  <SI,DS>		; Get back SFT pointer
 ;	ASSUME	DS:NOTHING
 	LES	DI,[CURBUF]
-	OR	[es:DI+buf_flags],buf_isDIR
+	OR	[es:DI+BUFFINFO.buf_flags],buf_isDIR
 	MOV	BX,DI			; ES:BX point to buffer header
 	LEA	DI,[DI+BUFINSIZ]	; Point to buffer
 	MOV	AL,sizeof.dir_entry
-	MUL	[SI+sf_DirPos]
+	MUL	[SI+sf_entry.sf_dirpos]
 	ADD	DI,AX			; Point at the entry
 
 	return				; carry is clear
@@ -338,7 +338,7 @@ PopDone:
 	return
 EndProc DirFromSFT
 
-Break	<DOS_Commit - update directory entries>
+Break	<DOS_COMMIT - UPDATE directory entries>
 
 ; Inputs:
 ;	Same as DOS_CLOSE
@@ -353,7 +353,7 @@ Break	<DOS_Commit - update directory entries>
 ;	ASSUME	ES:NOTHING
 
 	LES	DI,[THISSFT]
-	MOV	BX,[es:DI+sf_flags]
+	MOV	BX,[es:DI+sf_entry.sf_flags]
 	TEST	BX,devid_file_clean + devid_device	;Clears carry
 	retnz
 	TEST	BX,sf_isnet
@@ -361,7 +361,7 @@ Break	<DOS_Commit - update directory entries>
 if NOT Installed
 	transfer NET_COMMIT
 else
-	MOV	AX,(multNET SHL 8) OR 7
+	MOV	AX,(MultNET SHL 8) OR 7
 	INT	2FH
 	return
 end if
@@ -385,7 +385,7 @@ LOCAL_COMMIT:
 	PUSHF				;PTM.					;AN000;
 	invoke	DEV_OPEN_SFT		;PTM.  increment device count		;AN000;
 	POPF				;PTM.					;AN000;
-	LeaveCrit CritDisk		;PTM.					;AN000;
+	LeaveCrit critDisk		;PTM.					;AN000;
 	return
 
 EndProc DOS_COMMIT
@@ -416,11 +416,11 @@ Procedure   SetSFTTimes,NEAR
 	retnz				; nodate => no timestamp
 	SaveReg <AX,BX>
 	invoke	DATE16			; Date/Time to AX/DX
-	MOV	[es:DI+sf_date],AX
-	MOV	[es:DI+sf_time],DX
+	MOV	[es:DI+sf_entry.sf_date],AX
+	MOV	[es:DI+sf_entry.sf_time],DX
 	XOR	AX,AX
-if installed
-	call	dword [JSHARE+14*4]
+if Installed
+	call	dword [JShare+14*4]
 else
 	call	ShSU
 end if

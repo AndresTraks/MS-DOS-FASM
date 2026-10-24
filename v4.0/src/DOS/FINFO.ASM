@@ -36,7 +36,7 @@ Installed = TRUE
 	i_need	NoSetDir,BYTE
 	i_need	THISDRV,BYTE
 	I_need	EXTERR_CLASS,BYTE
-	I_need	EXTERR_ACTION set
+	I_need	EXTERR_ACTION Set
 	I_need	EXTERR_LOCUS,BYTE
 	i_need	DMAADD,DWORD
 	i_need	FastOpenFlg,BYTE
@@ -76,38 +76,38 @@ PAGE
 ;	ASSUME	ES:NOTHING
 
 	Invoke	TestNet
-	JNC	Local_Info
+	JNC	LOCAL_INFO_FINFO
 ;	invoke	OWN_SHARE2		       ;IFS. IFS owns share ?		;AN000;
-;	JZ	ifsshare		       ;IFS. yes			;AN000;
+;	JZ	ifsshare_FINFO		       ;IFS. yes			;AN000;
 ;	PUSH	WORD PTR [DMAADD+2]	       ;IFS. save DMAADD		;AN000;
 ;	PUSH	WORD PTR [DMAADD]	       ;IFS.				;AN000;
 ;	invoke	IFS_SEARCH_FIRST	       ;IFS. do search first		;AN000;
-;	JC	nofiles 		       ;IFS. file not existing		;AN000;
-delete_next_file:			       ;IFS.				;AN000;
+;	JC	nofiles_FINFO 		       ;IFS. file not existing		;AN000;
+delete_next_file_FINFO:			       ;IFS.				;AN000;
 ;	invoke	IFS_REN_DEL_CHECK	       ;IFS. do REN_DEL_CHECK		;AN000;
-;	JNC	share_okok		       ;IFS. share ok			;AN000;
+;	JNC	share_okok_FINFO		       ;IFS. share ok			;AN000;
 ;	MOV	AX,error_sharing_violation     ;IFS. share violation		;AN000;
-;	JMP	SHORT nofiles		       ;IFS.				;AN000;
-share_okok:
+;	JMP	SHORT nofiles_FINFO		       ;IFS.				;AN000;
+share_okok_FINFO:
 ;	POP	WORD PTR [DMAADD]	       ;IFS. retor DMAADD		;AN000;
 ;	POP	WORD PTR [DMAADD+2]	       ;IFS.				;AN000;
-ifsshare:
+ifsshare_FINFO:
 if NOT Installed
 	transfer NET_GET_FILE_INFO
 else
-	MOV	AX,(multNET SHL 8) OR 15
+	MOV	AX,(MultNET SHL 8) OR 15
 	INT	2FH
 	return
 end if
-nofiles:
+nofiles_FINFO:
 ;	POP	WORD PTR [DMAADD]	       ;IFS. retor DMAADD		;AN000;
 ;	POP	WORD PTR [DMAADD+2]	       ;IFS.				;AN000;
 ;	ret				       ;IFS. return
 
-LOCAL_INFO:
+LOCAL_INFO_FINFO:
 	EnterCrit   critDisk
-	MOV	[NoSetDir],1		; if we find a dir, don't change to it
-	invoke	Get_FAST_PATH
+	MOV	byte [NoSetDir],1		; if we find a dir, don't change to it
+	invoke	GET_FAST_PATH
 info_check:
 	JNC	info_check_dev
 
@@ -115,20 +115,20 @@ NO_PATH:
 	DOSAssume   CS,<DS>,"FINFO/No_Path"
 ;	ASSUME	ES:NOTHING
 
-	JNZ	bad_path
+	JNZ	bad_path_FINFO
 	OR	CL,CL
-	JZ	bad_path
+	JZ	bad_path_FINFO
 info_no_file:
 	MOV	AX,error_file_not_found
-BadRet:
+BadRet_FINFO:
 	STC
 justRet:
 	LeaveCrit   critDisk
 	return
 
-bad_path:
+bad_path_FINFO:
 	MOV	AX,error_path_not_found
-	jmp	BadRet
+	jmp	BadRet_FINFO
 
 info_check_dev:
 	OR	AH,AH
@@ -139,18 +139,18 @@ info_check_dev:
 	MOV	SI,BX
 	XOR	BX,BX			; Assume size=0 (dir)
 	MOV	DI,BX
-	MOV	CX,[SI+dir_time]
-	MOV	DX,[SI+dir_date]
+	MOV	CX,[SI+dir_entry.dir_time]
+	MOV	DX,[SI+dir_entry.dir_date]
 	XOR	AH,AH
-	MOV	AL,[SI+dir_attr]
+	MOV	AL,[SI+dir_entry.dir_attr]
 	TEST	AL,attr_directory
 	JNZ	NO_SIZE
-	MOV	DI,[SI+dir_size_l]
-	MOV	BX,[SI+dir_size_h]
+	MOV	DI,[SI+dir_entry.dir_size_l]
+	MOV	BX,[SI+dir_entry.dir_size_h]
 NO_SIZE:
 	POP	DS
 	CLC
-	jmp	JustRet
+	jmp	justRet
 EndProc GET_FILE_INFO
 
 Break	<SET_FILE_ATTRIBUTE -- Set File Attribute>
@@ -193,23 +193,23 @@ Break	<SET_FILE_ATTRIBUTE -- Set File Attribute>
 
 	TEST	AX,NOT attr_changeable
 	JZ	set_look
-BAD_ACC:
-	MOV	[ExtErr_locus],errLoc_UNK
-	MOV	[EXTERR_CLASS],errClass_Apperr
-	MOV	[EXTERR_ACTION],errAct_Abort
+BAD_ACC_FINFO:
+	MOV	byte [EXTERR_LOCUS],errLOC_Unk
+	MOV	byte [EXTERR_CLASS],errCLASS_Apperr
+	MOV	byte [EXTERR_ACTION],errACT_Abort
 	MOV	AX,error_access_denied
 	STC
 	return
 
 set_look:
 	Invoke	TestNet
-	JNC	Local_Set
+	JNC	LOCAL_SET
 
 if NOT Installed
 	transfer NET_SEQ_SET_FILE_ATTRIBUTE
 else
 	PUSH	AX
-	MOV	AX,(multNET SHL 8) OR 14
+	MOV	AX,(MultNET SHL 8) OR 14
 	INT	2FH
 	POP	BX			; clean stack
 	return
@@ -218,8 +218,8 @@ end if
 LOCAL_SET:
 	EnterCrit   critDisk
 	PUSH	AX			; Save new attributes
-	MOV	[NoSetDir],1		; if we find a dir, don't change to it
-	invoke	GetPath 		; get path through fastopen if there	 ;AC000;
+	MOV	byte [NoSetDir],1		; if we find a dir, don't change to it
+	invoke	GETPATH 		; get path through fastopen if there	 ;AC000;
 	JNC	set_check_device
 	POP	BX			; Clean stack (don't zap AX)
 	JMP	NO_PATH
@@ -229,25 +229,25 @@ set_check_device:
 	JNS	set_check_share
 	POP	AX
 	LeaveCrit   critDisk
-	JMP	BAD_ACC 		; device
+	JMP	BAD_ACC_FINFO 		; device
 
 set_check_share:
 	POP	AX			; Get new attributes
 	invoke	REN_DEL_Check
 	JNC	set_do
 	MOV	AX,error_sharing_violation
-	jmp	short	ok_bye
+	jmp	short	OK_BYE
 
 set_do:
 	LES	DI,[CURBUF]
-	AND	byte [es:BX+dir_attr],NOT attr_changeable
-	OR	byte [es:BX+dir_attr],AL
+	AND	byte [es:BX+dir_entry.dir_attr],NOT attr_changeable
+	OR	byte [es:BX+dir_entry.dir_attr],AL
 
-	TEST	[es:DI+buf_flags],buf_dirty  ;LB. if already dirty		;AN000;
-	JNZ	yesdirty		  ;LB.	  don't increment dirty count   ;AN000;
+	TEST	[es:DI+BUFFINFO.buf_flags],buf_dirty  ;LB. if already dirty		;AN000;
+	JNZ	yesdirty_FINFO		  ;LB.	  don't increment dirty count   ;AN000;
 	invoke	INC_DIRTY_COUNT 	  ;LB.					;AN000;
-	OR	[es:DI+buf_flags],buf_dirty
-yesdirty:
+	OR	[es:DI+BUFFINFO.buf_flags],buf_dirty
+yesdirty_FINFO:
 	MOV	AL,[THISDRV]
 ;;;; 10/1/86 F.C update fastopen cache
 	PUSH	DX
@@ -273,10 +273,10 @@ EndProc SET_FILE_ATTRIBUTE
 	procedure   GET_FAST_PATH,NEAR
 ;	ASSUME	DS:NOTHING,ES:NOTHING
 
-	OR	[FastOpenFlg],FastOpen_Set ;FO. trigger fastopen		;AN000;
-	invoke	GetPath
+	OR	byte [FastOpenFlg],FastOpen_Set ;FO. trigger fastopen		;AN000;
+	invoke	GETPATH
 	PUSHF			       ;FO.					;AN000;
-	AND    [FastOpenFlg],Fast_yes  ;FO. clear all fastopen flags		;AN000;
+	AND    byte [FastOpenFlg],Fast_yes  ;FO. clear all fastopen flags		;AN000;
 	POPF			       ;FO.					;AN000;
 	return
 
