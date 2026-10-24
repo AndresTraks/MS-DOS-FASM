@@ -1408,7 +1408,10 @@ ISEOFX:
 	MESSAGE FTESTINIT,<"SYSINIT",CR,LF>
 	ZWAIT
 	MESSAGE FTESTINIT,<"ON TO SYSINIT...",CR,LF>
-	JMP	SYSINIT
+; SYSINIT is in the other segment, and MASM knew it from EXTRN SYSINIT:FAR;
+; here the segment has to be named, or the jump would be a near one into
+; this segment -- SYSINITSEG begins its offsets again at nought.
+	JMP	SYSINITSEG:SYSINIT
 
 ;INIT	ENDP
 

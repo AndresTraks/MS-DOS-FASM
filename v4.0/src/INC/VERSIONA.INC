@@ -4,7 +4,7 @@
 MAJOR_VERSION	    equ     4	    ;Major DOS version
 MINOR_VERSION	    equ     00	    ;Minor DOS Version
 
-EXPECTED_VERSION    equ     (MINOR_VERSION SHL 8)+MAJOR_VERSION
+EXPECTED_VERSION    equ     ((MINOR_VERSION SHL 8)+MAJOR_VERSION)
 
 ;       if1
 ;       %OUT  ... for DOS Version 4.00 ...

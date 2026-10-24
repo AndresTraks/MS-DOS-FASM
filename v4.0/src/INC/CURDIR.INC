@@ -12,8 +12,8 @@ BREAK <Current directory list structure>
 ; field is the location of the end of the definition.  No .. is allowed    ;
 ; past this point							   ;
 
-DIRSTRLEN	EQU	64+3		; Max length in bytes of directory strings
-TEMPLEN 	EQU	DIRSTRLEN*2
+DIRSTRLEN	EQU	(64+3)		; Max length in bytes of directory strings
+TEMPLEN 	EQU	(DIRSTRLEN*2)
 
 STRUC curdir_list
 {

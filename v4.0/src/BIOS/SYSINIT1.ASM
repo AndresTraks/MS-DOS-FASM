@@ -598,7 +598,9 @@ Not_386_System: 				  ;AN003;
 ;ASSUME	DS:NOTHING
 
 	if	NOT IBMJAPVER
-	CALL	RE_INIT 		; Re-call the BIOS
+; RE_INIT is in the BIOS's own segment, which MASM knew from
+; EXTRN RE_INIT:FAR; the segment has to be named here.
+	CALL	far CODE:RE_INIT 	; Re-call the BIOS
 	end if
 
 	STI				; INTs OK
@@ -1664,7 +1666,7 @@ Set_Sysinit_Base:
 ; fasm's EQU is a preprocessor definition, so it has to stand before the
 ; line that uses it: the distance between the two labels rather than a
 ; position read off $ at the end.
-SIZE_SYSINIT_BASE	equ End_Sysinit_Base-Sysinit_Base	;AN000;
+SIZE_SYSINIT_BASE	equ (End_Sysinit_Base-Sysinit_Base)	;AN000;
 	mov	cx, SIZE_SYSINIT_BASE		 ;AN000;
 	add	[MEMLO],cx			 ;AN000;
 	or	[cs:SetDevMarkFlag], FOR_DEVMARK ;AN013;
@@ -1876,9 +1878,9 @@ Sysinit_Base:					;AN000;
 ; Offsets inside the block that gets relocated, which MASM read off $ at
 ; the data below; fasm's EQU has to stand before the line that uses it,
 ; so each is the distance between two labels instead.
-Sysinit_Base_SS  equ Sysinit_Base_SS_at-Sysinit_Base	;AN000;
-Sysinit_Base_SP  equ Sysinit_Base_SP_at-Sysinit_Base	;AN000;
-Mem_Alloc_Err_msg equ Mem_Alloc_Err_msg_at-Sysinit_Base	;AN000;
+Sysinit_Base_SS  equ (Sysinit_Base_SS_at-Sysinit_Base)	;AN000;
+Sysinit_Base_SP  equ (Sysinit_Base_SP_at-Sysinit_Base)	;AN000;
+Mem_Alloc_Err_msg equ (Mem_Alloc_Err_msg_at-Sysinit_Base)	;AN000;
 	mov	word [cs:Sysinit_Base_SS], SS ;AN000; save stack
 	mov	word [cs:Sysinit_Base_SP], SP ;AN000;
 	int	21h				;AN000; LOAD/EXEC DOS call.

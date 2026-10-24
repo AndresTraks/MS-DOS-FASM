@@ -86,32 +86,32 @@ fcb_sfn         EQU     sys_fcb.fcb_reserved
 ;
 ; Network FCB
 ;
-fcb_net_drive   EQU     sys_fcb.fcb_reserved+1
-fcb_net_handle  EQU     sys_fcb.fcb_reserved+2
-fcb_netID       EQU     sys_fcb.fcb_reserved+4
+fcb_net_drive   EQU     (sys_fcb.fcb_reserved+1)
+fcb_net_handle  EQU     (sys_fcb.fcb_reserved+2)
+fcb_netID       EQU     (sys_fcb.fcb_reserved+4)
 
 ;
 ; No sharing local file FCB
 ;
-fcb_nsl_drive   EQU     sys_fcb.fcb_reserved+1
-fcb_nsl_bits    EQU     sys_fcb.fcb_reserved+2
-fcb_nsl_firclus EQU     sys_fcb.fcb_reserved+3
-fcb_nsl_dirsec  EQU     sys_fcb.fcb_reserved+5
-fcb_nsl_dirpos  EQU     sys_fcb.fcb_reserved+7
+fcb_nsl_drive   EQU     (sys_fcb.fcb_reserved+1)
+fcb_nsl_bits    EQU     (sys_fcb.fcb_reserved+2)
+fcb_nsl_firclus EQU     (sys_fcb.fcb_reserved+3)
+fcb_nsl_dirsec  EQU     (sys_fcb.fcb_reserved+5)
+fcb_nsl_dirpos  EQU     (sys_fcb.fcb_reserved+7)
 
 ;
 ; No sharing local device FCB
 ;
-fcb_nsld_drive  EQU     sys_fcb.fcb_reserved+1
-fcb_nsld_drvptr EQU     sys_fcb.fcb_reserved+2
+fcb_nsld_drive  EQU     (sys_fcb.fcb_reserved+1)
+fcb_nsld_drvptr EQU     (sys_fcb.fcb_reserved+2)
 
 ;
 ; Sharing local FCB
 ;
-fcb_l_drive     EQU     sys_fcb.fcb_reserved+1
-fcb_l_firclus   EQU     sys_fcb.fcb_reserved+2
-fcb_l_mfs       EQU     sys_fcb.fcb_reserved+4
-fcb_l_attr      EQU     sys_fcb.fcb_reserved+6
+fcb_l_drive     EQU     (sys_fcb.fcb_reserved+1)
+fcb_l_firclus   EQU     (sys_fcb.fcb_reserved+2)
+fcb_l_mfs       EQU     (sys_fcb.fcb_reserved+4)
+fcb_l_attr      EQU     (sys_fcb.fcb_reserved+6)
 
 ;
 ; Bogusness:  the four cases are:

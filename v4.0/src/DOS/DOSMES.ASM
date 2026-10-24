@@ -315,7 +315,7 @@ ESCTAB:
 	DB	65			; End of table
 	end if
 ESCEND:
-ESCTABLEN EQU	ESCEND-ESCTAB
+ESCTABLEN EQU	(ESCEND-ESCTAB)
 
 ESCFUNC:
 	short_addr  GETCH		; Ignore the escape sequence

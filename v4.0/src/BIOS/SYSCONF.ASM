@@ -2883,34 +2883,34 @@ EMS_STUB_START:;AN030;J.K.
 	DW	0000			;AN031;pointer to harzard area. System will hang.
 	DB	'EMMXXXX0'		;AN031;device name
 
-INTV2F	equ $-EMS_STUB_START		;AN030;J.K.pointer to old 2Fh handler		  ;an000; dms;
+INTV2F	equ ($-EMS_STUB_START)		;AN030;J.K.pointer to old 2Fh handler		  ;an000; dms;
 IntV2FO DW	?			;AN030;;offset				       ;an000; dms;
 IntV2FS DW	?			;AN030;;segment 			       ;an000; dms;
 
-OLDINT67_VECTOR equ $-EMS_STUB_START	;AN030;J.K.
+OLDINT67_VECTOR equ ($-EMS_STUB_START)	;AN030;J.K.
 OldInt67	dd	?		;AN030;; save pointer to old INT 67 handler here
 
 if	BUFFERFLAG
 
-LOCKFLAG	equ $-EMS_STUB_START
+LOCKFLAG	equ ($-EMS_STUB_START)
 LOCK_FLAG	db  ?
 
 else
 
-EMSPAGE_CNT	equ	$-EMS_STUB_START ;AN030;J.K.
+EMSPAGE_CNT	equ	($-EMS_STUB_START) ;AN030;J.K.
 EMSPageCount	dw	?		;AN030;; save count of EMS mappable pages here
 
 EMSReservedArray_X:;AN030;;J.K. For initialization routine
-EMSRESERVEDARRAY equ $-EMS_STUB_START	;AN030;;J.K.
+EMSRESERVEDARRAY equ ($-EMS_STUB_START)	;AN030;;J.K.
 		 dw	0ffffh,0ffffh	;AN030;; array of reserved pages
 		 dw	0ffffh,0ffffh	;AN030;; phys_page_segment, phys_page_number * 2 entries
 MappableArray_X:;AN030;;J.K. for initialization routine
-MAPPABLEARRAY	equ  $-EMS_STUB_START	;AN030;;J.K.
+MAPPABLEARRAY	equ  ($-EMS_STUB_START)	;AN030;;J.K.
 		dw	64 dup (0,0)	;AN030;; table to get addresses from old INT 67 handler
 
 end if
 					; 64 entries * 2 words
-NEWEMS2F_OFF	equ	$-EMS_STUB_START;AN030;
+NEWEMS2F_OFF	equ	($-EMS_STUB_START);AN030;
 Int_2F_EMS:				;AN030;;J.K. Name changed.
 	cmp	ah,1Bh			;AN030;;AN032;2Fh trap for Mappable Phys. Add. Array ;an000; dms;
 	je	Int_2F_EMS_MINE 	;AN030;;This one we want		       ;an000; dms;
@@ -3012,7 +3012,7 @@ I67Error8F	equ	8fh		;AN031;; invalid sub-function error
 end if
 
 ;-------------------------------------------------------------------
-NEW67_OFFSET	equ	$-EMS_STUB_START	;J.K.
+NEW67_OFFSET	equ	($-EMS_STUB_START)	;J.K.
 Int67Filter:				;AN030;
 
 if	BUFFERFLAG

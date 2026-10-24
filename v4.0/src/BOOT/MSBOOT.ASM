@@ -155,13 +155,13 @@ Boot_System_id	db    'FAT12   '        ;AN000;
 UDATA:					; the names below are addresses in fasm, with no
 					;  size of their own, so each instruction says
 					;  what it is reading or writing
-Sec9	  equ	UDATA+0			;11 byte diskette parm. table
-BIOS$_L   EQU	UDATA+11
-BIOS$_H   equ	UDATA+13		;AN000;
-CURTRK	  EQU	UDATA+15
-CURSEC	  EQU	UDATA+17
-DIR$_L	  EQU	UDATA+18
-Dir$_H	  equ	UDATA+20		;AN000;
+Sec9	  equ	(UDATA+0)			;11 byte diskette parm. table
+BIOS$_L   EQU	(UDATA+11)
+BIOS$_H   equ	(UDATA+13)		;AN000;
+CURTRK	  EQU	(UDATA+15)
+CURSEC	  EQU	(UDATA+17)
+DIR$_L	  EQU	(UDATA+18)
+Dir$_H	  equ	(UDATA+20)		;AN000;
 START:
 
 ;

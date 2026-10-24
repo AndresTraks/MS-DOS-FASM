@@ -88,7 +88,7 @@ include '../INC/VERSIONA.INC'	;AN001; Version number for SYS.COM
 ; the end of the file; fasm's EQU is a preprocessor definition, so it
 ; has to stand before the line that uses it, as the distance between two
 ; labels rather than a position.
-LoadBIO_Size	equ	Total_Length - Start
+LoadBIO_Size	equ	(Total_Length - Start)
 
 sec9	equ	522h		;;** 8/3/87 DCL
 
@@ -1123,7 +1123,7 @@ Endwr:					;AN000;
 ;include MSbtmes.inc	       ;AN000;
 include 'MSBIO.CL1'	       ;AN001;
 
-Relocate_Length   equ  Total_Length - Start
+Relocate_Length   equ  (Total_Length - Start)
 Total_Length:
 ;LoadBIO_Size	equ	$ - Start	; written above, where it is needed
 

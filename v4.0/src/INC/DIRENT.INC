@@ -59,12 +59,12 @@ attr_device	    EQU     40h 	; This is a VERY special bit.
 					;   has this bit set. It is set non-zero
 					;   when a device is found by GETPATH
 
-attr_all	    EQU     attr_hidden+attr_system+attr_directory
+attr_all	    EQU     (attr_hidden+attr_system+attr_directory)
 					; OR of hard attributes for FINDENTRY
 
-attr_ignore	    EQU     attr_read_only+attr_archive+attr_device
+attr_ignore	    EQU     (attr_read_only+attr_archive+attr_device)
 					; ignore this(ese) attribute(s) during
 					; search first/next
 
-attr_changeable     EQU     attr_read_only+attr_hidden+attr_system+attr_archive
+attr_changeable     EQU     (attr_read_only+attr_hidden+attr_system+attr_archive)
 					; changeable via CHMOD

@@ -63,7 +63,7 @@ P_ASCII80	   equ	80h		;AN000; ASCII 80h character code
 
 ;-------- Masks
 P_Make_Lower	   equ	20h		;AN000; make lower case character
-P_Make_Upper	   equ	0ffh-P_Make_Lower ;AN000; make upper case character
+P_Make_Upper	   equ	(0ffh-P_Make_Lower) ;AN000; make upper case character
 
 		   PAGE 		   ;AN000;
 ;-------- DOS function call related equs
@@ -457,7 +457,7 @@ P_Flags	   dw	0		;AN000; Parser internal flags
 P_Flags1	   equ	byte ptr P_Flags ;AN038; to reference first byte flags
 ; MASM read this as a byte at P_Flags+1; in fasm the size goes on the
 ; instruction, so this is the address alone.
-P_Flags2	   equ	P_Flags+1 ;AN038; to reference second byte flags only
+P_Flags2	   equ	(P_Flags+1) ;AN038; to reference second byte flags only
 
 ;in second byte of P_Flags, referenced as P_Flags2:
 P_equ		   equ	01h	      ;AN000; "=" packed in string buffet
@@ -510,7 +510,7 @@ end if					;AN000;(of CAPSW)
 ; (tm06) IF	   FileSW		;AN000;(Check if file spec is supported)
 if		   FileSW+DrvSW 	;AN000;(Check if file spec is supported)
 P_FileSp_Char	   db	'[]|<>+=;"'     ;AN000; delimitter of file spec
-P_FileSp_Len	   equ	$-P_FileSp_Char ;AN000;
+P_FileSp_Len	   equ	($-P_FileSp_Char) ;AN000;
 end if					;AN000;(of FileSW)
 ; (tm05) IF	   QusSW		;AN000;(Check if quoted string is supported)
 ;(deleted ;AN025;) IF		      QusSW+CmpxSW	   ; (tm05) ;AN000;(Check if quoted string is supported)

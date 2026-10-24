@@ -664,6 +664,6 @@ Version_Fake_Table:			    ;AN007  starting address for special
 
 MEMSTRT:
 MSINI002E:
-ADJFAC	EQU	MEMSTRT-SYSBUF
+ADJFAC	EQU	(MEMSTRT-SYSBUF)
 
 end if

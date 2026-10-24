@@ -56,4 +56,4 @@ match =Process_data_block_LAID_OUT, Process_data_block_LAID_OUT
 }
 
 PDB_InterCon	EQU	Process_data_block.PDB_PAD1; 2/12/KK
-PDB_Append	EQU	Process_data_block.PDB_PAD1+1; 2/12/KK
+PDB_Append	EQU	(Process_data_block.PDB_PAD1+1); 2/12/KK

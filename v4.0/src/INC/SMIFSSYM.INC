@@ -82,5 +82,5 @@ IFSCBUPDATE    EQU     6
 ; start of it, which is 0.
 IFSR_PARMS@	   =  IFSRH.IFSR_FCN_PARMS    ; command parameters
 IFSR_RESSIZE	   =  IFSRH.IFSR_FCN_PARMS+4  ; driver total size
-LENGTH_INIT	   EQU IFSR_RESSIZE+2
+LENGTH_INIT	   EQU (IFSR_RESSIZE+2)
 
