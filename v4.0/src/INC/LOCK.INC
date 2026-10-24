@@ -14,11 +14,19 @@ Lock_add	    equ    6
 ;
 ;Structure for Lock buffer
 
-LockBuf    STRUC
+STRUC LockBuf
+{
 
-   Lock_position DD    ?	    ; file position for LOCK
-   Lock_length	 DD    ?	    ; number of bytes to LOCK
+   Lock_position DD    0	    ; file position for LOCK
+   Lock_length	 DD    0	    ; number of bytes to LOCK
 
-LockBuf    ENDS
+}
+match =LockBuf_LAID_OUT, LockBuf_LAID_OUT
+{
+    LockBuf_LAID_OUT equ 1
+    virtual at 0
+      LockBuf LockBuf
+      sizeof.LockBuf = $ - LockBuf
+    end virtual
+}
 ;
-

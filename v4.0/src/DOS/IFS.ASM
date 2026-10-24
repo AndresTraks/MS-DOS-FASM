@@ -1,17 +1,17 @@
 
 
 
-.xlist									  ;AN000;
-include    dosseg.asm							  ;AN000;
+;.xlist									  ;AN000;
+INCLUDE    '../INC/DOSSEG.ASM'							  ;AN000;
 
-CODE	SEGMENT BYTE PUBLIC  'CODE'                                       ;AN000;
-	ASSUME	CS:DOSGROUP,  SS:DOSGROUP				  ;AN000;
-.xcref									  ;AN000;
-include    dossym.inc							  ;AN000;
-include    devsym.inc							  ;AN000;
-include    doscntry.inc 						  ;AN000;
-.cref									  ;AN000;
-.list
+if SEGSEL = S_CODE;AN000;
+;	ASSUME	CS:DOSGROUP,  SS:DOSGROUP				  ;AN000;
+;.xcref									  ;AN000;
+INCLUDE    '../INC/DOSSYM.INC'							  ;AN000;
+INCLUDE    '../INC/DEVSYM.INC'							  ;AN000;
+INCLUDE    '../INC/DOSCNTRY.INC' 						  ;AN000;
+;.cref									  ;AN000;
+;.list
 StackSize   =	180h			; gross but effective
 
 	i_need	VERFLG		       ; verify status flag		  ;AN000;
@@ -51,15 +51,15 @@ buffers   dw	0							  ;AN000;
 	  dw	0							  ;AN000;
 lastdrv   dw	0							  ;AN000;
 secsize   dw	0							  ;AN000;
-DosInfo       ENDS							  ;AN000;
-
+;DosInfo       ENDS							  ;AN000;
+;
 
 
-	extrn	ABSDRD:NEAR		 ;AN000;
-	extrn	ABSDWRT:NEAR		 ;AN000;
-	extrn	READTIME:NEAR		 ;AN000;
-	extrn	CHECKFLUSH:NEAR 	 ;AN000;
-	extrn	GETCURHEAD:NEAR 	 ;AN000;
+;	extrn	ABSDRD:NEAR		 ;AN000;
+;	extrn	ABSDWRT:NEAR		 ;AN000;
+;	extrn	READTIME:NEAR		 ;AN000;
+;	extrn	CHECKFLUSH:NEAR 	 ;AN000;
+;	extrn	GETCURHEAD:NEAR 	 ;AN000;
 
 
 ;******************************************************************************
@@ -101,38 +101,38 @@ DosInfo       ENDS							  ;AN000;
 ; *		     "Licensed Material - Program Property of Microsoft"
 ; *
 ; *************************************************************************
-
+;
 
 
 
 
 PROCEDURE   IFS_DOSCALL,FAR						  ;AN000;
- assume DS:NOTHING,ES:NOTHING						  ;AN000;
+; assume DS:NOTHING,ES:NOTHING						  ;AN000;
 
 	 CLI			;					  ;AN000;
 	 CMP	 AH,39		;					  ;AN000;
 	 JNZ	 others 	;					  ;AN000;
-	 INC	 CS:[INDOS]	; in DOS				  ;AN000;
+	 INC	 [cs:INDOS]	; in DOS				  ;AN000;
 	 JMP	 Dosend 	;					  ;AN000;
 others:
 	 CMP	 AH,40		;					  ;AN000;
 	 JNZ	 others2	;					  ;AN000;
-	 DEC	 CS:[INDOS]	; out DOS				  ;AN000;
+	 DEC	 [cs:INDOS]	; out DOS				  ;AN000;
 	 JMP	 Dosend 	;					  ;AN000;
 others2:
 	 CMP	 AH,38		;					  ;AN000;
 	 JNZ	 not_stack	;					  ;AN000;
 	 PUSH	 CS		;					  ;AN000;
 	 POP	 DS		;					  ;AN000;
-	 MOV	 SI,OFFSET DOSGROUP:IOSTACK				  ;AN000;
+	 MOV	 SI,IOStack				  ;AN000;
 	 MOV	 CX,stacksize						  ;AN000;
 	 JMP	 Dosend 	;					  ;AN000;
 				;					  ;AN000;
 not_stack:			;					  ;AN000;
-	 MOV	 CS:[Temp_Var],DS; save ds for strcmp strcpy		  ;AN000;
+	 MOV	 [cs:Temp_Var],DS; save ds for strcmp strcpy		  ;AN000;
 	 PUSH	 CS		;					  ;AN000;
 	 POP	 DS		;					  ;AN000;
- assume DS:DOSGROUP							  ;AN000;
+; assume DS:DOSGROUP							  ;AN000;
 	 INC	 [INDOS]	; in DOS				  ;AN000;
 	 PUSH	 CX		; save cx				  ;AN000;
 	 PUSH	 DX		; save cx				  ;AN000;
@@ -147,12 +147,12 @@ not_stack:			;					  ;AN000;
 	 MOV	 [SaveBX],BX	;					  ;AN000;
 	 MOV	 BX,CS		; prepare system stack			  ;AN000;
 	 MOV	 SS,BX		;					  ;AN000;
-	 MOV	 SP,OFFSET DOSGROUP:DSKSTACK				  ;AN000;
+	 MOV	 SP,DSKSTACK				  ;AN000;
 	 MOV	 BX,[SaveBX]	;					  ;AN000;
 	 MOV	 [Callback_flag],1  ;set flag				  ;AN000;
 withSS_SP:			;					  ;AN000;
 	 STI								  ;AN000;
- ASSUME DS:NOTHING							  ;AN000;
+; ASSUME DS:NOTHING							  ;AN000;
 ;	 OR	 [DOS34_FLAG],Force_I24_Fail				  ;AN000;
 ;									  ;AN000;
 ;	 cmp	 ah,0		 ; call Strategy routine ??		  ;AN000;
@@ -219,8 +219,8 @@ Dos_Exit:								  ;AN000;
 	 JZ	 noSS_SP	    ;yes				  ;AN000;
 	 MOV	 [Callback_flag],0  ;					  ;AN000;
 	 POPF						    ;AN000;
-	 MOV	 SP,CS:[Callback_SP];					     ;AN000;
-	 MOV	 SS,CS:[Callback_SS]; restore user's SS:SP                   ;AN000;
+	 MOV	 SP,[cs:Callback_SP];					     ;AN000;
+	 MOV	 SS,[cs:Callback_SS]; restore user's SS:SP                   ;AN000;
 	 JMP	 SHORT DOSend				    ;AN000;
 noSS_SP:						    ;AN000;
 	 POPF
@@ -231,7 +231,7 @@ Dosend:
 
 
 ENDPROC   IFS_DOSCALL					    ;AN000;
-
+;
 
 
 
@@ -279,7 +279,7 @@ ENDPROC   IFS_DOSCALL					    ;AN000;
 ;ENDPROC   STRATEGY							   ;AN000;
 
 
-
+;
 
 
 
@@ -319,7 +319,7 @@ ENDPROC   IFS_DOSCALL					    ;AN000;
 ;ENDPROC  INTERRUPT							   ;AN000;
 
 
-
+;
 
 
 
@@ -358,7 +358,7 @@ PROCEDURE  GET_DOS_INFO,NEAR						   ;AN000;
 
 	MOV	CX,[YEAR]						   ;AN000;
 	ADD	CX,1980 						   ;AN000;
-	MOV	DX,WORD PTR [DAY]	; fetch both day and month	   ;AN000;
+	MOV	DX,word [DAY]	; fetch both day and month	   ;AN000;
 
 	pop	bx			; bh = seconds	bl = hundredths    ;AN000;
 	pop	ax			; ah = hour  al = minutes	   ;AN000;
@@ -401,35 +401,35 @@ chk_al5:
 	cmp    al,5		      ; Config.sys info ??		   ;AN000;
 	jne    chk_al6							   ;AN000;
 
-	mov	si,OFFSET DOSGROUP:SYSINITVAR	 ; DS:SI-->SysInitVar	   ;AN000;
+	mov	si,SysInitVar	 ; DS:SI-->SysInitVar	   ;AN000;
 	push	ds							   ;AN000;
 	push	si							   ;AN000;
-	lds	si,[si].Sysi_SFT      ; get SFT address 		   ;AN000;
-	mov	ax,[si].SFCount       ; get number of files		   ;AN000;
-	lds	si,[si].SFlink	      ; get next SFT table		   ;AN000;
+	lds	si,[si+Sysi_SFT]      ; get SFT address 		   ;AN000;
+	mov	ax,[si+SFCount]       ; get number of files		   ;AN000;
+	lds	si,[si+SFlink]	      ; get next SFT table		   ;AN000;
 	cmp	si,-1		      ; end of table			   ;AN000;
 	jz	nomore		      ; 				   ;AN000;
-	add	ax,[si].SFCount       ; 				   ;AN000;
+	add	ax,[si+SFCount]       ; 				   ;AN000;
 nomore: 			      ; 				   ;AN000;
-	mov	es:[di].files,ax	 ; save files= value		   ;AN000;
+	mov	[es:di].[files],ax	 ; save files= value		   ;AN000;
 	pop	si							   ;AN000;
 	pop	ds							   ;AN000;
-	mov	ax,[si].Sysi_MaxSec	 ; get maximum sector size	   ;AN000;
-	mov	es:[di].secsize,ax	 ; save files= value		   ;AN000;
-	mov	ax,[si].Sysi_Keep	 ;				   ;AN000;
-	mov	es:[di].fcbs2,ax	 ;				   ;AN000;
-	lds	si,[si].Sysi_FCB      ; get FCB address 		   ;AN000;
-	mov	ax,[si].SFCount       ; get number of fcbs		   ;AN000;
-	mov	es:[di].fcbs1,ax	 ; save fcbs=  value		   ;AN000;
+	mov	ax,[si+Sysi_MaxSec]	 ; get maximum sector size	   ;AN000;
+	mov	[es:di].[secsize],ax	 ; save files= value		   ;AN000;
+	mov	ax,[si+Sysi_Keep]	 ;				   ;AN000;
+	mov	[es:di].[fcbs2],ax	 ;				   ;AN000;
+	lds	si,[si+Sysi_FCB]      ; get FCB address 		   ;AN000;
+	mov	ax,[si+SFCount]       ; get number of fcbs		   ;AN000;
+	mov	[es:di].[fcbs1],ax	 ; save fcbs=  value		   ;AN000;
 	jmp	get_info_exit						   ;AN000;
 
-
+;
 
 chk_al6:								  ;AN000;
 	cmp    al,6			; get machine name ??		  ;AN000;
 	jne    chk_al7			; no, check next function	  ;AN000;
 	context  DS							  ;AN000;
-	mov	si,offset DOSGroup:MyName   ; DS:SI-->name string	  ;AN000;
+	mov	si,MYNAME   ; DS:SI-->name string	  ;AN000;
 					; ES:DI-->return buffer 	  ;AN000;
 	add	di,2			; skip max return size		  ;AN000;
 	mov	cx,15			; name size			  ;AN000;
@@ -454,7 +454,7 @@ Chk_Al7:								   ;AN000;
 Chk_Al8:								   ;AN000;
 	cmp	al,8			; get share retry count ??	   ;AN000;
 	jne	bad_param		; no, Bad parameter		   ;AN000;
-	mov	bx,RetryCount		; BX = Share retry count	   ;AN000;
+	mov	bx,[RetryCount]		; BX = Share retry count	   ;AN000;
 	jmp	SHORT Get_Info_Exit	      ; exit			   ;AN000;
 
 Bad_Param:				; Bad parameter 		   ;AN000;
@@ -469,7 +469,7 @@ ENDPROC   GET_DOS_INFO							   ;AN000;
 
 
 
-
+;
 
 
 
@@ -501,7 +501,7 @@ ENDPROC   GET_DOS_INFO							   ;AN000;
 ; *	 REVISION HISTORY:  New
 ; *************************************************************************
 
-PROCEDURE  $IFS_IOCTL,NEAR						   ;AN000;
+PROCEDURE  IFS_IOCTL$,NEAR						   ;AN000;
 
 	PUSH	AX							   ;AN000;
 	MOV	AX,(multnet SHL 8) OR 47    ; pass control to IFS Func	   ;AN000;
@@ -513,11 +513,11 @@ PROCEDURE  $IFS_IOCTL,NEAR						   ;AN000;
 ABB_ERR:								   ;AN000;
 	transfer SYS_RET_ERR		    ; error return		   ;AN000;
 
-ENDPROC  $IFS_IOCTL							   ;AN000;
+ENDPROC  IFS_IOCTL$							   ;AN000;
 
 
 
-CODE	ENDS								   ;AN000;
-    END 								   ;AN000;
+end if;AN000;
+;    END 								   ;AN000;
 
 

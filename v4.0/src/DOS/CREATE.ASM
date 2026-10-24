@@ -17,18 +17,18 @@ NAME	DOS_CREATE
 ;
 ; get the appropriate segment definitions
 ;
-.xlist
-include dosseg.asm
+;.xlist
+INCLUDE '../INC/DOSSEG.ASM'
 
-CODE	SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME	SS:DOSGROUP,CS:DOSGROUP
+if SEGSEL = S_CODE
+;	ASSUME	SS:DOSGROUP,CS:DOSGROUP
 
-.xcref
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
-include version.inc
-.cref
-.list
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+INCLUDE '../INC/VERSION.INC'
+;.cref
+;.list
 
 Installed = TRUE
 
@@ -84,7 +84,7 @@ Installed = TRUE
 
 	procedure   DOS_Create,NEAR
 	DOSAssume   CS,<DS>,"DOS_Create"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
 	XOR	AH,AH		; Truncate is OK
 Create_inter:
@@ -101,7 +101,7 @@ NoReset:
 	JZ	ATT_OK
 AttErr:
 	MOV	AX,5		; Attribute problem
-	MOV	Exterr_Locus,errLOC_Unk
+	MOV	[ExtErr_locus],errLOC_Unk
 	JMP	SHORT SET_MKND_ERR ; Gotta use MKDIR to make dirs, NEVER allow
 				   ;	attr_device to be set.
 ATT_OK:
@@ -125,24 +125,24 @@ IFS_extopen:				    ;AN000;EO.
 NOEXTOP:				    ;AN000;
 ;Extended open hooks
 
-IF NOT Installed
+if NOT Installed
 	transfer NET_SEQ_CREATE
-ELSE
+else
 	PUSH	AX
 	MOV	AX,(multNET SHL 8) OR 24
 	INT	2FH
 	POP	BX			; BX is trashed anyway
 	return
-ENDIF
+end if
 
 TEST_RE_NET:
-	TEST	ES:[SI.curdir_flags],curdir_isnet
+	TEST	[es:SI+curdir_flags],curdir_isnet
 	POP	ES
 	JZ	LOCAL_CREATE
 
 	CALL	Set_EXT_mode		    ;AN000;EO.
 	JC	SHORT dochk		    ;AN000;EO.
-	OR	ES:[DI.sf_mode],sharing_compat + open_for_both ;IFS.
+	OR	[es:DI+sf_mode],sharing_compat + open_for_both ;IFS.
 dochk:
  ;	invoke	IFS_SHARE_CHECK 	    ;AN000;IFS. check share
  ;	JC	nomore			    ;AN000;IFS. share violation
@@ -152,21 +152,21 @@ dochk:
 	JNZ	IFS_extopen		    ;AN000;EO. yes, issue extended open
 ;Extended open hooks
 
-IF NOT Installed
+if NOT Installed
 	transfer NET_CREATE
-ELSE
+else
 	PUSH	AX
 	MOV	AX,(multNET SHL 8) OR 23
 	INT	2FH
 	POP	BX			; BX is trashed anyway
 nomore:
 	return
-ENDIF
+end if
 
 LOCAL_CREATE:
 	CALL	Set_EXT_mode	       ;AN000;EO. set mode if from extended open
 	JC	setdone 	       ;AN000;EO.
-	OR	ES:[DI].sf_mode,sharing_compat+open_for_both
+	OR	[es:DI+sf_mode],sharing_compat+open_for_both
 setdone:
 	EnterCrit   critDisk
 	invoke	MakeNode
@@ -176,20 +176,20 @@ setdone:
 
 	entry	SET_MKND_ERR
 	DOSAssume   CS,<DS>,"Set_MkNd_Err"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 ; Looks up MakeNode errors and converts them. AL is MakeNode
 ; error, SI is GetPath bad spot return if path_not_found error.
 
-	MOV	BX,OFFSET DOSGROUP:CRTERRTAB
-	XLAT
+	MOV	BX,CRTERRTAB
+	XLATB
 CreatBadRet:
 	STC
 	return
 
-TABLE	SEGMENT
-Public CREAT001S,CREAT001E
-CREAT001S  label  byte
-CRTERRTAB LABEL BYTE		; Lookup table for MakeNode returns
+if SEGSEL = S_TABLE
+;Public CREAT001S,CREAT001E
+CREAT001S:
+CRTERRTAB:; Lookup table for MakeNode returns
 	DB	?			; none
 	DB	error_access_denied	; MakeNode error 1
 	DB	error_cannot_make	; MakeNode error 2
@@ -198,8 +198,8 @@ CRTERRTAB LABEL BYTE		; Lookup table for MakeNode returns
 	DB	error_access_denied	; MakeNode error 5
 	DB	error_sharing_violation ; MakeNode error 6
 	DB	error_file_not_found	; MakeNode error 7
-CREAT001E  label byte
-TABLE	ENDS
+CREAT001E:
+end if
 
 ;
 ; We have just created a new file.  This results in the truncation of old
@@ -217,8 +217,8 @@ Create_ok:
 	test	al,attr_volume_id
 	jz	NoVolLabel
 	LES	DI,[THISCDS]
-	mov	ah,byte ptr ES:[DI]	; get drive letter
-	sub	ah,'A'                  ; convert to drive letter
+	mov	ah,byte [es:DI]	; get drive letter
+	sub	ah,'[a]'                  ; convert to drive letter
 	mov	[VOLCHNG_FLAG],ah	;Set flag to indicate volid change
 	MOV	BH,1			;AN000;>32mb set volume id to boot record
 	CALL	Set_Media_ID		;AN000;>32mb
@@ -228,12 +228,12 @@ Create_ok:
 	LeaveCrit CritDisk
 NoVolLabel:
 	MOV	ax,2
-	LES	DI,ThisSFT
+	LES	DI,[ThisSFT]
 if installed
-	call	JShare + 14 * 4
+	call	dword [JSHARE+14*4]
 else
 	Call	ShSU
-endif
+end if
 	LeaveCrit   critDisk
 	transfer SET_SFT_MODE
 
@@ -272,7 +272,7 @@ EndProc DOS_Create
 
 	procedure   DOS_Create_New,NEAR
 	DOSAssume   CS,<DS>,"DOS_Create_New"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
 	MOV	AH,1		; Truncate is NOT OK
 	JMP	Create_inter
@@ -295,7 +295,7 @@ EndProc DOS_Create_New
 
 	procedure   Set_Media_ID,NEAR		   ;AN000;
 	DOSAssume   CS,<DS>,"DOS_Create_New"       ;AN000;
-	ASSUME	ES:NOTHING			   ;AN000;
+;	ASSUME	ES:NOTHING			   ;AN000;
 
 	PUSH	AX		;AN000;;>32mb
 	PUSH	ES		;AN000;;>32mb
@@ -305,23 +305,23 @@ EndProc DOS_Create_New
 	MOV	BL,AH		;AN000;;>32mb  bl=drive # (A=1,B=2,,,)
 	MOV	AL,0DH		;AN000;;>32mb  generic IOCTL
 	MOV	CX,0866H	;AN001;;>32mb  get media id
-	MOV	DX,OFFSET DOSGROUP:PACKET_TEMP	;AN000;>32mb
+	MOV	DX,Packet_Temp	;AN000;>32mb
 
 	PUSH	BX		;AN000;;>32mb
 	PUSH	DX		;AN000;;>32mb
 	XOR	BH,BH		;AN000;;>32mb
 
-	invoke	$IOCTL		;AN000;;>32mb
+	invoke	IOCTL$		;AN000;;>32mb
 	POP	DX		;AN000;;>32mb
 	POP	BX		;AN000;;>32mb
 	JC	geterr		;AN000;;>32mb
 
 	OR	BH,BH		;AN000;;>32mb delete volume id
 	JZ	NoName		;AN000;>32mb yes
-	MOV	SI,OFFSET DOSGROUP:NAME1   ;AN000;>32mb
+	MOV	SI,Name1   ;AN000;>32mb
 	JMP	SHORT doset	;AN000;>32mb yes
 Noname: 			;AN000;
-	MOV	SI,OFFSET DOSGROUP:NO_NAME_ID  ;AN000;>32mb
+	MOV	SI,NO_NAME_ID  ;AN000;>32mb
 doset:					       ;AN000;
 	MOV	DI,DX		;AN000;;>32mb
 	ADD	DI,MEDIA_LABEL	;AN000;;>32mb
@@ -334,7 +334,7 @@ doset:					       ;AN000;
 	MOV	CX,0846H	;AN001;;>32mb
 	MOV	AL,0DH		;AN000;;>32mb
 	XOR	BH,BH		;AN000;;>32mb
-	invoke	$IOCTL		;AN000;;>32mb  set volume id
+	invoke	IOCTL$		;AN000;;>32mb  set volume id
 geterr: 			;AN000;
 	PUSH	CS		;AN000;>32mb
 	POP	DS		;AN000;>32mb   ds= dosgroup
@@ -356,18 +356,18 @@ EndProc Set_Media_ID		;AN000;
 ;	carry set,mode is set if from Extended Open
 ;	carry clear, mode not set yet
 
-IF	NOT IBMCOPYRIGHT
-	public Set_EXT_mode
-ENDIF
+if	NOT IBMCOPYRIGHT
+;	public Set_EXT_mode
+end if
 
 	procedure   Set_EXT_mode,NEAR	    ;AN000;
-	ASSUME	ES:NOTHING,DS:NOTHING	    ;AN000;
+;	ASSUME	ES:NOTHING,DS:NOTHING	    ;AN000;
 
 	TEST	[EXTOPEN_ON],ext_open_on    ;AN000;EO. from extnded open
 	JZ	NOTEX			    ;AN000;EO. no, do normal
 	PUSH	AX			    ;AN000;EO.
 	MOV	AX,[SAVE_BX]		    ;AN000;EO.
-	OR	ES:[DI.sf_mode],AX	    ;AN000;EO.
+	OR	[es:DI+sf_mode],AX	    ;AN000;EO.
 	POP	AX			    ;AN000;EO.
 	STC				    ;AN000;EO.
 NOTEX:					    ;AN000;
@@ -375,6 +375,5 @@ NOTEX:					    ;AN000;
 
 EndProc Set_EXT_mode			    ;AN000;
 
-CODE	ENDS
-    END
-
+end if
+;    END

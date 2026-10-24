@@ -15,17 +15,17 @@ NAME	DOS_DUP
 ;
 ; get the appropriate segment definitions
 ;
-.xlist
-include dosseg.asm
+;.xlist
+INCLUDE '../INC/DOSSEG.ASM'
 
-CODE	SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME	SS:DOSGROUP,CS:DOSGROUP
+if SEGSEL = S_CODE
+;	ASSUME	SS:DOSGROUP,CS:DOSGROUP
 
-.xcref
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
-.cref
-.list
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+;.cref
+;.list
 
 	i_need	THISSFT,DWORD
 
@@ -48,9 +48,9 @@ BREAK <DOS_DUP -- DUP SFT across network>
 ;	that time.
 
 	procedure   DOS_DUP,NEAR
-	ASSUME	ES:NOTHING,SS:NOTHING
+;	ASSUME	ES:NOTHING,SS:NOTHING
 
-	LES	DI,ThisSFT
+	LES	DI,[ThisSFT]
 	Entry	Dos_Dup_Direct
 	Assert	ISSFT,<ES,DI>,"DOSDup"
 	invoke	IsSFTNet
@@ -58,11 +58,11 @@ BREAK <DOS_DUP -- DUP SFT across network>
 	invoke	DEV_OPEN_SFT
 DO_INC:
 	Assert	ISSFT,<ES,DI>,"DOSDup/DoInc"
-	INC	ES:[DI.sf_ref_count]	; Clears carry (if this ever wraps
+	INC	[es:DI+sf_ref_count]	; Clears carry (if this ever wraps
 					;   we're in big trouble anyway)
 	return
 
 EndProc DOS_DUP
 
-CODE	ENDS
-    END
+end if
+;    END

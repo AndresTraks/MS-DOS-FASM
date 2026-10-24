@@ -2,17 +2,17 @@
 TITLE   SHARING ROUTINES - Routines for file Sharing
 NAME    SHARE
 
-include dosseg.asm
+INCLUDE '../INC/DOSSEG.ASM'
 
-CODE    SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME  SS:DOSGROUP,CS:DOSGROUP
+if SEGSEL = S_CODE
+;	ASSUME  SS:DOSGROUP,CS:DOSGROUP
 
-.xlist
-.xcref
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
-.cref
-.list
+;.xlist
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+;.cref
+;.list
 
 AsmVars <IBM, Installed>
 
@@ -44,13 +44,13 @@ Installed = True
 
 	procedure   SHARE_CHECK,NEAR
 	DOSAssume   CS,<DS>,"Share_Check"
-	ASSUME  ES:NOTHING
+;	ASSUME  ES:NOTHING
 
 if installed
-	call    JShare + 1 * 4
+	call    dword [JSHARE+1*4]
 else
 	Call    MFT_Enter
-endif
+end if
 	return
 
 EndProc SHARE_CHECK
@@ -68,7 +68,7 @@ EndProc SHARE_CHECK
 
 	procedure   SHARE_VIOLATION,NEAR
 	DOSAssume   CS,<DS>,"Share_Violation"
-	ASSUME  ES:NOTHING
+;	ASSUME  ES:NOTHING
 
 	PUSH    DS
 	PUSH    ES
@@ -78,7 +78,7 @@ EndProc SHARE_CHECK
 	LES     BP,[THISDPB]
 	MOV     DI,1                            ; Fake some registers
 	MOV     CX,DI
-	MOV     DX,ES:[BP.dpb_dir_sector]
+	MOV     DX,[es:BP+dpb_dir_sector]
 	invoke  HARDERR
 	POP     DI
 	POP     ES
@@ -100,13 +100,13 @@ EndProc SHARE_VIOLATION
 
 	procedure   ShareEnd,Near
 	DOSAssume   CS,<DS>,"ShareEnd"
-	ASSUME  ES:NOTHING
+;	ASSUME  ES:NOTHING
 
 if installed
-	Call    JShare + 2 * 4
+	Call    dword [JSHARE+2*4]
 else
 	Call    MFTClose
-endif
+end if
 	return
 
 EndProc ShareEnd
@@ -125,15 +125,15 @@ break <ShareEnter - attempt to enter a node into the sharing set>
 
 Procedure   ShareEnter,NEAR
 	DOSAssume   CS,<DS>,"ShareEnter"
-	assume  es:nothing
+;	assume  es:nothing
 
 	SaveReg <CX>
 retry:
-	mov     cx,RetryCount
+	mov     cx,[RetryCount]
 attempt:
-	les     di,ThisSFT              ; grab sft
+	les     di,[ThisSFT]              ; grab sft
 	XOR     AX,AX
-	MOV     ES:[DI.sf_MFT],AX       ; indicate free SFT
+	MOV     [es:DI+sf_MFT],AX       ; indicate free SFT
 	SaveReg <CX>
 	call    Share_Check             ; attempt to enter into the sharing set
 	RestoreReg  <CX>
@@ -147,5 +147,5 @@ done:
 	return
 EndProc ShareEnter
 
-CODE    ENDS
-    END
+end if
+;    END

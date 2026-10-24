@@ -50,23 +50,40 @@ BY_XA		      equ  0000100B	     ; set by Get/Set XA by Handle
 
 ;Extended Attribute Structure
 
-EA	    STRUC			      ; extended attribute list
-EA_TYPE     DB	      ? 		      ; type
-EA_FLAGS    DW	      ? 		      ; flags
-EA_RC	    DB	      ? 		      ; reason code
-EA_NAMELEN  DB	      ? 		      ; name length
-EA_VALLEN   DW	      ? 		      ; value length
-EA_NAME     DB	      ? 		      ; name
-EA	    ENDS
+STRUC EA
+{
+.EA_TYPE     DB	      0 		      ; type
+.EA_FLAGS    DW	      0 		      ; flags
+.EA_RC	    DB	      0 		      ; reason code
+.EA_NAMELEN  DB	      0 		      ; name length
+.EA_VALLEN   DW	      0 		      ; value length
+.EA_NAME     DB	      0 		      ; name
+}
+match =EA_LAID_OUT, EA_LAID_OUT
+{
+    EA_LAID_OUT equ 1
+    virtual at 0
+      EA EA
+      sizeof.EA = $ - EA
+    end virtual
+}
 
 
 ;Query Extended Attribute list
 
-QEA	     STRUC			       ; extended attribute list
-QEA_TYPE     DB        ?		       ; type
-QEA_FLAGS    DW        ?		       ; flags
-QEA_NAMELEN  DB        ?		       ; name length
-QEA_NAME     DB        ?		       ; name
-QEA	     ENDS
+STRUC QEA
+{
+.QEA_TYPE     DB        0		       ; type
+.QEA_FLAGS    DW        0		       ; flags
+.QEA_NAMELEN  DB        0		       ; name length
+.QEA_NAME     DB        0		       ; name
+}
+match =QEA_LAID_OUT, QEA_LAID_OUT
+{
+    QEA_LAID_OUT equ 1
+    virtual at 0
+      QEA QEA
+      sizeof.QEA = $ - QEA
+    end virtual
+}
 
-

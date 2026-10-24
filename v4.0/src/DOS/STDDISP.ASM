@@ -6,11 +6,11 @@ NAME    DISP
 ; System call dispatch code
 ;
 
-.xlist
-.xcref
-include stdsw.asm
-.cref
-.list
+;.xlist
+;.xcref
+INCLUDE 'STDSW.ASM'
+;.cref
+;.list
 
-include disp.asm
-	END
+INCLUDE 'DISP.ASM'
+;	END

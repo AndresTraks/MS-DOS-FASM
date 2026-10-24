@@ -6,12 +6,11 @@ NAME    STDCODE
 ; System call dispatch code
 ;
 
-.xlist
-.xcref
-include stdsw.asm
-.cref
-.list
+;.xlist
+;.xcref
+INCLUDE 'STDSW.ASM'
+;.cref
+;.list
 
-include ms_code.asm
-	END
-
+INCLUDE 'MS_CODE.ASM'
+;	END

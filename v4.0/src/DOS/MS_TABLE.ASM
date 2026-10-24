@@ -4,25 +4,27 @@
 ;         A001   DCR 486 - Share installation for >32mb drives
 ;         A006   DCR 503 - fake version for IBMCACHE
 ;         A008   PTM 4070 - fake version for MS WINDOWS
-.xlist
-.xcref
-include dosseg.asm
-include EA.inc                           ;AN000;; for Extended Attributes
-include fastopen.inc                     ;AN000;; for Extended Attributes
-include dossym.inc
-.cref
-.list
+;.xlist
+;.xcref
+INCLUDE '../INC/DOSSEG.ASM'
+INCLUDE '../INC/EA.INC'                           ;AN000;; for Extended Attributes
+INCLUDE '../INC/FASTOPEN.INC'                     ;AN000;; for Extended Attributes
+INCLUDE '../INC/DOSSYM.INC'
+;.cref
+;.list
 
         AsmVars <Kanji, Debug, Redirector, ShareF>
 
-TABLE           SEGMENT BYTE PUBLIC 'TABLE'
-TableZero   LABEL   BYTE
+if SEGSEL = S_TABLE
+TableZero:
 
-        PUBLIC  MSVERS
-PUBLIC MSTAB001s,MSTAB001e
-MSTAB001S       label byte
+;        PUBLIC  MSVERS
+;PUBLIC MSTAB001s,MSTAB001e
+MSTAB001S:
 
-MSVERS  EQU     THIS WORD               ; MS-DOS version in hex for $GET_VERSION
+; MASM's THIS WORD is the address here, read as a word; in fasm the size
+; goes on the instruction, so this is a label like any other.
+MSVERS:                         ; MS-DOS version in hex for $GET_VERSION
 MSMAJOR DB      MAJOR_VERSION
 MSMINOR DB      MINOR_VERSION
 
@@ -61,8 +63,8 @@ MSMINOR DB      MINOR_VERSION
 ;
 ; The table is terminated by a call value of 0FFh
 
-PUBLIC  I21_MAP_E_TAB
-I21_MAP_E_TAB   LABEL   BYTE
+;PUBLIC  I21_MAP_E_TAB
+I21_MAP_E_TAB:
     DB  International,2,error_invalid_function,error_file_not_found
     DB  MKDir,3,error_path_not_found,error_file_not_found,error_access_denied
     DB  RMDir,4,error_current_directory,error_path_not_found
@@ -128,16 +130,23 @@ I21_MAP_E_TAB   LABEL   BYTE
 ; A value of 0FFh indicates a call specific value (ie.  should already
 ; be set).  AN ERROR CODE NOT IN THE TABLE FALLS THROUGH TO THE CATCH ALL AT
 ; THE END, IT IS ASSUMES THAT CLASS, ACTION, LOCUS IS ALREADY SET.
-ErrTab  Macro   err,class,action,locus
-ifidn <locus>,<0FFh>
-    DB  error_&err,errCLASS_&class,errACT_&action,0FFh
-ELSE
-    DB  error_&err,errCLASS_&class,errACT_&action,errLOC_&locus
-ENDIF
-ENDM
+; One row of the error table.  A locus of 0FFh means the call has already
+; set it; anything else is a name to be joined to errLOC_.  fasm cannot ask
+; MATCH for "anything but", so the first case says it has dealt with the
+; row and the second looks.
+macro ErrTab    err,class,action,locus
+{
+    ERRTAB_SET = 0
+    match =0FFh, locus \{
+    DB  error_#err,errCLASS_#class,errACT_#action,0FFh
+    ERRTAB_SET = 1 \}
+    if ERRTAB_SET = 0
+    DB  error_#err,errCLASS_#class,errACT_#action,errLOC_#locus
+    end if
+}
 
-PUBLIC  ERR_TABLE_21
-ERR_TABLE_21    LABEL   BYTE
+;PUBLIC  ERR_TABLE_21
+ERR_TABLE_21:
     ErrTab  invalid_function,       Apperr,     Abort,      0FFh
     ErrTab  file_not_found,         NotFnd,     User,       Disk
     ErrTab  path_not_found,         NotFnd,     User,       Disk
@@ -181,8 +190,8 @@ ERR_TABLE_21    LABEL   BYTE
 ; be set).  AN ERROR CODE NOT IN THE TABLE FALLS THROUGH TO THE CATCH ALL AT
 ; THE END.
 
-PUBLIC  ERR_TABLE_24
-ERR_TABLE_24    LABEL   BYTE
+;PUBLIC  ERR_TABLE_24
+ERR_TABLE_24:
     ErrTab  write_protect,          Media,      IntRet,     Disk
     ErrTab  bad_unit,               Intrn,      Panic,      Unk
     ErrTab  not_ready,              HrdFail,    IntRet,     0FFh
@@ -208,8 +217,8 @@ ERR_TABLE_24    LABEL   BYTE
 ; We need to map old int 24 errors and device driver errors into the new set
 ; of errors.  The following table is indexed by the new errors
 ;
-Public  ErrMap24
-ErrMap24    Label   BYTE
+;Public  ErrMap24
+ErrMap24:
     DB  error_write_protect             ;   0
     DB  error_bad_unit                  ;   1
     DB  error_not_ready                 ;   2
@@ -227,50 +236,50 @@ ErrMap24    Label   BYTE
     DB  error_gen_failure               ;   E   RESERVED
     DB  error_wrong_disk                ;   F
 
-Public  ErrMap24End
-ErrMap24End LABEL   BYTE
+;Public  ErrMap24End
+ErrMap24End:
 
 
-        PUBLIC  DISPATCH,MAXCALL,MAXCOM
+;        PUBLIC  DISPATCH,MAXCALL,MAXCOM
 
 MAXCALL DB      VAL1
 MAXCOM  DB      VAL2
 
 ; Standard Functions
-DISPATCH    LABEL WORD
-        short_addr  $ABORT                          ;  0      0
-        short_addr  $STD_CON_INPUT                  ;  1      1
-        short_addr  $STD_CON_OUTPUT                 ;  2      2
-        short_addr  $STD_AUX_INPUT                  ;  3      3
-        short_addr  $STD_AUX_OUTPUT                 ;  4      4
-        short_addr  $STD_PRINTER_OUTPUT             ;  5      5
-        short_addr  $RAW_CON_IO                     ;  6      6
-        short_addr  $RAW_CON_INPUT                  ;  7      7
-        short_addr  $STD_CON_INPUT_NO_ECHO          ;  8      8
-        short_addr  $STD_CON_STRING_OUTPUT          ;  9      9
-        short_addr  $STD_CON_STRING_INPUT           ; 10      A
-        short_addr  $STD_CON_INPUT_STATUS           ; 11      B
-        short_addr  $STD_CON_INPUT_FLUSH            ; 12      C
-        short_addr  $DISK_RESET                     ; 13      D
-        short_addr  $SET_DEFAULT_DRIVE              ; 14      E
-        short_addr  $FCB_OPEN                       ; 15      F
-        short_addr  $FCB_CLOSE                      ; 16     10
-        short_addr  $DIR_SEARCH_FIRST               ; 17     11
-        short_addr  $DIR_SEARCH_NEXT                ; 18     12
-        short_addr  $FCB_DELETE                     ; 19     13
-        short_addr  $FCB_SEQ_READ                   ; 20     14
-        short_addr  $FCB_SEQ_WRITE                  ; 21     15
-        short_addr  $FCB_CREATE                     ; 22     16
-        short_addr  $FCB_RENAME                     ; 23     17
+DISPATCH:
+        short_addr  ABORT$                          ;  0      0
+        short_addr  STD_CON_INPUT$                  ;  1      1
+        short_addr  STD_CON_OUTPUT$                 ;  2      2
+        short_addr  STD_AUX_INPUT$                  ;  3      3
+        short_addr  STD_AUX_OUTPUT$                 ;  4      4
+        short_addr  STD_PRINTER_OUTPUT$             ;  5      5
+        short_addr  RAW_CON_IO$                     ;  6      6
+        short_addr  RAW_CON_INPUT$                  ;  7      7
+        short_addr  STD_CON_INPUT_NO_ECHO$          ;  8      8
+        short_addr  STD_CON_STRING_OUTPUT$          ;  9      9
+        short_addr  STD_CON_STRING_INPUT$           ; 10      A
+        short_addr  STD_CON_INPUT_STATUS$           ; 11      B
+        short_addr  STD_CON_INPUT_FLUSH$            ; 12      C
+        short_addr  DISK_RESET$                     ; 13      D
+        short_addr  SET_DEFAULT_DRIVE$              ; 14      E
+        short_addr  FCB_OPEN$                       ; 15      F
+        short_addr  FCB_CLOSE$                      ; 16     10
+        short_addr  DIR_SEARCH_FIRST$               ; 17     11
+        short_addr  DIR_SEARCH_NEXT$                ; 18     12
+        short_addr  FCB_DELETE$                     ; 19     13
+        short_addr  FCB_SEQ_READ$                   ; 20     14
+        short_addr  FCB_SEQ_WRITE$                  ; 21     15
+        short_addr  FCB_CREATE$                     ; 22     16
+        short_addr  FCB_RENAME$                     ; 23     17
         short_addr  CPMFUNC                         ; 24     18
-        short_addr  $GET_DEFAULT_DRIVE              ; 25     19
-        short_addr  $SET_DMA                        ; 26     1A
+        short_addr  GET_DEFAULT_DRIVE$              ; 25     19
+        short_addr  SET_DMA$                        ; 26     1A
 
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
-        short_addr  $SLEAZEFUNC                     ; 27     1B
-        short_addr  $SLEAZEFUNCDL                   ; 28     1C
+        short_addr  SLEAZEFUNC$                     ; 27     1B
+        short_addr  SLEAZEFUNCDL$                   ; 28     1C
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
@@ -280,144 +289,144 @@ DISPATCH    LABEL WORD
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
-        short_addr  $GET_DEFAULT_DPB                ; 31     1F
+        short_addr  GET_DEFAULT_DPB$                ; 31     1F
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
         short_addr  CPMFUNC                         ; 32     20
-        short_addr  $FCB_RANDOM_READ                ; 33     21
-        short_addr  $FCB_RANDOM_WRITE               ; 34     22
-        short_addr  $GET_FCB_FILE_LENGTH            ; 35     23
-        short_addr  $GET_FCB_POSITION               ; 36     24
+        short_addr  FCB_RANDOM_READ$                ; 33     21
+        short_addr  FCB_RANDOM_WRITE$               ; 34     22
+        short_addr  GET_FCB_FILE_LENGTH$            ; 35     23
+        short_addr  GET_FCB_POSITION$               ; 36     24
 VAL1    =       ($-DISPATCH)/2 - 1
 
 ; Extended Functions
-        short_addr  $SET_INTERRUPT_VECTOR           ; 37     25
+        short_addr  SET_INTERRUPT_VECTOR$           ; 37     25
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
-        short_addr  $CREATE_PROCESS_DATA_BLOCK      ; 38     26
+        short_addr  CREATE_PROCESS_DATA_BLOCK$      ; 38     26
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
-        short_addr  $FCB_RANDOM_READ_BLOCK          ; 39     27
-        short_addr  $FCB_RANDOM_WRITE_BLOCK         ; 40     28
-        short_addr  $PARSE_FILE_DESCRIPTOR          ; 41     29
-        short_addr  $GET_DATE                       ; 42     2A
-        short_addr  $SET_DATE                       ; 43     2B
-        short_addr  $GET_TIME                       ; 44     2C
-        short_addr  $SET_TIME                       ; 45     2D
-        short_addr  $SET_VERIFY_ON_WRITE            ; 46     2E
+        short_addr  FCB_RANDOM_READ_BLOCK$          ; 39     27
+        short_addr  FCB_RANDOM_WRITE_BLOCK$         ; 40     28
+        short_addr  PARSE_FILE_DESCRIPTOR$          ; 41     29
+        short_addr  GET_DATE$                       ; 42     2A
+        short_addr  SET_DATE$                       ; 43     2B
+        short_addr  GET_TIME$                       ; 44     2C
+        short_addr  SET_TIME$                       ; 45     2D
+        short_addr  SET_VERIFY_ON_WRITE$            ; 46     2E
 
 ; Extended functionality group
-        short_addr  $GET_DMA                        ; 47     2F
-        short_addr  $GET_VERSION                    ; 48     30
-        short_addr  $Keep_Process                   ; 49     31
+        short_addr  GET_DMA$                        ; 47     2F
+        short_addr  GET_VERSION$                    ; 48     30
+        short_addr  Keep_Process$                   ; 49     31
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
-        short_addr  $GET_DPB                        ; 50     32
+        short_addr  GET_DPB$                        ; 50     32
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
-        short_addr  $SET_CTRL_C_TRAPPING            ; 51     33
-        short_addr  $GET_INDOS_FLAG                 ; 52     34
-        short_addr  $GET_INTERRUPT_VECTOR           ; 53     35
-        short_addr  $GET_DRIVE_FREESPACE            ; 54     36
-        short_addr  $CHAR_OPER                      ; 55     37
-        short_addr  $INTERNATIONAL                  ; 56     38
+        short_addr  SET_CTRL_C_TRAPPING$            ; 51     33
+        short_addr  GET_INDOS_FLAG$                 ; 52     34
+        short_addr  GET_INTERRUPT_VECTOR$           ; 53     35
+        short_addr  GET_DRIVE_FREESPACE$            ; 54     36
+        short_addr  CHAR_OPER$                      ; 55     37
+        short_addr  INTERNATIONAL$                  ; 56     38
 ; XENIX CALLS
 ;   Directory Group
-        short_addr  $MKDIR                          ; 57     39
-        short_addr  $RMDIR                          ; 58     3A
-        short_addr  $CHDIR                          ; 59     3B
+        short_addr  MKDIR$                          ; 57     39
+        short_addr  RMDIR$                          ; 58     3A
+        short_addr  CHDIR$                          ; 59     3B
 ;   File Group
-        short_addr  $CREAT                          ; 60     3C
-        short_addr  $OPEN                           ; 61     3D
-        short_addr  $CLOSE                          ; 62     3E
-        short_addr  $READ                           ; 63     3F
-        short_addr  $WRITE                          ; 64     40
-        short_addr  $UNLINK                         ; 65     41
-        short_addr  $LSEEK                          ; 66     42
-        short_addr  $CHMOD                          ; 67     43
-        short_addr  $IOCTL                          ; 68     44
-        short_addr  $DUP                            ; 69     45
-        short_addr  $DUP2                           ; 70     46
-        short_addr  $CURRENT_DIR                    ; 71     47
+        short_addr  CREAT$                          ; 60     3C
+        short_addr  OPEN$                           ; 61     3D
+        short_addr  CLOSE$                          ; 62     3E
+        short_addr  READ$                           ; 63     3F
+        short_addr  WRITE$                          ; 64     40
+        short_addr  UNLINK$                         ; 65     41
+        short_addr  LSEEK$                          ; 66     42
+        short_addr  CHMOD$                          ; 67     43
+        short_addr  IOCTL$                          ; 68     44
+        short_addr  DUP$                            ; 69     45
+        short_addr  DUP2$                           ; 70     46
+        short_addr  CURRENT_DIR$                    ; 71     47
 ;    Memory Group
-        short_addr  $ALLOC                          ; 72     48
-        short_addr  $DEALLOC                        ; 73     49
-        short_addr  $SETBLOCK                       ; 74     4A
+        short_addr  ALLOC$                          ; 72     48
+        short_addr  DEALLOC$                        ; 73     49
+        short_addr  SETBLOCK$                       ; 74     4A
 ;    Process Group
-        short_addr  $EXEC                           ; 75     4B
-        short_addr  $EXIT                           ; 76     4C
-        short_addr  $WAIT                           ; 77     4D
-        short_addr  $FIND_FIRST                     ; 78     4E
+        short_addr  EXEC$                           ; 75     4B
+        short_addr  EXIT$                           ; 76     4C
+        short_addr  WAIT$                           ; 77     4D
+        short_addr  FIND_FIRST$                     ; 78     4E
 ;   Special Group
-        short_addr  $FIND_NEXT                      ; 79     4F
+        short_addr  FIND_NEXT$                      ; 79     4F
 ; SPECIAL SYSTEM GROUP
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
-        short_addr  $SET_CURRENT_PDB                ; 80     50
-        short_addr  $GET_CURRENT_PDB                ; 81     51
-        short_addr  $GET_IN_VARS                    ; 82     52
-        short_addr  $SETDPB                         ; 83     53
+        short_addr  SET_CURRENT_PDB$                ; 80     50
+        short_addr  GET_CURRENT_PDB$                ; 81     51
+        short_addr  GET_IN_VARS$                    ; 82     52
+        short_addr  SETDPB$                         ; 83     53
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
-        short_addr  $GET_VERIFY_ON_WRITE            ; 84     54
+        short_addr  GET_VERIFY_ON_WRITE$            ; 84     54
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
-        short_addr  $DUP_PDB                        ; 85     55
+        short_addr  DUP_PDB$                        ; 85     55
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
-        short_addr  $RENAME                         ; 86     56
-        short_addr  $FILE_TIMES                     ; 87     57
-        short_addr  $AllocOper                      ; 88     58
+        short_addr  RENAME$                         ; 86     56
+        short_addr  FILE_TIMES$                     ; 87     57
+        short_addr  AllocOper$                      ; 88     58
 ; Network extention system calls
-        short_addr  $GetExtendedError               ; 89     59
-        short_addr  $CreateTempFile                 ; 90     5A
-        short_addr  $CreateNewFile                  ; 91     5B
-        short_addr  $LockOper                       ; 92     5C
-        short_addr  $ServerCall                     ; 93     5D
-        short_addr  $UserOper                       ; 94     5E
-        short_addr  $AssignOper                     ; 95     5F
-        short_addr  $NameTrans                      ; 96     60
+        short_addr  GetExtendedError$               ; 89     59
+        short_addr  CreateTempFile$                 ; 90     5A
+        short_addr  CreateNewFile$                  ; 91     5B
+        short_addr  LockOper$                       ; 92     5C
+        short_addr  ServerCall$                     ; 93     5D
+        short_addr  UserOper$                       ; 94     5E
+        short_addr  AssignOper$                     ; 95     5F
+        short_addr  NameTrans$                      ; 96     60
         short_addr  CPMFunc                         ; 97     61
-        short_addr  $Get_Current_PDB                ; 98     62
+        short_addr  Get_Current_PDB$                ; 98     62
 ; the next call is reserved for hangool sys call
-        short_addr  $ECS_Call                       ; 99     63
+        short_addr  ECS_Call$                       ; 99     63
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
-        short_addr  $Set_Printer_Flag               ; 100    64
+        short_addr  Set_Printer_Flag$               ; 100    64
 ;                                                                          ;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
-        short_addr  $GetExtCntry                    ; 101    65
-        short_addr  $GetSetCdPg                     ; 102    66
-        short_addr  $ExtHandle                      ; 103    67
-        short_addr  $Commit                         ; 104    68
-        short_addr  $GSetMediaID                    ; 105    69   ;AN000;
-        short_addr  $Commit                         ; 106    6A   ;AN000;
-        short_addr  $IFS_IOCTL                      ; 107    6B   ;AN000;
-        short_addr  $Extended_Open                  ; 108    6C   ;AN000;
+        short_addr  GetExtCntry$                    ; 101    65
+        short_addr  GetSetCdPg$                     ; 102    66
+        short_addr  ExtHandle$                      ; 103    67
+        short_addr  Commit$                         ; 104    68
+        short_addr  GSetMediaID$                    ; 105    69   ;AN000;
+        short_addr  Commit$                         ; 106    6A   ;AN000;
+        short_addr  IFS_IOCTL$                      ; 107    6B   ;AN000;
+        short_addr  Extended_Open$                  ; 108    6C   ;AN000;
 ;
 VAL2    =       ($-DISPATCH)/2 - 1
 
 
-        If      Installed
+        if      Installed
 
-PUBLIC FOO
-FOO     LABEL WORD
+;PUBLIC FOO
+FOO:
         Short_addr  Leave2F
-DTab    DW  OFFSET  DOSGroup:DOSTable
-        PUBLIC FOO,DTAB
+DTab    DW  DOSTable
+;        PUBLIC FOO,DTAB
 
-DOSTable    LABEL   WORD
+DOSTable:
         DB      (DOSTableEnd-DOSTable-1)/2
         Short_addr  DOSInstall          ;   0 install check
         Short_addr  DOS_CLOSE           ;   1   DOS_CLOSE
@@ -452,15 +461,15 @@ DOSTable    LABEL   WORD
         Short_addr  StrCmp              ;   30  StrCmp
         Short_addr  InitCDS             ;   31  initcds
         Short_addr  pJFNFromHandle      ;   32  pJfnFromHandle
-        Short_addr  $NameTrans          ;   33  $NameTrans
+        Short_addr  NameTrans$          ;   33  $NameTrans
         Short_addr  CAL_LK              ;   34  CAL_LK
         Short_addr  DEVNAME             ;   35  DEVNAME
         Short_addr  Idle                ;   36  Idle
         Short_addr  DStrLen             ;   37  DStrLen
         Short_addr  NLS_OPEN            ;   38  NLS_OPEN      DOS 3.3
-        Short_addr  $CLOSE              ;   39  $CLOSE        DOS 3.3
+        Short_addr  CLOSE$              ;   39  $CLOSE        DOS 3.3
         Short_addr  NLS_LSEEK           ;   40  NLS_LSEEK     DOS 3.3
-        Short_addr  $READ               ;   41  $READ         DOS 3.3
+        Short_addr  READ$               ;   41  $READ         DOS 3.3
         Short_addr  FastInit            ;   42  FastInit      DOS 3.4  ;AN000;
         Short_addr  NLS_IOCTL           ;   43  NLS_IOCTL     DOS 3.3
         Short_addr  GetDevList          ;   44  GetDevList    DOS 3.3
@@ -468,9 +477,9 @@ DOSTable    LABEL   WORD
         Short_addr  MSG_RETRIEVAL       ;   46  MSG_RETRIEVAL DOS 4.0  ;AN000;
         Short_addr  Fake_Version        ;   47  Fake_Version  DOS 4.0  ;AN006;
 
-DOSTableEnd LABEL   BYTE
+DOSTableEnd:
 
-        ENDIF
+        end if
 
 ; NOTE WARNING: This declaration of HEADER must be THE LAST thing in this
 ;       module. The reason is so that the data alignments are the same in
@@ -484,94 +493,94 @@ DOSTableEnd LABEL   BYTE
         I_AM    InterChar, byte         ; Interim character flag ( 1= interim)  ;AN000;
                                                                                 ;AN000;
 ;------- NOTE: NEXT TWO BYTES SOMETIMES USED AS A WORD !! ---------------------
-DUMMY   LABEL   WORD                                                            ;AN000;
-        PUBLIC  InterCon                ; Console in Interim mode ( 1= interim) ;AN000;
+DUMMY:;AN000;
+;        PUBLIC  InterCon                ; Console in Interim mode ( 1= interim) ;AN000;
 InterCon        db      0                                                       ;AN000;
-        PUBLIC  SaveCurFlg              ; Print, do not advance cursor flag     ;AN000;
+;        PUBLIC  SaveCurFlg              ; Print, do not advance cursor flag     ;AN000;
 SaveCurFlg      db      0                                                       ;AN000;
 ;-----------------------------------------End of Korean support  2/11/KK
 
 
-        PUBLIC  HEADER
-Header  LABEL   BYTE
-        IF      DEBUG
+;        PUBLIC  HEADER
+Header:
+        if      DEBUG
         DB      13,10,"Debugging DOS version "
         DB      MAJOR_VERSION + "0"
         DB      "."
         DB      (MINOR_VERSION / 10) + "0"
         DB      (MINOR_VERSION MOD 10) + "0"
-        ENDIF
+        end if
 
-        IF      NOT IBM
+        if      NOT IBM
         DB      13,10,"MS-DOS version "
         DB      MAJOR_VERSION + "0"
         DB      "."
         DB      (MINOR_VERSION / 10) + "0"
         DB      (MINOR_VERSION MOD 10) + "0"
 
-        IF      HIGHMEM
+        if      HIGHMEM
         DB      "H"
-        ENDIF
+        end if
 
 	DB	13,10, "Copyright 1981,82,83,84,88 Microsoft Corp.",13,10,"$"
-	ENDIF
+	end if
 
-IF DEBUG
+if DEBUG
         DB      13,10,"$"
-ENDIF
+end if
 
-MSTAB001E       label byte
+MSTAB001E:
 
-include copyrigh.inc                                                            ;AN000;
+INCLUDE '../INC/COPYRIGH.INC'                                                            ;AN000;
 
 ; SYS init extended table,   DOS 3.3   F.C. 5/29/86
 ;
-       PUBLIC   SysInitTable
+;       PUBLIC   SysInitTable
        I_need   COUNTRY_CDPG,BYTE
        I_need   SYSINITVAR,BYTE
 
-SysInitTable  label  byte
-               dw      OFFSET DOSGROUP:SYSINITVAR    ; pointer to sysinit var
+SysInitTable:
+               dw      SYSINITVAR    ; pointer to sysinit var
                dw      0                             ; segment
-               dw      OFFSET DOSGROUP:COUNTRY_CDPG  ; pointer to country table
+               dw      COUNTRY_CDPG  ; pointer to country table
                dw      0                             ; segment of pointer
 ; DOS 3.3 F.C. 6/12/86
 
 ; FASTOPEN communications area DOS 3.3   F.C. 5/29/86
 ;
-       PUBLIC   FastOpenTable
-       PUBLIC   FastTable                            ; a better name
-       EXTRN    FastRet:FAR                          ; defined in misc2.asm
+;       PUBLIC   FastOpenTable
+;       PUBLIC   FastTable                            ; a better name
+;       EXTRN    FastRet:FAR                          ; defined in misc2.asm
 
-FastTable      label  byte                           ; a better name
-FastOpenTable  label  byte
+FastTable:; a better name
+FastOpenTable:
                dw      2                             ; number of entries
-               dw      OFFSET DOSGROUP:FastRet       ; pointer to ret instr.
+               dw      FastRet       ; pointer to ret instr.
                dw      0                             ; and will be modified by
-               dw      OFFSET DOSGROUP:FastRet       ; FASTxxx when loaded in
+               dw      FastRet       ; FASTxxx when loaded in
                dw      0                             ;
 ; DOS 3.3 F.C. 6/12/86
-      PUBLIC   FastFlg                  ;AN000; flags
-FastFlg        label  byte              ;AN000; don't change the following order
+;      PUBLIC   FastFlg                  ;AN000; flags
+FastFlg:;AN000; don't change the following order
         I_am   FastOpenFlg,BYTE,<0>     ;AN000;
         I_am   FastSeekFlg,BYTE,<0>     ;AN000;
 
-       PUBLIC   FastOpen_Ext_Info
+;       PUBLIC   FastOpen_Ext_Info
 
 ; FastOpen_Ext_Info is used as a temporary storage for saving dirpos,dirsec
 ; and clusnum  which are filled by DOS 3.3 when calling FastOpen Insert
 ; or filled by FastOPen when calling FastOpen Lookup
 
-FastOpen_Ext_Info  label  byte
-               db   SIZE FASTOPEN_EXTENDED_INFO dup(0) ;dirpos
+FastOpen_Ext_Info:
+               db   sizeof.FASTOPEN_EXTENDED_INFO dup(0) ;dirpos
 
 ; Dir_Info_Buff is a dir entry buffer which is filled by FastOPen
 ; when calling FastOpen Lookup
 
-       PUBLIC  Dir_Info_Buff
+;       PUBLIC  Dir_Info_Buff
 
-Dir_Info_Buff  label  byte
-               db   SIZE dir_entry dup (0)
+Dir_Info_Buff:
+               db   sizeof.dir_entry dup (0)
 
 
       I_am     Next_Element_Start,WORD  ; save next element start offset
@@ -587,47 +596,47 @@ Dir_Info_Buff  label  byte
 ; not to destroy the INT 21 stack saved for the user.
 
 
-       PUBLIC   User_SP_2F
+;       PUBLIC   User_SP_2F
 
-USER_SP_2F       LABEL  WORD
-                dw    OFFSET DOSGROUP:FAKE_STACK_2F
+USER_SP_2F:
+                dw    FAKE_STACK_2F
 
-       PUBLIC   Packet_Temp
-Packet_Temp      label  word             ; temporary packet used by readtime
-       PUBLIC   DOS_TEMP                 ; temporary word
-DOS_TEMP         label  word
+;       PUBLIC   Packet_Temp
+Packet_Temp:; temporary packet used by readtime
+;       PUBLIC   DOS_TEMP                 ; temporary word
+DOS_TEMP:
 FAKE_STACK_2F   dw   14 dup (0)          ; 12 register temporary storage
 
-       PUBLIC   Hash_Temp                ;AN000; temporary word
-Hash_Temp        label  word             ;AN000;
+;       PUBLIC   Hash_Temp                ;AN000; temporary word
+Hash_Temp:;AN000;
                 dw    4 dup (0)          ;AN000; temporary hash table during config.sys
 
-      PUBLIC   SCAN_FLAG                 ; flag to indicate key ALT_Q
-SCAN_FLAG      label  byte
+;      PUBLIC   SCAN_FLAG                 ; flag to indicate key ALT_Q
+SCAN_FLAG:
                db     0
 ;;; The following  2 words must be adjacent for IBMDOS reasons
 
-      PUBLIC   DATE_FLAG
-DATE_FLAG      label  word               ; flag to
+;      PUBLIC   DATE_FLAG
+DATE_FLAG:; flag to
                dw     0                  ; to update the date
 ;;;; special tag for IBMDOS
-      PUBLIC   FETCHI_TAG
-FETCHI_TAG     label  word               ; TAG to make DOS 3.3 work
+;      PUBLIC   FETCHI_TAG
+FETCHI_TAG:; TAG to make DOS 3.3 work
                dw     0                  ; must be 22642
 ;;; The above  2 words must be adjacent for IBMDOS reasons
 ; DOS 3.3 F.C. 6/12/86
       I_am     Del_ExtCluster,WORD       ; for dos_delete                       ;AN000;
 
-      PUBLIC   MSG_EXTERROR              ; for system message addr              ;AN000;
-MSG_EXTERROR   label  DWORD                                                     ;AN000;
+;      PUBLIC   MSG_EXTERROR              ; for system message addr              ;AN000;
+MSG_EXTERROR:;AN000;
                dd     0                  ; for extended error                   ;AN000;
                dd     0                  ; for parser                           ;AN000;
                dd     0                  ; for critical errror                  ;AN000;
                dd     0                  ; for IFS                              ;AN000;
                dd     0                  ; for code reduction                   ;AN000;
 
-      PUBLIC   SEQ_SECTOR                ; last sector read                     ;AN000;
-SEQ_SECTOR     label  DWORD                                                     ;AN000;
+;      PUBLIC   SEQ_SECTOR                ; last sector read                     ;AN000;
+SEQ_SECTOR:;AN000;
                dd     -1                                                        ;AN000;
 
       I_am     XA_CONDITION,BYTE,<0>     ; for Extended Attributes              ;AN000;
@@ -684,12 +693,12 @@ SEQ_SECTOR     label  DWORD                                                     
         I_am    SC_FLAG,BYTE,<0>                 ; SC flag                            ;AN000;
         I_am    IFS_DRIVER_ERR,WORD,<0>          ; driver error for IFS               ;AN000;
 
-          PUBLIC NO_NAME_ID                                                           ;AN000;
-NO_NAME_ID       label byte                                                           ;AN000;
+;          PUBLIC NO_NAME_ID                                                           ;AN000;
+NO_NAME_ID:;AN000;
                  db   'NO NAME    '              ; null media id                      ;AN000;
 
-          PUBLIC SWAP_AREA_TABLE                                                      ;AN000;
-SWAP_AREA_TABLE  label byte                                                           ;AN000;
+;          PUBLIC SWAP_AREA_TABLE                                                      ;AN000;
+SWAP_AREA_TABLE:;AN000;
         I_am    NUM_SWAP_AREA,WORD,<2>           ; number of swap areas               ;AN000;
         I_am    SWAP_IN_DOS,DWORD                ; swap in dos area                   ;AN000;
         I_am    SWAP_IN_DOS_LEN,WORD             ; swap in dos area length            ;AN000;
@@ -704,7 +713,6 @@ SWAP_AREA_TABLE  label byte                                                     
         I_am    FAKE_COUNT,<255>                 ;AN008; fake version count
         I_am    OLD_FIRSTCLUS,WORD               ;AN011; save old first cluster for fastopen
 
-TABLE   ENDS
+end if
 
 
-

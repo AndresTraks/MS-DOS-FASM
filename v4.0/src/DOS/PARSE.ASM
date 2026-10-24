@@ -12,26 +12,26 @@ NAME  PARSE
 ;               EE PathParse 10 Sept 1983
 ;
 
-.xlist
+;.xlist
 ;
 ; get the appropriate segment definitions
 ;
-include dosseg.asm
+INCLUDE '../INC/DOSSEG.ASM'
 
-CODE    SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME  SS:DOSGROUP,CS:DOSGROUP
+if SEGSEL = S_CODE
+;	ASSUME  SS:DOSGROUP,CS:DOSGROUP
 
-.xcref
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
-.cref
-.list
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+;.cref
+;.list
 
 BOGUS =FALSE
-.lall
+;.lall
 	I_Need  chSwitch,BYTE
 
-BREAK <$Parse_File_Descriptor -- Parse an arbitrary string into an FCB>
+BREAK <Parse_File_Descriptor$ -- Parse an arbitrary string into an FCB>
 
 ; Inputs:
 ;       DS:SI Points to a command line
@@ -50,19 +50,19 @@ BREAK <$Parse_File_Descriptor -- Parse an arbitrary string into an FCB>
 ;       AL = 1 if '*' or '?' in filename or extension, 0 otherwise
 ;       DS:SI points to first character after filename
 
-	procedure   $PARSE_FILE_DESCRIPTOR,NEAR
-ASSUME  DS:NOTHING,ES:NOTHING
+	procedure   PARSE_FILE_DESCRIPTOR$,NEAR
+;ASSUME  DS:NOTHING,ES:NOTHING
 
 	invoke  MAKEFCB
 	PUSH    SI
 	invoke  get_user_stack
-	POP     [SI.user_SI]
+	POP     [SI+user_environ.user_SI]
 	return
-EndProc $PARSE_FILE_DESCRIPTOR
+EndProc PARSE_FILE_DESCRIPTOR$
 
 
-IF BOGUS
-BREAK <$PathParse - Parse a string>
+if BOGUS
+BREAK <PathParse$ - Parse a string>
 
 ;------------------------------------------------------------------------------
 ;
@@ -117,16 +117,16 @@ ParseInvalidDrive       equ     0000000000001000b       ; Path has invald drive
 ; Sepchars is a string containing all of the token separator characters
 ; and is used to test for separators.
 
-Table   segment
-Public PRS001S,PRS001E
-PRS001S label byte
+if SEGSEL = S_TABLE
+;Public PRS001S,PRS001E
+PRS001S:
 sepchrs db      9,10,13,' ','+',',',';','='     ; tab cr lf sp + , ; =
 seplen  equ     $-sepchrs
-PRS001E label byte
-table   ends
+PRS001E:
+end if
 
-Procedure $PathParse,NEAR
-	assume  ds:nothing,es:nothing
+Procedure PathParse$,NEAR
+;	assume  ds:nothing,es:nothing
 	xor     ah,ah           ; initialize registers and flags
 	xor     bx,bx
 	cld
@@ -175,11 +175,11 @@ pcont1: cmp     al,'.'
 	dec     si
 	dec     di
 	jmp     rcont
-pcont2: cmp     al,'A'                  ; if token may start with a drive
+pcont2: cmp     al,'[a]'                  ; if token may start with a drive
 	jge     drive                   ; designator, go to drive. otherwise
-	jmp     name1                   ; parse a file name.
+	jmp     [Name1]                   ; parse a file name.
 
-drive:  cmp     byte ptr [si],':'       ; if there is a drive designator, parse
+drive:  cmp     byte [si],':'       ; if there is a drive designator, parse
 	jne     name1                   ; and verify it. otherwise parse a file
 	not     ah                      ; name.
 	cmp     al,'Z'
@@ -198,7 +198,7 @@ dcont3: dec     cx
 	je      rcont
 	dec     si
 
-repeat: mov     al,byte ptr [si-2]      ; repeat and rcont test for //, \\, .,
+repeat_: mov     al,byte [si-2]      ; repeat and rcont test for //, \\, .,
 	call    pasep                   ; and .. and repeatedly calls name
 	jne     rcont                   ; and ext until a path token has
 	inc     si                      ; been completely parsed.
@@ -240,7 +240,7 @@ echeck: cmp     cx,dx
 	jmp     inval
 
 dcheck: call    ispsep                  ; do the checks need to make sure
-	je      repeat                  ; a file name or extension ended
+	je      repeat_                  ; a file name or extension ended
 	call    issep                   ; correctly and checks to see if
 	je      bkboth                  ; we're done
 	call    ischrnull
@@ -264,32 +264,32 @@ done:   xor     al,al                   ; byte at the end of buf, and exit
 	stosb
 	push    si
 	invoke  Get_user_stack
-	mov     [si].user_AX,bx
-	pop     [si].user_SI
+	mov     [si+user_environ.user_AX],bx
+	pop     [si+user_environ.user_SI]
 	Transfer sys_ret_ok
 
-Endproc $PathParse
+Endproc PathParse$
 
 ; Is current character the beginning of a switch?
 
-isswit  proc    near
+isswit:
 	cmp     al,[chSwitch]
 	jne     swret
 	stosb
 swret:  ret
-isswit  endp
+;isswit  endp
 
 
 ; Is the current character a separator?
 
-issep   proc    near
+issep:
 	push    cx
 	push    di
 	push    es
 	mov     cx,cs
 	mov     es,cx
 	mov     cx,seplen
-	mov     di,offset dosgroup:sepchrs
+	mov     di,sepchrs
 	repne   scasb
 	pop     es
 	pop     di
@@ -297,13 +297,13 @@ issep   proc    near
 sepyes: stosb
 sepret: pop     cx
 	ret
-issep   endp
+;issep   endp
 
 
 ; Is the current character a path character?  If it is a wildcard char too,
 ;  set that flag.
 
-ispchr  proc    near
+ispchr:
 	cmp     al,'!'
 	je      pcyes
 	cmp     al,'#'
@@ -335,37 +335,37 @@ pcwild: or      bx,ParsePathWild
 pcyes:  stosb
 	cmp     al,al
 pcret:  ret
-ispchr  endp
+;ispchr  endp
 
 
 ; Is the current character a path separator?  If so, set that flag after
 ; storing the byte.
 
-ispsep  proc    near
+ispsep:
 	call    pasep
 	jne     psret
 	stosb
 	or      bx,ParsePathSeparators
 	cmp     al,al
 psret:  ret
-ispsep  endp
+;ispsep  endp
 
 
 ; Set ZF if the character in AL is a path separator.
 
-pasep   proc    near
-	cmp     chSwitch,'/'
+pasep:
+	cmp     [chSwitch],'/'
 	je      bkslash
 	cmp     al,'/'
 	retz
 bkslash:cmp     al,'\'
 	ret
-pasep   endp
+;pasep   endp
 
 
 ; Is the current character invalid?
 
-isinval proc    near
+isinval:
 	cmp     al,1
 	jl      inret
 	cmp     al,8
@@ -385,28 +385,28 @@ incont: cmp     al,31
 	ret
 inyes:  cmp     al,al
 inret:  ret
-isinval endp
+;isinval endp
 
 
 ; Is the current character a dot?
 
-isdot   proc    near
+isdot:
 	cmp     al,'.'
 	jne     dotret
 	stosb
 dotret: ret
-isdot   endp
+;isdot   endp
 
 
 ; Is the current character null?  If so, update SI for exiting.
 
-ischrnull  proc    near
+ischrnull:
 	cmp     al,0
 	jne     nulret
 	dec     si
 	cmp     al,al
 nulret: ret
-ischrnull  endp
+;ischrnull  endp
 
 
 ; Check for . and ..  Before returning, CF and ZF are set to indicate whether
@@ -415,12 +415,12 @@ ischrnull  endp
 ; token continues (. and .. not found or found and followed by a path
 ; separator - both flags off).
 
-dirdot  proc    near
-	cmp     byte ptr [si], '.'
+dirdot:
+	cmp     byte [si], '.'
 	jne     diretc
 	lodsb
 	stosb
-	cmp     byte ptr [si],'.'
+	cmp     byte [si],'.'
 	jne     dicont
 	lodsb
 	stosb
@@ -440,8 +440,8 @@ diretd: cmp     al,al                   ; Done return
 diretc: cmp     ah,1                    ; Continue return
 	clc
 	ret
-dirdot  endp
-ENDIF
+;dirdot  endp
+end if
 
-CODE    ENDS
-    END
+end if
+;    END

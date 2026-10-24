@@ -2,13 +2,13 @@
 ;   Revision history
 ;      AN000  version 4.00  Jan. 1988
 ;      AN007  fake version check for IBMCACHE.COM
-include mshead.asm
-include version.inc
+INCLUDE '../INC/MSHEAD.ASM'
+INCLUDE '../INC/VERSION.INC'
 
-CODE		SEGMENT BYTE PUBLIC 'CODE'
-	Extrn	LeaveDOS:NEAR
-	Extrn	BadCall:FAR, OKCall:FAR
-CODE		ENDS
+if SEGSEL = S_CODE
+;	Extrn	LeaveDOS:NEAR
+;	Extrn	BadCall:FAR, OKCall:FAR
+end if
 
 Break <Initialized data and data used at DOS initialization>
 
@@ -24,13 +24,14 @@ Break <Initialized data and data used at DOS initialization>
 
 	AsmVars <Kanji, Debug, Redirector, ShareF>
 
-CONSTANTS	SEGMENT WORD PUBLIC 'CONST'
+if SEGSEL = S_CONSTANTS
 
-	extrn	sfTabl:DWORD
+;	extrn	sfTabl:DWORD
 
-	ORG	0
+; the first thing in the constants segment, so this is where it already is
+;	ORG	0
 
-	EVEN
+	align	2
 ;
 ; WANGO!!!  The following word is used by SHARE and REDIR to determin data
 ; area compatability.  This location must be incremented EACH TIME the data
@@ -38,24 +39,25 @@ CONSTANTS	SEGMENT WORD PUBLIC 'CONST'
 ;
 ; Also, do NOT change this position relative to DOSGROUP:0.
 ;
-Public MSCT001S,MSCT001E
+;Public MSCT001S,MSCT001E
 MSCT001S:
 	I_am	DataVersion,WORD,<1>	;AC000; [SYSTEM] version number for DOS DATA
 
-%out WARNING!!! Debug fields are being included!!!
+;%out WARNING!!! Debug fields are being included!!!
 	DB	"BUG "                  ; THIS FIELD MUST BE EVEN # OF BYTES
 	I_am	BugTyp,WORD,<0>
 	I_am	BugLev,WORD,<0>
-include bugtyp.asm
+INCLUDE '../INC/BUGTYP.ASM'
 
 	I_am	MYNUM,WORD,<0>		; [SYSTEM] A number that goes with MYNAME
 	I_am	FCBLRU,WORD,<0> 	; [SYSTEM] LRU count for FCB cache
 	I_am	OpenLRU,WORD,<0>	; [SYSTEM] LRU count for FCB cache opens
 ; NOTE: We include the decl of OEM_HANDLER in IBM DOS even though it is not used.
 ;	This allows the REDIRector to work on either IBM or MS-DOS.
-	PUBLIC	OEM_HANDLER
+;	PUBLIC	OEM_HANDLER
 OEM_HANDLER	DD	-1		; [SYSTEM] Pointer to OEM handler code
-	I_am	LeaveAddr,WORD,<<OFFSET DOSGroup:LeaveDOS>> ; [SYSTEM]
+; One group, so an offset in it is just the offset.
+	I_am	LeaveAddr,WORD,<LeaveDOS>	; [SYSTEM]
 	I_am	RetryCount,WORD,<3>	; [SYSTEM] Share retries
 	I_am	RetryLoop,WORD,<1>	; [SYSTEM] Share retries
 	I_am	LastBuffer,DWORD,<-1,-1>; [SYSTEM] Buffer queue recency pointer
@@ -63,10 +65,10 @@ OEM_HANDLER	DD	-1		; [SYSTEM] Pointer to OEM handler code
 	I_am	arena_head,WORD 	; [SYSTEM] Segment # of first arena in memory
 ; The following block of data is used by SYSINIT.  Do not change the order or
 ; size of this block
-	PUBLIC	SYSINITVAR		; [SYSTEM]
-SYSINITVAR  LABEL   WORD		; [SYSTEM]
+;	PUBLIC	SYSINITVAR		; [SYSTEM]
+SYSINITVAR:; [SYSTEM]
 	I_am	DPBHEAD,DWORD		; [SYSTEM] Pointer to head of DPB-FAT list
-	I_am	sft_addr,DWORD,<<OFFSET DosGroup:sfTabl>,?> ; [SYSTEM] Pointer to first SFT table
+	I_am	sft_addr,DWORD,<<sfTabl>,?> ; [SYSTEM] Pointer to first SFT table
 	I_am	BCLOCK,DWORD		; [SYSTEM] The CLOCK device
 	I_am	BCON,DWORD		; [SYSTEM] Console device entry points
 	I_am	MAXSEC,WORD,<128>	; [SYSTEM] Maximum allowed sector size
@@ -92,21 +94,21 @@ SYSINITVAR  LABEL   WORD		; [SYSTEM]
 	I_am	DDMOVE,BYTE,<0> 	; [SYSTEM] 1 if we need DWORD move	;AN000;
 	I_am	EXT_MEM_SIZE,WORD,<0>	; [SYSTEM] extended memory size 	;AN000;
 
-	PUBLIC	HASHINITVAR		; [SYSTEM]				;AN000;
-HASHINITVAR  LABEL   WORD		; [SYSTEM]				;AN000;
+;	PUBLIC	HASHINITVAR		; [SYSTEM]				;AN000;
+HASHINITVAR:; [SYSTEM]				;AN000;
 	I_am	BUF_HASH_PTR,DWORD	; [SYSTEM] buffer Hash table addr	;AN000;
 	I_am	BUF_HASH_COUNT,WORD,<1> ; [SYSTEM] number of Hash entries	;AN000;
 	I_am	SC_CACHE_PTR,DWORD	; [SYSTEM] secondary cache pointer	;AN000;
 	I_am	SC_CACHE_COUNT,WORD,<0> ; [SYSTEM] secondary cache count	;AN000;
 
-IF	BUFFERFLAG
+if	BUFFERFLAG
 
 	I_am	BUF_EMS_SAFE_FLAG,BYTE,<1>	; indicates whether the page used by buffers is safe or not
 	I_am	BUF_EMS_LAST_PAGE,4,<0,0,0,0>	; holds the last page above 640k
 	I_am	BUF_EMS_FIRST_PAGE,4,<0,0,0,0>  ; holds the first page above 640K
 	I_am	BUF_EMS_NPA640,WORD,<0>		; holds the number of pages above 640K
 
-ENDIF
+end if
 
 	I_am	BUF_EMS_MODE,BYTE,<-1>	; [SYSTEM] EMS mode			;AN000;
 	I_am	BUF_EMS_HANDLE,WORD	; [SYSTEM] buffer EMS handle		;AN000;
@@ -115,39 +117,38 @@ ENDIF
 	I_am	BUF_EMS_PFRAME,WORD	; [SYSTEM] EMS page frame seg address	;AN000;
 	I_am	BUF_EMS_RESERV,WORD,<0> ; [SYSTEM] reserved			;AN000;
 
-IF	BUFFERFLAG
+if	BUFFERFLAG
 	I_am	BUF_EMS_MAP_BUFF,1,<0>	; this is not used to save the state of the 
 					; of the buffers page. this one byte is
 					; retained to keep the size of this data 
 					; block the same.
-ELSE
+else
 	I_am	BUF_EMS_MAP_BUFF,12,<0,0,0,0,0,0,0,0,0,0,0,0>	; map buufer	;AN000;
-ENDIF
+end if
 
 ; End of SYSINITVar block
 
 ;
 ; Sharer jump table
 ;
-PUBLIC	JShare
-	EVEN
-JShare	LABEL	DWORD
-	DW	OFFSET DOSGROUP:BadCall, 0
-	DW	OFFSET DOSGROUP:OKCall,  0  ;	1   MFT_enter
-	DW	OFFSET DOSGROUP:OKCall,  0  ;	2   MFTClose
-	DW	OFFSET DOSGROUP:BadCall, 0  ;	3   MFTclU
-	DW	OFFSET DOSGROUP:BadCall, 0  ;	4   MFTCloseP
-	DW	OFFSET DOSGROUP:BadCall, 0  ;	5   MFTCloN
-	DW	OFFSET DOSGROUP:BadCall, 0  ;	6   set_block
-	DW	OFFSET DOSGROUP:BadCall, 0  ;	7   clr_block
-	DW	OFFSET DOSGROUP:OKCall,  0  ;	8   chk_block
-	DW	OFFSET DOSGROUP:BadCall, 0  ;	9   MFT_get
-	DW	OFFSET DOSGROUP:BadCall, 0  ;	10  ShSave
-	DW	OFFSET DOSGROUP:BadCall, 0  ;	11  ShChk
-	DW	OFFSET DOSGROUP:OKCall , 0  ;	12  ShCol
-	DW	OFFSET DOSGROUP:BadCall, 0  ;	13  ShCloseFile
-	DW	OFFSET DOSGROUP:BadCall, 0  ;	14  ShSU
+;PUBLIC	JShare
+	align	2
+JShare:
+	DW	BadCall, 0
+	DW	OKCall,  0  ;	1   MFT_enter
+	DW	OKCall,  0  ;	2   MFTClose
+	DW	BadCall, 0  ;	3   MFTclU
+	DW	BadCall, 0  ;	4   MFTCloseP
+	DW	BadCall, 0  ;	5   MFTCloN
+	DW	BadCall, 0  ;	6   set_block
+	DW	BadCall, 0  ;	7   clr_block
+	DW	OKCall,  0  ;	8   chk_block
+	DW	BadCall, 0  ;	9   MFT_get
+	DW	BadCall, 0  ;	10  ShSave
+	DW	BadCall, 0  ;	11  ShChk
+	DW	OKCall , 0  ;	12  ShCol
+	DW	BadCall, 0  ;	13  ShCloseFile
+	DW	BadCall, 0  ;	14  ShSU
 
 MSCT001E:
-CONSTANTS	ENDS
-
+end if

@@ -42,9 +42,9 @@ FmtLoop:
 	CMP     AL,'\'
 	JZ      FmtChr
 FmtOut:
-	CALL    Out
+	CALL    Out_
 	JMP     FmtLoop
-Out:
+Out_:
 	SaveReg <SI,DI,BP>
 	INT     29h
 	RestoreReg  <BP,DI,SI>
@@ -67,7 +67,7 @@ FmtChr: LODSB
 	MOV     AL,9
 	JMP     FmtOut
 FmtCRLF:MOV     AL,13
-	CALL    Out
+	CALL    Out_
 	MOV     AL,10
 	JMP     FmtOut
 ;
@@ -92,7 +92,7 @@ FmtX:
 	JMP     FmtLoop
 FmtC:
 	Call    FmtGetArg
-	CALL    Out
+	CALL    Out_
 	JMP     FmtLoop
 FmtSoff:
 	SaveReg <SI>
@@ -114,16 +114,16 @@ FmtUPID:
 	SaveReg <DS>
 	MOV     BX,0
 	MOV     DS,BX
-	MOV     DS,DS:[82h]
-	ASSUME  DS:DOSGroup
-	MOV     BX,User_ID
+	MOV     DS,[82h]
+;	ASSUME  DS:DOSGroup
+	MOV     BX,[User_ID]
 	CALL    MNUM
 	MOV     AL,':'
 	CALL    OUT
-	MOV     BX,Proc_ID
+	MOV     BX,[PROC_ID]
 	CALL    MNUM
 	RestoreReg  <DS>
-	Assume  DS:NOTHING
+;	Assume  DS:NOTHING
 	JMP     FmtLoop
 EndProc PFMT
 
@@ -147,7 +147,7 @@ EndProc FMTSout
 ;   Outputs:    message
 ;   Registers modified: BX
 Procedure   MOut,Near
-	ASSUME  DS:NOTHING,SS:NOTHING,ES:NOTHING
+;	ASSUME  DS:NOTHING,SS:NOTHING,ES:NOTHING
 	PUSHF
 	SaveReg <DS,SI,AX>
 	PUSH    CS
@@ -165,7 +165,7 @@ EndProc MOut
 ;   Registers modified: BX
 
 Procedure   MNum,NEAR
-	ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
+;	ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
 	PUSHF
 	SaveReg <ES,DI,AX,BX,CX,SI,DS>
 	PUSH    SS
@@ -183,7 +183,7 @@ DLoop:  SaveReg <CX>
 	ADD     AL,'0'
 	CMP     AL,'9'
 	JBE     Nok
-	ADD     AL,'A'-'0'-10
+	ADD     AL,'[a]'-'0'-10
 Nok:    STOSB                           ;       *p++ = "0123456789ABCDEF"[n];
 	LOOP    DLoop
 	XOR     AL,AL

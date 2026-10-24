@@ -19,22 +19,22 @@ NAME Alloc
 ;       Created: ARR 30 March 1983
 ;
 
-.xlist
+;.xlist
 ;
 ; get the appropriate segment definitions
 ;
-include dosseg.asm
+INCLUDE '../INC/DOSSEG.ASM'
 
-CODE    SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME  SS:DOSGROUP,CS:DOSGROUP
+if SEGSEL = S_CODE
+;	ASSUME  SS:DOSGROUP,CS:DOSGROUP
 
-.xcref
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
-.cref
-.list
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+;.cref
+;.list
 
-.lall
+;.lall
 
 SUBTTL memory allocation utility routines
 PAGE
@@ -55,7 +55,7 @@ PAGE
 ; output:   free all blocks allocated to that PID
 ;
 	procedure   arena_free_process,NEAR
-	ASSUME  DS:NOTHING,ES:NOTHING
+;	ASSUME  DS:NOTHING,ES:NOTHING
 	MOV     DI,arena_signature
 	MOV     AX,[arena_head]
 	CALL    Check_Signature         ; ES <- AX, check for valid block
@@ -64,12 +64,12 @@ arena_free_process_loop:
 	retc
 	PUSH    ES
 	POP     DS
-	CMP     DS:[arena_owner],BX     ; is block owned by pid?
+	CMP     [arena_owner],BX     ; is block owned by pid?
 	JNZ     arena_free_next         ; no, skip to next
-	MOV     DS:[arena_owner],DI     ; yes... free him
+	MOV     [arena_owner],DI     ; yes... free him
 
 arena_free_next:
-	CMP     BYTE PTR DS:[DI],arena_signature_end
+	CMP     byte [DI],arena_signature_end
 					; end of road, Jack?
 	retz                            ; never come back no more
 	CALL    arena_next              ; next item in ES/AX carry set if trash
@@ -84,9 +84,9 @@ EndProc arena_free_process
 ;           carry set if trashed arena
 ;
 	procedure   arena_next,NEAR
-	ASSUME  DS:NOTHING,ES:NOTHING
+;	ASSUME  DS:NOTHING,ES:NOTHING
 	MOV     AX,DS                   ; AX <- current block
-	ADD     AX,DS:[arena_size]      ; AX <- AX + current block length
+	ADD     AX,[arena_size]      ; AX <- AX + current block length
 	INC     AX                      ; remember that header!
 ;
 ;       fall into check_signature and return
@@ -101,12 +101,12 @@ EndProc arena_next
 ; output:   ES=AX, carry set if signature is bad
 ;
 	procedure   check_signature,NEAR
-	ASSUME  DS:NOTHING,ES:NOTHING
+;	ASSUME  DS:NOTHING,ES:NOTHING
 	MOV     ES,AX                   ; ES <- AX
-	CMP     BYTE PTR ES:[DI],arena_signature_normal
+	CMP     byte [es:DI],arena_signature_normal
 					; IF next signature = not_end THEN
 	retz                            ;   GOTO ok
-	CMP     BYTE PTR ES:[DI],arena_signature_end
+	CMP     byte [es:DI],arena_signature_end
 					; IF next signature = end then
 	retz                            ;   GOTO ok
 	STC                             ; set error
@@ -121,25 +121,25 @@ EndProc Check_signature
 ;           carry set -> trashed arena
 ;
 	procedure   Coalesce,NEAR
-	ASSUME  DS:NOTHING,ES:NOTHING
-	CMP     BYTE PTR DS:[DI],arena_signature_end
+;	ASSUME  DS:NOTHING,ES:NOTHING
+	CMP     byte [DI],arena_signature_end
 					; IF current signature = END THEN
 	retz                            ;   GOTO ok
 	CALL    arena_next              ; ES, AX <- next block, Carry set if error
 	retc                            ; IF no error THEN GOTO check
 
 coalesce_check:
-	CMP     ES:[arena_owner],DI
+	CMP     [es:arena_owner],DI
 	retnz                           ; IF next block isnt free THEN return
-	MOV     CX,ES:[arena_size]      ; CX <- next block size
+	MOV     CX,[es:arena_size]      ; CX <- next block size
 	INC     CX                      ; CX <- CX + 1 (for header size)
-	ADD     DS:[arena_size],CX      ; current size <- current size + CX
-	MOV     CL,ES:[DI]              ; move up signature
-	MOV     DS:[DI],CL
+	ADD     [arena_size],CX      ; current size <- current size + CX
+	MOV     CL,[es:DI]              ; move up signature
+	MOV     [DI],CL
 	JMP     coalesce                ; try again
 EndProc Coalesce
 
-SUBTTL $Alloc - allocate space in memory
+SUBTTL Alloc$ - allocate space in memory
 PAGE
 ;
 ;   Assembler usage:
@@ -157,8 +157,8 @@ PAGE
 ;           AX = error_not_enough_memory
 ;              = error_arena_trashed
 ;
-	procedure   $ALLOC,NEAR
-	ASSUME  DS:NOTHING,ES:NOTHING
+	procedure   ALLOC$,NEAR
+;	ASSUME  DS:NOTHING,ES:NOTHING
 
 	EnterCrit   critMem
 	XOR     AX,AX
@@ -176,11 +176,11 @@ PAGE
 alloc_scan:
 	PUSH    ES
 	POP     DS                      ; DS <- ES
-	CMP     DS:[arena_owner],DI
+	CMP     [arena_owner],DI
 	JZ      alloc_free              ; IF current block is free THEN examine
 
 alloc_next:
-	CMP     BYTE PTR DS:[DI],arena_signature_end
+	CMP     byte [DI],arena_signature_end
 					; IF current block is last THEN
 	JZ      alloc_end               ;   GOTO end
 	CALL    arena_next              ; AX, ES <- next block, Carry set if error
@@ -200,14 +200,14 @@ alloc_end:
 alloc_fail:
 	invoke  get_user_stack
 	POP     BX
-	MOV     [SI].user_BX,BX
+	MOV     [SI+user_environ.user_BX],BX
 	LeaveCrit   critMem
 	error   error_not_enough_memory
 
 alloc_free:
 	CALL    coalesce                ; add following free block to current
 	JC      alloc_err               ; IF error THEN GOTO err
-	MOV     CX,DS:[arena_size]
+	MOV     CX,[arena_size]
 
 	POP     DX                      ; check for max found size
 	CMP     CX,DX
@@ -227,7 +227,7 @@ alloc_best:
 	JZ      alloc_make_best         ; initial best
 	PUSH    ES
 	MOV     ES,[BestArena]
-	CMP     ES:[arena_size],CX      ; is size of best larger than found?
+	CMP     [es:arena_size],CX      ; is size of best larger than found?
 	POP     ES
 	JBE     alloc_last
 alloc_make_best:
@@ -241,7 +241,7 @@ alloc_last:
 ;
 alloc_do_split_high:
 	MOV     DS,[LastArena]
-	MOV     CX,DS:[arena_size]
+	MOV     CX,[arena_size]
 	SUB     CX,BX
 	MOV     DX,DS
 	JE      alloc_set_owner         ; sizes are equal, no split
@@ -257,13 +257,13 @@ alloc_do_split_high:
 ; last must be split high
 ;
 alloc_do_split:
-	CMP     BYTE PTR [AllocMethod], 1
+	CMP     byte [AllocMethod], 1
 	JA      alloc_do_split_high
 	MOV     DS,[FirstArena]
 	JB      alloc_get_size
 	MOV     DS,[BestArena]
 alloc_get_size:
-	MOV     CX,DS:[arena_size]
+	MOV     CX,[arena_size]
 	SUB     CX,BX                   ; get room left over
 	MOV     AX,DS
 	MOV     DX,AX                   ; save for owner setting
@@ -273,26 +273,26 @@ alloc_get_size:
 	MOV     ES,AX                   ; ES <- DS + BX (new header location)
 	DEC     CX                      ; CX <- size of split block
 alloc_set_sizes:
-	MOV     DS:[arena_size],BX      ; current size <- BX
-	MOV     ES:[arena_size],CX      ; split size <- CX
+	MOV     [arena_size],BX      ; current size <- BX
+	MOV     [es:arena_size],CX      ; split size <- CX
 	MOV     BL,arena_signature_normal
-	XCHG    BL,DS:[DI]              ; current signature <- 4D
-	MOV     ES:[DI],BL              ; new block sig <- old block sig
-	MOV     ES:[arena_owner],DI
+	XCHG    BL,[DI]              ; current signature <- 4D
+	MOV     [es:DI],BL              ; new block sig <- old block sig
+	MOV     [es:arena_owner],DI
 
 alloc_set_owner:
 	MOV     DS,DX
 	MOV     AX,[CurrentPDB]
-	MOV     DS:[arena_owner],AX
+	MOV     [arena_owner],AX
 	MOV     AX,DS
 	INC     AX
 	POP     BX
 	LeaveCrit   critMem
 	transfer    SYS_RET_OK
 
-EndProc $alloc
+EndProc alloc$
 
-SUBTTL $SETBLOCK - change size of an allocated block (if possible)
+SUBTTL SETBLOCK$ - change sizeof.of an allocated block (if possible)
 PAGE
 ;
 ;   Assembler usage:
@@ -308,8 +308,8 @@ PAGE
 ;              = error_not_enough_memory
 ;              = error_invalid_function
 ;
-	procedure   $SETBLOCK,NEAR
-	ASSUME  DS:NOTHING,ES:NOTHING
+	procedure   SETBLOCK$,NEAR
+;	ASSUME  DS:NOTHING,ES:NOTHING
 	EnterCrit   critMem
 	MOV     DI,arena_signature
 	MOV     AX,ES
@@ -324,14 +324,14 @@ setblock_grab:
 	MOV     DS,AX
 	CALL    coalesce
 	JC      setblock_bad
-	MOV     CX,DS:[arena_size]
+	MOV     CX,[arena_size]
 	PUSH    CX
 	CMP     BX,CX
 	JBE     alloc_get_size
 	JMP     alloc_fail
-EndProc $setblock
+EndProc setblock$
 
-SUBTTL $DEALLOC - free previously allocated piece of memory
+SUBTTL DEALLOC$ - free previously allocated piece of memory
 PAGE
 ;
 ;   Assembler usage:
@@ -343,24 +343,24 @@ PAGE
 ;           AX = error_invalid_block
 ;              = error_arena_trashed
 ;
-	procedure   $DEALLOC,NEAR
-	ASSUME  DS:NOTHING,ES:NOTHING
+	procedure   DEALLOC$,NEAR
+;	ASSUME  DS:NOTHING,ES:NOTHING
 	EnterCrit   critMem
 	MOV     DI,arena_signature
 	MOV     AX,ES
 	DEC     AX
 	CALL    check_signature
 	JC      dealloc_err
-	MOV     ES:[arena_owner],DI
+	MOV     [es:arena_owner],DI
 	LeaveCrit   critMem
 	transfer    SYS_RET_OK
 
 dealloc_err:
 	LeaveCrit   critMem
 	error   error_invalid_block
-EndProc $DEALLOC
+EndProc DEALLOC$
 
-SUBTTL $AllocOper - get/set allocation mechanism
+SUBTTL AllocOper$ - get/set allocation mechanism
 PAGE
 ;
 ;   Assembler usage:
@@ -372,21 +372,21 @@ PAGE
 ;   Error return:
 ;           AX = error_invalid_function
 ;
-	procedure   $AllocOper,NEAR
-	ASSUME  DS:NOTHING,ES:NOTHING
+	procedure   AllocOper$,NEAR
+;	ASSUME  DS:NOTHING,ES:NOTHING
 	CMP     AL,1
 	JB      AllocOperGet
 	JZ      AllocOperSet
-	MOV     EXTERR_LOCUS,errLoc_mem ; Extended Error Locus
+	MOV     [ExtErr_locus],errLoc_mem ; Extended Error Locus
 	error   error_invalid_function
 AllocOperGet:
-	MOV     AL,BYTE PTR [AllocMethod]
+	MOV     AL,byte [AllocMethod]
 	XOR     AH,AH
 	transfer    SYS_RET_OK
 AllocOperSet:
 	MOV     [AllocMethod],BL
 	transfer    SYS_RET_OK
-EndProc $AllocOper
+EndProc AllocOper$
 
-CODE    ENDS
-    END
+end if
+;    END

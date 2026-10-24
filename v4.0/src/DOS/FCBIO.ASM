@@ -34,21 +34,21 @@ NAME	FCBIO
 ;
 ;	A000	 version 4.00  Jan. 1988
 ;
-.xlist
+;.xlist
 ;
 ; get the appropriate segment definitions
 ;
-include dosseg.asm
+INCLUDE '../INC/DOSSEG.ASM'
 
-CODE	SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME	SS:DOSGROUP,CS:DOSGROUP
+if SEGSEL = S_CODE
+;	ASSUME	SS:DOSGROUP,CS:DOSGROUP
 
-.xcref
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
-INCLUDE FASTOPEN.INC
-.cref
-.list
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+INCLUDE '../INC/FASTOPEN.INC'
+;.cref
+;.list
 
  AsmVars <Kanji>
 
@@ -74,11 +74,11 @@ INCLUDE FASTOPEN.INC
 if debug
 	I_need	BugLev,WORD
 	I_need	BugTyp,WORD
-	include bugtyp.asm
-endif
+	INCLUDE '../INC/BUGTYP.ASM'
+end if
 
 
-Break <$Get_FCB_Position - set random record fields to current pos>
+Break <Get_FCB_Position$ - set random record fields to current pos>
 
 ;
 ;   $Get_FCB_Position - look at an FCB, retrieve the current position from the
@@ -89,20 +89,20 @@ Break <$Get_FCB_Position - set random record fields to current pos>
 ;   Outputs:	The random record field of the FCB is set to the current record
 ;   Registers modified: all
 
-Procedure $Get_FCB_Position,NEAR
-	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+Procedure Get_FCB_Position$,NEAR
+;	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	invoke	GetExtended		; point to FCB
 	invoke	GetExtent		; DX:AX is current record
-	MOV	WORD PTR [SI.fcb_RR],AX ; drop in low order piece
+	MOV	word [SI+fcb_RR],AX ; drop in low order piece
 	MOV	[SI+fcb_RR+2],DL	; drop in high order piece
-	CMP	[SI.fcb_RECSIZ],64
+	CMP	[SI+fcb_RECSIZ],64
 	JAE	GetFCBBye
 	MOV	[SI+fcb_RR+2+1],DH	; Set 4th byte only if record size < 64
 GetFCBBye:
 	transfer    FCB_Ret_OK
-EndProc $GET_FCB_POSITION
+EndProc GET_FCB_POSITION$
 
-Break <$FCB_Delete - remove several files that match the input FCB>
+Break <FCB_Delete$ - remove several files that match the input FCB>
 
 ;
 ;   $FCB_delete - given an FCB, remove all directory entries in the current
@@ -113,9 +113,9 @@ Break <$FCB_Delete - remove several files that match the input FCB>
 ;		AL = FF if no entries were deleted.
 ;   Registers modified: all
 
-Procedure $FCB_Delete,NEAR
-	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:DOSGroup
-	MOV	DI,OFFSET DOSGroup:OpenBuf  ; appropriate place
+Procedure FCB_Delete$,NEAR
+;	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+	MOV	DI,OpenBuf  ; appropriate place
 	invoke	TransFCB		; convert FCB to path
 	JC	BadPath 		; signal no deletions
 	Context DS
@@ -129,9 +129,9 @@ BadPath:
 ; Error code is in AX
 ;
 	transfer    FCB_Ret_Err 	; let someone else signal the error
-EndProc $FCB_DELETE
+EndProc FCB_DELETE$
 
-Break <$Get_FCB_File_Length - return the length of a file>
+Break <Get_FCB_File_Length$ - return the length of a file>
 
 ;
 ;   $Get_FCB_File_Length - set the random record field to the length of the
@@ -141,11 +141,11 @@ Break <$Get_FCB_File_Length - return the length of a file>
 ;   Outputs:	Random record field updated to reflect the number of records
 ;   Registers modified: all
 
-Procedure   $Get_FCB_File_Length,NEAR
-	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+Procedure   Get_FCB_File_Length$,NEAR
+;	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	invoke	GetExtended		; get real FCB pointer
 					; DX points to Input FCB
-	MOV	DI,OFFSET DOSGroup:OpenBuf  ; appropriate buffer
+	MOV	DI,OpenBuf  ; appropriate buffer
 	SaveReg <DS,SI> 		; save pointer to true FCB
 	Invoke	TransFCB		; Trans name DS:DX, sets SATTRIB
 	RestoreReg  <SI,DS>
@@ -157,7 +157,7 @@ Procedure   $Get_FCB_File_Length,NEAR
 	JC	BadPath 		; invalid something
 	MOV	DX,BX			; get high order size
 	MOV	AX,DI			; get low order size
-	MOV	BX,[SI.fcb_RECSIZ]	; get his record size
+	MOV	BX,[SI+fcb_RECSIZ]	; get his record size
 	OR	BX,BX			; empty record => 0 size for file
 	JNZ	GetSize 		; not empty
 	MOV	BX,128
@@ -175,16 +175,16 @@ GetSize:
 	ADD	AX,1
 	ADC	DX,0			; 32-bit increment
 LengthStore:
-	MOV	WORD PTR [SI.FCB_RR],AX ; store low order
-	MOV	[SI.FCB_RR+2],DL	; store high order
+	MOV	word [SI+FCB_RR],AX ; store low order
+	MOV	[SI+FCB_RR+2],DL	; store high order
 	OR	DH,DH
 	JZ	GoodPath		; not storing insignificant zero
-	MOV	[SI.FCB_RR+3],DH	; save that high piece
+	MOV	[SI+FCB_RR+3],DH	; save that high piece
 GoodRet:
 	transfer    FCB_Ret_OK
-EndProc $GET_FCB_FILE_LENGTH
+EndProc GET_FCB_FILE_LENGTH$
 
-Break <$FCB_Close - close a file>
+Break <FCB_Close$ - close a file>
 
 ;
 ;   $FCB_Close - given an FCB, look up the SFN and close it.  Do not free it
@@ -194,8 +194,8 @@ Break <$FCB_Close - close a file>
 ;   Outputs:	AL = FF if file was not found on disk
 ;   Registers modified: all
 
-Procedure $FCB_Close,NEAR
-	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+Procedure FCB_Close$,NEAR
+;	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	XOR	AL,AL			; default search attributes
 	invoke	GetExtended		; DS:SI point to real FCB
 	JZ	NoAttr			; not extended
@@ -209,33 +209,33 @@ NoAttr:
 ; no need to set the SFT's attribute.
 ;
 ;;; 9/8/86 F.C. save SFT attribute and restore it back when close is done
-	MOV	AL,ES:[DI].sf_attr
+	MOV	AL,[es:DI+sf_attr]
 	XOR	AH,AH
 	PUSH	AX
 ;;; 9/8/86 F.C. save SFT attribute and restore it back when close is done
 	invoke	CheckShare
 	JNZ	NoStash
-	MOV	AL,Attrib
-	MOV	ES:[DI].sf_attr,AL	; attempted attribute for close
+	MOV	AL,[ATTRIB]
+	MOV	[es:DI+sf_attr],AL	; attempted attribute for close
 NoStash:
-	MOV	AX,[SI].FCB_FDATE	; move in the time and date
-	MOV	ES:[DI].sf_date,AX
-	MOV	AX,[SI].FCB_FTIME
-	MOV	ES:[DI].sf_time,AX
-	MOV	AX,[SI].FCB_FilSiz
-	MOV	WORD PTR ES:[DI].sf_size,AX
-	MOV	AX,[SI].FCB_FilSiz+2
-	MOV	WORD PTR ES:[DI].sf_size+2,AX
-	OR	ES:[DI].sf_Flags,sf_close_nodate
+	MOV	AX,[SI+FCB_FDATE]	; move in the time and date
+	MOV	[es:DI+sf_date],AX
+	MOV	AX,[SI+FCB_FTIME]
+	MOV	[es:DI+sf_time],AX
+	MOV	AX,[SI+FCB_FilSiz]
+	MOV	word [es:DI+sf_size],AX
+	MOV	AX,[SI+FCB_FilSiz+2]
+	MOV	word [es:DI+sf_size+2],AX
+	OR	[es:DI+sf_Flags],sf_close_nodate
 	Context DS			; let Close see variables
 	invoke	DOS_Close		; wham
-	LES	DI,ThisSFT
+	LES	DI,[ThisSFT]
 ;;; 9/8/86 F.C. restore SFT attribute
 	POP	CX
-	MOV	ES:[DI].sf_attr,CL
+	MOV	[es:DI+sf_attr],CL
 ;;; 9/8/86 F.C. restore SFT attribute
 	PUSHF
-	TEST	ES:[DI.sf_ref_count],-1 ; zero ref count gets blasted
+	TEST	[es:DI+sf_ref_count],-1 ; zero ref count gets blasted
 	JNZ	CloseOK
 	PUSH	AX
 	MOV	AL,'M'
@@ -248,9 +248,9 @@ CloseOK:
 	JZ	GoodRet
 	MOV	AL,error_file_not_found
 	transfer    FCB_Ret_Err
-EndProc $FCB_CLOSE
+EndProc FCB_CLOSE$
 
-Break	<$FCB_Rename - change names in place>
+Break	<FCB_Rename$ - change names in place>
 
 ;
 ;   $FCB_Rename - rename a file in place within a directory.  Renames multiple
@@ -264,23 +264,23 @@ Break	<$FCB_Rename - change names in place>
 ;		    rename to existing file or source file not found
 ;   Registers modified: all
 
-Procedure $FCB_Rename,NEAR
-	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+Procedure FCB_Rename$,NEAR
+;	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	invoke	GetExtended		; get pointer to real FCB
 	SaveReg <DX>
 	MOV	AL,[SI] 		; get drive byte
 	ADD	SI,10h			; point to destination
-	MOV	DI,OFFSET DOSGroup:RenBuf   ; point to destination buffer
-	SaveReg <<WORD PTR DS:[SI]>,DS,SI>  ; save source pointer for TransFCB
-	MOV	DS:[SI],AL		; drop in real drive
+	MOV	DI,renbuf   ; point to destination buffer
+	SaveReg <word [ds:SI],DS,SI>  ; save source pointer for TransFCB
+	MOV	[SI],AL		; drop in real drive
 	MOV	DX,SI			; let TransFCB know where the FCB is
 	invoke	TransFCB		; munch this pathname
-	RestoreReg  <SI,DS,<WORD PTR DS:[SI]>>	; get path back
+	RestoreReg  <SI,DS,word [ds:SI]>	; get path back
 	RestoreReg  <DX>		; Original FCB pointer
 	JC	BadRen			; bad path -> error
-	MOV	SI,WFP_Start		; get pointer
-	MOV	Ren_WFP,SI		; stash it
-	MOV	DI,OFFSET DOSGroup:OpenBuf  ; appropriate spot
+	MOV	SI,[WFP_START]		; get pointer
+	MOV	[Ren_WFP],SI		; stash it
+	MOV	DI,OpenBuf  ; appropriate spot
 	invoke	TransFCB		; wham
 					; NOTE that this call is pointing
 					;  back to the ORIGINAL FCB so
@@ -295,7 +295,7 @@ BadRen:
 ;
 	transfer    FCB_Ret_Err
 
-EndProc $FCB_RENAME
+EndProc FCB_RENAME$
 
 Break <Misbehavior fixers>
 
@@ -413,16 +413,16 @@ Break	<SaveFCBInfo - store pertinent information from an SFT into the FCB>
 ;
 
 Procedure   SaveFCBInfo,NEAR
-	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
-	LES	DI,ThisSFT
+;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+	LES	DI,[ThisSFT]
 	Assert	ISSFT,<ES,DI>,"SaveFCBInfo"
 	invoke	IsSFTNet
 	JZ	SaveLocal		; if not network then save local info
 ;
 ;----- In net support -----
 ;
-	MOV	AX,WORD PTR ES:[DI].sf_serial_ID	;AN000;;IFS.  save IFS ID
-	MOV	WORD PTR [SI].FCB_netID,ax		;AN000;;IFS.
+	MOV	AX,word [es:DI+sf_serial_ID]	;AN000;;IFS.  save IFS ID
+	MOV	word [SI+FCB_netID],ax		;AN000;;IFS.
 ;	SaveReg <ES,DI>
 ;	LES	DI,DWORD PTR ES:[DI].sf_netid
 ;	MOV	WORD PTR [SI].FCB_netID,DI  ; save net ID
@@ -432,81 +432,81 @@ Procedure   SaveFCBInfo,NEAR
 ;
 ;----- END In net support -----
 ;
-IF debug
+if debug
 	JMP	SaveSFN
-ELSE
+else
 	JMP	SHORT SaveSFN
-ENDIF
+end if
 SaveLocal:
-	IF	Installed
+	if	Installed
 	Invoke	CheckShare
 	JZ	SaveNoShare		; no sharer
 	JMP	SaveShare		; sharer present
 
 SaveNoShare:
-	TEST	ES:[DI].sf_flags,devid_device
+	TEST	[es:DI+sf_flags],devid_device
 	JNZ	SaveNoShareDev		; Device
 ;
 ; Save no sharing local file information
 ;
-	MOV	AX,WORD PTR ES:[DI].sf_dirsec ; get directory sector F.C.
-	MOV	[SI].fcb_nsl_dirsec,AX
-	MOV	AL,ES:[DI].sf_dirpos	; location in sector
-	MOV	[SI].fcb_nsl_dirpos,AL
-	MOV	AX,ES:[DI].sf_firclus	; first cluster
-	MOV	[SI].fcb_nsl_firclus,AX
+	MOV	AX,word [es:DI+sf_dirsec] ; get directory sector F.C.
+	MOV	word [SI+fcb_nsl_dirsec],AX
+	MOV	AL,[es:DI+sf_dirpos]	; location in sector
+	MOV	[SI+fcb_nsl_dirpos],AL
+	MOV	AX,[es:DI+sf_firclus]	; first cluster
+	MOV	word [SI+fcb_nsl_firclus],AX
 	MOV	BL,00
 ;
 ; Create the bits field from the dirty/device bits of the flags word and the
 ; mode byte
 ;
 SetFCBBits:
-	MOV	AX,ES:[DI].sf_flags
+	MOV	AX,[es:DI+sf_flags]
 	AND	AL,0C0h 		; mask off drive bits
-	OR	AL,BYTE PTR ES:[DI].sf_mode ; stick in open mode
-	MOV	[SI].fcb_nsl_bits,AL	; save dirty info
+	OR	AL,byte [es:DI+sf_mode] ; stick in open mode
+	MOV	[SI+fcb_nsl_bits],AL	; save dirty info
 	JMP	SaveSFN 		; go and save SFN
 
 ;
 ; Save no sharing local device information
 ;
 SaveNoShareDev:
-	MOV	AX,WORD PTR ES:[DI].sf_devptr
-	MOV	WORD PTR [SI].FCB_nsld_drvptr,AX
-	MOV	AX,WORD PTR ES:[DI].sf_devptr + 2
-	MOV	WORD PTR [SI].FCB_nsld_drvptr + 2,AX
+	MOV	AX,word [es:DI+sf_devptr]
+	MOV	word [SI+FCB_nsld_drvptr],AX
+	MOV	AX,word [es:DI+sf_devptr+2]
+	MOV	word [SI+FCB_nsld_drvptr+2],AX
 	MOV	BL,FCBDEVICE
 	JMP	SetFCBBits		; go and save SFN
 
 SaveShare:
-	ENDIF
+	end if
 ;
 ;----- In share support -----
 ;
 if installed
-	Call	JShare + 10 * 4
+	Call	dword [JSHARE+10*4]
 else
 	Call	ShSave
-endif
+end if
 ;
 ;----- end in share support -----
 ;
 SaveSFN:
-	MOV	AX,ES:[DI].sf_flags
+	MOV	AX,[es:DI+sf_flags]
 	AND	AL,3Fh			; get real drive
 	OR	AL,BL
-	MOV	[SI].fcb_l_drive,AL
+	MOV	[SI+fcb_l_drive],AL
 	LEA	AX,[DI-SFTable]
 ;
 ; Adjust for offset to table.
 ;
-	SUB	AX,WORD PTR SftFCB
-	MOV	BL,SIZE sf_entry
+	SUB	AX,word [sftFCB]
+	MOV	BL,sizeof.sf_entry
 	DIV	BL
-	MOV	[SI].FCB_sfn,AL 	; last used SFN
-	MOV	AX,FCBLRU		; get lru count
+	MOV	[SI+FCB_sfn],AL 	; last used SFN
+	MOV	AX,[FCBLRU]		; get lru count
 	INC	AX
-	MOV	WORD PTR ES:[DI].sf_LRU,AX
+	MOV	word [es:DI+sf_LRU],AX
 	JNZ	SimpleStuff
 ;
 ; lru flag overflowed.	Run through all FCB sfts and adjust:  LRU < 8000h
@@ -518,7 +518,7 @@ SaveSFN:
 ; Set new LRU to AX
 ;
 SimpleStuff:
-	MOV	FCBLRU,AX
+	MOV	[FCBLRU],AX
 	return
 EndProc SaveFCBInfo
 
@@ -536,22 +536,22 @@ Break	<ResetLRU - reset overflowed lru counts>
 ;   Registers modified: none
 
 Procedure   ResetLRU,NEAR
-	ASSUME CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;	ASSUME CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
 	Assert	ISSFT,<ES,DI>,"ResetLRU"
 	MOV	AX,8000h
 	SaveReg <ES,DI>
-	LES	DI,sftFCB		; get pointer to head
-	MOV	CX,ES:[DI].sfCount
-	LEA	DI,[DI].sfTable 	; point at table
+	LES	DI,[sftFCB]		; get pointer to head
+	MOV	CX,[es:DI+sfCount]
+	LEA	DI,[DI+sfTable] 	; point at table
 ovScan:
-	SUB	WORD PTR ES:[DI+BX],AX	; decrement lru count
+	SUB	word [es:DI+BX],AX	; decrement lru count
 	JA	ovLoop
-	MOV	WORD PTR ES:[DI.BX],AX	; truncate at 0
+	MOV	word [es:DI+BX],AX	; truncate at 0
 ovLoop:
-	ADD	DI,SIZE SF_Entry	; advance to next
+	ADD	DI,sizeof.SF_Entry	; advance to next
 	LOOP	ovScan
 	RestoreReg  <DI,ES>
-	MOV	ES:[DI+BX],AX
+	MOV	[es:DI+BX],AX
 	return
 EndProc ResetLRU
 
@@ -570,16 +570,16 @@ Break	<SetOpenAge - update the open age of a SFT>
 ;
 
 Procedure   SetOpenAge,NEAR
-	ASSUME CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;	ASSUME CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
 	Assert	ISSFT,<ES,DI>,"SetOpenAge"
-	MOV	AX,OpenLRU
+	MOV	AX,[OpenLRU]
 	INC	AX
-	MOV	ES:[DI].sf_OpenAge,AX
+	MOV	word [es:DI+sf_OpenAge],AX
 	JNZ	SetDone
 	MOV	BX,sf_Position+2
 	invoke	ResetLRU
 SetDone:
-	MOV	OpenLRU,AX
+	MOV	[OpenLRU],AX
 	return
 EndProc SetOpenAge
 
@@ -599,7 +599,7 @@ Break	<LRUFCB - perform LRU on FCB sfts>
 ;
 
 Procedure   LRUFCB,NEAR
-	ASSUME CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;	ASSUME CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
 	Invoke	Save_World
 ;
 ; Find nth oldest NET/SHARE FCB.  We want to find its age for the second scan
@@ -610,7 +610,7 @@ Procedure   LRUFCB,NEAR
 ;   BP is the count of times we need to go through this loop.
 ;   AX is the current acceptable minimum age to consider
 ;
-	mov	bp,KeepCount		; k = keepcount;
+	mov	bp,[KeepCount]		; k = keepcount;
 	XOR	AX,AX			; low = 0;
 ;
 ; If we've scanned the table n times, then we are done.
@@ -628,18 +628,18 @@ lru1:
 ;
 	MOV	BX,-1			;     min = 0xffff;
 	MOV	si,BX			;     pos = 0xffff;
-	LES	DI,SFTFCB		;     for (CX=FCBCount; CX>0; CX--)
-	MOV	CX,ES:[DI].sfCount
-	LEA	DI,[DI].sfTable
+	LES	DI,[sftFCB]		;     for (CX=FCBCount; CX>0; CX--)
+	MOV	CX,[es:DI+sfCount]
+	LEA	DI,[DI+sfTable]
 ;
 ; Innermost loop.  If the current entry is free, then we are done.  Or, if the
 ; current entry is busy (indicating a previous aborted allocation), then we
 ; are done.  In both cases, we use the found entry.
 ;
 lru2:
-	cmp	es:[di].sf_ref_count,0
+	cmp	[es:di+sf_ref_count],0
 	jz	lru25
-	cmp	es:[di].sf_ref_count,sf_busy
+	cmp	[es:di+sf_ref_count],sf_busy
 	jnz	lru3
 ;
 ; The entry is usable without further scan.  Go and use it.
@@ -655,18 +655,18 @@ lru25:
 ;	    this entry becomes current minimum
 ;
 lru3:
-	TEST	ES:[DI].sf_flags,sf_isnet   ;	  if (!net[i]
+	TEST	[es:DI+sf_flags],sf_isnet   ;	  if (!net[i]
 	JNZ	lru35
 if installed
 	Invoke	CheckShare		;		&& !sharing)
 	JZ	lru5			;	  else
-ENDIF
+end if
 ;
 ; This SFT is for the net or is for the sharer.  See if it less than the
 ; current minimum.
 ;
 lru35:
-	MOV	DX,ES:[DI].sf_OpenAge
+	MOV	DX,word [es:DI+sf_OpenAge]
 	CMP	DX,AX			;	  if (age[i] >= low &&
 	JB	lru5
 	CMP	DX,BX
@@ -680,7 +680,7 @@ lru35:
 ; End of loop.	gp back for more
 ;
 lru5:
-add	di,size sf_entry
+add	di,sizeof.sf_entry
 	loop	lru2			;	      }
 ;
 ; The scan is complete.  If we have successfully found a new minimum (pos != -1)
@@ -701,15 +701,15 @@ lru65:	stc
 lru75:
 	mov	bx,-1			; min = 0xffff;
 	mov	si,bx			; pos = 0xffff;
-	LES	DI,SFTFCB		; for (CX=FCBCount; CX>0; CX--)
-	MOV	CX,ES:[DI].sfCount
-	LEA	DI,[DI].sfTable
+	LES	DI,[sftFCB]		; for (CX=FCBCount; CX>0; CX--)
+	MOV	CX,[es:DI+sfCount]
+	LEA	DI,[DI+sfTable]
 ;
 ; If this is is local-no-share then go check for LRU else if age >= threshold
 ; then check for lru.
 ;
 lru8:
-	TEST	ES:[DI].sf_flags,sf_isnet
+	TEST	[es:DI+sf_flags],sf_isnet
 	jnz	lru85			; is for network, go check age
 	invoke	CheckShare		; sharer here?
 	jz	lru86			; no, go check lru
@@ -717,21 +717,21 @@ lru8:
 ; Network or sharer.  Check age
 ;
 lru85:
-	cmp	es:[di].sf_OpenAge,ax
+	cmp	word [es:di+sf_OpenAge],ax
 	jb	lru9			; age is before threshold, skip it
 ;
 ; Check LRU
 ;
 lru86:
-	cmp	es:[di].sf_LRU,bx	; is LRU less than current LRU?
+	cmp	word [es:di+sf_LRU],bx	; is LRU less than current LRU?
 	jae	lru9			; no, skip this
 	mov	si,di			; remember position
-	mov	bx,es:[di].sf_LRU	; remember new minimum LRU
+	mov	bx,word [es:di+sf_LRU]	; remember new minimum LRU
 ;
 ; Done with this entry, go back for more.
 ;
 lru9:
-	add	di,size sf_entry
+	add	di,sizeof.sf_entry
 	loop	lru8
 ;
 ; Scan is complete.  If we found NOTHING that satisfied us then we bomb
@@ -744,25 +744,25 @@ lru10:
 	jz	lru65			;     return -1;
 lru11:
 	mov	di,si
-	MOV	WORD PTR ThisSFT,DI	; set thissft
-	MOV	WORD PTR ThisSFT+2,ES
+	MOV	word [ThisSFT],DI	; set thissft
+	MOV	word [ThisSFT+2],ES
 ;
 ; If we have sharing or thisSFT is a net sft, then close it until ref count
 ; is 0.
 ;
-	TEST	ES:[DI].sf_flags,sf_isNet
+	TEST	[es:DI+sf_flags],sf_isNet
 	JNZ	LRUClose
-IF INSTALLED
+if INSTALLED
 	Invoke	CheckShare
 	JZ	LRUDone
-ENDIF
+end if
 ;
 ; Repeat close until ref count is 0
 ;
 LRUClose:
 	Context DS
-	LES	DI,ThisSFT
-	CMP	ES:[DI].sf_ref_count,0	; is ref count still <> 0?
+	LES	DI,[ThisSFT]
+	CMP	[es:DI+sf_ref_count],0	; is ref count still <> 0?
 	JZ	LRUDone 		; nope, all done
 
 ;	Message     1,"LRUFCB: closing "
@@ -781,8 +781,8 @@ LRUDone:
 	invoke	BlastSFT		; fill SFT with 0 (AL)
 LRUDead:
 	Invoke	Restore_World
-	ASSUME	DS:NOTHING
-	LES	DI,ThisSFT
+;	ASSUME	DS:NOTHING
+	LES	DI,[ThisSFT]
 	Assert	ISSFT,<ES,DI>,"LRUFCB return"
 	retnc
 	MOV	AL,error_FCB_unavailable
@@ -801,13 +801,13 @@ Break	<FCBRegen - regenerate a sft from the info in the FCB>
 ;   Registers modified: all
 
 Procedure   FCBRegen,NEAR
-	ASSUME	DS:NOTHING,ES:NOTHING
+;	ASSUME	DS:NOTHING,ES:NOTHING
 ;
 ; General data filling.  Mode is sf_isFCB + open_for_both, date/time we do
 ; not fill, size we do no fill, position we do not fill,
 ; bit 14 of flags = TRUE, other bits = FALSE
 ;
-	MOV	AL,[SI].fcb_l_drive
+	MOV	AL,[SI+fcb_l_drive]
 ;
 ; We discriminate based on the first two bits in the reserved field.
 ;
@@ -829,7 +829,7 @@ Procedure   FCBRegen,NEAR
 	OR	AL,AL			; is it there?
 	JZ	RegenDead		; no, just fail the operation
 RegenFail:
-	MOV	AX,User_In_AX
+	MOV	AX,[USER_IN_AX]
 	cmp	AH,fcb_close
 	jz	RegenDead
 	invoke	FCBHardErr		; massive hard error.
@@ -848,7 +848,7 @@ RegenNoSharing:
 ;
 	invoke	LRUFcb
 	retc
-	MOV	ES:[DI].sf_mode,SF_IsFCB + open_for_both + sharing_compat
+	MOV	[es:DI+sf_mode],SF_IsFCB + open_for_both + sharing_compat
 	AND	AL,3Fh			; get drive number for flags
 	CBW
 	OR	AX,sf_close_noDate	; normal FCB operation
@@ -856,24 +856,24 @@ RegenNoSharing:
 ; The bits field consists of the upper two bits (dirty and device) from the
 ; SFT and the low 4 bits from the open mode.
 ;
-	MOV	CL,[SI].FCB_nsl_bits	; stick in dirty bits.
+	MOV	CL,[SI+FCB_nsl_bits]	; stick in dirty bits.
 	MOV	CH,CL
 	AND	CH,0C0h 		; mask off the dirty/device bits
 	OR	AL,CH
 	AND	CL,access_mask		; get the mode bits
-	MOV	BYTE PTR ES:[DI].sf_mode,CL
-	MOV	ES:[DI].sf_flags,AX	; initial flags
-	MOV	AX,Proc_ID
-	MOV	ES:[DI].sf_PID,AX
+	MOV	byte [es:DI+sf_mode],CL
+	MOV	[es:DI+sf_flags],AX	; initial flags
+	MOV	AX,[PROC_ID]
+	MOV	[es:DI+sf_PID],AX
 	SaveReg <DS,SI,ES,DI>
 	Context ES
-	MOV	DI,OFFSET DOSGroup:Name1
+	MOV	DI,Name1
 	MOV	CX,8
 	INC	SI			; Skip past drive byte to name in FCB
 RegenCopyName2:
 	LODSB
 
- IF  DBCS				;AN000;
+ if  DBCS				;AN000;
 	invoke	testkanj		;AN000;
 	jz	notkanj9		;AN000;
 	STOSB				;AN000;
@@ -883,7 +883,7 @@ RegenCopyName2:
 	jmp	short StuffChar2	;AN000;
 					;AN000;
 notkanj9:				;AN000;
- ENDIF					;AN000;
+ end if					;AN000;
 
 	Invoke	UCase
 StuffChar2:
@@ -895,17 +895,17 @@ DoneNam2:
 					; Must set this to something interesting
 					; to call DEVNAME.
 	Invoke	DevName 		; check for device
-	ASSUME	DS:NOTHING,ES:NOTHING
+;	ASSUME	DS:NOTHING,ES:NOTHING
 	RestoreReg  <DI,ES,SI,DS>
 	JC	RegenFileNoSharing	; not found on device list => file
 ;
 ; Device found.  We can ignore disk-specific info
 ;
-	MOV	BYTE PTR ES:[DI].sf_flags,BH   ; device parms
-	MOV	ES:[DI].sf_attr,0	; attribute
-	LDS	SI,DEVPT		; get device driver
-	MOV	WORD PTR ES:[DI].sf_devptr,SI
-	MOV	WORD PTR ES:[DI].sf_devptr+2,DS
+	MOV	byte [es:DI+sf_flags],BH   ; device parms
+	MOV	[es:DI+sf_attr],0	; attribute
+	LDS	SI,[DEVPT]		; get device driver
+	MOV	word [es:DI+sf_devptr],SI
+	MOV	word [es:DI+sf_devptr+2],DS
 	return				; carry is clear
 
 RegenDeadJ:
@@ -914,35 +914,35 @@ RegenDeadJ:
 ; File found.  Just copy in the remaining pieces.
 ;
 RegenFileNoSharing:
-	MOV	AX,ES:[DI].sf_flags
+	MOV	AX,[es:DI+sf_flags]
 	AND	AX,03Fh
 	SaveReg <DS,SI>
 	Invoke	Find_DPB
-	MOV	WORD PTR ES:[DI].sf_devptr,SI
-	MOV	WORD PTR ES:[DI].sf_devptr+2,DS
+	MOV	word [es:DI+sf_devptr],SI
+	MOV	word [es:DI+sf_devptr+2],DS
 	RestoreReg  <SI,DS>
 	jc	RegenDeadJ		; if find DPB fails, then drive
 					; indicator was bogus
-	MOV	AX,[SI].FCB_nsl_dirsec
-	MOV	WORD PTR ES:[DI].sf_dirsec,AX
-	MOV	WORD PTR ES:[DI].sf_dirsec+2,0	;AN000;>32mb
-	MOV	AX,[SI].FCB_nsl_firclus
-	MOV	ES:[DI].sf_firclus,AX
-	MOV	ES:[DI].sf_lstclus,AX
-	MOV	AL,[SI].FCB_nsl_dirpos
-	MOV	ES:[DI].sf_dirpos,AL
-	INC	ES:[DI].sf_ref_count	; Increment reference count.
+	MOV	AX,[SI+FCB_nsl_dirsec]
+	MOV	word [es:DI+sf_dirsec],AX
+	MOV	word [es:DI+sf_dirsec+2],0	;AN000;>32mb
+	MOV	AX,[SI+FCB_nsl_firclus]
+	MOV	[es:DI+sf_firclus],AX
+	MOV	[es:DI+sf_lstclus],AX
+	MOV	AL,[SI+FCB_nsl_dirpos]
+	MOV	[es:DI+sf_dirpos],AL
+	INC	[es:DI+sf_ref_count]	; Increment reference count.
 					; Existing FCB entries would be
 					; flushed unnecessarily because of
 					; check in CheckFCB of the ref_count.
 					; July 22/85 - BAS
-	LEA	SI,[SI].FCB_name
-	LEA	DI,[DI].sf_name
+	LEA	SI,[SI+FCB_name]
+	LEA	DI,[DI+sf_name]
 	MOV	CX,fcb_extent-fcb_name
 RegenCopyName:
 	LODSB
 
-	IF	DBCS			;AN000;
+	if	DBCS			;AN000;
 	invoke	testkanj
 	jz	notkanj1
 	STOSB
@@ -952,7 +952,7 @@ RegenCopyName:
 	jmp	short StuffChar
 
 notkanj1:
-	ENDIF				;AN000;
+	end if				;AN000;
 
 	Invoke	UCase
 StuffChar:
@@ -974,12 +974,12 @@ EndProc FCBRegen
 
 Procedure   BlastSFT,NEAR
 	SaveReg <DI>
-	MOV	CX,SIZE sf_entry
+	MOV	CX,sizeof.sf_entry
 	REP	STOSB
 	RestoreReg  <DI>
-	MOV	ES:[DI].sf_ref_count,0	; set ref count
-	MOV	ES:[DI].sf_LRU,0	; set lru
-	MOV	ES:[DI].sf_OpenAge,-1	; Set open age
+	MOV	[es:DI+sf_ref_count],0	; set ref count
+	MOV	[es:DI+sf_LRU],0	; set lru
+	MOV	[es:DI+sf_OpenAge],-1	; Set open age
 	return
 EndProc BlastSFT
 
@@ -995,20 +995,20 @@ Break	<CheckFCB - see if the SFT pointed to by the FCB is still OK>
 ;   Registers modified: AX and BX
 
 Procedure   CheckFCB,NEAR
-	ASSUME DS:NOTHING,ES:NOTHING
-	LES	DI,sftFCB
-	CMP	BYTE PTR ES:[DI].SFCount,AL
+;	ASSUME DS:NOTHING,ES:NOTHING
+	LES	DI,[sftFCB]
+	CMP	byte [es:DI+SFCount],AL
 	JC	BadSFT
-	MOV	BL,SIZE sf_entry
+	MOV	BL,sizeof.sf_entry
 	MUL	BL
-	LEA	DI,[DI].sftable
+	LEA	DI,[DI+sftable]
 	ADD	DI,AX
-	MOV	AX,Proc_ID
-	CMP	ES:[DI].sf_PID,AX
+	MOV	AX,[PROC_ID]
+	CMP	[es:DI+sf_PID],AX
 	JNZ	BadSFT			; must match process
-	CMP	ES:[DI].sf_ref_count,0
+	CMP	[es:DI+sf_ref_count],0
 	JZ	BadSFT			; must also be in use
-	MOV	AL,[SI].FCB_l_Drive
+	MOV	AL,[SI+FCB_l_Drive]
 	TEST	AL,FCBSPECIAL		; a special FCB?
 	JZ	CheckNoShare		; No. try local or device
 ;
@@ -1024,20 +1024,20 @@ Procedure   CheckFCB,NEAR
 ;----- In share support -----
 ;
 if installed
-	Call	JShare + 11 * 4
+	Call	dword [JSHARE+11*4]
 else
 	Call	ShChk
-endif
+end if
 	JC	BadSFT
 	JMP	SHORT CheckD
 ;
 ;----- End in share support -----
 ;
 CheckFirClus:
-	CMP	BX,ES:[DI].sf_firclus
+	CMP	BX,[es:DI+sf_firclus]
 	JNZ	BadSFT
 CheckD: AND	AL,3Fh
-	MOV	AH,BYTE PTR ES:[DI].sf_flags
+	MOV	AH,byte [es:DI+sf_flags]
 	AND	AH,3Fh
 	CMP	AH,AL
 	retz				; carry is clear
@@ -1053,8 +1053,8 @@ CheckNet:
 ;	MOV	AX,WORD PTR [SI].FCB_netID
 ;	CMP	AX,WORD PTR ES:[DI].sf_netid
 ;	JNZ	BadSFT
-	MOV	AX,WORD PTR [SI].FCB_netID	  ;AN000;IFS.DOS 4.00
-	CMP	AX,WORD PTR ES:[DI].sf_serial_ID  ;AN000;IFS.DOS 4.00
+	MOV	AX,word [SI+FCB_netID]	  ;AN000;IFS.DOS 4.00
+	CMP	AX,word [es:DI+sf_serial_ID]  ;AN000;IFS.DOS 4.00
 	JNZ	BadSFT
 ;
 ;----- END In net support -----
@@ -1067,24 +1067,24 @@ CheckNoShare:
 ;
 ; Check no sharing local file
 ;
-	MOV	BX,[SI].FCB_nsl_Dirsec
-	CMP	WORD PTR ES:[DI].sf_dirsec+2,0	;AN000;F.C. >32mb
+	MOV	BX,[SI+FCB_nsl_Dirsec]
+	CMP	word [es:DI+sf_dirsec+2],0	;AN000;F.C. >32mb
 	JNZ	BadSFt				;AN000;F.C. >32mb
 
-	CMP	BX,WORD PTR ES:[DI].sf_dirsec	;AN000;F.C. >32mb
+	CMP	BX,word [es:DI+sf_dirsec]	;AN000;F.C. >32mb
 	JNZ	BadSFT
-	MOV	BL,[SI].FCB_nsl_Dirpos
-	CMP	BL,ES:[DI].sf_dirpos
+	MOV	BL,[SI+FCB_nsl_Dirpos]
+	CMP	BL,[es:DI+sf_dirpos]
 	JNZ	BadSFt
 ;
 ; Since the bits field comes from two different spots, compare them separately.
 ;
-	MOV	BL,[SI].FCB_nsl_bits
-	MOV	BH,BYTE PTR ES:[DI].sf_flags
+	MOV	BL,[SI+FCB_nsl_bits]
+	MOV	BH,byte [es:DI+sf_flags]
 	XOR	BH,BL
 	AND	BH,0C0h
 	JNZ	BadSFT			; dirty/device bits are different
-	XOR	BL,BYTE PTR ES:[DI].sf_mode
+	XOR	BL,byte [es:DI+sf_mode]
 	AND	BL,access_mask
 	JNZ	BadSFT			; access modes are different
 ; Make sure that the names are the same in the FCB and the SFT
@@ -1096,22 +1096,22 @@ CheckNoShare:
 ; July 30/85 - BAS
 	PUSH	DI
 	PUSH	SI
-	LEA	DI,[DI].sf_name
-	LEA	SI,[SI].fcb_name
+	LEA	DI,[DI+sf_name]
+	LEA	SI,[SI+fcb_name]
 	MOV	CX,11
 	REPE	CMPSB
 	POP	SI
 	POP	DI
 	JNZ	BadSFT
-	MOV	BX,[SI].FCB_nsl_firclus
+	MOV	BX,[SI+FCB_nsl_firclus]
 	JMP	CheckFirClus
 
 CheckNoShareDev:
-	MOV	BX,WORD PTR [SI].FCB_nsld_drvptr
-	CMP	BX,WORD PTR ES:[DI].sf_devptr
+	MOV	BX,word [SI+FCB_nsld_drvptr]
+	CMP	BX,word [es:DI+sf_devptr]
 	JNZ	BadSFT
-	MOV	BX,WORD PTR [SI].FCB_nsld_drvptr + 2
-	CMP	BX,WORD PTR ES:[DI].sf_devptr + 2
+	MOV	BX,word [SI+FCB_nsld_drvptr+2]
+	CMP	BX,word [es:DI+sf_devptr+2]
 	JNZ	BadSFT
 	JMP	CheckD
 
@@ -1132,28 +1132,28 @@ Break	<SFTFromFCB - take a FCB and obtain a SFT from it>
 ;   Registers modified: ES,DI, AX
 
 Procedure   SFTFromFCB,NEAR
-	ASSUME	DS:NOTHING,ES:NOTHING
+;	ASSUME	DS:NOTHING,ES:NOTHING
 	SaveReg <AX,BX>
-	MOV	AL,[SI].fcb_sfn 	; set SFN for check
+	MOV	AL,[SI+fcb_sfn] 	; set SFN for check
 	invoke	CheckFCB
 	RestoreReg  <BX,AX>
-	MOV	WORD PTR ThisSFT,DI	; set thissft
-	MOV	WORD PTR ThisSFT+2,ES
+	MOV	word [ThisSFT],DI	; set thissft
+	MOV	word [ThisSFT+2],ES
 	JNC	SetSFT			; no problems, just set thissft
 
-	fmt	typFCB,LevCheck,<"FCB $x:$x does not match SFT $x:$x\n">,<DS,SI,ES,DI>
+	fmt	typFCB,LevCheck,<"FCB x$:x$ does not match SFT x$:x$\n">,<DS,SI,ES,DI>
 
 	Invoke	Save_World
 	invoke	FCBRegen
 	Invoke	Restore_World		; restore world
-	MOV	AX,EXTERR
+	MOV	AX,[EXTERR]
 	retc
 
 ;	Message 1,<"FCBRegen Succeeded",13,10>
 
-SetSFT: LES	DI,ThisSFT
-	PUSH	Proc_ID 		; set process id
-	POP	ES:[DI].sf_PID
+SetSFT: LES	DI,[ThisSFT]
+	PUSH	[PROC_ID] 		; set process id
+	POP	[es:DI+sf_PID]
 	return				; carry is clear
 EndProc SFTFromFCB
 
@@ -1169,17 +1169,17 @@ Break	<FCBHardErr - generate INT 24 for hard errors on FCBS>
 ;
 
 Procedure   FCBHardErr,NEAR
-	ASSUME	DS:NOTHING,ES:NOTHING
+;	ASSUME	DS:NOTHING,ES:NOTHING
 	MOV	AX,error_FCB_Unavailable
 	MOV	[ALLOWED],allowed_FAIL
 	LES	BP,[THISDPB]
 	MOV	DI,1				; Fake some registers
 	MOV	CX,DI
-	MOV	DX,ES:[BP.dpb_first_sector]
+	MOV	DX,[es:BP+dpb_first_sector]
 	invoke	HARDERR
 	STC
 	return
 EndProc FCBHardErr
 
-CODE ENDS
-END
+end if
+;END

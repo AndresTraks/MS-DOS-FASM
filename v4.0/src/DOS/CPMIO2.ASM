@@ -2,11 +2,11 @@
 TITLE	CPMIO2 - device IO for MSDOS
 NAME	CPMIO2
 
-.xlist
-.xcref
-include dosseg.asm
-.cref
-.list
+;.xlist
+;.xcref
+INCLUDE '../INC/DOSSEG.ASM'
+;.cref
+;.list
 
 ;
 ; Old style CP/M 1-12 system calls to talk to reserved devices
@@ -27,15 +27,15 @@ include dosseg.asm
 ;	AN000	 version 4.00 - Jan. 1988
 ;
 
-CODE	SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME	SS:DOSGROUP,CS:DOSGROUP
+if SEGSEL = S_CODE
+;	ASSUME	SS:DOSGROUP,CS:DOSGROUP
 
-.xcref
-.xlist
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
-.list
-.cref
+;.xcref
+;.xlist
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+;.list
+;.cref
 
 ; The following routines form the console I/O group (funcs 1,2,6,7,8,9,10,11).
 ; They assume ES and DS NOTHING, while not strictly correct, this forces data
@@ -58,14 +58,14 @@ Break
 ; Returns:
 ;	AL = character
 
-	procedure   $STD_CON_INPUT,NEAR   ;System call 1
-ASSUME	DS:NOTHING,ES:NOTHING
+	procedure   STD_CON_INPUT$,NEAR   ;System call 1
+;ASSUME	DS:NOTHING,ES:NOTHING
 
- IF  DBCS					;AN000;
-	push	word ptr [InterCon]		;AN000;
+ if  DBCS					;AN000;
+	push	word [InterCon]		;AN000;
 	mov	[InterCon],01H			;AN000;
 	invoke	INTER_CON_INPUT_NO_ECHO 	;AN000;
-	pop	word ptr [InterCon]		;AN000;
+	pop	word [InterCon]		;AN000;
 	pushf					;AN000;
 	push	AX				;AN000;
 	mov	[SaveCurFlg],0			;AN000;
@@ -76,15 +76,15 @@ sj0:						;AN000;
 	mov	[SaveCurFLg],0			;AN000;
 	pop	AX				;AN000;
 	popf					;AN000;
-	jz	$STD_CON_INPUT			;AN000;
- ELSE						;AN000;
-	invoke	$STD_CON_INPUT_NO_ECHO
+	jz	STD_CON_INPUT$			;AN000;
+ else						;AN000;
+	invoke	STD_CON_INPUT_NO_ECHO$
 	PUSH	AX
 	invoke	OUTT
 	POP	AX
- ENDIF						;AN000;
+ end if						;AN000;
 	return
-EndProc $STD_CON_INPUT
+EndProc STD_CON_INPUT$
 
 Break
 
@@ -95,9 +95,9 @@ Break
 ; Returns:
 ;	None
 
-	procedure   $STD_CON_OUTPUT,NEAR   ;System call 2
-	public	OUTCHA			       ;AN000;
-ASSUME	DS:NOTHING,ES:NOTHING
+	procedure   STD_CON_OUTPUT$,NEAR   ;System call 2
+;	public	OUTCHA			       ;AN000;
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 	MOV	AL,DL
 
@@ -107,12 +107,12 @@ ASSUME	DS:NOTHING,ES:NOTHING
 	CMP	AL,c_DEL
 	JZ	OUTCH
 OUTCHA: 				   ;AN000;
-	INC	BYTE PTR [CARPOS]
+	INC	byte [CARPOS]
 OUTCH:
 	PUSH	DS
 	PUSH	SI
-	INC	BYTE PTR [CHARCO]		;invoke  statchk...
-	AND	BYTE PTR [CHARCO],00111111B	;AN000; every 64th char
+	INC	byte [CHARCO]		;invoke  statchk...
+	AND	byte [CHARCO],00111111B	;AN000; every 64th char
 	JNZ	OUTSKIP
 	PUSH	AX
 	invoke	STATCHK
@@ -121,11 +121,11 @@ OUTSKIP:
 	invoke	RAWOUT				;output the character
 	POP	SI
 	POP	DS
- IF  DBCS				;AN000;
+ if  DBCS				;AN000;
 	TEST	[SaveCurFlg],01H	;AN000;print but no cursor adv? 2/13/KK
 	retnz				;AN000;if so then do not send to prt2/13/KK
- ENDIF
-	TEST	BYTE PTR [PFLAG],-1
+ end if
+	TEST	byte [PFLAG],-1
 	retz
 	PUSH	BX
 	PUSH	DS
@@ -133,7 +133,7 @@ OUTSKIP:
 	MOV	BX,1
 	invoke	GET_IO_SFT
 	JC	TRIPOPJ
-	MOV	BX,[SI.sf_flags]
+	MOV	BX,[SI+sf_flags]
 	TEST	BX,sf_isnet			; output to NET?
 	JNZ	TRIPOPJ 			; if so, no echo
 	TEST	BX,devid_device 		; output to file?
@@ -141,9 +141,9 @@ OUTSKIP:
 	MOV	BX,4
 	invoke	GET_IO_SFT
 	JC	TRIPOPJ
-	TEST	[SI.sf_flags],sf_net_spool	; StdPrn redirected?
+	TEST	[SI+sf_flags],sf_net_spool	; StdPrn redirected?
 	JZ	LISSTRT2J			; No, OK to echo
-	MOV	BYTE PTR [PFLAG],0		; If a spool, NEVER echo
+	MOV	byte [PFLAG],0		; If a spool, NEVER echo
 TRIPOPJ:
 	JMP	TRIPOP
 
@@ -176,12 +176,12 @@ POPTAB:
 	return
 
 ZERPOS:
-	MOV	BYTE PTR [CARPOS],0
+	MOV	byte [CARPOS],0
 	JMP	OUTCH
 OUTJ:	JMP	OUTT
 
 BACKPOS:
-	DEC	BYTE PTR [CARPOS]
+	DEC	byte [CARPOS]
 	JMP	OUTCH
 
 	entry	BUFOUT
@@ -206,7 +206,7 @@ NOT_CTRLU:
 CTRLU:
 	invoke	OUTT
 	return
-EndProc $STD_CON_OUTPUT
+EndProc STD_CON_OUTPUT$
 
 Break
 
@@ -217,8 +217,8 @@ Break
 ; Returns:
 ;	Character in AL
 
-	procedure   $STD_AUX_INPUT,NEAR   ;System call 3
-ASSUME	DS:NOTHING,ES:NOTHING
+	procedure   STD_AUX_INPUT$,NEAR   ;System call 3
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 	invoke	STATCHK
 	MOV	BX,3
@@ -234,7 +234,7 @@ TAISTRT:
 	XOR	AH,AH
 	invoke	IOFUNC
 	return
-EndProc $STD_AUX_INPUT
+EndProc STD_AUX_INPUT$
 
 Break
 
@@ -245,14 +245,14 @@ Break
 ; Returns:
 ;	Nothing
 
-	procedure   $STD_AUX_OUTPUT,NEAR   ;System call 4
-ASSUME	DS:NOTHING,ES:NOTHING
+	procedure   STD_AUX_OUTPUT$,NEAR   ;System call 4
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 	PUSH	BX
 	MOV	BX,3
 	JMP	SHORT SENDOUT
 
-EndProc $STD_AUX_OUTPUT
+EndProc STD_AUX_OUTPUT$
 
 Break
 
@@ -263,8 +263,8 @@ Break
 ; Returns:
 ;	None
 
-	procedure   $STD_PRINTER_OUTPUT,NEAR   ;System call 5
-ASSUME	DS:NOTHING,ES:NOTHING
+	procedure   STD_PRINTER_OUTPUT$,NEAR   ;System call 5
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 	PUSH	BX
 	MOV	BX,4
@@ -283,7 +283,7 @@ TRIPOP:
 	POP	DS
 	POP	BX
 	return
-EndProc $STD_PRINTER_OUTPUT
+EndProc STD_PRINTER_OUTPUT$
 
 Break
 
@@ -294,15 +294,15 @@ Break
 ; Returns:
 ;	AL = -1 character available, = 0 no character
 
-	procedure   $STD_CON_INPUT_STATUS,NEAR	 ;System call 11
-ASSUME	DS:NOTHING,ES:NOTHING
+	procedure   STD_CON_INPUT_STATUS$,NEAR	 ;System call 11
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 	invoke	STATCHK
 	MOV	AL,0			; no xor!!
 	retz
 	OR	AL,-1
 	return
-EndProc $STD_CON_INPUT_STATUS
+EndProc STD_CON_INPUT_STATUS$
 
 Break
 
@@ -313,8 +313,8 @@ Break
 ; Returns:
 ;	Whatever call in AL returns or AL=0 if AL was not 1,6,7,8 or 10
 
-	procedure   $STD_CON_INPUT_FLUSH,NEAR	;System call 12
-ASSUME	DS:NOTHING,ES:NOTHING
+	procedure   STD_CON_INPUT_FLUSH$,NEAR	;System call 12
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 	PUSH	AX
 	PUSH	DX
@@ -342,13 +342,13 @@ BADJFNCON:
 	return
 
 REDISPJ:
- IF  DBCS			  ;AN000;
+ if  DBCS			  ;AN000;
 	mov	ds,[CurrentPDB]   ;AN000;
 				  ;AN000; set DS same as one from COMMAND entry
- ENDIF
+ end if
 	CLI
 	transfer    REDISP
-EndProc $STD_CON_INPUT_FLUSH
+EndProc STD_CON_INPUT_FLUSH$
 
-CODE	ENDS
-    END
+end if
+;    END

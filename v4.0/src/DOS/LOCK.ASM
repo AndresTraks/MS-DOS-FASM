@@ -10,18 +10,18 @@ NAME	LOCK
 ;   Revision history:
 ;     A000   version 4.00   Jan. 1988
 ;
-include dosseg.asm
+INCLUDE '../INC/DOSSEG.ASM'
 
-CODE	SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME	SS:DOSGROUP,CS:DOSGROUP
+if SEGSEL = S_CODE
+;	ASSUME	SS:DOSGROUP,CS:DOSGROUP
 
-.xlist
-.xcref
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
-include lock.inc		     ;AN000;
-.cref
-.list
+;.xlist
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+INCLUDE '../INC/LOCK.INC'		     ;AN000;
+;.cref
+;.list
 
 AsmVars <IBM, Installed>
 
@@ -38,7 +38,7 @@ Installed = TRUE
 	i_need	Lock_Buffer,DWORD	;AN000; DOS 4.00
 	i_need	Temp_Var,WORD		;AN000; DOS 4.00
 
-BREAK <$LockOper - Lock Calls>
+BREAK <LockOper$ - Lock Calls>
 
 ;
 ;   Assembler usage:
@@ -76,8 +76,8 @@ BREAK <$LockOper - Lock Calls>
 ;	       = error_invalid_function
 ;	       = error_lock_violation
 
-	procedure   $LockOper,NEAR
-ASSUME	DS:NOTHING,ES:NOTHING
+	procedure   LockOper$,NEAR
+;ASSUME	DS:NOTHING,ES:NOTHING
 ;	MOV	BP,AX			;MS. BP=AX				;AN000;
 ;	AND	BP,7FH			;MS. clear bit 7			;AN000;
 ;	CMP	BP,Lock_add		;MS. supported function ?		;AN000;
@@ -92,7 +92,7 @@ ASSUME	DS:NOTHING,ES:NOTHING
 	POP	DI			       ; Clean stack
 	error	error_invalid_handle
 lock_bad_func:
-	MOV	EXTERR_LOCUS,errLoc_Unk        ; Extended Error Locus
+	MOV	[ExtErr_locus],errLoc_Unk        ; Extended Error Locus
 	error	error_invalid_function
 
 ; Align_buffer call has been deleted, since it corrupts the DTA  (6/5/88) P5013
@@ -117,12 +117,12 @@ old_33:
 					;AN000;
 ;;	MOV	DX,[Temp_Var]		;AN000;;MS. retore DX  (P5013) 6/5/88
 
-	MOV	BP, OFFSET DOSGROUP:Lock_Buffer ;AN000;;MS. get DOS LOCK buffer
-	MOV	WORD PTR [BP.Lock_position],DX	;AN000;;MS. set low offset
-	MOV	WORD PTR [BP.Lock_position+2],CX;AN000;;MS. set high offset
+	MOV	BP, Lock_Buffer ;AN000;;MS. get DOS LOCK buffer
+	MOV	word [BP+Lock_position],DX	;AN000;;MS. set low offset
+	MOV	word [BP+Lock_position+2],CX;AN000;;MS. set high offset
 	POP	CX				;AN000;;MS. get low length
-	MOV	WORD PTR [BP.Lock_length],CX	;AN000;;MS. set low length
-	MOV	WORD PTR [BP.Lock_length+2],SI	;AN000;;MS. set high length
+	MOV	word [BP+Lock_length],CX	;AN000;;MS. set low length
+	MOV	word [BP+Lock_length+2],SI	;AN000;;MS. set high length
 	MOV	CX,1				;AN000;;MS. one range
 	PUSH	CS				;AN000;;MS.
 	POP	DS				;AN000;;MS. DS:DX points to
@@ -182,7 +182,7 @@ old_33:
 ;	JMP	WriteUnlock			 ;AN000;;MS. do write unlock
 						 ;AN000;;MS.
 DOS_Unlock:
-	TEST	ES:[DI.sf_flags],sf_isnet
+	TEST	[es:DI+sf_flags],sf_isnet
 	JZ	LOCAL_UNLOCK
 ;;	invoke	OWN_SHARE			 ;AN000;;MS. IFS owns share ?
 ;;	JNZ	LOCAL_UNLOCK			 ;AN000;;MS. no
@@ -191,10 +191,10 @@ DOS_Unlock:
 	JMP	SHORT ValChk
 LOCAL_UNLOCK:
 if installed
-	Call	JShare + 7 * 4
+	Call	dword [JSHARE+7*4]
 else
 	Call	clr_block
-endif
+end if
 ValChk:
 	JNC	Lock_OK
 lockerror:
@@ -203,7 +203,7 @@ Lock_OK:
 	MOV	AX,[Temp_VAR]			 ;AN000;;MS. AX= number of bytes
 	transfer SYS_Ret_OK
 DOS_Lock:
-	TEST	ES:[DI.sf_flags],sf_isnet
+	TEST	[es:DI+sf_flags],sf_isnet
 	JZ	LOCAL_LOCK
 ;;	invoke	OWN_SHARE			 ;AN000;;MS. IFS owns share ?
 ;;	JNZ	LOCAL_LOCK			 ;AN000;;MS. no
@@ -211,13 +211,13 @@ DOS_Lock:
 	JMP	ValChk
 LOCAL_LOCK:
 if installed
-	Call	JShare + 6 * 4
+	Call	dword [JSHARE+6*4]
 else
 	Call	Set_Block
-endif
+end if
 	JMP	ValChk
 
-EndProc $LockOper
+EndProc LockOper$
 
 BREAK <Set_Lock>
 
@@ -301,16 +301,16 @@ BREAK <Set_Lock_Buffer>
 
 	procedure   LOCK_CHECK,NEAR
 	DOSAssume   CS,<DS>,"Lock_Check"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
-	MOV	BX,RetryCount		; Number retries
+	MOV	BX,[RetryCount]		; Number retries
 LockRetry:
 	SaveReg <BX,AX> 		; MS. save regs 			;AN000;
 if installed
-	call	JShare + 8 * 4
+	call	dword [JSHARE+8*4]
 else
 	Call	chk_block
-endif
+end if
 	RestoreReg  <AX,BX>		; MS. restrore regs			;AN000;
 	retnc				; There are no locks
 	Invoke	Idle			; wait a while
@@ -333,7 +333,7 @@ EndProc LOCK_CHECK
 
 	procedure   LOCK_VIOLATION,NEAR
 	DOSAssume   CS,<DS>,"Lock_Violation"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
 	PUSH	DS
 	PUSH	ES
@@ -344,7 +344,7 @@ EndProc LOCK_CHECK
 	LES	BP,[THISDPB]
 	MOV	DI,1				; Fake some registers
 	MOV	CX,DI
-	MOV	DX,ES:[BP.dpb_first_sector]
+	MOV	DX,[es:BP+dpb_first_sector]
 	invoke	HARDERR
 	POP	CX
 	POP	DI
@@ -357,16 +357,16 @@ EndProc LOCK_CHECK
 
 EndProc LOCK_VIOLATION
 
-IF  INSTALLED
+if  INSTALLED
 ;
 ; do a retz to return error
 ;
 Procedure   CheckShare,NEAR
-	ASSUME	CS:DOSGROUP,ES:NOTHING,DS:NOTHING,SS:NOTHING
-	CMP	fShare,0
+;	ASSUME	CS:DOSGROUP,ES:NOTHING,DS:NOTHING,SS:NOTHING
+	CMP	[fShare],0
 	return
 EndProc CheckShare
-ENDIF
+end if
 
-CODE	ENDS
-    END
+end if
+;    END

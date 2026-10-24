@@ -25,23 +25,23 @@ NAME	EXTATTR
 ;
 ;
 
-.xlist
+;.xlist
 ;
 ;
 ; get the appropriate segment definitions
 ;
-include dosseg.asm			     ;AN000;
+INCLUDE '../INC/DOSSEG.ASM'			     ;AN000;
 
-CODE	SEGMENT BYTE PUBLIC  'CODE'          ;AN000;
-	ASSUME	SS:DOSGROUP,CS:DOSGROUP      ;AN000;
+if SEGSEL = S_CODE;AN000;
+;	ASSUME	SS:DOSGROUP,CS:DOSGROUP      ;AN000;
 
-.xcref
-INCLUDE DOSSYM.INC			     ;AN000;
-INCLUDE DEVSYM.INC			     ;AN000;
-include EA.inc				     ;AN000;
-.cref
-.list
-.sall
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'			     ;AN000;
+INCLUDE '../INC/DEVSYM.INC'			     ;AN000;
+INCLUDE '../INC/EA.INC'				     ;AN000;
+;.cref
+;.list
+;.sall
 
 
 ;	I_need	XA_from,BYTE		;AN000;
@@ -92,10 +92,10 @@ BREAK <GetSet_EA get or set extended attributes by handle>			;AN000;
 										;AN000;
 										;AN000;
 procedure   GetSet_XA,near					   ;AN000;
-	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:DOSGROUP	   ;AN000;
+;	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:DOSGROUP	   ;AN000;
 
 
-	LES    DI,DWORD PTR [SAVE_DI]  ;AN000;;FT. ES:DI -> query list
+	LES    DI,dword [SAVE_DI]  ;AN000;;FT. ES:DI -> query list
 ;;	MOV    [SAVE_BX],2	       ;AN000;;FT. size returned
 ;;	XOR    DX,DX		       ;AN000;;FT. dx=0, codepage id
 
@@ -115,7 +115,7 @@ notmax:
 errout: 			       ;AN000;
 	JMP    insuff_space	       ;AN000;;FT. no error
 goodsiz:			       ;AN000;
-	MOV    WORD PTR ES:[DI],0      ;AN000;FT. FAKE FAKE ...............
+	MOV    word [es:DI],0      ;AN000;FT. FAKE FAKE ...............
 	MOV    CX,2		       ;AN000;FT. FAKE FAKE ...............
 	JMP    set_user_cx	       ;AN000;FT. FAKE FAKE ...............
 
@@ -152,7 +152,7 @@ geteaname:
 ;;	MOV    CX,[MAX_EANAME_SIZE]    ;AN000;;FT. get name size
 set_user_cx:			       ;AN000;
 	invoke get_user_stack	       ;AN000;;FT. get user stack
-	MOV    [SI.user_CX],CX	       ;AN000;;FT.
+	MOV    [SI+user_environ.user_CX],CX	       ;AN000;;FT.
 	JMP    OKexit		       ;AN000;;FT. exit
 
 getsome:			       ;AN000;
@@ -675,5 +675,5 @@ EndProc GetSet_XA				 ;AN000;
 ;
 ;EndProc Get_max_EA_size		      ;FT. exit 			 ;AN000;				   ;AN000;
 										;AN000;
-CODE	ENDS									;AN000;
-END										;AN000;
+end if;AN000;
+;END										;AN000;

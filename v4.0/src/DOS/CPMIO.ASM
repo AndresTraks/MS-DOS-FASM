@@ -5,11 +5,11 @@ NAME	CPMIO
 ; Standard device IO for MSDOS (first 12 function calls)
 ;
 
-.xlist
-.xcref
-include dosseg.asm
-.cref
-.list
+;.xlist
+;.xcref
+INCLUDE '../INC/DOSSEG.ASM'
+;.cref
+;.list
 
 ;
 ; Old style CP/M 1-12 system calls to talk to reserved devices
@@ -37,20 +37,20 @@ include dosseg.asm
 ;
 ;
 
-CODE	SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME	SS:DOSGROUP,CS:DOSGROUP
+if SEGSEL = S_CODE
+;	ASSUME	SS:DOSGROUP,CS:DOSGROUP
 
-.xcref
-.xlist
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
-include doscntry.inc			;AN000		2/12/KK
-.list
-.cref
+;.xcref
+;.xlist
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+INCLUDE '../INC/DOSCNTRY.INC'			;AN000		2/12/KK
+;.list
+;.cref
 
-IFNDEF	KANJI
+if ~ defined KANJI
 KANJI	EQU	0	;FALSE
-ENDIF
+end if
 
 ; The following routines form the console I/O group (funcs 1,2,6,7,8,9,10,11).
 ; They assume ES and DS NOTHING, while not strictly correct, this forces data
@@ -61,9 +61,9 @@ ENDIF
     i_need  INBUF,128
     i_need  INSMODE,BYTE
     i_need  user_SP,WORD
-    EXTRN   EscChar:BYTE		; lead byte for function keys
-    EXTRN   CanChar:BYTE		; Cancel character
-    EXTRN   OUTCHA:NEAR 		;AN000 char out with status check 2/11/KK
+;    EXTRN   EscChar:BYTE		; lead byte for function keys
+;    EXTRN   CanChar:BYTE		; Cancel character
+;    EXTRN   OUTCHA:NEAR 		;AN000 char out with status check 2/11/KK
     i_need  Printer_Flag,BYTE
     i_need  SCAN_FLAG,BYTE
     i_need  DATE_FLAG,WORD
@@ -79,20 +79,20 @@ ENDIF
 
 
 Break
- IF  DBCS							  ;AN000;
+ if  DBCS							  ;AN000;
 
 ;-------------------------------- Start of Korean Support 2/11/KK
-	procedure   $STD_CON_INPUT_NO_ECHO,NEAR   ;System call 8  ;AN000;
-ASSUME	DS:NOTHING,ES:NOTHING					  ;AN000;
+	procedure   STD_CON_INPUT_NO_ECHO$,NEAR   ;System call 8  ;AN000;
+;ASSUME	DS:NOTHING,ES:NOTHING					  ;AN000;
 
 StdCILop:							  ;AN000;
 	invoke	INTER_CON_INPUT_NO_ECHO 			  ;AN000;
 	transfer InterApRet		; go to return fuction	  ;AN000;
 
-EndProc $STD_CON_INPUT_NO_ECHO					  ;AN000;
+EndProc STD_CON_INPUT_NO_ECHO$					  ;AN000;
 
 	procedure   INTER_CON_INPUT_NO_ECHO,NEAR		  ;AN000;
-ASSUME	DS:NOTHING,ES:NOTHING					  ;AN000;
+;ASSUME	DS:NOTHING,ES:NOTHING					  ;AN000;
 ;-----------------------------------End of Korean Support 2/11/KK
 
 ; Inputs:
@@ -104,7 +104,7 @@ ASSUME	DS:NOTHING,ES:NOTHING					  ;AN000;
 ;	AL = character
 ;	Zero flag SET if interim character, RESET otherwise
 
- ELSE								  ;AN000;
+ else								  ;AN000;
 
 
 ;
@@ -115,10 +115,10 @@ ASSUME	DS:NOTHING,ES:NOTHING					  ;AN000;
 ; Returns:
 ;	AL = character
 
-	procedure   $STD_CON_INPUT_NO_ECHO,NEAR   ;System call 8
-ASSUME	DS:NOTHING,ES:NOTHING
+	procedure   STD_CON_INPUT_NO_ECHO$,NEAR   ;System call 8
+;ASSUME	DS:NOTHING,ES:NOTHING
 
- ENDIF
+ end if
 	PUSH	DS
 	PUSH	SI
 INTEST:
@@ -138,7 +138,7 @@ no_sys_wait:
 ;;; Dec 19, 1986 D.C.L. changed following CMP to Byte Ptr from Word Ptr
 ;;;;		 to shorten loop in consideration of the PC Convertible
 
-	CMP	byte ptr [DATE_FLAG],-1 ; date is updated may be every
+	CMP	byte [DATE_FLAG],-1 ; date is updated may be every
 	JNZ	NoUpdate		; 65535 x ? ms if no one calls
 	PUSH	AX
 	PUSH	BX			; following is tricky,
@@ -156,9 +156,9 @@ no_sys_wait:
 	CALL	Save_Restore_Packet	; restore DEVCALL packet
 
 	PUSH	BX			; the follwing code is to
-	MOV	BX,OFFSET DOSGROUP:DATE_FLAG
+	MOV	BX,DATE_FLAG
 	ADD	BX,2			; check the TAG
-	CMP	word ptr CS:[BX],22642
+	CMP	word [cs:BX],22642
 	JZ	check_ok
 	invoke	DOSINIT 		; should never come here
 check_ok:
@@ -180,22 +180,22 @@ Get:
 	POP	SI
 	POP	DS
 ;;; 7/15/86
-	MOV	BYTE PTR [SCAN_FLAG],0
+	MOV	byte [SCAN_FLAG],0
 	CMP	AL,0	    ; extended code ( AL )
 	JNZ	noscan
-	MOV	BYTE PTR [SCAN_FLAG],1	; set this flag for ALT_Q key
+	MOV	byte [SCAN_FLAG],1	; set this flag for ALT_Q key
 
 noscan:
 ;;; 7/15/86
- IF  DBCS			    ;AN000;
-	cmp	cs:[InterChar],1    ;AN000; set the zero flag if the character3/31/KK ;AN000;
- ENDIF				    ;AN000;
+ if  DBCS			    ;AN000;
+	cmp	[cs:InterChar],1    ;AN000; set the zero flag if the character3/31/KK ;AN000;
+ end if				    ;AN000;
 	return
- IF  DBCS			    ;AN000;
+ if  DBCS			    ;AN000;
 EndProc INTER_CON_INPUT_NO_ECHO     ;AN000;  ;2/11/KK				      ;AN000;
- ELSE				    ;AN000;
-EndProc $STD_CON_INPUT_NO_ECHO
- ENDIF				    ;AN000;
+ else				    ;AN000;
+EndProc STD_CON_INPUT_NO_ECHO$
+ end if				    ;AN000;
 
 Break
 
@@ -206,33 +206,33 @@ Break
 ; Returns:
 ;	None
 
-	procedure   $STD_CON_STRING_OUTPUT,NEAR   ;System call 9
-ASSUME	DS:NOTHING,ES:NOTHING
+	procedure   STD_CON_STRING_OUTPUT$,NEAR   ;System call 9
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 	MOV	SI,DX
 STRING_OUT1:
 	LODSB
- IF  DBCS				;AN000;
+ if  DBCS				;AN000;
 	invoke	TESTKANJ		;AN000; 	      2/11/KK		 ;AN000;
 	jz	SBCS00			;AN000; 	      2/11/KK		 ;AN000;
 	invoke	OUTT			;AN000; 	      2/11/KK		 ;AN000;
 	LODSB				;AN000; 	      2/11/KK		 ;AN000;
 	JMP	NEXT_STR1		;AN000; 	      2/11/KK		 ;AN000;
 SBCS00: 				;AN000; 	      2/11/KK		 ;AN000;
- ENDIF					;AN000;
+ end if					;AN000;
 	CMP	AL,'$'
 	retz
 NEXT_STR1:
 	invoke	OUTT
 	JMP	STRING_OUT1
 
-EndProc $STD_CON_STRING_OUTPUT
+EndProc STD_CON_STRING_OUTPUT$
 
-IF  DBCS				;AN000;
-include kstrin.asm			;AN000;
-ELSE					;AN000;
-include strin.asm
-ENDIF					;AN000;
+if  DBCS				;AN000;
+INCLUDE 'KSTRIN.ASM'			;AN000;
+else					;AN000;
+INCLUDE 'STRIN.ASM'
+end if					;AN000;
 
 Break
 
@@ -244,41 +244,41 @@ Break
 ; Returns:
 ;	AL = character
 
-	procedure   $RAW_CON_IO,NEAR   ; System call 6
-ASSUME	DS:NOTHING,ES:NOTHING
+	procedure   RAW_CON_IO$,NEAR   ; System call 6
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 	MOV	AL,DL
 	CMP	AL,-1
 	JZ	RAW22				      ;AN000;
 	JMP	RAWOUT				      ;AN000;
 RAW22:						      ;AN000;
-	LES	DI,DWORD PTR [user_SP]		      ; Get pointer to register save area
+	LES	DI,dword [user_SP]		      ; Get pointer to register save area
 	XOR	BX,BX
 	invoke	GET_IO_SFT
 	retc
- IF  DBCS				;AN000;
-	push	word ptr [Intercon]	;AN000;
+ if  DBCS				;AN000;
+	push	word [Intercon]	;AN000;
 	mov	[Intercon],0		;AN000; disable interim characters
- ENDIF					;AN000;
+ end if					;AN000;
 	MOV	AH,1
 	invoke	IOFUNC
 	JNZ	RESFLG
- IF  DBCS				;AN000;
-	pop	word ptr [InterCon]	;AN000; restore interim flag
- ENDIF					;AN000;
+ if  DBCS				;AN000;
+	pop	word [InterCon]	;AN000; restore interim flag
+ end if					;AN000;
 	invoke	SPOOLINT
-	OR	BYTE PTR ES:[DI.user_F],40H ; Set user's zero flag
+	OR	byte [es:DI+user_environ.user_F],40H ; Set user's zero flag
 	XOR	AL,AL
 	return
 
 RESFLG:
-	AND	BYTE PTR ES:[DI.user_F],0FFH-40H    ; Reset user's zero flag
- IF  DBCS				;AN000;
+	AND	byte [es:DI+user_environ.user_F],0FFH-40H    ; Reset user's zero flag
+ if  DBCS				;AN000;
 	XOR	AH,AH			;AN000;
 	invoke	IOFUNC			;AN000; get the character
-	pop	word ptr [InterCon]	;AN000;
+	pop	word [InterCon]	;AN000;
 	return				;AN000;
- ENDIF					;AN000; 				;AN000;
+ end if					;AN000; 				;AN000;
 
 RILP:
 	invoke	SPOOLINT
@@ -290,7 +290,7 @@ RILP:
 ; Returns:
 ;	AL = character
 
-	entry	$RAW_CON_INPUT	      ; System call 7
+	entry	RAW_CON_INPUT$	      ; System call 7
 
 	PUSH	BX
 	XOR	BX,BX
@@ -306,7 +306,7 @@ RILP:
 Got:
 	XOR	AH,AH
 	invoke	IOFUNC
- IF  DBCS				;AN000;
+ if  DBCS				;AN000;
 	cmp	[InterChar],1		;AN000;    2/11/KK
 ;								2/11/KK
 ;	Sets the application zero flag depending on the 	2/11/KK
@@ -318,8 +318,8 @@ entry	InterApRet			;AN000; 		2/11/KK 	;AN000;
 	push	ds			;AN000; 3/16/KK
 	push	bx			;AN000; 3/16/KK
 	Context DS			;AN000; 3/16/KK
-	MOV	BX,offset DOSGROUP:COUNTRY_CDPG.ccDosCodePage
-	cmp	word ptr [bx],934	;AN000; 3/16/KK       korean code page ?
+	MOV	BX,COUNTRY_CDPG+ccDosCodePage
+	cmp	word [bx],934	;AN000; 3/16/KK       korean code page ?
 	pop	bx			;AN000; 3/16/KK
 	pop	ds			;AN000; 3/16/KK
 	je	do_koren		;AN000; 3/16/KK
@@ -327,13 +327,13 @@ entry	InterApRet			;AN000; 		2/11/KK 	;AN000;
 	return				;AN000; 3/16/KK
 do_koren:				;AN000; 3/16/KK
 	popf				;AN000;
-	LES	DI,DWORD PTR [user_SP]	;AN000; Get pointer to register save area KK
+	LES	DI,dword [user_SP]	;AN000; Get pointer to register save area KK
 	jnz	sj0			;AN000; 		      2/11/KK
-	OR	BYTE PTR ES:[DI.user_F],40H	;AN000; Set user's zero flag  2/11/KK
+	OR	byte [es:DI+user_environ.user_F],40H	;AN000; Set user's zero flag  2/11/KK
 	return				;AN000; 		2/11/KK
 sj0:					;AN000; 		2/11/KK
-	AND	BYTE PTR ES:[DI.user_F],0FFH-40H ;AN000; Reset user's zero flag 2/KK
- ENDIF						 ;AN000;
+	AND	byte [es:DI+user_environ.user_F],0FFH-40H ;AN000; Reset user's zero flag 2/KK
+ end if						 ;AN000;
 	return					 ;AN000;
 ;
 ;	Output the character in AL to stdout
@@ -346,7 +346,7 @@ sj0:					;AN000; 		2/11/KK
 	invoke	GET_IO_SFT
 	JC	RAWRET1
 
-	MOV	BX,[SI.sf_flags]
+	MOV	BX,[SI+sf_flags]
 
  ;
  ; If we are a network handle OR if we are not a local device then go do the
@@ -356,10 +356,10 @@ sj0:					;AN000; 		2/11/KK
 	AND	BX,sf_isNet + devid_device
 	CMP	BX,devid_device
 	JNZ	RawNorm
- IF  DBCS					;AN000;
+ if  DBCS					;AN000;
 	TEST	[SaveCurFlg],01H		;AN000; print but no cursor adv?
 	JNZ	RAWNORM 			;AN000;    2/11/KK
- ENDIF						;AN000;
+ end if						;AN000;
 
 ;	TEST	BX,sf_isnet			; output to NET?
 ;	JNZ	RAWNORM 			; if so, do normally
@@ -367,8 +367,8 @@ sj0:					;AN000; 		2/11/KK
 ;	JZ	RAWNORM 			; if so, do normally
 
 	PUSH	DS
-	LDS	BX,[SI.sf_devptr]		; output to special?
-	TEST	BYTE PTR [BX+SDEVATT],ISSPEC
+	LDS	BX,[SI+sf_devptr]		; output to special?
+	TEST	byte [BX+SDEVATT],ISSPEC
 	POP	DS
 	JZ	RAWNORM 			; if not, do normally
 	INT	int_fastcon			; quickly output the char
@@ -404,7 +404,7 @@ RAWOSTRT:
 	invoke	IOFUNC
 	CLC			; Clear carry indicating successful
 	return
-EndProc $RAW_CON_IO
+EndProc RAW_CON_IO$
 
 ; Inputs:
 ;	AX=0 save the DEVCALL request packet
@@ -415,7 +415,7 @@ EndProc $RAW_CON_IO
 ;	none
 
 	procedure   Save_Restore_Packet,NEAR
-ASSUME	DS:NOTHING,ES:NOTHING
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 	PUSH	DS
 	PUSH	ES
@@ -424,12 +424,12 @@ ASSUME	DS:NOTHING,ES:NOTHING
 	CMP	AX,0		; save packet
 	JZ	save_packet
 restore_packet:
-	MOV	SI,OFFSET DOSGROUP:Packet_Temp	 ;sourec
-	MOV	DI,OFFSET DOSGROUP:DEVCALL	 ;destination
+	MOV	SI,Packet_Temp	 ;sourec
+	MOV	DI,Devcall	 ;destination
 	JMP	set_seg
 save_packet:
-	MOV	DI,OFFSET DOSGROUP:Packet_Temp	 ;destination
-	MOV	SI,OFFSET DOSGROUP:DEVCALL	 ;source
+	MOV	DI,Packet_Temp	 ;destination
+	MOV	SI,Devcall	 ;source
 set_seg:
 	MOV	AX,CS		; set DS,ES to DOSGROUP
 	MOV	DS,AX
@@ -444,5 +444,5 @@ set_seg:
 	return
 EndProc Save_Restore_Packet
 
-CODE	ENDS
-    END
+end if
+;    END

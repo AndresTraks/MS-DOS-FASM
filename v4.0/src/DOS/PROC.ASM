@@ -19,20 +19,20 @@ NAME	IBMPROC
 ;	Created: ARR 30 March 1983
 ;
 
-.xlist
+;.xlist
 ;
 ; get the appropriate segment definitions
 ;
-include dosseg.asm
+INCLUDE '../INC/DOSSEG.ASM'
 
-CODE	SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME	SS:DOSGROUP,CS:DOSGROUP
+if SEGSEL = S_CODE
+;	ASSUME	SS:DOSGROUP,CS:DOSGROUP
 
-.xcref
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
-.cref
-.list
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+;.cref
+;.list
 
 SAVEXIT 	EQU	10
 
@@ -47,7 +47,7 @@ SAVEXIT 	EQU	10
     i_need  OpenBuf,128
     I_need  EXTERR_LOCUS,BYTE		; Extended Error Locus
 
-SUBTTL $WAIT - return previous process error code
+SUBTTL WAIT$ - return previous process error code
 PAGE
 ;
 ; process control data
@@ -59,14 +59,14 @@ PAGE
 ;	    MOV     AH, WaitProcess
 ;	    INT     int_command
 ;	  AX has the exit code
-	procedure   $WAIT,NEAR
-	ASSUME	DS:NOTHING,ES:NOTHING
+	procedure   WAIT$,NEAR
+;	ASSUME	DS:NOTHING,ES:NOTHING
 	XOR	AX,AX
-	XCHG	AX,exit_code
+	XCHG	AX,[exit_code]
 	transfer    SYS_RET_OK
-EndProc $WAIT
+EndProc WAIT$
 
-include exec.asm
+INCLUDE 'EXEC.ASM'
 
 SUBTTL Terminate and stay resident handler
 PAGE
@@ -78,11 +78,11 @@ PAGE
 ;	    paragraphs long.  An exit is simulated via resetting CurrentPDB
 ;	    and restoring the vectors.
 ;
-	procedure   $Keep_process,NEAR
-	ASSUME DS:NOTHING,ES:NOTHING,SS:DOSGROUP
+	procedure   Keep_process$,NEAR
+;	ASSUME DS:NOTHING,ES:NOTHING,SS:DOSGROUP
 
 	PUSH	AX			; keep exit code around
-	MOV	BYTE PTR [Exit_type],Exit_keep_process
+	MOV	byte [Exit_type],Exit_keep_process
 	MOV	ES,[CurrentPDB]
 	CMP	DX,6h			; keep enough space around for system
 	JAE	Keep_shrink		; info
@@ -91,22 +91,22 @@ keep_shrink:
 	MOV	BX,DX
 	PUSH	BX
 	PUSH	ES
-	invoke	$SETBLOCK		; ignore return codes.
+	invoke	SETBLOCK$		; ignore return codes.
 	POP	DS
 	POP	BX
 	JC	keep_done		; failed on modification
 	MOV	AX,DS
 	ADD	AX,BX
-	MOV	DS:[PDB_block_len],AX
+	MOV	[PDB_block_len],AX
 
 keep_done:
 	POP	AX
 	JMP	SHORT exit_inner	; and let abort take care of the rest
 
-EndProc $Keep_process
+EndProc Keep_process$
 
 	procedure   Stay_resident,NEAR
-	ASSUME	DS:NOTHING,ES:NOTHING,SS:NOTHING
+;	ASSUME	DS:NOTHING,ES:NOTHING,SS:NOTHING
 	MOV	AX,(Keep_process SHL 8) + 0 ; Lower part is return code
 	ADD	DX,15
 	RCR	DX,1
@@ -116,7 +116,7 @@ EndProc $Keep_process
 	transfer    COMMAND
 EndProc Stay_resident
 
-SUBTTL $EXIT - return to parent process
+SUBTTL EXIT$ - return to parent process
 PAGE
 ;
 ;   Assembler usage:
@@ -126,24 +126,24 @@ PAGE
 ;   Error return:
 ;	    None.
 ;
-	procedure   $EXIT,NEAR
-	ASSUME	DS:NOTHING,ES:NOTHING,SS:DOSGROUP
+	procedure   EXIT$,NEAR
+;	ASSUME	DS:NOTHING,ES:NOTHING,SS:DOSGROUP
 	XOR	AH,AH
-	XCHG	AH,BYTE PTR [DidCTRLC]
+	XCHG	AH,byte [DidCTRLC]
 	OR	AH,AH
-	MOV	BYTE PTR [Exit_type],exit_terminate
+	MOV	byte [Exit_type],exit_terminate
 	JZ	exit_inner
-	MOV	BYTE PTR [Exit_type],exit_ctrl_c
+	MOV	byte [Exit_type],exit_ctrl_c
 
 	entry	Exit_inner
 
 	invoke	get_user_stack
 	PUSH	[CurrentPDB]
-	POP	[SI.user_CS]
+	POP	[SI+user_environ.user_CS]
 	JMP	SHORT abort_inner
-EndProc $EXIT
+EndProc EXIT$
 
-BREAK <$ABORT -- Terminate a process>
+BREAK <ABORT$ -- Terminate a process>
 
 ; Inputs:
 ;	user_CS:00 must point to valid program header block
@@ -153,8 +153,8 @@ BREAK <$ABORT -- Terminate a process>
 ; Returns:
 ;	TO THE TERMINATE ADDRESS
 
-	procedure   $ABORT,NEAR
-ASSUME	DS:NOTHING,ES:NOTHING
+	procedure   ABORT$,NEAR
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 	XOR	AL,AL
 	MOV	[exit_type],exit_abort
@@ -169,7 +169,7 @@ ASSUME	DS:NOTHING,ES:NOTHING
 	MOV	AH,[exit_type]
 	MOV	[exit_code],AX
 	invoke	Get_user_stack
-	MOV	DS,[SI.user_CS] 	; set up old interrupts
+	MOV	DS,[SI+user_environ.user_CS] 	; set up old interrupts
 	XOR	AX,AX
 	MOV	ES,AX
 	MOV	SI,SAVEXIT
@@ -181,7 +181,7 @@ ASSUME	DS:NOTHING,ES:NOTHING
 	MOVSW
 	MOVSW
 	transfer    reset_environment
-EndProc $ABORT
+EndProc ABORT$
 
-CODE	ENDS
-    END
+end if
+;    END

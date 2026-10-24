@@ -25,20 +25,20 @@ NAME	Disk
 ;
 ; get the appropriate segment definitions
 ;
-.xlist
-include dosseg.asm
-include fastseek.inc				;AN000;
-include fastxxxx.inc				;AN000;
+;.xlist
+INCLUDE '../INC/DOSSEG.ASM'
+INCLUDE '../INC/FASTSEEK.INC'				;AN000;
+INCLUDE '../INC/FASTXXXX.INC'				;AN000;
 
-CODE	SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME	SS:DOSGROUP,CS:DOSGROUP
+if SEGSEL = S_CODE
+;	ASSUME	SS:DOSGROUP,CS:DOSGROUP
 
-.xcref
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
-include version.inc
-.cref
-.list
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+INCLUDE '../INC/VERSION.INC'
+;.cref
+;.list
 
 Installed = TRUE
 
@@ -68,7 +68,7 @@ Installed = TRUE
 	I_need	JShare,DWORD		     ;AN000;
 	i_need	DOS34_FLAG,WORD 	     ;AN000;
 
-IF	BUFFERFLAG
+if	BUFFERFLAG
 
 	i_need	BUF_EMS_MODE,BYTE
 	i_need  BUF_EMS_LAST_PAGE,BYTE
@@ -79,11 +79,11 @@ IF	BUFFERFLAG
 	I_need	BUF_EMS_PFRAME,WORD
 	I_need	LASTBUFFER,DWORD
 
-	extrn	save_user_map:near
-	extrn	restore_user_map:near
-	extrn	Setup_EMS_Buffers:near
+;	extrn	save_user_map:near
+;	extrn	restore_user_map:near
+;	extrn	Setup_EMS_Buffers:near
 
-ENDIF
+end if
 
 Break	<SwapCon, Swap Back - Old-style I/O to files>
 ; * * * * Drivers for file input from devices * * * *
@@ -97,8 +97,8 @@ Break	<SwapCon, Swap Back - Old-style I/O to files>
 
 	procedure   SWAPBACK,NEAR
 	DOSAssume   CS,<DS>,"SwapBack"
-	ASSUME	ES:NOTHING
-	MOV	BYTE PTR [CONSWAP],0	; signal no conswaps
+;	ASSUME	ES:NOTHING
+	MOV	byte [CONSWAP],0	; signal no conswaps
 	return
 EndProc SWAPBACK
 
@@ -110,13 +110,13 @@ EndProc SWAPBACK
 ;   Registers modified: none
 	procedure   SWAPCON,NEAR
 	DOSAssume   CS,<DS>,"SwapCon"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 	SaveReg <ES,DI>
-	MOV	BYTE PTR [CONSWAP],1	;   CONSwap = TRUE;
-	LES	DI,ThisSFT
+	MOV	byte [CONSWAP],1	;   CONSwap = TRUE;
+	LES	DI,[ThisSFT]
 	Assert	ISSFT,<ES,DI>,"SwapCon"
-	MOV	WORD PTR CONSFT,DI
-	MOV	WORD PTR CONSFT+2,ES
+	MOV	word [CONSft],DI
+	MOV	word [CONSft+2],ES
 	RestoreReg  <DI,ES>
 	return
 EndProc SWAPCON
@@ -143,9 +143,9 @@ Break	<DOS_READ -- MAIN READ ROUTINE AND DEVICE IN ROUTINES>
 
 	procedure   DOS_READ,NEAR
 	DOSAssume   CS,<DS>,"DOS_Read"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
-IF	BUFFERFLAG
+if	BUFFERFLAG
 	cmp	[BUF_EMS_MODE], -1
 	jz	dos_rd_call
 	call	choose_buf_page
@@ -154,7 +154,7 @@ IF	BUFFERFLAG
 sav_map_rd_hndl:
 ;	call	save_user_map
 dos_rd_call:
-ENDIF
+end if
 	
 
 	LES	DI,[THISSFT]
@@ -162,7 +162,7 @@ ENDIF
 ;
 ; Verify that the sft has been opened in a mode that allows reading.
 ;
-	MOV	AL,BYTE PTR ES:[DI.sf_mode]
+	MOV	AL,byte [es:DI+sf_mode]
 	AND	AL,access_mask
 	CMP	AL,open_for_write
 	JNE	READ_NO_MODE		;Is read or both
@@ -184,13 +184,13 @@ READ_OK2:				;AN000;
 ;	LeaveCrit   critDisk		;AN000;;IFS. leave critical section
 IFS_HAS_SHARE:				;AN000;
 
-IF NOT Installed
+if NOT Installed
 	transfer NET_READ
-ELSE
+else
 	MOV	AX,(multNET SHL 8) OR 8
 	INT	2FH
 	return
-ENDIF
+end if
 
 ;
 ; The user ended up requesting 0 bytes of input.  We do nothing for this case
@@ -201,7 +201,7 @@ NoIORet:
 	return
 
 LOCAL_READ:
-	TEST	ES:[DI.sf_flags],devid_device  ; Check for named device I/O
+	TEST	[es:DI+sf_flags],devid_device  ; Check for named device I/O
 	JNZ	READDEV
 	MOV	[EXTERR_LOCUS],errLOC_Disk
 	EnterCrit   critDisk
@@ -211,7 +211,7 @@ LOCAL_READ:
 FS_no:
 	invoke	DISKREAD
 	PUSHF				      ; save flag
-	AND	CS:[FastSeekflg],FS_end       ; reset fastseek mode
+	AND	[cs:FastSeekflg],FS_end       ; reset fastseek mode
 	POPF				      ; retore flag
 critexit:
 	LeaveCrit   critDisk
@@ -224,9 +224,9 @@ critexit:
 ;
 READDEV:
 	DOSAssume   CS,<DS>,"DISK/ReadDev"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 	MOV	[EXTERR_LOCUS],errLOC_SerDev
-	MOV	BL,BYTE PTR ES:[DI.sf_flags]
+	MOV	BL,byte [es:DI+sf_flags]
 	LES	DI,[DMAADD]
 	TEST	BL,devid_device_EOF	; End of file?
 	JZ	ENDRDDEVJ3
@@ -251,7 +251,7 @@ DVRDRAW:
 	DOSAssume   CS,<DS>,"DISK/DvRdRaw"
 	PUSH	ES
 	POP	DS			; Xaddr to DS:DI
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 ReadRawRetry:
 	MOV	BX,DI			; DS:BX transfer addr
 	XOR	AX,AX			; Media Byte, unit = 0
@@ -304,7 +304,7 @@ CRDROK:
 NOTRDCON:
 	MOV	AX,ES
 	MOV	DS,AX
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 	MOV	BX,DI
 	XOR	DX,DX
 	MOV	AX,DX
@@ -314,7 +314,7 @@ ASSUME	DS:NOTHING
 	POP	CX
 	LDS	SI,[THISSFT]
 	Assert	ISSFT,<DS,SI>,"DOS_Read/NotRdCon"
-	LDS	SI,[SI.sf_devptr]
+	LDS	SI,[SI+sf_devptr]
 DVRDLP:
 	invoke	DSKSTATCHK
 	invoke	DEVIOCALL2
@@ -338,11 +338,11 @@ CRDOK:
 	CMP	[CALLSCNT],1
 	JNZ	ENDRDDEVJ2
 	PUSH	DS
-	MOV	DS,WORD PTR [CALLXAD+2]
-	MOV	AL,BYTE PTR [DI]	; Get the character we just read
+	MOV	DS,word [CALLXAD+2]
+	MOV	AL,byte [DI]	; Get the character we just read
 	POP	DS
 DVRDIGN:
-	INC	WORD PTR [CALLXAD]	; Next character
+	INC	word [CALLXAD]	; Next character
 	MOV	[DEVCALL.REQSTAT],0
 	INC	DI			; Next character
 	CMP	AL,1AH			; ^Z?
@@ -354,14 +354,14 @@ DVRDIGN:
 ENDRDDEVJ2:
 	JMP	SHORT ENDRDDEV
 
-ASSUME	DS:NOTHING,ES:NOTHING
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 TRANBUF:
 	LODSB
 	STOSB
 	CMP	AL,c_CR 	; Check for carriage return
 	JNZ	NORMCH
-	MOV	BYTE PTR [SI],c_LF
+	MOV	byte [SI],c_LF
 NORMCH:
 	CMP	AL,c_LF
 	LOOPNZ	TRANBUF
@@ -379,12 +379,12 @@ ENDRDDEV:
 	JNZ	SETSFTC 	; Zero set if Ctrl-Z found in input
 	LES	DI,[THISSFT]
 	Assert	ISSFT,<ES,DI>,"DOS_Read/EndRdDev"
-	AND	BYTE PTR ES:[DI.sf_flags],NOT devid_device_EOF ; Mark as no more data available
+	AND	byte [es:DI+sf_flags],NOT devid_device_EOF ; Mark as no more data available
 SETSFTC:
 	invoke	SETSFT
 	return
 
-ASSUME	DS:NOTHING,ES:NOTHING
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 READCON:
 	DOSAssume   CS,<DS>,"ReadCon"
@@ -392,20 +392,20 @@ READCON:
 	MOV	SI,[CONTPOS]
 	OR	SI,SI
 	JNZ	TRANBUF
-	CMP	BYTE PTR [CONBUF],128
+	CMP	byte [CONBUF],128
 	JZ	GETBUF
-	MOV	WORD PTR [CONBUF],0FF80H	; Set up 128-byte buffer with no template
+	MOV	word [CONBUF],0FF80H	; Set up 128-byte buffer with no template
 GETBUF:
 	PUSH	CX
 	PUSH	ES
 	PUSH	DI
-	MOV	DX,OFFSET DOSGROUP:CONBUF
-	invoke	$STD_CON_STRING_INPUT		; Get input buffer
+	MOV	DX,CONBUF
+	invoke	STD_CON_STRING_INPUT$		; Get input buffer
 	POP	DI
 	POP	ES
 	POP	CX
-	MOV	SI,2 + OFFSET DOSGROUP:CONBUF
-	CMP	BYTE PTR [SI],1AH	; Check for Ctrl-Z in first character
+	MOV	SI,2 + CONBUF
+	CMP	byte [SI],1AH	; Check for Ctrl-Z in first character
 	JNZ	TRANBUF
 	MOV	AL,1AH
 	STOSB
@@ -441,9 +441,9 @@ Break	<DOS_WRITE -- MAIN WRITE ROUTINE AND DEVICE OUT ROUTINES>
 
 	procedure   DOS_WRITE,NEAR
 	DOSAssume   CS,<DS>,"DOS_Write"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
-IF	BUFFERFLAG
+if	BUFFERFLAG
 	cmp	[BUF_EMS_MODE], -1
 	jz	dos_wrt_call
 	call	choose_buf_page
@@ -452,12 +452,12 @@ IF	BUFFERFLAG
 sav_map_wrt_hndl:
 ;	call	save_user_map
 dos_wrt_call:
-ENDIF
+end if
 
 
 	LES	DI,[THISSFT]
 	Assert	ISSFT,<ES,DI>,"DosWrite"
-	MOV	AL,BYTE PTR ES:[DI.sf_mode]
+	MOV	AL,byte [es:DI+sf_mode]
 	AND	AL,access_mask
 	CMP	AL,open_for_read
 	JNE	Check_FCB_RO		 ;Is write or both
@@ -476,9 +476,9 @@ BadMode:
 ;	    to a read-only file.
 ;
 Check_FCB_RO:
-	TEST	ES:[DI.sf_mode],sf_isfcb
+	TEST	[es:DI+sf_mode],sf_isfcb
 	JZ	WRITE_NO_MODE		; Not an FCB
-	TEST	ES:[DI].sf_attr,attr_read_only
+	TEST	[es:DI+sf_attr],attr_read_only
 	JNZ	BadMode 		; Can't write to Read_Only files via FCB
 WRITE_NO_MODE:
 	invoke	SETUP
@@ -495,9 +495,9 @@ WRITE_NO_MODE:
 IFS_HAS_SHARE2: 			;AN000;
 
 
-IF NOT Installed
+if NOT Installed
 	transfer NET_WRITE
-ELSE
+else
 	MOV	AX,(multNET SHL 8) OR 9
 	INT	2FH
 ;	JC	nomore		       ;AN000;;IFS. error
@@ -509,11 +509,11 @@ ELSE
 
 nomore: 			       ;AN000;
 	return
-ENDIF
+end if
 
 
 LOCAL_WRITE:
-	TEST	ES:[DI.sf_flags],devid_device  ; Check for named device I/O
+	TEST	[es:DI+sf_flags],devid_device  ; Check for named device I/O
 	JNZ	WRTDEV
 	MOV	[EXTERR_LOCUS],errLOC_Disk
 	EnterCrit   critDisk
@@ -523,12 +523,12 @@ LOCAL_WRITE:
 FS_no2: 				       ;AN000;
 	invoke	DISKWRITE
 	PUSHF				       ;AN000;FO. save flag
-	AND	CS:[FastSeekflg],FS_end        ;AN000;FO. reset fastseek mode
+	AND	[cs:FastSeekflg],FS_end        ;AN000;FO. reset fastseek mode
 	POPF				       ;AN000;FO. restore flag
 ;; Extended Open
 	JC	nocommit		       ;AN000;EO.
 	LES	DI,[THISSFT]		       ;AN000;EO.
-	TEST	ES:[DI.sf_mode],auto_commit_write ;AN000;EO.
+	TEST	[es:DI+sf_mode],auto_commit_write ;AN000;EO.
 	JZ	nocommit		       ;AN000;EO.
 	PUSH	CX			       ;AN000;EO.
 	invoke	DOS_COMMIT		       ;AN000;EO.
@@ -539,7 +539,7 @@ nocommit:				       ;AN000;
 	return
 
 DVWRTRAW:
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 	XOR	AX,AX			; Media Byte, unit = 0
 	invoke	SETWRITE
 	PUSH	DS			; Save seg of transfer
@@ -584,14 +584,14 @@ WrtCookJ:
 WRTDEV:
 	DOSAssume   CS,<DS>,"DISK/WrtDev"
 	MOV	[EXTERR_LOCUS],errLOC_SerDev
-	OR	BYTE PTR ES:[DI.sf_flags],devid_device_EOF  ; Reset EOF for input
-	MOV	BL,BYTE PTR ES:[DI.sf_flags]
+	OR	byte [es:DI+sf_flags],devid_device_EOF  ; Reset EOF for input
+	MOV	BL,byte [es:DI+sf_flags]
 	XOR	AX,AX
 	JCXZ	ENDWRDEV		; problem of creating on a device.
 	PUSH	DS
 	MOV	AL,BL
 	LDS	BX,[DMAADD]		; Xaddr to DS:BX
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 	MOV	DI,BX			; Xaddr to DS:DI
 	XOR	DX,DX			; Set starting point
 	TEST	AL,devid_device_raw	; Raw?
@@ -604,18 +604,18 @@ TEST_DEV_CON:
 	TEST	AL,devid_device_null
 	JNZ	WRTNUL
 	MOV	AX,DX
-	CMP	BYTE PTR [BX],1AH	; ^Z?
+	CMP	byte [BX],1AH	; ^Z?
 	JZ	WRTCOOKJ		; Yes, transfer nothing
 	PUSH	CX
 	MOV	CX,1
 	invoke	SETWRITE
 	POP	CX
 	LDS	SI,[THISSFT]
-	OR	CS:[DOS34_FLAG],X25_Special;AN000;;PTM. bad x25 driver
+	OR	[cs:DOS34_FLAG],X25_Special;AN000;;PTM. bad x25 driver
 	MOV	AH,3			;AN000;;PTM. prompt critical error ASAP
 	invoke	IOFUNC			;AN000;;PTM.
 	Assert	ISSFT,<DS,SI>,"DosWrite/TestDevCon"
-	LDS	SI,[SI.sf_devptr]
+	LDS	SI,[SI+sf_devptr]
 DVWRTLP:
 	invoke	DSKSTATCHK
 	invoke	DEVIOCALL2
@@ -639,11 +639,11 @@ CWROK:
 	JZ	WRTCOOKDONE
 DVWRTIGN:
 	INC	DX
-	INC	WORD PTR [CALLXAD]
+	INC	word [CALLXAD]
 	INC	DI
 	PUSH	DS
-	MOV	DS,WORD PTR [CALLXAD+2]
-	CMP	BYTE PTR [DI],1AH	; ^Z?
+	MOV	DS,word [CALLXAD+2]
+	CMP	byte [DI],1AH	; ^Z?
 	POP	DS
 	JZ	WRTCOOKDONE
 	MOV	[DEVCALL.REQSTAT],0
@@ -658,7 +658,7 @@ WRITECON:
 	Context DS
 	CALL	SWAPCON
 	POP	DS
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 	MOV	SI,BX
 	PUSH	CX
 WRCONLP:
@@ -681,8 +681,8 @@ EndProc DOS_WRITE
 ;   retrieve the sft from ConSFT which is set by SwapCon.
 
 	procedure   get_io_sft,near
-ASSUME	DS:NOTHING,ES:NOTHING
-	TEST	ConSwap,-1
+;ASSUME	DS:NOTHING,ES:NOTHING
+	TEST	[CONSWAP],-1
 	JNZ	GetRedir
 GetNormal:
 	Context DS
@@ -692,7 +692,7 @@ GetNormal:
 	JC	RET44P
 	MOV	SI,ES
 	MOV	DS,SI
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 	MOV	SI,DI
 RET44P:
 	POP	DI
@@ -701,7 +701,7 @@ RET44P:
 GetRedir:
 	CMP	BX,1
 	JA	GetNormal
-	LDS	SI,ConSFT
+	LDS	SI,[CONSft]
 	Assert	ISSFT,<DS,SI>,"GetIOSft"
 	CLC
 	return
@@ -727,7 +727,7 @@ Break	<DIRREAD -- READ A DIRECTORY SECTOR>
 
 	procedure   DirRead,NEAR
 	DOSAssume   CS,<DS>,"DirRead"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 	Assert	    ISDPB,<ES,BP>,"DirRead"
 
 ;
@@ -737,7 +737,7 @@ Break	<DIRREAD -- READ A DIRECTORY SECTOR>
 ; by DIRStart = 0.
 ;
 	XOR	DX,DX
-	CMP	DirStart,0
+	CMP	[DIRSTART],0
 	jnz	SubDir
 	XCHG	AX,DX
 	JMP	DoRead
@@ -746,11 +746,11 @@ Break	<DIRREAD -- READ A DIRECTORY SECTOR>
 ;
 SubDir:
 	MOV	DL,AL
-	AND	DL,ES:[BP.dpb_cluster_mask]
+	AND	DL,[es:BP+dpb_cluster_mask]
 ;
 ; DX is the sector-in-cluster
 ;
-	MOV	CL,ES:[BP.dpb_cluster_shift]
+	MOV	CL,[es:BP+dpb_cluster_shift]
 	SHR	AX,CL
 ;
 ; DX is position in cluster
@@ -764,9 +764,9 @@ DoRead:
 ; CX is number of clusters to skip.
 ; AH is remainder
 ;
-	MOV	DX,WORD PTR [DIRSEC+2]	     ;AN000;>32mb
+	MOV	DX,word [DIRSEC+2]	     ;AN000;>32mb
 	MOV	[HIGH_SECTOR],DX	     ;AN000;>32mb
-	MOV	DX,WORD PTR [DIRSEC]
+	MOV	DX,word [DIRSEC]
 	ADD	DL,AH
 	ADC	DH,0
 	ADC	[HIGH_SECTOR],0 	     ;AN000;>32mb
@@ -796,7 +796,7 @@ HAVESKIPPED:
 
 	entry	SET_BUF_AS_DIR
 	DOSAssume   CS,<DS>,"SET_BUF_AS_DIR"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 ; Set the type of CURBUF to be a directory sector.
 ; Only flags are modified.
 
@@ -804,7 +804,7 @@ HAVESKIPPED:
 	PUSH	SI
 	LDS	SI,[CURBUF]
 	Assert	ISBUF,<DS,SI>,"SetBufAsDir"
-	OR	[SI.buf_flags],buf_isDIR	; Clears carry
+	OR	[SI+buf_flags],buf_isDIR	; Clears carry
 	POP	SI
 	POP	DS
 	return
@@ -824,13 +824,13 @@ Break	<FATSECRD -- READ A FAT SECTOR>
 ;	Same as DREAD
 
 	procedure   FATSecRd,NEAR
-ASSUME	DS:NOTHING,ES:NOTHING
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 	Assert	    ISDPB,<ES,BP>,"FATSecRd"
 	MOV	[ALLOWED],allowed_RETRY + allowed_FAIL
 	MOV	DI,CX
-	MOV	CL,ES:[BP.dpb_FAT_count]
-	MOV	AX,ES:[BP.dpb_FAT_size] 	;AN000;>32mb
+	MOV	CL,[es:BP+dpb_FAT_count]
+	MOV	AX,[es:BP+dpb_FAT_size] 	;AN000;>32mb
 ;	XOR	AH,AH
 	XOR	CH,CH				;AN000;>32mb
 	PUSH	DX
@@ -867,12 +867,12 @@ Break	<DREAD -- DO A DISK READ>
 ; DS,ES:BP preserved. All other registers destroyed.
 
 	entry	DREAD
-ASSUME	DS:NOTHING,ES:NOTHING
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 	Assert	ISDPB,<ES,BP>,"DREAD"
 	invoke	DSKREAD
 	retz			; Carry clear
-	MOV	BYTE PTR [READOP],0
+	MOV	byte [READOP],0
 	invoke	HARDERRRW
 	CMP	AL,1		; Check for retry
 	JZ	DREAD
@@ -900,9 +900,9 @@ Break	<CHECK_WRITE_LOCK>
 ;	Carry clear if ok
 
 	procedure   CHECK_WRITE_LOCK,NEAR      ;AN000;
-ASSUME	DS:NOTHING,ES:NOTHING		       ;AN000;
+;ASSUME	DS:NOTHING,ES:NOTHING		       ;AN000;
 
-	TEST	ES:[DI].sf_attr,attr_volume_id ;AN000;;MS.  volume id
+	TEST	[es:DI+sf_attr],attr_volume_id ;AN000;;MS.  volume id
 	JZ	write_cont		       ;AN000;;MS.  no
 	invoke	SET_ACC_ERR_DS		       ;AN000;;MS.
 	return				;AN000;;MS.
@@ -935,9 +935,9 @@ Break	<CHECK_READ_LOCK>
 ;	Carry clear if ok
 
 	procedure   CHECK_READ_LOCK,NEAR       ;AN000;
-ASSUME	DS:NOTHING,ES:NOTHING		       ;AN000;
+;ASSUME	DS:NOTHING,ES:NOTHING		       ;AN000;
 
-	TEST	ES:[DI].sf_attr,attr_volume_id ;AN000;;MS.  volume id
+	TEST	[es:DI+sf_attr],attr_volume_id ;AN000;;MS.  volume id
 	JZ	do_retry		       ;AN000;;MS.  no
 	invoke	SET_ACC_ERR		       ;AN000;;MS.
 	return				       ;AN000;;MS.
@@ -951,7 +951,7 @@ READ_OK:				;AN000; MS.
 	return				;AN000;;MS.
 EndProc CHECK_READ_LOCK 		;AN000;
 
-IF BUFFERFLAG
+if BUFFERFLAG
 
 ;-------------------------------------------------------------------------
 ;	Function name	: 	choose_buf_page
@@ -990,7 +990,7 @@ IF BUFFERFLAG
 ;----------------------------------------------------------------------------
 Procedure 	choose_buf_page,near
 
-	assume cs:dosgroup, ds:nothing, es:nothing, ss:dosgroup
+;	assume cs:dosgroup, ds:nothing, es:nothing, ss:dosgroup
 
 	push	cx
 	push	bx
@@ -999,25 +999,25 @@ Procedure 	choose_buf_page,near
 	push	ds
 	push	ax
 
-	mov	ax, word ptr [DMAADD+2]
+	mov	ax, word [DMAADD+2]
 	and	ax, 0fc00h  	; page segment of transfer segment
 
-	cmp	ax, word ptr [BUF_EMS_FIRST_PAGE]
+	cmp	ax, word [BUF_EMS_FIRST_PAGE]
 	ja	pick_first
 	
 	cmp	[BUF_EMS_NPA640], 6
 	jae	safe_pick_last
 
-	add	cx, word ptr [DMAADD]	; get final offset 
+	add	cx, word [DMAADD]	; get final offset 
 	mov	bx, cx
 
 	mov	cl, 4
 	shr	bx, cl		; get # of paragraphs
-	mov	ax, word ptr [DMAADD+2]	; get initial segment
+	mov	ax, word [DMAADD+2]	; get initial segment
 	add	ax, bx		; get final segment
 
 	and	ax, 0fc00h
-	cmp	ax, word ptr [BUF_EMS_LAST_PAGE]
+	cmp	ax, word [BUF_EMS_LAST_PAGE]
 	jne	safe_pick_last
 
 	mov	[BUF_EMS_SAFE_FLAG], 0
@@ -1036,13 +1036,13 @@ safe_pick_last:
 ;	jmp	fin_choose_page
 
 pick_first:
-	mov	ax, word ptr [BUF_EMS_FIRST_PAGE]
+	mov	ax, word [BUF_EMS_FIRST_PAGE]
 	cmp	[BUF_EMS_PFRAME], ax
 	je	fin_choose_page
 	call	restore_user_map
-	mov	word ptr [LASTBUFFER], -1
+	mov	word [LASTBUFFER], -1
 	mov	[BUF_EMS_PFRAME], ax
-	mov	ax, word ptr [BUF_EMS_FIRST_PAGE+2]
+	mov	ax, word [BUF_EMS_FIRST_PAGE+2]
 	mov	[BUF_EMS_PAGE_FRAME], ax
 	mov	[BUF_EMS_SAFE_FLAG], 1
 	call	Setup_EMS_Buffers
@@ -1065,9 +1065,9 @@ fin_choose_page:
 
 EndProc	choose_buf_page	
 
-ENDIF
+end if
 
-CODE	ENDS
-    END
+end if
+;    END
 
 

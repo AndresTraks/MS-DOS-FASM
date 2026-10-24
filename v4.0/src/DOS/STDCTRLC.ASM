@@ -3,13 +3,13 @@
 ; ^C and error handler for MSDOS
 ;
 
-.xlist
-.xcref
-include stdsw.asm
-.cref
-.list
+;.xlist
+;.xcref
+INCLUDE 'STDSW.ASM'
+;.cref
+;.list
 
 TITLE   Control C detection, Hard error and EXIT routines
 NAME    STDCTRLC
 
-include ctrlc.asm
+INCLUDE 'CTRLC.ASM'

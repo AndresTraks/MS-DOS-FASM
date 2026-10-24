@@ -6,11 +6,11 @@ NAME	IBMCODE
 ; System call dispatch code.
 ;
 
-.xlist
-.xcref
-include mssw.asm
-.cref
-.list
+;.xlist
+;.xcref
+INCLUDE 'MSSW.ASM'
+;.cref
+;.list
 
-include ms_code.asm
-	END
+INCLUDE 'MS_CODE.ASM'
+;	END

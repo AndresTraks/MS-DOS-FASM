@@ -13,17 +13,17 @@ NAME	DOS_RENAME
 ;
 ; get the appropriate segment definitions
 ;
-.xlist
-include dosseg.asm
+;.xlist
+INCLUDE '../INC/DOSSEG.ASM'
 
-CODE	SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME	SS:DOSGROUP,CS:DOSGROUP
+if SEGSEL = S_CODE
+;	ASSUME	SS:DOSGROUP,CS:DOSGROUP
 
-.xcref
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
-.cref
-.list
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+;.cref
+;.list
 
 Installed = TRUE
 
@@ -89,7 +89,7 @@ Installed = TRUE
 
 	procedure   DOS_RENAME,NEAR
 	DOSAssume   CS,<DS>,"DOS_Rename"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
 	Invoke	TestNet
 	JNC	LOCAL_RENAME
@@ -133,20 +133,20 @@ nofiles:
 ;	ret				       ;IFS. return			;AN000;
 ifsshare:
 
-IF NOT Installed
+if NOT Installed
 	transfer NET_RENAME
-ELSE
+else
 	MOV	AX,(multNET SHL 8) OR 17
 	INT	2FH
 	return
-ENDIF
+end if
 
 LOCAL_RENAME:
 	MOV	[EXTERR_LOCUS],errLOC_Disk
 	MOV	SI,[WFP_START]
 	MOV	DI,[REN_WFP]
-	MOV	AL,BYTE PTR [SI]
-	MOV	AH,BYTE PTR [DI]
+	MOV	AL,byte [SI]
+	MOV	AH,byte [DI]
 	OR	AX,2020H		; Lower case
 	CMP	AL,AH
 	JZ	SAMEDRV
@@ -155,10 +155,10 @@ LOCAL_RENAME:
 	return
 
 SAMEDRV:
-	PUSH	WORD PTR [DMAADD+2]
-	PUSH	WORD PTR [DMAADD]
-	MOV	WORD PTR [DMAADD+2],DS
-	MOV	WORD PTR [DMAADD],OFFSET DOSGROUP:RENAMEDMA
+	PUSH	word [DMAADD+2]
+	PUSH	word [DMAADD]
+	MOV	word [DMAADD+2],DS
+	MOV	word [DMAADD],RENAMEDMA
 	MOV	[Found_dev],0		; Rename fails on DEVS, assume not a dev
 	EnterCrit   critDisk
 	invoke	DOS_SEARCH_FIRST	; Sets [NoSetDir] to 1, [CURBUF+2]:BX
@@ -170,8 +170,8 @@ SAMEDRV:
 GOTERR:
 	STC
 RENAME_POP:
-	POP	WORD PTR [DMAADD]
-	POP	WORD PTR [DMAADD+2]
+	POP	word [DMAADD]
+	POP	word [DMAADD+2]
 	LeaveCrit   critDisk
 	return
 
@@ -181,7 +181,7 @@ Check_dev:
 	PUSH	DS			      ;PTM.				;AN000;
 	LDS	SI,[DMAADD]		      ;PTM.  chek if source a dir	;AN000;
 	ADD	SI,find_buf_attr	      ;PTM.				;AN000;
-	TEST	[SI.dir_attr],attr_directory  ;PTM.				;AN000;
+	TEST	[SI+dir_attr],attr_directory  ;PTM.				;AN000;
 	JZ	notdir			      ;PTM.				;AN000;
 	MOV	SI,[REN_WFP]		      ;PTM.  if yes, make sure path	;AN000;
 	invoke	Check_Pathlen2		      ;PTM.   length < 67		;AN000;
@@ -210,7 +210,7 @@ REN_OK1:				;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	MOV	SI,[REN_WFP]		; Swap source and destination
 	MOV	[WFP_START],SI
 	MOV	[CURR_DIR_END],-1	; No current dir on dest
-	MOV	WORD PTR [CREATING],0E5FFH  ; Creating, not DEL *.*
+	MOV	word [CREATING],0E5FFH  ; Creating, not DEL *.*
 					; A rename is like a CREATE_NEW as far
 					; as the destination is concerned.
 	invoke	GetPathNoSet
@@ -259,24 +259,24 @@ BAD_PATH:
 
 SAVEDEST:
 	Context ES
-	MOV	DI,OFFSET DOSGROUP:NAME2
-	MOV	SI,OFFSET DOSGROUP:NAME1
+	MOV	DI,NAME2
+	MOV	SI,Name1
 	MOV	CX,11
 	REP	MOVSB			; Save dest with metas at NAME2
 	MOV	AX,[DIRSTART]
 	MOV	[DESTSTART],AX
 BUILDDEST:
 	Context ES			; needed due to JMP BUILDDEST below
-	MOV	BX,OFFSET DOSGROUP:RENAMEDMA + 21   ; Source of replace chars
-	MOV	DI,OFFSET DOSGROUP:NAME1    ; Real dest name goes here
-	MOV	SI,OFFSET DOSGROUP:NAME2    ; Raw dest
+	MOV	BX,RENAMEDMA+21   ; Source of replace chars
+	MOV	DI,Name1    ; Real dest name goes here
+	MOV	SI,NAME2    ; Raw dest
 	MOV	CX,11
 	CALL	NEW_RENAME		    ;IFS. replace ? chars		;AN000;
 
 	MOV	[ATTRIB],attr_all	; Stop duplicates with any attributes
 	MOV	[CREATING],0FFH
 	invoke	DEVNAME 		; Check if we built a device name
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 	JNC	BAD_ACC
 	MOV	BX,[DESTSTART]
 	LES	BP,[THISDPB]
@@ -287,7 +287,7 @@ BUILDDEST:
 	CMP	[FAILERR],0
 	JNZ	BAD_ACCJ		; Find failed because user FAILed to I 24
 	MOV	AX,[DESTSTART]		; DIRSTART of dest
-	CMP	AX,WORD PTR [RENAMEDMA + 15]	; DIRSTART of source
+	CMP	AX,word [RENAMEDMA + 15]	; DIRSTART of source
 	JZ	SIMPLE_RENAME		; If =, just give new name
 
 	MOV	AL,[RENAMEDMA + 21 + dir_attr]
@@ -296,10 +296,10 @@ BUILDDEST:
 					; otherwise the .  and ..  entries get
 					; wiped.
 	MOV	[ATTRIB],AL
-	MOV	WORD PTR [THISSFT+2],DS
-	MOV	SI,OFFSET DOSGROUP:AUXSTACK - SIZE SF_ENTRY
-	MOV	WORD PTR [THISSFT],SI
-	MOV	[SI].sf_mode,sharing_compat+open_for_both
+	MOV	word [THISSFT+2],DS
+	MOV	SI,[AUXStack-sizeof].SF_ENTRY
+	MOV	word [THISSFT],SI
+	MOV	[SI+sf_mode],sharing_compat+open_for_both
 	XOR	CX,CX			; Set "device ID" for call into makenode
 	invoke	RENAME_MAKE		; This is in mknode
 	JNC	GOT_DEST
@@ -308,7 +308,7 @@ BAD_ACCJ:
 
 GOT_DEST:
 	SaveReg <BX>
-	LES	DI,ThisSFT		; Rename_make entered this into sharing
+	LES	DI,[ThisSFT]		; Rename_make entered this into sharing
 	Invoke	ShareEnd		; we need to remove it.
 	RestoreReg  <BX>
 ; A zero length entry with the correct new name has now been made at
@@ -316,20 +316,20 @@ GOT_DEST:
 	LES	DI,[CURBUF]
 	Assert	ISBUF,<ES,DI>,"Got_Dest"
 
-	TEST	ES:[DI.buf_flags],buf_dirty  ;LB. if already dirty		;AN000;
+	TEST	[es:DI+buf_flags],buf_dirty  ;LB. if already dirty		;AN000;
 	JNZ	yesdirty		  ;LB.	  don't increment dirty count   ;AN000;
 	invoke	INC_DIRTY_COUNT 	  ;LB.					;AN000;
-	OR	ES:[DI.buf_flags],buf_dirty
+	OR	[es:DI+buf_flags],buf_dirty
 yesdirty:
 	MOV	DI,BX
 	ADD	DI,dir_attr		; Skip name
-	MOV	SI,OFFSET DOSGROUP:RENAMEDMA + 21 + dir_attr
-	MOV	CX,(SIZE dir_entry) - dir_attr
+	MOV	SI,RENAMEDMA+21 + dir_attr
+	MOV	CX,(sizeof.dir_entry) - dir_attr
 	REP	MOVSB
 	CALL	GET_SOURCE
 	JC	RENAME_OVER
 	MOV	DI,BX
-	MOV	ES,WORD PTR [CURBUF+2]
+	MOV	ES,word [CURBUF+2]
 	MOV	AL,0E5H
 	STOSB				; "free" the source
 	JMP	SHORT DIRTY_IT
@@ -338,21 +338,21 @@ SIMPLE_RENAME:
 	CALL	GET_SOURCE		; Get the source back
 	JC	RENAME_OVER
 	MOV	DI,BX
-	MOV	ES,WORD PTR [CURBUF+2]
-	MOV	SI,OFFSET DOSGROUP:NAME1    ; New Name
+	MOV	ES,word [CURBUF+2]
+	MOV	SI,Name1    ; New Name
 	MOV	CX,11
 	REP	MOVSB
 DIRTY_IT:
-	MOV	DI,WORD PTR [CURBUF]
+	MOV	DI,word [CURBUF]
 
-	TEST	ES:[DI.buf_flags],buf_dirty  ;LB. if already dirty		;AN000;
+	TEST	[es:DI+buf_flags],buf_dirty  ;LB. if already dirty		;AN000;
 	JNZ	yesdirty2		  ;LB.	  don't increment dirty count   ;AN000;
 	invoke	INC_DIRTY_COUNT 	  ;LB.					;AN000;
-	OR	ES:[DI.buf_flags],buf_dirty
+	OR	[es:DI+buf_flags],buf_dirty
 yesdirty2:
 	Assert	ISBUF,<ES,DI>,"Dirty_it"
 NEXT_SOURCE:
-	MOV	SI,OFFSET DOSGROUP:RENAMEDMA + 1    ;Name
+	MOV	SI,RENAMEDMA+1    ;Name
 ;
 ; WARNING!  Rename_Next leaves the disk critical section *ALWAYS*.  We need
 ; to enter it before going to RENAME_Next.
@@ -366,7 +366,7 @@ NEXT_SOURCE:
 ; we were before.
 ;
 	JC	RENAME_OVER
-	LEA	SI,[BX].dir_First
+	LEA	SI,[BX+dir_First]
 	invoke	REN_DEL_Check
 	JNC	REN_OK2
 	MOV	AX,error_sharing_violation
@@ -392,14 +392,14 @@ RENAME_OVER:
 
 GET_SOURCE:
 	DOSAssume   CS,<DS>,"Get_Source"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
-	MOV	BX,WORD PTR [RENAMEDMA + 15]	; DirStart
-	LES	BP,ThisDPB
+	MOV	BX,word [RENAMEDMA + 15]	; DirStart
+	LES	BP,[THISDPB]
 	invoke	SetDirSrch
 	retc
 	invoke	StartSrch
-	MOV	AX,WORD PTR [RENAMEDMA + 13]	; Lastent
+	MOV	AX,word [RENAMEDMA + 13]	; Lastent
 	invoke	GetEnt
 	return
 
@@ -416,7 +416,7 @@ EndProc DOS_RENAME
 
 	procedure   NEW_RENAME,NEAR
 	DOSAssume   CS,<DS>,"DOS_Rename"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 NEWNAM:
 	LODSB
 	CMP	AL,"?"
@@ -430,5 +430,5 @@ NOCHG:
 
 EndProc NEW_RENAME
 
-CODE	ENDS
-    END
+end if
+;    END

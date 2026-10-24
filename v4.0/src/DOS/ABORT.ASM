@@ -16,17 +16,17 @@ NAME    DOS_ABORT
 ; get the appropriate segment definitions
 ;
 
-include dosseg.asm
+INCLUDE '../INC/DOSSEG.ASM'
 
-CODE    SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME  SS:DOSGROUP,CS:DOSGROUP
+if SEGSEL = S_CODE
+;	ASSUME  SS:DOSGROUP,CS:DOSGROUP
 
-.xlist
-.xcref
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
-.cref
-.list
+;.xlist
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+;.cref
+;.list
 
 Installed = TRUE
 
@@ -49,16 +49,16 @@ Break   <DOS_ABORT -- CLOSE all files for process>
 ; All destroyed except stack
 
 	Procedure   DOS_ABORT,NEAR
-	ASSUME  DS:NOTHING,ES:NOTHING
+;	ASSUME  DS:NOTHING,ES:NOTHING
 
 	MOV     ES,[CurrentPDB]
-	MOV     CX,ES:[PDB_JFN_Length]  ; Number of JFNs
+	MOV     CX,[es:PDB_JFN_Length]  ; Number of JFNs
 reset_free_jfn:
 	MOV     BX,CX
 	PUSH    CX
 	DEC     BX                      ; get jfn (start with last one)
 
-	invoke  $close
+	invoke  close$
 	POP     CX
 	LOOP    reset_free_jfn          ; and do 'em all
 ;
@@ -80,26 +80,26 @@ reset_free_jfn:
 	context DS
 	CallInstall Net_Abort, multNet, 29
 if installed
-	call    JShare + 4 * 4
+	call    dword [JSHARE+4*4]
 else
 	call    mftCloseP
-endif
-	assume  ds:nothing
+end if
+;	assume  ds:nothing
 ;
 ; Scan the FCB cache for guys that belong to this process and zap their ref
 ; counts.
 ;
-	les     di,sftFCB               ; grab the pointer to the table
-	mov     cx,es:[di].sfCount
+	les     di,[sftFCB]               ; grab the pointer to the table
+	mov     cx,[es:di+sfCount]
 	jcxz    FCBScanDone
-	LEA     DI,[DI].sfTable         ; point at table
-	mov     ax,proc_id
+	LEA     DI,[DI+sfTable]         ; point at table
+	mov     ax,[PROC_ID]
 FCBTest:
-	cmp     es:[di].sf_PID,ax       ; is this one of ours
+	cmp     [es:di+sf_PID],ax       ; is this one of ours
 	jnz     FCBNext                 ; no, skip it
-	mov     es:[di].sf_ref_count,0  ; yes, blast ref count
+	mov     [es:di+sf_ref_count],0  ; yes, blast ref count
 FCBNext:
-	add     di,size sf_Entry
+	add     di,sizeof.sf_Entry
 	loop    FCBTest
 FCBScanDone:
 
@@ -112,26 +112,26 @@ Scan:
 	invoke  SFFromSFN
 	pop     bx
 	retc
-	cmp     es:[di].sf_ref_count,0
+	cmp     [es:di+sf_ref_count],0
 	jz      next
 ;
 ; we have a SFT that is not free.  See if it is for the current process
 ;
-	mov     ax,proc_id
-	cmp     es:[di].sf_pid,ax
+	mov     ax,[PROC_ID]
+	cmp     [es:di+sf_pid],ax
 	jnz     next
-	mov     ax,user_id
-	cmp     es:[di].sf_uid,ax
+	mov     ax,[User_ID]
+	cmp     [es:di+sf_uid],ax
 	jnz     next
 ;
 ; This SFT is labelled as ours.
 ;
-	mov     es:[di].sf_ref_count,0
+	mov     [es:di+sf_ref_count],0
 next:
 	inc     bx
 	jmp     scan
 
 EndProc DOS_Abort
 
-CODE    ENDS
-    END
+end if
+;    END

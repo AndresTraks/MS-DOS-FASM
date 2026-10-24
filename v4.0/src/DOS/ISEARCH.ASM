@@ -16,19 +16,19 @@ NAME	DOS_SEARCH
 ;
 ; get the appropriate segment definitions
 ;
-.xlist
-include dosseg.asm
+;.xlist
+INCLUDE '../INC/DOSSEG.ASM'
 
-CODE	SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME	SS:DOSGROUP,CS:DOSGROUP
+if SEGSEL = S_CODE
+;	ASSUME	SS:DOSGROUP,CS:DOSGROUP
 
-.xcref
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
-INCLUDE fastopen.inc
-INCLUDE fastxxxx.inc
-.cref
-.list
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+INCLUDE '../INC/FASTOPEN.INC'
+INCLUDE '../INC/FASTXXXX.INC'
+;.cref
+;.list
 
 Installed = TRUE
 
@@ -91,29 +91,29 @@ Installed = TRUE
 
 	procedure   DOS_SEARCH_FIRST,NEAR
 	DOSAssume   CS,<DS>,"DOS_Search_First"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
 	LES	DI,[THISCDS]
 	CMP	DI,-1
 	JNZ	TEST_RE_NET
-IF NOT Installed
+if NOT Installed
 	transfer NET_SEQ_SEARCH_FIRST
-ELSE
+else
 	MOV	AX,(multNET SHL 8) OR 25
 	INT	2FH
 	return
-ENDIF
+end if
 
 TEST_RE_NET:
-	TEST	ES:[DI.curdir_flags],curdir_isnet
+	TEST	[es:DI+curdir_flags],curdir_isnet
 	JZ	LOCAL_SEARCH_FIRST
-IF NOT Installed
+if NOT Installed
 	transfer NET_SEARCH_FIRST
-ELSE
+else
 	MOV	AX,(multNET SHL 8) OR 27
 	INT	2FH
 	return
-ENDIF
+end if
 
 LOCAL_SEARCH_FIRST:
 	EnterCrit   critDisk
@@ -135,7 +135,7 @@ getdone:
 find_no_more:
 	MOV	AX,error_no_more_files
 BadBye:
-	AND	CS:[FastOpenflg],Fast_yes  ;AN000;;FO. reset fastopen
+	AND	[cs:FastOpenflg],Fast_yes  ;AN000;;FO. reset fastopen
 
 	STC
 	LeaveCrit   critDisk
@@ -156,9 +156,9 @@ found_entry:
 ; a search-next may not have wfp_start set correctly
 ;
 	LES	DI,[DMAADD]
-	MOV	SI,WFP_Start		; get pointer to beginning
+	MOV	SI,[WFP_START]		; get pointer to beginning
 	LODSB
-	SUB	AL,'A'-1                ; logical drive
+	SUB	AL,'[a]'-1                ; logical drive
 	STOSB				; High bit not set (local)
 found_it:
 	LES	DI,[DMAADD]
@@ -167,18 +167,18 @@ found_it:
 	TEST	[Fastopenflg],Set_For_Search	  ;FO.;AN001; from fastopen
 	JZ	notfast 			  ;FO.;AN001;
 	MOV	SI,BX				  ;FO.;AN001;
-	MOV	DS,WORD PTR [CURBUF+2]		  ;FO.;AN001;
+	MOV	DS,word [CURBUF+2]		  ;FO.;AN001;
 	JMP	SHORT movmov			  ;FO.;AN001;
 
 
 notfast:
-	MOV	SI,OFFSET DOSGROUP:NAME1; find_buf 2 = formatted name
+	MOV	SI,Name1; find_buf 2 = formatted name
 movmov:
 ; Special E5 code
 	MOVSB
-	CMP	BYTE PTR ES:[DI-1],5
+	CMP	byte [es:DI-1],5
 	JNZ	NOTKANJB
-	MOV	BYTE PTR ES:[DI-1],0E5H
+	MOV	byte [es:DI-1],0E5H
 NOTKANJB:
 
 	MOV	CX,10
@@ -198,7 +198,7 @@ NOTKANJB:
 	POP	AX			; Recover AH device info
 	OR	AH,AH
 	JS	DOSREL			; Device entry is DOSGROUP relative
-	CMP	WORD PTR [CURBUF],-1
+	CMP	word [CURBUF],-1
 	JNZ	OKSTORE
 	TEST	[FastOPenFlg],Set_For_Search ;AN000;;FO. from fastopen and is good
 	JNZ	OKSTORE 		     ;AN000;;FO.
@@ -207,30 +207,30 @@ NOTKANJB:
 
 	; The user has specified the root directory itself, rather than some
 	; contents of it. We can't "find" that.
-	MOV	WORD PTR ES:[DI-8],-1	; Cause DOS_SEARCH_NEXT to fail by
+	MOV	word [es:DI-8],-1	; Cause DOS_SEARCH_NEXT to fail by
 					;   stuffing a -1 at Lastent
 	JMP	find_no_more
 
 OKSTORE:
-	MOV	DS,WORD PTR [CURBUF+2]
-ASSUME	DS:NOTHING
+	MOV	DS,word [CURBUF+2]
+;ASSUME	DS:NOTHING
 DOSREL:
 	MOV	SI,BX			; SI-> start of entry
 
 ; NOTE: DOS_RENAME depends on BX not being altered after this point
 
-	MOV	CX,SIZE dir_entry
+	MOV	CX,sizeof.dir_entry
 ;;;;; 7/29/86
 	MOV	AX,DI			; save the 1st byte addr
 	REP	MOVSB
 	MOV	DI,AX			; restore 1st byte addr
-	CMP	BYTE PTR ES:[DI],05H	; special char check
+	CMP	byte [es:DI],05H	; special char check
 	JNZ	NO05
-	MOV	BYTE PTR ES:[DI],0E5H	; convert it back to E5
+	MOV	byte [es:DI],0E5H	; convert it back to E5
 NO05:
 
 ;;;;; 7/29/86
-	AND	CS:[FastOpenflg],Fast_yes  ;AN000;;FO. reset fastopen
+	AND	[cs:FastOpenflg],Fast_yes  ;AN000;;FO. reset fastopen
 	context DS
 	CLC
 	LeaveCrit   critDisk
@@ -257,43 +257,43 @@ BREAK <DOS_SEARCH_NEXT - scan for subsequent matches>
 
 	procedure   DOS_SEARCH_NEXT,NEAR
 	DOSAssume   CS,<DS>,"DOS_Search_Next"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
 	LES	DI,[DMAADD]
-	MOV	AL,ES:[DI]
+	MOV	AL,[es:DI]
 	TEST	AL,80H			; Test for NET
 	JZ	LOCAL_SEARCH_NEXT
-IF NOT Installed
+if NOT Installed
 	transfer NET_SEARCH_NEXT
-ELSE
+else
 	MOV	AX,(multNET SHL 8) OR 28
 	INT	2FH
 	return
-ENDIF
+end if
 
 LOCAL_SEARCH_NEXT:
 ;AL is drive A=1
 	MOV	[EXTERR_LOCUS],errLOC_Disk
 	EnterCrit   critDisk
-	MOV	WORD PTR ThisCDS,OFFSET DOSGROUP:DummyCDS
-	MOV	WORD PTR ThisCDS+2,CS
-	ADD	AL,'A'-1
+	MOV	word [ThisCDS],DummyCDS
+	MOV	word [ThisCDS+2],CS
+	ADD	AL,'[a]'-1
 	invoke	InitCDS
 
 ;	invoke	GetThisDrv		; Set CDS pointer
 
 	JC	No_files		; Bogus drive letter
 	LES	DI,[THISCDS]		; Get CDS pointer
-	LES	BP,ES:[DI.curdir_devptr]; Get DPB pointer
+	LES	BP,[es:DI+curdir_devptr]; Get DPB pointer
 	invoke	GOTDPB			; [THISDPB] = ES:BP
 
-	mov	AL,ES:[BP.dpb_drive]
-	mov	ThisDrv,AL
+	mov	AL,[es:BP+dpb_drive]
+	mov	[ThisDRV],AL
 
-	MOV	WORD PTR [CREATING],0E500H
+	MOV	word [CREATING],0E500H
 	MOV	[NoSetDir],1		; if we find a dir, don't change to it
 	LDS	SI,[DMAADD]
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 	LODSB				; Drive Byte
 
 ;	DEC	AL
@@ -302,7 +302,7 @@ ASSUME	DS:NOTHING
 	entry	RENAME_NEXT		; Entry used by DOS_RENAME
 
 	context ES			; THIS BLOWS ES:BP POINTER TO DPB
-	MOV	DI,OFFSET DOSGROUP:NAME1
+	MOV	DI,Name1
 	MOV	CX,11
 	REP	MOVSB			; Search name
 	LODSB				; Attribute
@@ -343,7 +343,7 @@ EndProc DOS_SEARCH_NEXT
 ;	 carry set, if '?' exists
 
 	procedure   CHECK_QUESTION,NEAR ;AN000;
-	ASSUME	ES:NOTHING,DS:NOTHING	;AN000;
+;	ASSUME	ES:NOTHING,DS:NOTHING	;AN000;
 
 	PUSH	CS			;AN000;;FO.
 	POP	DS			;AN000;;FO. ds:si -> final path
@@ -360,5 +360,5 @@ NO_Question:				;AN000;
 
 EndProc CHECK_QUESTION			;AN000;
 
-CODE	ENDS
-    END
+end if
+;    END

@@ -26,21 +26,21 @@ NAME    ROM
 ;
 ; get the appropriate segment definitions
 ;
-.xlist
-include dosseg.asm
-include fastseek.inc			       ; DOS 4.00
-include fastxxxx.inc			       ; DOS 4.00
-include version.inc
+;.xlist
+INCLUDE '../INC/DOSSEG.ASM'
+INCLUDE '../INC/FASTSEEK.INC'			       ; DOS 4.00
+INCLUDE '../INC/FASTXXXX.INC'			       ; DOS 4.00
+INCLUDE '../INC/VERSION.INC'
 
-CODE    SEGMENT BYTE PUBLIC  'CODE'
-        ASSUME  SS:DOSGROUP,CS:DOSGROUP
+if SEGSEL = S_CODE
+;        ASSUME  SS:DOSGROUP,CS:DOSGROUP
 
-.xcref
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
-include EA.inc
-.cref
-.list
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+INCLUDE '../INC/EA.INC'
+;.cref
+;.list
 
         i_need  CLUSNUM,WORD
         i_need  NEXTADD,WORD
@@ -83,7 +83,7 @@ Break   <FNDCLUS -- Skip over allocation units>
 
         procedure   FNDCLUS,NEAR
         DOSAssume   CS,<DS>,"FndClus"
-        ASSUME  ES:NOTHING
+;        ASSUME  ES:NOTHING
 
         Assert      ISDPB,<ES,BP>,"FndCLus"
 ;; 10/31/86 FastSeek
@@ -91,8 +91,8 @@ Break   <FNDCLUS -- Skip over allocation units>
         LES     DI,[THISSFT]
         Assert      ISSFT,<ES,DI>,"FndClus"
         MOV     [FSeek_logclus],CX                ; presume CX is the position  ;AN000;
-        MOV     BX,ES:[DI.sf_lstclus]
-        MOV     DX,ES:[DI.sf_cluspos]
+        MOV     BX,[es:DI+sf_lstclus]
+        MOV     DX,[es:DI+sf_cluspos]
 ;; 10/31/86 FastSeek
         OR      BX,BX
         JNZ     YCLUS
@@ -102,7 +102,7 @@ YCLUS:
         JNB     FINDIT
         ADD     CX,DX
         XOR     DX,DX
-        MOV     BX,ES:[DI.sf_firclus]
+        MOV     BX,[es:DI+sf_firclus]
 FINDIT:
 ;; 10/31/86 FastSeek
 
@@ -211,7 +211,7 @@ Break  <BUFSEC -- BUFFER A SECTOR AND SET UP A TRANSFER>
 
         procedure   BUFSEC,NEAR
         DOSAssume   CS,<DS>,"BufSec"
-        ASSUME  ES:NOTHING
+;        ASSUME  ES:NOTHING
 
         Assert      ISDPB,<ES,BP>,"BufSec"
         MOV     DX,[CLUSNUM]
@@ -220,7 +220,7 @@ Break  <BUFSEC -- BUFFER A SECTOR AND SET UP A TRANSFER>
         CALL    FIGREC
         invoke  GETBUFFR
         retc
-        MOV     BYTE PTR [TRANS],1      ; A transfer is taking place
+        MOV     byte [TRANS],1      ; A transfer is taking place
         MOV     SI,[NEXTADD]
         MOV     DI,SI
         MOV     CX,[BYTCNT1]
@@ -228,8 +228,8 @@ Break  <BUFSEC -- BUFFER A SECTOR AND SET UP A TRANSFER>
         MOV     [NEXTADD],DI
         LES     DI,[CURBUF]
         Assert  ISBUF,<ES,DI>,"BufSec"
-        OR      ES:[DI.buf_flags],buf_isDATA
-        LEA     DI,[DI].BUFINSIZ        ; Point to buffer
+        OR      [es:DI+buf_flags],buf_isDATA
+        LEA     DI,[DI+BUFINSIZ]        ; Point to buffer
         ADD     DI,[BYTSECPOS]
         CLC
         return
@@ -243,7 +243,7 @@ Break   <BUFRD, BUFWRT -- PERFORM BUFFERED READ AND WRITE>
 
         procedure   BUFRD,NEAR
         DOSAssume   CS,<DS>,"BufRd"
-        ASSUME  ES:NOTHING
+;        ASSUME  ES:NOTHING
 
         Assert      ISDPB,<ES,BP>,"BufRd"
         PUSH    ES
@@ -258,7 +258,7 @@ BUF_OK:
         MOV     BX,ES
         MOV     ES,[DMAADD+2]
         MOV     DS,BX
-ASSUME  DS:NOTHING
+;ASSUME  DS:NOTHING
         XCHG    DI,SI
         SHR     CX,1
         JNC     EVENRD
@@ -268,11 +268,11 @@ EVENRD:
         POP     ES
         LDS     DI,[CURBUF]
         Assert  ISBUF,<DS,DI>,"BufRD/EvenRD"
-        LEA     BX,[DI.BufInSiz]
+        LEA     BX,[DI+BufInSiz]
         SUB     SI,BX                   ; Position in buffer
         invoke  PLACEBUF
         Assert  ISDPB,<ES,BP>,"BufRD/EvenRD"
-        CMP     SI,ES:[BP.dpb_sector_size] ; Read Last byte?
+        CMP     SI,[es:BP+dpb_sector_size] ; Read Last byte?
         JB      RBUFPLACEDC             ; No, leave buf where it is
         invoke  PLACEHEAD               ; Make it prime candidate for chucking
                                         ;  even though it is MRU.
@@ -290,20 +290,20 @@ EndProc BUFRD
 
         procedure   BUFWRT,NEAR
         DOSAssume   CS,<DS>,"BufWrt"
-        ASSUME  ES:NOTHING
+;        ASSUME  ES:NOTHING
 
         Assert      ISDPB,<ES,BP>,"BufWrt"
-        MOV     AX,WORD PTR [SECPOS]
+        MOV     AX,word [SECPOS]
         ADD     AX,1            ; Set for next sector
-        MOV     WORD PTR [SECPOS],AX      ;F.C. >32mb                           ;AN000;
-        ADC     WORD PTR [SECPOS+2],0     ;F.C. >32mb                           ;AN000;
-        MOV     AX,WORD PTR [SECPOS+2]    ;F.C. >32mb                           ;AN000;
-        CMP     AX,WORD PTR [VALSEC+2]    ;F.C. >32mb                           ;AN000;
+        MOV     word [SECPOS],AX      ;F.C. >32mb                           ;AN000;
+        ADC     word [SECPOS+2],0     ;F.C. >32mb                           ;AN000;
+        MOV     AX,word [SECPOS+2]    ;F.C. >32mb                           ;AN000;
+        CMP     AX,word [VALSEC+2]    ;F.C. >32mb                           ;AN000;
         MOV     AL,1                      ;F.C. >32mb                           ;AN000;
         JA      NOREAD                    ;F.C. >32mb                           ;AN000;
         JB      doread                    ;F.C. >32mb                           ;AN000;
-        MOV     AX,WORD PTR [SECPOS]      ;F.C. >32mb                           ;AN000;
-        CMP     AX,WORD PTR [VALSEC]     ; Has sector been written before?
+        MOV     AX,word [SECPOS]      ;F.C. >32mb                           ;AN000;
+        CMP     AX,word [VALSEC]     ; Has sector been written before?
         MOV     AL,1
         JA      NOREAD          ; Skip preread if SECPOS>VALSEC
 doread:
@@ -313,7 +313,7 @@ NOREAD:
         CALL    BUFSEC
         JC      BUF_IO_FAIL
         MOV     DS,[DMAADD+2]
-ASSUME  DS:NOTHING
+;ASSUME  DS:NOTHING
         SHR     CX,1
         JNC     EVENWRT
         MOVSB
@@ -323,18 +323,18 @@ EVENWRT:
         LDS     BX,[CURBUF]
         Assert  ISBUF,<DS,BX>,"BufWrt/EvenWrt"
 
-        TEST    [BX.buf_flags],buf_dirty  ;LB. if already dirty                 ;AN000;
+        TEST    [BX+buf_flags],buf_dirty  ;LB. if already dirty                 ;AN000;
         JNZ     yesdirty                  ;LB.    don't increment dirty count   ;AN000;
         invoke  INC_DIRTY_COUNT           ;LB.                                  ;AN000;
-        OR      [BX.buf_flags],buf_dirty
+        OR      [BX+buf_flags],buf_dirty
 yesdirty:
-        LEA     SI,[BX.BufInSiz]
+        LEA     SI,[BX+BufInSiz]
         SUB     DI,SI                   ; Position in buffer
         MOV     SI,DI
         MOV     DI,BX
         invoke  PLACEBUF
         Assert  ISDPB,<ES,BP>,"BufWrt/EvenWrt"
-        CMP     SI,ES:[BP.dpb_sector_size]  ; Written last byte?
+        CMP     SI,[es:BP+dpb_sector_size]  ; Written last byte?
         JB      WBUFPLACED              ; No, leave buf where it is
         invoke  PLACEHEAD               ; Make it prime candidate for chucking
                                         ;  even though it is MRU.
@@ -352,14 +352,14 @@ Break   <NEXTSEC -- Compute next sector to read or write>
 
         procedure   NEXTSEC,NEAR
         DOSAssume   CS,<DS>,"NextSec"
-        ASSUME  ES:NOTHING
+;        ASSUME  ES:NOTHING
 
         Assert      ISDPB,<ES,BP>,"NextSec"
-        TEST    BYTE PTR [TRANS],-1
+        TEST    byte [TRANS],-1
         JZ      CLRET
         MOV     AL,[SECCLUSPOS]
         INC     AL
-        CMP     AL,ES:[BP.dpb_cluster_mask]
+        CMP     AL,[es:BP+dpb_cluster_mask]
         JBE     SAVPOS
         MOV     BX,[CLUSNUM]
         Invoke  IsEOF
@@ -430,12 +430,12 @@ Break   <OPTIMIZE -- DO A USER DISK REQUEST WELL>
 
         procedure   OPTIMIZE,NEAR
         DOSAssume   CS,<DS>,"Optimize"
-        ASSUME  ES:NOTHING
+;        ASSUME  ES:NOTHING
 
         Assert      ISDPB,<ES,BP>,"Optimize"
         PUSH    DX
         PUSH    BX
-        MOV     AL,ES:[BP.dpb_cluster_mask]
+        MOV     AL,[es:BP+dpb_cluster_mask]
         INC     AL              ; Number of sectors per cluster
         MOV     AH,AL
         SUB     AL,DL           ; AL = Number of sectors left in first cluster
@@ -495,7 +495,7 @@ FINCLUS:
         SUB     DX,CX           ; Number of sectors still needed
         PUSH    DX
         MOV     AX,CX
-        MUL     ES:[BP.dpb_sector_size]  ; Number of sectors times sector size
+        MUL     [es:BP+dpb_sector_size]  ; Number of sectors times sector size
         MOV     SI,[NEXTADD]
         ADD     AX,SI           ; Adjust by size of transfer
         MOV     [NEXTADD],AX
@@ -537,11 +537,11 @@ Break   <FIGREC -- Figure sector in allocation unit>
 ; No other registers affected.
 
         procedure   FIGREC,NEAR
-ASSUME  DS:NOTHING,ES:NOTHING
+;ASSUME  DS:NOTHING,ES:NOTHING
 
         Assert      ISDPB,<ES,BP>,"FigRec"
         PUSH    CX
-        MOV     CL,ES:[BP.dpb_cluster_shift]
+        MOV     CL,[es:BP+dpb_cluster_shift]
         DEC     DX
         DEC     DX
         MOV     [HIGH_SECTOR],0              ;F.C. >32mb
@@ -557,7 +557,7 @@ noshift:
 
 ;       SHL     DX,CL
         OR      DL,BL
-        ADD     DX,ES:[BP.dpb_first_sector]
+        ADD     DX,[es:BP+dpb_first_sector]
         ADC     [HIGH_SECTOR],0              ;F.C. >32mb
         POP     CX
         return
@@ -645,7 +645,7 @@ Break   <ALLOCATE -- Assign disk space>
         PROCEDURE   ALLOCATE,NEAR
 
         DOSAssume   CS,<DS>,"Allocate"
-        ASSUME  ES:NOTHING
+;        ASSUME  ES:NOTHING
 
         Assert      ISDPB,<ES,BP>,"Allocate"
         PUSH    BX                      ; save (bx)
@@ -660,7 +660,7 @@ Break   <ALLOCATE -- Assign disk space>
 
         MOV     DX,BX
         Assert      ISDPB,<ES,BP>,"Allocate/Unpack"
-        mov     bx,es:[bp.dpb_next_free]
+        mov     bx,[es:bp+dpb_next_free]
         cmp     bx,2
         ja      findfre
 
@@ -669,7 +669,7 @@ Break   <ALLOCATE -- Assign disk space>
 
 ads1:
         Assert      ISDPB,<ES,BP>,"Alloc/ads1"
-        mov     es:[bp.dpb_next_free],2
+        mov     [es:bp+dpb_next_free],2
         mov     bx,1                    ; Counter next instruction so first
                                         ;       cluster examined is 2
 
@@ -683,7 +683,7 @@ ads1:
 FINDFRE:
         INC     BX
         Assert      ISDPB,<ES,BP>,"Alloc/findfre"
-        CMP     BX,ES:[BP.dpb_max_cluster]
+        CMP     BX,[es:BP+dpb_max_cluster]
         JBE     aupk
         jmp     ads7            ; at end of disk
 aupk:
@@ -696,14 +696,14 @@ aupk:
 ;       (BX) = found free cluster #
 ;       (DX) = current last cluster in file
 
-        mov     es:[bp.dpb_next_free],bx        ; next time start search here
+        mov     [es:bp+dpb_next_free],bx        ; next time start search here
         xchg    ax,dx           ; save (dx) in ax
         mov     dx,1            ; mark this free guy as "1"
         invoke  PACK            ; set special "temporary" mark
         jc      ads4            ; FAT error             [INTERR?]
-        CMP     ES:[BP.dpb_free_cnt],-1 ; Free count valid?
+        CMP     [es:BP+dpb_free_cnt],-1 ; Free count valid?
         JZ      NO_ALLOC                ; No
-        DEC     ES:[BP.dpb_free_cnt]    ; Reduce free count by 1
+        DEC     [es:BP+dpb_free_cnt]    ; Reduce free count by 1
 NO_ALLOC:
         xchg    ax,dx           ; (dx) = current last cluster in file
         XCHG    BX,DX
@@ -752,13 +752,13 @@ ads4:   POP     BX
 ;; 11/6/86 FastSeek
 dofastk:
         PUSH    DX
-        MOV     DL,ES:[BP.dpb_drive]              ; get drive #
+        MOV     DL,[es:BP+dpb_drive]              ; get drive #
 
         PUSH    ES
         LES     DI,[THISSFT]
         Assert  ISSFT,<ES,DI>,"Allocate/ads4"
-        MOV     ES:[DI.sf_firclus],BX
-        MOV     ES:[DI.sf_lstclus],BX
+        MOV     [es:DI+sf_firclus],BX
+        MOV     [es:DI+sf_lstclus],BX
 
         TEST    [FastSeekflg],Fast_yes           ; fastseek installed
         JZ      do_norm5                         ; no
@@ -779,7 +779,7 @@ do_norm5:
 ;** we're at the end of the disk, and not satisfied.  See if we've scanned ALL
 ;   of the disk...
 
-ads7:   cmp     es:[bp.dpb_next_free],2
+ads7:   cmp     [es:bp+dpb_next_free],2
 if not debug
         jz      tmplab2         ;
         jmp     ads1            ; start scan from front of disk
@@ -788,7 +788,7 @@ else
         jz      tmplab
         jmp     ads1
 tmplab:
-endif
+end if
 
 ;   Sorry, we've gone over the whole disk, with insufficient luck.  Lets give
 ;   the space back to the free list and tell the caller how much he could have
@@ -822,7 +822,7 @@ EndProc ALLOCATE
 
         procedure   RESTFATBYT,NEAR
         DOSAssume   CS,<DS>,"RestFATByt"
-        ASSUME  ES:NOTHING
+;        ASSUME  ES:NOTHING
 
         PUSH    BX
         PUSH    DX
@@ -848,7 +848,7 @@ Break   <RELEASE -- DEASSIGN DISK SPACE>
 
         procedure   RELEASE,NEAR
         DOSAssume   CS,<DS>,"Release"
-        ASSUME  ES:NOTHING
+;        ASSUME  ES:NOTHING
 
         XOR     DX,DX
 entry   RELBLKS
@@ -868,9 +868,9 @@ entry   RELBLKS
         retc
         OR      DX,DX
         JNZ     NO_DEALLOC              ; Was putting EOF mark
-        CMP     ES:[BP.dpb_free_cnt],-1 ; Free count valid?
+        CMP     [es:BP+dpb_free_cnt],-1 ; Free count valid?
         JZ      NO_DEALLOC              ; No
-        INC     ES:[BP.dpb_free_cnt]    ; Increase free count by 1
+        INC     [es:BP+dpb_free_cnt]    ; Increase free count by 1
 NO_DEALLOC:
         MOV     BX,AX
         dec     ax              ; check for "1"
@@ -893,7 +893,7 @@ Break   <GETEOF -- Find the end of a file>
 
         procedure   GETEOF,NEAR
         DOSAssume   CS,<DS>,"GetEOF"
-        ASSUME  ES:NOTHING
+;        ASSUME  ES:NOTHING
 
         Assert      ISDPB,<ES,BP>,"GetEof"
         invoke  UNPACK
@@ -918,7 +918,7 @@ Break   <FS_TRUNC_EOF - truncate EOF for Fastseek>
 ;       carry clear: EOF and do truncate
 
         procedure   FS_TRUNC_EOF,NEAR
-        ASSUME  ES:NOTHING,DS:NOTHING
+;        ASSUME  ES:NOTHING,DS:NOTHING
 
         MOV     BX,DI                             ; get beginning physical#     ;AN000;
         invoke  IsEOF                             ; is EOF                      ;AN000;
@@ -933,6 +933,5 @@ noteof2:                                                                        
         return                                                                  ;AN000;
 EndProc FS_TRUNC_EOF                                                            ;AN000;
 
-CODE    ENDS
-    END
-
+end if
+;    END

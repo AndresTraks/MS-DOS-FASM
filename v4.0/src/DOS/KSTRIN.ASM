@@ -12,15 +12,15 @@ Break
 ; Returns:
 ;	None
 
-	procedure   $STD_CON_STRING_INPUT,NEAR	 ;System call 10
-ASSUME	DS:NOTHING,ES:NOTHING
+	procedure   STD_CON_STRING_INPUT$,NEAR	 ;System call 10
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 	MOV	AX,SS
 	MOV	ES,AX
 	MOV	SI,DX
 	XOR	CH,CH
 	LODSW
-	mov	cs:Temp_Var,si	 ;AN000;   ; 3/31/KK
+	mov	[cs:Temp_Var],si	 ;AN000;   ; 3/31/KK
 ;
 ; AL is the buffer length
 ; AH is the template length
@@ -34,7 +34,7 @@ ASSUME	DS:NOTHING,ES:NOTHING
  ;
 	CMP	AL,BL
 	JBE	NOEDIT		;If length of buffer inconsistent with contents
-	CMP	BYTE PTR [BX+SI],c_CR
+	CMP	byte [BX+SI],c_CR
 	JZ	EDITON		;If CR correctly placed EDIT is OK
 ;
 ; The number of chars in the template is >= the number of chars in buffer or
@@ -53,7 +53,7 @@ NEWLIN:
 	MOV	AL,[CARPOS]
 	MOV	[STARTPOS],AL	;Remember position in raw buffer
 	PUSH	SI
-	MOV	DI,OFFSET DOSGROUP:INBUF	;Build the new line here
+	MOV	DI,INBUF	;Build the new line here
 	MOV	[INSMODE],CH	;Insert mode off
 	MOV	BH,CH		;No chars from template yet
 	MOV	DH,CH		;No chars to new line yet
@@ -178,7 +178,7 @@ ISNORM:
 	jmp	short InterLoop 	;AN000;; 2/17/KK
 CONTIN1:				;AN000;; 2/13/KK
 ;;;CONTIN:				;AN000;; 2/13/KK
-	CMP	BYTE PTR [INSMODE],0
+	CMP	byte [INSMODE],0
 	JNZ	GETCH0			; insertmode => don't advance template
 	CMP	BH,BL
 	JAE	GETCH0			; no more characters in template
@@ -186,7 +186,7 @@ CONTIN1:				;AN000;; 2/13/KK
 	INC	BH			; remember position in template
 
 	PUSH	AX			;
-	MOV	AL,BYTE PTR [SI-1]	;AN000;;		    2/13/KK
+	MOV	AL,byte [SI-1]	;AN000;;		    2/13/KK
 	invoke	TESTKANJ		;AN000;;		    2/13/KK
 	POP	AX			;AN000;;		    2/13/KK
 	JZ	GETCH0			;AN000;; Wasn't a dual byte 2/13/KK
@@ -222,7 +222,7 @@ ENDLIN:
 COPYNEW:
 	SaveReg <DS,ES>
 	RestoreReg <DS,ES>		; XCHG ES,DS
-	MOV	SI,OFFSET DOSGROUP:INBUF
+	MOV	SI,INBUF
 	MOV	CL,DH			; set up count
 	REP	MOVSB			; Copy final line to user buffer
 	return
@@ -252,13 +252,13 @@ WordLoop:
 	Call	BackSpace		; backspace the one spot
 	OR	DH,DH
 	JZ	GetChJ
-	MOV	AL,ES:[DI-1]
+	MOV	AL,[es:DI-1]
 	cmp	al,'0'
 	jb	GetChj
 	cmp	al,'9'
 	jbe	WordLoop
 	OR	AL,20h
-	CMP	AL,'a'
+	CMP	AL,'[a]'
 	JB	GetChJ
 	CMP	AL,'z'
 	JBE	WordLoop
@@ -291,7 +291,7 @@ BackSpace:
 	OR	DH,DH
 	JZ	OLDBAK		;No chars in line, do nothing to line
 	CALL	BACKUP		;Do the backup
-	MOV	AL,ES:[DI]	;Get the deleted char
+	MOV	AL,[es:DI]	;Get the deleted char
 	invoke	TESTKANJ	;AN000;2/13/KK
 	JNZ	OLDBAK		;AN000; Was a dual byte, done  2/13/KK
 	CMP	AL," "
@@ -306,7 +306,7 @@ BackSpace:
 ;; 9/27/86 fix for ctrl-U backspace
 	CALL	BACKMES 	;Was a control char, zap the '^'
 OLDBAK:
-	CMP	BYTE PTR [INSMODE],0
+	CMP	byte [INSMODE],0
 	retnz			;In insert mode, done
 	OR	BH,BH
 	retz			;Not advanced in template, stay where we are
@@ -318,13 +318,13 @@ OLDBAK:
 				;AN000;;  one, could not have dual byte
 ;;;;	POP	AX		;AN000;; Get start of template
 ;;;;	PUSH	AX		;AN000;; Put it back on stack
-	mov	ax,cs:Temp_Var	;AN000;; 3/31/KK
+	mov	ax,[cs:Temp_Var]	;AN000;; 3/31/KK
 	XCHG	AX,SI		;AN000;
 LOOKDUAL:			;AN000;
 	CMP	SI,AX		;AN000;
 	JAE	ATLOC		;AN000;
 	PUSH	AX		;AN000;
-	MOV	AL,BYTE PTR [SI];AN000;
+	MOV	AL,byte [SI];AN000;
 	invoke	TESTKANJ	;AN000;
 	POP	AX		;AN000;
 	JZ	ONEINC		;AN000;
@@ -353,7 +353,7 @@ BAKTAB:
 FNDPOS:
 	SCASB			;Look back
 	JNA	CHKCNT
-	CMP	BYTE PTR ES:[DI+1],9
+	CMP	byte [es:DI+1],9
 	JZ	HAVTAB		;Found a tab
 	DEC	BL		;Back one char if non tab control char
 CHKCNT:
@@ -380,12 +380,12 @@ BACKUP:
 	OR	DH,DH			;AN000;
 	JZ	BACKMES 		;AN000;; If deleted one and got only, no dual
 	MOV	AX,DI			;AN000;
-	MOV	DI,OFFSET DOSGROUP:INBUF;AN000;
+	MOV	DI,INBUF;AN000;
 LOOKDUAL2:				;AN000;
 	CMP	DI,AX			;AN000;
 	JAE	ATLOC2			;AN000;
 	PUSH	AX			;AN000;
-	MOV	AL,BYTE PTR ES:[DI]	;AN000;
+	MOV	AL,byte [es:DI]	;AN000;
 	invoke	TESTKANJ		;AN000;
 	POP	AX			;AN000;
 	JZ	ONEINC2 		;AN000;
@@ -434,7 +434,7 @@ BACKMES:
 
 ;Copy CX chars from template to line
 COPYEACH:
-	MOV	BYTE PTR [INSMODE],0	;All copies turn off insert mode
+	MOV	byte [INSMODE],0	;All copies turn off insert mode
 	CMP	DH,DL
 	JZ	GETCH2			;At end of line, can't do anything
 	CMP	BH,BL
@@ -479,7 +479,7 @@ GETCH2:
 	INC	BH			;Ahead in template
 	INC	SI
 	PUSH	AX			;AN000;; 2/13/KK
-	MOV	AL,BYTE PTR [SI-1]	;AN000;; 2/13/KK
+	MOV	AL,byte [SI-1]	;AN000;; 2/13/KK
 	invoke	TESTKANJ		;AN000;; 2/13/KK
 	POP	AX			;AN000;; 2/13/KK
 	JZ	GETCH2			;AN000;; 2/13/KK
@@ -500,12 +500,12 @@ GETCH2:
 ;	Make sure nothing extra on stack when this routine
 ;	is called!!! (no PUSHes before calling it).
 
-TABLE	SEGMENT 			;AN000;; 2/17/KK
-Public	KISTR001S,KISTR001E		;AN000;; 2/17/KK
-KISTR001S	label	byte		;AN000;; 2/17/KK
+if SEGSEL = S_TABLE;AN000;; 2/17/KK
+;Public	KISTR001S,KISTR001E		;AN000;; 2/17/KK
+KISTR001S:;AN000;; 2/17/KK
 LOOKSIZ DB	0			;AN000;; 0 if byte, NZ if word	2/17/KK
-KISTR001E	label	byte		;AN000;; 2/17/KK
-TABLE	ENDS				;AN000;; 2/17/KK
+KISTR001E:;AN000;; 2/17/KK
+end if;AN000;; 2/17/KK
 
 FINDOLD:
 	MOV	[LOOKSIZ],0		;AN000;; Initialize to byte    2/13/KK
@@ -533,7 +533,7 @@ GOTLSIZ:
 	DEC	CX		;Cannot point past end, limit search
 	JZ	NOTFND		;If only one char in template, forget it
 	PUSH	AX			;AN000;; 2/13/KK
-	MOV	AL,BYTE PTR [SI]	;AN000;; 2/13/KK
+	MOV	AL,byte [SI]	;AN000;; 2/13/KK
 	invoke	TESTKANJ		;AN000;; 2/13/KK
 	POP	AX			;AN000;; 2/13/KK
 	JZ	NOTDUAL5		;AN000;; 2/13/KK
@@ -549,7 +549,7 @@ NOTDUAL5:				;AN000;; 2/13/KK
 ;;;;	REPNE	SCASB		;Look  2/13/KK
 ;--------------------- Start of DBCS 2/13/KK
 	PUSH	AX			;AN000;
-	MOV	AL,BYTE PTR ES:[DI]	;AN000;
+	MOV	AL,byte [es:DI]	;AN000;
 	invoke	TESTKANJ		;AN000;
 	POP	AX			;AN000;
 	JZ	ONEINC5 		;AN000;
@@ -560,7 +560,7 @@ ONEINC5:				;AN000;
 	JNZ	LOOKWORD		;AN000;
 LOOKBYTE:				;AN000;
 	PUSH	AX			;AN000;
-	MOV	AL,BYTE PTR ES:[DI]	;AN000;
+	MOV	AL,byte [es:DI]	;AN000;
 	invoke	TESTKANJ		;AN000;
 	POP	AX			;AN000;
 	JZ	TESTITB 		;AN000;
@@ -572,7 +572,7 @@ LOOKBYTE:				;AN000;
 					;AN000;
 TESTITB:				;AN000;
 	DEC	CX			;AN000;
-	CMP	AL,ES:[DI]		;AN000;
+	CMP	AL,[es:DI]		;AN000;
 	JZ	ATSPOT			;AN000;
 	INC	DI			;AN000;
 	INC	CX			;AN000;; Counter next instruction
@@ -596,7 +596,7 @@ NOTFND:
 ;------------------------- Start of DBCS 2/13/KK
 LOOKWORD:			       ;AN000;
 	PUSH	AX		       ;AN000;
-	MOV	AL,BYTE PTR ES:[DI]    ;AN000;
+	MOV	AL,byte [es:DI]    ;AN000;
 	invoke	TESTKANJ	       ;AN000;
 	POP	AX		       ;AN000;
 	JNZ	TESTITW 	       ;AN000;
@@ -606,7 +606,7 @@ LOOKWORD:			       ;AN000;
 				       ;AN000;
 TESTITW:			       ;AN000;
 	DEC	CX		       ;AN000;
-	CMP	AX,ES:[DI]	       ;AN000;
+	CMP	AX,[es:DI]	       ;AN000;
 	JZ	ATSPOT		       ;AN000;
 	INC	DI		       ;AN000;
 	INC	DI		       ;AN000;
@@ -630,7 +630,7 @@ entry	REEDIT
 
 	entry	EXITINS
 	entry	ENTERINS
-	NOT	BYTE PTR [INSMODE]
+	NOT	byte [INSMODE]
 	JMP	GETCH
 
 ;Put a real live ^Z in the buffer (embedded)
@@ -645,24 +645,24 @@ entry	REEDIT
 	MOV	AL,c_LF
 	JMP	OUTT
 
-EndProc $STD_CON_STRING_INPUT
+EndProc STD_CON_STRING_INPUT$
 
 ;-------------- Start of DBCS 2/17/KK
-PUBLIC	IntCNE0 			;AN000;
+;PUBLIC	IntCNE0 			;AN000;
 procedure	IntCNE0,near		;AN000;
-	push	word ptr [InterCon]	;AN000;
+	push	word [InterCon]	;AN000;
 	mov	[InterCon],01		;AN000;
 get_com:				;AN000;
 	invoke	INTER_CON_INPUT_NO_ECHO ;AN000;; get a byte character
-	pop	word ptr [InterCon]	;AN000;
+	pop	word [InterCon]	;AN000;
 	ret				;AN000;
-IntCNE0 endp				;AN000;
+;IntCNE0 endp				;AN000;
 					;AN000;
 procedure	IntCNE1,near		;AN000;
-	push	word ptr [InterCon]	;AN000;
+	push	word [InterCon]	;AN000;
 	mov	[InterCon],00		;AN000;
 	jmp	short get_com		;AN000;
-IntCNE1 endp				;AN000;
+;IntCNE1 endp				;AN000;
 					;AN000;
 	procedure	outchax,near	;AN000;
 	pushf				;AN000;
@@ -674,7 +674,7 @@ sj1:					;AN000;
 	mov	[SaveCurFlg],0		;AN000;
 	popf				;AN000;
 	ret				;AN000;
-outchax endp				;AN000;
+;outchax endp				;AN000;
 					;AN000;
 	procedure	bufoutx,near	;AN000;
 	pushf				;AN000;
@@ -686,5 +686,5 @@ sj2:					;AN000;
 	mov	[SaveCurFlg],0		;AN000;
 	popf				;AN000;
 	ret				;AN000;
-bufoutx endp				;AN000;
+;bufoutx endp				;AN000;
 ;-------------- End of DBCS 2/17/KK

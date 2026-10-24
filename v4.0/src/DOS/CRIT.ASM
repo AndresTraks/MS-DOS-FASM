@@ -11,27 +11,27 @@ NAME  CRIT
 ;       Created: ARR 30 March 1983
 ;
 
-.xlist
+;.xlist
 ;
 ; get the appropriate segment definitions
 ;
-include dosseg.asm
+INCLUDE '../INC/DOSSEG.ASM'
 
-CODE    SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME  SS:NOTHING,CS:DOSGROUP
+if SEGSEL = S_CODE
+;	ASSUME  SS:NOTHING,CS:DOSGROUP
 
-.xcref
-INCLUDE DOSSYM.INC
-.cref
-.list
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+;.cref
+;.list
 
 	I_need  User_In_AX,WORD
 	i_need  CurrentPDB,WORD
 if debug
 	I_need  BugLev,WORD
 	I_need  BugTyp,WORD
-include bugtyp.asm
-endif
+INCLUDE '../INC/BUGTYP.ASM'
+end if
 
 Break   <Critical section handlers>
 
@@ -42,13 +42,13 @@ Break   <Critical section handlers>
 ;   by the sharer to be a PUSH AX to complete the correct routines.
 ;
 Procedure   EcritDisk,NEAR
-	public  EcritMem
-	public  EcritSFT
-ECritMEM    LABEL   NEAR
-ECritSFT    LABEL   NEAR
+;	public  EcritMem
+;	public  EcritSFT
+ECritMEM:
+ECritSFT:
 	RET
 ;       PUSH    AX
-	fmt     TypSect,LevReq,<"PDB $x entering $x">,<CurrentPDB,sect>
+	fmt     TypSect,LevReq,<"PDB x$ entering x$">,<CurrentPDB,sect>
 	MOV     AX,8000h+critDisk
 	INT     int_ibm
 	POP     AX
@@ -56,13 +56,13 @@ ECritSFT    LABEL   NEAR
 EndProc EcritDisk
 
 Procedure   LcritDisk,NEAR
-	public  LcritMem
-	public  LcritSFT
-LCritMEM    LABEL   NEAR
-LCritSFT    LABEL   NEAR
+;	public  LcritMem
+;	public  LcritSFT
+LCritMEM:
+LCritSFT:
 	RET
 ;       PUSH    AX
-	fmt     TypSect,LevReq,<"PDB $x entering $x">,<CurrentPDB,sect>
+	fmt     TypSect,LevReq,<"PDB x$ entering x$">,<CurrentPDB,sect>
 	MOV     AX,8100h+critDisk
 	INT     int_ibm
 	POP     AX
@@ -72,7 +72,7 @@ EndProc LcritDisk
 Procedure   EcritDevice,NEAR
 	RET
 ;       PUSH    AX
-	fmt     TypSect,LevReq,<"PDB $x entering $x">,<CurrentPDB,sect>
+	fmt     TypSect,LevReq,<"PDB x$ entering x$">,<CurrentPDB,sect>
 	MOV     AX,8000h+critDevice
 	INT     int_ibm
 	POP     AX
@@ -88,5 +88,5 @@ Procedure   LcritDevice,NEAR
 	return
 EndProc LcritDevice
 
-CODE    ENDS
-    END
+end if
+;    END

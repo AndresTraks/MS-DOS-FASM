@@ -4,17 +4,17 @@
 ; Dispatcher code
 ;
 
-.xlist
-.xcref
-INCLUDE DOSSYM.INC
-include dosseg.asm
-.cref
-.list
+;.xlist
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DOSSEG.ASM'
+;.cref
+;.list
 
 AsmVars <Kanji, Debug>
 
 BREAK   <Copyright notice and version>
-CODE    SEGMENT BYTE PUBLIC 'CODE'
+if SEGSEL = S_CODE
 
 
         I_need  CurrentPDB,WORD
@@ -54,23 +54,23 @@ CODE    SEGMENT BYTE PUBLIC 'CODE'
         I_need  DOS34_FLAG,WORD            ;AN000;
         I_need  ACT_PAGE,WORD              ;AN000;
 
-        IF      NOT IBM
+        if      NOT IBM
         I_need  OEM_HANDLER,DWORD
-        ENDIF
+        end if
 
-	IF	BUFFERFLAG
+	if	BUFFERFLAG
 	I_am	SETVECTFLAG,BYTE,<0>
 	i_need	BUF_EMS_SEG_CNT,WORD	     ; DOS 4.00 EMS seg count		;AN000;
 	i_need	BUF_EMS_MODE,BYTE	     ; DOS 4.00 EMS mode 		;AN000;
 	i_am	BUF_EMS_MAP_USER,12,<0,0,0,0,0,0,0,0,0,0,0,0>
-	ENDIF
+	end if
 
-ASSUME  CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;ASSUME  CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
 BREAK   <System call entry points and dispatcher>
-ASSUME  CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;ASSUME  CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
-BREAK <$Set_CTRL_C_Trapping -- En/Disable ^C check in dispatcher>
+BREAK <Set_CTRL_C_Trapping$ -- En/Disable ^C check in dispatcher>
 
 ; Inputs:
 ;       AL = 0 read ^C status
@@ -84,11 +84,11 @@ BREAK <$Set_CTRL_C_Trapping -- En/Disable ^C check in dispatcher>
 ; Outputs:
 ;       If AL = 0 then DL = 0/1 for ^C off/on
 
-        procedure   $SET_CTRL_C_TRAPPING,NEAR
-ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
+        procedure   SET_CTRL_C_TRAPPING$,NEAR
+;ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
         OR      AL,AL
         JNZ     Check1
-        MOV     DL,CntCFlag
+        MOV     DL,[CntCFlag]
         IRET
 Check1:
         CMP     AL,2
@@ -101,7 +101,7 @@ Check1:
         IRET
 SetAndRet:
         AND     DL,01h
-        XCHG    CntCFlag,DL
+        XCHG    [CntCFlag],DL
         IRET
 BadVal:
         MOV     AL,0FFH
@@ -138,9 +138,9 @@ QueryDOSboot:                            ;AN000;
 
 ;; DOS 4.00 File Tagging
 
-EndProc $SET_CTRL_C_TRAPPING
+EndProc SET_CTRL_C_TRAPPING$
 
-BREAK <$Get_current_PDB -- Set/Get PDB value>
+BREAK <Get_current_PDB$ -- Set/Get PDB value>
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
@@ -150,21 +150,21 @@ BREAK <$Get_current_PDB -- Set/Get PDB value>
 ; $Set_current_PDB takes BX and sets it to be the current process
 ;   *** THIS FUNCTION CALL IS SUBJECT TO CHANGE!!! ***
 ;
-        procedure   $SET_CURRENT_PDB,NEAR
-        ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
+        procedure   SET_CURRENT_PDB$,NEAR
+;        ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
         MOV     [CurrentPDB],BX
         IRET
-EndProc $SET_CURRENT_PDB
+EndProc SET_CURRENT_PDB$
 
 ;
 ; $get_current_PDB returns in BX the current process
 ;   *** THIS FUNCTION CALL IS SUBJECT TO CHANGE!!! ***
 ;
-procedure   $GET_CURRENT_PDB,NEAR
-        ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
+procedure   GET_CURRENT_PDB$,NEAR
+;        ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
         MOV     BX,[CurrentPDB]
         IRET
-EndProc $GET_CURRENT_PDB
+EndProc GET_CURRENT_PDB$
 ;            C  A  V  E  A  T     P  R  O  G  R  A  M  M  E  R             ;
 ;                                                                          ;
 ;----+----+----+----+----+----+----+----+----+----+----+----+----+----+----;
@@ -173,11 +173,11 @@ EndProc $GET_CURRENT_PDB
 ; Sets the Printer Flag to whatever is in AL.
 ; NOTE: THIS PROCEDURE IS SUBJECT TO CHANGE!!!
 ;
-Procedure $Set_Printer_Flag
-ASSUME DS:NOTHING, ES:NOTHING, SS:NOTHING
+Procedure Set_Printer_Flag$
+;ASSUME DS:NOTHING, ES:NOTHING, SS:NOTHING
         mov     [Printer_Flag],al
         IRET
-EndProc $Set_Printer_Flag
+EndProc Set_Printer_Flag$
 
         procedure   SYSTEM_CALL,NEAR
 ;
@@ -215,7 +215,7 @@ BADCALL:
         CLI
         PUSH    AX                      ; Save segment
         PUSH    [User_SP]               ; Stack now ordered as if INT had been used
-        CMP     CL,MAXCALL              ; This entry point doesn't get as many calls
+        CMP     CL,[MAXCALL]              ; This entry point doesn't get as many calls
         JA      BADCALL
         MOV     AH,CL
         JMP     SHORT SavRegs
@@ -227,14 +227,14 @@ BADCALL:
 
 entry   COMMAND                         ; Interrupt call entry point (INT 21H)
 
-        IF      NOT IBM
+        if      NOT IBM
         CMP     AH,SET_OEM_HANDLER
         JB      NOTOEM
-        JMP     $SET_OEM_HANDLER
+        JMP     SET_OEM_HANDLER$
 NOTOEM:
-        ENDIF
+        end if
 
-        CMP     AH,MAXCOM
+        CMP     AH,[MAXCOM]
         JA      BadCall
 
 ;
@@ -244,17 +244,17 @@ NOTOEM:
 ;
 SAVREGS:
         CMP     AH,GET_CURRENT_PDB
-        JZ      $GET_CURRENT_PDB
+        JZ      GET_CURRENT_PDB$
         CMP     AH,GetCurrentPSP
-        JZ      $GET_CURRENT_PDB
+        JZ      GET_CURRENT_PDB$
         CMP     AH,SET_CURRENT_PDB
-        JZ      $SET_CURRENT_PDB
+        JZ      SET_CURRENT_PDB$
         CMP     AH,Set_CTRL_C_Trapping
         JNZ     chkprt
-        JMP     $Set_CTRL_C_Trapping
+        JMP     Set_CTRL_C_Trapping$
 chkprt:
         CMP     AH,SET_PRINTER_FLAG
-        JZ      $Set_Printer_Flag
+        JZ      Set_Printer_Flag$
 ;
 ; Preserve all user's registers on his own stack.
 ;
@@ -263,11 +263,11 @@ chkprt:
         MOV     [SaveBX],BX
         MOV     BX,CS
         MOV     DS,BX
-        ASSUME  DS:DOSGROUP
+;        ASSUME  DS:DOSGROUP
         INC     [INDOS]                 ; Flag that we're in the DOS
         XOR     AX,AX
         MOV     [USER_ID],AX
-        MOV     AX,CurrentPDB           ; current process
+        MOV     AX,[CURRENTPDB]           ; current process
         MOV     [PROC_ID],AX            ; Assume local machine for the moment
 ;
 ; Provide one level of reentrancy for INT 24 recallability.
@@ -284,23 +284,23 @@ chkprt:
 ; save user stack in his area for later returns (possibly from EXEC)
 ;
         MOV     DS,[CurrentPDB]
-ASSUME  DS:NOTHING
-        MOV     WORD PTR DS:[PDB_User_stack],SP
-        MOV     WORD PTR DS:[PDB_User_stack+2],SS
+;ASSUME  DS:NOTHING
+        MOV     word [PDB_User_stack],SP
+        MOV     word [PDB_User_stack+2],SS
 
-        MOV     fSharing,0              ; allow redirection
+        MOV     [fSharing],0              ; allow redirection
 
         MOV     BX,CS                   ; no holes here.
         MOV     SS,BX
-ASSUME  SS:DOSGROUP
+;ASSUME  SS:DOSGROUP
 
 entry   REDISP
-        MOV     SP,OFFSET DOSGROUP:AUXSTACK ; Enough stack for interrupts
+        MOV     SP,AUXStack ; Enough stack for interrupts
         STI                             ; stack is in our space now...
- IF  DBCS                                       ;AN000;
-        MOV     BH, BYTE PTR DS:[PDB_InterCon]  ;AN000;; get interim mode  2/13/KK
-        MOV     SS:[InterCon], BH               ;AN000;; 2/13/KK
- ENDIF                                          ;AN000;
+ if  DBCS                                       ;AN000;
+        MOV     BH, byte [PDB_InterCon]  ;AN000;; get interim mode  2/13/KK
+        MOV     [ss:InterCon], BH               ;AN000;; 2/13/KK
+ end if                                          ;AN000;
         MOV     BX,CS
         MOV     DS,BX
         DOSAssume   CS,<DS>,"MSCODE/ReDisp"
@@ -315,8 +315,8 @@ entry   REDISP
         XOR     BH,BH
         MOV     [CONSWAP],BH            ; random clean up of possibly mis-set flags
         MOV     [IDLEINT],1             ; presume that we can issue INT 28
-        MOV     BYTE PTR [NoSetDir],BH  ; set directories on search
-        MOV     BYTE PTR [FAILERR],BH   ; FAIL not in progress
+        MOV     byte [NoSetDir],BH  ; set directories on search
+        MOV     byte [FAILERR],BH   ; FAIL not in progress
         MOV     BL,AH
         SHL     BX,1                    ; 2 bytes per call in table
         CLD
@@ -344,7 +344,7 @@ entry   REDISP
         JA      DSKROUT
         CMP     [ERRORMODE],0           ; Are we in an INT 24?
         JNZ     DISPCALL                ; Stay on AUXSTACK if INT 24.
-        MOV     SP,OFFSET DOSGROUP:IOSTACK
+        MOV     SP,IOStack
         JMP     SHORT DISPCALL
 ;
 ; We are on a system call that is classified as "the rest".  We place
@@ -372,44 +372,44 @@ DSKROUT:
 ; Since we are going to be running on the DSKStack and since INT 28 people
 ; will use the DSKStack, we must turn OFF the generation of INT 28's.
 ;
-        MOV     IdleInt,0
-        MOV     SP,OFFSET DOSGROUP:DSKSTACK
+        MOV     [IdleInt],0
+        MOV     SP,DSKSTACK
         TEST    [CNTCFLAG],-1
         JZ      DISPCALL                ; Extra ^C checking is disabled
         PUSH    AX
         invoke  DSKSTATCHK
         POP     AX
 DISPCALL:
-        MOV     BX,CS:Dispatch[BX]
-        XCHG    BX,SaveBX
-        MOV     DS,SaveDS
+        MOV     BX,[cs:Dispatch+BX]
+        XCHG    BX,[SaveBX]
+        MOV     DS,[SaveDS]
 
-IF	BUFFERFLAG
-	mov	cs:[SETVECTFLAG], 0
+if	BUFFERFLAG
+	mov	[cs:SETVECTFLAG], 0
 	cmp	ah, 25h
 	jne	saveuser
 	cmp	ah, 35h
 	jne	saveuser
-	mov	cs:[SETVECTFLAG], 1
+	mov	[cs:SETVECTFLAG], 1
 saveuser:
 	invoke	SAVE_USER_MAP		    ;AN000;LB.	save EMS map
-ENDIF
+end if
 
-        ASSUME  DS:NOTHING
-        CALL    SaveBX
+;        ASSUME  DS:NOTHING
+        CALL    [SaveBX]
 
-IF	BUFFERFLAG
+if	BUFFERFLAG
       invoke  RESTORE_USER_MAP            ;AN000;LB.  retsore EMS map
-ENDIF
+end if
 
         entry   LEAVEDOS
-ASSUME  SS:NOTHING                      ; User routines may misbehave
+;ASSUME  SS:NOTHING                      ; User routines may misbehave
         CLI
         DEC     [INDOS]
         MOV     SS,[user_SS]
         MOV     SP,[user_SP]
         MOV     BP,SP
-        MOV     BYTE PTR [BP.user_AX],AL
+        MOV     byte [BP+user_environ.user_AX],AL
         MOV     AX,[NSP]
         MOV     [user_SP],AX
         MOV     AX,[NSS]
@@ -422,9 +422,9 @@ EndProc SYSTEM_CALL
 ; restore_world restores all registers ('cept SS:SP, CS:IP, flags) from
 ; the stack prior to giving the user control
 ;
-        ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
+;        ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
         procedure   restore_world,NEAR
-        POP     restore_tmp             ; POP     restore_tmp
+        POP     [restore_tmp]             ; POP     restore_tmp
         POP     AX                      ; PUSH    ES
         POP     BX                      ; PUSH    DS
         POP     CX                      ; PUSH    BP
@@ -434,15 +434,15 @@ EndProc SYSTEM_CALL
         POP     BP                      ; PUSH    CX
         POP     DS                      ; PUSH    BX
         POP     ES                      ; PUSH    AX
-        JMP     restore_tmp             ; PUSH    restore_tmp
+        JMP     [restore_tmp]             ; PUSH    restore_tmp
 EndProc restore_world
 
 ;
 ; save_world saves complete registers on the stack
 ;
-        ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
+;        ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
         procedure   save_world,NEAR
-        POP     restore_tmp
+        POP     [restore_tmp]
         PUSH    ES
         PUSH    DS
         PUSH    BP
@@ -452,10 +452,10 @@ EndProc restore_world
         PUSH    CX
         PUSH    BX
         PUSH    AX
-        JMP     restore_tmp             ; PUSH    restore_tmp
+        JMP     [restore_tmp]             ; PUSH    restore_tmp
 EndProc save_world
 
-IF BUFFERFLAG
+if BUFFERFLAG
 
 Break	<SAVE_USER_MAP - save map >							;AN000;
 ; Inputs:									;AN000;
@@ -467,11 +467,11 @@ Break	<SAVE_USER_MAP - save map >							;AN000;
 ; No other registers altered							;AN000;
 										;AN000;
 Procedure   SAVE_USER_MAP,NEAR							 ;AN000;
-	ASSUME	DS:NOTHING,ES:NOTHING						;AN000;
+;	ASSUME	DS:NOTHING,ES:NOTHING						;AN000;
 										;AN000;
-	CMP	cs:[BUF_EMS_MODE],-1	  ;LB. EMS support			;AN000;
+	CMP	[cs:BUF_EMS_MODE],-1	  ;LB. EMS support			;AN000;
 	JZ	No_user_save 		  ;LB. no				;AN000;
-	CMP	cs:[SETVECTFLAG], 1
+	CMP	[cs:SETVECTFLAG], 1
 	jz	No_user_save
 ;	MOV	[ACT_PAGE],-1		  ;LB. invalidate active page		;AN000;
 ;	MOV	WORD PTR [LASTBUFFER],-1  ;LB.	and last buffer pointer 	;AN000;
@@ -480,8 +480,8 @@ Procedure   SAVE_USER_MAP,NEAR							 ;AN000;
 	PUSH	ES			  ;LB.					;AN000;
 	PUSH	SI			  ;LB.					;AN000;
 	PUSH	DI			  ;LB.					;AN000;
-	MOV	SI,OFFSET DOSGROUP:BUF_EMS_SEG_CNT     ;LB.			;AN000;
-	MOV	DI,OFFSET DOSGROUP:BUF_EMS_MAP_USER     ;LB.			;AN000;
+	MOV	SI,BUF_EMS_SEG_CNT     ;LB.			;AN000;
+	MOV	DI,BUF_EMS_MAP_USER     ;LB.			;AN000;
 
 	PUSH	CS
 	POP	ES
@@ -512,16 +512,16 @@ Break	<RESTORE_USER_MAP- retore map >						;AN000;
 ; No other registers altered							;AN000;
 										;AN000;
 Procedure   RESTORE_USER_MAP,NEAR							 ;AN000;
-	ASSUME	DS:NOTHING,ES:NOTHING						;AN000;
+;	ASSUME	DS:NOTHING,ES:NOTHING						;AN000;
 	
-	CMP	cs:[BUF_EMS_MODE],-1	  ;LB. EMS support			;AN000;
+	CMP	[cs:BUF_EMS_MODE],-1	  ;LB. EMS support			;AN000;
 	JZ	No_user_restore		  ;LB. no				;AN000;
-	CMP	cs:[SETVECTFLAG], 1
+	CMP	[cs:SETVECTFLAG], 1
 	jz	No_user_restore
 	PUSH	AX			  ;LB. save regs			;AN000;
 	PUSH	DS			  ;LB. save regs			;AN000;
 	PUSH	SI			  ;LB.					;AN000;
-	MOV	SI,OFFSET DOSGROUP:BUF_EMS_MAP_USER     ;LB.			;AN000;
+	MOV	SI,BUF_EMS_MAP_USER     ;LB.			;AN000;
 
 	PUSH	CS
 	POP	DS
@@ -537,21 +537,21 @@ No_user_restore:									 ;AN000;
 	return									;AN000;
 EndProc RESTORE_USER_MAP
 
-ENDIF
+end if
 
 ;
 ; get_user_stack returns the user's stack (and hence registers) in DS:SI
 ;
         procedure   get_user_stack,NEAR
-        LDS     SI,DWORD PTR [user_SP]
+        LDS     SI,dword [user_SP]
         return
 EndProc get_user_stack
 
-        IF      NOT IBM
-BREAK <Set_OEM_Handler -- Set OEM sys call address and handle OEM Calls
+        if      NOT IBM
+BREAK <Set_OEM_Handler -- Set OEM sys call address and handle OEM Calls>
 
-$SET_OEM_HANDLER:
-ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
+SET_OEM_HANDLER$:
+;ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
 
 ; Inputs:
 ;       User registers, User Stack, INTS disabled
@@ -562,18 +562,18 @@ ASSUME  DS:NOTHING,ES:NOTHING,SS:NOTHING
 ;       Jumps to OEM_HANDLER if appropriate
 
         JNE     DO_OEM_FUNC             ; If above F8 try to jump to handler
-        MOV     WORD PTR [OEM_HANDLER],DX   ; Set Handler
-        MOV     WORD PTR [OEM_HANDLER+2],DS
+        MOV     word [OEM_HANDLER],DX   ; Set Handler
+        MOV     word [OEM_HANDLER+2],DS
         IRET                            ; Quick return, Have altered no registers
 
 DO_OEM_FUNC:
-        CMP     WORD PTR [OEM_HANDLER],-1
+        CMP     word [OEM_HANDLER],-1
         JNZ     OEM_JMP
         JMP     BADCALL                 ; Handler not initialized
 
 OEM_JMP:
         JMP     [OEM_HANDLER]
-        ENDIF
+        end if
 
 
-CODE    ENDS
+end if

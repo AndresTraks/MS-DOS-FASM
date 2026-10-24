@@ -23,17 +23,17 @@ NAME	Dir
 ;
 ; get the appropriate segment definitions
 ;
-.xlist
-include dosseg.asm
-include fastopen.inc
+;.xlist
+INCLUDE '../INC/DOSSEG.ASM'
+INCLUDE '../INC/FASTOPEN.INC'
 
-CODE	SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME	SS:DOSGROUP,CS:DOSGROUP
+if SEGSEL = S_CODE
+;	ASSUME	SS:DOSGROUP,CS:DOSGROUP
 
-.xcref
-include dossym.inc
-.cref
-.list
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+;.cref
+;.list
 
 asmvar	Kanji
 
@@ -87,10 +87,10 @@ Break	<FINDENTRY -- LOOK FOR AN ENTRY>
 
 	entry	FindEntry
 	DOSAssume   CS,<DS>,"FindEntry"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
 	invoke	STARTSRCH
-	MOV	AL,Attrib
+	MOV	AL,[ATTRIB]
 	AND	AL,NOT attr_ignore	; Ignore useless bits
 	CMP	AL,attr_volume_id	; Looking for vol ID only ?
 	JNZ	NOTVOLSRCH		; No
@@ -103,28 +103,28 @@ NOTVOLSRCH:
 	entry	Srch
 
 	PUSH	DS
-	MOV	DS,WORD PTR [CURBUF+2]
-ASSUME	DS:NOTHING
-	MOV	AH,BYTE PTR [BX]
+	MOV	DS,word [CURBUF+2]
+;ASSUME	DS:NOTHING
+	MOV	AH,byte [BX]
 	OR	AH,AH			; End of directory?
 	JZ	FREE
-	CMP	AH,BYTE PTR [DELALL]	; Free entry?
+	CMP	AH,byte [DELALL]	; Free entry?
 	JZ	FREE
-	TEST	BYTE PTR [BX+11],attr_volume_id
+	TEST	byte [BX+11],attr_volume_id
 					; Volume ID file?
 	JZ	CHKFNAM 		; NO
-	INC	BYTE PTR [VOLID]
+	INC	byte [VOLID]
 CHKFNAM:
 ;	Context ES
-	ASSUME	ES:DOSGroup
+;	ASSUME	ES:DOSGroup
 	MOV	SI,SS
 	MOV	ES,SI
 	MOV	SI,BX
-	MOV	DI,OFFSET DOSGROUP:NAME1
+	MOV	DI,Name1
 ;;;;; 7/29/86
-	CMP	BYTE PTR [NAME1],0E5H	 ; special char check
+	CMP	byte [NAME1],0E5H	 ; special char check
 	JNZ	NO_E5
-	MOV	BYTE PTR [NAME1],05H
+	MOV	byte [NAME1],05H
 NO_E5:
 ;;;;; 7/29/86
 	CALL	MetaCompare
@@ -136,7 +136,7 @@ NO_E5:
 
 	Assert	ISDPB,<<WORD PTR THISDPB+2>,<WORD PTR THISDPB>>,"NextEnt"
 	LES	BP,[THISDPB]
-ASSUME	ES:NOTHING
+;ASSUME	ES:NOTHING
 	CALL	NEXTENTRY
 	JNC	SRCH
 	JMP	SHORT SETESRET
@@ -149,7 +149,7 @@ FREE:
 	JAE	TSTALL
 	MOV	[ENTFREE],CX
 TSTALL:
-	CMP	AH,BYTE PTR [DELALL]	; At end of directory?
+	CMP	AH,byte [DELALL]	; At end of directory?
 NextEntJ:
 	JZ	NEXTENT 		; No - continue search
 	MOV	[ENTLAST],CX
@@ -168,7 +168,7 @@ FOUND:
 	MOV	CH,[SI] 		; Attributes of file
 	POP	DS
 	DOSAssume   CS,<DS>,"DIR/found"
-	MOV	AH,Attrib		; Attributes of search
+	MOV	AH,[ATTRIB]		; Attributes of search
 	AND	AH,NOT attr_ignore
 	LEA	SI,[SI+Dir_First-Dir_Attr]  ; point to firclus field
 	TEST	CH,attr_volume_id	; Volume ID file?
@@ -182,11 +182,11 @@ check_one_volume_id:
 	JZ	NEXTENTJ		; Yes, continue search
 	invoke	MatchAttributes
 	JZ	RETFF
-	TEST	BYTE PTR [CREATING],-1	; Pass back mismatch if creating
+	TEST	byte [CREATING],-1	; Pass back mismatch if creating
 	JZ	NEXTENTJ		; Otherwise continue searching
 RETFF:
 	LES	BP,[THISDPB]
-	MOV	AH,ES:[BP.dpb_drive]
+	MOV	AH,[es:BP+dpb_drive]
 SETESRET:
 	PUSH	SS
 	POP	ES
@@ -205,13 +205,13 @@ EndProc Search
 ; Destroys CX,SI,DI all others preserved
 
 	procedure   MetaCompare,near
-ASSUME	DS:NOTHING,ES:NOTHING
+;ASSUME	DS:NOTHING,ES:NOTHING
 	MOV	CX,11
- IF  DBCS				;AN000;
+ if  DBCS				;AN000;
 ;-------------------- Start of DBCS	;AN000;
-	CMP	BYTE PTR DS:[SI],05H	;AN000;; Special case for lead byte of 05h
+	CMP	byte [SI],05H	;AN000;; Special case for lead byte of 05h
 	JNE	WILDCRD2		;AN000;; Compare as normal if not an 05h
-	CMP	BYTE PTR ES:[DI],0E5H	;AN000;; 05h and 0E5h equivalent for lead byte
+	CMP	byte [es:DI],0E5H	;AN000;; 05h and 0E5h equivalent for lead byte
 	JNE	WILDCRD2		;AN000;; Compare as normal if not an 05h
 	DEC	CX			;AN000;; One less byte to compare
 	INC	SI			;AN000;; Bypass lead byte in source and
@@ -225,7 +225,7 @@ cagain: 				;AN000;;KK.
 	invoke	testkanj		;AN000;;KK.
 	JZ	notdb			;AN000;;KK. no
 	MOV	AX,'??'                 ;AN000;;KK.
-	CMP	ES:[DI],AX		;AN000;;KK. is es:di pointing to '??'
+	CMP	[es:DI],AX		;AN000;;KK. is es:di pointing to '??'
 	JNZ	metaend3		;AN000;;KK. no
 	ADD	SI,2			;AN000;;KK.
 	ADD	DI,2			;AN000;;KK. update pointers and count
@@ -239,7 +239,7 @@ metaend3:				;AN000;;KK.
 notdb:					;AN000;
 	CMPSB				;AN000;;KK. same code ?
 	JZ	sameco			;AN000;;KK. yes
-	CMP	BYTE PTR ES:[DI-1],"?"  ;AN000;;KK. ?
+	CMP	byte [es:DI-1],"?"  ;AN000;;KK. ?
 	JNZ	metaend2		;AN000;;KK. no
 sameco: 				;AN000;
 	DEC	CX			;AN000;;KK. decrement count
@@ -248,15 +248,15 @@ sameco: 				;AN000;
 metaend2:				;AN000;
 	POP	AX			;AN000;;KK.
 ;-------------------- End of DBCS	;AN000; KK.
- ELSE					;AN000;
+ else					;AN000;
 WILDCRD:
 	REPE	CMPSB
 	JZ	MetaRet 		; most of the time we will fail.
 CHECK_META:
-	CMP	BYTE PTR ES:[DI-1],"?"
+	CMP	byte [es:DI-1],"?"
 	JZ	WildCrd
 MetaRet:
- ENDIF					;AN000;
+ end if					;AN000;
 	return				; Zero set, Match
 EndProc MetaCompare
 
@@ -270,7 +270,7 @@ Break	<NEXTENTRY -- STEP THROUGH DIRECTORY>
 
 Procedure NextEntry
 	DOSAssume   CS,<DS>,"NextEntry"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
 	MOV	AX,[LASTENT]
 	CMP	AX,[ENTLAST]
@@ -279,9 +279,9 @@ Procedure NextEntry
 	LEA	BX,[BX+32]
 	CMP	BX,DX
 	JB	HAVIT
-	MOV	BL,BYTE PTR [SECCLUSPOS]
+	MOV	BL,byte [SECCLUSPOS]
 	INC	BL
-	CMP	BL,BYTE PTR [CLUSFAC]
+	CMP	BL,byte [CLUSFAC]
 	JB	SAMECLUS
 	MOV	BX,[NXTCLUSNUM]
 	Invoke	IsEOF
@@ -300,14 +300,14 @@ HAVIT:
 	return
 
 SAMECLUS:
-	MOV	BYTE PTR [SECCLUSPOS],BL
+	MOV	byte [SECCLUSPOS],BL
 	MOV	[LASTENT],AX
 	PUSH	DS
 	LDS	DI,[CURBUF]
-ASSUME	DS:NOTHING
-	MOV	DX,WORD PTR [DI.buf_sector+2]	;AN000; >32mb
+;ASSUME	DS:NOTHING
+	MOV	DX,word [DI+buf_sector+2]	;AN000; >32mb
 	MOV	[HIGH_SECTOR],DX		;AN000; >32mb
-	MOV	DX,WORD PTR [DI.buf_sector]	;AN000; >32mb
+	MOV	DX,word [DI+buf_sector]	;AN000; >32mb
 
 	ADD	DX,1				;AN000; >32mb
 	ADC	[HIGH_SECTOR],0 		;AN000; >32mb
@@ -334,7 +334,7 @@ EndProc NextEntry
 
 Procedure GETENTRY,NEAR
 	DOSAssume   CS,<DS>,"GetEntry"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
 	MOV	AX,[LASTENT]
 
@@ -356,7 +356,7 @@ Procedure GETENTRY,NEAR
 ; beginning of the directory.  Convert this to a sector number.  Round the
 ; sector size down to a multiple of 32.
 ;
-	MOV	BX,ES:[BP.dpb_sector_size]
+	MOV	BX,[es:BP+dpb_sector_size]
 	AND	BL,255-31		; Must be multiple of 32
 	DIV	BX
 	MOV	BX,DX			; Position within sector
@@ -365,10 +365,10 @@ Procedure GETENTRY,NEAR
 	POP	BX
 	retc
 SETENTRY:
-	MOV	DX,WORD PTR [CURBUF]
+	MOV	DX,word [CURBUF]
 	ADD	DX,BUFINSIZ
 	ADD	BX,DX
-	ADD	DX,ES:[BP.dpb_sector_size]  ; Always clears carry
+	ADD	DX,[es:BP+dpb_sector_size]  ; Always clears carry
 	return
 EndProc GetEntry
 
@@ -388,15 +388,15 @@ Break	<SETDIRSRCH SETROOTSRCH -- Set Search environments>
 
 	procedure SETDIRSRCH
 	DOSAssume   CS,<DS>,"SetDirSrch"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
 	Assert	ISDPB,<ES,BP>,"SetDirSrch"
 	OR	BX,BX
 	JZ	SETROOTSRCH
 	MOV	[DIRSTART],BX
-	MOV	AL,ES:[BP.dpb_cluster_mask]
+	MOV	AL,[es:BP+dpb_cluster_mask]
 	INC	AL
-	MOV	BYTE PTR [CLUSFAC],AL
+	MOV	byte [CLUSFAC],AL
 ; DOS 3.3 for FastOPen	F.C. 6/12/86
 	SaveReg <SI>
 	TEST	[FastOpenFlg],Lookup_Success
@@ -412,34 +412,34 @@ UNP_OK:
 	MOV	[CLUSNUM],DI
 	MOV	DX,BX
 	XOR	BL,BL
-	MOV	BYTE PTR [SECCLUSPOS],BL
+	MOV	byte [SECCLUSPOS],BL
 	invoke	FIGREC
 	RestoreReg  <SI>
 	PUSH	DX			   ;AN000; >32mb
 	MOV	DX,[HIGH_SECTOR]	   ;AN000; >32mb
-	MOV	WORD PTR [DIRSEC+2],DX	   ;AN000; >32mb
+	MOV	word [DIRSEC+2],DX	   ;AN000; >32mb
 	POP	DX			   ;AN000; >32mb
-	MOV	WORD PTR [DIRSEC],DX
+	MOV	word [DIRSEC],DX
 	CLC
 	return
 
 entry	SETROOTSRCH
 	DOSAssume   CS,<DS>,"SetRootSrch"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 	XOR	AX,AX
 	MOV	[DIRSTART],AX
-	MOV	BYTE PTR [SECCLUSPOS],AL
+	MOV	byte [SECCLUSPOS],AL
 	DEC	AX
 	MOV	[CLUSNUM],AX
-	MOV	AX,ES:[BP.dpb_first_sector]
-	MOV	DX,ES:[BP.dpb_dir_sector]
+	MOV	AX,[es:BP+dpb_first_sector]
+	MOV	DX,[es:BP+dpb_dir_sector]
 	SUB	AX,DX
-	MOV	BYTE PTR [CLUSFAC],AL
-	MOV	WORD PTR [DIRSEC],DX		      ;F.C. >32mb
-	MOV	WORD PTR [DIRSEC+2],0		      ;F.C. >32mb
+	MOV	byte [CLUSFAC],AL
+	MOV	word [DIRSEC],DX		      ;F.C. >32mb
+	MOV	word [DIRSEC+2],0		      ;F.C. >32mb
 	CLC
 	return
 EndProc SETDIRSRCH
 
-CODE	ENDS
-    END
+end if
+;    END

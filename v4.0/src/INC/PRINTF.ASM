@@ -48,17 +48,17 @@ TITLE	PRINTF ROUITNE FOR MS-DOS
 ;
 ;   The arguments are used in one-to-one correspondence to % specifiers.
 
-.xlist
-.xcref
-	INCLUDE dossym.asm
-.cref
-.list
+;.xlist
+;.xcref
+	INCLUDE 'DOSSYM.ASM'
+;.cref
+;.list
 
-printf_CODE SEGMENT public byte
-ASSUME	CS:PRINTF_CODE,DS:NOTHING,ES:NOTHING,SS:NOTHING
+if SEGSEL = S_PRINTF_CODE
+;ASSUME	CS:PRINTF_CODE,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
-	PUBLIC	PRINTF, PFHandle
-	PUBLIC	PRINTF_LAST
+;	PUBLIC	PRINTF, PFHandle
+;	PUBLIC	PRINTF_LAST
 
 PFHandle	DW  1
 PRINTF_LEFT	DB  0
@@ -85,12 +85,12 @@ OLDBP	DW  ?
 OLDCS	DW  ?
 OLDIP	DW  ?
 STRING	DW  ?
-PRINTF_STACK   ENDS
+;PRINTF_STACK   ENDS
 
 PRINTF_ARGS    STRUC
 CONSTR	DW ?
 ARG	DW ?
-PRINTF_ARGS    ENDS
+;PRINTF_ARGS    ENDS
 
 RET_ADDR1  DW  ?
 RET_ADDR2  DW  ?
@@ -100,7 +100,7 @@ PRINTF_BUF DB  BUFSIZ DUP (?)
 	db	0			;This buffer is always nul terminated
 BUFEND DW   $-PRINTF_BUF
 
-PRINTF	proc	far
+PRINTF:
 	PUSH	BP			;Save the callers' registers
 	PUSH	DX
 	PUSH	CX
@@ -113,9 +113,9 @@ PRINTF	proc	far
 	MOV	BP,SP
 	PUSH	CS
 	POP	ES			;ES points to Printf segment
-	MOV	DI,OFFSET PRINTF_BUF	;DI points to the output buffer
-	MOV	BP,[BP.STRING]		;BP points to the argument list
-	MOV	SI,DS:[BP]		;SI points to the control string
+	MOV	DI,PRINTF_BUF	;DI points to the output buffer
+	MOV	BP,[BP+STRING]		;BP points to the argument list
+	MOV	SI,[ds:BP]		;SI points to the control string
 	XOR	BX,BX			;BX is the index into the arg list
 	CALL	Clear_flags		; initialize the world
 GET_CHAR:
@@ -138,14 +138,14 @@ PRINTF_DONE:
 	POP	CX
 	POP	DX
 	POP	BP
-	POP	CS:[RET_ADDR1]		       ;Fix up the stack
-	POP	CS:[RET_ADDR2]
+	POP	[cs:RET_ADDR1]		       ;Fix up the stack
+	POP	[cs:RET_ADDR2]
 	POP	AX
-	PUSH	CS:[RET_ADDR2]
-	PUSH	CS:[RET_ADDR1]
-	RET
+	PUSH	[cs:RET_ADDR2]
+	PUSH	[cs:RET_ADDR1]
+	RETF
 
-printf	endp
+;printf	endp
 
 PRINTF_PERCENT:
 	CALL	OUTCHR
@@ -170,28 +170,28 @@ CONV_CHAR:
 	JA	LOOK_CONV_CHAR
 	CMP	AL,"0"
 	JNZ	NOT_PAD
-	CMP	CS:[PRINTF_WIDTH],0
+	CMP	[cs:PRINTF_WIDTH],0
 	JNZ	NOT_PAD
-	MOV	CS:BYTE PTR [PAD_CHAR],"0"
+	MOV	byte [cs:PAD_CHAR],"0"
 NOT_PAD:
 	PUSH	AX			    ;Adjust decimal place on precision
 	MOV	AX,10
-	MUL	CS:[PRINTF_WIDTH]
-	MOV	CS:[PRINTF_WIDTH],AX
+	MUL	[cs:PRINTF_WIDTH]
+	MOV	[cs:PRINTF_WIDTH],AX
 	POP	AX
 	XOR	AH,AH
 	SUB	AL,"0"
-	ADD	CS:[PRINTF_WIDTH],AX	       ;And save the total
+	ADD	[cs:PRINTF_WIDTH],AX	       ;And save the total
 	JMP	SHORT NXT_CONV_CHAR
 
 	;Set the correct flags for the options in a conversion
 
 LEFT_ADJ:
-	INC	CS:BYTE PTR[PRINTF_LEFT]
+	INC	[cs:BYTE] PTR[PRINTF_LEFT]
 	JMP	SHORT NXT_CONV_CHAR
 
 LONG_INT:
-	INC	CS:BYTE PTR[PRINTF_LONG]
+	INC	[cs:BYTE] PTR[PRINTF_LONG]
 NXT_CONV_CHAR:
 	JMP	CONV_CHAR
 
@@ -224,23 +224,23 @@ CAPS:
 	jmp	get_char
 
 HEX_LO:
-	MOV	CS:[TABLE_INDEX],6		;Will print lower case hex digits
+	MOV	[cs:TABLE_INDEX],6		;Will print lower case hex digits
 HEX_UP:
-	MOV	CS:[PRINTF_BASE],16    ;Hex conversion
+	MOV	[cs:PRINTF_BASE],16    ;Hex conversion
 	JMP	CONV_TO_NUM
 
 DECIMAL:
-	MOV	CS:[PRINTF_BASE],10    ;Decimal conversion
+	MOV	[cs:PRINTF_BASE],10    ;Decimal conversion
 	JMP	CONV_TO_NUM
 
 S_PUT_STRG:
-	INC	CS:[S_FLAG]	       ;It's a string specifier
+	INC	[cs:S_FLAG]	       ;It's a string specifier
 C_PUT_CHAR:
 	PUSH	SI		       ;Save pointer to control string
 	MOV	SI,BX
 	ADD	BX,2
-	MOV	SI,ds:[BP+SI.ARG]      ;Point to the % string or character
-	CMP	BYTE PTR CS:[S_FLAG],0
+	MOV	SI,[ds:BP+SI.ARG]      ;Point to the % string or character
+	CMP	byte [cs:S_FLAG],0
 	JNZ	S_PUT_1
 	LODSB
 	cmp	al,0
@@ -249,10 +249,10 @@ C_PUT_CHAR:
 	JMP	SHORT C_S_END
 
 S_PUT_1:
-	mov	cx,cs:[printf_width]
+	mov	cx,[cs:printf_width]
 	or	cx,cx
 	jz	s_put_2
-	cmp	cs:byte ptr[printf_left],0
+	cmp	[cs:byte] ptr[printf_left],0
 	jnz	s_put_2
 	push	si
 	call	Pad_string
@@ -269,7 +269,7 @@ s_put_4:
 	pop	si
 	cmp	byte ptr[printf_left],0
 	jz	c_s_end
-	mov	cx,cs:[printf_width]
+	mov	cx,[cs:printf_width]
 	or	cx,cx
 	jz	c_s_end
 	call	Pad_string
@@ -298,19 +298,19 @@ CONV_TO_NUM:
 	PUSH	SI		    ;Save pointer to control string
 	MOV	SI,BX		    ;Get index into argument list
 	ADD	BX,2		    ;Increment the index
-	MOV	AX,ds:[BP+SI.ARG]   ;Lo word of number in SI
-	CMP	BYTE PTR CS:[PRINTF_LONG],0	;Is this is a short or long integer?
+	MOV	AX,[ds:BP+SI.ARG]   ;Lo word of number in SI
+	CMP	byte [cs:PRINTF_LONG],0	;Is this is a short or long integer?
 	JZ	NOT_LONG_INT
 	MOV	SI,BX			     ;Copy index
 	ADD	BX,2			     ;Increment the index
-	MOV	DX,ds:[BP+SI.ARG]	     ;Hi word of number in BP
+	MOV	DX,[ds:BP+SI.ARG]	     ;Hi word of number in BP
 	JMP	SHORT DO_CONV
 NOT_LONG_INT:
 	XOR	DX,DX			     ;Hi word is zero
 DO_CONV:
 	PUSH	BX			     ;Save index into arguemnt list
-	MOV	si,CS:[PRINTF_BASE]
-	MOV	cx,CS:[PRINTF_WIDTH]
+	MOV	si,[cs:PRINTF_BASE]
+	MOV	cx,[cs:PRINTF_WIDTH]
 	CALL	PNUM
 	CALL	PAD
 CONV_DONE:
@@ -338,18 +338,18 @@ PNUM:
 	POP	BX
 	JMP	SHORT REM
 DO_PAD:
-	CMP	CS:BYTE PTR[PRINTF_LEFT],0
+	CMP	[cs:BYTE] PTR[PRINTF_LEFT],0
 	JNZ	REM
 	CALL	PAD
 REM:
 	MOV	AX,BX
 	CMP	AL,10
 	JB	NOT_HEX
-	CMP	CS:BYTE PTR [PRINTF_HEX],0
+	CMP	byte [cs:PRINTF_HEX],0
 	JNZ	NOT_HEX
-	ADD	AL,CS:BYTE PTR [TABLE_INDEX]
+	ADD	AL,byte [cs:TABLE_INDEX]
 NOT_HEX:
-	MOV	BX,OFFSET PRINTF_TABLE
+	MOV	BX,PRINTF_TABLE
 	PUSH	DS
 	PUSH	CS
 	POP	DS
@@ -363,7 +363,7 @@ NOT_HEX:
 PAD:
 	OR	CX,CX
 	JLE	PAD_DONE
-	MOV	AL,CS:BYTE PTR [PAD_CHAR]
+	MOV	AL,byte [cs:PAD_CHAR]
 PAD_LOOP:
 	push	cx
 	CALL	OUTCHR
@@ -374,42 +374,41 @@ PAD_DONE:
 
 OUTCHR:
 	STOSB
-	CMP	DI,offset bufend-1	;Don't count the nul
+	CMP	DI,bufend-1	;Don't count the nul
 	RETNZ
 	MOV	CX,BUFSIZ
 WRITE_CHARS:
 	push	bx
-	MOV	BX,PFHandle
+	MOV	BX,[PFHandle]
 	push	ds
 	PUSH	CS
 	POP	DS
-	MOV	DX,OFFSET PRINTF_BUF
+	MOV	DX,PRINTF_BUF
 	MOV	AH,WRITE
 	INT	21H
 	pop	ds
 	pop	bx
-	MOV	DI,OFFSET PRINTF_BUF
+	MOV	DI,PRINTF_BUF
 	RET
 
 FLUSH:
-	CMP	DI,OFFSET PRINTF_BUF
+	CMP	DI,PRINTF_BUF
 	RETZ
-	SUB	DI,OFFSET PRINTF_BUF
+	SUB	DI,PRINTF_BUF
 	MOV	CX,DI
 	call	write_chars
 	ret
 
 CLEAR_FLAGS:
 	XOR	ax,ax
-	MOV	BYTE PTR CS:[PRINTF_LEFT],al	   ;Reset justifing flag
-	MOV	BYTE PTR CS:[PRINTF_LONG],al	   ;Reset long flag
-	MOV	BYTE PTR CS:[TABLE_INDEX],al	   ;Reset hex table index
-	MOV	CS:[PRINTF_WIDTH],ax		   ;Reinitialize width to 0
-	MOV	BYTE PTR CS:[PAD_CHAR]," "         ;Reset padding character
-	MOV	BYTE PTR CS:[S_FLAG],al 	   ;Clear the string flag
+	MOV	byte [cs:PRINTF_LEFT],al	   ;Reset justifing flag
+	MOV	byte [cs:PRINTF_LONG],al	   ;Reset long flag
+	MOV	byte [cs:TABLE_INDEX],al	   ;Reset hex table index
+	MOV	[cs:PRINTF_WIDTH],ax		   ;Reinitialize width to 0
+	MOV	byte [cs:PAD_CHAR]," "         ;Reset padding character
+	MOV	byte [cs:S_FLAG],al 	   ;Clear the string flag
 	ret
 
-PRINTF_LAST LABEL   WORD
-printf_CODE    ENDS
-	END
-
+PRINTF_LAST:
+end if
+;	END

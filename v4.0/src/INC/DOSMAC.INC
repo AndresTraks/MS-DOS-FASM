@@ -64,6 +64,17 @@ macro I_NEED  sym,len
 ; Nothing to import: one binary.
 }
 
+; The modules spell these in every case there is, one name to MASM.
+macro i_need  sym,len
+{
+}
+macro I_need  sym,len
+{
+}
+macro I_Need  sym,len
+{
+}
+
 ;
 ; call a procedure that may be external.  The call will be short.
 ;
@@ -87,7 +98,7 @@ macro Invoke  name
 ;
 macro transfer    name
 {
-	JUMP    name
+	jump    name
 }
 
 ;
@@ -134,7 +145,8 @@ macro EndProc name, chk
     match , chk \{
 	if ?initstack <> ?stackdepth	;; is it different?
 	display "***** Possible stack size error *****",13,10
-	end if \}
+	end if
+	\}
 }
 
 ;
@@ -143,44 +155,73 @@ macro EndProc name, chk
 ; SIZE is WORD, DWORD, BYTE or a count of bytes, and INIT either a list of
 ; values or nothing at all, in which case the space is reserved.
 ;
+; One value of the initialiser, as wide as the size said.  It is a macro of
+; its own because a MATCH inside a MACRO is as deep as fasm's braces go
+; without being escaped twice over.
+macro I_AM_VALUES [itm]
+{
+  forward
+    if I_AM_LEN = 1
+	DB  itm
+    else
+	DW  itm
+    end if
+    I_AM_SIZE = I_AM_SIZE - 1
+}
+
 macro I_AM    name,size,init
 {
+    ; what the size says: WORD and DWORD are one or two words, BYTE and a
+    ; bare count are that many bytes
     I_AM_SIZE = 1
     I_AM_LEN  = 1
-    match =WORD, size \{ I_AM_LEN = 2 \}
-    match =DWORD, size \{ I_AM_SIZE = 2
-	I_AM_LEN = 2 \}
-    match =BYTE, size \{ \}
-    match , size \{ \}
     I_AM_COUNTED = 0
-    match =WORD, size \{ I_AM_COUNTED = 1 \}
-    match =DWORD, size \{ I_AM_COUNTED = 1 \}
-    match =BYTE, size \{ I_AM_COUNTED = 1 \}
-    match , size \{ I_AM_COUNTED = 1 \}
+    ; fasm's MATCH is case-sensitive and the modules write the size in
+    ; either case
+    match =WORD, size \{
+	I_AM_LEN = 2
+	I_AM_COUNTED = 1 \}
+    match =word, size \{
+	I_AM_LEN = 2
+	I_AM_COUNTED = 1 \}
+    match =DWORD, size \{
+	I_AM_SIZE = 2
+	I_AM_LEN = 2
+	I_AM_COUNTED = 1 \}
+    match =dword, size \{
+	I_AM_SIZE = 2
+	I_AM_LEN = 2
+	I_AM_COUNTED = 1 \}
+    match =BYTE, size \{
+	I_AM_COUNTED = 1 \}
+    match =byte, size \{
+	I_AM_COUNTED = 1 \}
     if I_AM_COUNTED = 0
 	I_AM_SIZE = size
     end if
 name:
+    ; InstalledData is FALSE in this build, which is the branch that writes
+    ; the values out; the other reserved the space and left them to whatever
+    ; had installed the data elsewhere.
     match , init \{
 	DB  I_AM_SIZE*I_AM_LEN dup (?) \}
     match any, init \{
-      if ~ InstalledData
-	irp itm, init \{\{
-	    if I_AM_LEN = 1
-		DB  itm
-	    else
-		DW  itm
-	    end if
-	    I_AM_SIZE = I_AM_SIZE - 1 \}\}
+	I_AM_VALUES init
 	if I_AM_SIZE <> 0
-	display "***** initialization not complete *****",13,10
-	end if
-      else
-	DB  I_AM_SIZE*I_AM_LEN dup (?)
-      end if \}
+	    display "***** initialization not complete *****",13,10
+	end if \}
 }
 I_AM_SIZE   = 0
 I_AM_LEN    = 0
+
+macro I_am    name,size,init
+{
+	I_AM    name,size,<init>
+}
+macro i_am    name,size,init
+{
+	I_AM    name,size,<init>
+}
 
 ;
 ; define an entry in a procedure
@@ -209,6 +250,14 @@ BREAK <JUMP - real jump that links up shortwise>
 macro jump lbl
 {
 	JMP lbl
+}
+macro JUMP lbl
+{
+	jump lbl
+}
+macro Jump lbl
+{
+	jump lbl
 }
 
 BREAK <RETURN - return from a function>
@@ -374,8 +423,11 @@ macro localvar    name,length
 	match =DWORD, length \{
 	    ?frame =  ?frame + 4
 	    name EQU  dword [BP-?frame]
+	    ; the two halves, in either case: MASM read NAMEL and NAMEl as one
 	    name#l EQU  word [BP-?frame]
-	    name#h EQU  word [BP-?frame+2] \}
+	    name#L EQU  word [BP-?frame]
+	    name#h EQU  word [BP-?frame+2]
+	    name#H EQU  word [BP-?frame+2] \}
 }
 
 ; ENTER and LEAVE are instructions of the 286 as well; a macro of the same
@@ -404,7 +456,9 @@ macro Argvar  name,length
 	match =DWORD, length \{
 	    name EQU  dword [BP+?aframe]
 	    name#l EQU  word [BP+?aframe]
+	    name#L EQU  word [BP+?aframe]
 	    name#h EQU  word [BP+?aframe+2]
+	    name#H EQU  word [BP+?aframe+2]
 	    ?aframe =  ?aframe + 4 \}
 }
 
@@ -416,4 +470,94 @@ macro errnz   x
 	display "***** FATAL error: expression <> 0",13,10
 	err
     end if
+}
+
+; MASM read a name in any case; fasm does not, and the modules spell
+; these macros every way there is.  Each other spelling is a name for
+; the same macro, its arguments passed through as they came.
+
+macro asmvar [args]
+{
+  common
+	AsmVar args
+}
+macro Callinstall [args]
+{
+  common
+	CallInstall args
+}
+macro ENDPROC [args]
+{
+  common
+	EndProc args
+}
+macro Endproc [args]
+{
+  common
+	EndProc args
+}
+macro Context [args]
+{
+  common
+	context args
+}
+macro Enter [args]
+{
+  common
+	enter args
+}
+macro Entry [args]
+{
+  common
+	entry args
+}
+macro Leave [args]
+{
+  common
+	leave args
+}
+macro LocalVar [args]
+{
+  common
+	localvar args
+}
+macro PROCEDURE [args]
+{
+  common
+	procedure args
+}
+macro Procedure [args]
+{
+  common
+	procedure args
+}
+macro RETURN [args]
+{
+  common
+	return args
+}
+macro Return [args]
+{
+  common
+	return args
+}
+macro Short_Addr [args]
+{
+  common
+	short_addr args
+}
+macro Short_addr [args]
+{
+  common
+	short_addr args
+}
+macro TRANSFER [args]
+{
+  common
+	transfer args
+}
+macro Transfer [args]
+{
+  common
+	transfer args
 }

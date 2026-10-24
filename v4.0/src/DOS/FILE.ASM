@@ -24,30 +24,30 @@ NAME	FILE
 ;	Created: MZ 4 April 1983
 ;	A000   version 4.00  Jan. 1988
 
-.xlist
+;.xlist
 ;
 ; get the appropriate segment definitions
 ;
-include dosseg.asm
+INCLUDE '../INC/DOSSEG.ASM'
 
-CODE	SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME	SS:DOSGroup,CS:DOSGroup
+if SEGSEL = S_CODE
+;	ASSUME	SS:DOSGroup,CS:DOSGroup
 
-.xcref
-include dossym.inc
-include devsym.inc
-include fastopen.inc
-include EA.inc			     ;AN000;
-include version.inc
-.cref
-.list
-.sall
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+INCLUDE '../INC/FASTOPEN.INC'
+INCLUDE '../INC/EA.INC'			     ;AN000;
+INCLUDE '../INC/VERSION.INC'
+;.cref
+;.list
+;.sall
 
-	EXTRN	DOS_OPEN:NEAR,DOS_CREATE:NEAR,DOS_Create_New:NEAR
+;	EXTRN	DOS_OPEN:NEAR,DOS_CREATE:NEAR,DOS_Create_New:NEAR
 
-IF 	NOT IBMCOPYRIGHT
-	extrn	Set_EXT_mode:near
-ENDIF
+if 	NOT IBMCOPYRIGHT
+;	extrn	Set_EXT_mode:near
+end if
 
 	I_need	WFP_Start,WORD		; pointer to beginning of expansion
 	I_Need	ThisCDS,DWORD		; pointer to curdir in use
@@ -84,10 +84,10 @@ ENDIF
 if debug
 	I_need	BugLev,WORD
 	I_need	BugTyp,WORD
-include bugtyp.asm
-endif
+INCLUDE '../INC/BUGTYP.ASM'
+end if
 
-BREAK <$Open - open a file from a path string>
+BREAK <Open$ - open a file from a path string>
 
 ;
 ;   $Open - given a path name in DS:DX and an open mode in AL, access the file
@@ -98,38 +98,38 @@ BREAK <$Open - open a file from a path string>
 ;		Carry Clear - AX has per process handle number
 ;   Registers modified: most
 
-Procedure   $Open,NEAR
-	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+Procedure   Open$,NEAR
+;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	fmt TypSysCall,LevLog,<"Open\n">
-	fmt TypSysCall,LevArgs,<" Mode = $x file = '$S'\n">,<AX,DS,DX>
+	fmt TypSysCall,LevArgs,<" Mode = x$ file = 'S$'\n">,<AX,DS,DX>
 	XOR	AH,AH
-Entry $Open2				;AN000;
+Entry Open2$				;AN000;
 	mov	ch,attr_hidden+attr_system+attr_directory
 	call	SetAttrib
-	MOV	CX,OFFSET DOSGroup:DOS_Open ; address of routine to call
+	MOV	CX,DOS_Open ; address of routine to call
 	SaveReg <AX>			; Save mode on stack
-IF DBCS 				;AN000;
+if DBCS 				;AN000;
 	MOV	[Temp_Var],0		;AN000;KK. set variable with 0
-ENDIF					;AN000;
+end if					;AN000;
 
 AccessFile:
 ;
 ; Grab a free SFT.
 ;
-IF  DBCS				;AN000;
+if  DBCS				;AN000;
 	TEST	[Temp_Var],8		;AN000;;KK. volume id bit set		       ;AN000;
 	JZ	novol			;AN000;;KK. no				       ;AN000;
 	OR	[DOS34_FLAG],DBCS_VOLID ;AN000;;KK. set bit for transpath	       ;AN000;
 novol:					;AN000;
-ENDIF					;AN000;
+end if					;AN000;
 	EnterCrit   critSFT
 	invoke	SFNFree 		; get a free sfn
 	LeaveCrit   critSFT
 	JC	OpenFailJ		; oops, no free sft's
-	MOV	SFN,BX			; save the SFN for later
-	fmt	TypAccess,LevSFN,<"AccessFile setting SFN to $x\n">,<BX>
-	MOV	WORD PTR [ThisSFT],DI	; save the SF offset
-	MOV	WORD PTR [ThisSFT+2],ES ; save the SF segment
+	MOV	[SFN],BX			; save the SFN for later
+	fmt	TypAccess,LevSFN,<"AccessFile setting SFN to x$\n">,<BX>
+	MOV	word [ThisSFT],DI	; save the SF offset
+	MOV	word [ThisSFT+2],ES ; save the SF segment
 ;
 ; Find a free area in the user's JFN table.
 ;
@@ -138,24 +138,24 @@ ENDIF					;AN000;
 OpenFailJ:
 	JMP	OpenFail		; there were free JFNs... try SFN
 SaveJFN:
-	MOV	WORD PTR [pJFN],DI	; save the jfn offset
-	MOV	WORD PTR [pJFN+2],ES	; save the jfn segment
+	MOV	word [pJFN],DI	; save the jfn offset
+	MOV	word [pJFN+2],ES	; save the jfn segment
 	MOV	[JFN],BX		; save the jfn itself
 ;
 ; We have been given an JFN.  We lock it down to prevent other tasks from
 ; reusing the same JFN.
 ;
-	MOV	BX,SFN
-	MOV	ES:[DI],BL		; assign the JFN
+	MOV	BX,[SFN]
+	MOV	[es:DI],BL		; assign the JFN
 	MOV	SI,DX			; get name in appropriate place
-	MOV	DI,OFFSET DOSGroup:OpenBuf  ; appropriate buffer
+	MOV	DI,OpenBuf  ; appropriate buffer
 	SaveReg <CX>			; save routine to call
 	invoke	TransPath		; convert the path
 	RestoreReg  <BX>		; restore routine to call
-	LDS	SI,ThisSFT
-	ASSUME	DS:NOTHING
+	LDS	SI,[ThisSFT]
+;	ASSUME	DS:NOTHING
 	JC	OpenCleanJ		; no error, go and open file
-	CMP	cMeta,-1
+	CMP	[cMeta],-1
 	JZ	SetSearch
 	MOV	AL,error_file_not_found ; no meta chars allowed
 OpenCleanJ:
@@ -166,22 +166,22 @@ SetSearch:
 ; We need to get the new inheritance bits.
 ;
 	xor	cx,cx
-	CMP	BX,OFFSET DOSGroup:DOS_OPEN
+	CMP	BX,DOS_OPEN
 	JNZ	DoOper
 	TEST	AL,sharing_no_inherit	; look for no inher
 	JZ	DoOper
 	AND	AL,07Fh 		; mask off inherit bit
 	MOV	CX,sf_no_inherit
 DoOper:
-	MOV	[SI].sf_mode,0		; initialize mode field to 0
-	MOV	[SI.SF_mft],0		; clean out sharing info
+	MOV	[SI+sf_mode],0		; initialize mode field to 0
+	MOV	[SI+SF_mft],0		; clean out sharing info
 ;
 ;------------------------------------------------------------HKN 8/7/88
 ;	Check if this is an extended open. If so you must set the 
 ;	modes in sf_mode. Call Set_EXT_mode to do all this. See
 ;	Set_EXT_mode in creat.asm
 ;
-IF	NOT IBMCOPYRIGHT
+if	NOT IBMCOPYRIGHT
 
 	push	es	; set up es:di to point to SFT
 	push	di
@@ -193,7 +193,7 @@ IF	NOT IBMCOPYRIGHT
 	pop	di
 	pop	es
 
-ENDIF
+end if
 
 ;-----------------------------------------------------------------------
 
@@ -201,18 +201,18 @@ ENDIF
 	SaveReg <CX>
 	CALL	BX			; blam!
 	RestoreReg  <CX>
-	LDS	SI,ThisSFT
-	ASSUME	DS:NOTHING
+	LDS	SI,[ThisSFT]
+;	ASSUME	DS:NOTHING
 	JC	OpenE2			;AN000;FT. chek extended open hooks first
 ;
 ; The SFT was successfully opened.  Remove busy mark.
 ;
 OpenOK:
-	ASSUME	DS:NOTHING
+;	ASSUME	DS:NOTHING
 ;	MOV	AL,[SI].sf_attr_hi	;AN000;FT. save file type for EXEC
 ;	MOV	BYTE PTR [Temp_Var2],AL ;AN000;FT.
-	MOV	[SI].sf_ref_count,1
-	OR	[SI].sf_flags,CX	; set no inherit bit if necessary
+	MOV	[SI+sf_ref_count],1
+	OR	[SI+sf_flags],CX	; set no inherit bit if necessary
 ;
 ; If the open mode is 70, we scan the system for other SFT's with the same
 ; contents.  If we find one, then we can 'collapse' thissft onto the already
@@ -221,15 +221,15 @@ OpenOK:
 ; Since this is only relevant on sharer systems, we stick this code into the
 ; sharer.
 ;
-	MOV	AX,JFN
+	MOV	AX,[JFN]
 if installed
-	Call	JShare + 12 * 4
+	Call	dword [JSHARE+12*4]
 else
 	Call	ShCol
-endif
+end if
 	fmt	TypAccess,LevSFN,<"AccessFile setting SFN to -1\n">
-	MOV	SFN,-1			; clear out sfn pointer
-	fmt	TypSysCall,LevLog,<"Open/CreateXX: return $x\n">,<AX>
+	MOV	[SFN],-1			; clear out sfn pointer
+	fmt	TypSysCall,LevLog,<"Open/CreateXX: return x$\n">,<AX>
 	transfer    Sys_Ret_OK		; bye with no errors
 ;Extended Open hooks check
 OpenE2: 				   ;AN000;;EO.
@@ -242,22 +242,22 @@ OpenE2: 				   ;AN000;;EO.
 ; AL has error code.  Stack has argument to dos_open/dos_create.
 ;
 OpenClean:
-	fmt TypSysCall,LevLog,<"Return value from transpath $x\n">,<AX>
+	fmt TypSysCall,LevLog,<"Return value from transpath x$\n">,<AX>
 	RestoreReg  <bx>		; clean off stack
 OpenE:
-	MOV	[SI.SF_Ref_Count],0	; release SFT
-	LDS	SI,pJFN
-	MOV	BYTE PTR [SI],0FFh	; free the SFN...
+	MOV	[SI+SF_Ref_Count],0	; release SFT
+	LDS	SI,[PJFN]
+	MOV	byte [SI],0FFh	; free the SFN...
 	JMP	SHORT OpenCritLeave
 
 OpenFail:
 	STI
 	RestoreReg  <CX>		; Clean stack
 OpenCritLeave:
-	MOV	SFN,-1			; remove mark.
-	fmt TypSysCall,LevLog,<"Open/CreateXX: error $x\n">,<AX>
+	MOV	[SFN],-1			; remove mark.
+	fmt TypSysCall,LevLog,<"Open/CreateXX: error x$\n">,<AX>
 ;; File Tagging DOS 4.00
-	CMP	CS:[EXTERR],error_Code_Page_Mismatched	;AN000;;FT. code page mismatch
+	CMP	[cs:EXTERR],error_Code_Page_Mismatched	;AN000;;FT. code page mismatch
 	JNZ	NORERR					;AN000;;FT. no
 	transfer From_GetSet				;AN000;;FT. yes
 NORERR: 						;AN000;
@@ -265,9 +265,9 @@ NORERR: 						;AN000;
 ;; File Tagging DOS 4.00
 	transfer    Sys_Ret_Err 	; no free, return error
 
-EndProc $Open
+EndProc Open$
 
-BREAK <$Creat - create a brand-new file>
+BREAK <Creat$ - create a brand-new file>
 
 ;
 ;   $Creat - create the directory entry specified in DS:DX and give it the
@@ -278,21 +278,21 @@ BREAK <$Creat - create a brand-new file>
 ;		Carry reset - AX has handle
 ;   Registers modified: all
 
-Procedure   $Creat,NEAR
-	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+Procedure   Creat$,NEAR
+;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	fmt TypSysCall,LevLog,<"Create\n">
-	fmt TypSysCall,LevArgs,<" Att = $x file = '$S'\n">,<CX,DS,DX>
-IF DBCS 				;AN000;
+	fmt TypSysCall,LevArgs,<" Att = x$ file = 'S$'\n">,<CX,DS,DX>
+if DBCS 				;AN000;
 	MOV	[Temp_Var],CX		;AN000;KK. set variable with attribute	      ;AN000;
-ENDIF					;AN000;
+end if					;AN000;
 	SaveReg <CX>			; Save attributes on stack
-	MOV	CX,OFFSET DOSGroup:DOS_Create; routine to call
+	MOV	CX,DOS_Create; routine to call
 AccessSet:
-	mov	SAttrib,attr_hidden+attr_system
+	mov	[SATTRIB],attr_hidden+attr_system
 	JMP	AccessFile		; use good ol' open
-EndProc $Creat
+EndProc Creat$
 
-BREAK <$CHMOD - change file attributes>
+BREAK <CHMOD$ - change file attributes>
 ;
 ;   Assembler usage:
 ;	    LDS     DX, name
@@ -304,28 +304,28 @@ BREAK <$CHMOD - change file attributes>
 ;	    AX = error_access_denied
 ;
 
-	procedure $CHMOD,NEAR
-	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
-	MOV	DI,OFFSET DOSGroup:OpenBuf  ; appropriate buffer
+	procedure CHMOD$,NEAR
+;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+	MOV	DI,OpenBuf  ; appropriate buffer
 	SaveReg <AX,CX> 		; save function and attributes
 	MOV	SI,DX			; get things in appropriate places
 	invoke	TransPathSet		; get correct path
 	RestoreReg  <CX,AX>		; and get function and attrs back
 	JC	ChModErr		; errors get mapped to path not found
 	Context DS			; set up for later possible calls
-	CMP	cMeta,-1
+	CMP	[cMeta],-1
 	JNZ	ChModErr
 	MOV	[SAttrib],attr_hidden+attr_system+attr_directory
 	SUB	AL,1			; fast way to discriminate
 	JB	ChModGet		; 0 -> go get value
 	JZ	ChModSet		; 1 -> go set value
-	MOV	EXTERR_LOCUS,errLoc_Unk ; Extended Error Locus
+	MOV	[ExtErr_locus],errLoc_Unk ; Extended Error Locus
 	error	error_invalid_function	; bad value
 ChModGet:
 	invoke	Get_File_Info		; suck out the ol' info
 	JC	ChModE			; error codes are already set for ret
 	invoke	Get_User_stack		; point to user saved vaiables
-	MOV	[SI.User_CX],AX 	; return the attributes
+	MOV	[SI+user_environ.user_CX],AX 	; return the attributes
 	transfer    Sys_Ret_OK		; say sayonara
 ChModSet:
 	MOV	AX,CX			; get attrs in position
@@ -336,9 +336,9 @@ ChModErr:
 	mov	al,error_path_not_found
 ChmodE:
 	Transfer    SYS_RET_ERR
-EndProc $ChMod
+EndProc ChMod$
 
-BREAK <$UNLINK - delete a file entry>
+BREAK <UNLINK$ - delete a file entry>
 ;
 ;   Assembler usage:
 ;	    LDS     DX, name
@@ -352,15 +352,15 @@ BREAK <$UNLINK - delete a file entry>
 ;	       = error_access_denied
 ;
 
-	procedure $UNLINK,NEAR
-	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+	procedure UNLINK$,NEAR
+;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	SaveReg <CX>			; Save possible CX input parm
 	MOV	SI,DX			; Point at input string
-	MOV	DI,OFFSET DOSGroup:OpenBuf  ; temp spot for path
+	MOV	DI,OpenBuf  ; temp spot for path
 	invoke	TransPathSet		; go get normalized path
 	RestoreReg <CX>
 	JC	ChModErr		; badly formed path
-	CMP	cMeta,-1		; meta chars?
+	CMP	[cMeta],-1		; meta chars?
 	JNZ	NotFound
 	Context DS
 	mov	ch,attr_hidden+attr_system   ; unlink appropriate files
@@ -374,9 +374,9 @@ NotFound:
 	MOV	AL,error_path_not_found
 UnlinkE:
 	transfer    Sys_Ret_Err 	; bye
-EndProc $UnLink
+EndProc UnLink$
 
-BREAK <$RENAME - move directory entries around>
+BREAK <RENAME$ - move directory entries around>
 ;
 ;   Assembler usage:
 ;	    LDS     DX, source
@@ -391,36 +391,36 @@ BREAK <$RENAME - move directory entries around>
 ;	       = error_not_same_device
 ;	       = error_access_denied
 
-	procedure $RENAME,NEAR
-	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+	procedure RENAME$,NEAR
+;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	SaveReg <CX,DS,DX>		; save source and possible CX arg
 	PUSH	ES
 	POP	DS			; move dest to source
 	MOV	SI,DI			; save for offsets
-	MOV	DI,OFFSET DOSGroup:RenBuf
+	MOV	DI,renbuf
 
-	MOV	WORD PTR [NO_FILTER_DPATH],SI	;AN000;;IFS. save them for IFS
-	MOV	WORD PTR [NO_FILTER_DPATH+2],DS ;AN000;;IFS.
+	MOV	word [NO_FILTER_DPATH],SI	;AN000;;IFS. save them for IFS
+	MOV	word [NO_FILTER_DPATH+2],DS ;AN000;;IFS.
 
 	invoke	TransPathSet		; munge the paths
-	PUSH	WFP_Start		; get pointer
-	POP	Ren_WFP 		; stash it
+	PUSH	[WFP_START]		; get pointer
+	POP	[Ren_WFP] 		; stash it
 	RestoreReg <SI,DS,CX>		; get back source and possible CX arg
 epjc2:	JC	ChModErr		; get old error
-	CMP	cMeta,-1
+	CMP	[cMeta],-1
 	JNZ	NotFound
 	SaveReg <CX>			; Save possible CX arg
-	MOV	DI,OFFSET DOSGroup:OpenBuf  ; appropriate buffer
+	MOV	DI,OpenBuf  ; appropriate buffer
 	invoke	TransPathSet		; wham
 	RestoreReg <CX>
 	JC	EPJC2
 	Context DS
-	CMP	cMeta,-1
+	CMP	[cMeta],-1
 	JB	NotFound
 
-	PUSH	WORD PTR [THISCDS]	   ;AN000;;MS.save thiscds
-	PUSH	WORD PTR [THISCDS+2]	   ;AN000;;MS.
-	MOV	DI,OFFSET DOSGROUP:OpenBuf ;AN000;;MS.
+	PUSH	word [THISCDS]	   ;AN000;;MS.save thiscds
+	PUSH	word [THISCDS+2]	   ;AN000;;MS.
+	MOV	DI,OpenBuf ;AN000;;MS.
 	PUSH	SS			   ;AN000;;MS.
 	POP	ES			   ;AN000;;MS.es:di-> source
 	XOR	AL,AL			   ;AN000;;MS.scan all CDS
@@ -435,8 +435,8 @@ rnerr:					   ;AN000;
 	ADD	SP,4			   ;AN000;;MS. pop thiscds
 	error	error_current_directory    ;AN000;;MS.
 dorn:					   ;AN000;
-	POP	WORD PTR SS:[THISCDS+2]    ;AN000;;MS.
-	POP	WORD PTR SS:[THISCDS]	   ;AN000;;MS.
+	POP	word [ss:THISCDS+2]    ;AN000;;MS.
+	POP	word [ss:THISCDS]	   ;AN000;;MS.
 	Context DS
 	mov	ch,attr_directory+attr_hidden+attr_system; rename appropriate files
 	call	SetAttrib
@@ -445,9 +445,9 @@ dorn:					   ;AN000;
 
 
 	transfer    Sys_Ret_OK
-EndProc $Rename
+EndProc Rename$
 
-Break <$CreateNewFile - Create a new directory entry>
+Break <CreateNewFile$ - Create a new directory entry>
 
 ;
 ;   CreateNew - Create a new directory entry.  Return a file handle if there
@@ -462,17 +462,17 @@ Break <$CreateNewFile - Create a new directory entry>
 ;		    AX has error code
 ;   Registers modified: All
 
-	Procedure $CreateNewFile,NEAR
-	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+	Procedure CreateNewFile$,NEAR
+;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	fmt TypSysCall,LevLog,<"CreateNew\n">
-	fmt TypSysCall,LevArgs,<" Att = $x file = '$S'\n">,<CX,DS,DX>
-IF DBCS 				;AN000;
+	fmt TypSysCall,LevArgs,<" Att = x$ file = 'S$'\n">,<CX,DS,DX>
+if DBCS 				;AN000;
 	MOV	[Temp_Var],CX		;AN000;KK. set variable with attribute
-ENDIF					;AN000;
+end if					;AN000;
 	SaveReg <CX>			; Save attributes on stack
-	MOV	CX,OFFSET DOSGroup:DOS_Create_New   ; routine to call
+	MOV	CX,DOS_Create_New   ; routine to call
 	JMP	AccessSet		; use good ol' open
-EndProc $CreateNewFile
+EndProc CreateNewFile$
 
 Break	<HexToAsciz - convert a number to hex and store it in memory>
 
@@ -495,7 +495,7 @@ GetDigit:
 	ADD	AL,'0'                  ; turn into digit
 	CMP	AL,'9'                  ; bigger than 9
 	JBE	DoStore 		; no, stash it
-	ADD	AL,'A'-'0'-10           ; convert into uppercase letter
+	ADD	AL,'[a]'-'0'-10           ; convert into uppercase letter
 DoStore:
 	STOSB				; drop in the character
 	RestoreReg <AX,CX>		; regain the number and count
@@ -503,7 +503,7 @@ DoStore:
 	return
 EndProc HexToAsciz
 
-Break	<$CreateTempFile - create a unique name>
+Break	<CreateTempFile$ - create a unique name>
 
 ;
 ;   $CreateTemp - given a directory, create a unique name in that directory.
@@ -516,11 +516,11 @@ Break	<$CreateTempFile - create a unique name>
 ;		AX has handle
 ;   Registers modified: all
 
-	Procedure $CreateTempFile,NEAR
-	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+	Procedure CreateTempFile$,NEAR
+;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	fmt TypSysCall,LevLog,<"CreateTmp\n">
-	fmt TypSysCall,LevArgs,<" Att = $x dir = '$S'\n">,<CX,DS,DX>
-PUBLIC FILE001S,FILE001E
+	fmt TypSysCall,LevArgs,<" Att = x$ dir = 'S$'\n">,<CX,DS,DX>
+;PUBLIC FILE001S,FILE001E
 FILE001S:
 	LocalVar    EndPtr,DWORD
 	LocalVar    FilPtr,DWORD
@@ -541,46 +541,46 @@ FILE001E:
 	JMP	SHORT SETTMPERR
 
 OKatts:
-	MOV	attr,CX 		; save attribute
-	MOV	FilPtrL,DX		; pointer to file
-	MOV	FilPtrH,DS
-	MOV	EndPtrH,DS		; seg pointer to end of dir
+	MOV	Attr,CX 		; save attribute
+	MOV	FilPtrl,DX		; pointer to file
+	MOV	FilPtrh,DS
+	MOV	EndPtrh,DS		; seg pointer to end of dir
 	PUSH	DS
 	POP	ES			; destination for nul search
 	MOV	DI,DX
 	MOV	CX,DI
 	NEG	CX			; number of bytes remaining in segment
- IF  DBCS				;AN000;
+ if  DBCS				;AN000;
 Kloop:					;AN000;; 2/13/KK
-	MOV	AL, BYTE PTR ES:[DI]	;AN000;; 2/13/KK
+	MOV	AL, byte [es:DI]	;AN000;; 2/13/KK
 	INC	DI			;AN000;; 2/13/KK
 	OR	AL,AL			;AN000;; 2/13/KK
 	JZ	GOTEND			;AN000;; 2/13/KK
 	invoke	testkanj		;AN000;; 2/13/KK
 	jz	Kloop			;AN000;; 2/13/KK
 	inc	di			;AN000;; Skip over second kanji byte 2/13/KK
-	CMP	BYTE PTR ES:[DI],0	;AN000;; 2/13/KK
+	CMP	byte [es:DI],0	;AN000;; 2/13/KK
 	JZ	STOREPTH		;AN000; When char before NUL is sec Kanji byte
 					;AN000; do not look for path char. 2/13/KK
 	jmp	Kloop			;AN000; 2/13/KK
 GOTEND: 				;AN000; 2/13/KK
- ELSE					;AN000;
+ else					;AN000;
 	OR	CX,CX			;AN000;MS.  cx=0 ? ds:dx on segment boundary
 	JNZ	okok			;AN000;MS.  no
 	MOV	CX,-1			;AN000;MS.
 okok:					;AN000;
 	XOR	AX,AX			;AN000;
 	REPNZ	SCASB			;AN000;
- ENDIF					;AN000;
+ end if					;AN000;
 	DEC	DI			; point back to the null
-	MOV	AL,ES:[DI-1]		; Get char before the NUL
+	MOV	AL,[es:DI-1]		; Get char before the NUL
 	invoke	PathChrCmp		; Is it a path separator?
 	JZ	SETENDPTR		; Yes
 STOREPTH:
 	MOV	AL,'\'
 	STOSB				; Add a path separator (and INC DI)
 SETENDPTR:
-	MOV	EndPtrL,DI		; pointer to the tail
+	MOV	EndPtrl,DI		; pointer to the tail
 CreateLoop:
 	Context DS			; let ReadTime see variables
 	SaveReg <BP>
@@ -597,17 +597,17 @@ CreateLoop:
 	xor	al,al
 	STOSB				; nul terminate
 	LDS	DX,FilPtr		; get name
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 	MOV	CX,Attr 		; get attr
 	SaveReg <BP>
-	CALL	$CreateNewFile		; try to create a new file
+	CALL	CreateNewFile$		; try to create a new file
 	RestoreReg  <BP>
 	JNC	CreateDone		; failed, go try again
 ;
 ; The operation failed and the error has been mapped in AX.  Grab the extended
 ; error and figure out what to do.
 ;
-	mov	ax,ExtErr
+	mov	ax,[EXTERR]
 	cmp	al,error_file_exists
 	jz	CreateLoop		; file existed => try with new name
 	cmp	al,error_access_denied
@@ -629,7 +629,7 @@ CreateDone:
 	transfer    Sys_Ret_OK		; success!
 CreateFail:
 	transfer    Sys_Ret_Err
-EndProc $CreateTempFile
+EndProc CreateTempFile$
 
 Break	<SetAttrib - set the search attrib>
 
@@ -644,12 +644,12 @@ Break	<SetAttrib - set the search attrib>
 ;   Registers changed:	CX
 
 procedure   SetAttrib,NEAR
-	assume	ds:nothing,es:nothing
-	test	fSharing,-1
+;	assume	ds:nothing,es:nothing
+	test	[fSharing],-1
 	jnz	Set
 	mov	cl,ch
 Set:
-	mov	SAttrib,cl
+	mov	[SATTRIB],cl
 	return
 EndProc SetAttrib
 
@@ -676,8 +676,8 @@ Break	<Extended_Open- Extended open the file>
 ;
 
 
-procedure   $Extended_Open,NEAR 			       ;AN000;
-	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:DOSGROUP  ;AN000;
+procedure   Extended_Open$,NEAR 			       ;AN000;
+;	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:DOSGROUP  ;AN000;
 
 	MOV	[XA_from],0		  ;AN000;EO. init for set XA
 	MOV	[EXTOPEN_FLAG],DX	  ;AN000;EO. save ext. open flag
@@ -748,7 +748,7 @@ goopen: 					 ;AN000;
 	AND	[EXTOPEN_FLAG],0FFH		 ;AN000;EO.create new ?
 	CMP	[EXTOPEN_FLAG],ext_exists_fail + ext_nexists_create ;AN000;FT.
 	JNZ	chknext 			 ;AN000;;EO.  no
-	invoke	$CreateNewFile			 ;AN000;;EO.  yes
+	invoke	CreateNewFile$			 ;AN000;;EO.  yes
 	JC	error_return			 ;AN000;;EO.  error
 	CMP	[EXTOPEN_ON],0			 ;AN000;;EO.  IFS does it
 	JZ	ok_return2			 ;AN000;;EO.  yes
@@ -760,7 +760,7 @@ ok_return2:
 chknext:
 	TEST	[EXTOPEN_FLAG],ext_exists_open	 ;AN000;;EO.  exists open
 	JNZ	exist_open			 ;AN000;;EO.  yes
-	invoke	$Creat				 ;AN000;;EO.  must be replace open
+	invoke	Creat$				 ;AN000;;EO.  must be replace open
 	JC	error_return			 ;AN000;;EO.  return with error
 	CMP	[EXTOPEN_ON],0			 ;AN000;;EO.  IFS does it
 	JZ	ok_return2			 ;AN000;;EO.  yes
@@ -775,12 +775,12 @@ error_return2:
 	ret					 ;AN000;;EO.  return with error
 						 ;AN000;
 exist_open:					 ;AN000;
-	test	fSharing,-1			 ;AN000;;EO. server doscall?
+	test	[fSharing],-1			 ;AN000;;EO. server doscall?
 	jz	noserver			 ;AN000;;EO. no
 	MOV	CL,CH				 ;AN000;;EO. cl=search attribute
 
 noserver:
-	invoke	$Open2				 ;AN000;;EO.  do open
+	invoke	Open2$				 ;AN000;;EO.  do open
 	JNC	ext_ok				 ;AN000;;EO.
 	CMP	[EXTOPEN_ON],0			 ;AN000;;EO.  error and IFS call
 	JZ	error_return2			 ;AN000;;EO.  return with error
@@ -794,9 +794,9 @@ local_extopen:
 do_creat:
 	MOV	[XA_from],By_Create		 ;AN000;;EO.  for set xa
 	MOV	CX,[SAVE_CX]			 ;AN000;;EO.  get ds:dx for file name
-	LDS	SI,DWORD PTR [SAVE_SI]		 ;AN000;;EO.  cx = attribute
+	LDS	SI,dword [SAVE_SI]		 ;AN000;;EO.  cx = attribute
 	MOV	DX,SI				 ;AN000;;EO.
-	invoke	$Creat				 ;AN000;;EO.  do create
+	invoke	Creat$				 ;AN000;;EO.  do create
 	JC	extexit 			 ;AN000;;EO.  error
 	MOV	[EXTOPEN_FLAG],action_created_opened  ;AN000;;EO. is created/opened
 	JMP	SHORT setXAttr			      ;AN000;;EO.   set XAs
@@ -824,9 +824,9 @@ setXAttr:
 ;	JC	extexit2		;AN000;;EO.
 	invoke	get_user_stack		;AN000;;EO.
 	MOV	AX,[EXTOPEN_FLAG]	;AN000;;EO.
-	MOV	[SI.USER_CX],AX 	;AN000;;EO. set action code for cx
+	MOV	[SI+user_environ.user_CX],AX 	;AN000;;EO. set action code for cx
 	POP	AX			;AN000;;EO.
-	MOV	[SI.USER_AX],AX 	;AN000;;EO. set handle for ax
+	MOV	[SI+user_environ.user_AX],AX 	;AN000;;EO. set handle for ax
 
 ok_return:				;AN000;
 	transfer SYS_RET_OK		;AN000;;EO.
@@ -837,13 +837,13 @@ extexit2:				;AN000; ERROR RECOVERY
 	PUSH	AX			;AN000;EO. save error code from set XA
 	CMP	[EXTOPEN_FLAG],action_created_opened	;AN000;EO. from create
 	JNZ	justopen		;AN000;EO.
-	LDS	SI,DWORD PTR [SAVE_SI]		 ;AN000;EO.  cx = attribute
-	LDS	DX,DWORD PTR [SI]		 ;AN000;EO.
-	invoke	$UNLINK 		;AN000;EO. delete the file
+	LDS	SI,dword [SAVE_SI]		 ;AN000;EO.  cx = attribute
+	LDS	DX,dword [SI]		 ;AN000;EO.
+	invoke	UNLINK$ 		;AN000;EO. delete the file
 	JMP	SHORT reserror		;AN000;EO.
 
 justopen:				;AN000;
-	invoke	$close			;AN000;EO. pretend never happend
+	invoke	close$			;AN000;EO. pretend never happend
 reserror:				;AN000;
 	POP	AX			;AN000;EO. retore error code from set XA
 	JMP	SHORT extexit		;AN000;EO.
@@ -857,7 +857,7 @@ ext_inval:				 ;AN000;
 extexit:
 	transfer SYS_RET_ERR		;AN000;EO.
 
-EndProc $Extended_Open			;AN000;
+EndProc Extended_Open$			;AN000;
 
 
 Break	<GetIOParms - get IO parms form extended open parm list>
@@ -904,6 +904,5 @@ Break	<GetIOParms - get IO parms form extended open parm list>
 ;EndProc GetIOParms								 ;AN000;
 
 
-CODE ENDS
-END
-
+end if
+;END

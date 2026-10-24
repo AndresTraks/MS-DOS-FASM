@@ -78,21 +78,21 @@ NAME	MACRO
 ;
 ;   A000    version 4.00  Jan. 1988
 
-.xlist
+;.xlist
 ;
 ; get the appropriate segment definitions
 ;
-include dosseg.asm
+INCLUDE '../INC/DOSSEG.ASM'
 
-CODE	SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME	SS:DOSGroup,CS:DOSGroup
+if SEGSEL = S_CODE
+;	ASSUME	SS:DOSGroup,CS:DOSGroup
 
-.xcref
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
-.cref
-.list
-.sall
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+;.cref
+;.list
+;.sall
 
 Installed = TRUE
 
@@ -111,7 +111,7 @@ Installed = TRUE
 	I_need	EXTERR_LOCUS,BYTE	; Extended Error Locus
 	I_need	DrvErr,BYTE		; drive error
 
-BREAK <$AssignOper -- Set up a Macro>
+BREAK <AssignOper$ -- Set up a Macro>
 
 ; Inputs:
 ;	AL = 00 get assign mode 		    (ReturnMode)
@@ -139,8 +139,8 @@ BREAK <$AssignOper -- Set up a Macro>
 ; Returns:
 ;	Std Xenix style error return
 
-	procedure   $AssignOper,NEAR
-ASSUME	DS:NOTHING,ES:NOTHING
+	procedure   AssignOper$,NEAR
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 	CMP	AL,7				      ; set in_use ?		;AN000;
 	JNZ	chk08				      ; no			;AN000;
@@ -150,14 +150,14 @@ srinuse:									;AN000;
 	CALL	GetCDSFromDrv			      ; ds:si -> cds		;AN000;
 	POP	AX				      ; 			;AN000;
 	JC	baddrv				      ; bad drive		;AN000;
-	CMP	WORD PTR [SI.curdir_devptr],0	      ; dpb ptr =0 ?		;AN000;
+	CMP	word [SI+curdir_devptr],0	      ; dpb ptr =0 ?		;AN000;
 	JZ	baddrv				      ;     no			;AN000;
 	CMP	AL,7				      ; set ?			;AN000;
 	JNZ	resetdrv			      ; no			;AN000;
-	OR	[SI.curdir_flags],curdir_inuse	      ; set in_use		;AN000;
+	OR	[SI+curdir_flags],curdir_inuse	      ; set in_use		;AN000;
 	JMP	SHORT okdone			      ; 			;AN000;
 resetdrv:									;AN000;
-	AND	[SI.curdir_flags],NOT curdir_inuse    ; reset in_use		;AN000;
+	AND	[SI+curdir_flags],NOT curdir_inuse    ; reset in_use		;AN000;
 	JMP	SHORT okdone			      ; 			;AN000;
 baddrv: 									;AN000;
 	MOV	AX,error_invalid_drive		      ; error			;AN000;
@@ -166,9 +166,9 @@ chk08:										;AN000;
 	CMP	AL,8				      ; reset inuse ?		;AN000;
 	JZ	srinuse 			      ; yes			;AN000;
 
-	IF	NOT INSTALLED
+	if	NOT INSTALLED
 	transfer NET_ASSOPER
-	ELSE
+	else
 	PUSH	AX
 	MOV	AX,(multnet SHL 8) OR 30
 	INT	2FH
@@ -179,9 +179,9 @@ okdone:
 
 ASS_ERR:
 	transfer SYS_RET_ERR
-	ENDIF
+	end if
 
-EndProc $AssignOper
+EndProc AssignOper$
 
 Break <FIND_DPB - Find a DPB from a drive number>
 
@@ -192,14 +192,14 @@ Break <FIND_DPB - Find a DPB from a drive number>
 ;		    DS:SI points to DPB for drive
 ;   registers modified: DS,SI
 Procedure FIND_DPB,NEAR
-	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	LDS	SI,[DPBHEAD]
 DPB_LOOP:
 	CMP	SI,-1
 	JZ	NO_DPB
-	CMP	AL,[SI.dpb_drive]
+	CMP	AL,[SI+dpb_drive]
 	retz				; Carry clear
-	LDS	SI,[SI.dpb_next_dpb]
+	LDS	SI,[SI+dpb_next_dpb]
 	JMP	DPB_LOOP
 
 NO_DPB:
@@ -216,32 +216,32 @@ Break <InitCDS - set up an empty CDS>
 ;		Carry set if no DPB associated with drive
 ;   registers modified: AH,ES,DI
 Procedure InitCDS,NEAR
-	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	MOV	AH,':'
 	PUSH	AX
-	SUB	AL,"A"-1                ; A = 1
+	SUB	AL,"[a]"-1                ; A = 1
 	CMP	[NUMIO],AL
 	POP	AX
 	LES	DI,[THISCDS]
-	MOV	ES:[DI.curdir_flags],0	; "free" CDS
+	MOV	[es:DI+curdir_flags],0	; "free" CDS
 	JB	RET_OK			; Drive does not map a physical drive
-	MOV	WORD PTR ES:[DI.curdir_text],AX
+	MOV	word [es:DI+curdir_text],AX
 	PUSH	AX
 	MOV	AX,"\"
-	MOV	WORD PTR ES:[DI.curdir_text+2],AX   ; NUL terminate
+	MOV	word [es:DI+curdir_text+2],AX   ; NUL terminate
 	POP	AX
-	OR	ES:[DI.curdir_flags],curdir_inuse
-	MOV	ES:[DI.curdir_END],2	; MZ 3 Nov 83
-	MOV	ES:[DI.curdir_ID],0
-	MOV	ES:[DI.curdir_ID+2],0
+	OR	[es:DI+curdir_flags],curdir_inuse
+	MOV	[es:DI+curdir_END],2	; MZ 3 Nov 83
+	MOV	[es:DI+curdir_ID],0
+	MOV	[es:DI+curdir_ID+2],0
 	PUSH	AX
 	PUSH	DS
 	PUSH	SI
-	SUB	AL,"A"                  ; A = 0
+	SUB	AL,"[a]"                  ; A = 0
 	invoke	FIND_DPB
 	JC	PRET			; OOOOPPPPPSSSS!!!!
-	MOV	WORD PTR ES:[DI.curdir_devptr],SI
-	MOV	WORD PTR ES:[DI.curdir_devptr+2],DS
+	MOV	word [es:DI+curdir_devptr],SI
+	MOV	word [es:DI+curdir_devptr+2],DS
 PRET:
 	POP	SI
 	POP	DS
@@ -249,7 +249,7 @@ PRET:
 RET_OK: return
 EndProc InitCDS
 
-Break <$UserOper - get/set current user ID (for net)>
+Break <UserOper$ - get/set current user ID (for net)>
 
 ;
 ;   $UserOper - retrieve or initiate a user id string.	MSDOS will only
@@ -267,8 +267,8 @@ Break <$UserOper - get/set current user ID (for net)>
 ;		If AL = 3 then CX bytes have been put at input ES:DI
 ;		If AL = 5 then DX is flag word
 
-Procedure   $UserOper,NEAR
-	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+Procedure   UserOper$,NEAR
+;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	PUSH	AX
 	SUB	AL,1			; quick dispatch on 0,1
 	POP	AX
@@ -276,7 +276,7 @@ Procedure   $UserOper,NEAR
 	JZ	UserSet 		; set the current user
 	CMP	AL,5			; test for 2,3,4 or 5
 	JBE	UserPrint		; yep
-	MOV	EXTERR_LOCUS,errLoc_Unk ; Extended Error Locus
+	MOV	[ExtErr_locus],errLoc_Unk ; Extended Error Locus
 	error	error_Invalid_Function	; not 0,1,2,3
 
 UserGet:
@@ -287,12 +287,12 @@ UserGet:
 	MOV	DI,DX			; destination
 	MOV	CX,[MYNUM]		; Get number
 	invoke	get_user_stack
-	MOV	[SI.User_CX],CX 	; Set number return
+	MOV	[SI+user_environ.user_CX],CX 	; Set number return
 	Context DS			; point to DOSGroup
-ASSUME	DS:DOSGROUP
-	MOV	SI,OFFSET DOSGroup:MyName   ; point source to user string
+;ASSUME	DS:DOSGROUP
+	MOV	SI,MYNAME   ; point source to user string
 UserMove:
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 	MOV	CX,15
 	REP	MOVSB			; blam.
 	XOR	AX,AX			; 16th byte is 0
@@ -301,21 +301,21 @@ UserBye:
 	transfer    sys_ret_ok		; no errors here
 
 UserSet:
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 ; Transfer DS:DX to MYNAME
 ; CX to MYNUM
 	MOV	[MYNUM],CX
 	MOV	SI,DX			; user space has source
 	Context ES
-	MOV	DI,OFFSET DOSGroup:MyName   ; point dest to user string
+	MOV	DI,MYNAME   ; point dest to user string
 	INC	[DiffNam]		  ; signal change
 	JMP	UserMove
 
 UserPrint:
-	ASSUME	ES:NOTHING
-IF NOT Installed
+;	ASSUME	ES:NOTHING
+if NOT Installed
 	transfer PRINTER_GETSET_STRING
-ELSE
+else
 	PUSH	AX
 	MOV	AX,(multNET SHL 8) OR 31
 	INT	2FH
@@ -325,9 +325,9 @@ ELSE
 
 OKPA:
 	transfer SYS_RET_OK
-ENDIF
+end if
 
-EndProc $UserOper
+EndProc UserOper$
 
 Break	<GetVisDrv - return visible drive>
 
@@ -341,12 +341,12 @@ Break	<GetVisDrv - return visible drive>
 ;   Registers modified: AL
 
 Procedure   GetVisDrv,NEAR
-	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	CALL	GetThisDrv		; get inuse drive
 	retc
 	SaveReg <DS,SI>
-	LDS	SI,ThisCDS
-	TEST	[SI].curdir_flags,curdir_splice
+	LDS	SI,[ThisCDS]
+	TEST	[SI+curdir_flags],curdir_splice
 	RestoreReg  <SI,DS>
 	retz				; if not spliced, return OK
 	MOV	[DrvErr],error_invalid_drive ;IFS.				;AN000;
@@ -368,7 +368,7 @@ Break <Getthisdrv - map a drive designator (0=def, 1=A...)>
 ;   Registers modified: AL
 
 Procedure   GetThisDrv,NEAR
-	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	OR	AL,AL			; are we using default drive?
 	JNZ	GetMap			; no, go get the CDS pointers
 	MOV	AL,[CurDrv]		; get the current drive
@@ -377,14 +377,14 @@ GetMap:
 	DEC	AL			; 0 = A
 	SaveReg <DS,SI> 		; save world
 	mov	[EXTERR_LOCUS],errLOC_Disk
-	TEST	fSharing,-1		; Logical or Physical?
+	TEST	[fSharing],-1		; Logical or Physical?
 	JZ	Not_SRVC		; Logical
 	SaveReg <AX,ES,DI>
-	MOV	WORD PTR ThisCDS,OFFSET DOSGroup:DummyCDS
-	MOV	WORD PTR ThisCDS+2,CS	;	ThisCDS = &DummyCDS;
-	ADD	AL,'A'
+	MOV	word [ThisCDS],DummyCDS
+	MOV	word [ThisCDS+2],CS	;	ThisCDS = &DummyCDS;
+	ADD	AL,'[a]'
 	CALL	InitCDS 		;	InitCDS(c);
-	TEST	ES:[DI.curdir_flags],curdir_inuse	; Clears carry
+	TEST	[es:DI+curdir_flags],curdir_inuse	; Clears carry
 	RestoreReg  <DI,ES,AX>
 	JZ	GetBerr 		; Not a physical drive.
 	JMP	SHORT GetBye		; carry clear
@@ -392,11 +392,11 @@ GetMap:
 Not_SRVC:
 	invoke	GetCDSFromDrv
 	JC	GetBerr2		; Unassigned CDS -> return error already set
-	TEST	[SI.curdir_flags],curdir_inuse	; Clears Carry
+	TEST	[SI+curdir_flags],curdir_inuse	; Clears Carry
 	JNZ	GetBye			; carry clear
 GetBerr:
 	MOV	AL,error_not_DOS_disk	;AN000;IFS. Formatted IFS drive
-	CMP	WORD PTR [SI.curdir_devptr],0	 ;AN000;IFS. dpb ptr =0 ?
+	CMP	word [SI+curdir_devptr],0	 ;AN000;IFS. dpb ptr =0 ?
 	JNZ	notfat			;AN000;IFS. no
 GetBerr2:
 	MOV	AL,error_invalid_drive	;AN000;;IFS. invalid FAT drive
@@ -423,7 +423,7 @@ Break <GetCDSFromDrv - convert a drive number to a CDS pointer>
 ;   Registers modified: DS,SI
 
 Procedure   GetCDSFromDrv,NEAR
-	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	CMP	AL,[CDSCount]		; is this a valid designator
 	JB	GetCDS			; yes, go get the macro
 	STC				; signal error
@@ -431,15 +431,15 @@ Procedure   GetCDSFromDrv,NEAR
 GetCDS:
 	SaveReg <BX,AX>
 	LDS	SI,[CDSAddr]		; get pointer to table
-	MOV	BL,SIZE CurDir_list	; size in convenient spot
+	MOV	BL,sizeof.CurDir_list	; size in convenient spot
 	MUL	BL			; get net offset
 	ADD	SI,AX			; convert to true pointer
-	MOV	WORD PTR [ThisCDS],SI	; store convenient offset
-	MOV	WORD PTR [ThisCDS+2],DS ; store convenient segment
+	MOV	word [ThisCDS],SI	; store convenient offset
+	MOV	word [ThisCDS+2],DS ; store convenient segment
 	RestoreReg  <AX,BX>
 	CLC				; no error
 	return				; bye!
 EndProc GetCDSFromDrv
 
-CODE ends
-END
+end if
+;END

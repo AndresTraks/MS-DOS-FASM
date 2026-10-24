@@ -19,20 +19,20 @@ NAME	DOS_OPEN
 ;
 ; get the appropriate segment definitions
 ;
-.xlist
-include dosseg.asm
+;.xlist
+INCLUDE '../INC/DOSSEG.ASM'
 
-CODE	SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME	SS:DOSGROUP,CS:DOSGROUP
+if SEGSEL = S_CODE
+;	ASSUME	SS:DOSGROUP,CS:DOSGROUP
 
-.xcref
-include dossym.inc
-include devsym.inc
-include fastopen.inc
-include fastxxxx.inc		       ;AN000;
-include ifssym.inc		       ;AN000;
-.cref
-.list
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+INCLUDE '../INC/FASTOPEN.INC'
+INCLUDE '../INC/FASTXXXX.INC'		       ;AN000;
+INCLUDE '../INC/IFSSYM.INC'		       ;AN000;
+;.cref
+;.list
 
 Installed = TRUE
 
@@ -111,7 +111,7 @@ Break	<DOS_Open - internal file access>
 
 	procedure   DOS_Open,NEAR
 	DOSAssume   CS,<DS>,"DOS_Open"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
 	MOV	[NoSetDir],0
 	CALL	Check_Access_AX
@@ -119,7 +119,7 @@ Break	<DOS_Open - internal file access>
 	LES	DI,[THISSFT]
 	XOR	AH,AH
 ; sleaze! move only access/sharing mode in.  Leave sf_isFCB unchanged
-	MOV	BYTE PTR ES:[DI.sf_mode],AL ; For moment do this on FCBs too
+	MOV	byte [es:DI+sf_mode],AL ; For moment do this on FCBs too
 	PUSH	ES
 	LES	SI,[THISCDS]
 	CMP	SI,-1
@@ -130,7 +130,7 @@ Break	<DOS_Open - internal file access>
 	TEST	[EXTOPEN_ON],ext_open_on    ;FT. from extnded open		;AN000;
 	JZ	NOEXTOP 		    ;FT. no, do normal			;AN000;
 IFS_extopen:									;AN000;
-	MOV	AL,byte ptr [SAVE_CX]	    ;FT. al= create attribute		;AN000;
+	MOV	AL,byte [SAVE_CX]	    ;FT. al= create attribute		;AN000;
 	PUSH	AX			    ;FT. pass create attr to IFS	;AN000;
 	MOV	AX,(multNET SHL 8) OR 46    ;FT. issue extended open verb	;AN000;
 	INT	2FH			    ;FT.				;AN000;
@@ -142,18 +142,18 @@ NOEXTOP:
 ;Extended open hooks
 
 
-IF NOT Installed
+if NOT Installed
 	transfer NET_SEQ_OPEN
-ELSE
+else
 	PUSH	AX
 	MOV	AX,(multNET SHL 8) OR 22
 	INT	2FH
 	POP	BX			; clean stack
 	return
-ENDIF
+end if
 
 TEST_RE_NET:
-	TEST	ES:[SI.curdir_flags],curdir_isnet
+	TEST	[es:SI+curdir_flags],curdir_isnet
 	POP	ES
 	JZ	LOCAL_OPEN
 ;	CALL	IFS_SHARE_CHECK 	;IFS. check IFS share,may create share	;AN000;
@@ -164,9 +164,9 @@ TEST_RE_NET:
 	JNZ	IFS_extopen		    ;FT. isuue extended open		;AN000;
 ;Extended open hooks
 
-IF NOT Installed
+if NOT Installed
 	transfer NET_OPEN
-ELSE
+else
 	PUSH	AX
 	MOV	AX,(multNET SHL 8) OR 22
 	INT	2FH
@@ -182,7 +182,7 @@ nomore2:
 ;	CLC
 nomore:
 	return
-ENDIF
+end if
 
 LOCAL_OPEN:
 	EnterCrit   critDisk
@@ -202,7 +202,7 @@ LOCAL_OPEN:
 OpenFNF:
 	MOV	AX,error_file_not_found
 OpenBadRet:
-	AND	BYTE PTR CS:[FastOpenFlg],Fast_yes    ;; DOS 3.3
+	AND	byte [cs:FastOpenFlg],Fast_yes    ;; DOS 3.3
 	STC
 	LeaveCrit   critDisk
 	JMP	Clear_FastOpen
@@ -219,8 +219,8 @@ Open_found:
 	JZ	Open_Bad_Access 	; test for directories
 	OR	AH,AH
 	JS	open_ok 		; Devices don't have attributes
-	MOV	ES,WORD PTR [CURBUF+2]	; get buffer location
-	MOV	AL,ES:[BX].dir_attr
+	MOV	ES,word [CURBUF+2]	; get buffer location
+	MOV	AL,[es:BX+dir_attr]
 	TEST	AL,attr_volume_id	; can't open volume ids
 	JNZ	open_bad_access
 	TEST	AL,attr_read_only	; check write on read only
@@ -237,7 +237,7 @@ Open_found:
 ;
 	SaveReg <DS,SI>
 	LDS	SI,[THISSFT]
-	MOV	CX,[SI].sf_mode
+	MOV	CX,[SI+sf_mode]
 	TEST	CX,sf_isFCB		; is it FCB?
 	JNZ	ResetAccess		; yes, reset the access
 	MOV	DL,CL
@@ -248,7 +248,7 @@ ResetAccess:
 	AND	CX,NOT access_mask	; clear access
 	errnz	open_for_read
 ;	OR	CX,open_for_read	; stick in open_for_read
-	MOV	[SI].sf_mode,CX
+	MOV	[SI+sf_mode],CX
 	JMP	SHORT FillSFT
 ;
 ; The SFT is normal.  See if the requested access is open_for_read
@@ -287,7 +287,7 @@ NORM0:
 
 ;;; File Tagging DOS 4.00
 	invoke	DOOPEN			; Fill in SFT
-	AND	BYTE PTR CS:[FastOpenFlg],Fast_yes    ;; DOS 3.3
+	AND	byte [cs:FastOpenFlg],Fast_yes    ;; DOS 3.3
 	CALL	DO_SHARE_CHECK		;
 	JNC	Share_Ok
 	LeaveCrit   critDisk
@@ -295,19 +295,19 @@ NORM0:
 
 SHARE_OK:
 	MOV	AX,3
-	LES	DI,ThisSFT
+	LES	DI,[ThisSFT]
 if installed
-	call	JShare + 14 * 4
+	call	dword [JSHARE+14*4]
 else
 	Call	ShSU
-endif
+end if
 ;; DOS 4.00 10/27/86
-	LES	DI,ThisSFT			   ; if this is a newly 	;AN000;
-	CMP	ES:[DI.sf_firclus],0		   ; created file then		;AN000;
+	LES	DI,[ThisSFT]			   ; if this is a newly 	;AN000;
+	CMP	[es:DI+sf_firclus],0		   ; created file then		;AN000;
 	JZ	no_fastseek			   ; do nothing 		;AN000;
-	MOV	CX,ES:[DI.sf_firclus]		   ; first cluster #		;AN000;
-	LES	DI,ES:[DI.sf_devptr]		   ; pointer to DPB		;AN000;
-	MOV	DL,ES:[DI.dpb_drive]		   ; drive #			;AN000;
+	MOV	CX,[es:DI+sf_firclus]		   ; first cluster #		;AN000;
+	LES	DI,[es:DI+sf_devptr]		   ; pointer to DPB		;AN000;
+	MOV	DL,[es:DI+dpb_drive]		   ; drive #			;AN000;
 	invoke	FastSeek_Open			   ; call fastseek		;AN000;
 no_fastseek:
 
@@ -327,14 +327,14 @@ no_fastseek:
 
 	entry	SET_SFT_MODE
 	DOSAssume   CS,<DS>,"Set_SFT_Mode"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
-	LES	DI,ThisSFT
+	LES	DI,[ThisSFT]
 	invoke	DEV_OPEN_SFT
-	TEST	ES:[DI.sf_mode],sf_isfcb; Clears carry
+	TEST	[es:DI+sf_mode],sf_isfcb; Clears carry
 	retz				; sf_mode correct
 	MOV	AX,[CurrentPDB]
-	MOV	ES:[DI.sf_PID],AX	; For FCB sf_PID=PID
+	MOV	[es:DI+sf_PID],AX	; For FCB sf_PID=PID
 
 Clear_FastOpen:
 	return			       ;;;;; DOS 3.3
@@ -349,10 +349,10 @@ EndProc DOS_Open
 
 procedure SHARE_ERROR,NEAR
 	DOSAssume   CS,<DS>,"Share_Error"
-	ASSUME	ES:NOTHING
-	TEST	ES:[DI.sf_mode],sf_isfcb
+;	ASSUME	ES:NOTHING
+	TEST	[es:DI+sf_mode],sf_isfcb
 	JNZ	HARD_ERR
-	MOV	CL,BYTE PTR ES:[DI.sf_mode]
+	MOV	CL,byte [es:DI+sf_mode]
 	AND	CL,sharing_mask
 	CMP	CL,sharing_compat
 	JNE	NO_HARD_ERR
@@ -374,11 +374,11 @@ EndProc SHARE_ERROR
 
 procedure DO_SHARE_CHECK,NEAR
 	DOSAssume   CS,<DS>,"DO_SHARE__CHECK"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 	EnterCrit   critDisk		; enter critical section
 
 OPN_RETRY:
-	MOV	CX,RetryCount		; Get # tries to do
+	MOV	CX,[RetryCount]		; Get # tries to do
 OpenShareRetry:
 	SaveReg <CX>			; Save number left to do
 	invoke	SHARE_CHECK		; Final Check
@@ -404,7 +404,7 @@ EndProc DO_SHARE_CHECK
 
 procedure OWN_SHARE,NEAR		;AN000;
 	DOSAssume   CS,<DS>,"OWN_SHARE" ;AN000;
-	ASSUME	ES:NOTHING		;AN000;
+;	ASSUME	ES:NOTHING		;AN000;
 
 ;	PUSH	DS			;IFS. save reg				;AN000;
 ;	PUSH	SI			;IFS. save reg				;AN000;
@@ -424,7 +424,7 @@ EndProc OWN_SHARE			;AN000;
 
 procedure OWN_SHARE2,NEAR		  ;AN000;
 	DOSAssume   CS,<DS>,"OWN_SHARE2"  ;AN000;
-	ASSUME	ES:NOTHING		  ;AN000;
+;	ASSUME	ES:NOTHING		  ;AN000;
 
 ;	CMP	WORD PTR [THISCDS],-1	;IFS. UNC ?				;AN000;
 ;	JZ	ifs_hasit		;IFS. yes				;AN000;
@@ -447,7 +447,7 @@ EndProc OWN_SHARE2			;AN000;
 
 procedure SET_THISDPB,NEAR		       ;AN000;
 	DOSAssume   CS,<DS>,"SET_THISDPB"      ;AN000;
-	ASSUME	ES:NOTHING		       ;AN000;
+;	ASSUME	ES:NOTHING		       ;AN000;
 
 ;	PUSH	DS			;IFS. save reg				;AN000;
 ;	PUSH	SI			;IFS. save reg				;AN000;
@@ -468,7 +468,7 @@ EndProc SET_THISDPB			;AN000;
 
 procedure IFS_SHARE_CHECK,NEAR			   ;AN000;
 	DOSAssume   CS,<DS>,"IFS_SHARE_CHECK"      ;AN000;
-	ASSUME	ES:NOTHING			   ;AN000;
+;	ASSUME	ES:NOTHING			   ;AN000;
 
 
 ;	CALL	OWN_SHARE		;IFS. IFS owns share			;AN000;
@@ -508,16 +508,16 @@ EndProc IFS_SHARE_CHECK 		;AN000;
 
 	procedure Check_Access_AX
 	DOSAssume   CS,<DS>,"Check_Access"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
-	MOV	Open_Access,AL
+	MOV	[open_access],AL
 	PUSH	BX
 ;
 ; If sharing, then test for special sharing mode for FCBs
 ;
 	MOV	BL,AL
 	AND	BL,sharing_mask
-	CMP	fSharing,-1
+	CMP	[fSharing],-1
 	JNZ	CheckShareMode		; not through server call, must be ok
 	CMP	BL,sharing_NET_FCB
 	JZ	CheckAccessMode 	; yes, we have an FCB
@@ -548,7 +548,7 @@ EndProc Check_Access_AX
 
 procedure Code_Page_Mismatched_Error,NEAR		 ;AN000;
 	DOSAssume   CS,<DS>,"Code_Page_Mismatched_Error" ;AN000;
-	ASSUME	ES:NOTHING				 ;AN000;
+;	ASSUME	ES:NOTHING				 ;AN000;
 
 ;	PUSH	DS		       ;FT.					;AN000;
 ;	Context DS		       ;FT. ds=cs				;AN000;
@@ -565,5 +565,5 @@ procedure Code_Page_Mismatched_Error,NEAR		 ;AN000;
 ;	return						 ;FT.			;AN000;
 
 EndProc Code_Page_Mismatched_Error			 ;AN000;
-CODE	ENDS
-    END
+end if
+;    END

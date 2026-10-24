@@ -3,22 +3,22 @@
 ; MSCODE.ASM -- MSDOS code
 ;
 
-.xlist
-.xcref
-include dossym.inc
-include devsym.inc
-include dosseg.asm
-include ifssym.inc
-include fastopen.inc
-include fastxxxx.inc
-.cref
-.list
+;.xlist
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+INCLUDE '../INC/DOSSEG.ASM'
+INCLUDE '../INC/IFSSYM.INC'
+INCLUDE '../INC/FASTOPEN.INC'
+INCLUDE '../INC/FASTXXXX.INC'
+;.cref
+;.list
 
 AsmVars <Kanji, Debug>
 
-CODE	SEGMENT BYTE PUBLIC 'CODE'
+if SEGSEL = S_CODE
 
-ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
     I_need  InDos,BYTE			; TRUE => we are in dos, no interrupt
     I_need  OpenBuf,128 		; temp name buffer
@@ -46,8 +46,8 @@ ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 BREAK <NullDev -- Driver for null device>
 
 procedure   SNULDEV,FAR
-ASSUME DS:NOTHING,ES:NOTHING,SS:NOTHING
-	OR	ES:[BX.REQSTAT],STDON	; Set done bit
+;ASSUME DS:NOTHING,ES:NOTHING,SS:NOTHING
+	OR	[es:BX+SRHEAD.REQSTAT],STDON	; Set done bit
 entry INULDEV
 	RET				; MUST NOT BE A RETURN!
 EndProc SNULDEV
@@ -55,10 +55,10 @@ EndProc SNULDEV
 BREAK <AbsDRD, AbsDWRT -- INT int_disk_read, int_disk_write handlers>
 
 
-TABLE	SEGMENT
-Public MSC001S,MSC001E
-MSC001S label byte
-	IF	IBM
+if SEGSEL = S_TABLE
+;Public MSC001S,MSC001E
+MSC001S:
+	if	IBM
 ; Codes returned by BIOS
 ERRIN:
 	DB	2			; NO RESPONSE
@@ -77,26 +77,26 @@ ERROUT:
 	DB	3			; WRITE ATTEMPT TO WRITE-PROTECT DISK
 
 NUMERR	EQU	$-ERROUT
-	ENDIF
-MSC001E label byte
+	end if
+MSC001E:
 
-TABLE	ENDS
+end if
 
 ;   AbsSetup - setup for abs disk functions
 
 Procedure   AbsSetup,NEAR
-	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
-	INC	INDOS
+;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
+	INC	[INDOS]
 	STI
 	CLD
 	PUSH	DS
 	Context DS
 	CALL	GETBP
 	JC	errdriv 		;PM. error drive			;AN000;
-	MOV	ES:[BP.dpb_free_cnt],-1 ; do not trust user at all.
+	MOV	[es:BP+dpb_free_cnt],-1 ; do not trust user at all.
 errdriv:
 	POP	DS
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 	retc
 
 	MOV	[HIGH_SECTOR],0 	;>32mb	from API			;AN000;
@@ -108,19 +108,19 @@ ASSUME	DS:NOTHING
 	PUSH	SI
 	PUSH	AX
 	Context DS
-	MOV	SI,OFFSET DOSGROUP:OPENBUF
+	MOV	SI,OpenBuf
 	MOV	[SI],AL
-	ADD	BYTE PTR [SI],"A"
-	MOV	WORD PTR [SI+1],003AH	; ":",0
+	ADD	byte [SI],"[a]"
+	MOV	word [SI+1],003AH	; ":",0
 	MOV	AX,0300H
 	CLC
 	INT	int_IBM 		; Will set carry if shared
 	POP	AX
 	POP	SI
 	POP	DS
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 	retnc
-	MOV	ExtErr,error_not_supported
+	MOV	[EXTERR],error_not_supported
 	return
 EndProc AbsSetup
 
@@ -135,15 +135,15 @@ EndProc AbsSetup
 ;		    AL same as low byte of DI from INT 24
 
 	procedure   ABSDRD,FAR
-	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
 	CLI
 	MOV	[user_SS],SS
 	MOV	[user_SP],SP
 	PUSH	CS
 	POP	SS
-ASSUME	SS:DOSGROUP
-	MOV	SP,OFFSET DOSGROUP:DSKSTACK
+;ASSUME	SS:DOSGROUP
+	MOV	SP,DSKSTACK
 	invoke	Save_World		      ;>32mb save all regs		;AN000;
 	PUSH	ES
 	CALL	AbsSetup
@@ -158,34 +158,34 @@ if not ibmcopyright
 	EnterCrit   critDisk
 	MOV	[CURSC_DRIVE],-1	      ; invalidate SC			;AN000;
 	LeaveCrit   critDisk
-endif
+end if
 	invoke	DSKREAD
 TLEAVE:
 	JZ	ILEAVE
 
-	IF	IBM
+	if	IBM
 ; Translate the error code to ancient 1.1 codes
 	PUSH	ES
 	PUSH	CS
 	POP	ES
 	XOR	AH,AH			; Nul error code
 	MOV	CX,NUMERR		; Number of possible error conditions
-	MOV	DI,OFFSET DOSGROUP:ERRIN    ; Point to error conditions
+	MOV	DI,ERRIN    ; Point to error conditions
 	REPNE	SCASB
 	JNZ	LEAVECODE		; Not found
-	MOV	AH,ES:[DI+NUMERR-1]	; Get translation
+	MOV	AH,[es:DI+NUMERR-1]	; Get translation
 LEAVECODE:
 	POP	ES
-	ENDIF
+	end if
 	MOV	[IFS_DRIVER_ERR],AX	;>32mb save error
 	STC
 ILEAVE:
 	POP	ES
 	invoke	Restore_World		     ;>32mb				;AN000;
 	CLI
-	DEC	INDOS
+	DEC	[INDOS]
 	MOV	SS,[user_SS]
-ASSUME	SS:NOTHING
+;ASSUME	SS:NOTHING
 	MOV	SP,[user_SP]
 	MOV	AX,[IFS_DRIVER_ERR]	     ;>32mb restore error		;AN000;
 	STI
@@ -203,15 +203,15 @@ EndProc ABSDRD
 ;		    AL same as low byte of DI from INT 24
 
 	procedure   ABSDWRT,FAR
-ASSUME	DS:NOTHING,ES:NOTHING,SS:NOTHING
+;ASSUME	DS:NOTHING,ES:NOTHING,SS:NOTHING
 
 	CLI
 	MOV	[user_SS],SS
 	MOV	[user_SP],SP
 	PUSH	CS
 	POP	SS
-ASSUME	SS:DOSGROUP
-	MOV	SP,OFFSET DOSGROUP:DSKSTACK
+;ASSUME	SS:DOSGROUP
+	MOV	SP,DSKSTACK
 	invoke	Save_World		      ;>32mb save all regs		;AN000;
 
 	PUSH	ES
@@ -240,7 +240,7 @@ EndProc ABSDWRT
 
 Procedure GETBP,NEAR
 	DOSAssume   CS,<DS>,"GetBP"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
 	PUSH	AX
 	ADD	AL,1			; No increment; need carry flag
@@ -251,37 +251,37 @@ Procedure GETBP,NEAR
 	CMP	AX,error_not_dos_disk	   ;DCR. is unknown media ?		;AN000;
 	JZ	SkipGet 		   ;DCR. yes, let it go 		;AN000;
 	STC				   ;DCR.				;AN000;
-	MOV	ExtErr,AX		   ;PM. invalid drive or Non DOS drive	;AN000;
+	MOV	[EXTERR],AX		   ;PM. invalid drive or Non DOS drive	;AN000;
 	MOV	[IFS_DRIVER_ERR],0201H	   ;PM. other errors/unknown unit	;AN000;
 SkipGet:
 	POP	AX
 	retc
 	LES	BP,[THISCDS]
-	TEST	ES:[BP.curdir_flags],curdir_isnet   ; Clears carry
+	TEST	[es:BP+curdir_flags],curdir_isnet   ; Clears carry
 	JZ	GETBP_CDS
-	LES	BP,ES:[BP.curdir_ifs_hdr]	    ;IFS. if remote file	;AN000;
-	TEST	ES:[BP.ifs_attribute],IFSREMOTE     ;IFS.			;AN000;
+	LES	BP,[es:BP+curdir_ifs_hdr]	    ;IFS. if remote file	;AN000;
+	TEST	[es:BP+ifs_attribute],IFSREMOTE     ;IFS.			;AN000;
 	LES	BP,[THISCDS]
 	JZ	GETBP_CDS			    ;IFS. then error		;AN000;
-	MOV	ExtErr,error_not_supported
+	MOV	[EXTERR],error_not_supported
 	STC
 	return
 
 GETBP_CDS:
-	LES	BP,ES:[BP.curdir_devptr]
+	LES	BP,[es:BP+curdir_devptr]
 
 	entry	GOTDPB
 	DOSAssume   CS,<DS>,"GotDPB"
 ; Load THISDPB from ES:BP
 
-	MOV	WORD PTR [THISDPB],BP
-	MOV	WORD PTR [THISDPB+2],ES
+	MOV	word [THISDPB],BP
+	MOV	word [THISDPB+2],ES
 	return
 EndProc GetBP
 
 BREAK <SYS_RET_OK SYS_RET_ERR CAL_LK ETAB_LK set system call returns>
 
-ASSUME	SS:DOSGROUP
+;ASSUME	SS:DOSGROUP
 
 ;
 ; These are the general system call exit mechanisms.  All internal system
@@ -290,11 +290,11 @@ ASSUME	SS:DOSGROUP
 ;
 
 procedure   SYS_RETURN,NEAR
-	ASSUME	DS:NOTHING,ES:NOTHING
+;	ASSUME	DS:NOTHING,ES:NOTHING
 entry	SYS_RET_OK
 	invoke	FETCHI_CHECK		; TAG checking for FETCHI
 	invoke	get_user_stack
-	AND	[SI.user_F],NOT f_Carry ; turn off user's carry flag
+	AND	[SI+user_environ.user_F],NOT f_Carry ; turn off user's carry flag
 	JMP	SHORT DO_RET		; carry is now clear
 
 entry	SYS_RET_ERR
@@ -303,10 +303,10 @@ entry	SYS_RET_ERR
 	CALL	ErrorMap
 entry	From_GetSet
 	invoke	get_user_stack
-	OR	[SI.user_F],f_Carry	; signal carry to user
+	OR	[SI+user_environ.user_F],f_Carry	; signal carry to user
 	STC				; also, signal internal error
 DO_RET:
-	MOV	[SI.user_AX],AX 	; Really only sets AH
+	MOV	[SI+user_environ.user_AX],AX 	; Really only sets AH
 	return
 
 	entry	FCB_RET_OK
@@ -316,18 +316,18 @@ DO_RET:
 
 	entry	FCB_RET_ERR
 	XOR	AH,AH
-	mov	exterr,AX
+	mov	[EXTERR],AX
 	CALL	ErrorMap
 	MOV	AL,-1
 	return
 
 	entry	errorMap
 	PUSH	SI
-	MOV	SI,OFFSET DOSGROUP:ERR_TABLE_21
+	MOV	SI,ERR_TABLE_21
 	CMP	[FAILERR],0		; Check for SPECIAL case.
 	JZ	EXTENDED_NORMAL 	; All is OK.
 	MOV	[EXTERR],error_FAIL_I24 ; Ooops, this is the REAL reason
-	MOV	SI,OFFSET DOSGROUP:ERR_TABLE_21
+	MOV	SI,ERR_TABLE_21
 EXTENDED_NORMAL:
 	invoke	CAL_LK			; Set CLASS,ACTION,LOCUS for EXTERR
 	POP	SI
@@ -348,7 +348,7 @@ EndProc SYS_RETURN
 ; Destroys SI, FLAGS
 
 	procedure   CAL_LK,NEAR
-ASSUME	DS:NOTHING,ES:NOTHING
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 	PUSH	DS
 	PUSH	AX
@@ -396,7 +396,7 @@ EndProc CAL_LK
 ; Destroys ONLY AX and FLAGS
 
 	procedure   ETAB_LK,NEAR
-ASSUME	DS:NOTHING,ES:NOTHING
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 	PUSH	DS
 	PUSH	SI
@@ -404,9 +404,9 @@ ASSUME	DS:NOTHING,ES:NOTHING
 	PUSH	BX
 	Context DS
 	MOV	[EXTERR],AX		; Set EXTERR with "real" error
-	MOV	SI,OFFSET DOSGROUP:I21_MAP_E_TAB
+	MOV	SI,I21_MAP_E_TAB
 	MOV	BH,AL			; Real code to BH
-	MOV	BL,BYTE PTR [USER_IN_AX + 1]	; Sys call to BL
+	MOV	BL,byte [USER_IN_AX + 1]	; Sys call to BL
 TABLK2:
 	LODSW
 	CMP	AL,0FFH 		; End of table?
@@ -442,15 +442,15 @@ EndProc ETAB_LK
 
 BREAK <DOS 2F Handler and default NET 2F handler>
 
-IF installed
+if installed
 
 ;
 ; SetBad sets up info for bad functions
 ;
 Procedure   SetBad,NEAR
-	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 	MOV	AX,error_invalid_function	; ALL NET REQUESTS get inv func
-	MOV	ExtErr_LOCUS,errLoc_UNK
+	MOV	[ExtErr_locus],errLoc_UNK
 	STC
 	ret
 EndProc SetBad
@@ -465,7 +465,7 @@ EndProc BadCall
 ; OKCall always sets carry to off.
 ;
 Procedure   OKCall,FAR
-	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 	CLC
 	ret
 EndProc OKCall
@@ -477,11 +477,11 @@ EndProc OKCall
 ;   POP     ...
 ; The handler itself needs to make the AX available for the various routines.
 
-PUBLIC	Int2F
-INT2F	PROC	FAR
+;PUBLIC	Int2F
+INT2F:
 
 INT2FNT:
-	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 	STI
 	CMP	AH,multNET
 	JNZ	INT2FSHR
@@ -491,7 +491,7 @@ TestInstall:
 BadFunc:
 	CALL	SetBad
 	entry	Leave2F
-	RET	2			; long return + clear flags off stack
+	RETF	2			; long return + clear flags off stack
 
 INT2FSHR:
 	CMP	AH,multSHARE		; is this a share request
@@ -502,16 +502,16 @@ INT2FNLS:
 	JZ	TestInstall		; yes check for installation
 
 INT2FDOS:
-	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 	CMP	AH,multDOS
 	JZ	DispatchDOS
 	IRET				; This assume that we are at the head
 					; of the list
-INT2F	ENDP
+;INT2F	ENDP
 
 DispatchDOS:
-	PUSH	FOO			; push return address
-	PUSH	DTab			; push table address
+	PUSH	[FOO]			; push return address
+	PUSH	[DTab]			; push table address
 	PUSH	AX			; push index
 	PUSH	BP
 	MOV	BP,SP
@@ -540,7 +540,7 @@ Procedure   INT2F_etcetera,NEAR
 	return
 EndProc INT2F_etcetera
 
-ENDIF
+end if
 ;Input: same as ABSDRD and ABSDWRT
 ;	 ES:BP -> DPB
 ;Functions: convert 32bit absolute RW input parms to 16bit input parms
@@ -548,13 +548,13 @@ ENDIF
 ;	 carry clear, parms ok
 ;
 Procedure   RW32_CONVERT,NEAR
-	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 	CMP	CX,-1			     ;>32mb  new format ?		;AN000;
 	JZ	new32format		     ;>32mb  yes			;AN000;
 	PUSH	AX			     ;>32mb  save ax			;AN000;
 	PUSH	DX			     ;>32mb  save dx			;AN000;
-	MOV	AX,ES:[BP.dpb_max_cluster]   ;>32mb  get max cluster #		;AN000;
-	MOV	DL,ES:[BP.dpb_cluster_mask]  ;>32mb				;AN000;
+	MOV	AX,[es:BP+dpb_max_cluster]   ;>32mb  get max cluster #		;AN000;
+	MOV	DL,[es:BP+dpb_cluster_mask]  ;>32mb				;AN000;
 	CMP	DL,0FEH 		     ;>32mb  removable ?		;AN000;
 	JZ	letold			     ;>32mb  yes			;AN000;
 	INC	DL			     ;>32mb				;AN000;
@@ -569,11 +569,11 @@ letold:
 	STC				     ;>32mb				;AN000;
 	return				     ;>32mb				;AN000;
 new32format:
-	MOV	DX,WORD PTR [BX.SECTOR_RBA+2];>32mb				;AN000;
+	MOV	DX,word [BX+ABS_32RW.SECTOR_RBA+2];>32mb				;AN000;
 	MOV	[HIGH_SECTOR],DX	     ;>32mb				;AN000;
-	MOV	DX,WORD PTR [BX.SECTOR_RBA]  ;>32mb				;AN000;
-	MOV	CX,[BX.ABS_RW_COUNT]	     ;>32mb				;AN000;
-	LDS	BX,[BX.BUFFER_ADDR]	     ;>32mb				;AN000;
+	MOV	DX,word [BX+ABS_32RW.SECTOR_RBA]  ;>32mb				;AN000;
+	MOV	CX,[BX+ABS_32RW.ABS_RW_COUNT]	     ;>32mb				;AN000;
+	LDS	BX,[BX+ABS_32RW.BUFFER_ADDR]	     ;>32mb				;AN000;
 old_style:				     ;>32mb				;AN000;
 	CLC				     ;>32mb				;AN000;
 	return				     ;>32mb				;AN000;
@@ -586,21 +586,21 @@ EndProc RW32_CONVERT
 ;
 ;
 Procedure   Fastxxx_Purge,NEAR
-	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 	PUSH	AX			      ; save regs.			;AN000;
 	PUSH	SI								;AN000;
 	PUSH	DX								;AN000;
-	TEST	FastSeekflg,Fast_yes	      ; fastseek installed ?		;AN000;
+	TEST	[FastSeekflg],Fast_yes	      ; fastseek installed ?		;AN000;
 	JZ	topen			      ; no				;AN000;
 	MOV	AH,FastSeek_ID		      ; set fastseek id 		;AN000;
 	JMP	SHORT dofast		      ; 				;AN000;
 topen:
-	TEST	FastOpenflg,Fast_yes	      ; fastopen installed ?		;AN000;
+	TEST	[Fastopenflg],Fast_yes	      ; fastopen installed ?		;AN000;
 	JZ	nofast			      ; no				;AN000;
 	MOV	AH,FastOpen_ID		      ; set fastseek installed		;AN000;
 dofast:
 	MOV	AL,FONC_purge		      ; purge				;AN000;
-	MOV	DL,ES:[BP.dpb_drive]	      ; set up drive number		;AN000;
+	MOV	DL,[es:BP+dpb_drive]	      ; set up drive number		;AN000;
 	invoke	Fast_Dispatch		      ; call fastopen/seek		;AN000;
 nofast:
 	POP	DX								;AN000;
@@ -610,5 +610,4 @@ nofast:
 	return				      ; exit				;AN000;
 EndProc Fastxxx_Purge
 
-CODE	ENDS
-
+end if

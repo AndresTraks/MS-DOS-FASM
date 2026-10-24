@@ -147,7 +147,7 @@ GetInterimMode	EQU	2	;		2/12/KK
 NonInterimMode	EQU	0	;		2/12/KK
 InterimMode	EQU	1	;		2/12/KK
 
-OLD_COUNTRY_SIZE    equ     (type DOS_country_cdpg_info - ccDFormat - 10)
+OLD_COUNTRY_SIZE    equ     (sizeof.DOS_country_cdpg_info - ccDFormat - 10)
 NEW_COUNTRY_SIZE    equ     (sizeof.DOS_country_cdpg_info - DOS_country_cdpg_info.ccDosCountry)
 
 ;CAPITALIZATION equates

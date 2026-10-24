@@ -15,19 +15,19 @@ NAME	FILE_INFO
 ;
 ; get the appropriate segment definitions
 ;
-.xlist
-include dosseg.asm
+;.xlist
+INCLUDE '../INC/DOSSEG.ASM'
 
-CODE	SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME	SS:DOSGROUP,CS:DOSGROUP
+if SEGSEL = S_CODE
+;	ASSUME	SS:DOSGROUP,CS:DOSGROUP
 
-.xcref
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
-include fastxxxx.inc
-include fastopen.inc
-.cref
-.list
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+INCLUDE '../INC/FASTXXXX.INC'
+INCLUDE '../INC/FASTOPEN.INC'
+;.cref
+;.list
 
 Installed = TRUE
 
@@ -73,7 +73,7 @@ PAGE
 
 	procedure   GET_FILE_INFO,NEAR
 	DOSAssume   CS,<DS>,"Get_File_Info"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
 	Invoke	TestNet
 	JNC	Local_Info
@@ -92,13 +92,13 @@ share_okok:
 ;	POP	WORD PTR [DMAADD]	       ;IFS. retor DMAADD		;AN000;
 ;	POP	WORD PTR [DMAADD+2]	       ;IFS.				;AN000;
 ifsshare:
-IF NOT Installed
+if NOT Installed
 	transfer NET_GET_FILE_INFO
-ELSE
+else
 	MOV	AX,(multNET SHL 8) OR 15
 	INT	2FH
 	return
-ENDIF
+end if
 nofiles:
 ;	POP	WORD PTR [DMAADD]	       ;IFS. retor DMAADD		;AN000;
 ;	POP	WORD PTR [DMAADD+2]	       ;IFS.				;AN000;
@@ -113,7 +113,7 @@ info_check:
 
 NO_PATH:
 	DOSAssume   CS,<DS>,"FINFO/No_Path"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
 	JNZ	bad_path
 	OR	CL,CL
@@ -134,19 +134,19 @@ info_check_dev:
 	OR	AH,AH
 	JS	info_no_file		; device
 	PUSH	DS
-	MOV	DS,WORD PTR [CURBUF+2]
-ASSUME	DS:NOTHING
+	MOV	DS,word [CURBUF+2]
+;ASSUME	DS:NOTHING
 	MOV	SI,BX
 	XOR	BX,BX			; Assume size=0 (dir)
 	MOV	DI,BX
-	MOV	CX,[SI.dir_time]
-	MOV	DX,[SI.dir_date]
+	MOV	CX,[SI+dir_time]
+	MOV	DX,[SI+dir_date]
 	XOR	AH,AH
-	MOV	AL,[SI.dir_attr]
+	MOV	AL,[SI+dir_attr]
 	TEST	AL,attr_directory
 	JNZ	NO_SIZE
-	MOV	DI,[SI.dir_size_l]
-	MOV	BX,[SI.dir_size_h]
+	MOV	DI,[SI+dir_size_l]
+	MOV	BX,[SI+dir_size_h]
 NO_SIZE:
 	POP	DS
 	CLC
@@ -189,14 +189,14 @@ Break	<SET_FILE_ATTRIBUTE -- Set File Attribute>
 
 	procedure   SET_FILE_ATTRIBUTE,NEAR
 	DOSAssume   CS,<DS>,"Set_File_Attribute"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
 	TEST	AX,NOT attr_changeable
 	JZ	set_look
 BAD_ACC:
-	MOV	ExtErr_Locus,errLoc_UNK
-	MOV	ExtErr_Class,errClass_Apperr
-	MOV	ExtErr_Action,errAct_Abort
+	MOV	[ExtErr_locus],errLoc_UNK
+	MOV	[EXTERR_CLASS],errClass_Apperr
+	MOV	[EXTERR_ACTION],errAct_Abort
 	MOV	AX,error_access_denied
 	STC
 	return
@@ -205,15 +205,15 @@ set_look:
 	Invoke	TestNet
 	JNC	Local_Set
 
-IF NOT Installed
+if NOT Installed
 	transfer NET_SEQ_SET_FILE_ATTRIBUTE
-ELSE
+else
 	PUSH	AX
 	MOV	AX,(multNET SHL 8) OR 14
 	INT	2FH
 	POP	BX			; clean stack
 	return
-ENDIF
+end if
 
 LOCAL_SET:
 	EnterCrit   critDisk
@@ -240,13 +240,13 @@ set_check_share:
 
 set_do:
 	LES	DI,[CURBUF]
-	AND	BYTE PTR ES:[BX].dir_attr,NOT attr_changeable
-	OR	BYTE PTR ES:[BX].dir_attr,AL
+	AND	byte [es:BX+dir_attr],NOT attr_changeable
+	OR	byte [es:BX+dir_attr],AL
 
-	TEST	ES:[DI.buf_flags],buf_dirty  ;LB. if already dirty		;AN000;
+	TEST	[es:DI+buf_flags],buf_dirty  ;LB. if already dirty		;AN000;
 	JNZ	yesdirty		  ;LB.	  don't increment dirty count   ;AN000;
 	invoke	INC_DIRTY_COUNT 	  ;LB.					;AN000;
-	OR	ES:[DI.buf_flags],buf_dirty
+	OR	[es:DI+buf_flags],buf_dirty
 yesdirty:
 	MOV	AL,[THISDRV]
 ;;;; 10/1/86 F.C update fastopen cache
@@ -271,7 +271,7 @@ EndProc SET_FILE_ATTRIBUTE
 
 
 	procedure   GET_FAST_PATH,NEAR
-	ASSUME	DS:NOTHING,ES:NOTHING
+;	ASSUME	DS:NOTHING,ES:NOTHING
 
 	OR	[FastOpenFlg],FastOpen_Set ;FO. trigger fastopen		;AN000;
 	invoke	GetPath
@@ -282,5 +282,5 @@ EndProc SET_FILE_ATTRIBUTE
 
 EndProc GET_FAST_PATH
 
-CODE	ENDS
-    END
+end if
+;    END

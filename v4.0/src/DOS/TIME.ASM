@@ -20,20 +20,20 @@ NAME	TIME
 ;	Created: ARR 30 March 1983
 ;
 
-.xlist
+;.xlist
 ;
 ; get the appropriate segment definitions
 ;
-include dosseg.asm
+INCLUDE '../INC/DOSSEG.ASM'
 
-CODE	    SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME	SS:DOSGROUP,CS:DOSGROUP
+if SEGSEL = S_CODE
+;	ASSUME	SS:DOSGROUP,CS:DOSGROUP
 
-.xcref
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
-.cref
-.list
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+;.cref
+;.list
 
 
     i_need  DAY,BYTE
@@ -51,8 +51,8 @@ INCLUDE DEVSYM.INC
 
 SUBTTL DATE AND TIME - SYSTEM CALLS 42,43,44,45
 PAGE
-	procedure   $GET_DATE,NEAR
-ASSUME	DS:NOTHING,ES:NOTHING
+	procedure   GET_DATE$,NEAR
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 ; Inputs:
 ;	None
@@ -67,18 +67,18 @@ ASSUME	DS:NOTHING,ES:NOTHING
 ;
 ; WARNING!!!! DAY and MONTH must be adjacently allocated!
 ;
-	MOV	BX,WORD PTR [DAY]	; fetch both day and month
+	MOV	BX,word [DAY]	; fetch both day and month
 	invoke	get_user_stack		;Get pointer to user registers
-ASSUME	DS:NOTHING
-	MOV	[SI.user_DX],BX 	;DH=month, DL=day
+;ASSUME	DS:NOTHING
+	MOV	[SI+user_environ.user_DX],BX 	;DH=month, DL=day
 	ADD	AX,1980 		;Put bias back
-	MOV	[SI.user_CX],AX 	;CX=year
-	MOV	AL,BYTE PTR [WEEKDAY]
+	MOV	[SI+user_environ.user_CX],AX 	;CX=year
+	MOV	AL,byte [WEEKDAY]
 	return
-EndProc $GET_DATE
+EndProc GET_DATE$
 
-	procedure   $SET_DATE,NEAR	;System call 43
-ASSUME	DS:NOTHING,ES:NOTHING
+	procedure   SET_DATE$,NEAR	;System call 43
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 ; Inputs:
 ;	CX:DX valid date
@@ -101,10 +101,10 @@ ASSUME	DS:NOTHING,ES:NOTHING
 	Context DS
 	invoke	DODATE
 RET24:	return
-EndProc $SET_DATE
+EndProc SET_DATE$
 
-	procedure   $GET_TIME,NEAR	;System call 44
-ASSUME	DS:NOTHING,ES:NOTHING
+	procedure   GET_TIME$,NEAR	;System call 44
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 ; Inputs:
 ;	None
@@ -116,14 +116,14 @@ ASSUME	DS:NOTHING,ES:NOTHING
 	Context DS
 	CALL	READTIME
 	invoke	get_user_stack		;Get pointer to user registers
-	MOV	[SI.user_DX],DX
-	MOV	[SI.user_CX],CX
+	MOV	[SI+user_environ.user_DX],DX
+	MOV	[SI+user_environ.user_CX],CX
 	XOR	AL,AL
 RET26:	return
-EndProc $GET_TIME
+EndProc GET_TIME$
 
-	procedure   $SET_TIME,NEAR	;System call 45
-ASSUME	DS:NOTHING,ES:NOTHING
+	procedure   SET_TIME$,NEAR	;System call 45
+;ASSUME	DS:NOTHING,ES:NOTHING
 
 ; Inputs:
 ;	CX:DX = Time
@@ -144,7 +144,7 @@ ASSUME	DS:NOTHING,ES:NOTHING
 	PUSH	CX
 	PUSH	DX
 	Context DS
-	MOV	BX,OFFSET DOSGROUP:TIMEBUF
+	MOV	BX,TIMEBUF
 	MOV	CX,6
 	XOR	DX,DX
 	MOV	AX,DX
@@ -153,20 +153,20 @@ ASSUME	DS:NOTHING,ES:NOTHING
 	DOSAssume   CS,<ES>,"TIME/SetRead"
 	PUSH	DS
 	LDS	SI,[BCLOCK]
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 	invoke	DEVIOCALL2		;Get correct day count
 	POP	DS
 	DOSAssume   CS,<DS>,"TIME/DevIOCall2"
 	POP	BX
 	invoke	SETWRITE
-	POP	WORD PTR [TIMEBUF+4]
-	POP	WORD PTR [TIMEBUF+2]
+	POP	word [TIMEBUF+4]
+	POP	word [TIMEBUF+2]
 	LDS	SI,[BCLOCK]
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 	invoke	DEVIOCALL2		;Set the time
 	XOR	AL,AL
 	return
-EndProc $SET_TIME
+EndProc SET_TIME$
 
 SUBTTL DATE16, READTIME, DODATE -- GUTS OF TIME AND DATE
 PAGE
@@ -180,7 +180,7 @@ PAGE
 
 procedure   DATE16,NEAR
 	Context DS
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 	PUSH	CX
 	PUSH	ES
 	CALL	READTIME
@@ -196,7 +196,7 @@ procedure   DATE16,NEAR
 ;
 ; WARNING!  MONTH and YEAR must be adjacently allocated
 ;
-	MOV	AX,WORD PTR [MONTH]	;Fetch month and year
+	MOV	AX,word [MONTH]	;Fetch month and year
 	MOV	CL,4
 	SHL	AL,CL			;Push month to left to make room for day
 	SHL	AX,1
@@ -210,27 +210,27 @@ EndProc DATE16
 
 	procedure   READTIME,NEAR
 	DOSAssume   CS,<DS>,"ReadTime"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 
 	MOV	[DATE_FLAG],0		; reset date flag for CPMIO
 	PUSH	SI
 	PUSH	BX
-	MOV	BX,OFFSET DOSGROUP:TIMEBUF
+	MOV	BX,TIMEBUF
 	MOV	CX,6
 	XOR	DX,DX
 	MOV	AX,DX
 	invoke	SETREAD
 	PUSH	DS
 	LDS	SI,[BCLOCK]
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 	invoke	DEVIOCALL2		;Get correct date and time
 	POP	DS
 	DOSAssume   CS,<DS>,"ReadTime/DevIOCall2"
 	POP	BX
 	POP	SI
-	MOV	AX,WORD PTR [TIMEBUF]
-	MOV	CX,WORD PTR [TIMEBUF+2]
-	MOV	DX,WORD PTR [TIMEBUF+4]
+	MOV	AX,word [TIMEBUF]
+	MOV	CX,word [TIMEBUF+2]
+	MOV	DX,word [TIMEBUF+4]
 	CMP	AX,[DAYCNT]		;See if day count is the same
 	retz
 	CMP	AX,FOURYEARS*30 	;Number of days in 120 years
@@ -246,7 +246,7 @@ ASSUME	DS:NOTHING
 	SHL	AX,1
 	SHL	AX,1			;Multiply by 8 (no. of half-years)
 	MOV	CX,AX			;<240 implies AH=0
-	MOV	SI,OFFSET DOSGROUP:YRTAB;Table of days in each year
+	MOV	SI,YRTAB;Table of days in each year
 	CALL	DSLIDE			;Find out which of four years we're in
 	SHR	CX,1			;Convert half-years to whole years
 	JNC	SK			;Extra half-year?
@@ -254,7 +254,7 @@ ASSUME	DS:NOTHING
 SK:
 	CALL	SETYEAR
 	MOV	CL,1			;At least at first month in year
-	MOV	SI,OFFSET DOSGROUP:MONTAB   ;Table of days in each month
+	MOV	SI,MONTAB   ;Table of days in each month
 	CALL	DSLIDE			;Find out which month we're in
 	MOV	[MONTH],CL
 	INC	DX			;Remainder is day of month (start with one)
@@ -279,7 +279,7 @@ EndProc DSLIDE
 
 	procedure   SETYEAR,NEAR
 ;Set year with value in CX. Adjust length of February for this year.
-	MOV	BYTE PTR [YEAR],CL
+	MOV	byte [YEAR],CL
 
 CHKYR:
 	TEST	CL,3			;Check for leap year
@@ -293,11 +293,11 @@ EndProc SETYEAR
 
 	procedure   DODATE,NEAR
 	DOSAssume   CS,<DS>,"DoDate"
-	ASSUME	ES:NOTHING
+;	ASSUME	ES:NOTHING
 	CALL	CHKYR			;Set Feb. up for new year
 	MOV	AL,DH
-	MOV	BX,OFFSET DOSGROUP:MONTAB-1
-	XLAT				;Look up days in month
+	MOV	BX,[MONTAB-1]
+	XLATB				;Look up days in month
 	CMP	AL,DL
 	MOV	AL,-1			;Restore error flag, just in case
 	retc				;Error if too many days
@@ -305,20 +305,20 @@ EndProc SETYEAR
 ;
 ; WARNING!  DAY and MONTH must be adjacently allocated
 ;
-	MOV	WORD PTR [DAY],DX	;Set both day and month
+	MOV	word [DAY],DX	;Set both day and month
 	SHR	CX,1
 	SHR	CX,1
 	MOV	AX,FOURYEARS
 	MOV	BX,DX
 	MUL	CX
-	MOV	CL,BYTE PTR [YEAR]
+	MOV	CL,byte [YEAR]
 	AND	CL,3
-	MOV	SI,OFFSET DOSGROUP:YRTAB
+	MOV	SI,YRTAB
 	MOV	DX,AX
 	SHL	CX,1			;Two entries per year, so double count
 	CALL	DSUM			;Add up the days in each year
 	MOV	CL,BH			;Month of year
-	MOV	SI,OFFSET DOSGROUP:MONTAB
+	MOV	SI,MONTAB
 	DEC	CX			;Account for months starting with one
 	CALL	DSUM			;Add up days in each month
 	MOV	CL,BL			;Day of month
@@ -329,7 +329,7 @@ EndProc SETYEAR
 	PUSH	SI
 	PUSH	BX
 	PUSH	AX
-	MOV	BX,OFFSET DOSGROUP:TIMEBUF
+	MOV	BX,TIMEBUF
 	MOV	CX,6
 	XOR	DX,DX
 	MOV	AX,DX
@@ -338,16 +338,16 @@ EndProc SETYEAR
 	DOSAssume   CS,<ES>,"DoDate/SetRead"
 	PUSH	DS
 	LDS	SI,[BCLOCK]
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 	invoke	DEVIOCALL2		;Get correct date and time
 	POP	DS
 	POP	BX
 	DOSAssume   CS,<DS>,"DoDate/DevIOCall2"
 	invoke	SETWRITE
-	POP	WORD PTR [TIMEBUF]
+	POP	word [TIMEBUF]
 	PUSH	DS
 	LDS	SI,[BCLOCK]
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 	invoke	DEVIOCALL2		;Set the date
 	POP	DS
 	DOSAssume   CS,<DS>,"DoDate/DevIOCall2(second)"
@@ -375,6 +375,5 @@ DSUM1:
 	return
 EndProc DSUM
 
-CODE	     ENDS
-    END
-
+end if
+;    END

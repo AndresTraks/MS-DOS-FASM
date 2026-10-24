@@ -9,28 +9,28 @@ NAME	DOSPRINT
 ;	Created: MZ 16 June 1984
 ;
 
-.xlist
+;.xlist
 ;
 ; get the appropriate segment definitions
 ;
-include dosseg.asm
+INCLUDE '../INC/DOSSEG.ASM'
 
-CODE	SEGMENT BYTE PUBLIC  'CODE'
-	ASSUME	SS:DOSGroup,CS:DOSGroup
+if SEGSEL = S_CODE
+;	ASSUME	SS:DOSGroup,CS:DOSGroup
 
-.xcref
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
-.cref
-.list
-.sall
+;.xcref
+INCLUDE '../INC/DOSSYM.INC'
+INCLUDE '../INC/DEVSYM.INC'
+;.cref
+;.list
+;.sall
 
 	I_Need	Proc_ID,WORD
 	I_Need	User_ID,WORD
 
 BREAK	<debugging output>
 
-include print.asm
+INCLUDE 'PRINT.ASM'
 
-CODE ENDS
-END
+end if
+;END
