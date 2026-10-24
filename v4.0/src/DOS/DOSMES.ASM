@@ -229,7 +229,7 @@ if SEGSEL = S_CODE
 Procedure   MAP_CASE,FAR
 	CMP	AL,80H
 	JAE	Map1		;Map no chars below 80H ever
-	RET
+	RETF		; the procedure is FAR, so MASM assembled this far
 Map1:
 	SUB	AL,80H		;Turn into index value
 	PUSH	DS

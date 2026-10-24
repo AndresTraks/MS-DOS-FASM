@@ -240,7 +240,7 @@ noSS_SP:						    ;AN000;
 Dosend:
 	 STI			 ;					  ;AN000;
 
-	 ret			 ;return				  ;AN000;
+	 retf		;return				  ;AN000;
 
 
 ENDPROC   IFS_DOSCALL					    ;AN000;

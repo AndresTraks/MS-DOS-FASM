@@ -49,7 +49,7 @@ procedure   SNULDEV,FAR
 ;ASSUME DS:NOTHING,ES:NOTHING,SS:NOTHING
 	OR	[es:BX+SRHEAD.REQSTAT],STDON	; Set done bit
 entry INULDEV
-	RET				; MUST NOT BE A RETURN!
+	RETF		; MUST NOT BE A RETURN!
 EndProc SNULDEV
 
 BREAK <ABSDRD, ABSDWRT -- INT int_disk_read, int_disk_write handlers>
@@ -196,7 +196,7 @@ ILEAVE:
 	MOV	SP,[cs:user_SP]
 	MOV	AX,[cs:IFS_DRIVER_ERR]	     ;>32mb restore error		;AN000;
 	STI
-	RET				; This must not be a RETURN!
+	RETF		; This must not be a RETURN!
 EndProc ABSDRD
 
 ; Interrupt 26 handler.  Performs absolute disk write.
@@ -466,7 +466,7 @@ EndProc SetBad
 ;
 procedure   BadCall,FAR
 	call	SetBad
-	ret
+	retf		; the procedure is FAR, so MASM assembled this far
 EndProc BadCall
 ;
 ; OKCall always sets carry to off.
@@ -474,7 +474,7 @@ EndProc BadCall
 Procedure   OKCall,FAR
 ;	ASSUME	CS:DOSGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 	CLC
-	ret
+	retf		; the procedure is FAR, so MASM assembled this far
 EndProc OKCall
 
 ; INT 2F handler works as follows:

@@ -686,7 +686,7 @@ CHECKSINGLESIDED:
 	MOV	AL,byte [cs:MediaByte]
 	TEST	AL,0001H	; IS LOW BIT SET? - INDICATES DOUBLE SIDED
 	JNZ	GOODDSK
-	CMP	word [cs:DiskSector+8],"." SHL 8 + "3"
+	CMP	word [cs:DiskSector+8],("." SHL 8) + "3"
 	JNZ	MUSTBEEARLIER
 	CMP	byte [cs:DiskSector+10],"2"
 	JAE	GOODDSK

@@ -161,7 +161,7 @@ SETFINDPB:
 	end if
 
 procedure XXX,FAR
-	RET
+	RETF		; the procedure is FAR, so MASM assembled this far
 EndProc XXX
 end if
 

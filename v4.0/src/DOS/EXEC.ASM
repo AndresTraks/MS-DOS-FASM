@@ -804,7 +804,7 @@ if	BUFFERFLAG
 	invoke	RESTORE_USER_MAP
 end if
 
-	RET
+	RETF		; the procedure is FAR, so MASM assembled this far
 EndProc exec_long_ret
 
 EndProc Exec$

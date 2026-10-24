@@ -1668,29 +1668,29 @@ OKnotMini:				;J.K. 4/7/86
 ; MEDIA IF WE RECOGNIZE THE VERSION NUMBER.
 	mov	bx, DiskSector	;AN000;
 ; look for a signature for msdos...
-	cmp	word [cs:bx+3], "S" shl 8 + "M"
+	cmp	word [cs:bx+3], ("S" shl 8) + "M"
 	jnz	notmssig
-	cmp	word [cs:bx+5], "O" shl 8 + "D"
+	cmp	word [cs:bx+5], ("O" shl 8) + "D"
 	jnz	notmssig
 	cmp	byte [cs:bx+7], "S"
 	je	sigfound
 ; ...or perhaps pcdos...
 notmssig:
-	CMP	word [cs:bx+3], "B" SHL 8 + "I"
+	CMP	word [cs:bx+3], ("B" SHL 8) + "I"
 	jnz	notibmsig
-	CMP	word [cs:bx+5], " " SHL 8 + "M"
+	CMP	word [cs:bx+5], (" " SHL 8) + "M"
  	je	sigfound
 ;----------------------------------------------------------------------
 ;	check for Microsoft OS/2 signature also. 7/29/88. HKN
 notibmsig:
-	CMP	word [cs:bx+3], "S" SHL 8 + "O"
+	CMP	word [cs:bx+3], ("S" SHL 8) + "O"
 	JNZ	UNKNOWNJ
-	CMP	word [cs:bx+5], " " SHL 8 + "2"
+	CMP	word [cs:bx+5], (" " SHL 8) + "2"
 	JNZ	UNKNOWNJ
 ;-----------------------------------------------------------------------
 	
 sigfound:			; signature was found, now check version
-	CMP	word [cs:bx+8], "." SHL 8 + "2"
+	CMP	word [cs:bx+8], ("." SHL 8) + "2"
 	JNZ	TRY5
 	CMP	byte [cs:bx+10], "0"
 	JNZ	TRY5
@@ -1707,7 +1707,7 @@ UNKNOWN3_0_J:					;AN012;Legally formatted media,
 
 TRY5:
 	call	Cover_FDISK_Bug 		;AN010;
-	CMP	word [cs:bx+8],"." SHL 8 + "3"
+	CMP	word [cs:bx+8],("." SHL 8) + "3"
 	jb	UNKNOWN3_0_J			;AN012; Must be 2.1 boot record. Do not trust it, but still legal.
 	JNZ	COPYBPB 			;AN007; Honor OS2 boot record, or DOS 4.0 version
 	cmp	byte [cs:bx+10],"1"         ;do not trust 3.0 boot record. But still legal J.K. 4/15/86
@@ -1969,7 +1969,7 @@ Cover_FDISK_Bug:				;AN010;
 	push	si				      ;AN010;
 	cmp	[cs:Ext_Boot_Sig], EXT_BOOT_SIGNATURE ;AN010;
 	je	CFB_Retit			      ;AN010;if extended BPB, then >= PC DOS 4.00
-	cmp	word [cs:bx+7], "0" shl 8 + "1"   ;AN011; OS2 1.0 ? = IBM 10.0
+	cmp	word [cs:bx+7], ("0" shl 8) + "1"   ;AN011; OS2 1.0 ? = IBM 10.0
 	jne	CFB_Chk_SECNUM			      ;AN010;
 	cmp	byte [cs:bx+10], "0"              ;AN010;
 	jne	CFB_Retit			      ;AN010;

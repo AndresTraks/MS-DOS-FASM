@@ -141,7 +141,7 @@ Break	<GETPATH -- PARSE a WFP>
 ; go build the guy quickly.  Otherwise, let findpath find the device.
 ;
 	MOV	DI,[ss:WFP_START]		; point to the beginning of the name
-	CMP	word [DI+1],'\' SHL 8 + ':'
+	CMP	word [DI+1],('\' SHL 8) + ':'
 	JZ	CrackIt
 ;
 ; Let ChkDev find it in the device list
@@ -1137,7 +1137,7 @@ Procedure   CheckThisDevice,NEAR
 ;
 	LODSW
 	OR	AX,2020h
-	CMP	AX,"e" SHL 8 + "d"
+	CMP	AX,("e" SHL 8) + "d"
 	JNZ	NotDevice		; not "de", assume not device
 	LODSB
 	OR	AL,20h

@@ -409,7 +409,7 @@ Procedure   FastRet,FAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
 	MOV	AX,-1
 	STC
-	RET
+	RETF		; the procedure is FAR, so MASM assembled this far
 EndProc FastRet
 
 Break	<NLS_OPEN - do Open$ for NLSFUNC   >
