@@ -196,6 +196,14 @@ M_TERMINATING_FLAG$	EQU	-1     ;; Is there any more classes?
 M_ADDR_SZ_NEAR$ 	EQU	2      ;; Size to increment if NEAR
 M_ADDR_SZ_FAR$		EQU	4      ;; Size to increment if FAR
 M_SL$			EQU   ds:si    ;; Refer to SUBLIST as $M_SL
+
+; Which segment the retriever's own data table is in.  MASM worked that out
+; for every reference from the ASSUME the program had set: SORT says ASSUME
+; ds:nothing before it asks for the services, so MASM wrote CS overrides
+; through the whole of MSGSERV, while MORE assumes DS on its one segment and
+; MASM wrote none.  The table is assembled into the program's code segment
+; either way, so CS is what reaches it, and it is written out here.
+M_SEG$			EQU   cs       ;; The segment the data table is in
 M_NO_HANDLE$		EQU	-1     ;; No handle flag
 M_TEMP_BUF_SZ$		EQU	64     ;; Size of temporary buffer	 ;AN003;
 M_NEXT_DBCS_VECTOR$	EQU	2      ;; Amount to increment to get next vector
@@ -413,11 +421,11 @@ macro M_MAKE$ n
 {
     if FARmsg
 	CALL	M_CLS_#n#$				 ;  Get addressibilty to class n (ES:DI)
-	MOV	word [M_RT$+M_RES_ADDRS$.M_CLASS_ADDRS$+M_INDEX$+2],ES ;  Move into first avaliable table location
-	MOV	word [M_RT$+M_RES_ADDRS$.M_CLASS_ADDRS$+M_INDEX$],DI
+	MOV	word [M_SEG$:M_RT$+M_RES_ADDRS$.M_CLASS_ADDRS$+M_INDEX$+2],ES ;  Move into first avaliable table location
+	MOV	word [M_SEG$:M_RT$+M_RES_ADDRS$.M_CLASS_ADDRS$+M_INDEX$],DI
     else
 	CALL	M_CLS_#n#$				 ;  Get addressibilty to class n (ES:DI)
-	MOV	word [M_RT$+M_RES_ADDRS$.M_CLASS_ADDRS$+M_INDEX$],DI
+	MOV	word [M_SEG$:M_RT$+M_RES_ADDRS$.M_CLASS_ADDRS$+M_INDEX$],DI
     end if
 	M_INDEX$ =  M_INDEX$ + 4			 ;  Set next available table location
 }
@@ -446,6 +454,6 @@ macro M_MAKE_COMT$
 macro M_TAKE$ n
 {
 	CALL	M_CLS_#n#$				 ;  Get addressibilty to the class
-	MOV	word [M_RT$+M_RES_ADDRS$.M_CLASS_ADDRS$+M_INDEX$],DI
+	MOV	word [M_SEG$:M_RT$+M_RES_ADDRS$.M_CLASS_ADDRS$+M_INDEX$],DI
 	M_INDEX$ =  M_INDEX$ + 4			 ;  Set next available table location
 }

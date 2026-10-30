@@ -1,23 +1,23 @@
 TITLE	SORT Messages
 
-false	equ	0
-true	equ	not	false
+false	=	0
+true	=	-1
 msver	equ	false
 ibm	equ	true
 internat	equ	true
 
-msg	Macro	lbl,msg
+macro msg lbl,text {
 local a
-public	lbl,lbl&len
-lbl&len dw	a - lbl
-lbl	db	msg
-a	label	byte
-endm
+;public	lbl,lbl#len
+lbl#len dw	a - lbl
+lbl	db	text
+a:
+}
 
-CONST	SEGMENT PUBLIC BYTE
+if SEGSEL = S_CONST
 
 if	internat
-	public	table
+;	public	table
 ;This table defibes the coalating sequence to be used for
 ;international characters.  This table also equates
 ;lower case character to upper case unlike a straight ASCII sort.
@@ -53,7 +53,7 @@ if	msver
 	db	152,153,154,155,156,157,158,159
 	db	160,161,162,163,164,165,166,167
 	db	168,169,170,171,172,173,174,175
-	endif
+	end if
 if	ibm
 	db	"C","U","E","A","A","A","A","C"
 	db	"E","E","E","I","I","I","A","A"
@@ -61,7 +61,7 @@ if	ibm
 	db	"Y","O","U","$","$","$","$","$"
 	db	"A","I","O","U","N","N",166,167
 	db	"?",169,170,171,172,"!",'"','"'
-	endif
+	end if
 	db	176,177,178,179,180,181,182,183
 	db	184,185,186,187,188,189,190,191
 	db	192,193,194,195,196,197,198,199
@@ -70,16 +70,16 @@ if	ibm
 	db	216,217,218,219,220,221,222,223
 if	ibm
 	db	224,"S"
-endif
+end if
 if	msver
 	db	224,225
-endif
+end if
 	db	226,227,228,229,230,231
 	db	232,233,234,235,236,237,238,239
 	db	240,241,242,243,244,245,246,247
 	db	248,249,250,251,252,253,254,255
-	endif
+	end if
 
-CONST	ENDS
-	END
+end if
+;	END
 

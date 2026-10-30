@@ -10,7 +10,7 @@
 # at is a message the retriever looked up by number, and a keystroke lets the
 # rest through.
 #
-# COMMAND.COM cannot do the redirection yet, so tests/moresh.asm stands in
+# COMMAND.COM cannot do the redirection yet, so tests/runsh.asm stands in
 # for it: it puts TEST.TXT on handle 0 and EXECs MORE.
 set -e
 cd "$(dirname "$0")/.."
@@ -32,8 +32,15 @@ else
     WINEDEBUG=${WINEDEBUG:--all}
     export WINEDEBUG
 fi
-$FASM tests/moresh.asm "$OUT/MORESH.COM" >/dev/null
-mcopy -o -i msdos.img "$OUT/MORESH.COM" ::COMMAND.COM
+# Which program the stand-in interpreter is to run, and on what.
+cat > "$OUT/RUN.INC" <<'INC'
+prog	db	"MORE.COM",0
+txtfile	db	"TEST.TXT",0
+INC
+INCLUDE="$OUT" ; export INCLUDE
+$FASM tests/runsh.asm "$OUT/RUNSH.COM" >/dev/null
+unset INCLUDE
+mcopy -o -i msdos.img "$OUT/RUNSH.COM" ::COMMAND.COM
 mcopy -o -i msdos.img bin/MORE.COM ::MORE.COM
 
 # Forty numbered lines, so that MORE has to stop part way.
@@ -93,7 +100,7 @@ want = [(paged, "line 01 of the file", "MORE read the file and wrote it out"),
         (paged, "-- More --",
          "MORE stopped, with the message the retriever found by number"),
         (rest, "line 40 of the file", "a key let the rest of the file through"),
-        (rest, "MORE.COM returned", "MORE ended and EXEC came back")]
+        (rest, "The program returned", "MORE ended and EXEC came back")]
 for screen, text, why in want:
     if text in screen:
         print("ok      %s: %s" % (text, why))

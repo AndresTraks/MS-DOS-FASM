@@ -14,12 +14,13 @@ meaning moved, which is the one thing a line-for-line conversion must not do
 and the one thing nothing else here would notice: the assembler is happy, the
 module is the right length, and the instruction does something else.
 
-What it still reports, and why those are not findings: DOSMAC.INC's macros
-were rewritten rather than translated, so its two streams do not line up at
-all; JUMPMAC.INC and MSSTACK.INC build their instructions out of names that
-MASM pasted together with & and fasm with #; MSBOOT.ASM has one NOP that MASM
-generated and the conversion writes out; and MSEXTRN.INC asks IFNDEF about a
-block whose body is commented out.
+What it still reports, and why those are not findings: DOSMAC.INC's macros,
+SYSMSG.INC's and the whole of STRUC.INC were rewritten rather than
+translated, so their two streams do not line up at all; JUMPMAC.INC and
+MSSTACK.INC build their instructions out of names that MASM pasted together
+with & and fasm with #; MSBOOT.ASM has one NOP that MASM generated and the
+conversion writes out; and MSEXTRN.INC asks IFNDEF about a block whose body
+is commented out.
 
     python3 checkcode.py
 """
@@ -78,7 +79,8 @@ SAME = {
     "GROUP": {None},
     "END": {None, "END"},
     ".XLIST": {None}, ".LIST": {None}, ".XCREF": {None}, ".CREF": {None},
-    ".SALL": {None}, ".RADIX": {None}, "%OUT": {None},
+    ".SALL": {None}, ".LALL": {None}, ".XALL": {None}, ".RADIX": {None},
+    "%OUT": {None},
 }
 WORD = re.compile(r"[A-Za-z_@?$.%][A-Za-z0-9_@?$.]*")
 
@@ -88,6 +90,10 @@ def mnemonic(code):
     code = code.split(";")[0].rstrip()
     if not code.strip():
         return None
+    # a macro's body in fasm opens and closes with a brace of its own, where
+    # MASM had the MACRO line and ENDM.
+    if code.strip() in ("{", "}"):
+        return code.strip()
     # a label on its own, or a label and then the instruction
     code = re.sub(r"^\s*[A-Za-z_@?$][A-Za-z0-9_@?$]*\s*:", " ", code)
     m = WORD.search(code)

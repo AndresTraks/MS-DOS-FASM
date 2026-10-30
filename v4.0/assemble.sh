@@ -64,6 +64,7 @@ $FASM src/DOS/MSDOSLNK.ASM bin/MSDOS.SYS
 #
 # MORE, the smallest of them: one module, the message retriever, and the
 # structured statements in INC/STRUC.INC.
+# utility <directory> <source> <output>
 utility() {
     python3 buildmsg.py "src/CMD/$1/$1.SKL" >/dev/null
     if [ "$FASM" = fasm ]; then
@@ -74,8 +75,12 @@ utility() {
         INCLUDE="$(win "$PWD/src/INC");$(win "$PWD/src/CMD/$1")"
     fi
     export INCLUDE
-    $FASM "src/CMD/$1/$2.ASM" "bin/$2.COM"
+    $FASM "src/CMD/$1/$2.ASM" "bin/$3"
     unset INCLUDE
 }
 
-utility MORE MORE
+utility MORE MORE MORE.COM
+
+# SORT, the first of them built as an .EXE: CODE, CONST and CSTACK in one
+# group, which SORTLNK.ASM lays down as one segment.
+utility SORT SORTLNK SORT.EXE
