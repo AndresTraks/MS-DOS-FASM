@@ -55,3 +55,27 @@ python3 buildmsg.py src/DOS/MSDOS.SKL >/dev/null
 # procedure -- the same twelve as in the release, which does its RestoreReg
 # on a shared way out -- so those lines are expected.
 $FASM src/DOS/MSDOSLNK.ASM bin/MSDOS.SYS
+
+# The utilities under src/CMD.  Each one is built from its own directory, so
+# the INCLUDE path has the shared headers in src/INC first and the utility's
+# own directory after it -- which is where its messages are written.  That is
+# how MASM found them as well: the build ran in the utility's directory with
+# INCLUDE pointing at src/INC.
+#
+# MORE, the smallest of them: one module, the message retriever, and the
+# structured statements in INC/STRUC.INC.
+utility() {
+    python3 buildmsg.py "src/CMD/$1/$1.SKL" >/dev/null
+    if [ "$FASM" = fasm ]; then
+        INCLUDE="$PWD/src/INC:$PWD/src/CMD/$1"
+    else
+        # fasm.exe reads the path the way Windows writes one.
+        win() { printf 'Z:%s' "$(echo "$1" | sed 's|/|\\|g')"; }
+        INCLUDE="$(win "$PWD/src/INC");$(win "$PWD/src/CMD/$1")"
+    fi
+    export INCLUDE
+    $FASM "src/CMD/$1/$2.ASM" "bin/$2.COM"
+    unset INCLUDE
+}
+
+utility MORE MORE

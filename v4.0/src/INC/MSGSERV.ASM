@@ -42,11 +42,19 @@
 ;
 ;
 ; * * * * * * * * * * * * END OF SPECIFICATIONS * * * * * * * * * * * * * * * *
+;
+; Converted to fasm: a structure's field is written as the offset it is, the
+; brackets MASM did not need round a memory reference are there, and PROC and
+; ENDP are a label and nothing.  The four CALL FAR PTR lines below are the
+; exception -- fasm wants the segment named in a far call, and which segment
+; that is waits on COMMAND.COM, the only program in the release that asks the
+; retriever for FARmsg.
+;
 ; Page ;
 
 ;   $SALUT	     $M  (2,5,22,62)			     ;;AN000;; Set SALUT formatting
 
-IF  M_STRUC$						     ;;AN000;; IF we haven't included the structures yet THEN
+if M_STRUC$						     ;;AN000;; IF we haven't included the structures yet THEN
     M_STRUC$	     =	FALSE				     ;;AN000;;	 Let the assembler know that we have
 							     ;;AN000;;	   and include them
 
@@ -60,18 +68,27 @@ IF  M_STRUC$						     ;;AN000;; IF we haven't included the structures yet THEN
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_SUBLIST_STRUC$ STRUC					     ;;AN000;;
+STRUC M_SUBLIST_STRUC$;;AN000					     ;;
+{
 							     ;;
-    M_S_SIZE$	     DB        11			     ;;AN000;; SUBLIST size  (PTR to next SUBLIST)
-    M_S_RESV$	     DB        0			     ;;AN000;; RESERVED
-    M_S_VALUE$	     DD        ?			     ;;AN000;; Time, Date or PTR to data item
-    M_S_ID$	     DB        ?			     ;;AN000;; n of %n
-    M_S_FLAG$	     DB        ?			     ;;AN000;; Data-type flags
-    M_S_MAXW$	     DB        ?			     ;;AN000;; Maximum field width
-    M_S_MINW$	     DB        ?			     ;;AN000;; Minimum field width
-    M_S_PAD$	     DB        ?			     ;;AN000;; Character for Pad field
+    .M_S_SIZE$       DB        11			     ;;AN000;; SUBLIST size  (PTR to next SUBLIST)
+    .M_S_RESV$       DB        0			     ;;AN000;; RESERVED
+    .M_S_VALUE$      DD        ?			     ;;AN000;; Time, Date or PTR to data item
+    .M_S_ID$         DB        ?			     ;;AN000;; n of %n
+    .M_S_FLAG$       DB        ?			     ;;AN000;; Data-type flags
+    .M_S_MAXW$       DB        ?			     ;;AN000;; Maximum field width
+    .M_S_MINW$       DB        ?			     ;;AN000;; Minimum field width
+    .M_S_PAD$        DB        ?			     ;;AN000;; Character for Pad field
 							     ;;
-M_SUBLIST_STRUC$ ENDS					     ;;AN000;;
+}						     ;;AN000;;
+match =M_SUBLIST_STRUC$_LAID_OUT, M_SUBLIST_STRUC$_LAID_OUT
+{
+    M_SUBLIST_STRUC$_LAID_OUT equ 1
+    virtual at 0
+      M_SUBLIST_STRUC$ M_SUBLIST_STRUC$
+      sizeof.M_SUBLIST_STRUC$ = $ - M_SUBLIST_STRUC$
+    end virtual
+}
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -81,13 +98,22 @@ M_SUBLIST_STRUC$ ENDS					     ;;AN000;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_CLASS_ID$ STRUC					     ;;AN000;;
+STRUC M_CLASS_ID$;;AN000					     ;;
+{
 							     ;;
-    M_CLS_ID$	     DB        -1			     ;;AN000;; Class identifer
-    M_COMMAND_VER$   DW        EXPECTED_VERSION 	     ;;AN003;; COMMAND.COM version check
-    M_NUM_CLS_MSG$   DB        0			     ;;AN000;; Total number of message in class
+    .M_CLS_ID$       DB        -1			     ;;AN000;; Class identifer
+    .M_COMMAND_VER$  DW        EXPECTED_VERSION 	     ;;AN003;; COMMAND.COM version check
+    .M_NUM_CLS_MSG$  DB        0			     ;;AN000;; Total number of message in class
 							     ;;
-M_CLASS_ID$ ENDS					     ;;
+}						     ;;
+match =M_CLASS_ID$_LAID_OUT, M_CLASS_ID$_LAID_OUT
+{
+    M_CLASS_ID$_LAID_OUT equ 1
+    virtual at 0
+      M_CLASS_ID$ M_CLASS_ID$
+      sizeof.M_CLASS_ID$ = $ - M_CLASS_ID$
+    end virtual
+}
 							     ;;AN000;;
     M_CLASS_ID_SZ$   EQU       sizeof.M_CLASS_ID$ 	     ;;AN000;;
 							     ;;
@@ -99,12 +125,21 @@ M_CLASS_ID$ ENDS					     ;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_ID$ STRUC						     ;;AN000;;
+STRUC M_ID$;;AN000					     ;;
+{
 							     ;;
-    M_NUM$	     DW        -1			     ;;AN000;; Message Number
-    M_TXT_PTR$	     DW        ?			     ;;AN000;; Pointer to message text
+    .M_NUM$          DW        -1			     ;;AN000;; Message Number
+    .M_TXT_PTR$      DW        ?			     ;;AN000;; Pointer to message text
 							     ;;
-M_ID$ ENDS						     ;;AN000;;
+}						     ;;AN000;;
+match =M_ID$_LAID_OUT, M_ID$_LAID_OUT
+{
+    M_ID$_LAID_OUT equ 1
+    virtual at 0
+      M_ID$ M_ID$
+      sizeof.M_ID$ = $ - M_ID$
+    end virtual
+}
 							     ;;AN000;; Status Flag Values:
     M_ID_SZ$	     EQU       sizeof.M_ID$		     ;;AN000;;
 							     ;;
@@ -116,33 +151,42 @@ M_ID$ ENDS						     ;;AN000;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_RES_ADDRS$ STRUC					     ;;AN000;;
+STRUC M_RES_ADDRS$;;AN000					     ;;
+{
 							     ;;
-    M_EXT_ERR_ADDRS$ DD        0			     ;;AN000;; Allow pointers to THREE Extended error locations
-    M_EXT_FILE$      DD        0			     ;;AN001;;
-    M_EXT_COMMAND$   DD        0			     ;;AN000;;
-    M_EXT_TERM$      DD        -1			     ;;AN000;;
-    M_PARSE_COMMAND$ DD        0			     ;;AN000;;
-    M_PARSE_ADDRS$   DD        0			     ;;AN000;; Allow pointers to TWO Parse error locations
-    M_PARSE_TERM$    DD        -1			     ;;AN000;;
-    M_CRIT_ADDRS$    DD        0			     ;;AN000;; Allow pointers to TWO Critical error locations
-    M_CRIT_COMMAND$  DD        0			     ;;AN000;;
-    M_CRIT_TERM$     DD        -1			     ;;AN000;;
-    M_DISK_PROC_ADDR$ DD       -1			     ;;AN004;; Address of READ_DISK_PROC
-    M_CLASS_ADDRS$   DD        M_NUM_CLS$ DUP(0)	     ;;AN000;; Allow pointers to specified classes
-    M_CLS_TERM$      DD        -1			     ;;AN000;;
-    M_DBCS_VEC$      DD        0			     ;;AN000;; Save DBCS vector
-    M_HANDLE$	     DW        ?			     ;;AN000;;
-    M_SIZE$	     DB        0			     ;;AN000;;
-    M_CRLF$	     DB        0DH,0AH			     ;;AN004;; CR LF message
-    M_CLASS$	     DB        ?			     ;;AN004;; Saved class
-    M_RETURN_ADDR$   DW        ?			     ;;AN000;;
-    M_MSG_NUM$	     DW        M_NULL$			     ;;AN000;;
-    M_DIVISOR$	     DW        10			     ;;AN000;; Default = 10 (must be a WORD for division)
-    M_TEMP_BUF$      DB        M_TEMP_BUF_SZ$ DUP("$")	     ;;AN000;; Temporary buffer
-    M_BUF_TERM$      DB        "$"			     ;;AN000;;
+    .M_EXT_ERR_ADDRS$ DD        0			     ;;AN000;; Allow pointers to THREE Extended error locations
+    .M_EXT_FILE$     DD        0			     ;;AN001;;
+    .M_EXT_COMMAND$  DD        0			     ;;AN000;;
+    .M_EXT_TERM$     DD        -1			     ;;AN000;;
+    .M_PARSE_COMMAND$ DD        0			     ;;AN000;;
+    .M_PARSE_ADDRS$  DD        0			     ;;AN000;; Allow pointers to TWO Parse error locations
+    .M_PARSE_TERM$   DD        -1			     ;;AN000;;
+    .M_CRIT_ADDRS$   DD        0			     ;;AN000;; Allow pointers to TWO Critical error locations
+    .M_CRIT_COMMAND$ DD        0			     ;;AN000;;
+    .M_CRIT_TERM$    DD        -1			     ;;AN000;;
+    .M_DISK_PROC_ADDR$ DD       -1			     ;;AN004;; Address of READ_DISK_PROC
+    .M_CLASS_ADDRS$  DD        M_NUM_CLS$ DUP(0)	     ;;AN000;; Allow pointers to specified classes
+    .M_CLS_TERM$     DD        -1			     ;;AN000;;
+    .M_DBCS_VEC$     DD        0			     ;;AN000;; Save DBCS vector
+    .M_HANDLE$       DW        ?			     ;;AN000;;
+    .M_SIZE$         DB        0			     ;;AN000;;
+    .M_CRLF$         DB        0DH,0AH			     ;;AN004;; CR LF message
+    .M_CLASS$        DB        ?			     ;;AN004;; Saved class
+    .M_RETURN_ADDR$  DW        ?			     ;;AN000;;
+    .M_MSG_NUM$      DW        M_NULL$			     ;;AN000;;
+    .M_DIVISOR$      DW        10			     ;;AN000;; Default = 10 (must be a WORD for division)
+    .M_TEMP_BUF$     DB        M_TEMP_BUF_SZ$ DUP("$")	     ;;AN000;; Temporary buffer
+    .M_BUF_TERM$     DB        "$"			     ;;AN000;;
 
-M_RES_ADDRS$ ENDS					     ;;AN000;;
+}						     ;;AN000;;
+match =M_RES_ADDRS$_LAID_OUT, M_RES_ADDRS$_LAID_OUT
+{
+    M_RES_ADDRS$_LAID_OUT equ 1
+    virtual at 0
+      M_RES_ADDRS$ M_RES_ADDRS$
+      sizeof.M_RES_ADDRS$ = $ - M_RES_ADDRS$
+    end virtual
+}
 							     ;;
 M_RES_ADDRS_SZ$ EQU  sizeof.M_RES_ADDRS$			     ;;AN000;;
 							     ;;
@@ -154,27 +198,36 @@ M_RES_ADDRS_SZ$ EQU  sizeof.M_RES_ADDRS$			     ;;AN000;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_COUNTRY_INFO$ STRUC					     ;;AN000;; Expected Country infomation
+STRUC M_COUNTRY_INFO$;;AN000					     ;; Expected Country infomation
+{
 							     ;;
-    M_HEADER$	     DB       M_RES_ADDRS_SZ$-M_TEMP_BUF_SZ$-1 DUP(?) ;;AN000;; Go past first part of struc
-    M_DATE_FORMAT$   DW       ? 			     ;;AN000;; <------- Date Format
-    M_CURR_SEPARA$   DB       5 DUP(?)			     ;;AN000;;
-    M_THOU_SEPARA$   DB       ?,0			     ;;AN000;; <------- Thou Separator
-    M_DECI_SEPARA$   DB       ?,0			     ;;AN000;; <------- Decimal Separator
-    M_DATE_SEPARA$   DB       ?,0			     ;;AN000;; <------- Date Separator
-    M_TIME_SEPARA$   DB       ?,0			     ;;AN000;; <------- Time Separator
-    M_CURR_FORMAT$   DB       ? 			     ;;AN000;;
-    M_SIG_DIGS_CU$   DB       ? 			     ;;AN000;;
-    M_TIME_FORMAT$   DB       ? 			     ;;AN000;; <------- Time Format
+    .M_HEADER$       DB       (M_RES_ADDRS_SZ$-M_TEMP_BUF_SZ$-1) DUP(?) ;;AN000;; Go past first part of struc
+    .M_DATE_FORMAT$  DW       ? 			     ;;AN000;; <------- Date Format
+    .M_CURR_SEPARA$  DB       5 DUP(?)			     ;;AN000;;
+    .M_THOU_SEPARA$  DB       ?,0			     ;;AN000;; <------- Thou Separator
+    .M_DECI_SEPARA$  DB       ?,0			     ;;AN000;; <------- Decimal Separator
+    .M_DATE_SEPARA$  DB       ?,0			     ;;AN000;; <------- Date Separator
+    .M_TIME_SEPARA$  DB       ?,0			     ;;AN000;; <------- Time Separator
+    .M_CURR_FORMAT$  DB       ? 			     ;;AN000;;
+    .M_SIG_DIGS_CU$  DB       ? 			     ;;AN000;;
+    .M_TIME_FORMAT$  DB       ? 			     ;;AN000;; <------- Time Format
 							     ;;
-M_COUNTRY_INFO$ ENDS					     ;;AN000;;
+}						     ;;AN000;;
+match =M_COUNTRY_INFO$_LAID_OUT, M_COUNTRY_INFO$_LAID_OUT
+{
+    M_COUNTRY_INFO$_LAID_OUT equ 1
+    virtual at 0
+      M_COUNTRY_INFO$ M_COUNTRY_INFO$
+      sizeof.M_COUNTRY_INFO$ = $ - M_COUNTRY_INFO$
+    end virtual
+}
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-ELSE							     ;;AN000;;	ELSE if we have already included the STRUCTURES
+else                                                         ;;AN000;;	ELSE if we have already included the STRUCTURES
 ; ;
 ;   $SALUT  $M	(2,5,13,62)				     ;;AN000;;	Set SALUT formatting for code section
 
-    IF	    MSGDATA					     ;;AN000;;	IF this is a request to include the data area
+    if MSGDATA					             ;;AN000;;	IF this is a request to include the data area
       MSGDATA =  FALSE					     ;;AN000;;	  Let the assembler know not to include it again
 							     ;;AN000;;	  and include it
       PAGE
@@ -187,28 +240,27 @@ ELSE							     ;;AN000;;	ELSE if we have already included the STRUCTURES
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-IF    COMR						     ;;AN000;; Since COMMAND.COM includes this twice
-      M_RT$   EQU	       M_RT2$			     ;;AN000;;	we must redefine the label so no
-      M_RT2$  LABEL  BYTE				     ;;AN000;;	 assembly errors occur
+if COMR						             ;;AN000;; Since COMMAND.COM includes this twice
+      M_RT$   =	       M_RT2$			     ;;AN000;;	we must redefine the label so no
+      M_RT2$  M_RES_ADDRS$				     ;;AN000;;	 assembly errors occur
       M_ALTLABEL$ = TRUE				     ;;AN000;; Flag that label was changed
-ELSE							     ;;AN000;;
-      M_RT$   LABEL   BYTE				     ;;AN000;;
-ENDIF							     ;;AN000;;
-      M_RES_ADDRS$ <>					     ;;AN000;; Resident addresses
+else                                                         ;;AN000;;
+      M_RT$   M_RES_ADDRS$				     ;;AN000;; Resident addresses
+end if                                                       ;;AN000;;
 							     ;;
-      include COPYRIGH.INC				     ;;AN001;; Include Copyright 1988 Microsoft
+      include 'COPYRIGH.INC'				     ;;AN001;; Include Copyright 1988 Microsoft
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ENDIF						     ;;AN000;; END of include of Data table
+    end if                                                   ;;AN000;; END of include of Data table
 
 ; ;
-    IF	    NOT  M_MSGDATA_ONLY$			     ;;AN000;; IF this was a request for only the data table THEN
+    if ~M_MSGDATA_ONLY$			                     ;;AN000;; IF this was a request for only the data table THEN
 							     ;; 	don't include any more code
 							     ;;AN000;; Figure out what other code to include
-      IF      DISK_PROC 				     ;;AN003;;	 Is the request to include the READ_DISK code
-	IF	COMR					     ;;AN003;;	 (Only Resident COMMAND.COM should ask for it)
-	  M_RT$   EQU		   M_RT2$		     ;;AN003;;
-	ENDIF
+      if DISK_PROC 				             ;;AN003;;	 Is the request to include the READ_DISK code
+	if COMR					             ;;AN003;;	 (Only Resident COMMAND.COM should ask for it)
+	  M_RT$   =		   M_RT2$		     ;;AN003;;
+	end if
 	DISK_PROC = FALSE				     ;;AN003;;	 Yes, THEN include it and reset flag
 	PAGE
 	SUBTTL	DOS - Message Retriever - DISK_PROC Module
@@ -228,9 +280,9 @@ ENDIF							     ;;AN000;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-	PUBLIC	READ_DISK_PROC				     ;;
+	;PUBLIC READ_DISK_PROC				     ;;
 							     ;;
-READ_DISK_PROC PROC FAR 				     ;;AN003;;
+READ_DISK_PROC:                                              ;;AN003;;
 
 	PUSH	AX					     ;;AN003;; Save everything
 	PUSH	BX					     ;;AN003;;
@@ -273,7 +325,7 @@ MDO3$:
 	      XOR     SI,SI				     ;;AN003;;	   Reset buffer index
 	      MOV     AH,DOS_READ_BYTE			     ;;AN003;;	   Read
 	      MOV     CX,M_TEMP_BUF_SZ$ 		     ;;AN003;;	     the first part of the header
-	      LEA     DX,M_RT$.M_TEMP_BUF$		     ;;AN003;;	       into the temp buffer
+	      LEA     DX,[M_RT$+M_RES_ADDRS$.M_TEMP_BUF$]		     ;;AN003;;	       into the temp buffer
 	      INT     21H				     ;;AN003;;	   Read it
 	      MOV     DI,DX				     ;;AN003;;
 	      POP     AX				     ;;AN003;;
@@ -283,9 +335,9 @@ MDO3$:
 	      JZ MIF4$
 		XOR	CX,CX				     ;;AN003;;	   Set flag to second pass
 		XOR	AH,AH				     ;;AN003;;	   Get number of messages in class
-		MOV	AL,DS:[DI].M_NUM_CLS_MSG$	     ;;AN003;;
+		MOV	AL,[ds:DI+M_CLASS_ID$.M_NUM_CLS_MSG$]	     ;;AN003;;
 		MOV	SI,M_CLASS_ID_SZ$		     ;;AN003;;	   Initialize index
-		CMP	DS:[DI].M_COMMAND_VER$,EXPECTED_VERSION ;;AN003;;  Is this the right version of COMMAND.COM?
+		CMP	ds:DI+M_CLASS_ID$.M_COMMAND_VER$,EXPECTED_VERSION ;;AN003;;  Is this the right version of COMMAND.COM?
 ;	      $ENDIF					     ;;AN003;;
 MIF4$:
 	      POP     DX				     ;;AN003;;
@@ -293,7 +345,7 @@ MIF4$:
 	      JNZ MIF6$
 ;		$SEARCH 				     ;;AN003;;
 MDO7$:
-		  CMP	  BP,WORD PTR M_RT$.M_TEMP_BUF$[SI]  ;;AN003;;	     Is this the message I'm looking for?
+		  CMP	  BP,word [M_RT$+M_RES_ADDRS$.M_TEMP_BUF$+SI] ;;AN003;;	     Is this the message I'm looking for?
 ;		$EXITIF Z				     ;;AN003;;	     Yes, (ZF=1)
 		JNZ MIF7$
 		  CLC					     ;;AN003;;	      Reset carry, exit search
@@ -327,11 +379,11 @@ MEN6$:
 	      MOV     AX,DOS_LSEEK_FILE 		     ;;AN003;;	 Prepare to LSEEK to the specific message
 	      XOR     CX,CX				     ;;AN003;;	 Value has been set by COMMAND.COM
 	      ADD     DX,M_CLASS_ID_SZ$ 		     ;;AN003;;	 Add offset of first header
-	      ADD     DX,WORD PTR M_RT$.M_TEMP_BUF$[SI]+2    ;;AN003;;	 Add offset from msg structure
+	      ADD     DX,word [M_RT$+M_RES_ADDRS$.M_TEMP_BUF$+SI+2] ;;AN003;;	 Add offset from msg structure
 	      INT     21H				     ;;AN003;;	 LSEEK the file
 	      MOV     AH,DOS_READ_BYTE			     ;;AN003;;	   Read
 	      MOV     CX,M_TEMP_BUF_SZ$ 		     ;;AN003;;	     the message
-	      LEA     DX,M_RT$.M_TEMP_BUF$		     ;;AN003;;	       into the temp buffer
+	      LEA     DX,[M_RT$+M_RES_ADDRS$.M_TEMP_BUF$]		     ;;AN003;;	       into the temp buffer
 	      INT     21H				     ;;AN003;;	   Read it
 	      MOV     DI,DX				     ;;AN003;;	       into the temp buffer
 	      PUSH    DS				     ;;AN003;;	       into the temp buffer
@@ -355,12 +407,12 @@ MIF1$:
 							     ;;AN003;;	     abort everything
 	RET						     ;;AN003;;
 
-READ_DISK_PROC ENDP					     ;;AN003;;
+;READ_DISK_PROC ENDP                                         ;;AN003;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-      ENDIF						     ;;AN003;; END of include for DISK_PROC
+      end if                                                 ;;AN003;; END of include for DISK_PROC
 ;;
 
-      IF      SETSTDIO					     ;;AN000;;	 Is the request to include the code for SETSTDIO
+      if SETSTDIO					     ;;AN000;;	 Is the request to include the code for SETSTDIO
 	SETSTDIO = FALSE				     ;;AN000;;	 Yes, THEN include it and reset flag
 	PAGE
 	SUBTTL	DOS - Message Retriever - SETSTDIO Module
@@ -376,11 +428,11 @@ READ_DISK_PROC ENDP					     ;;AN003;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-IF	FARmsg						     ;AN001;
-	SETSTDINON PROC FAR				     ;AN001;
-ELSE							     ;AN001;
-	SETSTDINON PROC NEAR				     ;AN001;
-ENDIF							     ;AN001;
+if FARmsg						     ;AN001;
+	SETSTDINON:                                          ;AN001;
+else                                                         ;AN001;
+	SETSTDINON:                                          ;AN001;
+end if                                                       ;AN001;
 	PUSH	AX					     ;AN002; Save changed regs
 	PUSH	BX					     ;AN002;
 	PUSH	DX					     ;AN002;
@@ -398,13 +450,13 @@ ENDIF							     ;AN001;
 
 	RET						     ;AN001;
 							     ;AN001;
-	SETSTDINON ENDP 				     ;AN001;
+;	SETSTDINON ENDP                                      ;AN001;
 
-IF	FARmsg						     ;AN001;
-	SETSTDINOFF PROC FAR				     ;AN001;
-ELSE							     ;AN001;
-	SETSTDINOFF PROC NEAR				     ;AN001;
-ENDIF							     ;AN001;
+if FARmsg						     ;AN001;
+	SETSTDINOFF:                                         ;AN001;
+else                                                         ;AN001;
+	SETSTDINOFF:                                         ;AN001;
+end if                                                       ;AN001;
 
 	PUSH	AX					     ;AN002; Save changed regs
 	PUSH	BX					     ;AN002;
@@ -423,13 +475,13 @@ ENDIF							     ;AN001;
 
 	RET						     ;AN001;
 
-	SETSTDINOFF ENDP				     ;AN001;
+;	SETSTDINOFF ENDP                                     ;AN001;
 
-IF	FARmsg						     ;AN001;
-	SETSTDOUTON PROC FAR				     ;AN001;
-ELSE							     ;AN001;
-	SETSTDOUTON PROC NEAR				     ;AN001;
-ENDIF							     ;AN001;
+if FARmsg						     ;AN001;
+	SETSTDOUTON:                                         ;AN001;
+else                                                         ;AN001;
+	SETSTDOUTON:                                         ;AN001;
+end if                                                       ;AN001;
 
 	PUSH	AX					     ;AN002; Save changed regs
 	PUSH	BX					     ;AN002;
@@ -448,13 +500,13 @@ ENDIF							     ;AN001;
 
 	RET						     ;AN001;
 
-	SETSTDOUTON ENDP				     ;AN001;
+;	SETSTDOUTON ENDP                                     ;AN001;
 
-IF	FARmsg						     ;AN001;
-	SETSTDOUTOFF PROC FAR				     ;AN001;
-ELSE							     ;AN001;
-	SETSTDOUTOFF PROC NEAR
-ENDIF							     ;AN001;
+if FARmsg						     ;AN001;
+	SETSTDOUTOFF:                                        ;AN001;
+else                                                         ;AN001;
+	SETSTDOUTOFF:
+end if                                                       ;AN001;
 
 	PUSH	AX					     ;AN002; Save changed regs
 	PUSH	BX					     ;AN002;
@@ -473,17 +525,17 @@ ENDIF							     ;AN001;
 
 	RET						     ;AN001;
 
-	SETSTDOUTOFF ENDP				     ;AN001;
+;	SETSTDOUTOFF ENDP                                    ;AN001;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-      ENDIF						     ;;AN000;; END of include for SETSTDIO
+      end if                                                 ;;AN000;; END of include for SETSTDIO
 ; ;
-      IF      LOADmsg					     ;;AN000;;	 Is the request to include the code for SYSLOADMSG ?
-	IF	COMR					     ;;AN000;;
-	  M_RT$   EQU		   M_RT2$		     ;;AN000;;
-	ENDIF
+      if LOADmsg					     ;;AN000;;	 Is the request to include the code for SYSLOADMSG ?
+	if COMR					             ;;AN000;;
+	  M_RT$   =		   M_RT2$		     ;;AN000;;
+	end if
 	LOADmsg = FALSE 				     ;;AN000;;	 Yes, THEN include it and reset flag
 	PAGE
-	SUBTTL	DOS - Message Retriever - LOADMSG.ASM Module
+	SUBTTL	DOS - Message Retriever - LOADmsg.ASM Module
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;	PROC NAME: SYSLOADMSG
@@ -496,11 +548,11 @@ ENDIF							     ;AN001;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-IF	FARmsg						     ;;AN000;;
-	SYSLOADMSG PROC FAR				     ;;AN000;;
-ELSE							     ;;AN000;;
-	SYSLOADMSG PROC NEAR				     ;;AN000;;
-ENDIF							     ;;AN000;;
+if FARmsg						     ;;AN000;;
+	SYSLOADMSG:                                          ;;AN000;;
+else                                                         ;;AN000;;
+	SYSLOADMSG:                                          ;;AN000;;
+end if                                                       ;;AN000;;
 	PUSH	AX					     ;;AN000;
 	PUSH	BX					     ;;AN000;
 	PUSH	DX					     ;;AN000;
@@ -512,83 +564,81 @@ ENDIF							     ;;AN000;;
 	MOV	AX,DOS_GET_EXT_PARSE_ADD		     ;;AN000;; 2FH Interface
 	MOV	DL,DOS_GET_EXTENDED			     ;;AN000;; Where are the Extended errors in COMMAND.COM
 	INT	2FH					     ;;AN000;; Private interface
-	MOV	WORD PTR M_RT$.M_EXT_COMMAND$+2,ES	     ;;AN000;;	Move into first avaliable table location
-	MOV	WORD PTR M_RT$.M_EXT_COMMAND$,DI	     ;;AN000;;
+	MOV	word [M_RT$+M_RES_ADDRS$.M_EXT_COMMAND$+2],ES	     ;;AN000;;	Move into first avaliable table location
+	MOV	word [M_RT$+M_RES_ADDRS$.M_EXT_COMMAND$],DI	     ;;AN000;;
 							     ;;
 	MOV	AX,DOS_GET_EXT_PARSE_ADD		     ;;AN000;; 2FH Interface
 	MOV	DL,DOS_GET_PARSE			     ;;AN000;; Where are the Parse errors in COMMAND.COM
 	INT	2FH					     ;;AN000;; Private interface
-	MOV	WORD PTR M_RT$.M_PARSE_COMMAND$+2,ES	     ;;AN000;;	Move into first avaliable table location
-	MOV	WORD PTR M_RT$.M_PARSE_COMMAND$,DI	     ;;AN000;;
+	MOV	word [M_RT$+M_RES_ADDRS$.M_PARSE_COMMAND$+2],ES	     ;;AN000;;	Move into first avaliable table location
+	MOV	word [M_RT$+M_RES_ADDRS$.M_PARSE_COMMAND$],DI	     ;;AN000;;
 							     ;;
 	MOV	AX,DOS_GET_EXT_PARSE_ADD		     ;;AN000;; 2FH Interface
 	MOV	DL,DOS_GET_CRITICAL			     ;;AN000;; Where are the Critical errors in COMMAND.COM
 	INT	2FH					     ;;AN000;; Private interface
-	MOV	WORD PTR M_RT$.M_CRIT_COMMAND$+2,ES	     ;;AN000;;	Move into first avaliable table location
-	MOV	WORD PTR M_RT$.M_CRIT_COMMAND$,DI	     ;;AN000;;
+	MOV	word [M_RT$+M_RES_ADDRS$.M_CRIT_COMMAND$+2],ES	     ;;AN000;;	Move into first avaliable table location
+	MOV	word [M_RT$+M_RES_ADDRS$.M_CRIT_COMMAND$],DI	     ;;AN000;;
 
 	MOV	AX,DOS_GET_EXT_PARSE_ADD		     ;;AN001;; 2FH Interface
 	MOV	DL,DOS_GET_FILE 			     ;;AN001;; Where are the FILE dependant in IFSFUNC.EXE
 	INT	2FH					     ;;AN001;; Private interface
-	MOV	WORD PTR M_RT$.M_EXT_FILE$+2,ES 	     ;;AN001;;	Move into first avaliable table location
-	MOV	WORD PTR M_RT$.M_EXT_FILE$,DI		     ;;AN001;;
+	MOV	word [M_RT$+M_RES_ADDRS$.M_EXT_FILE$+2],ES 	     ;;AN001;;	Move into first avaliable table location
+	MOV	word [M_RT$+M_RES_ADDRS$.M_EXT_FILE$],DI		     ;;AN001;;
 
-IF	COMR						     ;;  ** Special case for RESIDENT COMMAND.COM
-	IF2
-	  IFNDEF  READ_DISK_INFO			     ;;AN003;;
-	    Extrn   READ_DISK_PROC:Far			     ;;AN003;;
-	  ENDIF 					     ;;AN003;;
-	ENDIF						     ;;AN003;;
-ELSE							     ;;
-	IF	FARmsg					     ;;AN000;;
+if COMR						             ;;  ** Special case for RESIDENT COMMAND.COM
+; READ_DISK_PROC is in this assembly, above, so there is nothing to declare:
+; MASM assembled COMMAND.COM's modules apart and needed the EXTRN on its
+; second pass.
+else                                                         ;;
+	if FARmsg					     ;;AN000;;
 	  CALL	  FAR PTR M_MSGSERV_1$			     ;;AN000;; Get addressibilty to MSGSERV CLASS 1 (EXTENDED Errors)
-	ELSE						     ;;AN000;;
+	else                                                 ;;AN000;;
 	  CALL	  M_MSGSERV_1$				     ;;AN000;; Get addressibilty to MSGSERV CLASS 1 (EXTENDED Errors)
-	ENDIF						     ;;AN000;;
-	MOV	WORD PTR M_RT$.M_EXT_ERR_ADDRS$+2,ES	     ;;AN000;; Move into first avaliable table location
-	MOV	WORD PTR M_RT$.M_EXT_ERR_ADDRS$,DI	     ;;AN000;;
-	MOV	WORD PTR M_RT$.M_CRIT_ADDRS$+2,ES	     ;;AN000;; Move into first avaliable table location
-	MOV	WORD PTR M_RT$.M_CRIT_ADDRS$,DI 	     ;;AN000;;
+	end if                                               ;;AN000;;
+	MOV	word [M_RT$+M_RES_ADDRS$.M_EXT_ERR_ADDRS$+2],ES	     ;;AN000;; Move into first avaliable table location
+	MOV	word [M_RT$+M_RES_ADDRS$.M_EXT_ERR_ADDRS$],DI	     ;;AN000;;
+	MOV	word [M_RT$+M_RES_ADDRS$.M_CRIT_ADDRS$+2],ES	     ;;AN000;; Move into first avaliable table location
+	MOV	word [M_RT$+M_RES_ADDRS$.M_CRIT_ADDRS$],DI 	     ;;AN000;;
 							     ;;
-	IF	FARmsg					     ;;AN000;;
+	if FARmsg					     ;;AN000;;
 	  CALL	  FAR PTR M_MSGSERV_2$			     ;;AN000;; Get addressibilty to MSGSERV CLASS 2 (PARSE Errors)
-	ELSE						     ;;AN000;;
+	else                                                 ;;AN000;;
 	  CALL	  M_MSGSERV_2$				     ;;AN000;; Get addressibilty to MSGSERV CLASS 2 (PARSE Errors)
-	ENDIF						     ;;AN000;;
-	MOV	WORD PTR M_RT$.M_PARSE_ADDRS$+2,ES	     ;;AN000;; Move into first avaliable table location
-	MOV	WORD PTR M_RT$.M_PARSE_ADDRS$,DI	     ;;AN000;;
-ENDIF							     ;;
+	end if                                               ;;AN000;;
+	MOV	word [M_RT$+M_RES_ADDRS$.M_PARSE_ADDRS$+2],ES	     ;;AN000;; Move into first avaliable table location
+	MOV	word [M_RT$+M_RES_ADDRS$.M_PARSE_ADDRS$],DI	     ;;AN000;;
+end if                                                       ;;
 							     ;;
 	MOV	AX,DOS_GET_EXT_PARSE_ADD		     ;;AN001;; 2FH Interface
 	MOV	DL,DOS_GET_ADDR 			     ;;AN001;; Where is the READ_DISK_PROC in COMMAND.COM
 	INT	2FH					     ;;AN001;; Private interface
-	MOV	WORD PTR M_RT$.M_DISK_PROC_ADDR$+2,ES	     ;;AN001;;	Move into first avaliable table location
-	MOV	WORD PTR M_RT$.M_DISK_PROC_ADDR$,DI	     ;;AN001;;
+	MOV	word [M_RT$+M_RES_ADDRS$.M_DISK_PROC_ADDR$+2],ES	     ;;AN001;;	Move into first avaliable table location
+	MOV	word [M_RT$+M_RES_ADDRS$.M_DISK_PROC_ADDR$],DI	     ;;AN001;;
 
-	M_BUILD_PTRS$ %M_NUM_CLS$			     ;;AN000;; Build all utility classes
+	M_BUILD_PTRS$ M_NUM_CLS$ 			     ;;AN000;; Build all utility classes
 							     ;;AN000;;
 	CALL	M_GET_DBCS_VEC$ 			     ;;AN000;; Save the DBCS vector
 
-IF	NOT	NOCHECKSTDIN				     ;;AN000;; IF EOF check is not to be suppressed
+if ~NOCHECKSTDIN				             ;;AN000;; IF EOF check is not to be suppressed
 	CALL	M_CHECKSTDIN$				     ;;AN000;;	 Set EOF CHECK
-ENDIF							     ;;AN000;;
+end if                                                       ;;AN000;;
 							     ;;AN000;;
-IF	NOT	NOCHECKSTDOUT				     ;;AN000;; IF Disk Full check is not to be suppressed
+if ~NOCHECKSTDOUT				             ;;AN000;; IF Disk Full check is not to be suppressed
 	CALL	M_CHECKSTDOUT$				     ;;AN000;;	 Set Disk Full CHECK
-ENDIF							     ;;AN000;;
+end if                                                       ;;AN000;;
 							     ;;AN000;;
-IF	NOVERCHECKmsg					     ;;AN000;; IF version check is to be supressed
+if NOVERCHECKmsg					     ;;AN000;; IF version check is to be supressed
 	CLC						     ;;AN000;;	 Make sure carry is clear
-ELSE							     ;;AN000;; ELSE
+else                                                         ;;AN000;; ELSE
 	PUSH	CX					     ;;AN000;;
 	CALL	M_VERSION_CHECK$			     ;;AN000;;	 Check Version
-ENDIF							     ;;AN000;;
+end if                                                       ;;AN000;;
 							     ;;        Error ?
 ;	$IF	NC					     ;;AN000;; No.
 	JC MIF20$
-IF	  NOT	  NOVERCHECKmsg 			     ;;AN000;;	IF version check was not supressed
+if ~NOVERCHECKmsg 			                     ;;AN000;;	IF version check was not supressed
 	  POP	  CX					     ;;AN000;;	Reset stack
-ENDIF							     ;;AN000;;
+end if                                                       ;;AN000;;
 	  POP	  DI					     ;;AN000;;	Restore REGS
 	  POP	  ES					     ;;AN000;;
 	  POP	  DX					     ;;AN000;;
@@ -597,18 +647,18 @@ ENDIF							     ;;AN000;;
 ;	$ELSE						     ;;AN000;; Yes,
 	JMP SHORT MEN20$
 MIF20$:
-IF	  NOVERCHECKmsg 				     ;;AN000;;	IF version check is to be supressed
+if NOVERCHECKmsg 				             ;;AN000;;	IF version check is to be supressed
 	  ADD	  SP,10 				     ;;AN000;;
 	  STC						     ;;AN000;;	Reset carry flag
-ELSE							     ;;AN000;;	IF version check is to be supressed
+else                                                         ;;AN000;;	IF version check is to be supressed
 	  ADD	  SP,12 				     ;;AN000;;
 	  STC						     ;;AN000;;	Reset carry flag
-ENDIF							     ;;AN000;;	IF version check is to be supressed
+end if                                                       ;;AN000;;	IF version check is to be supressed
 ;	$ENDIF						     ;;AN000;;
 MEN20$:
 	RET						     ;;AN000;;
 							     ;;
-	SYSLOADMSG ENDP 				     ;;AN000;;
+;	SYSLOADMSG ENDP                                      ;;AN000;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	PAGE
 	SUBTTL	DOS - Message Retriever - M_VERSION_CHECK$ Proc
@@ -626,7 +676,7 @@ MEN20$:
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_GET_DBCS_VEC$ PROC NEAR				     ;;AN000;;
+M_GET_DBCS_VEC$:                                             ;;AN000;;
 							     ;;
 	PUSH	AX					     ;;AN000;; Save character to check
 	PUSH	SI					     ;;AN000;;
@@ -638,19 +688,19 @@ M_GET_DBCS_VEC$ PROC NEAR				     ;;AN000;;
 	POP	DS					     ;;AN000;; Get environment pointer
 ;	$IF	NC					     ;;AN000;;
 	JC MIF23$
-	  MOV	  WORD PTR M_RT$.M_DBCS_VEC$,SI 	     ;;AN000;; Save DBCS Vector
-	  MOV	  WORD PTR M_RT$.M_DBCS_VEC$+2,ES	     ;;AN000;;
+	  MOV	  word [M_RT$+M_RES_ADDRS$.M_DBCS_VEC$],SI 	     ;;AN000;; Save DBCS Vector
+	  MOV	  word [M_RT$+M_RES_ADDRS$.M_DBCS_VEC$+2],ES	     ;;AN000;;
 ;	$ENDIF						     ;;AN000;;
 MIF23$:
 	POP	SI					     ;;AN000;;
 	POP	AX					     ;;AN000;; Retrieve character to check
 	RET						     ;;AN000;; Return
 							     ;;
-M_GET_DBCS_VEC$ ENDP					     ;;
+;M_GET_DBCS_VEC$ ENDP                                        ;;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	IF	NOCHECKSTDIN				     ;AN001; Are we suppose to include the code for Checking EOF ?
-	ELSE						     ;AN001; Yes, THEN include it
+	if NOCHECKSTDIN				             ;AN001; Are we suppose to include the code for Checking EOF ?
+	else                                                 ;AN001; Yes, THEN include it
 	  PAGE
 	  SUBTTL  DOS - Message Retriever - M_CHECKSTDIN$ Proc
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -667,7 +717,7 @@ M_GET_DBCS_VEC$ ENDP					     ;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_CHECKSTDIN$ PROC NEAR 				     ;AN001;
+M_CHECKSTDIN$:                                               ;AN001;
 
 	  MOV	  AX,DOS_IOCTL_GET_INFO 		     ;AN001; Get info using IOCTL
 	  MOV	  BX,STDIN				     ;AN001;
@@ -680,12 +730,12 @@ M_CHECKSTDIN$ PROC NEAR 				     ;AN001;
 
 	  RET						     ;AN001;
 
-M_CHECKSTDIN$ ENDP					     ;AN001;
+;M_CHECKSTDIN$ ENDP                                          ;AN001;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	ENDIF						     ;AN001; END of include for EOF Check
-	IF	NOCHECKSTDOUT				     ;AN001; Are we suppose to include the code for Checking Disk Full?
-	ELSE						     ;AN001; Yes, THEN include it
+	end if                                               ;AN001; END of include for EOF Check
+	if NOCHECKSTDOUT				     ;AN001; Are we suppose to include the code for Checking Disk Full?
+	else                                                 ;AN001; Yes, THEN include it
 	  PAGE
 	  SUBTTL  DOS - Message Retriever - M_CHECKSTDOUT$ Proc
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -702,7 +752,7 @@ M_CHECKSTDIN$ ENDP					     ;AN001;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_CHECKSTDOUT$ PROC NEAR				     ;AN001;
+M_CHECKSTDOUT$:                                              ;AN001;
 
 	  MOV	  AX,DOS_IOCTL_GET_INFO 		     ;AN001; Get info using IOCTL
 	  MOV	  BX,STDOUT				     ;AN001;
@@ -715,12 +765,12 @@ M_CHECKSTDOUT$ PROC NEAR				     ;AN001;
 
 	  RET						     ;AN001;
 
-M_CHECKSTDOUT$ ENDP					     ;AN001;
+;M_CHECKSTDOUT$ ENDP                                         ;AN001;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	ENDIF						     ;AN001;  END of include for Disk Full Check
-	IF	NOVERCHECKmsg				     ;;AN000;; Are we suppose to include the code for DOS version check?
-	ELSE						     ;;AN000;; Yes, THEN include it
+	end if                                               ;AN001;  END of include for Disk Full Check
+	if NOVERCHECKmsg				     ;;AN000;; Are we suppose to include the code for DOS version check?
+	else                                                 ;;AN000;; Yes, THEN include it
 	  PAGE
 	  SUBTTL  DOS - Message Retriever - M_VERSION_CHECK$ Proc
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -739,7 +789,7 @@ M_CHECKSTDOUT$ ENDP					     ;AN001;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_VERSION_CHECK$ PROC NEAR				     ;;AN000;;
+M_VERSION_CHECK$:                                            ;;AN000;;
 							     ;;
 	  MOV	  AH,DOS_GET_VERSION			     ;;AN000;; Check that version matches VERSIONA.INC
 	  INT	  21H					     ;;AN000;;
@@ -751,7 +801,7 @@ M_VERSION_CHECK$ PROC NEAR				     ;;AN000;;
 ;	  $ELSE 					     ;;AN000;; ELSE
 	  JMP SHORT MEN25$
 MIF25$:
-IF	    NOT     COMR				     ;;  ** Special case for RESIDENT COMMAND.COM
+if ~COMR				                     ;;  ** Special case for RESIDENT COMMAND.COM
 	    CMP     AX,LOWEST_4CH_VERSION		     ;;AN000;; Does this version support AH = 4CH
 ;	    $IF     B					     ;;AN000;; No,
 	    JNB MIF27$
@@ -762,9 +812,9 @@ MIF27$:
 	      MOV     BX,STDERR 			     ;;AN000;;	 Standard Error
 ;	    $ENDIF					     ;;AN000;;
 MEN27$:
-ELSE
+else
 	    MOV     BX,NO_HANDLE			     ;;AN000;;	 No handle
-ENDIF
+end if
 	    MOV     AX,1				     ;;AN000;; Set message # 1
 	    MOV     CX,NO_REPLACE			     ;;AN000;; No replacable parms
 	    MOV     DL,NO_INPUT 			     ;;AN000;; No input
@@ -775,19 +825,19 @@ MEN25$:
 							     ;;
 	  RET						     ;;AN000;; Return
 							     ;;
-M_VERSION_CHECK$ ENDP					     ;;
+;M_VERSION_CHECK$ ENDP                                       ;;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	ENDIF						     ;;AN000;; END of include for DOS version check
-      ENDIF						     ;;AN000;; END of include for SYSLOADMSG
+	end if                                               ;;AN000;; END of include for DOS version check
+      end if                                                 ;;AN000;; END of include for SYSLOADMSG
 ; ;
-      IF      GETmsg					     ;;AN000;; Is the request to include the code for SYSGETMSG ?
-	IF	COMR					     ;;AN000;;
-	  M_RT$   EQU		   M_RT2$		     ;;AN000;;
-	ENDIF						     ;;AN000;;
+      if GETmsg					             ;;AN000;; Is the request to include the code for SYSGETMSG ?
+	if COMR					             ;;AN000;;
+	  M_RT$   =		   M_RT2$		     ;;AN000;;
+	end if                                               ;;AN000;;
 	GETmsg	=      FALSE				     ;;AN000;; Yes, THEN include it and reset flag
 	PAGE
-	SUBTTL	DOS - Message Retriever - GETMSG.ASM Module
+	SUBTTL	DOS - Message Retriever - GETmsg.ASM Module
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;  Proc Name:	SYSGETMSG
@@ -812,11 +862,11 @@ M_VERSION_CHECK$ ENDP					     ;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-IF	FARmsg						     ;;AN000;;
-	SYSGETMSG PROC	FAR				     ;;AN000;;
-ELSE							     ;;AN000;;
-	SYSGETMSG PROC	NEAR				     ;;AN000;;
-ENDIF							     ;;AN000;;
+if FARmsg						     ;;AN000;;
+	SYSGETMSG:                                           ;;AN000;;
+else                                                         ;;AN000;;
+	SYSGETMSG:                                           ;;AN000;;
+end if                                                       ;;AN000;;
 							     ;;
 ;; Save registers needed later
 
@@ -825,11 +875,11 @@ ENDIF							     ;;AN000;;
 	PUSH	DI					     ;;AN000;;
 	PUSH	BP					     ;;AN000;;
 							     ;;
-IF	FARmsg						     ;;AN000;;
+if FARmsg						     ;;AN000;;
 	CALL	FAR PTR M_GET_MSG_ADDRESS$		     ;;AN000;; Scan thru classes to find message
-ELSE							     ;;AN000;;
+else                                                         ;;AN000;;
 	CALL	M_GET_MSG_ADDRESS$			     ;;AN000;; Scan thru classes to find message
-ENDIF							     ;;AN000;; Return message in ES:DI
+end if                                                       ;;AN000;; Return message in ES:DI
 ;	$IF	NC					     ;;AN000;; Message found?
 	JC MIF31$
 	  CMP	  DH,UTILITY_MSG_CLASS
@@ -841,13 +891,13 @@ ENDIF							     ;;AN000;; Return message in ES:DI
 ;	  $ELSE
 	  JMP SHORT MEN32$
 MIF32$:
-IF	    FARmsg					     ;;AN000;;	 Yes,
+if FARmsg					             ;;AN000;;	 Yes,
 	    PUSH    ES					     ;;AN000;;
 	    POP     DS					     ;;AN000;;	   Return message in DS:SI
-ELSE							     ;;AN000;;
+else                                                         ;;AN000;;
 	    PUSH    CS					     ;;AN000;;	   Return message in DS:SI
 	    POP     DS					     ;;AN000;;
-ENDIF							     ;;AN000;;
+end if                                                       ;;AN000;;
 ;	  $ENDIF					     ;;AN000;;
 MEN32$:
 	  MOV	  SI,DI 				     ;;AN000;;	   Return message in DS:SI
@@ -861,9 +911,9 @@ MIF31$:
 							     ;;
 	RET						     ;;AN000;;	  Return
 							     ;;
-	SYSGETMSG ENDP					     ;;
+;	SYSGETMSG ENDP                                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	IF	M_SUBS$ 				     ;;AN000;; Include the common subroutines if they haven't yet
+	if M_SUBS$ 				             ;;AN000;; Include the common subroutines if they haven't yet
 	  M_SUBS$ = FALSE				     ;;AN000;; No, then include and reset the flag
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -877,11 +927,11 @@ MIF31$:
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-IF	  FARmsg					     ;;AN000;;
-	  M_GET_MSG_ADDRESS$ PROC FAR			     ;;AN000;;
-ELSE							     ;;AN000;;
-	  M_GET_MSG_ADDRESS$ PROC NEAR			     ;;AN000;;
-ENDIF							     ;;AN000;;
+if FARmsg					             ;;AN000;;
+	  M_GET_MSG_ADDRESS$:                                ;;AN000;;
+else                                                         ;;AN000;;
+	  M_GET_MSG_ADDRESS$:                                ;;AN000;;
+end if                                                       ;;AN000;;
 							     ;;
 	  PUSH	  SI					     ;;AN000;;
 	  PUSH	  BX					     ;;AN000;;
@@ -892,20 +942,20 @@ MDO36$:
 	    CMP     DH,UTILITY_MSG_CLASS		     ;;AN000;; Were utility messages requested?
 ;	    $IF     E					     ;;AN000;; Yes,
 	    JNE MIF37$
-	      IF      FARmsg				     ;;AN000;;
-		LES	DI,DWORD PTR M_RT$.M_CLASS_ADDRS$[SI] ;;AN000;;  Get address of class
+	      if FARmsg				             ;;AN000;;
+		LES	DI,dword [M_RT$+M_RES_ADDRS$.M_CLASS_ADDRS$+SI] ;;AN000;;  Get address of class
 		MOV	BX,ES				     ;;AN000;
-	      ELSE					     ;;AN000;;
-		MOV	DI,WORD PTR M_RT$.M_CLASS_ADDRS$[SI] ;;AN000;;	 Get address of class
+	      else                                           ;;AN000;;
+		MOV	DI,word [M_RT$+M_RES_ADDRS$.M_CLASS_ADDRS$+SI] ;;AN000;;	 Get address of class
 		MOV	BX,DI				     ;;AN000;
-	      ENDIF					     ;;AN000;;
+	      end if                                         ;;AN000;;
 ;	    $ELSE					     ;;AN000;; No,
 	    JMP SHORT MEN37$
 MIF37$:
 	      TEST    DH,PARSE_ERR_CLASS		     ;;AN000;;	 Were parse errors requested?
 ;	      $IF     NE				     ;;AN000;;	 Yes,
 	      JE MIF39$
-		LES	DI,DWORD PTR M_RT$.M_PARSE_COMMAND$[SI] ;;AN000;;   Get address of class
+		LES	DI,dword [M_RT$+M_RES_ADDRS$.M_PARSE_COMMAND$+SI] ;;AN000;;   Get address of class
 		MOV	BX,ES				     ;;AN000;
 ;	      $ELSE					     ;;AN000;;	 No, extended errors were specified
 	      JMP SHORT MEN39$
@@ -916,12 +966,12 @@ MIF39$:
 		CMP	AX,M_CRIT_HI$			     ;;AN000;;
 ;		$IF	BE				     ;;AN000;;	    Yes,
 		JNBE MIF41$
-		  LES	  DI,DWORD PTR M_RT$.M_CRIT_ADDRS$[SI] ;;AN000;; Get address of class
+		  LES	  DI,dword [M_RT$+M_RES_ADDRS$.M_CRIT_ADDRS$+SI] ;;AN000;; Get address of class
 		  MOV	  BX,ES 			     ;;AN000;
 ;		$ELSE					     ;;AN000;;
 		JMP SHORT MEN41$
 MIF41$:
-		  LES	  DI,DWORD PTR M_RT$.M_EXT_ERR_ADDRS$[SI] ;;AN000;; Get address of class
+		  LES	  DI,dword [M_RT$+M_RES_ADDRS$.M_EXT_ERR_ADDRS$+SI] ;;AN000;; Get address of class
 		  MOV	  BX,ES 			     ;;AN000;
 ;		$ENDIF					     ;;AN000;;
 MEN41$:
@@ -940,7 +990,7 @@ MEN37$:
 ;	      $ELSE					     ;;AN000;;	  No,
 	      JMP SHORT MEN47$
 MIF47$:
-		MOV	M_RT$.M_MSG_NUM$,AX		     ;;AN000;;	    Save message number
+		MOV	[M_RT$+M_RES_ADDRS$.M_MSG_NUM$],AX		     ;;AN000;;	    Save message number
 		MOV	AX,M_SPECIAL_MSG_NUM$		     ;;AN000;;	    Set special message number
 		MOV	BP,M_ONE_REPLACE$		     ;;AN000;;	    Set one replace in message
 		XOR	SI,SI				     ;;AN000;;	    Reset the SI index to start again
@@ -1018,9 +1068,9 @@ MIF56$:
 	  POP	  SI					     ;;AN000;;
 	  RET						     ;;AN000;; Return ES:DI pointing to the message
 							     ;;
-M_GET_MSG_ADDRESS$ ENDP 				     ;;
+;M_GET_MSG_ADDRESS$ ENDP                                     ;;
 							     ;;
-M_SET_LEN_IN_CX$ PROC NEAR				     ;;
+M_SET_LEN_IN_CX$:                                            ;;
 							     ;;
 	  PUSH	  DI					     ;;AN006;; Save position
 	  PUSH	  AX					     ;;AN006;;
@@ -1033,7 +1083,7 @@ M_SET_LEN_IN_CX$ PROC NEAR				     ;;
 	  POP	  DI					     ;;AN006;; Restore position
 	  RET						     ;;AN006;;
 							     ;;
-M_SET_LEN_IN_CX$ ENDP					     ;;
+;M_SET_LEN_IN_CX$ ENDP                                       ;;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -1048,25 +1098,25 @@ M_SET_LEN_IN_CX$ ENDP					     ;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_FIND_SPECIFIED_MSG$ PROC NEAR 			     ;;AN000;;
+M_FIND_SPECIFIED_MSG$:                                       ;;AN000;;
 							     ;;
 	  CMP	  BX,1					     ;;AN004;;	Do we have an address to CALL?
 ;	  $IF	  E,AND 				     ;;AN004;;	Yes,
 	  JNE MIF64$
-	  CMP	  WORD PTR M_RT$.M_DISK_PROC_ADDR$,-1	     ;;AN004;;	Do we have an address to CALL?
+	  CMP	  word [M_RT$+M_RES_ADDRS$.M_DISK_PROC_ADDR$],-1	     ;;AN004;;	Do we have an address to CALL?
 ;	  $IF	  NE					     ;;AN004;;	Yes,
 	  JE MIF64$
 	    CMP     AX,M_SPECIAL_MSG_NUM$		     ;;AN004;; Are we displaying a default Ext Err?
 ;	    $IF     E					     ;;AN004;;	. . . and . . .
 	    JNE MIF65$
 	      PUSH    AX				     ;;AN004;;	 Reset the special message number
-	      MOV     AX,M_RT$.M_MSG_NUM$		     ;;AN004;;	 Get the old message number
-	      CALL    DWORD PTR M_RT$.M_DISK_PROC_ADDR$      ;;AN004;;	 Call the READ_DISK_PROC to get error text
+	      MOV     AX,[M_RT$+M_RES_ADDRS$.M_MSG_NUM$]		     ;;AN004;;	 Get the old message number
+	      CALL    dword [M_RT$+M_RES_ADDRS$.M_DISK_PROC_ADDR$] ;;AN004;;	 Call the READ_DISK_PROC to get error text
 	      POP     AX				     ;;AN004;;	 Reset the special message number
 ;	    $ELSE					     ;;AN004;;	 Get the old message number
 	    JMP SHORT MEN65$
 MIF65$:
-	      CALL    DWORD PTR M_RT$.M_DISK_PROC_ADDR$      ;;AN004;;	 Call the READ_DISK_PROC to get error text
+	      CALL    dword [M_RT$+M_RES_ADDRS$.M_DISK_PROC_ADDR$] ;;AN004;;	 Call the READ_DISK_PROC to get error text
 ;	    $ENDIF					     ;;AN004;;	 Get the old message number
 MEN65$:
 ;	  $ELSE 					     ;;AN004;;
@@ -1076,22 +1126,22 @@ MIF64$:
 	    CMP     DH,UTILITY_MSG_CLASS		     ;;AN001;;
 ;	    $IF     NE					     ;;AN001;;
 	    JE MIF69$
-	      MOV     CL,BYTE PTR ES:[DI].M_NUM_CLS_MSG$     ;;AN001;;	 Get number of messages in class
+	      MOV     CL,byte [es:DI+M_CLASS_ID$.M_NUM_CLS_MSG$] ;;AN001;;	 Get number of messages in class
 ;	    $ELSE					     ;;AN001;;
 	    JMP SHORT MEN69$
 MIF69$:
-IF	      FARmsg					     ;;AN001;;
-	      CMP     BYTE PTR ES:[DI].M_CLASS_ID$,DH	     ;;AN002;; Check if class still exists at
-ELSE
-	      CMP     BYTE PTR CS:[DI].M_CLASS_ID$,DH	     ;;AN002;; Check if class still exists at
-ENDIF
+if FARmsg					             ;;AN001;;
+	      CMP     byte [es:DI+M_CLASS_ID$.M_CLS_ID$],DH	     ;;AN002;; Check if class still exists at
+else
+	      CMP     byte [cs:DI+M_CLASS_ID$.M_CLS_ID$],DH	     ;;AN002;; Check if class still exists at
+end if
 ;	      $IF     E 				     ;;AN002;;	pointer (hopefully)
 	      JNE MIF71$
-IF		FARmsg					     ;;AN001;;
-		MOV	CL,BYTE PTR ES:[DI].M_NUM_CLS_MSG$   ;;AN000;;	   Get number of messages in class
-ELSE
-		MOV	CL,BYTE PTR CS:[DI].M_NUM_CLS_MSG$   ;;AN000;;	   Get number of messages in class
-ENDIF
+if FARmsg					             ;;AN001;;
+		MOV	CL,byte [es:DI+M_CLASS_ID$.M_NUM_CLS_MSG$] ;;AN000;;	   Get number of messages in class
+else
+		MOV	CL,byte [cs:DI+M_CLASS_ID$.M_NUM_CLS_MSG$] ;;AN000;;	   Get number of messages in class
+end if
 ;	      $ENDIF					     ;;AN002;;	  go on to the next class
 MIF71$:
 ;	    $ENDIF					     ;;AN001;;
@@ -1112,15 +1162,15 @@ MDO76$:
 	      CMP     DH,UTILITY_MSG_CLASS		     ;;AN001;;
 ;	      $IF     NE				     ;;AN001;;
 	      JE MIF78$
-		CMP	AX,WORD PTR ES:[DI].M_NUM$	     ;;AN001;; Is this the message requested?
+		CMP	AX,word [es:DI+M_ID$.M_NUM$]         ;;AN001;; Is this the message requested?
 ;	      $ELSE					     ;;AN001;;
 	      JMP SHORT MEN78$
 MIF78$:
-IF		FARmsg					     ;;AN001;;
-		CMP	AX,WORD PTR ES:[DI].M_NUM$	     ;;AN000;; Is this the message requested?
-ELSE
-		CMP	AX,WORD PTR CS:[DI].M_NUM$	     ;;AN000;; Is this the message requested?
-ENDIF
+if FARmsg					             ;;AN001;;
+		CMP	AX,word [es:DI+M_ID$.M_NUM$]         ;;AN000;; Is this the message requested?
+else
+		CMP	AX,word [cs:DI+M_ID$.M_NUM$]         ;;AN000;; Is this the message requested?
+end if
 ;	      $ENDIF
 MEN78$:
 ;	    $EXITIF E					     ;;AN000;;
@@ -1144,14 +1194,14 @@ MSR76$:
 	      CLC					     ;;AN001;;
 ;	      $IF     E 				     ;;AN001;;
 	      JNE MIF87$
-IF		FARmsg					     ;;AN001;;
-ELSE							     ;;AN000;;
+if FARmsg					             ;;AN001;;
+else                                                         ;;AN000;;
 		PUSH	CS				     ;;AN000;;
 		POP	ES				     ;;AN000;;	 Return ES:DI pointing to the message
-ENDIF
+end if
 ;	      $ENDIF					     ;;AN001;;
 MIF87$:
-	      ADD     DI,WORD PTR ES:[DI].M_TXT_PTR$	     ;;AN000;; Prepare ES:DI pointing to the message
+	      ADD     DI,word [es:DI+M_ID$.M_TXT_PTR$]       ;;AN000;; Prepare ES:DI pointing to the message
 ;	    $ENDIF					     ;;AN004;;
 MIF86$:
 ;	  $ENDIF					     ;;AN004;;
@@ -1161,24 +1211,24 @@ MIF75$:
 ;	  $IF	  NC					     ;;AN000;;	 Did we find the message?
 	  JC MIF91$
 	    XOR     CH,CH				     ;;AN000;;
-	    MOV     CL,BYTE PTR ES:[DI] 		     ;;AN000;;	 Move size into CX
+	    MOV     CL,byte [es:DI]                        ;;AN000;;	 Move size into CX
 	    INC     DI					     ;;AN000;;	 Increment past length
 ;	  $ENDIF					     ;;AN004;;
 MIF91$:
 
-	  MOV	  M_RT$.M_SIZE$,M_NULL$ 		     ;;AN004;; Reset variable
+	  MOV	  byte [M_RT$+M_RES_ADDRS$.M_SIZE$],M_NULL$ 		     ;;AN004;; Reset variable
 	  RET						     ;;AN000;; Return
 							     ;;
-M_FIND_SPECIFIED_MSG$ ENDP				     ;;AN000;;
+;M_FIND_SPECIFIED_MSG$ ENDP                                  ;;AN000;;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	ENDIF						     ;;AN000;; END of include of common subroutines
-      ENDIF						     ;;AN000;; END of include of SYSGETMSG
+	end if                                               ;;AN000;; END of include of common subroutines
+      end if                                                 ;;AN000;; END of include of SYSGETMSG
 ; ;
-      IF      DISPLAYmsg				     ;;AN000;; Is the request to include the code for SYSGETMSG ?
-	IF	COMR					     ;;AN000;;
-	  M_RT$   EQU		   M_RT2$		     ;;AN000;;
-	ENDIF						     ;;AN000;;
+      if DISPLAYmsg				             ;;AN000;; Is the request to include the code for SYSGETMSG ?
+	if COMR					             ;;AN000;;
+	  M_RT$   =		   M_RT2$		     ;;AN000;;
+	end if                                               ;;AN000;;
 	DISPLAYmsg =  FALSE				     ;;AN000;; Yes, THEN include it and reset flag
 	PAGE
 	SUBTTL	DOS - Message Retriever - DISPMSG.ASM Module
@@ -1218,11 +1268,11 @@ M_FIND_SPECIFIED_MSG$ ENDP				     ;;AN000;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-IF	FARmsg						     ;;AN000;;
-	SYSDISPMSG PROC FAR				     ;;AN000;;
-ELSE							     ;;AN000;;
-	SYSDISPMSG PROC NEAR				     ;;AN000;;
-ENDIF							     ;;AN000;;
+if FARmsg						     ;;AN000;;
+	SYSDISPMSG:                                          ;;AN000;;
+else                                                         ;;AN000;;
+	SYSDISPMSG:                                          ;;AN000;;
+end if                                                       ;;AN000;;
 							     ;;
 ;; Save registers and values needed later
 
@@ -1235,16 +1285,16 @@ ENDIF							     ;;AN000;;
 	PUSH	DX					     ;;AN000;; Save Input/Class request
 
 	MOV	BP,CX					     ;;AN000;; Use BP to hold replace count
-	MOV	WORD PTR M_RT$.M_HANDLE$,BX		     ;;AN000;; Save handle
-	MOV	BYTE PTR M_RT$.M_CLASS$,DH		     ;;AN004;; Save class
+	MOV	word [M_RT$+M_RES_ADDRS$.M_HANDLE$],BX		     ;;AN000;; Save handle
+	MOV	byte [M_RT$+M_RES_ADDRS$.M_CLASS$],DH		     ;;AN004;; Save class
 
 ;; Get address of the message requested
 
-IF	FARmsg						     ;;AN000;;
+if FARmsg						     ;;AN000;;
 	CALL	FAR PTR M_GET_MSG_ADDRESS$		     ;;AN000;; Scan thru classes to find message
-ELSE							     ;;AN000;;
+else                                                         ;;AN000;;
 	CALL	M_GET_MSG_ADDRESS$			     ;;AN000;; Scan thru classes to find message
-ENDIF							     ;;AN000;;
+end if                                                       ;;AN000;;
 	OR	CX,CX					     ;;AN000;; Was message found?
 ;	$IF	NZ					     ;;AN000;;	 YES, Message address in ES:DI
 	JZ MIF93$
@@ -1261,12 +1311,12 @@ ENDIF							     ;;AN000;;
 ;	  $ELSE 					     ;;AN000;;
 	  JMP SHORT MEN94$
 MIF94$:
-IF	    M_REPLACE$					     ;;AN000;;
+if M_REPLACE$					             ;;AN000;;
 
 ;; Display message with replacable parms
 
 	    CALL    M_DISPLAY_MESSAGE$			     ;;AN000;;	 Display the message with substitutions
-ENDIF							     ;;AN000;;
+end if                                                       ;;AN000;;
 ;	  $ENDIF					     ;;AN000;;
 MEN94$:
 ;	  $IF	  NC
@@ -1281,14 +1331,14 @@ MEN94$:
 
 ;; Test if character input was requested
 
-IF	    INPUTmsg					     ;;AN000;;
+if INPUTmsg					             ;;AN000;;
 	    OR	    DL,DL				     ;;AN000;; Was Wait-For-Input requested?
 ;	    $IF     NZ					     ;;AN000;;
 	    JZ MIF98$
 	      CALL    M_WAIT_FOR_INPUT$ 		     ;;AN000;;
 ;	    $ENDIF					     ;;AN000;;
 MIF98$:
-ENDIF							     ;;AN000;;
+end if                                                       ;;AN000;;
 ;	  $ELSE 					     ;;AN000;;
 	  JMP SHORT MEN97$
 MIF97$:
@@ -1311,11 +1361,11 @@ MEN93$:
 	  POP	  BP					     ;;AN000;; No,
 	  POP	  CX					     ;;AN000;;
 	  POP	  BX					     ;;AN000;;
-IF	  INPUTmsg					     ;;AN000;;
+if INPUTmsg					             ;;AN000;;
 	  ADD	  SP,2					     ;;AN000;;
-ELSE							     ;AN000;
+else                                                         ;AN000;
 	  POP	  AX					     ;;AN000;;
-ENDIF							     ;;AN000;;
+end if                                                       ;;AN000;;
 ;	$ELSE						     ;;AN000;;	Yes,
 	JMP SHORT MEN104$
 MIF104$:
@@ -1326,7 +1376,7 @@ MEN104$:
 							     ;;
 	RET						     ;;AN000;; Return
 							     ;;
-	SYSDISPMSG ENDP 				     ;;AN000;;
+;	SYSDISPMSG ENDP                                      ;;AN000;;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; ;
@@ -1341,17 +1391,17 @@ MEN104$:
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_DISPLAY_STRING$ PROC NEAR				     ;;AN000;;
+M_DISPLAY_STRING$:                                           ;;AN000;;
 							     ;;
 	PUSH	AX					     ;;AN000;;
 	PUSH	BX					     ;;AN000;;
 	PUSH	DX					     ;;AN000;;
 							     ;;
-	MOV	BX,M_RT$.M_HANDLE$			     ;;AN000;; Retrieve handle
+	MOV	BX,[M_RT$+M_RES_ADDRS$.M_HANDLE$]			     ;;AN000;; Retrieve handle
 							     ;;
-IF	COMR						     ;;  ** Special case for RESIDENT COMMAND.COM
+if COMR						             ;;  ** Special case for RESIDENT COMMAND.COM
 	CALL	M_DISPLAY_$_STRING$			     ;;AN000;; No, display $ terminated string
-ELSE
+else
 	CMP	BX,M_NO_HANDLE$ 			     ;;AN000;; Was there a handle specified?
 ;	$IF	E					     ;;AN000;;
 	JNE MIF107$
@@ -1389,7 +1439,7 @@ MIF113$:
 MIF112$:
 ;	$ENDIF						     ;;AN000;;
 MEN110$:
-ENDIF
+end if
 ;	$IF	NC					     ;;AN000;;	Was there ANY error?
 	JC MIF117$
 	  POP	  DX					     ;;AN000;;	Restore regs
@@ -1399,7 +1449,7 @@ ENDIF
 MIF117$:
 	RET						     ;;AN000;; Return
 							     ;;
-M_DISPLAY_STRING$ ENDP					     ;;AN000;;
+;M_DISPLAY_STRING$ ENDP                                      ;;AN000;;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -1412,17 +1462,17 @@ M_DISPLAY_STRING$ ENDP					     ;;AN000;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_DISPLAY_$_STRING$ PROC NEAR				     ;;AN000;;
+M_DISPLAY_$_STRING$:                                         ;;AN000;;
 							     ;;
 	PUSH	DS					     ;;AN000;;
 	PUSH	ES					     ;;AN000;;
 	POP	DS					     ;;AN000;; Set DS to segment of message text
-IF	NOT	COMR
+if ~COMR
 	CMP	CX,M_SINGLE_CHAR$			     ;;AN000;; Is this a single character?
 ;	$IF	E					     ;;AN000;; Yes,
 	JNE MIF119$
 	  MOV	  AH,DOS_DISP_CHAR			     ;;AN000;;	 DOS Function to display CHARACTER
-	  MOV	  DL,BYTE PTR ES:[DI]			     ;;AN000;;	 Get the character
+	  MOV	  DL,byte [es:DI]                          ;;AN000;;	 Get the character
 	  INT	  21H					     ;;AN000;;	 Write character
 	  POP	  DS					     ;;AN000;; Set DS to segment of message text
 	  MOV	  AL,DL 				     ;;AN000;;	 Get the character in AL
@@ -1432,7 +1482,7 @@ IF	NOT	COMR
 	  POP	  DS					     ;;AN000;; Set DS to segment of message text
 ;	  $IF	  C					     ;;AN000;;	 Yes,
 	  JNC MIF120$
-	    MOV     DL,BYTE PTR ES:[DI]+1		     ;;AN000;; Get the next character
+	    MOV     DL,byte [es:DI+1]                      ;;AN000;; Get the next character
 	    INT     21H 				     ;;AN000;;	 Write character
 	    CLC 					     ;;AN000;;	 Clear the DBCS indicator
 ;	  $ENDIF					     ;;AN000;;
@@ -1440,31 +1490,31 @@ MIF120$:
 ;	$ELSE						     ;;AN000;; No,
 	JMP SHORT MEN119$
 MIF119$:
-ENDIF
+end if
 	  MOV	  AH,DOS_DISP_CHAR			     ;;AN000;;	 DOS Function to display CHARACTER
 ;	  $DO						     ;;AN002;; No,
 MDO123$:
 	    OR	    CX,CX				     ;;AN002;;	 Are there any left to display?
 ;	  $LEAVE  Z					     ;;AN002;;	 Yes,
 	  JZ MEN123$
-	    MOV     DL,BYTE PTR ES:[DI] 		     ;;AN002;;	   Get the character
+	    MOV     DL,byte [es:DI]                        ;;AN002;;	   Get the character
 	    INT     21H 				     ;;AN002;;	   Display the character
 	    INC     DI					     ;;AN002;;	   Set pointer to next character
 	    DEC     CX					     ;;AN002;;	   Count this character
 ;	  $ENDDO  Z					     ;;AN002;; No,
 	  JNZ MDO123$
 MEN123$:
-IF	  NOT	  COMR
+if ~COMR
 ;	$ENDIF						     ;;AN000;;
 MEN119$:
-ENDIF
+end if
 	CLC						     ;;AN000;;	 Char functions used don't return carry as error
 	POP	DS					     ;;AN000;;
 	RET						     ;;AN000;;
 							     ;;
-M_DISPLAY_$_STRING$ ENDP				     ;;AN000;;
+;M_DISPLAY_$_STRING$ ENDP                                    ;;AN000;;
 							     ;;
-IF	NOT	COMR
+if ~COMR
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;	PROC NAME: $M_DISPLAY_H_STRING
@@ -1478,7 +1528,7 @@ IF	NOT	COMR
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_DISPLAY_H_STRING$ PROC NEAR				     ;;AN000;;
+M_DISPLAY_H_STRING$:                                         ;;AN000;;
 							     ;;
 	XOR	AX,AX					     ;;AN002;; Set number of bytes written to 0
 	OR	CX,CX					     ;;AN002;; For performance, don't write if not necessary
@@ -1495,7 +1545,7 @@ M_DISPLAY_H_STRING$ PROC NEAR				     ;;AN000;;
 	    INT     21H 				     ;;AN000;;	   Write character
 	    POP     DS					     ;;AN000;;	     Set DS to segment of message text
 	    PUSH    AX					     ;;AN000;;
-	    MOV     AL,BYTE PTR ES:[DI] 		     ;;AN000;;	     Get the character
+	    MOV     AL,byte [es:DI]                        ;;AN000;;	     Get the character
 	    CALL    M_IS_IT_DBCS$			     ;;AN000;;	     Is this the first byte of a DB character
 	    POP     AX					     ;;AN000;;	     Set DS to segment of message text
 	    PUSH    DS					     ;;AN000;;
@@ -1521,7 +1571,7 @@ MIF127$:
 							     ;;
 	RET						     ;;AN000;;
 							     ;;
-M_DISPLAY_H_STRING$ ENDP				     ;;AN000;;
+;M_DISPLAY_H_STRING$ ENDP                                    ;;AN000;;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -1534,7 +1584,7 @@ M_DISPLAY_H_STRING$ ENDP				     ;;AN000;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_GET_EXT_ERR_39$ PROC NEAR				     ;AN001;
+M_GET_EXT_ERR_39$:                                           ;AN001;
 							     ;;
 	MOV	AX,EXT_ERR_39				     ;AN001; Set AX=39
 	MOV	BX,(ERROR_CLASS_39 SHR 8) + ACTION_39	     ;AN001; Set BH=1 BL=4
@@ -1542,10 +1592,10 @@ M_GET_EXT_ERR_39$ PROC NEAR				     ;AN001;
 							     ;AN001;
 	RET						     ;AN001;
 							     ;;
-M_GET_EXT_ERR_39$ ENDP					     ;AN001;
+;M_GET_EXT_ERR_39$ ENDP                                      ;AN001;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-ENDIF
+end if
 ;;
 ;;	PROC NAME: $M_ADD_CRLF
 ;;
@@ -1556,7 +1606,7 @@ ENDIF
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_ADD_CRLF$ PROC NEAR					     ;;AN004;;
+M_ADD_CRLF$:                                                 ;;AN004;;
 							     ;;
 	CMP	DH,UTILITY_MSG_CLASS			     ;;AN004;; Is it a utility message?
 ;	$IF	NE					     ;;AN004;; No,
@@ -1566,7 +1616,7 @@ M_ADD_CRLF$ PROC NEAR					     ;;AN004;;
 	  JNZ MIF135$
 	    PUSH    DS					     ;;AN004;;
 	    POP     ES					     ;;AN004;;	  Set ES to data segment
-	    LEA     DI,M_RT$.M_CRLF$			     ;;AN004;;	  Point at CRLF message
+	    LEA     DI,[M_RT$+M_RES_ADDRS$.M_CRLF$]			     ;;AN004;;	  Point at CRLF message
 	    MOV     CX,M_CRLF_SIZE$			     ;;AN004;;	  Set the message size
 	    CALL    M_DISPLAY_STRING$			     ;;AN004;;	  Display the CRLF
 ;	  $ENDIF					     ;;AN004;;
@@ -1575,7 +1625,7 @@ MIF135$:
 MIF134$:
 	RET						     ;;AN004;; Return
 							     ;;
-M_ADD_CRLF$ ENDP					     ;;AN004;;
+;M_ADD_CRLF$ ENDP                                            ;;AN004;;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -1589,26 +1639,26 @@ M_ADD_CRLF$ ENDP					     ;;AN004;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_IS_IT_DBCS$ PROC NEAR 				     ;;AN000;;
+M_IS_IT_DBCS$:                                               ;;AN000;;
 							     ;;
 	PUSH	ES					     ;;AN000;; Save Extra segment register
 	PUSH	DI					     ;;AN000;; Save SI register
 							     ;;
-	LES	DI,M_RT$.M_DBCS_VEC$			     ;;AN000;;
+	LES	DI,[M_RT$+M_RES_ADDRS$.M_DBCS_VEC$]			     ;;AN000;;
 	OR	DI,DI					     ;;AN000;; Was the DBCS vector set?
 ;	$IF	NZ					     ;;AN000;;
 	JZ MIF138$
 ;	  $DO						     ;;AN000;;
 MDO139$:
-	    CMP     WORD PTR ES:[DI],M_DBCS_TERM$	     ;;AN000;; Is this the terminating flag?
+	    CMP     word [es:DI],M_DBCS_TERM$	             ;;AN000;; Is this the terminating flag?
 	    CLC 					     ;;AN000;;
 ;	  $LEAVE  E					     ;;AN000;;
 	  JE MEN139$
 							     ;;        No,
-	    CMP     AL,BYTE PTR ES:[DI] 		     ;;AN000;;	  Does the character fall in the DBCS range?
+	    CMP     AL,byte [es:DI]                        ;;AN000;;	  Does the character fall in the DBCS range?
 ;	    $IF     AE,AND				     ;;AN000;;
 	    JNAE MIF141$
-	    CMP     AL,BYTE PTR ES:[DI]+1		     ;;AN000;;	  Does the character fall in the DBCS range?
+	    CMP     AL,byte [es:DI+1]                      ;;AN000;;	  Does the character fall in the DBCS range?
 ;	    $IF     BE					     ;;AN000;;
 	    JNBE MIF141$
 	      STC					     ;;AN000;;	  Yes,
@@ -1626,7 +1676,7 @@ MIF138$:
 	POP	ES					     ;;AN000;; Restore SI register
 	RET						     ;;AN000;; Return
 							     ;;
-M_IS_IT_DBCS$ ENDP					     ;;AN000;;
+;M_IS_IT_DBCS$ ENDP                                          ;;AN000;;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -1643,19 +1693,19 @@ M_IS_IT_DBCS$ ENDP					     ;;AN000;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_CONVERT2ASC$ PROC NEAR				     ;;AN000;;
+M_CONVERT2ASC$:                                              ;;AN000;;
 							     ;;
-	POP	[M_RT$.M_RETURN_ADDR$]			     ;;AN000;; Save Return Address
+	POP	[M_RT$+M_RES_ADDRS$.M_RETURN_ADDR$]			     ;;AN000;; Save Return Address
 	XOR	BX,BX					     ;;AN000;; Use BP as a swapping register
 							     ;;
 	XCHG	BX,AX					     ;;AN000;; Initialize - Low Word in BP
 	XCHG	AX,DX					     ;;AN000;;		  - High Word in AX
 ;	$DO						     ;;AN000;; DO UNTIL Low Word becomes zero
 MDO145$:
-	  DIV	  M_RT$.M_DIVISOR$			     ;;AN000;; Divide High Word by divisor
+	  DIV	  word [M_RT$+M_RES_ADDRS$.M_DIVISOR$]			     ;;AN000;; Divide High Word by divisor
 	  XCHG	  BX,AX 				     ;;AN000;; Setup to divide Low Word using remainder
 							     ;; 	and save reduced High Word in BP
-	  DIV	  M_RT$.M_DIVISOR$			     ;;AN000;; Divide Low Word by divisor
+	  DIV	  word [M_RT$+M_RES_ADDRS$.M_DIVISOR$]			     ;;AN000;; Divide Low Word by divisor
 	  CMP	  DX,9					     ;;AN000;;	Make a digit of the remainder
 ;	  $IF	  A					     ;;AN000;;	IF 10 to 15,
 	  JNA MIF146$
@@ -1675,14 +1725,14 @@ MEN146$:
 ;	$LEAVE	Z					     ;;AN000;; No,
 	JZ MEN145$
 MLL149$:
-IF	  NOT	  COMR
+if ~COMR
 	  CMP	  CX,M_FIRST_THOU$			     ;;AN000;; Are we at the first thousands mark
 ;	  $IF	  E					     ;;AN000;; Yes,
 	  JNE MIF150$
-	    CMP     M_SL$.M_S_PAD$,M_COMMA$		     ;;AN000;; Is the pad character a comma?
+	    CMP     byte [M_SL$+M_SUBLIST_STRUC$.M_S_PAD$],M_COMMA$		     ;;AN000;; Is the pad character a comma?
 ;	    $IF     E					     ;;AN000;; Yes,
 	    JNE MIF151$
-	      PUSH    WORD PTR M_RT$.M_THOU_SEPARA$	     ;;AN000;; Insert a thousand separator
+	      PUSH    word [M_RT$+M_COUNTRY_INFO$.M_THOU_SEPARA$] ;;AN000;; Insert a thousand separator
 	      INC     CX				     ;;AN000;;
 ;	    $ENDIF					     ;;AN000;;
 MIF151$:
@@ -1692,10 +1742,10 @@ MIF150$:
 	    CMP     CX,M_SECOND_THOU$			     ;;AN000;;	 Are we at the first thousands mark
 ;	    $IF     E					     ;;AN000;;	      Yes,
 	    JNE MIF154$
-	      CMP     M_SL$.M_S_PAD$,M_COMMA$		     ;;AN000;; Is the pad character a comma?
+	      CMP     byte [M_SL$+M_SUBLIST_STRUC$.M_S_PAD$],M_COMMA$		     ;;AN000;; Is the pad character a comma?
 ;	      $IF     E 				     ;;AN000;; Yes,
 	      JNE MIF155$
-		PUSH	WORD PTR M_RT$.M_THOU_SEPARA$	     ;;AN000;; Insert a thousand separator
+		PUSH	word [M_RT$+M_COUNTRY_INFO$.M_THOU_SEPARA$] ;;AN000;; Insert a thousand separator
 		INC	CX				     ;;AN000;;
 ;	      $ENDIF					     ;;AN000;;
 MIF155$:
@@ -1705,10 +1755,10 @@ MIF154$:
 	      CMP     CX,M_THIRD_THOU$			     ;;AN000;;	 Are we at the first thousands mark
 ;	      $IF     E 				     ;;AN000;;		Yes,
 	      JNE MIF158$
-		CMP	M_SL$.M_S_PAD$,M_COMMA$ 	     ;;AN000;; Is the pad character a comma?
+		CMP	byte [M_SL$+M_SUBLIST_STRUC$.M_S_PAD$],M_COMMA$ 	     ;;AN000;; Is the pad character a comma?
 ;		$IF	E				     ;;AN000;; Yes,
 		JNE MIF159$
-		  PUSH	  WORD PTR M_RT$.M_THOU_SEPARA$      ;;AN000;; Insert a thousand separator
+		  PUSH	  word [M_RT$+M_COUNTRY_INFO$.M_THOU_SEPARA$] ;;AN000;; Insert a thousand separator
 		  INC	  CX				     ;;AN000;;
 ;		$ENDIF					     ;;AN000;;
 MIF159$:
@@ -1718,7 +1768,7 @@ MIF158$:
 MEN154$:
 ;	  $ENDIF					     ;;AN000;;
 MEN150$:
-ENDIF
+end if
 	  XCHG	  AX,BX 				     ;;AN000;;	 Setup to divide the reduced High Word
 							     ;;AN000;;	   and Revised Low Word
 	  XOR	  DX,DX 				     ;;AN000;;	 Reset remainder
@@ -1728,10 +1778,10 @@ MEN145$:
 							     ;;AN000;; Yes,
 	XOR	DX,DX					     ;;AN000;;	 Reset remainder
 	XOR	AX,AX					     ;;AN000;;	 Reset remainder
-	PUSH	[M_RT$.M_RETURN_ADDR$]			     ;;AN000;;	 Restore Return Address
+	PUSH	[M_RT$+M_RES_ADDRS$.M_RETURN_ADDR$]			     ;;AN000;;	 Restore Return Address
 	RET						     ;;AN000;;	 Return
 							     ;;
-M_CONVERT2ASC$ ENDP					     ;;AN000;;
+;M_CONVERT2ASC$ ENDP                                         ;;AN000;;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -1749,7 +1799,7 @@ M_CONVERT2ASC$ ENDP					     ;;AN000;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_DISPLAY_MESSAGE$ PROC NEAR				     ;;AN000;;
+M_DISPLAY_MESSAGE$:                                          ;;AN000;;
 							     ;;
 ;	$DO						     ;;AN000;; Note: DS:SI -> message
 MDO165$:
@@ -1762,17 +1812,17 @@ MDO165$:
 							     ;;
 ;	    $DO 					     ;;AN000;;	 Scan through string until %
 MDO167$:
-	      CMP     BYTE PTR ES:[DI],AH		     ;;AN000;;	 Is this character NOT a %
+	      CMP     byte [es:DI],AH		             ;;AN000;;	 Is this character NOT a %
 ;	    $LEAVE  E,AND				     ;;AN000;;	 No,
 	    JNE MLL168$
-	      CMP     BYTE PTR ES:[DI+1],AH		     ;;AN000;;	   Is the next character also a %
+	      CMP     byte [es:DI+1],AH		     ;;AN000;;	   Is the next character also a %
 ;	    $LEAVE  NE,AND				     ;;AN000;;	   No,
 	    JE MLL168$
 	      CMP     AL,AH				     ;;AN000;;	     Was the character before a %
 ;	    $LEAVE  NE					     ;;AN000;;	     No, GREAT found it
 	    JNE MEN167$
 MLL168$:
-	      MOV     AL,BYTE PTR ES:[DI]		     ;;AN004;;	 Yes, (to any of the above)
+	      MOV     AL,byte [es:DI]                      ;;AN004;;	 Yes, (to any of the above)
 	      CALL    M_IS_IT_DBCS$			     ;;AN004;;	   Is this character the first part of a DBCS?
 ;	      $IF     C 				     ;;AN004;;	   Yes,
 	      JNC MIF169$
@@ -1797,14 +1847,14 @@ MIF166$:
 
 ;; Search through sublists to find applicable one
 
-	    CMP     M_RT$.M_MSG_NUM$,M_NULL$		     ;;AN000;; Is this an Extended/Parse case
+	    CMP     word [M_RT$+M_RES_ADDRS$.M_MSG_NUM$],M_NULL$		     ;;AN000;; Is this an Extended/Parse case
 ;	    $IF     E					     ;;AN000;; No,
 	    JNE MIF174$
 ;	      $SEARCH					     ;;AN000;;
 MDO175$:
-		MOV	AL,M_SL$.M_S_ID$		     ;;AN000;;	 Get ID byte
+		MOV	AL,[M_SL$+M_SUBLIST_STRUC$.M_S_ID$]		     ;;AN000;;	 Get ID byte
 		ADD	AL,30H				     ;;AN000;;	 Convert to ASCII
-		CMP	AL,BYTE PTR ES:[DI]+1		     ;;AN000;;	 Is this the right sublist?
+		CMP	AL,byte [es:DI+1]                  ;;AN000;;	 Is this the right sublist?
 ;	      $EXITIF E 				     ;;AN000;;
 	      JNE MIF175$
 ;	      $ORELSE					     ;;AN000;;	 No,
@@ -1817,11 +1867,11 @@ MIF175$:
 ;	      $LEAVE  Z 				     ;;AN000;;	   No,
 	      JZ MEN175$
 MLL178$:
-		ADD	SI,WORD PTR M_SL$.M_S_SIZE$	     ;;AN000;;	     Next SUBLIST
+		ADD	SI,word [M_SL$+M_SUBLIST_STRUC$.M_S_SIZE$] ;;AN000;;	     Next SUBLIST
 ;	      $ENDLOOP					     ;;AN000;;	   Yes,
 	      JMP SHORT MDO175$
 MEN175$:
-		CMP	M_RT$.M_CLASS$,UTILITY_MSG_CLASS     ;;AN004;;	     Is it a utility message?
+		CMP	byte [M_RT$+M_RES_ADDRS$.M_CLASS$],UTILITY_MSG_CLASS     ;;AN004;;	     Is it a utility message?
 ;		$IF	E				     ;;AN004;;	     Yes,
 		JNE MIF180$
 		  INC	  DX				     ;;AN000;;	       Remember to display CR,LF
@@ -1859,7 +1909,7 @@ MXL3$:
 ;; Save and reset pointer registers
 
 	  MOV	  CX,DX 				     ;;AN000;; Get the size of the rest of the message
-	  CMP	  M_SL$.M_S_ID$,M_SPECIAL_CASE$-30H	     ;;AN000;; Is this the %0 case?
+	  CMP	  byte [M_SL$+M_SUBLIST_STRUC$.M_S_ID$],M_SPECIAL_CASE$-30H	     ;;AN000;; Is this the %0 case?
 ;	  $IF	  NE					     ;;AN000;; No,
 	  JE MIF187$
 	    OR	    CX,CX				     ;;AN000;;	Are we finished the whole message?
@@ -1906,45 +1956,45 @@ MEN187$:
 
 ;; Determine what action is required on parameter
 
-	  CMP	  M_RT$.M_MSG_NUM$,M_NULL$		     ;;AN000;; Is this an Extended/Parse case
+	  CMP	  word [M_RT$+M_RES_ADDRS$.M_MSG_NUM$],M_NULL$		     ;;AN000;; Is this an Extended/Parse case
 ;	  $IF	  E					     ;;AN000;;
 	  JNE MIF199$
 
-IF	    CHARmsg					     ;;AN000;; Was Char specified?
-	    TEST    BYTE PTR M_SL$.M_S_FLAG$,NOT Char_Type AND M_TYPE_MASK$ ;;AN000;;
+if CHARmsg					             ;;AN000;; Was Char specified?
+	    TEST    byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],NOT Char_type AND M_TYPE_MASK$ ;;AN000;;
 ;	    $IF     Z					     ;;AN000;;
 	    JNZ MIF200$
 
 ;; Character type requested
 							     ;;AN000;;
-	      LES     DI,DWORD PTR M_SL$.M_S_VALUE$	     ;;AN000;; Load pointer to replacing parameter
+	      LES     DI,dword [M_SL$+M_SUBLIST_STRUC$.M_S_VALUE$] ;;AN000;; Load pointer to replacing parameter
 	      CALL    M_CHAR_REPLACE$			     ;;AN000;;
 ;	    $ELSE					     ;;AN000;;	 Get the rest of the message to display
 	    JMP SHORT MEN200$
 MIF200$:
-ENDIF							     ;;AN000;;
-IF	      NUMmsg					     ;;AN000;; Was Nnmeric type specified?
-	      TEST    BYTE PTR M_SL$.M_S_FLAG$,NOT Sgn_Bin_Type AND M_TYPE_MASK$ ;;AN000;;
+end if                                                       ;;AN000;;
+if NUMmsg					             ;;AN000;; Was Nnmeric type specified?
+	      TEST    byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],NOT Sgn_Bin_Type AND M_TYPE_MASK$ ;;AN000;;
 ;	      $IF     Z,OR				     ;;AN000;;
 	      JZ MLL202$
-	      TEST    BYTE PTR M_SL$.M_S_FLAG$,NOT Unsgn_Bin_Type AND M_TYPE_MASK$ ;;AN000;;
+	      TEST    byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],NOT Unsgn_Bin_Type AND M_TYPE_MASK$ ;;AN000;;
 ;	      $IF     Z,OR				     ;;AN000;;
 	      JZ MLL202$
-	      TEST    BYTE PTR M_SL$.M_S_FLAG$,NOT Bin_Hex_Type AND M_TYPE_MASK$ ;;AN000;;
+	      TEST    byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],NOT Bin_Hex_Type AND M_TYPE_MASK$ ;;AN000;;
 ;	      $IF     Z 				     ;;AN000;;
 	      JNZ MIF202$
 MLL202$:
 
 ;; Numeric type requested
 
-		LES	DI,DWORD PTR M_SL$.M_S_VALUE$	     ;;AN000;; Load pointer to replacing parameter
+		LES	DI,dword [M_SL$+M_SUBLIST_STRUC$.M_S_VALUE$] ;;AN000;; Load pointer to replacing parameter
 		CALL	M_BIN2ASC_REPLACE$		     ;;AN000;;
 ;	      $ELSE					     ;;AN000;; Get the rest of the message to display
 	      JMP SHORT MEN202$
 MIF202$:
-ENDIF							     ;;AN000;;
-IF		DATEmsg 				     ;;AN000;; Was date specified?
-		TEST	BYTE PTR M_SL$.M_S_FLAG$,NOT Date_Type AND M_TYPE_MASK$ ;;AN000;;
+end if                                                       ;;AN000;;
+if DATEmsg 				                     ;;AN000;; Was date specified?
+		TEST	byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],NOT Date_Type AND M_TYPE_MASK$ ;;AN000;;
 ;		$IF	E				     ;;AN000;;
 		JNE MIF204$
 
@@ -1954,39 +2004,39 @@ IF		DATEmsg 				     ;;AN000;; Was date specified?
 ;		$ELSE					     ;;AN000;; Get the rest of the message to display
 		JMP SHORT MEN204$
 MIF204$:
-ENDIF							     ;;AN000;;
-IF		  TIMEmsg				     ;;AN000;;	Was time (12 hour format) specified?
+end if                                                       ;;AN000;;
+if TIMEmsg				                     ;;AN000;;	Was time (12 hour format) specified?
 
 ;; Time type requested (Default if we have not matched until here)
 
 		  CALL	  M_TIME_REPLACE$		     ;;AN000;;
-ENDIF							     ;;AN000;;
+end if                                                       ;;AN000;;
 
-IF		  DATEmsg				     ;;AN000;;
+if DATEmsg				                     ;;AN000;;
 ;		$ENDIF					     ;;AN000;;
 MEN204$:
-ENDIF							     ;;AN000;;
-IF		NUMmsg					     ;;AN000;;
+end if                                                       ;;AN000;;
+if NUMmsg					             ;;AN000;;
 ;	      $ENDIF					     ;;AN000;;
 MEN202$:
-ENDIF							     ;;AN000;;
-IF	      CHARmsg					     ;;AN000;;
+end if                                                       ;;AN000;;
+if CHARmsg					             ;;AN000;;
 ;	    $ENDIF					     ;;AN000;;
 MEN200$:
-ENDIF							     ;;AN000;;
+end if                                                       ;;AN000;;
 
-IF	    M_REPLACE$					     ;;AN000;;
+if M_REPLACE$					             ;;AN000;;
 ;; With the replace information of the Stack, display the replaceable field
 
 	    CALL    M_DISPLAY_REPLACE$			     ;;AN000;; Display the replace
-ENDIF							     ;;AN000;;
+end if                                                       ;;AN000;;
 ;; None of the above - Extended/Parse replace
 ;	  $ELSE 					     ;;AN000;;
 	  JMP SHORT MEN199$
 MIF199$:
-IF	    NOT     COMR
+if ~COMR
 	    CALL    M_EXT_PAR_REPLACE$			     ;;AN000;;
-ENDIF
+end if
 ;	  $ENDIF					     ;;AN000;;
 MEN199$:
 
@@ -2006,7 +2056,7 @@ MIF211$:
 	    STC 					     ;;AN000;;
 ;	  $ENDIF					     ;;AN000;;
 MEN211$:
-	  CMP	  M_RT$.M_MSG_NUM$,M_NULL$		     ;;AN000;; Is this an Extended/Parse case
+	  CMP	  word [M_RT$+M_RES_ADDRS$.M_MSG_NUM$],M_NULL$		     ;;AN000;; Is this an Extended/Parse case
 ;	$ENDDO	NE,OR					     ;;AN000;;
 	JNE MLL214$
 ;	$ENDDO	C,LONG					     ;;AN000;; Go back and display the rest of the message
@@ -2016,11 +2066,11 @@ MXL4$:
 MLL214$:
 MEN165$:
 							     ;;        IF there was an error displaying then EXIT
-	MOV	M_RT$.M_MSG_NUM$,0			     ;;AN000;; Reset message number to null
+	MOV	word [M_RT$+M_RES_ADDRS$.M_MSG_NUM$],0			     ;;AN000;; Reset message number to null
 	RET						     ;;AN000;; Return
 							     ;;
-M_DISPLAY_MESSAGE$ ENDP 				     ;;AN000;;
-IF	NOT	COMR
+;M_DISPLAY_MESSAGE$ ENDP                                     ;;AN000;;
+if ~COMR
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;	PROC NAME: $M_EXT_PAR_REPLACE
@@ -2033,18 +2083,18 @@ IF	NOT	COMR
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_EXT_PAR_REPLACE$ PROC NEAR				     ;;AN000;;
+M_EXT_PAR_REPLACE$:                                          ;;AN000;;
 							     ;;
 	XOR	DX,DX					     ;;AN000;; Prepare for get binary value (HIGH)
-	MOV	AX,M_RT$.M_MSG_NUM$			     ;;AN000;; Prepare for get binary value (LOW)
-	MOV	M_RT$.M_DIVISOR$,M_BASE10$		     ;;AN000;; Set default divisor
+	MOV	AX,[M_RT$+M_RES_ADDRS$.M_MSG_NUM$]			     ;;AN000;; Prepare for get binary value (LOW)
+	MOV	word [M_RT$+M_RES_ADDRS$.M_DIVISOR$],M_BASE10$		     ;;AN000;; Set default divisor
 							     ;;
 	CALL	M_CONVERT2ASC$				     ;;AN000;;
 							     ;;
 ;	$DO						     ;;AN000;;
 MDO215$:
 	  POP	  AX					     ;;AN000;;	 Get character in register
-	  MOV	  BYTE PTR M_RT$.M_TEMP_BUF$[BX],AL	     ;;AN000;;	Move char into the buffer
+	  MOV	  byte [M_RT$+M_RES_ADDRS$.M_TEMP_BUF$+BX],AL	     ;;AN000;;	Move char into the buffer
 	  INC	  BX					     ;;AN000;;	 Increase buffer count
 	  CMP	  BX,M_TEMP_BUF_SZ$			     ;;AN000;;	 Is buffer full?
 ;	  $IF	  E					     ;;AN000;;	 Yes,
@@ -2057,17 +2107,17 @@ MIF216$:
 	JNZ MDO215$
 							     ;;
 	MOV	AX,M_CR_LF$				     ;;AN000;;	Move char into the buffer
-	MOV	WORD PTR M_RT$.M_TEMP_BUF$[BX],AX	     ;;AN000;;	Move char into the buffer
+	MOV	word [M_RT$+M_RES_ADDRS$.M_TEMP_BUF$+BX],AX	     ;;AN000;;	Move char into the buffer
 	INC	BX					     ;;AN000;;	 Increase buffer count
 	INC	BX					     ;;AN000;;	 Increase buffer count
 	CALL	M_FLUSH_BUF$				     ;;AN000;;	   Flush the buffer
 	RET						     ;;AN000::
 							     ;;
-M_EXT_PAR_REPLACE$ ENDP 				     ;;AN000;;
+;M_EXT_PAR_REPLACE$ ENDP                                     ;;AN000;;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-ENDIF
-	IF	M_SUBS$ 				     ;;AN000;; Include the common subroutines if they haven't yet
+end if
+	if M_SUBS$ 				             ;;AN000;; Include the common subroutines if they haven't yet
 	  M_SUBS$ = FALSE				     ;;AN000;; No, then include and reset the flag
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -2081,11 +2131,11 @@ ENDIF
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-IF	  FARmsg					     ;;AN000;;
-	  M_GET_MSG_ADDRESS$ PROC FAR			     ;;AN000;;
-ELSE							     ;;AN000;;
-	  M_GET_MSG_ADDRESS$ PROC NEAR			     ;;AN000;;
-ENDIF							     ;;AN000;;
+if FARmsg					             ;;AN000;;
+	  M_GET_MSG_ADDRESS$:                                ;;AN000;;
+else                                                         ;;AN000;;
+	  M_GET_MSG_ADDRESS$:                                ;;AN000;;
+end if                                                       ;;AN000;;
 							     ;;
 	  PUSH	  SI					     ;;AN000;;
 	  PUSH	  BX					     ;;AN000;;
@@ -2096,20 +2146,20 @@ MDO219$:
 	    CMP     DH,UTILITY_MSG_CLASS		     ;;AN000;; Were utility messages requested?
 ;	    $IF     E					     ;;AN000;; Yes,
 	    JNE MIF220$
-	      IF      FARmsg				     ;;AN000;;
-		LES	DI,DWORD PTR M_RT$.M_CLASS_ADDRS$[SI] ;;AN000;;  Get address of class
+	      if FARmsg				             ;;AN000;;
+		LES	DI,dword [M_RT$+M_RES_ADDRS$.M_CLASS_ADDRS$+SI] ;;AN000;;  Get address of class
 		MOV	BX,ES				     ;;AN000;
-	      ELSE					     ;;AN000;;
-		MOV	DI,WORD PTR M_RT$.M_CLASS_ADDRS$[SI] ;;AN000;;	 Get address of class
+	      else                                           ;;AN000;;
+		MOV	DI,word [M_RT$+M_RES_ADDRS$.M_CLASS_ADDRS$+SI] ;;AN000;;	 Get address of class
 		MOV	BX,DI				     ;;AN000;
-	      ENDIF					     ;;AN000;;
+	      end if                                         ;;AN000;;
 ;	    $ELSE					     ;;AN000;; No,
 	    JMP SHORT MEN220$
 MIF220$:
 	      TEST    DH,PARSE_ERR_CLASS		     ;;AN000;;	 Were parse errors requested?
 ;	      $IF     NE				     ;;AN000;;	 Yes,
 	      JE MIF222$
-		LES	DI,DWORD PTR M_RT$.M_PARSE_COMMAND$[SI] ;;AN000;;   Get address of class
+		LES	DI,dword [M_RT$+M_RES_ADDRS$.M_PARSE_COMMAND$+SI] ;;AN000;;   Get address of class
 		MOV	BX,ES				     ;;AN000;
 ;	      $ELSE					     ;;AN000;;	 No, extended errors were specified
 	      JMP SHORT MEN222$
@@ -2120,12 +2170,12 @@ MIF222$:
 		CMP	AX,M_CRIT_HI$			     ;;AN000;;
 ;		$IF	BE				     ;;AN000;;	    Yes,
 		JNBE MIF224$
-		  LES	  DI,DWORD PTR M_RT$.M_CRIT_ADDRS$[SI] ;;AN000;; Get address of class
+		  LES	  DI,dword [M_RT$+M_RES_ADDRS$.M_CRIT_ADDRS$+SI] ;;AN000;; Get address of class
 		  MOV	  BX,ES 			     ;;AN000;
 ;		$ELSE					     ;;AN000;;
 		JMP SHORT MEN224$
 MIF224$:
-		  LES	  DI,DWORD PTR M_RT$.M_EXT_ERR_ADDRS$[SI] ;;AN000;; Get address of class
+		  LES	  DI,dword [M_RT$+M_RES_ADDRS$.M_EXT_ERR_ADDRS$+SI] ;;AN000;; Get address of class
 		  MOV	  BX,ES 			     ;;AN000;
 ;		$ENDIF					     ;;AN000;;
 MEN224$:
@@ -2144,7 +2194,7 @@ MEN220$:
 ;	      $ELSE					     ;;AN000;;	  No,
 	      JMP SHORT MEN230$
 MIF230$:
-		MOV	M_RT$.M_MSG_NUM$,AX		     ;;AN000;;	    Save message number
+		MOV	[M_RT$+M_RES_ADDRS$.M_MSG_NUM$],AX		     ;;AN000;;	    Save message number
 		MOV	AX,M_SPECIAL_MSG_NUM$		     ;;AN000;;	    Set special message number
 		MOV	BP,M_ONE_REPLACE$		     ;;AN000;;	    Set one replace in message
 		XOR	SI,SI				     ;;AN000;;	    Reset the SI index to start again
@@ -2222,9 +2272,9 @@ MIF239$:
 	  POP	  SI					     ;;AN000;;
 	  RET						     ;;AN000;; Return ES:DI pointing to the message
 							     ;;
-M_GET_MSG_ADDRESS$ ENDP 				     ;;
+;M_GET_MSG_ADDRESS$ ENDP                                     ;;
 							     ;;
-M_SET_LEN_IN_CX$ PROC NEAR				     ;;
+M_SET_LEN_IN_CX$:                                            ;;
 							     ;;
 	  PUSH	  DI					     ;;AN006;; Save position
 	  PUSH	  AX					     ;;AN006;;
@@ -2237,7 +2287,7 @@ M_SET_LEN_IN_CX$ PROC NEAR				     ;;
 	  POP	  DI					     ;;AN006;; Restore position
 	  RET						     ;;AN006;;
 							     ;;
-M_SET_LEN_IN_CX$ ENDP					     ;;
+;M_SET_LEN_IN_CX$ ENDP                                       ;;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -2252,25 +2302,25 @@ M_SET_LEN_IN_CX$ ENDP					     ;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_FIND_SPECIFIED_MSG$ PROC NEAR 			     ;;AN000;;
+M_FIND_SPECIFIED_MSG$:                                       ;;AN000;;
 							     ;;
 	  CMP	  BX,1					     ;;AN004;;	Do we have an address to CALL?
 ;	  $IF	  E,AND 				     ;;AN004;;	Yes,
 	  JNE MIF247$
-	  CMP	  WORD PTR M_RT$.M_DISK_PROC_ADDR$,-1	     ;;AN004;;	Do we have an address to CALL?
+	  CMP	  word [M_RT$+M_RES_ADDRS$.M_DISK_PROC_ADDR$],-1	     ;;AN004;;	Do we have an address to CALL?
 ;	  $IF	  NE					     ;;AN004;;	Yes,
 	  JE MIF247$
 	    CMP     AX,M_SPECIAL_MSG_NUM$		     ;;AN004;; Are we displaying a default Ext Err?
 ;	    $IF     E					     ;;AN004;;	. . . and . . .
 	    JNE MIF248$
 	      PUSH    AX				     ;;AN004;;	 Reset the special message number
-	      MOV     AX,M_RT$.M_MSG_NUM$		     ;;AN004;;	 Get the old message number
-	      CALL    DWORD PTR M_RT$.M_DISK_PROC_ADDR$      ;;AN004;;	 Call the READ_DISK_PROC to get error text
+	      MOV     AX,[M_RT$+M_RES_ADDRS$.M_MSG_NUM$]		     ;;AN004;;	 Get the old message number
+	      CALL    dword [M_RT$+M_RES_ADDRS$.M_DISK_PROC_ADDR$] ;;AN004;;	 Call the READ_DISK_PROC to get error text
 	      POP     AX				     ;;AN004;;	 Reset the special message number
 ;	    $ELSE					     ;;AN004;;	 Get the old message number
 	    JMP SHORT MEN248$
 MIF248$:
-	      CALL    DWORD PTR M_RT$.M_DISK_PROC_ADDR$      ;;AN004;;	 Call the READ_DISK_PROC to get error text
+	      CALL    dword [M_RT$+M_RES_ADDRS$.M_DISK_PROC_ADDR$] ;;AN004;;	 Call the READ_DISK_PROC to get error text
 ;	    $ENDIF					     ;;AN004;;	 Get the old message number
 MEN248$:
 ;	  $ELSE 					     ;;AN004;;
@@ -2280,22 +2330,22 @@ MIF247$:
 	    CMP     DH,UTILITY_MSG_CLASS		     ;;AN001;;
 ;	    $IF     NE					     ;;AN001;;
 	    JE MIF252$
-	      MOV     CL,BYTE PTR ES:[DI].M_NUM_CLS_MSG$     ;;AN001;;	 Get number of messages in class
+	      MOV     CL,byte [es:DI+M_CLASS_ID$.M_NUM_CLS_MSG$] ;;AN001;;	 Get number of messages in class
 ;	    $ELSE					     ;;AN001;;
 	    JMP SHORT MEN252$
 MIF252$:
-IF	      FARmsg					     ;;AN001;;
-	      CMP     BYTE PTR ES:[DI].M_CLASS_ID$,DH	     ;;AN002;; Check if class still exists at
-ELSE
-	      CMP     BYTE PTR CS:[DI].M_CLASS_ID$,DH	     ;;AN002;; Check if class still exists at
-ENDIF
+if FARmsg					             ;;AN001;;
+	      CMP     byte [es:DI+M_CLASS_ID$.M_CLS_ID$],DH	     ;;AN002;; Check if class still exists at
+else
+	      CMP     byte [cs:DI+M_CLASS_ID$.M_CLS_ID$],DH	     ;;AN002;; Check if class still exists at
+end if
 ;	      $IF     E 				     ;;AN002;;	pointer (hopefully)
 	      JNE MIF254$
-IF		FARmsg					     ;;AN001;;
-		MOV	CL,BYTE PTR ES:[DI].M_NUM_CLS_MSG$   ;;AN000;;	   Get number of messages in class
-ELSE
-		MOV	CL,BYTE PTR CS:[DI].M_NUM_CLS_MSG$   ;;AN000;;	   Get number of messages in class
-ENDIF
+if FARmsg					             ;;AN001;;
+		MOV	CL,byte [es:DI+M_CLASS_ID$.M_NUM_CLS_MSG$] ;;AN000;;	   Get number of messages in class
+else
+		MOV	CL,byte [cs:DI+M_CLASS_ID$.M_NUM_CLS_MSG$] ;;AN000;;	   Get number of messages in class
+end if
 ;	      $ENDIF					     ;;AN002;;	  go on to the next class
 MIF254$:
 ;	    $ENDIF					     ;;AN001;;
@@ -2316,15 +2366,15 @@ MDO259$:
 	      CMP     DH,UTILITY_MSG_CLASS		     ;;AN001;;
 ;	      $IF     NE				     ;;AN001;;
 	      JE MIF261$
-		CMP	AX,WORD PTR ES:[DI].M_NUM$	     ;;AN001;; Is this the message requested?
+		CMP	AX,word [es:DI+M_ID$.M_NUM$]         ;;AN001;; Is this the message requested?
 ;	      $ELSE					     ;;AN001;;
 	      JMP SHORT MEN261$
 MIF261$:
-IF		FARmsg					     ;;AN001;;
-		CMP	AX,WORD PTR ES:[DI].M_NUM$	     ;;AN000;; Is this the message requested?
-ELSE
-		CMP	AX,WORD PTR CS:[DI].M_NUM$	     ;;AN000;; Is this the message requested?
-ENDIF
+if FARmsg					             ;;AN001;;
+		CMP	AX,word [es:DI+M_ID$.M_NUM$]         ;;AN000;; Is this the message requested?
+else
+		CMP	AX,word [cs:DI+M_ID$.M_NUM$]         ;;AN000;; Is this the message requested?
+end if
 ;	      $ENDIF
 MEN261$:
 ;	    $EXITIF E					     ;;AN000;;
@@ -2348,14 +2398,14 @@ MSR259$:
 	      CLC					     ;;AN001;;
 ;	      $IF     E 				     ;;AN001;;
 	      JNE MIF270$
-IF		FARmsg					     ;;AN001;;
-ELSE							     ;;AN000;;
+if FARmsg					             ;;AN001;;
+else                                                         ;;AN000;;
 		PUSH	CS				     ;;AN000;;
 		POP	ES				     ;;AN000;;	 Return ES:DI pointing to the message
-ENDIF
+end if
 ;	      $ENDIF					     ;;AN001;;
 MIF270$:
-	      ADD     DI,WORD PTR ES:[DI].M_TXT_PTR$	     ;;AN000;; Prepare ES:DI pointing to the message
+	      ADD     DI,word [es:DI+M_ID$.M_TXT_PTR$]       ;;AN000;; Prepare ES:DI pointing to the message
 ;	    $ENDIF					     ;;AN004;;
 MIF269$:
 ;	  $ENDIF					     ;;AN004;;
@@ -2365,59 +2415,59 @@ MIF258$:
 ;	  $IF	  NC					     ;;AN000;;	 Did we find the message?
 	  JC MIF274$
 	    XOR     CH,CH				     ;;AN000;;
-	    MOV     CL,BYTE PTR ES:[DI] 		     ;;AN000;;	 Move size into CX
+	    MOV     CL,byte [es:DI]                        ;;AN000;;	 Move size into CX
 	    INC     DI					     ;;AN000;;	 Increment past length
 ;	  $ENDIF					     ;;AN004;;
 MIF274$:
 
-	  MOV	  M_RT$.M_SIZE$,M_NULL$ 		     ;;AN004;; Reset variable
+	  MOV	  byte [M_RT$+M_RES_ADDRS$.M_SIZE$],M_NULL$ 		     ;;AN004;; Reset variable
 	  RET						     ;;AN000;; Return
 							     ;;
-M_FIND_SPECIFIED_MSG$ ENDP				     ;;AN000;;
+;M_FIND_SPECIFIED_MSG$ ENDP                                  ;;AN000;;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	ENDIF						     ;;AN000;; END of include of common subroutines
+	end if                                               ;;AN000;; END of include of common subroutines
 ; ;
-	IF	M_REPLACE$				     ;;AN000;; Is the request to include the code for replaceable parms
+	if M_REPLACE$				             ;;AN000;; Is the request to include the code for replaceable parms
 	  M_REPLACE$ = FALSE				     ;;AN000;;	   Tell the assembler we did
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-M_DISPLAY_REPLACE$ PROC NEAR				     ;;AN000;;
+M_DISPLAY_REPLACE$:                                          ;;AN000;;
 							     ;;
 	  XOR	  BX,BX 				     ;;AN000;; Use BX for buffer count
-IF	  NOT	  COMR
-	  CMP	  M_SL$.M_S_ID$,M_SPECIAL_CASE$-30H	     ;;AN000;; Is this the special case (convert to ASCII)
+if ~COMR
+	  CMP	  byte [M_SL$+M_SUBLIST_STRUC$.M_S_ID$],M_SPECIAL_CASE$-30H	     ;;AN000;; Is this the special case (convert to ASCII)
 ;	  $IF	  E					     ;;AN000;; Yes,
 	  JNE MIF276$
-	    MOV     WORD PTR M_RT$.M_TEMP_BUF$[BX],M_SPACE_HYP$ ;;AN000;; Move in a " -"
+	    MOV     word [M_RT$+M_RES_ADDRS$.M_TEMP_BUF$+BX],M_SPACE_HYP$ ;;AN000;; Move in a " -"
 	    INC     BX					     ;;AN000;;	   Increment count
 	    INC     BX					     ;;AN000;;	   Increment count
-	    MOV     BYTE PTR M_RT$.M_TEMP_BUF$[BX],M_SPACE$  ;;AN000;;	   Move in a " "
+	    MOV     byte [M_RT$+M_RES_ADDRS$.M_TEMP_BUF$+BX],M_SPACE$  ;;AN000;;	   Move in a " "
 	    INC     BX					     ;;AN000;;	   Increment count
 	    CALL    M_FLUSH_BUF$			     ;;AN000;;	   Write out " - " to prepare for special case
 ;	  $ENDIF					     ;;AN000;;	   If it fails we will catch it later
 MIF276$:
-ENDIF
+end if
 
 	  POP	  BP					     ;;AN000;; Remember the return address
 	  XOR	  BX,BX 				     ;;AN000;; Use BX for buffer count
 	  XOR	  DX,DX 				     ;;AN000;; Use DX for count of parms taken off the stack
 
-	  MOV	  M_RT$.M_SIZE$,CL			     ;;AN000;; Save size to later clear stack
-	  MOV	  AL,BYTE PTR M_SL$.M_S_MINW$		     ;;AN000;; Get the minimum width
+	  MOV	  [M_RT$+M_RES_ADDRS$.M_SIZE$],CL			     ;;AN000;; Save size to later clear stack
+	  MOV	  AL,byte [M_SL$+M_SUBLIST_STRUC$.M_S_MINW$] ;;AN000;; Get the minimum width
 							     ;;
 	  CMP	  AL,CL 				     ;;AN000;; Do we need pad chars added?
 ;	  $IF	  A					     ;;AN000;; Yes,
 	  JNA MIF278$
 	    SUB     AL,CL				     ;;AN000;;	 Calculate how many pad chars are needed.
 	    MOV     DH,AL				     ;;AN000;;	 Save the number of pad characters
-	    TEST    BYTE PTR M_SL$.M_S_FLAG$,Right_Align     ;;AN000;;	 Was replaceable parm to be right aligned?
+	    TEST    byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],Right_Align     ;;AN000;;	 Was replaceable parm to be right aligned?
 ;	    $IF     NZ					     ;;AN000;;	 Yes,
 	    JZ MIF279$
 ;	      $DO					     ;;AN000;;	   Begin filling buffer with pad chars
 MDO280$:
-		MOV	AL,BYTE PTR M_SL$.M_S_PAD$	     ;;AN000;;
-		MOV	BYTE PTR M_RT$.M_TEMP_BUF$[BX],AL    ;;AN000;;	   Move in a pad char
+		MOV	AL,byte [M_SL$+M_SUBLIST_STRUC$.M_S_PAD$] ;;AN000;;
+		MOV	byte [M_RT$+M_RES_ADDRS$.M_TEMP_BUF$+BX],AL    ;;AN000;;	   Move in a pad char
 		INC	BX				     ;;AN000;;
 		CMP	BX,M_TEMP_BUF_SZ$		     ;;AN000;;	   Is buffer full?
 ;		$IF	E				     ;;AN000;;	   Yes,
@@ -2433,15 +2483,15 @@ MIF279$:
 ;	  $ENDIF					     ;;AN000;;	   Yes,
 MIF278$:
 							     ;;
-	  CMP	  BYTE PTR M_SL$.M_S_MAXW$,M_UNLIM_W$	     ;;AN000;; Is maximum width unlimited?
+	  CMP	  byte [M_SL$+M_SUBLIST_STRUC$.M_S_MAXW$],M_UNLIM_W$	     ;;AN000;; Is maximum width unlimited?
 ;	  $IF	  NE					     ;;AN000;;
 	  JE MIF286$
-	    CMP     BYTE PTR M_SL$.M_S_MAXW$,CL 	     ;;AN000;; Will we exceed maximum width?
+	    CMP     byte [M_SL$+M_SUBLIST_STRUC$.M_S_MAXW$],CL 	     ;;AN000;; Will we exceed maximum width?
 ;	    $IF     B					     ;;AN000;; Yes,
 	    JNB MIF287$
-	      SUB     CL,BYTE PTR M_SL$.M_S_MAXW$	     ;;AN000;;	 Calculate how many extra chars
+	      SUB     CL,byte [M_SL$+M_SUBLIST_STRUC$.M_S_MAXW$] ;;AN000;;	 Calculate how many extra chars
 	      MOV     DL,CL				     ;;AN000;;	 Remember how many chars to pop off
-	      MOV     CL,BYTE PTR M_SL$.M_S_MAXW$	     ;;AN000;;	 Set new string length
+	      MOV     CL,byte [M_SL$+M_SUBLIST_STRUC$.M_S_MAXW$] ;;AN000;;	 Set new string length
 ;	    $ENDIF					     ;;AN000;;
 MIF287$:
 ;	  $ENDIF					     ;;AN000;;
@@ -2451,13 +2501,13 @@ MIF286$:
 	  JZ MIF290$
 ;	    $DO 					     ;;AN000;; Begin filling buffer with string
 MDO291$:
-	      TEST    BYTE PTR M_SL$.M_S_FLAG$,NOT Char_Type AND M_TYPE_MASK$ ;;AN000;;
+	      TEST    byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],NOT Char_type AND M_TYPE_MASK$ ;;AN000;;
 ;	      $IF     Z,AND				     ;;AN000;;
 	      JNZ MIF292$
-	      TEST    M_SL$.M_S_FLAG$,Char_field_ASCIIZ AND M_SIZE_MASK$ ;  Is this replace a ASCIIZ string?
+	      TEST    byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],Char_Field_ASCIIZ AND M_SIZE_MASK$ ;  Is this replace a ASCIIZ string?
 ;	      $IF     NZ				     ;;AN000;; Yes,
 	      JZ MIF292$
-		MOV	AL,BYTE PTR ES:[DI]		     ;;AN000;;	 Get first character from string
+		MOV	AL,byte [es:DI]                    ;;AN000;;	 Get first character from string
 		INC	DI				     ;;AN000;;	 Next character in string
 ;	      $ELSE					     ;;AN000;; No,
 	      JMP SHORT MEN292$
@@ -2465,7 +2515,7 @@ MIF292$:
 		POP	AX				     ;;AN000;;	 Get character in register
 ;	      $ENDIF					     ;;AN000;;
 MEN292$:
-	      MOV     BYTE PTR M_RT$.M_TEMP_BUF$[BX],AL      ;;AN000;;	Move char into the buffer
+	      MOV     byte [M_RT$+M_RES_ADDRS$.M_TEMP_BUF$+BX],AL      ;;AN000;;	Move char into the buffer
 	      INC     BX				     ;;AN000;;	 Increase buffer count
 	      CMP     BX,M_TEMP_BUF_SZ$ 		     ;;AN000;;	 Is buffer full?
 ;	      $IF     E 				     ;;AN000;;	 Yes,
@@ -2479,7 +2529,7 @@ MIF295$:
 ;	  $ENDIF					     ;;AN000;;
 MIF290$:
 							     ;;
-	  TEST	  BYTE PTR M_SL$.M_S_FLAG$,Right_Align	     ;;AN000;;	 Was replaceable parm to be left aligned?
+	  TEST	  byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],Right_Align	     ;;AN000;;	 Was replaceable parm to be left aligned?
 ;	  $IF	  Z					     ;;AN000;; Yes,
 	  JNZ MIF299$
 	    OR	    DH,DH				     ;;AN000;;	 Do we need pad chars added?
@@ -2487,8 +2537,8 @@ MIF290$:
 	    JZ MIF300$
 ;	      $DO					     ;;AN000;;	   Begin filling buffer with pad chars
 MDO301$:
-		MOV	AL,BYTE PTR M_SL$.M_S_PAD$	     ;;AN000;;
-		MOV	BYTE PTR M_RT$.M_TEMP_BUF$[BX],AL    ;;AN000;;	   Move in a pad char
+		MOV	AL,byte [M_SL$+M_SUBLIST_STRUC$.M_S_PAD$] ;;AN000;;
+		MOV	byte [M_RT$+M_RES_ADDRS$.M_TEMP_BUF$+BX],AL    ;;AN000;;	   Move in a pad char
 		INC	BX				     ;;AN000;;
 		CMP	BX,M_TEMP_BUF_SZ$		     ;;AN000;;	   Is buffer full?
 ;		$IF	E				     ;;AN000;;	   Yes,
@@ -2504,10 +2554,10 @@ MIF300$:
 ;	  $ENDIF					     ;;AN000;;
 MIF299$:
 							     ;;
-	  TEST	  BYTE PTR M_SL$.M_S_FLAG$,NOT Char_Type AND M_TYPE_MASK$ ;;AN000;;
+	  TEST	  byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],NOT Char_type AND M_TYPE_MASK$ ;;AN000;;
 ;	  $IF	  Z,AND 				     ;;AN000;;
 	  JNZ MIF307$
-	  TEST	  M_SL$.M_S_FLAG$,Char_field_ASCIIZ AND M_SIZE_MASK$ ;;AN000;;	Is this replace a ASCIIZ string?
+	  TEST	  byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],Char_Field_ASCIIZ AND M_SIZE_MASK$ ;;AN000;;	Is this replace a ASCIIZ string?
 ;	  $IF	  NZ					     ;;AN000;; Yes,
 	  JZ MIF307$
 ;	  $ELSE 					     ;;AN000;;
@@ -2518,7 +2568,7 @@ MIF307$:
 	    JE MIF309$
 ;	      $DO					     ;;AN000;;
 MDO310$:
-		POP	[M_RT$.M_RETURN_ADDR$]		     ;;AN000;;	 Clean Up stack using spare variable
+		POP	[M_RT$+M_RES_ADDRS$.M_RETURN_ADDR$]		     ;;AN000;;	 Clean Up stack using spare variable
 		DEC	DL				     ;;AN000;;	 Are we done?
 ;	      $ENDDO  Z 				     ;;AN000;;
 	      JNZ MDO310$
@@ -2531,7 +2581,7 @@ MEN307$:
 							     ;;
 	  RET						     ;;AN000;;
 							     ;;
-M_DISPLAY_REPLACE$ ENDP 				     ;;AN000;;
+;M_DISPLAY_REPLACE$ ENDP                                     ;;AN000;;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -2545,7 +2595,7 @@ M_DISPLAY_REPLACE$ ENDP 				     ;;AN000;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_FLUSH_BUF$ PROC NEAR					     ;;AN000;;
+M_FLUSH_BUF$:                                                ;;AN000;;
 							     ;;
 	  PUSH	  CX					     ;;AN000;; Save changed regs
 	  PUSH	  ES					     ;;AN000;;
@@ -2555,7 +2605,7 @@ M_FLUSH_BUF$ PROC NEAR					     ;;AN000;;
 							     ;;
 	  MOV	  CX,BX 				     ;;AN000;; Set number of bytes to display
 	  XOR	  BX,BX 				     ;;AN000;; Reset buffer counter
-	  LEA	  DI,M_RT$.M_TEMP_BUF$			     ;;AN000;; Reset buffer location pointer
+	  LEA	  DI,[M_RT$+M_RES_ADDRS$.M_TEMP_BUF$]			     ;;AN000;; Reset buffer location pointer
 	  CALL	  M_DISPLAY_STRING$			     ;;AN000;; Display the buffer
 							     ;;
 ;	  $IF	  NC					     ;;AN000;; Error?
@@ -2573,10 +2623,10 @@ MEN314$:
 							     ;;
 	  RET						     ;;AN000;; Return
 							     ;;
-M_FLUSH_BUF$ ENDP					     ;;AN000;;
+;M_FLUSH_BUF$ ENDP                                           ;;AN000;;
 							     ;;
 							     ;;
-	  IF	  CHARmsg				     ;;AN000;; Is the request to include the code for CHAR replace?
+	  if CHARmsg				             ;;AN000;; Is the request to include the code for CHAR replace?
 	    M_REPLACE$ =  TRUE				     ;;AN000;; Yes, THEN include it and flag that we will need common
 	    M_CHAR_ONLY$ = TRUE 			     ;;AN000;;	 replacement code later
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2595,19 +2645,19 @@ M_FLUSH_BUF$ ENDP					     ;;AN000;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_CHAR_REPLACE$ PROC NEAR				     ;;AN000;;
+M_CHAR_REPLACE$:                                             ;;AN000;;
 							     ;;
 	    POP     BP					     ;;AN000;; Save return address
-	    TEST    M_SL$.M_S_FLAG$,NOT Char_Field_Char AND M_SIZE_MASK$ ;;AN000;; Was Character specified?
+	    TEST    byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],NOT Char_Field_Char AND M_SIZE_MASK$ ;;AN000;; Was Character specified?
 ;	    $IF     Z					     ;;AN000;; Yes,
 	    JNZ MIF317$
-	      MOV     AL,BYTE PTR ES:[DI]		     ;;AN000;;	 Get the character
+	      MOV     AL,byte [es:DI]                      ;;AN000;;	 Get the character
 	      PUSH    AX				     ;;AN000;;	 Put it on the stack
 	      INC     CX				     ;;AN000;;	 Increase the count
 	      CALL    M_IS_IT_DBCS$			     ;;AN000;;	 Is this the first byte of a DB character
 ;	      $IF     C 				     ;;AN000;;	 Yes,
 	      JNC MIF318$
-		MOV	AL,BYTE PTR ES:[DI]+1		     ;;AN000;;	   Get the next character
+		MOV	AL,byte [es:DI+1]                  ;;AN000;;	   Get the next character
 		PUSH	AX				     ;;AN000;;	   Put it on the stack
 		CLC					     ;;AN000;;	   Clear the carry
 ;	      $ENDIF					     ;;AN000;;
@@ -2617,7 +2667,7 @@ MIF318$:
 MIF317$:
 ;	      $DO					     ;;AN000;;
 MDO321$:
-		MOV	AL,BYTE PTR ES:[DI]		     ;;AN000;;	 Get the character
+		MOV	AL,byte [es:DI]                    ;;AN000;;	 Get the character
 		OR	AL,AL				     ;;AN000;;	 Is it the NULL?
 ;	      $LEAVE  Z 				     ;;AN000;;	 No,
 	      JZ MEN321$
@@ -2633,12 +2683,12 @@ MEN317$:
 	    PUSH    BP					     ;;AN000;; Restore return address
 	    RET 					     ;;AN000;; Return
 							     ;;
-M_CHAR_REPLACE$ ENDP					     ;;AN000;;
+;M_CHAR_REPLACE$ ENDP                                        ;;AN000;;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	  ENDIF 					     ;;AN000;; END of include of CHAR replace code
+	  end if                                             ;;AN000;; END of include of CHAR replace code
 ; ;
-	  IF	  NUMmsg				     ;;AN000;; Is the request to include the code for NUM replace?
+	  if NUMmsg				             ;;AN000;; Is the request to include the code for NUM replace?
 	    M_REPLACE$ =  TRUE				     ;;AN000;; Yes, THEN include it and flag that we will need common
 	    M_CHAR_ONLY$ = FALSE			     ;;AN000;;	 replacement code later
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2657,20 +2707,20 @@ M_CHAR_REPLACE$ ENDP					     ;;AN000;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_BIN2ASC_REPLACE$ PROC NEAR				     ;;AN000;;
+M_BIN2ASC_REPLACE$:                                          ;;AN000;;
 							     ;;
 	    POP     BP					     ;;AN000;; Save return address
 							     ;;
 	    XOR     DX,DX				     ;;AN000;; Prepare for get binary value (HIGH)
 	    XOR     AX,AX				     ;;AN000;; Prepare for get binary value (LOW)
-	    MOV     M_RT$.M_DIVISOR$,M_BASE16$		     ;;AN000;; Set default divisor
+	    MOV     word [M_RT$+M_RES_ADDRS$.M_DIVISOR$],M_BASE16$		     ;;AN000;; Set default divisor
 	    XOR     BX,BX				     ;;AN000;; Use BP as the NEG flag (if applicable)
-IF	    NOT     COMR
-	    TEST    M_SL$.M_S_FLAG$,NOT M_BYTE$ AND M_SIZE_MASK$ ;;AN000;; Was BYTE specified?
+if ~COMR
+	    TEST    byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],NOT M_BYTE$ AND M_SIZE_MASK$ ;;AN000;; Was BYTE specified?
 ;	    $IF     Z					     ;;AN000;;
 	    JNZ MIF325$
-	      MOV     AL, BYTE PTR ES:[DI]		     ;;AN000;; Setup byte in AL
-	      TEST    M_SL$.M_S_FLAG$,NOT Sgn_Bin_Type AND M_TYPE_MASK$ ;;AN000;; Was Signed binary specified?
+	      MOV     AL, byte [es:DI]                     ;;AN000;; Setup byte in AL
+	      TEST    byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],NOT Sgn_Bin_Type AND M_TYPE_MASK$ ;;AN000;; Was Signed binary specified?
 ;	      $IF     Z 				     ;;AN000;;
 	      JNZ MIF326$
 		TEST	AL,10000000b			     ;;AN000;; Is this number negative?
@@ -2680,24 +2730,24 @@ IF	    NOT     COMR
 		  AND	  AL,01111111b			     ;;AN000;;	   Make it positive
 ;		$ENDIF					     ;;AN000;;
 MIF327$:
-		MOV	M_RT$.M_DIVISOR$,M_BASE10$	     ;;AN000;;
+		MOV	word [M_RT$+M_RES_ADDRS$.M_DIVISOR$],M_BASE10$	     ;;AN000;;
 ;	      $ENDIF					     ;;AN000;;
 MIF326$:
-	      TEST    M_SL$.M_S_FLAG$,NOT Unsgn_Bin_Type AND M_TYPE_MASK$ ;;AN000;; Was Signed binary specified?
+	      TEST    byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],NOT Unsgn_Bin_Type AND M_TYPE_MASK$ ;;AN000;; Was Signed binary specified?
 ;	      $IF     Z 				     ;;AN000;;
 	      JNZ MIF330$
-		MOV	M_RT$.M_DIVISOR$,M_BASE10$	     ;;AN000;;
+		MOV	word [M_RT$+M_RES_ADDRS$.M_DIVISOR$],M_BASE10$	     ;;AN000;;
 ;	      $ENDIF					     ;;AN000;;
 MIF330$:
 ;	    $ELSE					     ;;AN000;;
 	    JMP SHORT MEN325$
 MIF325$:
-ENDIF
-	      TEST    M_SL$.M_S_FLAG$,NOT M_WORD$ AND M_SIZE_MASK$ ;;AN000;; Was WORD specified?
+end if
+	      TEST    byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],NOT M_WORD$ AND M_SIZE_MASK$ ;;AN000;; Was WORD specified?
 ;	      $IF     Z 				     ;;AN000;;
 	      JNZ MIF333$
-		MOV	AX, WORD PTR ES:[DI]		     ;;AN000;; Setup byte in AL
-		TEST	M_SL$.M_S_FLAG$,NOT Sgn_Bin_Type AND M_TYPE_MASK$ ;; AN000;; Was Signed binary specified?
+		MOV	AX, word [es:DI]                   ;;AN000;; Setup byte in AL
+		TEST	byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],NOT Sgn_Bin_Type AND M_TYPE_MASK$ ;; AN000;; Was Signed binary specified?
 ;		$IF	Z				     ;;AN000;;
 		JNZ MIF334$
 		  TEST	  AH,10000000b			     ;;AN000;; Is this number negative?
@@ -2707,22 +2757,22 @@ ENDIF
 		    AND     AH,01111111b		     ;;AN000;;	   Make it positive
 ;		  $ENDIF				     ;;AN000;;
 MIF335$:
-		  MOV	  M_RT$.M_DIVISOR$,M_BASE10$	     ;;AN000;;
+		  MOV	  word [M_RT$+M_RES_ADDRS$.M_DIVISOR$],M_BASE10$	     ;;AN000;;
 ;		$ENDIF					     ;;AN000;;
 MIF334$:
-		TEST	M_SL$.M_S_FLAG$,NOT Unsgn_Bin_Type AND M_TYPE_MASK$ ;;AN000;; Was Signed binary specified?
+		TEST	byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],NOT Unsgn_Bin_Type AND M_TYPE_MASK$ ;;AN000;; Was Signed binary specified?
 ;		$IF	Z				     ;;AN000;;
 		JNZ MIF338$
-		  MOV	  M_RT$.M_DIVISOR$,M_BASE10$	     ;;AN000;;
+		  MOV	  word [M_RT$+M_RES_ADDRS$.M_DIVISOR$],M_BASE10$	     ;;AN000;;
 ;		$ENDIF					     ;;AN000;;
 MIF338$:
 ;	      $ELSE					     ;;AN000;;
 	      JMP SHORT MEN333$
 MIF333$:
-IF		NOT	COMR
-		MOV	AX, WORD PTR ES:[DI]		     ;;AN000;; Setup Double word in DX:AX
-		MOV	DX, WORD PTR ES:[DI]+2		     ;;AN000;;
-		TEST	M_SL$.M_S_FLAG$,NOT Sgn_Bin_Type AND M_TYPE_MASK$ ;;AN000;; Was Signed binary specified?
+if ~COMR
+		MOV	AX, word [es:DI]                   ;;AN000;; Setup Double word in DX:AX
+		MOV	DX, word [es:DI+2]                 ;;AN000;;
+		TEST	byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],NOT Sgn_Bin_Type AND M_TYPE_MASK$ ;;AN000;; Was Signed binary specified?
 ;		$IF	Z				     ;;AN000;;
 		JNZ MIF341$
 		  TEST	  DH,10000000b			     ;;AN000;; Is this number negative?
@@ -2732,23 +2782,23 @@ IF		NOT	COMR
 		    AND     DH,01111111b		     ;;AN000;;	   Make it positive
 ;		  $ENDIF				     ;;AN000;;
 MIF342$:
-		  MOV	  M_RT$.M_DIVISOR$,M_BASE10$	     ;;AN000;;
+		  MOV	  word [M_RT$+M_RES_ADDRS$.M_DIVISOR$],M_BASE10$	     ;;AN000;;
 ;		$ENDIF					     ;;AN000;;
 MIF341$:
-		TEST	M_SL$.M_S_FLAG$,NOT Unsgn_Bin_Type AND M_TYPE_MASK$ ;;AN000;; Was Signed binary specified?
+		TEST	byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],NOT Unsgn_Bin_Type AND M_TYPE_MASK$ ;;AN000;; Was Signed binary specified?
 ;		$IF	Z				     ;;AN000;;
 		JNZ MIF345$
-		  MOV	  M_RT$.M_DIVISOR$,M_BASE10$	     ;;AN000;;
+		  MOV	  word [M_RT$+M_RES_ADDRS$.M_DIVISOR$],M_BASE10$	     ;;AN000;;
 ;		$ENDIF					     ;;AN000;;
 MIF345$:
-ENDIF
+end if
 ;	      $ENDIF					     ;;AN000;;
 MEN333$:
 ;	    $ENDIF					     ;;AN000;;
 MEN325$:
 							     ;;
 	    CALL    M_CONVERT2ASC$			     ;;AN000;; Convert to ASCII string
-IF	    NOT     COMR
+if ~COMR
 	    OR	    BX,BX				     ;;AN000;;
 ;	    $IF     NZ					     ;;AN000;; Was number negative?
 	    JZ MIF349$
@@ -2757,17 +2807,17 @@ IF	    NOT     COMR
 	      PUSH    DX				     ;;AN000;;
 ;	    $ENDIF					     ;;AN000;; No,
 MIF349$:
-ENDIF
+end if
 							     ;;
 	    PUSH    BP					     ;;AN000;; Restore return address
 	    RET 					     ;;AN000;; Return
 							     ;;
-M_BIN2ASC_REPLACE$ ENDP 				     ;;AN000;;
+;M_BIN2ASC_REPLACE$ ENDP                                     ;;AN000;;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	  ENDIF 					     ;;AN000;; END of include of NUM replace code
+	  end if                                             ;;AN000;; END of include of NUM replace code
 ; ;
-	  IF	  DATEmsg				     ;;AN000;; Is the request to include the code for DATE replace?
+	  if DATEmsg				             ;;AN000;; Is the request to include the code for DATE replace?
 	    M_REPLACE$ =  TRUE				     ;;AN000;; Yes, THEN include it and flag that we will need common
 	    M_CHAR_ONLY$ = FALSE			     ;;AN000;;	  replacement code later
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2786,58 +2836,58 @@ M_BIN2ASC_REPLACE$ ENDP 				     ;;AN000;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_DATE_REPLACE$ PROC NEAR				     ;;AN000;;
+M_DATE_REPLACE$:                                             ;;AN000;;
 							     ;;
 	    POP     BP					     ;;AN000;; Save return address
-	    MOV     M_RT$.M_DIVISOR$,M_BASE10$		     ;;AN000;; Set default divisor
+	    MOV     word [M_RT$+M_RES_ADDRS$.M_DIVISOR$],M_BASE10$		     ;;AN000;; Set default divisor
 	    CALL    M_GET_DATE$ 			     ;;AN000;; Set date format/separator in $M_RT
 							     ;;AN000;; All O.K.?
 	    XOR     DX,DX				     ;;AN000;; Reset DX value
 	    XOR     AX,AX				     ;;AN000;; Reset AX value
-	    CMP     WORD PTR M_RT$.M_DATE_FORMAT$,0	     ;;AN000;; USA Date Format
+	    CMP     word [M_RT$+M_COUNTRY_INFO$.M_DATE_FORMAT$],0	     ;;AN000;; USA Date Format
 ;	    $IF     E					     ;;AN000;;	Beginning from end: (saved on the stack)
 	    JNE MIF351$
 	      CALL    M_YEAR$				     ;;AN000;;	 Get Year
 	      CALL    M_CONVERTDATE$			     ;;AN000;;	Convert it to an ASCII string
-	      PUSH    WORD PTR M_RT$.M_DATE_SEPARA$	     ;;AN000;;
+	      PUSH    word [M_RT$+M_COUNTRY_INFO$.M_DATE_SEPARA$] ;;AN000;;
 	      INC     CX				     ;;AN000;; Increment count
 	      XOR     AX,AX				     ;;AN000;; Reset AX value
-	      MOV     AL,BYTE PTR M_SL$.M_S_VALUE$+3	     ;;AN000;;	Get Day
+	      MOV     AL,byte [M_SL$+M_SUBLIST_STRUC$.M_S_VALUE$+3] ;;AN000;;	Get Day
 	      CALL    M_CONVERTDATE$			     ;;AN000;;	Convert it to an ASCII string
-	      PUSH    WORD PTR M_RT$.M_DATE_SEPARA$	     ;;AN000;;
+	      PUSH    word [M_RT$+M_COUNTRY_INFO$.M_DATE_SEPARA$] ;;AN000;;
 	      INC     CX				     ;;AN000;; Increment count
-	      MOV     AL,BYTE PTR M_SL$.M_S_VALUE$+2	     ;;AN000;;	Get Month
+	      MOV     AL,byte [M_SL$+M_SUBLIST_STRUC$.M_S_VALUE$+2] ;;AN000;;	Get Month
 	      CALL    M_CONVERTDATE$			     ;;AN000;;	Convert it to an ASCII string
 ;	    $ENDIF					     ;;AN000;;
 MIF351$:
 							     ;;
-	    CMP     WORD PTR M_RT$.M_DATE_FORMAT$,1	     ;;AN000;; EUROPE Date Format
+	    CMP     word [M_RT$+M_COUNTRY_INFO$.M_DATE_FORMAT$],1	     ;;AN000;; EUROPE Date Format
 ;	    $IF     E					     ;;AN000;;	Beginning from end: (saved on the stack)
 	    JNE MIF353$
 	      CALL    M_YEAR$				     ;;AN000;;	 Get Year
 	      CALL    M_CONVERTDATE$			     ;;AN000;;	Convert it to an ASCII string
-	      PUSH    WORD PTR M_RT$.M_DATE_SEPARA$	     ;;AN000;;
+	      PUSH    word [M_RT$+M_COUNTRY_INFO$.M_DATE_SEPARA$] ;;AN000;;
 	      INC     CX				     ;;AN000;;
 	      XOR     AX,AX				     ;;AN000;; Reset AX
-	      MOV     AL,BYTE PTR M_SL$.M_S_VALUE$+2	     ;;AN000;;	Get Month
+	      MOV     AL,byte [M_SL$+M_SUBLIST_STRUC$.M_S_VALUE$+2] ;;AN000;;	Get Month
 	      CALL    M_CONVERTDATE$			     ;;AN000;;	Convert it to an ASCII string
-	      PUSH    WORD PTR M_RT$.M_DATE_SEPARA$	     ;;AN000;;
+	      PUSH    word [M_RT$+M_COUNTRY_INFO$.M_DATE_SEPARA$] ;;AN000;;
 	      INC     CX				     ;;AN000;;
-	      MOV     AL,BYTE PTR M_SL$.M_S_VALUE$+3	     ;;AN000;;	Get Day
+	      MOV     AL,byte [M_SL$+M_SUBLIST_STRUC$.M_S_VALUE$+3] ;;AN000;;	Get Day
 	      CALL    M_CONVERTDATE$			     ;;AN000;;	Convert it to an ASCII string
 ;	    $ENDIF					     ;;AN000;;
 MIF353$:
 							     ;;
-	    CMP     WORD PTR M_RT$.M_DATE_FORMAT$,2	     ;;AN000;; JAPAN Date Format
+	    CMP     word [M_RT$+M_COUNTRY_INFO$.M_DATE_FORMAT$],2	     ;;AN000;; JAPAN Date Format
 ;	    $IF     E					     ;;AN000;;	Beginning from end: (saved on the stack)
 	    JNE MIF355$
-	      MOV     AL,BYTE PTR M_SL$.M_S_VALUE$+3	     ;;AN000;;	Get Day
+	      MOV     AL,byte [M_SL$+M_SUBLIST_STRUC$.M_S_VALUE$+3] ;;AN000;;	Get Day
 	      CALL    M_CONVERTDATE$			     ;;AN000;;	Convert it to an ASCII string
-	      PUSH    WORD PTR M_RT$.M_DATE_SEPARA$	     ;;AN000;;
+	      PUSH    word [M_RT$+M_COUNTRY_INFO$.M_DATE_SEPARA$] ;;AN000;;
 	      INC     CX				     ;;AN000;;
-	      MOV     AL,BYTE PTR M_SL$.M_S_VALUE$+2	     ;;AN000;;	Get Month
+	      MOV     AL,byte [M_SL$+M_SUBLIST_STRUC$.M_S_VALUE$+2] ;;AN000;;	Get Month
 	      CALL    M_CONVERTDATE$			     ;;AN000;;	Convert it to an ASCII string
-	      PUSH    WORD PTR M_RT$.M_DATE_SEPARA$	     ;;AN000;;
+	      PUSH    word [M_RT$+M_COUNTRY_INFO$.M_DATE_SEPARA$] ;;AN000;;
 	      INC     CX				     ;;AN000;;
 	      CALL    M_YEAR$				     ;;AN000;;	 Get Year
 	      CALL    M_CONVERTDATE$			     ;;AN000;;	Convert it to an ASCII string
@@ -2847,25 +2897,25 @@ MIF355$:
 	    PUSH    BP					     ;;AN000;; Restore return address
 	    RET 					     ;;AN000;; Return
 							     ;;
-M_DATE_REPLACE$ ENDP					     ;;AN000;;
+;M_DATE_REPLACE$ ENDP                                        ;;AN000;;
 							     ;;
-M_GET_DATE$ PROC    NEAR				     ;;AN000;;
+M_GET_DATE$:                                                 ;;AN000;;
 	    MOV     AH,DOS_GET_COUNTRY			     ;;AN000;; Call DOS for country dependant info
 	    MOV     AL,0				     ;;AN000;; Get current country info
-	    LEA     DX,M_RT$.M_TEMP_BUF$		     ;;AN000;; Set up addressibility to buffer
+	    LEA     DX,[M_RT$+M_RES_ADDRS$.M_TEMP_BUF$]		     ;;AN000;; Set up addressibility to buffer
 	    INT     21H 				     ;;AN000;;
 ;	    $IF     C					     ;;AN000;; No,
 	    JNC MIF357$
-	      MOV     WORD PTR M_RT$.M_DATE_FORMAT$,M_DEF_DATE_FORM$ ;;AN000;;	 Set default date format    (BH)
-	      MOV     BYTE PTR M_RT$.M_DATE_SEPARA$,M_DEF_DATE_SEP$ ;;AN000;;	Set default date separator (BL)
+	      MOV     word [M_RT$+M_COUNTRY_INFO$.M_DATE_FORMAT$],M_DEF_DATE_FORM$ ;;AN000;;	 Set default date format    (BH)
+	      MOV     byte [M_RT$+M_COUNTRY_INFO$.M_DATE_SEPARA$],M_DEF_DATE_SEP$ ;;AN000;;	Set default date separator (BL)
 ;	    $ENDIF					     ;;AN000;;
 MIF357$:
 	    RET 					     ;;AN000;;
-M_GET_DATE$ ENDP					     ;;AN000;;
+;M_GET_DATE$ ENDP                                            ;;AN000;;
 							     ;;
-M_YEAR$     PROC    NEAR				     ;;AN000;;
-	    MOV     AX,WORD PTR M_SL$.M_S_VALUE$	     ;;AN000;;	Get Year
-	    TEST    M_SL$.M_S_FLAG$,Date_MDY_4 AND M_DATE_MASK$ ;;AN000;; Was Month/Day/Year (2 Digits) specified?
+M_YEAR$:                                                     ;;AN000;;
+	    MOV     AX,word [M_SL$+M_SUBLIST_STRUC$.M_S_VALUE$] ;;AN000;;	Get Year
+	    TEST    byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],Date_MDY_4 AND M_DATE_MASK$ ;;AN000;; Was Month/Day/Year (2 Digits) specified?
 ;	    $IF     Z					     ;;AN000;;
 	    JNZ MIF359$
 	      CMP     AX,M_MAX_2_YEAR$			     ;;AN000;;	Get Year
@@ -2877,14 +2927,14 @@ MIF360$:
 ;	    $ENDIF					     ;;AN000;;
 MIF359$:
 	    RET 					     ;;AN000;;
-M_YEAR$     ENDP					     ;;AN000;;
+;M_YEAR$ ENDP                                                ;;AN000;;
 							     ;;
-M_CONVERTDATE$ PROC NEAR				     ;;AN000;;
-	    POP     WORD PTR M_RT$.M_TEMP_BUF$		     ;;AN000;; Save return address
-	    MOV     M_RT$.M_SIZE$,CL			     ;;AN000;; Save the size before conversion
+M_CONVERTDATE$:                                              ;;AN000;;
+	    POP     word [M_RT$+M_RES_ADDRS$.M_TEMP_BUF$]    ;;AN000;; Save return address
+	    MOV     [M_RT$+M_RES_ADDRS$.M_SIZE$],CL			     ;;AN000;; Save the size before conversion
 	    CALL    M_CONVERT2ASC$			     ;;AN000;; Convert it to an ASCII string
 	    DEC     CX					     ;;AN000;; Test if size only grew by 1
-	    CMP     CL,M_RT$.M_SIZE$			     ;;AN000;; Did size only grow by one
+	    CMP     CL,[M_RT$+M_RES_ADDRS$.M_SIZE$]			     ;;AN000;; Did size only grow by one
 ;	    $IF     E					     ;;AN000;; Yes,
 	    JNE MIF363$
 	      MOV     AX,M_TIMEDATE_PAD$		     ;;AN000;;	 Get a pad character (0)
@@ -2893,14 +2943,14 @@ M_CONVERTDATE$ PROC NEAR				     ;;AN000;;
 ;	    $ENDIF					     ;;AN000;;
 MIF363$:
 	    INC     CX					     ;;AN000;; Restore CX
-	    PUSH    WORD PTR M_RT$.M_TEMP_BUF$		     ;;AN000;; Save return address
+	    PUSH    word [M_RT$+M_RES_ADDRS$.M_TEMP_BUF$]    ;;AN000;; Save return address
 	    RET 					     ;;AN000;;
-M_CONVERTDATE$ ENDP					     ;;AN000;;
+;M_CONVERTDATE$ ENDP                                         ;;AN000;;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	  ENDIF 					     ;;AN000;; END of include of DATE replace code
+	  end if                                             ;;AN000;; END of include of DATE replace code
 ; ;
-	  IF	  TIMEmsg				     ;;AN000;; Is the request to include the code for TIME replace?
+	  if TIMEmsg				             ;;AN000;; Is the request to include the code for TIME replace?
 	    M_REPLACE$ =  TRUE				     ;;AN000;; Yes, THEN include it and flag that we will need common
 	    M_CHAR_ONLY$ = FALSE			     ;;AN000;;	  replacement code later
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2919,18 +2969,18 @@ M_CONVERTDATE$ ENDP					     ;;AN000;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_TIME_REPLACE$ PROC NEAR				     ;;AN000;;
+M_TIME_REPLACE$:                                             ;;AN000;;
 							     ;;
 	    POP     BP					     ;;AN000;; Save return address
-	    MOV     M_RT$.M_DIVISOR$,M_BASE10$		     ;;AN000;; Set default divisor
+	    MOV     word [M_RT$+M_RES_ADDRS$.M_DIVISOR$],M_BASE10$		     ;;AN000;; Set default divisor
 	    CALL    M_GET_TIME$ 			     ;;AN000;; All O.K.?
-	    TEST    M_SL$.M_S_FLAG$,Time_Cty_Type AND M_TIME_MASK$ ;;AN000;; Is this a request for current country info?
+	    TEST    byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],Time_Cty_Type AND M_TIME_MASK$ ;;AN000;; Is this a request for current country info?
 ;	    $IF     NZ					     ;;AN000;; Yes,
 	    JZ MIF365$
-	      CMP     BYTE PTR M_RT$.M_TIME_FORMAT$,0	     ;;AN000;; Is the current country format 12 Hour?
+	      CMP     byte [M_RT$+M_COUNTRY_INFO$.M_TIME_FORMAT$],0	     ;;AN000;; Is the current country format 12 Hour?
 ;	      $IF     E 				     ;;AN000;; Yes,
 	      JNE MIF366$
-		MOV	AL,BYTE PTR M_SL$.M_S_VALUE$	     ;;AN000;;	Get Hours
+		MOV	AL,byte [M_SL$+M_SUBLIST_STRUC$.M_S_VALUE$] ;;AN000;;	Get Hours
 		CMP	AL,12				     ;;AN000;;	Is hour 12 or less?
 ;		$IF	L,OR				     ;;AN000;;	 or
 		JL MLL367$
@@ -2956,39 +3006,39 @@ MIF365$:
 							     ;;
 	    XOR     AX,AX				     ;;AN000;;
 	    XOR     DX,DX				     ;;AN000;;
-	    TEST    M_SL$.M_S_FLAG$,Time_HHMMSSHH_Cty AND M_SIZE_MASK$ ;;AN000;; Was Hour/Min/Sec/Hunds (12 Hour) specified?
+	    TEST    byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],Time_HHMMSSHH_Cty AND M_SIZE_MASK$ ;;AN000;; Was Hour/Min/Sec/Hunds (12 Hour) specified?
 ;	    $IF     NZ					     ;;AN000;;
 	    JZ MIF372$
-	      MOV     AL,BYTE PTR M_SL$.M_S_VALUE$+3	     ;;AN000;;	Get Hundreds
+	      MOV     AL,byte [M_SL$+M_SUBLIST_STRUC$.M_S_VALUE$+3] ;;AN000;;	Get Hundreds
 	      CALL    M_CONVERTTIME$			     ;;AN000;;
-	      PUSH    WORD PTR M_RT$.M_DECI_SEPARA$	     ;;AN000;;
+	      PUSH    word [M_RT$+M_COUNTRY_INFO$.M_DECI_SEPARA$] ;;AN000;;
 	      INC     CX				     ;;AN000;;
 ;	    $ENDIF					     ;;AN000;;
 MIF372$:
-	    TEST    M_SL$.M_S_FLAG$,Time_HHMMSSHH_Cty AND M_SIZE_MASK$ ;;AN000;; Was Hour/Min/Sec/Hunds (12 Hour) specified?
+	    TEST    byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],Time_HHMMSSHH_Cty AND M_SIZE_MASK$ ;;AN000;; Was Hour/Min/Sec/Hunds (12 Hour) specified?
 ;	    $IF     NZ,OR				     ;;AN000;;
 	    JNZ MLL374$
-	    TEST    M_SL$.M_S_FLAG$,Time_HHMMSS_Cty AND M_SIZE_MASK$ ;;AN000;; Was Hour/Min/Sec (12 Hour) specified?
+	    TEST    byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],Time_HHMMSS_Cty AND M_SIZE_MASK$ ;;AN000;; Was Hour/Min/Sec (12 Hour) specified?
 ;	    $IF     NZ					     ;;AN000;;
 	    JZ MIF374$
 MLL374$:
-	      MOV     AL,BYTE PTR M_SL$.M_S_VALUE$+2	     ;;AN000;;	Get Seconds
+	      MOV     AL,byte [M_SL$+M_SUBLIST_STRUC$.M_S_VALUE$+2] ;;AN000;;	Get Seconds
 	      CALL    M_CONVERTTIME$			     ;;AN000;;
-	      PUSH    WORD PTR M_RT$.M_TIME_SEPARA$	     ;;AN000;;
+	      PUSH    word [M_RT$+M_COUNTRY_INFO$.M_TIME_SEPARA$] ;;AN000;;
 	      INC     CX				     ;;AN000;;
 ;	    $ENDIF					     ;;AN000;;
 MIF374$:
 							     ;;        Do Hour/Min (12 Hour)
-	    MOV     AL,BYTE PTR M_SL$.M_S_VALUE$+1	     ;;AN000;;	Get Minutes
+	    MOV     AL,byte [M_SL$+M_SUBLIST_STRUC$.M_S_VALUE$+1] ;;AN000;;	Get Minutes
 	    CALL    M_CONVERTTIME$			     ;;AN000;;
-	    PUSH    WORD PTR M_RT$.M_TIME_SEPARA$	     ;;AN000;;
+	    PUSH    word [M_RT$+M_COUNTRY_INFO$.M_TIME_SEPARA$] ;;AN000;;
 	    INC     CX					     ;;AN000;;
 							     ;;
-	    MOV     AL,BYTE PTR M_SL$.M_S_VALUE$	     ;;AN000;;	Get Hours
-	    TEST    M_SL$.M_S_FLAG$,Time_Cty_Type AND M_TIME_MASK$ ;;AN000;; Is this a request for current country info?
+	    MOV     AL,byte [M_SL$+M_SUBLIST_STRUC$.M_S_VALUE$] ;;AN000;;	Get Hours
+	    TEST    byte [M_SL$+M_SUBLIST_STRUC$.M_S_FLAG$],Time_Cty_Type AND M_TIME_MASK$ ;;AN000;; Is this a request for current country info?
 ;	    $IF     NZ					     ;;AN000;; Yes,
 	    JZ MIF376$
-	      CMP     BYTE PTR M_RT$.M_TIME_FORMAT$,0	     ;;AN000;; Is the current country format 12 Hour?
+	      CMP     byte [M_RT$+M_COUNTRY_INFO$.M_TIME_FORMAT$],0	     ;;AN000;; Is the current country format 12 Hour?
 ;	      $IF     E 				     ;;AN000;; Yes,
 	      JNE MIF377$
 		CMP	AL,13				     ;;AN000;;	Is hour less than 12?
@@ -3012,29 +3062,29 @@ MIF376$:
 	    PUSH    BP					     ;;AN000;; Restore return address
 	    RET 					     ;;AN000;; Return
 							     ;;
-M_TIME_REPLACE$ ENDP					     ;;AN000;;
+;M_TIME_REPLACE$ ENDP                                        ;;AN000;;
 							     ;;
-M_GET_TIME$ PROC    NEAR				     ;;AN000;;
+M_GET_TIME$:                                                 ;;AN000;;
 	    MOV     AH,DOS_GET_COUNTRY			     ;;AN000;; Call DOS for country dependant info
 	    MOV     AL,0				     ;;AN000;; Get current country info
-	    LEA     DX,M_RT$.M_TEMP_BUF$		     ;;AN000;; Set up addressibility to buffer
+	    LEA     DX,[M_RT$+M_RES_ADDRS$.M_TEMP_BUF$]		     ;;AN000;; Set up addressibility to buffer
 	    INT     21H 				     ;;AN000;;
 ;	    $IF     C					     ;;AN000;; No,
 	    JNC MIF384$
-	      MOV     WORD PTR M_RT$.M_TIME_FORMAT$,M_DEF_TIME_FORM$ ;;AN000;;	 Set default time format    (BH)
-	      MOV     BYTE PTR M_RT$.M_TIME_SEPARA$,M_DEF_TIME_SEP$ ;;AN000;;	Set default time separator (BL)
-	      MOV     BYTE PTR M_RT$.M_DECI_SEPARA$,M_DEF_DECI_SEP$ ;;AN000;;	Set default time separator (BL)
+	      MOV     word [M_RT$+M_COUNTRY_INFO$.M_TIME_FORMAT$],M_DEF_TIME_FORM$ ;;AN000;;	 Set default time format    (BH)
+	      MOV     byte [M_RT$+M_COUNTRY_INFO$.M_TIME_SEPARA$],M_DEF_TIME_SEP$ ;;AN000;;	Set default time separator (BL)
+	      MOV     byte [M_RT$+M_COUNTRY_INFO$.M_DECI_SEPARA$],M_DEF_DECI_SEP$ ;;AN000;;	Set default time separator (BL)
 ;	    $ENDIF					     ;;AN000;;
 MIF384$:
 	    RET 					     ;;AN000;;
-M_GET_TIME$ ENDP					     ;;AN000;;
+;M_GET_TIME$ ENDP                                            ;;AN000;;
 							     ;;
-M_CONVERTTIME$ PROC NEAR				     ;;AN000;;
-	    POP     WORD PTR M_RT$.M_TEMP_BUF$		     ;;AN000;; Save return address
-	    MOV     M_RT$.M_SIZE$,CL			     ;;AN000;; Save the size before conversion
+M_CONVERTTIME$:                                              ;;AN000;;
+	    POP     word [M_RT$+M_RES_ADDRS$.M_TEMP_BUF$]    ;;AN000;; Save return address
+	    MOV     [M_RT$+M_RES_ADDRS$.M_SIZE$],CL			     ;;AN000;; Save the size before conversion
 	    CALL    M_CONVERT2ASC$			     ;;AN000;; Convert it to an ASCII string
 	    DEC     CX					     ;;AN000;; Test if size only grew by 1
-	    CMP     CL,M_RT$.M_SIZE$			     ;;AN000;; Did size only grow by one
+	    CMP     CL,[M_RT$+M_RES_ADDRS$.M_SIZE$]			     ;;AN000;; Did size only grow by one
 ;	    $IF     E					     ;;AN000;; Yes,
 	    JNE MIF386$
 	      MOV     AX,M_TIMEDATE_PAD$		     ;;AN000;;	 Get a pad character (0)
@@ -3043,15 +3093,15 @@ M_CONVERTTIME$ PROC NEAR				     ;;AN000;;
 ;	    $ENDIF					     ;;AN000;;
 MIF386$:
 	    INC     CX					     ;;AN000;; Restore CX
-	    PUSH    WORD PTR M_RT$.M_TEMP_BUF$		     ;;AN000;; Save return address
+	    PUSH    word [M_RT$+M_RES_ADDRS$.M_TEMP_BUF$]    ;;AN000;; Save return address
 	    RET 					     ;;AN000;;
-M_CONVERTTIME$ ENDP					     ;;AN000;;
+;M_CONVERTTIME$ ENDP                                         ;;AN000;;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	  ENDIF 					     ;;AN000;; END of include of TIME replace
-	ENDIF						     ;;AN000;; END of include of Replacement common code
+	  end if                                             ;;AN000;; END of include of TIME replace
+	end if                                               ;;AN000;; END of include of Replacement common code
 ; ;
-	IF	INPUTmsg				     ;;AN000;; Is the request to include the code for NUM replace?
+	if INPUTmsg				             ;;AN000;; Is the request to include the code for NUM replace?
 	  INPUTmsg =	FALSE				     ;;AN000;; Yes, THEN include it and reset the flag
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -3065,7 +3115,7 @@ M_CONVERTTIME$ ENDP					     ;;AN000;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 							     ;;
-M_WAIT_FOR_INPUT$ PROC NEAR				     ;;AN000;;
+M_WAIT_FOR_INPUT$:                                           ;;AN000;;
 							     ;;
 	  PUSH	  CX					     ;;AN000;; Save CX
 	  PUSH	  DX					     ;;AN000;; Save DX
@@ -3123,11 +3173,11 @@ MIF396$:
 MEN396$:
 	  RET						     ;;AN000;; Return
 							     ;;
-M_WAIT_FOR_INPUT$ ENDP					     ;;AN000;;
+;M_WAIT_FOR_INPUT$ ENDP                                      ;;AN000;;
 							     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	ENDIF						     ;;AN000;; END of include of Wait for Input
-      ENDIF						     ;;AN000;; END of include of SYSDISPMSG
-    ENDIF						     ;;AN000;; END of include of MSG_DATA_ONLY
-ENDIF							     ;;AN000;; END of include of Structure only
+	end if                                               ;;AN000;; END of include of Wait for Input
+      end if                                                 ;;AN000;; END of include of SYSDISPMSG
+    end if                                                   ;;AN000;; END of include of MSG_DATA_ONLY
+end if                                                       ;;AN000;; END of include of Structure only
 

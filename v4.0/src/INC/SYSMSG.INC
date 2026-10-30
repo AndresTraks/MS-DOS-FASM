@@ -47,10 +47,12 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-INCLUDE        VERSIONA.INC	       ;;AN003;;
+include        'VERSIONA.INC'	       ;;AN003;;
 
+; MASM worked an expression out sixteen bits wide, so NOT FALSE was 0FFFFh.
+; fasm's arithmetic is wider than that, and -1 is what the sixteen bits held.
 FALSE	       = 0		       ;;
-TRUE	       = NOT FALSE	       ;;    List message services and flags
+TRUE	       = -1		       ;;    List message services and flags
 				       ;;
 
 ; Control Characters For Message Skeleton file
@@ -193,7 +195,7 @@ M_CLASS_NOT_EXIST$	EQU	 0     ;; Does class exist?
 M_TERMINATING_FLAG$	EQU	-1     ;; Is there any more classes?
 M_ADDR_SZ_NEAR$ 	EQU	2      ;; Size to increment if NEAR
 M_ADDR_SZ_FAR$		EQU	4      ;; Size to increment if FAR
-M_SL$			EQU   DS:[SI]  ;; Refer to SUBLIST as $M_SL
+M_SL$			EQU   ds:si    ;; Refer to SUBLIST as $M_SL
 M_NO_HANDLE$		EQU	-1     ;; No handle flag
 M_TEMP_BUF_SZ$		EQU	64     ;; Size of temporary buffer	 ;AN003;
 M_NEXT_DBCS_VECTOR$	EQU	2      ;; Amount to increment to get next vector
@@ -240,10 +242,11 @@ NUMmsg			 =	FALSE  ;;  |
 TIMEmsg 		 =	FALSE  ;;  |
 DATEmsg 		 =	FALSE  ;; /
 
-IF1				       ;;
+; MASM set these on the first pass only.  fasm makes as many passes as it
+; needs and every one of them reads the file, so they are set here each time;
+; the value is the same.
 COMR			 =	FALSE  ;;  COMMAND.COM Cases (resident)
 COMT			 =	FALSE  ;;		     (transient)
-ENDIF				       ;;
 
 M_STRUC$		 =	TRUE   ;; Internal message service defaults
 M_LOAD$ 		 =	TRUE   ;;
@@ -262,182 +265,187 @@ M_PAR_CLS$		 =	TRUE   ;;
 ;;	$M_POPF 	     Macro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-M_POPF$    MACRO
-	   LOCAL   M_MYRET$
-	   JMP	   $+3
-M_MYRET$   LABEL   NEAR
-	   IRET
-	   PUSH    CS
-	   CALL    M_MYRET$
-ENDM
+; The flags back off the stack without the interrupt flag coming with them:
+; CS and a return address go on, and an IRET takes all three off.
+macro M_POPF$
+{
+	local myret, over
+	jmp	over
+    myret:
+	iret
+    over:
+	push	cs
+	call	myret
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;  Message Retreiver requests
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-				       ;
-MSG_UTILNAME  Macro   utilname	       ;
-				       ;
-   INCLUDE &utilname.CTL	       ;  Include the control file for the utility
-   M_STRUC$ = TRUE		       ;
-   INCLUDE MSGSERV.ASM		       ;  Get structure definitions
-				       ;
-ENDM				       ;
-				       ;
+
+; A file to read, named as a name rather than as a string, which is how the
+; sources write it: fasm's INCLUDE wants the string, and ` makes one out of
+; the name.
+macro M_INC$ ext
+{
+	include `ext
+}
+
+; The utility's own control file, which says how many classes of its own it
+; has, and then the structures.  The name of the file is the utility's name
+; with .CTL after it, joined here because INCLUDE cannot join anything.
+macro MSG_UTILNAME utilname
+{
+	M_INC$ utilname#.CTL
+	M_STRUC$ = TRUE
+	include 'MSGSERV.ASM'
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;	MSG_SERVICES		Macro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-					  ;
-MSG_SERVICES Macro   varlist		  ;  MACRO used in source routine
-					  ;
-   M_SERVICE$ = FALSE			  ;  Reset service flag
-   IRP	   var,<varlist>		  ;  FOR each variable in the list
-     M_INCLUDE$ = TRUE			  ;  Reset include flag
-					  ;	For each service predefined
 
-IRP  serv,<MSGDATA,LOADmsg,NOVERCHECKmsg,DISPLAYmsg,GETmsg,INPUTmsg,CHARmsg,NUMmsg,TIMEmsg,DATEmsg,NEARmsg,FARmsg,COMR,COMT>
+; What a utility asks for.  Every name in the list is either one of the
+; services, and turns on the switch of that name, or a file holding a class
+; of messages, and is read.
+;
+; MASM read MSGSERV.ASM only when a service had been asked for.  fasm reads
+; an INCLUDE written inside a macro whether or not the IF around it would
+; have held, so it is read every time instead; what it contributes is
+; decided from within, by these switches, and each part of it turns its own
+; switch off once it has been laid down.  MASM's MSG_SERVICES2, which was
+; the rest of this list moved into a macro of its own to get around a limit
+; of MASM's, is therefore gone as well.
+macro MSG_SERVICES [var]
+{
+	forward
+	M_LIST$ var
+	common
+	include 'MSGSERV.ASM'
+}
 
-	 IFDIF <var>,<serv>		  ;	  IF it IS a service (defined above)
-	 ELSE				  ;
-	   IFDIF <var>,<MSGDATA>	  ;	    IF it is NOT the message data space request
-	     M_MSGDATA_ONLY$ = FALSE	  ;	       Instruct the assembler to include all services
-	   ENDIF			  ;	    ENDIF
-	   IRP	repl,<CHARmsg,NUMmsg,TIMEmsg,DATEmsg>  ; IF it is a replace service
-	     IFIDN  <var>,<repl>	  ;
-	       M_REPLACE$ = TRUE	  ;	       Set replace flag
-	     ENDIF			  ;
-	   ENDM 			  ;
-	   serv = TRUE			  ;	    Let the assembler know about the service
-	   M_SERVICE$ = TRUE		  ;	    Let the macro know it was a service
-	   M_INCLUDE$ = FALSE		  ;	    Let the macro know it wasn't a class
-	 ENDIF				  ;	  ENDIF
-      ENDM				  ;	NEXT service
+; MASM wanted the list inside angle brackets, as one argument with the commas
+; still in it; fasm takes the brackets off and hands the argument over whole,
+; so it is split into its names here.
+macro M_LIST$ [var]
+{
+	forward
+	M_ASK$ var
+}
 
-MSG_SERVICES2  <varlist>
-					  ; Continue further checks (If we add any more predefined
-					  ;  function to the above IRP command, it generates a
-					  ;  syntax error. We must continue the processing in another
-					  ;  MACRO called MSG_SERVICES2)
+macro M_ASK$ var
+{
+	define M_WAS$ no
+	M_DATA$ var
+	M_SERV$ var, LOADmsg
+	M_SERV$ var, NOVERCHECKmsg
+	M_SERV$ var, DISPLAYmsg
+	M_SERV$ var, GETmsg
+	M_SERV$ var, INPUTmsg
+	M_REPL$ var, CHARmsg
+	M_REPL$ var, NUMmsg
+	M_REPL$ var, TIMEmsg
+	M_REPL$ var, DATEmsg
+	M_SERV$ var, NEARmsg
+	M_SERV$ var, FARmsg
+	M_SERV$ var, COMR
+	M_SERV$ var, COMT
+	M_SERV$ var, SETSTDIO
+	M_SERV$ var, NOCHECKSTDIN
+	M_SERV$ var, NOCHECKSTDOUT
+	M_SERV$ var, DISK_PROC
+	match =no, M_WAS$ \{ M_INC$ var \}
+}
 
-      IF M_INCLUDE$			  ;	IF message class was requested
-	 M_INC$ var			  ;	   Include it as a message class
-      ENDIF				  ;	ENDIF
-   ENDM 				  ;  NEXT variable
-					  ;
-   IF M_SERVICE$			  ;	IF it any services were requested THEN
-     INCLUDE MSGSERV.ASM		  ;	   THEN include module to get service
-   ENDIF				  ;	ENDIF
+; The data area on its own, which is all a utility that asks for nothing
+; else wants.
+macro M_DATA$ var
+{
+	match =MSGDATA, var \{ MSGDATA = TRUE
+	    define M_WAS$ yes \}
+}
 
-ENDM
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;	MSG_SERVICES2		Macro
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-					  ;
-MSG_SERVICES2 Macro   varlist2		  ;  MACRO used in source routine
-					  ;
-					    ;  FOR each variable in the list
-   IRP	   var2,<varlist2>
-						       ; For each service predefined
-      IRP  serv2,<SETSTDIO,NOCHECKSTDIN,NOCHECKSTDOUT,DISK_PROC>
-					    ;AN003; IF it IS a service (defined above)
-	 IFDIF <var2>,<serv2>
-	 ELSE				  ;
-	   serv2 = TRUE 		   ;	     Let the assembler know about the service
-	   M_SERVICE$ = TRUE		  ;	    Let the macro know it was a service
-	   M_INCLUDE$ = FALSE		  ;	    Let the macro know it wasn't a class
-	 ENDIF				  ;	  ENDIF
-      ENDM				  ;	NEXT service
-   ENDM 				  ;  NEXT variable
-ENDM					  ;
-					  ;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; $M_INC		Macro
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-						 ;
-M_INC$	Macro	ext				 ;
-						 ;
-INCLUDE &ext					 ;
-						 ;
-ENDM						 ;
-						 ;
+; A service, which brings the code with it.
+macro M_SERV$ var, name
+{
+	match =name, var \{ name = TRUE
+	    M_MSGDATA_ONLY$ = FALSE
+	    define M_WAS$ yes \}
+}
+
+; One that puts a value into a message, which brings the replacing with it.
+macro M_REPL$ var, name
+{
+	match =name, var \{ name = TRUE
+	    M_MSGDATA_ONLY$ = FALSE
+	    M_REPLACE$ = TRUE
+	    define M_WAS$ yes \}
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $M_BUILD_PTRS	Macro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-						 ;
-M_BUILD_PTRS$ Macro nummsg			 ;
-						 ;
-    M_INDEX$ =	    0				 ;
-IF COMR 				     ; IF this is resident COMMAND.COM
-    M_MAKE_COMR$			     ;
-ELSE						 ; ELSE
-  IF COMT				     ;	 IF this is transient COMMAND.COM
-    M_MAKE_COMT$			     ;
-  ELSE						 ;   ELSE
-						 ;
-    M_INDEX$ =	    0				 ;
-    M_COUNT$ =	    0				 ;     Build normal utilities
-						 ;
-    REPT    nummsg				 ;
-    M_COUNT$ =	    M_COUNT$ + 1		 ;
-    M_MAKE$ %M_COUNT$				 ;
-    ENDM					 ;
-  ENDIF 					 ;
-ENDIF						 ;
-ENDM						 ;
-						 ;
+
+; The table of classes, filled in as the program starts: each class answers
+; with its own address, so each one is asked.  Resident and transient
+; COMMAND.COM have their classes numbered differently and ask by hand.
+;
+; The count comes from the utility's .CTL file, where it is written as an
+; EQU because REPT is read before an = has a value.
+macro M_BUILD_PTRS$ nummsg
+{
+	M_INDEX$ =	0
+    if COMR
+	M_MAKE_COMR$
+    else if COMT
+	M_MAKE_COMT$
+    else
+	rept nummsg n \{ M_MAKE$ n \}
+    end if
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $M_MAKE		Macro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-						 ;
-M_MAKE$ Macro m_append$ 			 ;
-IF  FARmsg					 ;
-    CALL    FAR PTR M_CLS_$&m_append$		 ;  Get addressibilty to class &$M_APPEND (ES:DI)
-    MOV     WORD PTR M_RT$.M_CLASS_ADDRS$+M_INDEX$+2,ES ;  Move into first avaliable table location
-    MOV     WORD PTR M_RT$.M_CLASS_ADDRS$+M_INDEX$,DI ;
-ELSE						 ;
-    CALL    M_CLS_$&m_append$			 ;  Get addressibilty to class &$M_APPEND (ES:DI)
-    MOV     WORD PTR M_RT$.M_CLASS_ADDRS$+M_INDEX$,DI ;
-ENDIF						 ;
-M_INDEX$ =  M_INDEX$ + 4			 ;  Set next available table location
-						 ;
-ENDM						 ;
+
+macro M_MAKE$ n
+{
+    if FARmsg
+	CALL	M_CLS_#n#$				 ;  Get addressibilty to class n (ES:DI)
+	MOV	word [M_RT$+M_RES_ADDRS$.M_CLASS_ADDRS$+M_INDEX$+2],ES ;  Move into first avaliable table location
+	MOV	word [M_RT$+M_RES_ADDRS$.M_CLASS_ADDRS$+M_INDEX$],DI
+    else
+	CALL	M_CLS_#n#$				 ;  Get addressibilty to class n (ES:DI)
+	MOV	word [M_RT$+M_RES_ADDRS$.M_CLASS_ADDRS$+M_INDEX$],DI
+    end if
+	M_INDEX$ =  M_INDEX$ + 4			 ;  Set next available table location
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $M_MAKE_COMR     Macro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-						 ;
-M_MAKE_COMR$   macro			     ;
-						 ;
-    CALL    M_CLS_3$				 ;  Get addressibilty to class A
-    MOV     WORD PTR M_RT$.M_CLASS_ADDRS$+M_INDEX$,DI ;
-M_INDEX$ =  M_INDEX$ + 4			 ;  Set next available table location
-						 ;
-    CALL    M_CLS_4$				 ;  Get addressibilty to class B
-    MOV     WORD PTR M_RT$.M_CLASS_ADDRS$+M_INDEX$,DI ;
-M_INDEX$ =  M_INDEX$ + 4			 ;  Set next available table location
-						 ;
-    CALL    M_CLS_5$				 ;  Get addressibilty to class C
-    MOV     WORD PTR M_RT$.M_CLASS_ADDRS$+M_INDEX$,DI ;
-M_INDEX$ =  M_INDEX$ + 4			 ;  Set next available table location
-						 ;
-    CALL    M_CLS_6$				 ;  Get addressibilty to class D
-    MOV     WORD PTR M_RT$.M_CLASS_ADDRS$+M_INDEX$,DI ;
-M_INDEX$ =  M_INDEX$ + 4			 ;  Set next available table location
-						 ;
-    CALL    M_CLS_7$				 ;  Get addressibilty to class E
-    MOV     WORD PTR M_RT$.M_CLASS_ADDRS$+M_INDEX$,DI ;
-M_INDEX$ =  M_INDEX$ + 4			 ;  Set next available table location
-						 ;
-ENDM						 ;
+
+; Resident COMMAND.COM's classes are the third to the seventh, the transient
+; one's the eighth, because the two of them share a numbering.
+macro M_MAKE_COMR$
+{
+	rept 5 n:3 \{ M_TAKE$ n \}
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; $M_MAKE_COMT     Macro
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-						 ;
-M_MAKE_COMT$  macro			     ;
-						 ;
-    CALL    M_CLS_8$				 ;  Get addressibilty to class A
-    MOV     WORD PTR M_RT$.M_CLASS_ADDRS$+M_INDEX$,DI ;
-M_INDEX$ =  M_INDEX$ + 4			 ;  Set next available table location
-						 ;
-ENDM						 ;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+macro M_MAKE_COMT$
+{
+	M_TAKE$ 8
+}
+
+; One class of COMMAND.COM's, which is always a near call.
+macro M_TAKE$ n
+{
+	CALL	M_CLS_#n#$				 ;  Get addressibilty to the class
+	MOV	word [M_RT$+M_RES_ADDRS$.M_CLASS_ADDRS$+M_INDEX$],DI
+	M_INDEX$ =  M_INDEX$ + 4			 ;  Set next available table location
+}

@@ -31,6 +31,10 @@ include '../src/INC/STRUC.INC'
 	.IF	<BX EQ 2>
 	inc	si
 	.ENDIF
+; a comparison whose first operand needs brackets of its own
+	.IF	<<byte [BX]> EQ 80>
+	inc	ax
+	.ENDIF
 ; a bit test, and a register against itself
 	.IF	<BIT AL AND 3>
 	inc	di

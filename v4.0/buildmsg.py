@@ -349,8 +349,10 @@ def compile_skeleton(skeleton, messages, outdir):
         with open(control, "w") as f:
             f.write("\n".join(head + [
                 "; How many classes of its own this utility has, which is how",
-                "; many times SYSMSG.INC's M_BUILD_PTRS$ asks for one.",
-                "M_NUM_CLS$      =       %d" % mine, ""]))
+                "; many times SYSMSG.INC's M_BUILD_PTRS$ asks for one.  It is an",
+                "; EQU because the REPT that counts them is read before an = has",
+                "; a value.",
+                "M_NUM_CLS$      equ     %d" % mine, ""]))
         print(control)
 
     for name, lines in written.items():

@@ -194,30 +194,53 @@ macro go$ yes, no, label, sense
 ; ----------------------------------------------------------------------------
 ; The conditions.
 ;
-; Four shapes, told apart by how many words they are written in: a bit test
+; Five shapes, told apart by how many words they are written in: a bit test
 ; is BIT and three more, a comparison is three, a register against itself is
 ; two and a flag is one.  A shape is tried only if nothing longer has already
 ; answered, since fasm's MATCH lets the last name in a pattern stand for the
 ; rest of the line.
+;
+; The fifth is a comparison whose first operand is more than one word, which
+; the sources write inside angle brackets of its own -- <<byte [SI]> EQ 0> --
+; because MASM read a condition as a list of words as well.  fasm takes the
+; outer brackets off an argument and leaves the inner ones, so the brackets
+; are what this matches on.
 
 macro cond$ cond, label, sense
 {
 	define HIT$ no
+	bit$ <cond>, label, sense
+	group$ <cond>, label, sense
+	three$ <cond>, label, sense
+	two$ <cond>, label, sense
+	one$ <cond>, label, sense
+	lost$ <cond>
+}
+
+macro bit$ cond, label, sense
+{
 	match =BIT l op r, cond \{ test l, r
 	    jumpon$ op, label, sense
 	    define HIT$ yes \}
 	match =bit l op r, cond \{ test l, r
 	    jumpon$ op, label, sense
 	    define HIT$ yes \}
-	three$ cond, label, sense
-	two$ cond, label, sense
-	one$ cond, label, sense
-	lost$ cond
+}
+
+macro group$ cond, label, sense
+{
+	match =no, HIT$ \{ grouped$ <cond>, label, sense \}
+}
+macro grouped$ cond, label, sense
+{
+	match =< l => op r, cond \{ cmp l, r
+	    jumpon$ op, label, sense
+	    define HIT$ yes \}
 }
 
 macro three$ cond, label, sense
 {
-	match =no, HIT$ \{ compare$ cond, label, sense \}
+	match =no, HIT$ \{ compare$ <cond>, label, sense \}
 }
 macro compare$ cond, label, sense
 {
@@ -228,7 +251,7 @@ macro compare$ cond, label, sense
 
 macro two$ cond, label, sense
 {
-	match =no, HIT$ \{ against$ cond, label, sense \}
+	match =no, HIT$ \{ against$ <cond>, label, sense \}
 }
 macro against$ cond, label, sense
 {
@@ -239,7 +262,7 @@ macro against$ cond, label, sense
 
 macro one$ cond, label, sense
 {
-	match =no, HIT$ \{ flag$ cond, label, sense \}
+	match =no, HIT$ \{ flag$ <cond>, label, sense \}
 }
 macro flag$ cond, label, sense
 {
@@ -342,7 +365,7 @@ macro .if cond, p2, p3
 	match =conjif, S$TYPE \{ define CHAIN$ yes \}
 	match =yes, CHAIN$ \{ s$pop \}
 	match =no, CHAIN$ \{ newif$ \}
-	ifpart$ cond
+	ifpart$ <cond>
 }
 
 macro newif$
@@ -355,11 +378,11 @@ macro newif$
 
 macro ifpart$ cond
 {
-	match =or, CONJ$ \{ cond$ cond, S$L2, t
+	match =or, CONJ$ \{ cond$ <cond>, S$L2, t
 	    s$push conjif, S$L1, S$L2, S$L3 \}
-	match =and, CONJ$ \{ cond$ cond, S$L1, f
+	match =and, CONJ$ \{ cond$ <cond>, S$L1, f
 	    s$push conjif, S$L1, S$L2, S$L3 \}
-	match =none, CONJ$ \{ cond$ cond, S$L1, f
+	match =none, CONJ$ \{ cond$ <cond>, S$L1, f
 	    place$ S$L2
 	    s$push if, S$L1, none, S$L3 \}
 }
@@ -391,7 +414,7 @@ macro .elseif cond, p2, p3
 	match =if, S$TYPE \{ define WHAT$ if \}
 	match =if, WHAT$ \{ jmp S$L3
 	    place$ S$L1
-	    elseif$ cond \}
+	    elseif$ <cond> \}
 	match =other, WHAT$ \{ err$ "elseif without if" \}
 }
 
@@ -402,7 +425,7 @@ macro elseif$ cond
 	local miss, body
 	define S$L1 miss
 	define S$L2 body
-	ifpart$ cond
+	ifpart$ <cond>
 }
 
 macro .endif
@@ -443,7 +466,7 @@ macro .when cond, p2, p3
 	    newwhen$ S$L3 \}
 	match =first, WHAT$ \{ newwhen$ S$L1 \}
 	match =other, WHAT$ \{ err$ "when without select" \}
-	whenpart$ cond
+	whenpart$ <cond>
 }
 
 ; Where the select ends comes in as the name it is held under, so it is
@@ -458,11 +481,11 @@ macro newwhen$ done
 
 macro whenpart$ cond
 {
-	match =or, CONJ$ \{ cond$ cond, S$L2, t
+	match =or, CONJ$ \{ cond$ <cond>, S$L2, t
 	    s$push conjwhen, S$L1, S$L2, S$L3 \}
-	match =and, CONJ$ \{ cond$ cond, S$L1, f
+	match =and, CONJ$ \{ cond$ <cond>, S$L1, f
 	    s$push conjwhen, S$L1, S$L2, S$L3 \}
-	match =none, CONJ$ \{ cond$ cond, S$L1, f
+	match =none, CONJ$ \{ cond$ <cond>, S$L1, f
 	    place$ S$L2
 	    s$push when, S$L1, none, S$L3 \}
 }
@@ -508,7 +531,7 @@ macro .while cond, p2, p3
 	match =conjwhile, S$TYPE \{ define CHAIN$ yes \}
 	match =yes, CHAIN$ \{ s$pop \}
 	match =no, CHAIN$ \{ newwhile$ \}
-	whilepart$ cond
+	whilepart$ <cond>
 }
 
 macro newwhile$
@@ -523,11 +546,11 @@ macro newwhile$
 
 macro whilepart$ cond
 {
-	match =or, CONJ$ \{ cond$ cond, S$L3, t
+	match =or, CONJ$ \{ cond$ <cond>, S$L3, t
 	    s$push conjwhile, S$L1, S$L2, S$L3 \}
-	match =and, CONJ$ \{ cond$ cond, S$L2, f
+	match =and, CONJ$ \{ cond$ <cond>, S$L2, f
 	    s$push conjwhile, S$L1, S$L2, S$L3 \}
-	match =none, CONJ$ \{ cond$ cond, S$L2, f
+	match =none, CONJ$ \{ cond$ <cond>, S$L2, f
 	    place$ S$L3
 	    s$push while, S$L1, S$L2, none \}
 }
@@ -558,7 +581,7 @@ macro .until cond, p2, p3
 	define WHAT$ other
 	match =repeat, S$TYPE \{ define WHAT$ repeat \}
 	match =conjuntil, S$TYPE \{ define WHAT$ repeat \}
-	match =repeat, WHAT$ \{ untilpart$ cond \}
+	match =repeat, WHAT$ \{ untilpart$ <cond> \}
 	match =other, WHAT$ \{ err$ "until without repeat" \}
 }
 
@@ -572,16 +595,16 @@ macro untilpart$ cond
 	match =yes, BARE$ \{ jmp S$L1
 	    place$ S$L2
 	    l$pop \}
-	match =no, BARE$ \{ untilcond$ cond \}
+	match =no, BARE$ \{ untilcond$ <cond> \}
 }
 
 macro untilcond$ cond
 {
-	match =or, CONJ$ \{ cond$ cond, S$L2, t
+	match =or, CONJ$ \{ cond$ <cond>, S$L2, t
 	    s$push conjuntil, S$L1, S$L2, none \}
-	match =and, CONJ$ \{ cond$ cond, S$L1, f
+	match =and, CONJ$ \{ cond$ <cond>, S$L1, f
 	    s$push conjuntil, S$L1, S$L2, none \}
-	match =none, CONJ$ \{ cond$ cond, S$L1, f
+	match =none, CONJ$ \{ cond$ <cond>, S$L1, f
 	    place$ S$L2
 	    l$pop \}
 }
@@ -610,16 +633,19 @@ macro .leave cond, p2, p3
 	define BARE$ no
 	match , cond \{ define BARE$ yes \}
 	match =yes, BARE$ \{ jmp L$NOW \}
-	match =no, BARE$ \{ cond$ cond, L$NOW, t \}
+	match =no, BARE$ \{ cond$ <cond>, L$NOW, t \}
 }
 
 ; ----------------------------------------------------------------------------
 ; The files write the statements in capitals and in small letters, which were
-; one name to MASM.
+; one name to MASM.  A condition goes on in brackets of its own, because the
+; brackets it arrived in have been taken off and it may have brackets inside
+; it -- <<byte [SI]> EQ 0> -- which would otherwise be read as the argument
+; and the rest as something after it.
 
 macro .IF cond, p2, p3
 {
-	.if cond, p2, p3
+	.if <cond>, p2, p3
 }
 macro .THEN
 {
@@ -630,7 +656,7 @@ macro .ELSE dist
 }
 macro .ELSEIF cond, p2, p3
 {
-	.elseif cond, p2, p3
+	.elseif <cond>, p2, p3
 }
 macro .ENDIF
 {
@@ -642,7 +668,7 @@ macro .SELECT x
 }
 macro .WHEN cond, p2, p3
 {
-	.when cond, p2, p3
+	.when <cond>, p2, p3
 }
 macro .OTHERWISE dist
 {
@@ -654,7 +680,7 @@ macro .ENDSELECT
 }
 macro .WHILE cond, p2, p3
 {
-	.while cond, p2, p3
+	.while <cond>, p2, p3
 }
 macro .ENDWHILE p1
 {
@@ -666,7 +692,7 @@ macro .REPEAT
 }
 macro .UNTIL cond, p2, p3
 {
-	.until cond, p2, p3
+	.until <cond>, p2, p3
 }
 macro .LOOP cc
 {
@@ -674,5 +700,5 @@ macro .LOOP cc
 }
 macro .LEAVE cond, p2, p3
 {
-	.leave cond, p2, p3
+	.leave <cond>, p2, p3
 }
