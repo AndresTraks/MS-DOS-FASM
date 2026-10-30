@@ -1,702 +1,678 @@
 ;;STRUC--Stucture Macro Library
 ;;Optimizing Version 2.30  03/31/87
+;
+; The structured statements the utilities are written in: .IF, .WHILE,
+; .REPEAT, .SELECT and the rest.  MASM's library measures every jump over two
+; passes and pads the short ones with NOPs, so this is a rewrite of the same
+; interface rather than a translation of its workings -- fasm sizes an
+; unconditional jump itself.
+;
+; A statement reads
+;
+;	.IF	<AX EQ 0>		; a comparison, in angle brackets
+;	.IF	C			; or a flag, which needs none
+;	.IF	<BIT FLAGS AND MASK>	; or a bit test
+;	.IF	<ZERO AX>		; or a register against itself
+;
+; with a conjunction or a jump distance after it:
+;
+;	.IF	<AX EQ 0>, AND		; the next .IF continues the condition
+;	.IF	<AX EQ 0>, OR
+;	.IF	<AX EQ 0>, NEAR		; a body too long for a short jump
+;
+; Three things differ from MASM.  A conjunction or a distance needs a comma
+; in front of it, because fasm's angle brackets close the argument they
+; enclose.  An operand that MASM gave brackets of its own, <<WORD PTR
+; ES:[SI]> NE 0>, is written in fasm's own syntax instead: <word [ES:SI] NE
+; 0>.  And .THEN, which MASM only checked, is nothing at all here.
+;
+; .FOR and .NEXT are not written, because nothing in this release uses them,
+; and neither is a conjunction after .LEAVE, for the same reason.
+;
+; The statements nest, so each one that is still open has an entry on a
+; stack: what kind of statement it is and the labels its closing statement
+; has to lay down, with "none" where it needs fewer than three.  The labels
+; are fasm's local ones, a fresh name every time the macro declaring them
+; runs, and they travel from the statement that opens a structure to the one
+; that closes it through the stack.
 
-if1
-NoConj$ 	equ	0
-And$		equ	1
-Or$		equ	2
-Short$		equ	3
-Near$		equ	4
-NearToShort$	equ	5
-ncxz$		equ	6
-AndOr$		=	0
-Temp$		=	0
-Temp2$		=	0
-Dist$		=	0
+; ----------------------------------------------------------------------------
+; A label where the line stands.
+;
+; It goes the long way round because of two things fasm's preprocessor does.
+; A macro is given its arguments as they were written, not as they stand for,
+; so a name DEFINE holds has to be put through MATCH, which does look it up;
+; and the first name on a line with a colon after it is a label being named,
+; which is the one place the preprocessor leaves a name alone -- so the
+; lookup cannot happen there either.
+macro place$ name
+{
+	match n, name \{ n: \}
+}
 
-NoType$ 	equ	10
-ConjIfType$	equ	11
-IfType$ 	equ	12
-ElseType$	equ	13
-WhileType$	equ	14
-ConjWhileType$	equ	15
-RepeatType$	equ	16
-ConjUntilType$	equ	17
-ForType$	equ	18
-ConjLeaveType$	equ	19
-SelectType$	equ	20
-WhenType$	equ	21
-ConjWhenType$	equ	22
-OtherwiseType$	equ	ElseType$
+; ----------------------------------------------------------------------------
+; The jumps.
+;
+; A condition is named the way MASM named it -- EQ, NE, NAND and the rest --
+; and the mnemonic to jump on it is j written in front of the name, or jn to
+; jump when it does not hold.  The processor answers to most of those already,
+; in either spelling, since fasm reads a mnemonic whichever way it is
+; written; these are the ones it does not, each in the two spellings the
+; sources use.
 
-StrucError$ macro text
-					Structure error -- text
-endm
+macro buildjump$ name, real
+{
+	macro name target \{ real target \}
+}
 
-J	macro
-endm
-JN	macro
-endm
+irp c, EQ,eq
+{
+	buildjump$ j#c, je
+	buildjump$ jn#c, jne
+}
+irp c, LT,lt
+{
+	buildjump$ j#c, jl
+	buildjump$ jn#c, jnl
+}
+irp c, GT,gt
+{
+	buildjump$ j#c, jg
+	buildjump$ jn#c, jng
+}
+irp c, NLT,nlt
+{
+	buildjump$ j#c, jnl
+	buildjump$ jn#c, jl
+}
+irp c, NGT,ngt
+{
+	buildjump$ j#c, jng
+	buildjump$ jn#c, jg
+}
+irp c, ZERO,zero
+{
+	buildjump$ j#c, jz
+	buildjump$ jn#c, jnz
+}
+irp c, NONZERO,nonzero
+{
+	buildjump$ j#c, jnz
+	buildjump$ jn#c, jz
+}
+; A bit test leaves the answer in the zero flag the other way round: the bits
+; asked for are there when the result is not zero.
+irp c, AND,and
+{
+	buildjump$ j#c, jnz
+	buildjump$ jn#c, jz
+}
+irp c, NAND,nand
+{
+	buildjump$ j#c, jz
+	buildjump$ jn#c, jnz
+}
+; A flag the processor names with an N of its own: jn and the name would make
+; two of them, so each of those is written out.
+buildjump$ jnNA, ja
+buildjump$ jnna, ja
+buildjump$ jnNAE, jae
+buildjump$ jnnae, jae
+buildjump$ jnNB, jb
+buildjump$ jnnb, jb
+buildjump$ jnNBE, jbe
+buildjump$ jnnbe, jbe
+buildjump$ jnNC, jc
+buildjump$ jnnc, jc
+buildjump$ jnNE, je
+buildjump$ jnne, je
+buildjump$ jnNG, jg
+buildjump$ jnng, jg
+buildjump$ jnNGE, jge
+buildjump$ jnnge, jge
+buildjump$ jnNL, jl
+buildjump$ jnnl, jl
+buildjump$ jnNLE, jle
+buildjump$ jnnle, jle
+buildjump$ jnNO, jo
+buildjump$ jnno, jo
+buildjump$ jnNP, jp
+buildjump$ jnnp, jp
+buildjump$ jnNS, js
+buildjump$ jnns, js
+buildjump$ jnNZ, jz
+buildjump$ jnnz, jz
+irp c, PE,pe
+{
+	buildjump$ jn#c, jpo
+}
+irp c, PO,po
+{
+	buildjump$ jn#c, jpe
+}
+; CX is zero or it is not, and the processor only asks the one way round.
+macro jncxz$ target
+{
+	local over
+	jcxz over
+	jmp target
+	place$ over
+}
+irp c, CXZ,cxz
+{
+	buildjump$ jn#c, jncxz$
+}
 
-BuildJump$   macro   j1,j2
-	j1  macro   t
-	    .xcref  j1
-					j2 t
-	endm
-endm
+purge buildjump$
 
-irp	x,<<jeq,je>,<jlt,jl>,<jgt,jg>,<jneq,jne>,<jnlt,jnl>,<jngt,jng>,<jnpe,jpo>,<jnpo,jpe>>
-	BuildJump$ x
-endm
-irp	x,<<jzero,jz>,<jnzero,jnz>,<jnonzero,jnz>,<jnnonzero,jz>,<jand,jnz>,<jnand,jz>,<jnnand,jnz>>
-	BuildJump$ x
-endm
-irp	x,<a,ae,b,be,c,e,g,ge,l,le,o,p,s,z,cxz>
-	BuildJump$ jnn&x,j&x
-endm
+; The two mnemonics a condition's name makes, and the jump.  The name is a
+; macro's own argument here because that is what fasm joins with #: a name
+; MATCH took out of a condition is still text at that point, and jn#op would
+; come out as jnop.
+macro jumpon$ op, label, sense
+{
+	go$ j#op, jn#op, label, sense
+}
 
-jncxz	macro	t
-	if	Dist$ eq NearToShort$
-					jcxz $+5
-					jmp t
-	else
-					jcxz $+4
-					jmp short t
-	endif
-endm
+; Where to go, and whether to go there when the condition holds or when it
+; does not.  A conditional jump reaches 127 bytes, which is why a site whose
+; body is longer says NEAR: then the jump goes the other way, over an
+; unconditional jump that has the whole segment to aim at.
+macro go$ yes, no, label, sense
+{
+	local over
+	match =t =short, sense DIST$ \{ yes label \}
+	match =f =short, sense DIST$ \{ no label \}
+	match =t =near, sense DIST$ \{ no over
+	    jmp label
+	    place$ over \}
+	match =f =near, sense DIST$ \{ yes over
+	    jmp label
+	    place$ over \}
+}
 
-purge	BuildJump$
+; ----------------------------------------------------------------------------
+; The conditions.
+;
+; Four shapes, told apart by how many words they are written in: a bit test
+; is BIT and three more, a comparison is three, a register against itself is
+; two and a flag is one.  A shape is tried only if nothing longer has already
+; answered, since fasm's MATCH lets the last name in a pattern stand for the
+; rest of the line.
 
-GetConj$ macro	p1,p2
-	AndOr$	= NoConj$
-	irp	parm,<p1,p2>
-	    ifnb    <&parm>
-		irp	x,<and,AND,or,OR>
-		    ifidn   <parm>,<x>
-			 AndOr$ = $&&&x
-			 exitm
-		    endif
-		endm
-	    endif
-	endm
-endm
+macro cond$ cond, label, sense
+{
+	define HIT$ no
+	match =BIT l op r, cond \{ test l, r
+	    jumpon$ op, label, sense
+	    define HIT$ yes \}
+	match =bit l op r, cond \{ test l, r
+	    jumpon$ op, label, sense
+	    define HIT$ yes \}
+	three$ cond, label, sense
+	two$ cond, label, sense
+	one$ cond, label, sense
+	lost$ cond
+}
 
-GetDist$ macro	p1,p2
-	irp	parm,<p1,p2>
-	    ifnb    <parm>
-		irp	x,<short,SHORT,near,NEAR>
-		    ifidn   <parm>,<x>
-			Dist$	= $&&&x
-			 exitm
-		     endif
-		endm
-	    endif
-	endm
-endm
+macro three$ cond, label, sense
+{
+	match =no, HIT$ \{ compare$ cond, label, sense \}
+}
+macro compare$ cond, label, sense
+{
+	match l op r, cond \{ cmp l, r
+	    jumpon$ op, label, sense
+	    define HIT$ yes \}
+}
 
+macro two$ cond, label, sense
+{
+	match =no, HIT$ \{ against$ cond, label, sense \}
+}
+macro against$ cond, label, sense
+{
+	match op l, cond \{ or l, l
+	    jumpon$ op, label, sense
+	    define HIT$ yes \}
+}
 
-Poke$	macro	n,m
-	st$&n	= m
-.xcref	st$&n
-endm
+macro one$ cond, label, sense
+{
+	match =no, HIT$ \{ flag$ cond, label, sense \}
+}
+macro flag$ cond, label, sense
+{
+	match op, cond \{ jumpon$ op, label, sense
+	    define HIT$ yes \}
+}
 
-Peek$	macro	x,n
-	x	= st$&n
-endm
+macro lost$ cond
+{
+	match =no, HIT$ \{ err$ "condition not understood" \}
+}
 
-Push$	macro	n
-	st$	= st$+1
-	Poke$	%st$,n
-endm
+; A conjunction and a jump distance, in whichever order the site wrote them.
+macro parse$ p2, p3
+{
+	define CONJ$ none
+	define DIST$ short
+	look$ p2
+	look$ p3
+}
+macro look$ p
+{
+	match =AND, p \{ define CONJ$ and \}
+	match =and, p \{ define CONJ$ and \}
+	match =OR, p \{ define CONJ$ or \}
+	match =or, p \{ define CONJ$ or \}
+	match =NEAR, p \{ define DIST$ near \}
+	match =near, p \{ define DIST$ near \}
+	match =SHORT, p \{ define DIST$ short \}
+	match =short, p \{ define DIST$ short \}
+}
 
-Pop$	macro	x
-	if	st$ gt 0
-	    Peek$   x,%st$
-	    st$     = st$-1
-	else
-	    StrucError$ <open structure>
-	endif
-endm
+macro err$ text
+{
+	display "struc: ", text, 13, 10
+	err
+}
 
-EquateLabel$ macro last,this
-	if	LastLabelOrg$ eq $
-	    ll$&last = this
-	    .xcref  ll$&last
-	endif
-endm
+; ----------------------------------------------------------------------------
+; The stack of open structures, innermost first, and the stack of the loops
+; among them, which is what .LEAVE leaves.
 
-TraceLabel$ macro n,a,b
-	if	ll$&a eq ll$&b
-	    ll$&n   = b
-	    .xcref  ll$&n
-	else
-	    TraceLabel$ n,%ll$&a,%ll$&b
-	endif
-endm
+define S$ bottom none none none end$
+define L$ none end$
 
-Label$	 macro	 n
-	if1
-	    EquateLabel$ %LastLabel$,n
-	    ll$&n   = n
-	    .xcref  ll$&n
-	    LastLabel$ = n
-	    LastLabelOrg$ = $
-l$&n:
-	else
-	    if	    ll$&n eq n
-l$&n:
-	    else
-		.xcref	l$&n
-		.xcref	ll$&n
-	    endif
-	endif
-endm
+; One match looks up the labels and the stack together, since an argument
+; reaches a macro as the name it was written as and not as what it stands for.
+macro s$push type, l1, l2, l3
+{
+	match a b c cur, l1 l2 l3 S$ \{ define S$ type a b c cur \}
+}
+macro s$pop
+{
+	match t a b c rest, S$ \{ define S$ rest
+	    define S$TYPE t
+	    define S$L1 a
+	    define S$L2 b
+	    define S$L3 c \}
+}
+macro s$peek
+{
+	match t a b c rest, S$ \{ define S$TYPE t
+	    define S$L1 a
+	    define S$L2 b
+	    define S$L3 c \}
+}
+macro l$push label
+{
+	match a cur, label L$ \{ define L$ a cur \}
+}
+macro l$pop
+{
+	match a rest, L$ \{ define L$ rest
+	    define L$NOW a \}
+}
+macro l$peek
+{
+	match a rest, L$ \{ define L$NOW a \}
+}
 
-CondJump$ macro l,tf,c
-	if1
-	    ifb     <c>
-		EquateLabel$ %LastLabel$,l
-	    endif
-	    ifndef  <ll$&l>
-		ll$&l	= l
-		.xcref	ll$&l
-	    endif
-	else
-	    TraceLabel$ l,l,%ll$&l
-	endif
-	CondJump2$ %ll$&l,tf,c
-endm
+; ----------------------------------------------------------------------------
+; .IF, and what goes with it.
+;
+; A chain of conditions joined by AND or OR is one statement written over
+; several .IF lines: every line but the last leaves its labels on the stack
+; under conjif for the next one to carry on with.  An AND sends a condition
+; that fails to the end of the statement and an OR sends one that holds to
+; the body, so the body needs a label of its own; the statement needs another
+; for where it ends, which is what .ELSE jumps to and .ENDIF lays down.
+;
+; A closing statement looks at what kind of structure it has taken off the
+; stack before it does anything, because taking the next one off would answer
+; the question differently.
 
-CondJump2$ macro l,tf,c
-	if	Dist$ eq Short$
-	    ifb     <c>
-					jmp short l$&l
-	    else
-		ifidn <tf>,<f>
-					jn&c l$&l
-		else
-					j&c l$&l
-		endif
-	    endif
-	else
-	    ifnb    <c>
-		ifdef	l$&l
-		    if	    (($ - l$&l) le 126) and ((l$&l - $) le 129)
-			Dist$	= NearToShort$
-			nops$	= 3
-			ifidn <tf>,<f>
-					jn&c l$&l
-			    ifdef   n$&c
-				if	n$&c eq ncxz$
-				    nops$ = 0
-				endif
-			    endif
-			    ifdef   $&c
-				if	$&c eq ncxz$
-				    nops$ = 5
-				endif
-			    endif
-			else
-					j&c l$&l
-			    ifdef   n$&c
-				if	n$&c eq ncxz$
-				    nops$ = 5
-				endif
-			    endif
-			    ifdef   $&c
-				if	$&c eq ncxz$
-				    nops$ = 0
-				endif
-			    endif
-			endif
-			    rept nops$
-				nop
-			    endm
-		    else
-			ifidn <tf>,<f>
-					j&c $+5
-			else
-					jn&c $+5
-			endif
-					jmp l$&l
-		    endif
-		else
-		    ifidn <tf>,<f>
-					j&c $+5
-		    else
-					jn&c $+5
-		    endif
-					jmp l$&l
-		endif
-	    else
-		ifdef	l$&l
-		    ifidn   <tf>,<NoFold>
-					jmp l$&l
-		    else
-			if	(($ - l$&l) le 126) and ((l$&l - $) le 129)
-					jmp short l$&l
-					nop
-			else
-					jmp l$&l
-			endif
-		    endif
-		else
-					jmp l$&l
-		endif
-	    endif
-	endif
-endm
+macro .if cond, p2, p3
+{
+	parse$ p2, p3
+	s$peek
+	define CHAIN$ no
+	match =conjif, S$TYPE \{ define CHAIN$ yes \}
+	match =yes, CHAIN$ \{ s$pop \}
+	match =no, CHAIN$ \{ newif$ \}
+	ifpart$ cond
+}
 
+macro newif$
+{
+	local miss, body, done
+	define S$L1 miss
+	define S$L2 body
+	define S$L3 done
+}
 
-CondLoop$ macro l,c
-					loop&c l$&l
-endm
+macro ifpart$ cond
+{
+	match =or, CONJ$ \{ cond$ cond, S$L2, t
+	    s$push conjif, S$L1, S$L2, S$L3 \}
+	match =and, CONJ$ \{ cond$ cond, S$L1, f
+	    s$push conjif, S$L1, S$L2, S$L3 \}
+	match =none, CONJ$ \{ cond$ cond, S$L1, f
+	    place$ S$L2
+	    s$push if, S$L1, none, S$L3 \}
+}
 
-Test$	macro	tgt,a1,a2,a3,a4,x
-	ifb	<a1>
-	    StrucError$ <invalid condition>
-	else
-	ifb	<a2>
-	    CondJump$ %&tgt,a1
-	else
-	ifb	<a3>
-	    ifdif   <a1>,<zero>
-	    ifdif   <a1>,<nonzero>
-	    ifdif   <a1>,<ZERO>
-	    ifdif   <a1>,<NONZERO>
-		StrucError$ <invalid condition>
-		exitm
-	    endif
-	    endif
-	    endif
-	    endif
-					or a2,a2
-	    CondJump$ %&tgt,a1
-	else
-	ifb	<a4>
-					cmp a1,a3
-	    CondJump$ %&tgt,a2
-	else
-	ifb	<x>
-	    ifdif   <a1>,<bit>
-	    ifdif   <a1>,<BIT>
-		StrucError$ <invalid condition>
-		exitm
-	    endif
-	    endif
-					test a2,a4
-	    CondJump$ %&tgt,a3
-	else
-	    StrucError$ <invalid condition>
-	endif
-	endif
-	endif
-	endif
-	endif
-endm
+macro .then
+{
+}
 
-TopTest$ macro	args,n,c,p4,p5
-	GetConj$ p4,p5
-	Dist$	= DefDist$
-	GetDist$ p4,p5
-	if	AndOr$ eq NoConj$
-	    Test$   <sn$-1,f>,args
-	    Pop$    Temp$
-	    if	    OrFound$
-		Label$	%Temp$
-	    endif
-	    Push$   n
-	else
-	    if	    AndOr$ eq And$
-		Test$	<sn$-1,f>,args
-	    else
-		OrFound$ = 1
-		Test$	<sn$,t>,args
-	    endif
-	    Push$   c
-	endif
-endm
-;;*****************************************************************************
-.if	macro	t,p2,p3
-	Peek$	Temp$,%st$
-	if	Temp$ eq ConjIfType$
-	    Pop$    Temp$
-	else
-	    OrFound$ = 0
-	    sn$     = sn$+1
-	    Push$   sn$
-	    sn$     = sn$+1
-	    Push$   sn$
-	    sn$     = sn$+1
-	    Push$   sn$
-	endif
-	TopTest$ <t>,IfType$,ConjIfType$,p2,p3
-endm
-;;*****************************************************************************
-.then	macro
-	Peek$	Temp$,%st$
-	if	Temp$ ne IfType$
-	if	Temp$ ne WhenType$
-	    StrucError$ <then without if or when>
-	endif
-	endif
-endm
-;;*****************************************************************************
-.elseif macro	t,p2,p3
-	Pop$	Temp$
-	if	Temp$ ne IfType$
-	    StrucError$ <elseif without if>
-	    exitm
-	endif
-	OrFound$ = 0
-	Pop$	Temp$
-	Peek$	Temp2$,%st$
-	Dist$	= Near$
-	CondJump$ %Temp2$
-	Label$	%Temp$
-	sn$	= sn$+1
-	Push$	sn$
-	sn$	= sn$+1
-	Push$	sn$
-	TopTest$ <t>,IfType$,ConjIfType$,p2,p3
-endm
-;;*****************************************************************************
-.else	macro	dist
-	Pop$	Temp$
-	if	Temp$ ne IfType$
-	if	Temp$ ne WhenType$
-	if	Temp$ ne SelectType$
-	    StrucError$ <else without if, when or select>
-	    exitm
-	endif
-	endif
-	endif
-	sn$	= sn$+1
-	if	Temp$ eq SelectType$
-	    Push$   sn$
-	else
-	    Dist$   = DefDist$
-	    GetDist$ dist
-	    CondJump$ %sn$
-	    Pop$    Temp$
-	    Label$  %Temp$
-	    Push$   sn$
-	endif
-	push$	ElseType$
-endm
-;;*****************************************************************************
-.endif	macro
-	Pop$	Temp$
-	if	Temp$ ne IfType$
-	    if	    Temp$ ne ElseType$
-		StrucError$ <endif without if>
-		exitm
-	    endif
-	endif
-	Pop$	Temp$
-	Label$	%Temp$
-	Pop$	Temp$
-	Label$	%Temp$
-endm
-;;*****************************************************************************
-.select macro	x
-	OrFound$ = 0
-	sn$	= sn$+1
-	Push$	sn$
-	Push$	SelectType$
-endm
-;;*****************************************************************************
-.when	macro	tst,p2,p3
-	Pop$	Temp$
-	if	Temp$ ne SelectType$
-	if	Temp$ ne WhenType$
-	if	Temp$ ne ConjWhenType$
-	    StrucError$ <when without select>
-	    exitm
-	endif
-	endif
-	endif
-	if	Temp$ ne ConjWhenType$
-	    Dist$   = Near$
-	    OrFound$ = 0
-	    if	    Temp$ eq WhenType$
-		Pop$	Temp2$
-		Peek$	Temp$,%st$
-		CondJump$ %Temp$
-		Label$	 %Temp2$
-	    endif
-	    sn$     = sn$+1
-	    Push$   sn$
-	    sn$     = sn$+1
-	    Push$   sn$
-	endif
-	TopTest$ <tst>,WhenType$,ConjWhenType$,p2,p3
-endm
-;;*****************************************************************************
-.otherwise	macro	dist
-	Pop$	Temp$
-	if	Temp$ ne WhenType$
-	if	Temp$ ne SelectType$
-	if	Temp$ ne IfType$
-	    StrucError$ <otherwise without if, when or select>
-	    exitm
-	endif
-	endif
-	endif
-	sn$	= sn$+1
-	if	Temp$ eq SelectType$
-	    Push$   sn$
-	else
-	    Dist$   = DefDist$
-	    GetDist$ dist
-	    CondJump$ %sn$
-	    Pop$    Temp$
-	    Label$  %Temp$
-	    Push$   sn$
-	endif
-	push$	OtherwiseType$
-endm
-;;*****************************************************************************
-.endselect	macro
-	Pop$	Temp$
-	if	Temp$ ne WhenType$
-	if	Temp$ ne OtherwiseType$
-	if	Temp$ ne SelectType$
-	    StrucError$ <endselect without select>
-	    exitm
-	endif
-	endif
-	endif
-	pop$	Temp2$
-	if	Temp$ ne SelectType$
-	    Label$  %Temp2$
-	    Pop$    Temp2$
-	    Label$  %Temp2$
-	endif
-endm
-;;*****************************************************************************
-.while	macro	t,p2,p3
-	Peek$	Temp$,%st$
-	if	Temp$ eq ConjWhileType$
-	    Pop$    Temp$
-	else
-	    Push$   LoopEnd$
-	    OrFound$ = 0
-	    sn$     = sn$ + 1
-	    Push$   sn$
-	    Label$  %sn$
-	    sn$     = sn$ + 2
-	    Push$   sn$
-	    LoopEnd$ = sn$ - 1
-	endif
-	TopTest$ <t>,WhileType$,ConjWhileType$,p2,p3
-endm
-;;*****************************************************************************
-.endwhile macro p1
-	Pop$	Temp$
-	if	Temp$ ne WhileType$
-	    StrucError$ <endwhile without while>
-	    exitm
-	endif
-	Dist$	= Near$
-	Pop$	Temp$
-	CondJump$ %Temp$,NoFold
-	Label$	%Temp$+1
-	Pop$	LoopEnd$
-endm
-;;*****************************************************************************
-.repeat macro
-	Push$	LoopEnd$
-	Push$	LeaveFound$
-	sn$	= sn$+1
-	Label$	%sn$
-	Push$	sn$
-	Push$	RepeatType$
-	sn$	= sn$+1
-	LoopEnd$ = sn$
-	LeaveFound$ = 0
-endm
-;;*****************************************************************************
-.until	macro	t,p2,p3
-	until2$ p2,p3,t
-endm
-until2$ macro	p2,p3,a1,a2,a3,a4,x
-	Pop$	Temp$
-	if	Temp$ ne RepeatType$
-	    if	    Temp$ ne ConjUntilType$
-		StrucError$ <until without repeat>
-		exitm
-	    endif
-	else
-	    OrFound$ = 0
-	endif
-	Dist$	= DefDist$
-	GetDist$ p2,p3
-	GetConj$ p2,p3
+macro .else dist
+{
+	s$pop
+	define WHAT$ other
+	match =if, S$TYPE \{ define WHAT$ if \}
+	match =when, S$TYPE \{ define WHAT$ when \}
+	match =if, WHAT$ \{ jmp S$L3
+	    place$ S$L1
+	    s$push else, S$L3, none, none \}
+	match =when, WHAT$ \{ jmp S$L3
+	    place$ S$L1
+	    s$push otherwise, S$L3, none, none \}
+	match =other, WHAT$ \{ err$ "else without if" \}
+}
 
-	if	AndOr$ eq NoConj$
-	    Pop$    Temp$
-	    ifb     <a1>
-		Dist$	= Near$
-		CondJump$ %Temp$,NoFold
-	    else
-		Test$	 <Temp$,f>,<a1>,<a2>,<a3>,<a4>,<x>
-	    endif
-	    if	    OrFound$ or LeaveFound$
-		Label$	 %Temp$+1
-	    endif
-	    Pop$    LeaveFound$
-	    Pop$    LoopEnd$
-	else
-	    Peek$   Temp$,%st$
-	    if	    AndOr$ eq And$
-		Test$	 <Temp$,f>,<a1>,<a2>,<a3>,<a4>,<x>
-	    else
-		OrFound$ = 1
-		Test$	 <Temp$+1,t>,<a1>,<a2>,<a3>,<a4>,<x>
-	    endif
-	    Push$   ConjUntilType$
-	endif
-endm
-;;*****************************************************************************
-.loop	macro	cond
-	Pop$	Temp$
-	if	Temp$ ne RepeatType$
-	    StrucError$ <loop without repeat>
-	    exitm
-	endif
-	Pop$	Temp$
-	CondLoop$ %Temp$,cond
-	if	LeaveFound$
-	    Label$  %Temp$+1
-	endif
-	Pop$	LeaveFound$
-	Pop$	LoopEnd$
-endm
-;;*****************************************************************************
-.for	macro	index,equals,start,to,stop,by,step,dist
-					mov index,start
-	Push$	LoopEnd$
-	sn$	= sn$+1
-	Push$	sn$
-	Label$	%sn$
-	sn$	= sn$+1
-	LoopEnd$ = sn$
-					cmp index,stop
-	Dist$	= DefDist$
-	ifb	<step>
-	    Push$   1
-	    GetDist$ by
-	    CondJump$ %sn$,t,gt
-	else
-	    GetDist$ dist
-	    Push$   %(step)
-	    if	    step lt 0
-		CondJump$ %sn$,t,lt
-	    else
-		CondJump$ %sn$,t,gt
-	    endif
-	endif
-	Push$	ForType$
-endm
-;;*****************************************************************************
-.next	macro	index,dist
-	Pop$	Temp$
-	if	Temp$ ne ForType$
-	    StrucError$ <next without for>
-	    exitm
-	endif
-	Pop$	Temp$
-	if	Temp$ eq 1
-					inc index
-	else
-	    if	    Temp$ eq -1
-					dec index
-	    else
-					add index,Temp$
-	    endif
-	endif
-	Pop$	Temp$
-	Dist$	= Near$
-	CondJump$ %Temp$,NoFold
-	Label$	%Temp$+1
-	Pop$	LoopEnd$
-endm
-;;*****************************************************************************
-.leave	macro	t,p2,p3
-	leave2$ p2,p3,t
-endm
-leave2$ macro  p2,p3,a1,a2,a3,a4,x
-	ife	LoopEnd$
-	    StrucError$ <leave outside a loop>
-	    exitm
-	endif
-	LeaveFound$ = 1
-	Peek$	Temp$,%st$
-	if	Temp$ eq ConjLeaveType$
-	    Pop$    Temp$
-	else
-	    OrFound$ = 0
-	    sn$     = sn$ + 1
-	endif
-	Dist$	= 0
-	GetDist$ <a1>
-	if	Dist$
-	    CondJump$ %LoopEnd$
-	    if	    OrFound$
-		Label$	%sn$
-	    endif
-	else
-	    Dist$   = DefDist$
-	    GetDist$ p2,p3
-	    GetConj$ p2,p3
-	    if	    AndOr$ eq NoConj$
-		ifb	<a1>
-		    CondJump$ %LoopEnd$,t
-		else
-		    Test$   <LoopEnd$,t>,<a1>,<a2>,<a3>,<a4>,<x>
-		endif
-		if	OrFound$
-		    Label$  %sn$
-		endif
-	    else
-		if	AndOr$ eq And$
-		    OrFound$ = 1
-		    Test$   <sn$,f>,<a1>,<a2>,<a3>,<a4>,<x>
-		else
-		    Test$   <LoopEnd$,t>,<a1>,<a2>,<a3>,<a4>,<x>
-		endif
-		Push$	ConjLeaveType$
-	    endif
-	endif
-endm
-;;*****************************************************************************
-else	       ;else for if1
-Pop$	Temp$
-;;if	   $Temp ne $NoType
-if	st$ ne 0
-     StrucError$ <open structure(s)>
-endif
-.xcref NoConj$,And$,Or$,Short$,Near$,NearToShort$,AndOr$,Temp$,Temp2$,Dist$
-.xcref NoType$,ConjIfType$,IfType$,ElseType$,WhileType$,ConjWhileType$
-.xcref RepeatType$,ConjUntilType$,ForType$,ConjLeaveType$,jncxz
-.xcref SelectType$,WhenType$,OtherwiseType$,ConjWhenType$
-.xcref jeq,jgt,jlt,jneq,jngt,jnlt,jnna,jnnae,jnnb,jnnbe,jnnc,jnncxz
-.xcref jnne,jnng,jnnge,jnnl,jnnle,jnno,jnnp,jnns,jnnz,jnpe,jnpo,BuildJump$
-.xcref GetConj$,GetDist$,Poke$,Peek$,Push$,Pop$,Label$,CondJump$,CondLoop$,Test$
-.xcref TopTest$,leave2$,until2$,StrucError$,j,jn,jand,jnand,jnnand
-.xcref jnnonzero,jnonzero,jnzero,jzero
-.xcref st$,sn$,OrFound$,LoopEnd$,LeaveFound$,DefDist$
-.xcref LastLabel$,LastLabelOrg$,EquateLabel$,TraceLabel$,CondJump2$,ncxz$
-endif
+macro .elseif cond, p2, p3
+{
+	parse$ p2, p3
+	s$pop
+	define WHAT$ other
+	match =if, S$TYPE \{ define WHAT$ if \}
+	match =if, WHAT$ \{ jmp S$L3
+	    place$ S$L1
+	    elseif$ cond \}
+	match =other, WHAT$ \{ err$ "elseif without if" \}
+}
 
+; The same statement goes on, so the end stays what it was and only the
+; condition's own labels are new.
+macro elseif$ cond
+{
+	local miss, body
+	define S$L1 miss
+	define S$L2 body
+	ifpart$ cond
+}
 
-st$	= 0
-sn$	= 0
-OrFound$ = 0
-LoopEnd$ = 0
-LeaveFound$ = 0
-LastLabel$ = -1
-LastLabelOrg$ = $
-DefDist$= Short$
-Push$	%NoType$
+macro .endif
+{
+	s$pop
+	define WHAT$ other
+	match =if, S$TYPE \{ define WHAT$ if \}
+	match =else, S$TYPE \{ define WHAT$ else \}
+	match =if, WHAT$ \{ place$ S$L1
+	    place$ S$L3 \}
+	match =else, WHAT$ \{ place$ S$L1 \}
+	match =other, WHAT$ \{ err$ "endif without if" \}
+}
+
+; ----------------------------------------------------------------------------
+; .SELECT, whose .WHENs are a row of conditions with one end between them.
+; The select's own entry stays underneath them, holding that end, until
+; .ENDSELECT lays it down.
+
+macro .select x
+{
+	local done
+	s$push select, done, none, none
+}
+
+macro .when cond, p2, p3
+{
+	parse$ p2, p3
+	s$peek
+	define WHAT$ other
+	match =conjwhen, S$TYPE \{ define WHAT$ chain \}
+	match =when, S$TYPE \{ define WHAT$ again \}
+	match =select, S$TYPE \{ define WHAT$ first \}
+	match =chain, WHAT$ \{ s$pop \}
+	match =again, WHAT$ \{ s$pop
+	    jmp S$L3
+	    place$ S$L1
+	    newwhen$ S$L3 \}
+	match =first, WHAT$ \{ newwhen$ S$L1 \}
+	match =other, WHAT$ \{ err$ "when without select" \}
+	whenpart$ cond
+}
+
+; Where the select ends comes in as the name it is held under, so it is
+; looked up before that name is given to anything else.
+macro newwhen$ done
+{
+	local miss, body
+	match d, done \{ define S$L3 d \}
+	define S$L1 miss
+	define S$L2 body
+}
+
+macro whenpart$ cond
+{
+	match =or, CONJ$ \{ cond$ cond, S$L2, t
+	    s$push conjwhen, S$L1, S$L2, S$L3 \}
+	match =and, CONJ$ \{ cond$ cond, S$L1, f
+	    s$push conjwhen, S$L1, S$L2, S$L3 \}
+	match =none, CONJ$ \{ cond$ cond, S$L1, f
+	    place$ S$L2
+	    s$push when, S$L1, none, S$L3 \}
+}
+
+macro .otherwise dist
+{
+	s$pop
+	define WHAT$ other
+	match =when, S$TYPE \{ define WHAT$ when \}
+	match =select, S$TYPE \{ define WHAT$ select \}
+	match =when, WHAT$ \{ jmp S$L3
+	    place$ S$L1
+	    s$push otherwise, S$L3, none, none \}
+	match =select, WHAT$ \{ s$push otherwise, S$L1, none, none \}
+	match =other, WHAT$ \{ err$ "otherwise without select" \}
+}
+
+macro .endselect
+{
+	s$pop
+	define WHAT$ other
+	match =when, S$TYPE \{ define WHAT$ when \}
+	match =otherwise, S$TYPE \{ define WHAT$ otherwise \}
+	match =select, S$TYPE \{ define WHAT$ select \}
+	match =when, WHAT$ \{ place$ S$L1
+	    s$pop
+	    place$ S$L1 \}
+	match =otherwise, WHAT$ \{ s$pop
+	    place$ S$L1 \}
+	match =select, WHAT$ \{ place$ S$L1 \}
+	match =other, WHAT$ \{ err$ "endselect without select" \}
+}
+
+; ----------------------------------------------------------------------------
+; The loops.  Each one puts where it breaks to on the loop stack, so that a
+; .LEAVE anywhere inside knows where to go.
+
+macro .while cond, p2, p3
+{
+	parse$ p2, p3
+	s$peek
+	define CHAIN$ no
+	match =conjwhile, S$TYPE \{ define CHAIN$ yes \}
+	match =yes, CHAIN$ \{ s$pop \}
+	match =no, CHAIN$ \{ newwhile$ \}
+	whilepart$ cond
+}
+
+macro newwhile$
+{
+	local top, out, body
+	place$ top
+	define S$L1 top
+	define S$L2 out
+	define S$L3 body
+	l$push out
+}
+
+macro whilepart$ cond
+{
+	match =or, CONJ$ \{ cond$ cond, S$L3, t
+	    s$push conjwhile, S$L1, S$L2, S$L3 \}
+	match =and, CONJ$ \{ cond$ cond, S$L2, f
+	    s$push conjwhile, S$L1, S$L2, S$L3 \}
+	match =none, CONJ$ \{ cond$ cond, S$L2, f
+	    place$ S$L3
+	    s$push while, S$L1, S$L2, none \}
+}
+
+macro .endwhile p1
+{
+	s$pop
+	define WHAT$ other
+	match =while, S$TYPE \{ define WHAT$ while \}
+	match =while, WHAT$ \{ jmp S$L1
+	    place$ S$L2
+	    l$pop \}
+	match =other, WHAT$ \{ err$ "endwhile without while" \}
+}
+
+macro .repeat
+{
+	local top, out
+	place$ top
+	s$push repeat, top, out, none
+	l$push out
+}
+
+macro .until cond, p2, p3
+{
+	parse$ p2, p3
+	s$pop
+	define WHAT$ other
+	match =repeat, S$TYPE \{ define WHAT$ repeat \}
+	match =conjuntil, S$TYPE \{ define WHAT$ repeat \}
+	match =repeat, WHAT$ \{ untilpart$ cond \}
+	match =other, WHAT$ \{ err$ "until without repeat" \}
+}
+
+; The loop goes round again while the condition does not hold, so a plain
+; .UNTIL jumps back when it fails; an AND sends a failure back as well, and
+; an OR lets a condition that holds out of the loop at once.
+macro untilpart$ cond
+{
+	define BARE$ no
+	match , cond \{ define BARE$ yes \}
+	match =yes, BARE$ \{ jmp S$L1
+	    place$ S$L2
+	    l$pop \}
+	match =no, BARE$ \{ untilcond$ cond \}
+}
+
+macro untilcond$ cond
+{
+	match =or, CONJ$ \{ cond$ cond, S$L2, t
+	    s$push conjuntil, S$L1, S$L2, none \}
+	match =and, CONJ$ \{ cond$ cond, S$L1, f
+	    s$push conjuntil, S$L1, S$L2, none \}
+	match =none, CONJ$ \{ cond$ cond, S$L1, f
+	    place$ S$L2
+	    l$pop \}
+}
+
+macro .loop cc
+{
+	s$pop
+	define WHAT$ other
+	match =repeat, S$TYPE \{ define WHAT$ repeat \}
+	match =repeat, WHAT$ \{ turn$ cc
+	    place$ S$L2
+	    l$pop \}
+	match =other, WHAT$ \{ err$ "loop without repeat" \}
+}
+
+macro turn$ cc
+{
+	match , cc \{ loop S$L1 \}
+	match c, cc \{ loop#c S$L1 \}
+}
+
+macro .leave cond, p2, p3
+{
+	parse$ p2, p3
+	l$peek
+	define BARE$ no
+	match , cond \{ define BARE$ yes \}
+	match =yes, BARE$ \{ jmp L$NOW \}
+	match =no, BARE$ \{ cond$ cond, L$NOW, t \}
+}
+
+; ----------------------------------------------------------------------------
+; The files write the statements in capitals and in small letters, which were
+; one name to MASM.
+
+macro .IF cond, p2, p3
+{
+	.if cond, p2, p3
+}
+macro .THEN
+{
+}
+macro .ELSE dist
+{
+	.else dist
+}
+macro .ELSEIF cond, p2, p3
+{
+	.elseif cond, p2, p3
+}
+macro .ENDIF
+{
+	.endif
+}
+macro .SELECT x
+{
+	.select x
+}
+macro .WHEN cond, p2, p3
+{
+	.when cond, p2, p3
+}
+macro .OTHERWISE dist
+{
+	.otherwise dist
+}
+macro .ENDSELECT
+{
+	.endselect
+}
+macro .WHILE cond, p2, p3
+{
+	.while cond, p2, p3
+}
+macro .ENDWHILE p1
+{
+	.endwhile p1
+}
+macro .REPEAT
+{
+	.repeat
+}
+macro .UNTIL cond, p2, p3
+{
+	.until cond, p2, p3
+}
+macro .LOOP cc
+{
+	.loop cc
+}
+macro .LEAVE cond, p2, p3
+{
+	.leave cond, p2, p3
+}
