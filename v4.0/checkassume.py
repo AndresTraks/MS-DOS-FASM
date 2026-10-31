@@ -32,7 +32,7 @@ pointing where the label lives.  MASM's rule is to use whichever assumed
 register reaches the label, DS for preference, and to refuse the line if none
 does; a reference with no override is right only when DS reaches it.
 
-Two passes, because the two programs are laid out differently:
+Three passes, because the programs are laid out differently:
 
   * the kernel: six segments in one group, DOSGROUP, walked by MSDOSLNK.ASM.
     A label is reachable through any register assumed to its own segment or
@@ -42,6 +42,13 @@ Two passes, because the two programs are laid out differently:
     laying the modules of each down in turn.  So a label's segment is the
     half of MSBIOLNK.ASM its module is read in, and nothing but a register
     assumed to that segment reaches it.
+  * the utilities under src/CMD, one program each, taken from the lines
+    assemble.sh builds them with.  One of more than one segment has a link
+    file of the kernel's shape and is read the same way; a .COM has none, and
+    everything it defines is in the single segment its ASSUME puts CS on.
+    What this does not see of them is the message retriever: SYSMSG.INC and
+    MSGSERV.ASM reach their table through M_SEG$, which is a name rather than
+    a register, so those references are not examined.
 
 What it cannot see: a name the sources paste together.  MSSTACK.INC chains
 each hardware interrupt on through "call dword [Old#AA]", where AA is the
@@ -147,6 +154,21 @@ SHARED = re.compile(r"(?i)(DOSSYM|DEVSYM|DOSSEG|DOSMAC|VERSION|BUGTYP|"
                     r"DOSCNTRY|DPL|COPYRIGH|STRUC|SMDOSSYM|VERSIONA)\.")
 
 
+# Where an include is looked for besides the including file's own directory.
+# The kernel and the BIOS keep their modules together; a utility reads the
+# shared headers out of src/INC, which fasm finds through INCLUDE.
+SEARCH = []
+
+
+def find(here, name):
+    """The file an include names, or None."""
+    for d in [here] + SEARCH:
+        p = os.path.normpath(os.path.join(d, name))
+        if os.path.exists(p):
+            return p
+    return None
+
+
 def included(path, seen):
     """A module and whatever it includes of its own, the headers aside."""
     if path in seen:
@@ -158,21 +180,26 @@ def included(path, seen):
         name = m.group(1).replace("\\", "/")
         if SHARED.match(os.path.basename(name)) or name.upper().endswith((".SW", ".CL1", ".CL3")):
             continue
-        p = os.path.normpath(os.path.join(here, name))
-        if os.path.exists(p):
+        p = find(here, name)
+        if p:
             out += included(p, seen)
     return out
 
 
-def kernel_labels(paths):
-    """Every label the kernel defines, and the segment it is defined in."""
+def kernel_labels(paths, default=None):
+    """Every label a program defines, and the segment it is defined in.
+
+    The segments are the ones the link file selects with SEGSEL, which is how
+    the kernel and the .EXE utilities are laid out.  A one-segment .COM has no
+    such blocks, and every label is in the segment named by default.
+    """
     where = {}
     for path in paths:
         stack = []
         for line in lines_of(path):
             if segment_of(line, stack):
                 continue
-            seg = next((s for s in reversed(stack) if s), None)
+            seg = next((s for s in reversed(stack) if s), None) or default
             if seg is None:
                 continue
             code = line.split(";")[0]
@@ -243,8 +270,8 @@ def stream(path, seen=None):
         m = re.match(r"(?i)^\s*include\s+'?([A-Za-z0-9_./\\]+)", line.split(";")[0])
         if m:
             name = m.group(1).replace("\\", "/")
-            sub = os.path.normpath(os.path.join(here, name))
-            if not SHARED.match(os.path.basename(name)) and os.path.exists(sub):
+            sub = find(here, name)
+            if not SHARED.match(os.path.basename(name)) and sub:
                 out += stream(sub, seen)
                 continue
         out.append((path, n, line))
@@ -306,6 +333,38 @@ def report(title, paths, labels, group):
     return total
 
 
+def utilities():
+    """The utilities assemble.sh builds, and the source it hands fasm."""
+    text = read(os.path.join(HERE, "assemble.sh"))
+    return re.findall(r"(?m)^utility\s+(\S+)\s+(\S+)\s+\S+", text)
+
+
+def utility_program(where, source):
+    """One utility's modules, the segment its labels are in, and its group.
+
+    A utility of more than one segment has a link file of the kernel's shape:
+    S_xxx equates name the segments, a walk macro names the modules, and the
+    one fasm segment the file declares is the group MASM counted the offsets
+    from.  A one-segment .COM is its own link file, and every label is in the
+    segment its ASSUME puts CS on.
+    """
+    top = os.path.join(SRC, "CMD", where, source + ".ASM")
+    if not os.path.exists(top):
+        return None
+    text = read(top)
+    body = re.search(r"macro\s+walk\b[^{]*\{(.*?)^\}", text, re.S | re.M | re.I)
+    if body:
+        mods = []
+        for n in re.findall(r"include\s+'([^']+)'", body.group(1), re.I):
+            p = find(os.path.dirname(top), n)
+            if p:
+                mods.append(p)
+        m = re.search(r"(?m)^segment\s+(\w+?)_?\s*$", text)
+        return top, mods, None, m.group(1).upper() if m else None
+    m = re.search(r"(?i);?\s*ASSUME[^\n]*\bCS\s*:\s*(\w+)", text)
+    return top, [top], m.group(1).upper() if m else None, None
+
+
 def main():
     bios = bios_segments()
     paths = sorted(bios)
@@ -322,6 +381,21 @@ def main():
     everything = sorted(set(everything))
     bad += report("the kernel: six segments in DOSGROUP",
                   mods, kernel_labels(everything), "DOSGROUP")
+
+    # The utilities read the shared headers out of src/INC.
+    SEARCH.append(os.path.join(SRC, "INC"))
+    for where, source in utilities():
+        program = utility_program(where, source)
+        if program is None:
+            continue
+        top, mods, default, group = program
+        everything = []
+        for p in mods:
+            everything += included(p, set())
+        everything = sorted(set(everything))
+        bad += report("%s: %s" % (where, "%s, one segment" % default if default
+                                  else "the segments of the group %s" % group),
+                      mods, kernel_labels(everything, default), group)
     return 1 if bad else 0
 
 

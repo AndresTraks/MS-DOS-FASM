@@ -63,6 +63,7 @@ MSG_UTILNAME <MORE>			 ;AN000;
 
 ; One segment, with the program loaded at 100h as a .COM, so CS, DS, ES and
 ; SS are all the same and an offset is an offset.
+;ASSUME	CS:CODE,DS:CODE,ES:CODE,SS:CODE
 	org	100H
 
 
