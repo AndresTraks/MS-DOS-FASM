@@ -33,9 +33,13 @@ trap 'rm -rf "$OUT"' EXIT
 
 ./create_image.sh >/dev/null
 
-# A CONFIG.SYS with one setting in it, so that the file is read and parsed as
-# well as found.
-printf 'FILES=20\r\n' > "$OUT/CONFIG.SYS"
+# A CONFIG.SYS with three settings in it, so that the file is read and parsed
+# as well as found.  SYSINIT matches each keyword against COMTAB in
+# SYSINIT2.ASM with the line already upper cased, so a keyword spelled any
+# other way in the table draws "Unrecognized command in CONFIG.SYS" and the
+# setting is dropped -- which is what the checks below look for the absence
+# of.  STACKS is also what puts the switchable hardware stacks in.
+printf 'FILES=20\r\nSTACKS=9,128\r\nSWITCHES=/K\r\n' > "$OUT/CONFIG.SYS"
 mcopy -o -i msdos.img "$OUT/CONFIG.SYS" ::CONFIG.SYS
 
 # The monitor is on stdin; the screen comes back through pmemsave as the text
@@ -101,5 +105,11 @@ for text, why in want:
     else:
         print("MISSING %s" % text)
         rc = 1
+
+if "Unrecognized command" in screen:
+    print("WRONG   SYSINIT turned a CONFIG.SYS setting down")
+    rc = 1
+else:
+    print("ok      all three CONFIG.SYS settings were taken")
 sys.exit(rc)
 PY
