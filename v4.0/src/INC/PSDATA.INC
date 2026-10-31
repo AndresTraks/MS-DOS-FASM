@@ -461,7 +461,9 @@ P_Save_EOB	   dw	0		;AN000; save pointer to EOB
 P_Found_SYNONYM   dw	0		;AN000; es:@ points to found synonym
 
 P_STRING_BUF	   db	128 dup(0)	;AN000; Pick a operand from command line
-P_STRING_BUF_END  equ	$		;AN000;
+; = and not equ: fasm's equ is text put in where the name is used, so a $
+; in it would be the address of the use and not of this line.
+P_STRING_BUF_END  =	$		;AN000;
 if		   TimeSW		;AN039; For TIME only
 P_ORIG_ORD	   DW	0		;AN039; ORIGINAL ORDINAL FROM CX
 P_ORIG_STACK	   DW	0		;AN039; ORIGINAL VALUE OF STACK FROM SP
@@ -492,7 +494,9 @@ end if					;AN000;(of CAPSW)
 ; (tm06) IF	   FileSW		;AN000;(Check if file spec is supported)
 if		   FileSW+DrvSW 	;AN000;(Check if file spec is supported)
 P_FileSp_Char	   db	'[]|<>+=;"'     ;AN000; delimitter of file spec
-P_FileSp_Len	   equ	($-P_FileSp_Char) ;AN000;
+; = and not equ: fasm's equ is text put in where the name is used, so a $
+; in it would be the address of the use and not of this line.
+P_FileSp_Len	   =	($-P_FileSp_Char) ;AN000;
 end if					;AN000;(of FileSW)
 ; (tm05) IF	   QusSW		;AN000;(Check if quoted string is supported)
 ;(deleted ;AN025;) IF		      QusSW+CmpxSW	   ; (tm05) ;AN000;(Check if quoted string is supported)

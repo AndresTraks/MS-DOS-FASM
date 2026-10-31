@@ -269,7 +269,9 @@ label cp_list word              ;AN001; ;code page attr. get/set list
             dw      2                ;AN001; ; ea value length
             db      "CP"             ;AN001; ; ea name
 cp          dw      ?                ;AN001; ; ea value (code page)
-cp_len      equ     ($ - cp_list)    ;AN001;
+; = and not equ: fasm's equ is text put in where the name is used, so a $
+; in it would be the address of the use and not of this line.
+cp_len      =       ($ - cp_list)    ;AN001;
 
 ;-------Save area for Code Pages
 src_cp  dw      ?               ;AN000; Save area for source code page

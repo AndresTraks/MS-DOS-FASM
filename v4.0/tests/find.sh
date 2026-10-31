@@ -11,7 +11,9 @@
 # COMMAND.COM runs it, from an AUTOEXEC.BAT that puts the file on its input,
 # so the tail FIND parses is the one the interpreter built in its PSP, with
 # the redirection taken out of it, and the prompt at the end is the
-# interpreter having it back.
+# interpreter having it back.  It is run a second time with the file named
+# instead, which is the other way in: FIND opens it itself, and writes the
+# name above what it found.
 set -e
 cd "$(dirname "$0")/.."
 
@@ -28,7 +30,8 @@ mcopy -o -i msdos.img bin/FIND.EXE ::FIND.EXE
 
 # An AUTOEXEC.BAT, which is also what keeps the interpreter from asking for
 # the date and the time.
-printf 'ECHO OFF\r\nFIND /N "line 07" < LINES.TXT\r\n' > "$OUT/AUTOEXEC.BAT"
+printf 'ECHO OFF\r\nFIND /N "line 07" < LINES.TXT\r\nFIND "line 03" LINES.TXT\r\n' \
+    > "$OUT/AUTOEXEC.BAT"
 mcopy -o -i msdos.img "$OUT/AUTOEXEC.BAT" ::AUTOEXEC.BAT
 
 # Twelve numbered lines, one of which FIND is to come back with.
@@ -41,7 +44,7 @@ PY
 mcopy -o -i msdos.img "$OUT/LINES.TXT" ::LINES.TXT
 
 {
-    sleep 28
+    sleep 36
     echo "pmemsave 0xb8000 4000 \"$OUT/screen.bin\""
     sleep 2
     echo quit
@@ -73,12 +76,19 @@ else:
     print("MISSING [7]line 07 of the file FIND is reading")
     rc = 1
 others = [n for n in range(1, 13)
-          if n != 7 and "line %02d of the file FIND" % n in screen]
+          if n not in (3, 7) and "line %02d of the file FIND" % n in screen]
 if others:
     print("WRONG   these lines came back as well: %s" % others)
     rc = 1
 else:
     print("ok      no other line came back")
+
+if "LINES.TXT" in screen and "line 03 of the file FIND is reading" in screen:
+    print("ok      FIND opened the file it was named, and wrote the name "
+          "above the line it matched")
+else:
+    print("MISSING the named file's own run")
+    rc = 1
 
 last = [r for r in rows if r.strip()][-1]
 if last.startswith("A>"):

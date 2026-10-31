@@ -343,7 +343,9 @@ BREAK <Arg_Switch>
 
 if SEGSEL = S_TRANSPACE	;AC000;
 ;    extrn   switch_list:byte
-    switch_count    EQU     $-switch_list
+; = and not equ: fasm's equ is text put in where the name is used, so a $
+; in it would be the address of the use and not of this line.
+    switch_count    =       $-switch_list
 end if
 
 ;---------------
