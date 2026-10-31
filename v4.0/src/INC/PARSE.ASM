@@ -14,8 +14,9 @@
 ;
 ; basesw says which segment register points at the parser's data: DS when
 ; it is 1, ES when it is 0, and CS when the caller has not set it at all.
-; SYSCONF does not set it, so CS it is -- and it has to be written out,
-; fasm's EQU being made as the line is read whichever way the IF went.
+; fasm's EQU is made as the line is read whichever way the IF went, so the
+; question is asked with MATCH instead: a name the caller has not set stands
+; for itself, which is what the first of the three looks for.
 ;if ~ defined basesw;AN022;
 ;   psdata_seg EQU   CS			;AN022;
 ;else					;AN022;
@@ -25,7 +26,9 @@
 ;       psdata_seg EQU	ES		;AN022;ELSE only other choice is ES (basesw EQU 0)
 ;   end if				;AN022;
 ;end if					;AN022;
-psdata_seg EQU   CS			;AN022;
+match =basesw, basesw { psdata_seg EQU CS } ;AN022;
+match =1, basesw { psdata_seg EQU DS }	;AN022;
+match =0, basesw { psdata_seg EQU ES }	;AN022;
 
 ; fasm's EQU is made as the line is read, whether or not the IF holds, so
 ; MATCH asks the question where it counts.
