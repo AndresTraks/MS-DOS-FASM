@@ -22,6 +22,12 @@
 # appear, MAXROW and CURROW are still 25 and 1, and the machine is in the
 # kernel's idle loop with keystrokes going nowhere.
 #
+# Later than that, the memory MORE was loaded into holds something else --
+# the PSP is no longer a PSP -- so MORE does end, and whatever hangs happens
+# after it: the interpreter's own way back from EXEC is the next place to
+# look, and a debugger with a breakpoint on the return from function 4BH
+# would settle it faster than another screen capture.
+#
 # What has been ruled out, each by a program written for the purpose: the
 # loader reads the last partial cluster of a 2137-byte .COM (it prints the
 # eight bytes at its own end); a read into a buffer at an odd offset lands
