@@ -140,13 +140,22 @@ AltPipeChr	equ	"|"             ; alternate pipe character
 
 FCB		EQU	5CH
 
-VARSTRUC	STRUC
-ISDIR		DB	?
-SIZ		DB	?
-TTAIL		DW	?
-INFO		DB	?
-BUF		DB	DIRSTRLEN + 20 DUP (?)
-VARSTRUC	ENDS
+STRUC VARSTRUC
+{
+.ISDIR		DB	?
+.SIZ		DB	?
+.TTAIL		DW	?
+.INFO		DB	?
+.BUF		DB	DIRSTRLEN + 20 DUP (?)
+}
+match =VARSTRUC_LAID_OUT, VARSTRUC_LAID_OUT
+{
+    VARSTRUC_LAID_OUT equ 1
+    virtual at 0
+      VARSTRUC VARSTRUC
+      sizeof.VARSTRUC = $ - VARSTRUC
+    end virtual
+}
 
 fCheckDrive	equ	00000001b
 fSwitchAllowed	equ	00000010b
@@ -173,16 +182,25 @@ fParse		EQU	0001h		; display results of parseline
 
 BatchType   equ 0
 
-BatchSegment	struc
-BatType 	DB	BatchType	; signature
-Batechoflag	DB	0		; G state of echo
-Batlast 	DW	0		; G segment of last batch file
-Batforptr	DW	0		; G segment for FOR command
-Batforflag	DB	0		; G state of FOR
-BatSeek 	DD	?		; lseek position of next char
-BatParm 	DW	10 dup (?)	; pointers to parameters
-BatFile 	DB	?		; beginning of batch file name
-BatchSegment	ends
+STRUC BatchSegment
+{
+.BatType 	DB	BatchType  ; signature
+.Batechoflag	DB	0 ; G state of echo
+.Batlast 	DW	0 ; G segment of last batch file
+.Batforptr	DW	0 ; G segment for FOR command
+.Batforflag	DB	0 ; G state of FOR
+.BatSeek 	DD	? ; lseek position of next char
+.BatParm 	DW	10 dup (?) ; pointers to parameters
+.BatFile 	DB	? ; beginning of batch file name
+}
+match =BatchSegment_LAID_OUT, BatchSegment_LAID_OUT
+{
+    BatchSegment_LAID_OUT equ 1
+    virtual at 0
+      BatchSegment BatchSegment
+      sizeof.BatchSegment = $ - BatchSegment
+    end virtual
+}
 
 ANULL		equ	0		; terminates an argv string
 ARGMAX		equ	64		; max args on a command line
@@ -191,22 +209,40 @@ tplen		equ	64		; max size of one argument
 arg_cnt_error	equ	1		; number of args > MAXARG
 arg_buf_ovflow	equ	2		; overflowed argbuffer
 
-argv_ele   STRUC			; elements in the argv array
-    argpointer	DW	(?)		; pointer to the argstring
-    argflags	DB	(?)		; cparse flags for this argstring
-    argstartel	DW	(?)		; the result of cparse's [STARTEL]
-    arglen	DW	(?)		; cparse's char count + one (for null)
-    argsw_word	DW	(?)		; any switches after this?  what kinds?
-    arg_ocomptr DW	(?)		; pointer into original command string
-argv_ele   ENDS
+STRUC argv_ele	; elements in the argv array
+{
+    .argpointer	DW	(?) ; pointer to the argstring
+    .argflags	DB	(?) ; cparse flags for this argstring
+    .argstartel	DW	(?) ; the result of cparse's [STARTEL]
+    .arglen	DW	(?) ; cparse's char count + one (for null)
+    .argsw_word	DW	(?) ; any switches after this?  what kinds?
+    .arg_ocomptr DW	(?) ; pointer into original command string
+}
+match =argv_ele_LAID_OUT, argv_ele_LAID_OUT
+{
+    argv_ele_LAID_OUT equ 1
+    virtual at 0
+      argv_ele argv_ele
+      sizeof.argv_ele = $ - argv_ele
+    end virtual
+}
 
-arg_unit    STRUC
-    argv	DB	(ARGMAX * SIZE argv_ele) DUP (?)
-    argvcnt	DW	(?)		; number of arguments
-    argswinfo	DW	(?)		; Switch information for entire line
-    argbuf	DW	ARGBLEN DUP (?) ; storage for argv strings
-    argforcombuf db	COMBUFLEN DUP (?) ; Original for loop command string
-arg_unit    ENDS
+STRUC arg_unit
+{
+    .argv	DB	(ARGMAX * sizeof.argv_ele) DUP (?)
+    .argvcnt	DW	(?) ; number of arguments
+    .argswinfo	DW	(?) ; Switch information for entire line
+    .argbuf	DW	ARGBLEN DUP (?)  ; storage for argv strings
+    .argforcombuf db	COMBUFLEN DUP (?)  ; Original for loop command string
+}
+match =arg_unit_LAID_OUT, arg_unit_LAID_OUT
+{
+    arg_unit_LAID_OUT equ 1
+    virtual at 0
+      arg_unit arg_unit
+      sizeof.arg_unit = $ - arg_unit
+    end virtual
+}
 
 parseflags RECORD special_delim:1, unused:4, path_sep:1, wildcard:1, sw_flag:1
 
@@ -224,14 +260,14 @@ SwitchCopy	EQU	SwitchV + SwitchA + SwitchB + fSwitch
 break <Trap:  Get the attention of MSDOS>
 ;   TRAP snares the operating system for a service call
 ; AX, as well as any other registers MS-DOS takes a fancy to, will be crunched.
-trap	MACRO	dos_function,dos_info
+macro trap dos_function,dos_info {
     ifnb    <dos_info>
 	mov	AX, (dos_function SHL 8) + dos_info
     else
 	mov	AX, (dos_function SHL 8)
     endif
 	int	int_command
-ENDM
+}
 
 ;
 ; Equates for initialization

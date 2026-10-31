@@ -3,26 +3,26 @@
 ; This file is included by command.asm and is used as the default command
 ; environment.
 
-ENVARENA  SEGMENT PUBLIC PARA
-	ORG 0
+if SEGSEL = S_ENVARENA
+;	ORG 0	; the flat layout is already here
 	DB  10h  DUP (?)		 ;Pad for memory allocation addr mark
-ENVARENA   ENDS
+end if
 
-ENVIRONMENT SEGMENT PUBLIC PARA        ; Default COMMAND environment
+if SEGSEL = S_ENVIRONMENT	; Default COMMAND environment
 
-	PUBLIC	ECOMSPEC,ENVIREND,PATHSTRING
+;	PUBLIC	ECOMSPEC,ENVIREND,PATHSTRING
 
-	ORG	0
+;	ORG	0	; the flat layout is already here
 PATHSTRING DB	"PATH="
-USERPATH LABEL	BYTE
+label USERPATH byte
 
 	DB	0		; Null path
 	DB	"COMSPEC="
 ECOMSPEC DB	"\COMMAND.COM"      ;AC062
 	DB	134 DUP (0)
 
-ENVIREND	LABEL	BYTE
+label ENVIREND byte
 
 ENVIRONSIZ EQU	$-PATHSTRING
 ENVIRONSIZ2 EQU $-ECOMSPEC
-ENVIRONMENT ENDS
+end if
