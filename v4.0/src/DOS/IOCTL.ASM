@@ -526,7 +526,7 @@ IOCTLShare:
 	Context DS
 ;ASSUME	DS:NOTHING
 	MOV	SI,OPENBUF
-	ADD	BL,"a"
+	ADD	BL,"A"
 	MOV	[SI],BL
 	MOV	word [SI+1],003AH	; ":",0
 	MOV	AX,0300H

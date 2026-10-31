@@ -396,7 +396,7 @@ GoGetCh:
 	transfer    GETCH		; no, ignore sequence
 EatParm:
 	invoke	STD_CON_INPUT_NO_ECHO$	; get argument
-	CMP	AL,'a'                  ; is it alphabetic arg?
+	CMP	AL,'A'                  ; is it alphabetic arg?
 	JAE	EatAlpha		; yes, go snarf one up
 	XOR	BP,BP			; init digit counter
 	JMP	InDigit 		; jump into internal eat digit routine

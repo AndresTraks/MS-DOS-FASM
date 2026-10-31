@@ -158,7 +158,7 @@ found_entry:
 	LES	DI,[ss:DMAADD]
 	MOV	SI,[ss:WFP_START]		; get pointer to beginning
 	LODSB
-	SUB	AL,'a'-1                ; logical drive
+	SUB	AL,'A'-1                ; logical drive
 	STOSB				; High bit not set (local)
 found_it:
 	LES	DI,[ss:DMAADD]
@@ -277,7 +277,7 @@ LOCAL_SEARCH_NEXT:
 	EnterCrit   critDisk
 	MOV	word [THISCDS],DummyCDS
 	MOV	word [THISCDS+2],CS
-	ADD	AL,'a'-1
+	ADD	AL,'A'-1
 	invoke	InitCDS
 
 ;	invoke	GetThisDrv		; Set CDS pointer

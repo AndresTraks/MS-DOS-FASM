@@ -117,7 +117,7 @@ errdriv:
 	Context DS
 	MOV	SI,OPENBUF
 	MOV	[SI],AL
-	ADD	byte [SI],"a"
+	ADD	byte [SI],"A"
 	MOV	word [SI+1],003AH	; ":",0
 	MOV	AX,0300H
 	CLC

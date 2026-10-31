@@ -219,7 +219,7 @@ Procedure InitCDS,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGroup
 	MOV	AH,':'
 	PUSH	AX
-	SUB	AL,"a"-1                ; A = 1
+	SUB	AL,"A"-1                ; A = 1
 	CMP	[ss:NUMIO],AL
 	POP	AX
 	LES	DI,[ss:THISCDS]
@@ -237,7 +237,7 @@ Procedure InitCDS,NEAR
 	PUSH	AX
 	PUSH	DS
 	PUSH	SI
-	SUB	AL,"a"                  ; A = 0
+	SUB	AL,"A"                  ; A = 0
 	invoke	FIND_DPB
 	JC	PRET			; OOOOPPPPPSSSS!!!!
 	MOV	word [es:DI+curdir_list.curdir_devptr],SI
@@ -382,7 +382,7 @@ GetMap:
 	SaveReg <AX,ES,DI>
 	MOV	word [ss:THISCDS],DummyCDS
 	MOV	word [ss:THISCDS+2],CS	;	ThisCDS = &DummyCDS;
-	ADD	AL,'a'
+	ADD	AL,'A'
 	CALL	InitCDS 		;	InitCDS(c);
 	TEST	[es:DI+curdir_list.curdir_flags],curdir_inuse	; Clears carry
 	RestoreReg  <DI,ES,AX>

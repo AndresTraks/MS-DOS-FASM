@@ -495,7 +495,7 @@ GetDigit:
 	ADD	AL,'0'                  ; turn into digit
 	CMP	AL,'9'                  ; bigger than 9
 	JBE	DoStore 		; no, stash it
-	ADD	AL,'a'-'0'-10           ; convert into uppercase letter
+	ADD	AL,'A'-'0'-10           ; convert into uppercase letter
 DoStore:
 	STOSB				; drop in the character
 	RestoreReg <AX,CX>		; regain the number and count

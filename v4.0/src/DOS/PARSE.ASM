@@ -175,7 +175,7 @@ pcont1: cmp     al,'.'
 	dec     si
 	dec     di
 	jmp     rcont
-pcont2: cmp     al,'a'                  ; if token may start with a drive
+pcont2: cmp     al,'A'                  ; if token may start with a drive
 	jge     drive                   ; designator, go to drive. otherwise
 	jmp     [ss:Name1]                   ; parse a file name.
 

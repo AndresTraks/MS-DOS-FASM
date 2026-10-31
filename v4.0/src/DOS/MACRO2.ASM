@@ -1198,7 +1198,7 @@ Procedure TextFromDrive,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
 	INC	AL
 	Entry	TextFromDrive1
-	ADD	AL,'a'-1                ;   *d++ = drive-1+'A';
+	ADD	AL,'A'-1                ;   *d++ = drive-1+'A';
 	MOV	AH,":"                  ;   strcat (d, ":");
 	STOSW
 	return

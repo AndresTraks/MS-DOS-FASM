@@ -736,7 +736,7 @@ RDLAST:
 ;	Carry clear
 
 	entry	SETSFT
-	DOSAssume   CS,<DS>,"SETSFT"
+	DOSAssume   CS,<DS>,"SetSFT"
 ;	ASSUME	ES:NOTHING
 
 	LES	DI,[THISSFT]

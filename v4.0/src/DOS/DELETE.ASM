@@ -325,7 +325,7 @@ end if
 	LES	DI,[ss:THISCDS]
 ;ASSUME	ES:NOTHING
 	MOV	AH,byte [es:DI]	; Get drive
-	SUB	AH,'a'                  ; Convert to 0-based
+	SUB	AH,'A'                  ; Convert to 0-based
 	mov	byte [ss:VOLCHNG_FLAG],AH
 	XOR	BH,BH			;>32mb delte volume id from boot record ;AN000;
 	invoke	Set_Media_ID		;>32mb set voulme id to boot record	;AN000;

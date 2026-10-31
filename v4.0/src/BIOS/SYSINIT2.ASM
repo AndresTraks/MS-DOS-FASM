@@ -1520,7 +1520,7 @@ COMTAB:
 	db     10,"MULTITRACK", 'M'     ;AN002;
 	DB	8,"DRIVPARM", 'P'       ; RS for DOS 3.2
 		if     STACKSW
-	DB	6,"Stacks",   'K'       ; BAS for DOS 3.2
+	DB	6,"STACKS",   'K'       ; BAS for DOS 3.2
 		end if
 	DB	7,"COUNTRY",  'Q'
 	DB	5,"SHELL",    'S'
@@ -1530,7 +1530,7 @@ COMTAB:
 ;;;;	   DB	   8,"SWITCHAR",'W'     ; NO LONGER SUPPORTED
 	db	7,"COMMENT",  'Y'       ;AN000;
 	db	3,"REM",      '0'       ;AN004;
-	db	8,"Switches", '1'       ;AN013;
+	db	8,"SWITCHES", '1'       ;AN013;
 	DB	0
 
 ;public DeviceParameters

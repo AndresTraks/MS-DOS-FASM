@@ -225,7 +225,7 @@ Create_ok:
 	jz	NoVolLabel
 	LES	DI,[ss:THISCDS]
 	mov	ah,byte [es:DI]	; get drive letter
-	sub	ah,'a'                  ; convert to drive letter
+	sub	ah,'A'                  ; convert to drive letter
 	mov	[ss:VOLCHNG_FLAG],ah	;Set flag to indicate volid change
 	MOV	BH,1			;AN000;>32mb set volume id to boot record
 	CALL	Set_Media_ID		;AN000;>32mb
