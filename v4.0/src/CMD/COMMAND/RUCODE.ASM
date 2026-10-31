@@ -8,7 +8,7 @@ TITLE	COMMAND Language modifiable Code Resident
 .xcref
 include 'DOSSYM.INC' ;AC000;
 include 'DOSCNTRY.INC' ;AC000;
-DEBUG = 0				; NEED TO SET IT TO WHAT IT IS IN DOSSYM.INC
+debug = 0				; NEED TO SET IT TO WHAT IT IS IN DOSSYM.INC
 
 
 	include 'DEVSYM.INC'
@@ -20,7 +20,7 @@ DEBUG = 0				; NEED TO SET IT TO WHAT IT IS IN DOSSYM.INC
 .cref
 
 
-Tokenized   =	FALSE
+tokenized   =	FALSE
 
 if SEGSEL = S_DATARES	;AC000;
 ;	EXTRN	abort_char:byte
@@ -69,7 +69,7 @@ if SEGSEL = S_DATARES	;AC000;
 ;	EXTRN	VolName:BYTE
 ;	EXTRN	yes_char:byte
 
-	IF	Tokenized
+	IF	tokenized
 ;	EXTRN	IOTYP:BYTE
 ;	EXTRN	MESADD:BYTE
 end if
@@ -131,12 +131,12 @@ DSKERR:
 	PUSH	AX
 	MOV	DS,BP
 	MOV	AX,word [SI+SYSDEV.SDEVATT]
-	MOV	[CDEVAT],AH
+	MOV	[cs:CDEVAT],AH
 	PUSH	CS
 	POP	ES
 	MOV	DI,DEVENAM
 	MOV	CX,8
-	ADD	SI,SDEVNAME			; Suck up device name (even on Block)
+	ADD	SI,SYSDEV.SDEVNAME ; Suck up device name (even on Block)
 	REP	MOVSB
 	POP	AX
 	POP	CX
@@ -167,7 +167,7 @@ NOHARDE:
 	MOV	SI,[MWRITE] ;AC000;
 
 SAVMES:
-	IF	Tokenized
+	IF	tokenized
 	LODSW
 	MOV	word [IOTYP],AX
 	LODSW
@@ -264,7 +264,7 @@ GotStyle:
 	xor	al,al				;  the high byte on for rprint
 	repnz	scasb
 
-	IF	Tokenized
+	IF	tokenized
 	or	byte [di-2],80h
 	call	RPRINT				; Print the message
 	and	byte [di-2], NOT 80h     ; Restore msg to original condition
@@ -298,7 +298,7 @@ CheckErrType:
 	jmp     ASK
 
 ContOld:
-	IF	NOT Tokenized
+	IF	NOT tokenized
 	MOV	AX,SI				;AN000; get reading/writing for message
 	MOV	DH,util_msg_class		;AN000; this is a utility message
 	CALL	SYSGETMSG			;AN000; get the message
@@ -443,7 +443,7 @@ JustExit:
 ;ASSUME	DS:RESGROUP
 	call	reset_msg_pointers		;AN000; reset critical & parse message addresses
 	mov	ax,[PARENT]			; Load real parent PID
-	mov	word [ds:PDB_Parent_PID],ax     ; Put it back where it belongs
+	mov	word [ds:Process_data_block.PDB_Parent_PID],ax     ; Put it back where it belongs
 	mov	ax,(Exit SHL 8) OR 255
 	int	21H
 
@@ -492,7 +492,7 @@ FATERR:
 	MOV	SI,BADFAT_BLOCK                 ;AN000; get address of subst block
 	CALL	RPRINT
 
-	IF	Tokenized
+	IF	tokenized
 	MOV	DX,ERRMES
 	CALL	RPRINT
 end if
@@ -555,7 +555,7 @@ end if
 ; bit to determine the end-of-string.
 ;
 
-If Tokenized
+If tokenized
 	SaveReg <AX,DX,SI>
 	MOV	SI,DX
 

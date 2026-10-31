@@ -96,7 +96,7 @@ if SEGSEL = S_TRANCODE
 SINGLETEST:
 ;	ASSUME	DS:NOTHING
 	push	ds
-	MOV	DS,[RESSEG]
+	MOV	DS,[cs:RESSEG]
 ;	ASSUME	DS:ResGroup
 	CMP	word [SINGLECOM],0
 	JZ	TestDone
@@ -131,7 +131,7 @@ PIPEDEL:
 ;	assume	ds:nothing
 	push	ds
 	PUSH	DX
-	mov	ds,[RESSEG]
+	mov	ds,[cs:RESSEG]
 ;	assume	ds:ResGroup
 	mov	DX,Pipe1                 ; Clean up in case ^C
 	MOV	AH,Unlink
@@ -228,7 +228,7 @@ no_pipeerr:
 	MOV	BX,AX
 	MOV	AL,0FFH
 	XCHG	AL,[BX+Process_data_block.PDB_JFN_Table]
-	MOV	[ds:PDB_JFN_Table],AL		; Redirect
+	MOV	byte [ds:Process_data_block.PDB_JFN_Table],AL      ; Redirect
 
 FIRSTPIPE:
 	MOV	DI,COMBUF + 2
@@ -272,7 +272,7 @@ NOTKANJ5:
 IsPipe2:
 	MOV	byte [es:DI-1],0DH
 	DEC	CX
-	MOV	[COMBUF+1],CL
+	MOV	[es:COMBUF+1],CL
 	DEC	SI
 	MOV	[PIPEPTR],SI			; On to next pipe element
 	MOV	DX,[OUTPIPEPTR]
@@ -285,13 +285,13 @@ IsPipe2:
 	MOV	BX,AX
 	MOV	AL,0FFH
 	XCHG	AL,[BX+Process_data_block.PDB_JFN_Table]
-	MOV	[ds:PDB_JFN_Table+1],AL
+	MOV	byte [ds:Process_data_block.PDB_JFN_Table+1],AL
 	XCHG	DX,[INPIPEPTR]			; Swap for next element of pipe
 	MOV	[OUTPIPEPTR],DX
 	jmp     PIPECOM
 
 LASTPIPE:
-	MOV	[COMBUF+1],CL
+	MOV	[es:COMBUF+1],CL
 	DEC	SI
 	MOV	[PIPEPTR],SI			; Point at the CR (anything not '|' will do)
 	CALL	TESTDOREOUT			; Set up the redirection if specified
@@ -333,7 +333,7 @@ DATINIT:
 	CALL	CTIME
 	POP	DS
 	POP	ES
-	RET
+	RETF
 ;DATINIT ENDP
 
 ; DATE - Gets and sets the time
@@ -522,7 +522,7 @@ SetInitFlag:
 PipeOff:
 ;	ASSUME	DS:NOTHING,ES:NOTHING
 	SaveReg <DS,AX>
-	MOV	DS,[RESSEG]
+	MOV	DS,[cs:RESSEG]
 ;	ASSUME	DS:RESGroup
 	XOR	AL,AL
 	XCHG	[PIPEFLAG],AL
@@ -544,8 +544,8 @@ PRINT_TIME:
 	POP	ES
 	xchg	ch,cl				;AN000; switch hours & minutes
 	xchg	dh,dl				;AN000; switch seconds & hundredths
-	mov	[PromTim_hr_min],cx        ;AC000; put hours and minutes into message subst block
-	mov	[PromTim_Sec_hn],dx        ;AC000; put seconds and hundredths into message subst block
+	mov	[cs:PromTim_hr_min],cx        ;AC000; put hours and minutes into message subst block
+	mov	[cs:PromTim_Sec_hn],dx        ;AC000; put seconds and hundredths into message subst block
 	mov	dx,promTim_Ptr                  ;AC000; set up message for output
 	invoke	STD_PRINTF
 ;AD061; mov	promTim_hr_min,0		;AC000; reset hour, minutes, seconds, and hundredths
@@ -581,20 +581,20 @@ GETDAT:			;AC000;
 	int	int_command			;  print a message describing it
 	mov	si,dx
 	lodsw
-	mov	dx,[USADat_Ptr] ;AC000; get mm-dd-yy
+	mov	dx,[cs:USADat_Ptr] ;AC000; get mm-dd-yy
 	dec	ax
 	js	printformat
-	mov	dx,[EurDat_Ptr] ;AC000; get dd-mm-yy
+	mov	dx,[cs:EurDat_Ptr] ;AC000; get dd-mm-yy
 	jz	printformat
-	mov	dx,[JapDat_Ptr] ;AC000; get yy-mm-dd
+	mov	dx,[cs:JapDat_Ptr] ;AC000; get yy-mm-dd
 printformat:
 	mov	ax,dx				;AN000; get message number of format
 	mov	dh,util_msg_class		;AN000; this is a utility message
 	call	TSYSGETMSG			;AN000; get the address of the message
-	mov	[NewDat_Format],si ;AN000; put the address in subst block
+	mov	[cs:NewDat_Format],si ;AN000; put the address in subst block
 	MOV	DX,NewDat_Ptr                  ;AC000; get address of message to print
 	invoke	STD_PRINTF
-	mov	word [NewDat_Format],no_subst      ;AN000; reset subst block
+	mov	word [cs:NewDat_Format],no_subst      ;AN000; reset subst block
 
 	MOV	AH,Std_Con_String_Input
 	MOV	DX,COMBUF

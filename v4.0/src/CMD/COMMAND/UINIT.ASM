@@ -105,7 +105,7 @@ lcasea		db	"a"
 lcasez		db	"z"
 fslash		db	"/"
 bslash		db	"\"
-space		db	" "
+SPACE		db	" "
 scswitch	db	"C"                             ; Single command
 ucasea		db	"A"
 

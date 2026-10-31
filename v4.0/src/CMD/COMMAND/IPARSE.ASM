@@ -17,14 +17,21 @@ if SEGSEL = S_INIT	;AN000;
 
 ;AD054; public	SYSPARSE		;AN000;
 
-	DateSW	equ	0		;AN000; do not Check date format
-	TimeSW	equ	0		;AN000; do not Check time format
-	CmpxSW	equ	0		;AN000; do not check complex list
-	KeySW	equ	0		;AN025; do not support keywords
-	Val2SW	equ	0		;AN025; do not Support value definition 2
-	Val3SW	equ	0		;AN000; do not Support value definition 3
-	QusSW	equ	0		;AN025; do not include quoted string
-	DrvSW	equ	0		;AN025; do not include drive only
+; These are the switches the parser this module used to include was built
+; with, and the include is deleted: SYSPARSE is the transient's now, and
+; TPARSE.ASM asks for it with switches of its own.  An EQU is made as the line
+; is read whichever way the IF went, and one assembly reads the whole program,
+; so leaving them here would build the transient's parser without the date,
+; time, third value list and drive-only forms that TPARSE.ASM asks nothing
+; about and PSDATA.INC therefore turns on.
+;	DateSW	equ	0		;AN000; do not Check date format
+;	TimeSW	equ	0		;AN000; do not Check time format
+;	CmpxSW	equ	0		;AN000; do not check complex list
+;	KeySW	equ	0		;AN025; do not support keywords
+;	Val2SW	equ	0		;AN025; do not Support value definition 2
+;	Val3SW	equ	0		;AN000; do not Support value definition 3
+;	QusSW	equ	0		;AN025; do not include quoted string
+;	DrvSW	equ	0		;AN025; do not include drive only
 
 .xlist
 .xcref

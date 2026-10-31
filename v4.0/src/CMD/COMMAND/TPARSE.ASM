@@ -67,7 +67,7 @@ Append_parse:			;AN010;
 
 	call	SysParse		;AN010;
 
-	ret				;AN010;
+	RETF   ;AN010;
 
 ;Append_parse	endp			;AN010;
 

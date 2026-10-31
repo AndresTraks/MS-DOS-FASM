@@ -376,7 +376,7 @@ linperpag	dw	LINESPERPAGE		;AN000; display length (default to linesperpage)
 
 label vol_ioctl_buf byte   ;AN000; buffer for ioctl volume label/serial call
 		dw	0			;AN000; info level
-vol_serial	dd	0			;AN000; volume serial number
+VOL_SERIAL	dd	0			;AN000; volume serial number
 vol_label	db	11 dup (" ")            ;AN000; volume label - init to blanks
 		db	8  dup (" ")            ;AN000; file system type
 
@@ -451,7 +451,7 @@ PARSE1_ADDR	DD	0			;AN000;  numeric value / address
 ;
 
 label DATE_OUTPUT byte   ;AN000;
-DATE_TYPE_TSPC	DB	0			;AN000;  type
+Date_Type_TSPC	DB	0			;AN000;  type
 		DB	0			;AN000;  return value
 		DW	0			;AN000;  es offset of synonym
 DATE_YEAR	DW	0			;AN000;  year
@@ -479,7 +479,7 @@ label DRIVE_OUTPUT byte   ;AN000;
 DRIVE_TYPE	DB	0			;AN000;  type
 DRIVE_VALUE	DB	0			;AN000;  return value
 		DW	0			;AN000;  es offset of synonym
-DRIVE_NUMBER	DB	0			;AN000;  drive number
+Drive_Number	DB	0			;AN000;  drive number
 		DB	0,0,0			;AN000;  reserved
 
 label TRANSPACEEND byte

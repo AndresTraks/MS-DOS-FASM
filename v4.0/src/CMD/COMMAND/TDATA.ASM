@@ -309,17 +309,17 @@ COMTAB	DB	3,"DIR",fSwitchAllowed+fCheckDrive
 	DB	3,"VOL",fSwitchAllowed+fCheckDrive   ;AC018; P3903
 	DW	VOLUME                   ; In TCMD1.ASM
 	DB	2,"CD",fSwitchAllowed+fCheckDrive    ;AC018; P3903
-	DW	CHDir$                   ; In TENV.ASM
+	DW	CHDIR$                   ; In TENV.ASM
 	DB	5,"CHDIR",fSwitchAllowed+fCheckDrive ;AC018; P3903
-	DW	CHDir$                   ; In TENV.ASM
+	DW	CHDIR$                   ; In TENV.ASM
 	DB	2,"MD",fSwitchAllowed+fCheckDrive    ;AC018; P3903
-	DW	MKDir$                   ; In TENV.ASM
+	DW	MKDIR$                   ; In TENV.ASM
 	DB	5,"MKDIR",fSwitchAllowed+fCheckDrive ;AC018; P3903
-	DW	MKDir$                   ; In TENV.ASM
+	DW	MKDIR$                   ; In TENV.ASM
 	DB	2,"RD",fSwitchAllowed+fCheckDrive    ;AC018; P3903
-	DW	RMDir$                   ; In TENV.ASM
+	DW	RMDIR$                   ; In TENV.ASM
 	DB	5,"RMDIR",fSwitchAllowed+fCheckDrive ;AC018; P3903
-	DW	RMDir$                   ; In TENV.ASM
+	DW	RMDIR$                   ; In TENV.ASM
 	DB	5,"BREAK",fSwitchAllowed        ;AC018; P3903
 	DW	CNTRLC                   ; In TUCODE.ASM
 	DB	6,"VERIFY",fSwitchAllowed       ;AC018; P3903
@@ -331,7 +331,7 @@ COMTAB	DB	3,"DIR",fSwitchAllowed+fCheckDrive
 	DB	4,"PATH",fSwitchAllowed
 	DW	PATH                   ; In TCMD2.ASM
 	DB	4,"EXIT",0
-	DW	Exit$                   ; In TCMD2.ASM
+	DW	EXIT$                   ; In TCMD2.ASM
 	DB	4,"CTTY",fCheckDrive+fSwitchAllowed
 	DW	CTTY                   ; In TCMD2.ASM
 	DB	4,"ECHO",fSwitchAllowed
@@ -343,7 +343,7 @@ COMTAB	DB	3,"DIR",fSwitchAllowed+fCheckDrive
 	DB	2,"IF",fSwitchAllowed
 	DW	IF$                   ; In TBATCH.ASM
 	DB	3,"FOR",fSwitchAllowed
-	DW	FOR$                   ; In TBATCH.ASM
+	DW	for$                   ; In TBATCH.ASM
 	DB	3,"CLS",0
 	DW	CLS                   ; In TCMD2.ASM
 	DB	8,"TRUENAME",fSwitchAllowed+fCheckDrive  ;AN000; P3903 changed

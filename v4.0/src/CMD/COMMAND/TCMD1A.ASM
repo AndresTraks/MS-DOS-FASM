@@ -180,7 +180,7 @@ dirscan_cont2:
 	jmp	dir_err_setup			;AN022; otherwise - go issue error message
 
 dir_check_device:				;AN022;
-	test	byte [(DIRBUF+find_buf_attr)],attr_device   ;AC000;
+	test	byte [(DIRBUF+find_buf.find_buf_attr)],attr_device        ;AC000;
 	jz	dir_fspec_end			;AC000; no, go do normal operation
 	mov	word [COMSW],-2    ;AC000; signal device
 
@@ -287,7 +287,7 @@ DoParse_TCMD1A:
 	lodsw					;AN000; bypass drive
 
 dir_no_drive:
-	cmp	[si],".."
+	cmp	word [si],".."
 	jnz	DoRealParse
 	cmp	byte [si+2],0
 	jnz	DoRealParse

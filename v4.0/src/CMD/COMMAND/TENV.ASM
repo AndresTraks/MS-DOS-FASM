@@ -188,7 +188,7 @@ add_name_ret:
 ; Generate drive letter for display
 ;
 	xor	ax,ax				;g assume no drive first
-	mov	[COMDRV],al ;g
+	mov	[es:COMDRV],al ;g
 	push	ax				;AN000;  3/3/KK
 	mov	al,[si] 			;AN000;  3/3/KK
 	call	TESTKANJ			;AN000;  3/3/KK
@@ -201,7 +201,7 @@ add_name_ret:
 	sub	al,'A'                          ; convert to 0-based
 	add	di,2
 	inc	al				; convert to 1-based number
-	mov	[COMDRV],al
+	mov	[es:COMDRV],al
 ;
 ; Stick the drive letter in the prompt message.  Nothing special needs to be
 ; done here..
@@ -210,7 +210,7 @@ add_name_ret:
 	add	al,'A'-1
 
 gotdrive_TENV:					;g
-	mov	[COMSPEC_PRINT],di ;g point to beginning of name after drive
+	mov	[es:COMSPEC_PRINT],di ;g point to beginning of name after drive
 	mov	[es:cpdrv],al
 ;
 ; Copy chars until delim
@@ -232,7 +232,7 @@ CopyDone_TENV:
 	stosb
 	mov	byte [comspec_flag],0
 	dec	di
-	mov	[comspec_end],di
+	mov	[es:comspec_end],di
 
 	ret
 
@@ -319,7 +319,7 @@ FIND:
 	CALL	COUNT0				; CX = LENGTH OF NAME
 	MOV	ES,[RESSEG]
 ;ASSUME	ES:RESGROUP
-	MOV	ES,[ENVIRSEG]
+	MOV	ES,[es:ENVIRSEG]
 ;ASSUME	ES:NOTHING
 	XOR	DI,DI
 
@@ -420,7 +420,7 @@ GETARG:
 SCAN_DOUBLE_NULL:
 	MOV	ES,[RESSEG]
 ;ASSUME	ES:RESGROUP
-	MOV	ES,[ENVIRSEG]
+	MOV	ES,[es:ENVIRSEG]
 ;ASSUME	ES:NOTHING
 	XOR	DI,DI
 ;
@@ -599,7 +599,7 @@ GETENVSIZ:
 	MOV	AX,ES
 	DEC	AX				;Point at arena
 	MOV	ES,AX
-	MOV	AX,[es:arena_size]
+	MOV	AX,word [es:arena.arena_size]
 	MOV	CL,4
 	SHL	AX,CL				;Convert to bytes
 	MOV	CX,AX

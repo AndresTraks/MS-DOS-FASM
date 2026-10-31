@@ -66,7 +66,7 @@ FORTERM:
 	push	cs				;AN037;
 	pop	es				;AN037;
 	call	ForOff
-	mov	ds,[RESSEG]
+	mov	ds,[es:RESSEG]
 ;ASSUME	DS:RESGROUP
 	CMP	word [SINGLECOM],0FF00H
 	JNZ	BATCRLF
@@ -279,9 +279,9 @@ for_stosb:
 
 for_made_com:					; finished all the <command> args
 	not	CL				; compute and record command length
-	mov	[COMBUF+1], CL
+	mov	[es:COMBUF+1], CL
 
-	mov	DS, [RESSEG]
+	mov	DS, [es:RESSEG]
 ;assume	DS:resgroup
 
 	test	byte [ECHOFLAG],1 ; shall we echo this <command>, dearie?
@@ -321,20 +321,20 @@ fornesterrj:					; no multi-loop processing... yet!
 forerrorj:
 	jmp	FORERROR
 
-	BREAK	For$
+	BREAK	for$
 ;assume	ds:trangroup,es:trangroup
 
 for$:
 	mov	ES, [RESSEG]
 ;assume	ES:resgroup
 
-	cmp	byte [FORFLAG],0   ; is another one already running?
+	cmp	byte [es:FORFLAG],0   ; is another one already running?
 	jnz	fornesterrj			; if flag is set.... boom!
 
 ;
 ; Turn off any pipes in progress.
 ;
-	cmp	byte [PIPEFILES],0 ; Only turn off if present.
+	cmp	byte [es:PIPEFILES],0 ; Only turn off if present.
 	jz	NoPipe_TFOR
 	invoke	PIPEDEL
 NoPipe_TFOR:
@@ -451,7 +451,7 @@ for_do:
 	mov	BX, sizeof.for_info - sizeof.arg_unit
 	invoke	Save_Args			; extra bytes needed for for-info
 	pushf
-	mov	[FORPTR], AX
+	mov	[es:FORPTR], AX
 	invoke	Alloc_TPA			; ALLOC_TPA clobbers registers...
 	popf
 	pop	BP
@@ -464,7 +464,7 @@ for_do:
 	jc	for_alloc_err
 
 	push	ES				; save resgroup seg...
-	push	word [FORPTR]
+	push	word [es:FORPTR]
 	pop	ES
 ;assume	ES:for_segment				; make references to for-info segment
 
@@ -479,10 +479,10 @@ for_do:
 	pop	ES
 ;assume	ES:resgroup
 
-	inc	byte [FORFLAG]
-	cmp	word [SINGLECOM], -1
+	inc	byte [es:FORFLAG]
+	cmp	word [es:SINGLECOM], -1
 	jnz	for_ret
-	mov	word [SINGLECOM], 0FF00H
+	mov	word [es:SINGLECOM], 0FF00H
 for_ret:
 	ret
 
@@ -530,9 +530,9 @@ NOFORP3:
 ForOff:
 ;	assume DS:NOTHING,ES:NOTHING
 	SaveReg <AX,ES>
-	mov	es,[RESSEG]
+	mov	es,[cs:RESSEG]
 ;	assume	es:ResGroup
-	mov	AX,[FORPTR]
+	mov	AX,[es:FORPTR]
 	or	ax,ax
 	jz	FreeDone
 	push	es
@@ -541,8 +541,8 @@ ForOff:
 	int	21h
 	pop	es
 FreeDone:
-	mov	word [FORPTR],0
-	mov	byte [FORFLAG],0
+	mov	word [es:FORPTR],0
+	mov	byte [es:FORFLAG],0
 	RestoreReg  <ES,AX>
 	return
 

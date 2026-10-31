@@ -162,7 +162,7 @@ GetByteDone:
 
 EndProc GETBATBYT
 
-	BREAK	<If$ - conditional execution>
+	BREAK	<IF$ - conditional execution>
 ;assume	ds:trangroup,es:trangroup
 
 IFERRORP:
@@ -516,7 +516,7 @@ SkipErr:
 
 EndProc SkipDelim
 
-	BREAK  Call$
+	BREAK  CALL$
 
 ;  CALL is an internal command that transfers control to a .bat, .exe, or
 ;  .com file.  This routine strips the CALL off the command line,  sets
@@ -591,7 +591,7 @@ GotoOpen:
 NOINC:
 	SUB	CX,11
 	NEG	CX
-	MOV	[GOTOLEN],CX
+	MOV	[es:GOTOLEN],CX
 ;
 ; At beginning of file.  Skip to first non-delimiter char
 ;
@@ -631,7 +631,7 @@ CHKLABEL:
 	CALL	SkipDelim
 	JC	BadGoto
 	MOV	DI,FCB+1
-	MOV	CX,[GOTOLEN]
+	MOV	CX,[es:GOTOLEN]
 	jmp     GotByte
 
 NEXTCHRLP:
@@ -670,7 +670,7 @@ NEXTLABCHR:
 	INC	DI
 	LOOP	NEXTCHRLP
 	CALL	GETBATBYT
-	cmp	word [GOTOLEN],8   ; Is the label atleast 8 chars long?
+	cmp	word [es:GOTOLEN],8   ; Is the label atleast 8 chars long?
 	jge	gotocont			; Yes, then the next char doesn't matter
 	CMP	AL,' '
 	JA	LABLKTST
@@ -726,11 +726,11 @@ procedure   BatOpen,NEAR
 	POP	DS
 ;ASSUME	DS:RESGROUP
 
-	MOV	[BATHAND],AX
+	MOV	[es:BATHAND],AX
 	MOV	BX,AX
 	MOV	AX,LSeek SHL 8			; Go to the right spot
 	INT	int_command
-	MOV	word [BatBufPos],-1        ; nuke batch buffer position
+	MOV	word [es:BatBufPos],-1        ; nuke batch buffer position
 
 	return
 

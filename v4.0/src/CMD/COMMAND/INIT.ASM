@@ -207,9 +207,9 @@ CONPROC:
 	JNC	okdos				;AN000; if no problem - continue
 
 	mov	ax,BADVER			;AN000; set DOS version
-	invoke	sysdispmsg			;AN000; must be incorrect version
+	invoke	SYSDISPMSG			;AN000; must be incorrect version
 	mov	ax,es
-	cmp	[es:PDB_Parent_PID],AX		; If command is its own parent,
+	cmp	word [es:Process_data_block.PDB_Parent_PID],AX     ; If command is its own parent,
 here:						;  loop forever.
 	Jz	here
 	int	20h				; Otherwise, exit.
@@ -278,7 +278,7 @@ set_msg_addr:
 
 	mov	di,DATARESEND+15                 ;AN000; get address of resident end
 	mov	[RESMSGEND],di			;AN000; save it
-	call	sysloadmsg			;AN000; load message addresses
+	call	SYSLOADMSG			;AN000; load message addresses
 	call	GET_MSG_PTR			;AN000; set up pointers to some translated chars
 	mov	ah,GetExtCntry			;g get extended country information
 	mov	al,2				;g minor function - ucase table
@@ -312,11 +312,11 @@ set_msg_addr:
 	mov	[Dbcs_vector_addr+2],bx    ;AN000;     dbcs vector
 
 
-	mov	ax,word [ds:PDB_Parent_PID]     ; Init PARENT so we can exit
+	mov	ax,word [ds:Process_data_block.PDB_Parent_PID]     ; Init PARENT so we can exit
 	mov	[PARENT],ax			;  correctly.
-	MOV	AX,word [ds:PDB_Exit]
+	MOV	AX,word [ds:Process_data_block.PDB_Exit]
 	MOV	word [OldTerm],AX
-	MOV	AX,word [ds:PDB_Exit+2]
+	MOV	AX,word [ds:Process_data_block.PDB_Exit+2]
 	MOV	word [OldTerm+2],AX
 
 	MOV	AX,ENVIREND + 15
@@ -332,7 +332,7 @@ set_msg_addr:
 	MOV	AX, [RES_TPA]
 TPASET:
 	MOV	[LTPA],AX			; Good enough for the moment
-	MOV	AX,word [ds:PDB_block_len]     ; ax = # of paras given to command
+	MOV	AX,word [ds:Process_data_block.PDB_block_len]      ; ax = # of paras given to command
 
 	MOV	[MYSEG1],DS			; These 3 variables are used as part of
 	MOV	[MYSEG2],DS			;  3 long ptrs that the transient will
@@ -341,7 +341,7 @@ TPASET:
 ;
 ; Compute maximum size of environment
 ;
-	MOV	word [EnvMax],(ENVIRONSIZ + 15) / 16 + (EnvMaximum-zero + 15)/16 - 1
+	MOV	word [EnvMax],(ENVIRONSIZ + 15) / 16 + (EnvMaximum-ZERO + 15)/16 - 1
 ;
 ; Compute minimum size of environment
 ;
@@ -355,7 +355,7 @@ TPASET:
 
 	SUB	AX,DX				; max seg addr - # para's needed for transient
 	MOV	[TRNSEG],AX			;  = seg addr to load the transient at.
-	MOV	AX,[ds:PDB_environ]		; ax = environment segment
+	MOV	AX,word [ds:Process_data_block.PDB_environ]        ; ax = environment segment
 	OR	AX,AX				; If there is no environment segment,
 	JZ	BUILDENV			;  go compute one.
 	INC	byte [CHUCKENV]      ; Flag no new ENVIRONSEG to set up
@@ -479,7 +479,7 @@ init_chk_delim:
 	cmp	si,di				;AN057; at end of parsed parameter?
 	jz	parse_line_error_disp		;AN057; Yes - just display message
 	lodsb					;AN057;
-	cmp	al,[space] ;AN057; Skip blank spaces
+	cmp	al,[SPACE] ;AN057; Skip blank spaces
 	jz	init_chk_delim			;AN057;
 	cmp	al,tab_chr			;AN057; Skip tab characters
 	jz	init_chk_delim			;AN057;
@@ -684,14 +684,14 @@ RCCLLOOP:					; Close 0,1 and 2
 
 CHKSRCHSPEC:					; Not a device, so must be directory spec
 
-	MOV	byte [CHUCKENV],0      ; If search specified -- no inheritance
+	MOV	byte [ss:CHUCKENV],0      ; If search specified -- no inheritance
 	MOV	AX,PATHSTRING                 ; Figure environment pointer
 	MOV	CL,4
 	SHR	AX,CL
 ;AD054; MOV	DX,DS
 	MOV	DX,CS				;AC054;
 	ADD	AX,DX
-	MOV	[ENVIRSEG],AX
+	MOV	[ss:ENVIRSEG],AX
 
 	MOV	ES,AX
 	push	si				;AN000; remember location of file
@@ -703,17 +703,17 @@ countloop:
 	cmp	al,end_of_line_out		;AN000; are we at end of line?
 	jnz	countloop			;AN000; no - keep counting
 
-	mov	al,[space]
+	mov	al,[ss:SPACE]
 	dec	si				;AN000; move back one
 	MOV	byte [SI],al      ;AN000; put a space at end of line
 	pop	si				;AC000; get location back
 
-	MOV	DI,[ECOMLOC]
+	MOV	DI,[ss:ECOMLOC]
 
 COMTRLOOP:
 	LODSB
 	DEC	CX
-	CMP	AL,[space]
+	CMP	AL,[ss:SPACE]
 	JZ	SETCOMSR
 	STOSB
 
@@ -844,7 +844,7 @@ ARGSDONE:
 	MOV	BX,DS
 	MOV	ES,BX
 	INT	int_command			; Current process is me
-	MOV	DI,PDB_Exit			; Diddle the addresses in my header
+	MOV	DI,Process_data_block.PDB_Exit     ; Diddle the addresses in my header
 	MOV	AX,LODCOM
 	STOSW
 	MOV	AX,DS
@@ -857,7 +857,7 @@ ARGSDONE:
 	STOSW
 	MOV	AX,DS
 	STOSW
-	MOV	word [ds:PDB_Parent_PID],DS     ; Parent is me forever
+	MOV	word [ds:Process_data_block.PDB_Parent_PID],DS     ; Parent is me forever
 
 	MOV	DX,INT_2E
 	MOV	AX,(Set_Interrupt_Vector SHL 8) OR 02EH
@@ -865,10 +865,10 @@ ARGSDONE:
 	POP	ES				;Remember environment
 
 COMRETURNS:
-	MOV	AX,word [ds:PDB_Parent_PID]
+	MOV	AX,word [ds:Process_data_block.PDB_Parent_PID]
 	MOV	[PARENT],AX			; Save parent
-	MOV	word [ds:PDB_Parent_PID],DS     ; Parent is me
-	MOV	AX,word [ds:PDB_JFN_Table]
+	MOV	word [ds:Process_data_block.PDB_Parent_PID],DS     ; Parent is me
+	MOV	AX,word [ds:Process_data_block.PDB_JFN_Table]
 	MOV	[IO_SAVE],AX			; Get the default stdin and out
 	MOV	word [COM_PTR+2],DS      ; Set all these to resident
 	MOV	word [COM_FCB1+2],DS
@@ -1030,17 +1030,17 @@ MAXOK:
 	mov	word [usedenv],0   ;g initialize env size counter
 	MOV	DS,bx
 ;	ASSUME	DS:NOTHING
-	MOV	[ENVIRSEG],AX
+	MOV	[ss:ENVIRSEG],AX
 	MOV	ES,AX
 	XOR	SI,SI
 	MOV	DI,SI
-	MOV	BX,[EnvMax] ; Copy over as much of the environment
+	MOV	BX,[ss:EnvMax] ; Copy over as much of the environment
 						; as possible
 	SHL	BX,1
 	SHL	BX,1
 	SHL	BX,1
 	SHL	BX,1
-	MOV	[EnvMax], BX ; Convert EnvMax to bytes
+	MOV	[ss:EnvMax], BX ; Convert EnvMax to bytes
 	DEC	BX				; Dec by one to leave room for double 0
 	XOR	DX,DX				; Use DX to indicate that there was
 						; no environment size error.
@@ -1602,7 +1602,7 @@ no_slash_msg:
 	int	2fh				;AN060; go set it
 
 permcom_end:
-	call	sysloadmsg			;AN060; load message addresses
+	call	SYSLOADMSG			;AN060; load message addresses
 	pop	di				;AN060;
 	pop	dx				;AN060;
 	pop	ax				;AN060;

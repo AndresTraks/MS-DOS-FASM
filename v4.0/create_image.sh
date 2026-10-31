@@ -45,14 +45,5 @@ PY
 mcopy -i "$IMAGE" bin/IO.SYS ::
 mcopy -i "$IMAGE" bin/MSDOS.SYS ::
 
-# COMMAND.COM, which cannot be built yet -- the thirty-odd utilities under
-# src/CMD are not converted -- so tests/shell.asm stands in for it.  SYSINIT
-# finishes by EXECing the interpreter, and this one says so and echoes what is
-# typed, which is the end to end proof that the kernel dispatches, the console
-# driver writes and reads, and EXEC loads a program.
-if command -v fasm >/dev/null 2>&1; then
-    fasm tests/shell.asm bin/SHELL.COM >/dev/null
-else
-    WINEDEBUG=${WINEDEBUG:--all} wine ../fasmw17332/FASM.EXE tests/shell.asm bin/SHELL.COM >/dev/null
-fi
-mcopy -i "$IMAGE" bin/SHELL.COM ::COMMAND.COM
+# COMMAND.COM, which SYSINIT EXECs to finish starting the system.
+mcopy -i "$IMAGE" bin/COMMAND.COM ::

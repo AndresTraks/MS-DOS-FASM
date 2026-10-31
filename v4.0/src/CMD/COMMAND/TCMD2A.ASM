@@ -149,7 +149,7 @@ PP4:
 	push	di
 	push	cs
 	pop	es
-	call	[bx+1]
+	call	word [bx+1]
 	pop	di
 	pop	es
 	jmp	PP1

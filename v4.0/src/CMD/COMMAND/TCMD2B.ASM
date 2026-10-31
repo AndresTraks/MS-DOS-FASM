@@ -191,13 +191,13 @@ RESRET:
 	MOV	DS,[RESSEG]
 ;ASSUME	DS:RESGROUP
 	PUSH	DS
-	MOV	AX,word [ds:PDB_JFN_Table]     ; Get new 0 and 1
+	MOV	AX,word [ds:Process_data_block.PDB_JFN_Table]      ; Get new 0 and 1
 	MOV	[IO_SAVE],AX
 	MOV	AX,LODCOM1
 	PUSH	AX
 
 ZMMMM:
-	RET					; Force header to be checked
+	RETF    ; Force header to be checked
 ;ZMMMM	ENDP
 
 	BREAK	CHCP
@@ -420,11 +420,11 @@ tn_print_xname: 				;AN000;
 
 	ret					;AN000;
 
-	BREAK	Exit$
+	BREAK	EXIT$
 
 ;assume	ds:trangroup,es:trangroup
 
-Exit$:
+EXIT$:
 	push	ds				;AN000; save data segment
 	mov	ds,[RESSEG]			;AN000; get resident data segment
 
@@ -455,12 +455,12 @@ no_reset:					;AN045;
 
 ;assume	es:resgroup
 
-	MOV	AX,[PARENT]
-	MOV	word [es:PDB_Parent_PID],AX
-	MOV	AX,word [OldTerm]
-	MOV	word [es:PDB_Exit],AX
-	MOV	AX,word [OldTerm+2]
-	MOV	word [es:PDB_Exit+2],AX
+	MOV	AX,[es:PARENT]
+	MOV	word [es:Process_data_block.PDB_Parent_PID],AX
+	MOV	AX,word [es:OldTerm]
+	MOV	word [es:Process_data_block.PDB_Exit],AX
+	MOV	AX,word [es:OldTerm+2]
+	MOV	word [es:Process_data_block.PDB_Exit+2],AX
 
 	PUSH	ES
 	MOV	ES,[TRAN_TPA]
@@ -469,7 +469,7 @@ no_reset:					;AN045;
 	POP	ES
 
 	MOV	AH,Exit
-	MOV	AL,byte [RETCODE]
+	MOV	AL,byte [es:RETCODE]
 	INT	int_command
 
 

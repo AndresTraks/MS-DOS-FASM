@@ -88,3 +88,13 @@ utility SORT SORTLNK SORT.EXE
 # FIND, an .EXE of two segments and no group, which FINDLNK.ASM lays down in
 # turn.
 utility FIND FINDLNK FIND.EXE
+
+# COMMAND.COM: thirty-two modules in twelve segments and two groups, which
+# COMLNK.ASM lays down as two address spaces over one stretch of output --
+# the resident interpreter and the transient part that is read back from the
+# file whenever a program has overwritten it.  The release linked the modules
+# and ran EXE2BIN over the result; this assembles the whole of it at once, so
+# the message retriever, which goes in twice, is read with its own names for
+# each of the two copies.  Microsoft's EndProc check prints a line for
+# ReadBat, whose SaveReg has no RestoreReg inside the procedure.
+utility COMMAND COMLNK COMMAND.COM

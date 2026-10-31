@@ -13,7 +13,7 @@
 .cref
 
 
-BREAK <parse.Asm>
+BREAK <Parse.Asm>
 ;----------------------------------------------------------------------------
 ;    PARSE.ASM contains the routines to perform command line parsing.
 ;    Parse and Path share a buffer and argv[] definitions.

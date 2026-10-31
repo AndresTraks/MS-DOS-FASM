@@ -121,7 +121,7 @@ if SEGSEL = S_CODERES	;AC000;
 ; other allocation error, we display a message and then die.
 ;
 BADMEMERR:				; Allocation error loading transient
-	MOV	DX,[BMEMMES]       ;AC000; get message number
+	MOV	DX,[cs:BMEMMES]       ;AC000; get message number
 FATALC:
 	PUSH	CS
 	POP	DS
@@ -156,11 +156,11 @@ FATALRET2:
 	JNZ	RET_2E			; must be INT_2E
 	invoke	reset_msg_pointers	;AN000; reset critical & parse error messages
 	MOV	AX,[PARENT]
-	MOV	word [cs:PDB_Parent_PID],AX
+	MOV	word [cs:Process_data_block.PDB_Parent_PID],AX
 	MOV	AX,word [OldTerm]
-	MOV	word [cs:PDB_Exit],AX
+	MOV	word [cs:Process_data_block.PDB_Exit],AX
 	MOV	AX,word [OldTerm+2]
-	MOV	word [cs:PDB_Exit+2],AX
+	MOV	word [cs:Process_data_block.PDB_Exit+2],AX
 	MOV	AX,(Exit SHL 8) 	; Return to lower level
 	INT	int_command
 
@@ -185,8 +185,8 @@ GOTECODE:
 
 INT_2E: 				; Magic command executer
 ;ASSUME	DS:NOTHING,ES:NOTHING,SS:NOTHING
-	POP	word [INT_2E_RET]
-	POP	word [INT_2E_RET+2]     ;Get return address
+	POP	word [cs:INT_2E_RET]
+	POP	word [cs:INT_2E_RET+2]     ;Get return address
 	POP	AX			;Chuck flags
 	PUSH	CS
 	POP	ES
@@ -195,15 +195,15 @@ INT_2E: 				; Magic command executer
 	REP	MOVSW
 	MOV	AH,Get_Current_PDB
 	INT	int_command		; Get user's header
-	MOV	[SAVE_PDB],BX
+	MOV	[cs:SAVE_PDB],BX
 	MOV	AH,Set_Current_PDB
 	MOV	BX,CS
 	INT	int_command		; Current process is me
-	MOV	word [SINGLECOM],81H
-	MOV	byte [EXTCOM],1    ; Make sure this case forced
+	MOV	word [cs:SINGLECOM],81H
+	MOV	byte [cs:EXTCOM],1    ; Make sure this case forced
 
 LODCOM: 				; Termination handler
-	CMP	byte [EXTCOM],0
+	CMP	byte [cs:EXTCOM],0
 	jz	LODCOM1 		; if internal, memory already allocated
 	mov	bx,0ffffh
 	MOV	AH,Alloc
@@ -227,13 +227,13 @@ MEMOK:
 	MOV	AH,Alloc
 	INT	int_command
 	JC	BADMEMERRJ		; Memory arenas probably trashed
-	MOV	byte [EXTCOM],0    ; Flag not to ALLOC again
-	MOV	[RES_TPA], AX		; Save current TPA segment
+	MOV	byte [cs:EXTCOM],0    ; Flag not to ALLOC again
+	MOV	[cs:RES_TPA], AX		; Save current TPA segment
 	AND	AX, 0F000H
 	ADD	AX, 01000H		; Round up to next 64K boundary
 	JC	BAD_TPA 		; Memory wrap if carry set
 ; Make sure that new boundary is within allocated range
-	MOV	DX, [RES_TPA]
+	MOV	DX, [cs:RES_TPA]
 	ADD	DX, BX			; Compute maximum address
 	CMP	DX, AX			; Is 64K address out of range?
 	JBE	BAD_TPA
@@ -242,15 +242,15 @@ MEMOK:
 	CMP	DX, 01000H		; Is space >= 64K ?
 	JAE	LTPASET
 BAD_TPA:
-	MOV	AX, [RES_TPA]
+	MOV	AX, [cs:RES_TPA]
 LTPASET:
-	MOV	[LTPA],AX		; Usable TPA is 64k buffer aligned
-	MOV	AX, [RES_TPA]		; Actual TPA is buffer allocated
+	MOV	[cs:LTPA],AX		; Usable TPA is 64k buffer aligned
+	MOV	AX, [cs:RES_TPA]		; Actual TPA is buffer allocated
 	ADD	BX,AX
-	MOV	[MEMSIZ],BX
+	MOV	[cs:MEMSIZ],BX
 	CALL	SetSize
 	SUB	BX,AX
-	MOV	[TRNSEG],BX		; Transient starts here
+	MOV	[cs:TRNSEG],BX		; Transient starts here
 LODCOM1:
 	MOV	AX,CS
 	MOV	SS,AX
@@ -303,7 +303,7 @@ USESLASH:
 	SUB	CX,SI
 	REP	MOVSB			; Transfer INFO to transient
 	MOV	AX,[MEMSIZ]
-	MOV	word [ds:PDB_block_len],AX     ; Adjust my own header
+	MOV	word [ds:Process_data_block.PDB_block_len],AX      ; Adjust my own header
 
 ; Just a public label so this spot can be found easily.
 tjmp:
@@ -312,7 +312,7 @@ tjmp:
 ; Far call to REMCHECK for TRANSIENT
 TREMCHECK:
 	CALL	REMCHECK
-	RET
+	RETF
 ;TREMCHECK ENDP
 
 REMCHECK:
@@ -339,26 +339,26 @@ ResRegs:
 ; Far call to HEADFIX for TRANSIENT
 THEADFIX:
 	CALL	HEADFIX
-	RET
+	RETF
 ;THEADFIX ENDP
 
 HEADFIX:
 	CALL	SETVECT
 	XOR	BX,BX			; Clean up header
 	MOV	CX,[IO_SAVE]
-	MOV	DX,word [ds:PDB_JFN_Table]
+	MOV	DX,word [ds:Process_data_block.PDB_JFN_Table]
 	CMP	CL,DL
 	JZ	CHK1			; Stdin matches
 	MOV	AH,Close
 	INT	int_command
-	MOV	[ds:PDB_JFN_Table],CL	; Restore stdin
+	MOV	byte [ds:Process_data_block.PDB_JFN_Table],CL      ; Restore stdin
 CHK1:
 	INC	BX
 	CMP	CH,DH			; Stdout matches
 	JZ	CHKOTHERHAND
 	MOV	AH,Close
 	INT	int_command
-	MOV	[ds:PDB_JFN_Table+1],CH ; Restore stdout
+	MOV	byte [ds:Process_data_block.PDB_JFN_Table+1],CH    ; Restore stdout
 CHKOTHERHAND:
 	ADD	BX,4			; Skip 2,3,4
 	MOV	CX,FilPerProc - 5	; Already done 0,1,2,3,4
@@ -397,10 +397,10 @@ SAVHAND:
 	MOV	AH,Get_Current_PDB
 	INT	int_command		; Get user's header
 	MOV	DS,BX
-	LDS	BX,dword [ds:PDB_JFN_Pointer]      ; get pointer to JFN table...
+	LDS	BX,dword [ds:Process_data_block.PDB_JFN_Pointer]   ; get pointer to JFN table...
 	MOV	AX,word [ds:BX]
-	MOV	[HANDLE01],AX		; Save user's stdin, stdout
-	MOV	AL,[cs:PDB_JFN_Table+2] ; get COMMAND stderr
+	MOV	[cs:HANDLE01],AX		; Save user's stdin, stdout
+	MOV	AL,byte [cs:Process_data_block.PDB_JFN_Table+2]    ; get COMMAND stderr
 	MOV	AH,AL
 	MOV	word [ds:BX],AX     ; Dup stderr
 	POP	AX
@@ -422,7 +422,7 @@ RESTHAND:
 	MOV	AX,[HANDLE01]
 	MOV	DS,BX
 ;ASSUME DS:NOTHING
-	LDS	BX,dword [ds:PDB_JFN_Pointer]      ; get pointer to JFN table...
+	LDS	BX,dword [ds:Process_data_block.PDB_JFN_Pointer]   ; get pointer to JFN table...
 	MOV	word [ds:BX],AX     ; Stuff his old 0 and 1
 	POP	AX
 	POP	BX
@@ -544,8 +544,8 @@ CHK:
 SETVECT:				; Set useful vectors
 	MOV	DX,LODCOM
 	MOV	AX,(Set_Interrupt_Vector SHL 8) OR 22H
-	MOV	word [ds:PDB_Exit],DX
-	MOV	word [ds:PDB_Exit+2],DS
+	MOV	word [ds:Process_data_block.PDB_Exit],DX
+	MOV	word [ds:Process_data_block.PDB_Exit+2],DS
 	INT	int_command
 	MOV	DX,CONTC
 	INC	AL
@@ -571,7 +571,7 @@ ENDINIT:
 	mov	es,[ENVIRSEG]      ;g get target environment segment
 
 ;	ASSUME	ES:NOTHING
-	mov	[ds:PDB_environ],es	;g put new environment in my header	   ;AM067;
+	mov	word [ds:Process_data_block.PDB_environ],es        ;g put new environment in my header	   ;AM067;
 	mov	ds,[oldenv]        ;g source environment segment		   ;AM067;
 ;	ASSUME	DS:NOTHING							   ;AM067;
 	xor	si,si			;g set up offsets to start of segments	   ;AM067;
@@ -581,16 +581,16 @@ ENDINIT:
 	xor	ax,ax			;g					   ;AM067;
 	stosb				;g make sure there are double 0 at end	   ;AM067;
 
-	cmp	byte [resetenv],1  ;eg Do we need to setblock to env end?
+	cmp	byte [ss:resetenv],1  ;eg Do we need to setblock to env end?
 	jnz	NoReset_COMMAND2 		;eg no - we already did it
-	mov	bx,[EnvSiz]        ;eg get size of environment in paragraphs
+	mov	bx,[ss:EnvSiz]        ;eg get size of environment in paragraphs
 	push	es			;eg save environment - just to make sure
 	mov	ah,Setblock		;eg
 	int	int_command		;eg
 	pop	es			;eg
 
 NoReset_COMMAND2:
-	mov	byte [InitFlag],FALSE      ;AC042; Turn off init flag
+	mov	byte [ss:InitFlag],FALSE      ;AC042; Turn off init flag
 	pop	es			;g
 	pop	ds			;g
 	jmp	LODCOM			;g allocate transient

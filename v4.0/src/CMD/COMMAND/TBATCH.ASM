@@ -93,7 +93,7 @@ procedure   PromptBat,NEAR
 	jmp     BatDie     ;AN022;
 
 Bat_Remcheck:					;AN022; Go see if media is removable
-	CALL	[RCH_ADDR]			; DX has error number
+	CALL	[cs:RCH_ADDR]			; DX has error number
 	JZ	ASKFORBAT			; Media is removable
 ;
 ; The media is not changeable.	Turn everything off.
@@ -262,7 +262,7 @@ SET_BAT_POS:					;g
 ;	ASSUME	DS:ResGroup
 	MOV	AX,(LSeek SHL 8) + 0		; seek back
 	INT	int_command
-	MOV	word [BatBufPos],-1        ; nuke batch buffer position
+	MOV	word [es:BatBufPos],-1        ; nuke batch buffer position
 	xor	cx,cx				; Initialize line length to zero
 	JMP	RDBAT
 ;
@@ -397,7 +397,7 @@ PAROK:
 ;
 ; Get pointer to BX'th argument
 ;
-	MOV	SI,word [es:BatchSegment.BatParm+BX]
+	MOV	SI,word [es:BatchSegment+BatchSegment.BatParm+BX]
 	RestoreReg  <ES>
 ;
 ; Is there a parameter here?
@@ -569,7 +569,7 @@ procedure   Free_TPA,NEAR
 
 	PUSH	ES
 	MOV	ES,[RESSEG]
-	MOV	ES,[RES_TPA]
+	MOV	ES,[es:RES_TPA]
 	MOV	AH,Dealloc
 	INT	int_command			; Make lots of free memory
 	POP	ES
@@ -598,7 +598,7 @@ procedure   Alloc_TPA,NEAR
 ; Attempt to align TPA on 64K boundary
 ;
 	POP	BX				; Restore size of block
-	MOV	[RES_TPA], AX			; Save segment to beginning of block
+	MOV	[es:RES_TPA], AX			; Save segment to beginning of block
 	MOV	[TRAN_TPA], AX
 ;
 ; Is the segment already aligned on a 64K boundary
@@ -618,7 +618,7 @@ Calc_TPA:
 ;
 ; Make sure that new boundary is within allocated range
 ;
-	MOV	DX, [RES_TPA]
+	MOV	DX, [es:RES_TPA]
 	ADD	DX, BX				; Compute maximum address
 	CMP	DX, AX				; Is 64K address out of range?
 	JB	NOROUND
@@ -637,10 +637,10 @@ Calc_TPA:
 	JAE	ROUNDDONE
 
 NOROUND:
-	MOV	AX, [RES_TPA]
+	MOV	AX, [es:RES_TPA]
 
 ROUNDDONE:
-	MOV	[LTPA],AX			; Re-compute everything
+	MOV	[es:LTPA],AX			; Re-compute everything
 	MOV	[TPA],AX
 	MOV	BX,AX
 	MOV	AX,CS
@@ -704,7 +704,7 @@ skip_ioset:					;AN043;
 
 getecho:
 	invoke	PipeOff
-	mov	al,[ECHOFLAG] ; preserve echo state for chaining
+	mov	al,[es:ECHOFLAG] ; preserve echo state for chaining
 
 	and	al, 1				; Save current echo state
 	push	ax
@@ -797,7 +797,7 @@ mem_error:
 	jmp	NO_MEMORY			;G Set up for message and exit
 
 enough_mem:
-	MOV	[BATCH],AX
+	MOV	[es:BATCH],AX
 	CALL	Alloc_TPA
 ;
 ; Initialize batch segment
@@ -806,7 +806,7 @@ enough_mem:
 	POP	AX				;G  get saved batch segment back
 	inc	word [es:NEST]     ;G increment # batch files in progress
 	PUSH	ES
-	MOV	ES,[BATCH]
+	MOV	ES,[es:BATCH]
 ;ASSUME	ES:NOTHING
 	MOV	byte [es:BatchSegment.BatType],BatchType   ; signal batch file type
 	MOV	word [es:BatchSegment.Batlast],ax  ;G save segment of last batch file
@@ -955,8 +955,8 @@ procedure   BatchOff
 	SaveReg <AX,ES>
 	PUSH	DS				;G
 	PUSH	BX				;G
-	MOV	ES,[RESSEG]
-	MOV	DS,[RESSEG] ;G
+	MOV	ES,[cs:RESSEG]
+	MOV	DS,[cs:RESSEG] ;G
 ;	ASSUME	ES:ResGroup,DS:Resgroup 	;G
 	MOV	AX,[BATCH] ; Free the batch segment
 	OR	AX,AX

@@ -75,7 +75,7 @@ if SEGSEL = S_TRANCODE
 ;	PUBLIC	scanoff
 ;	PUBLIC	strcomp
 
-BREAK	CHDir$
+BREAK	CHDIR$
 
 ; ****************************************************************
 ; *
@@ -95,7 +95,7 @@ BREAK	CHDir$
 
 ;assume	ds:trangroup,es:trangroup
 
-CHDir$:
+CHDIR$:
 
 	mov	si,81H
 	mov	di,PARSE_CHDIR                  ;AN000; Get adderss of PARSE_CHDIR
@@ -154,11 +154,11 @@ ChDirErr:
 	invoke	STD_EPRINTF
 	return
 
-BREAK	MKDir$
+BREAK	MKDIR$
 
 ;assume	ds:trangroup,es:trangroup
 
-MKDir$:
+MKDIR$:
 	CALL	SETRMMK
 	JC	MkDirErr
 	MOV	AH,MKDir
@@ -247,11 +247,11 @@ NOARGERR:
 	STC
 	return
 
-BREAK	RMDir$
+BREAK	RMDIR$
 
 ;assume	ds:trangroup,es:trangroup
 
-RMDir$:
+RMDIR$:
 	CALL	SETRMMK
 	JC	RmDirErr
 	JNZ	BADRDERR
@@ -482,7 +482,7 @@ ERROR_OUTPUT:
 ;ASSUME	ES:RESGROUP
 
 	MOV	DX,NoSpace_Ptr
-	CMP	byte [PIPEFLAG],0
+	CMP	byte [es:PIPEFLAG],0
 	JZ	GO_TO_ERROR_TENV2
 
 	invoke	PipeOff

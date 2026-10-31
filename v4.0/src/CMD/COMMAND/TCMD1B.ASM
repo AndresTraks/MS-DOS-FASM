@@ -439,7 +439,7 @@ foundz:
 	push	cs				;  will be typed.
 	pop	es
 ;assume es:trangroup
-	not	byte [zflag]       ; Turn on ^Z flag so that the routine
+	not	byte [es:zflag]       ; Turn on ^Z flag so that the routine
 
 typecont2:					;  will quit after this write.
 	push	bx

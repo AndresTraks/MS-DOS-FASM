@@ -192,7 +192,7 @@ IOSET:
 	PUSH	AX
 	PUSH	BX
 	PUSH	CX
-	MOV	DS,[RESSEG]
+	MOV	DS,[cs:RESSEG]
 ;ASSUME	DS:RESGROUP
 
 	CMP	byte [PIPEFLAG],0
@@ -215,7 +215,7 @@ TESTDOREIN:
 
 ;ASSUME	DS:RESGROUP
 
-	CMP	byte [RE_INSTR],0
+	CMP	byte [cs:RE_INSTR],0
 	retz
 	PUSH	DS
 	PUSH	CS
@@ -233,7 +233,7 @@ TESTDOREIN:
 ; spot.  We invalidate the new JFN we got.
 ;
 	XCHG	AL,[BX+Process_data_block.PDB_JFN_Table]
-	MOV	[ds:PDB_JFN_Table],AL
+	MOV	byte [ds:Process_data_block.PDB_JFN_Table],AL
 
 	return
 ;
@@ -264,9 +264,9 @@ CERRORJ_TMISC2:
 ;
 
 OpenError:
-	mov	byte [msg_disp_class],ext_msg_class        ;AN000; set up extended error msg class
+	mov	byte [cs:msg_disp_class],ext_msg_class        ;AN000; set up extended error msg class
 	mov	dx,Extend_Buf_ptr                  ;AC000; get extended message pointer
-	mov	[Extend_Buf_ptr],ax        ;AN000; get message number in control block
+	mov	[cs:Extend_Buf_ptr],ax        ;AN000; get message number in control block
 	JMP	CERROR
 
 TESTDOREOUT:
@@ -323,7 +323,7 @@ REOUTEXISTS:
 	jmp     SET_REOUT
 
 reout_0_length: 				;AN017; We have a 0 length file
-	mov	DS,[RESSEG]			;AN017; Get resident segment back
+	mov	DS,[cs:RESSEG]			;AN017; Get resident segment back
 ;	assume	DS:Resgroup			;AN017;
 	MOV	AX,(LSeek SHL 8)		;AN017; Move to beginning of file
 	XOR	CX,CX				;AN017; Offset is 0
@@ -357,7 +357,7 @@ SET_REOUT:
 ;
 	MOV	AL,0FFH
 	XCHG	AL,[BX+Process_data_block.PDB_JFN_Table]
-	MOV	[ds:PDB_JFN_Table+1],AL
+	MOV	byte [ds:Process_data_block.PDB_JFN_Table+1],AL
 
 NOREOUT:
 	return
@@ -421,7 +421,7 @@ EndProc TriageError
 ;PUBLIC Triage_Init
 Triage_Init:
 	call	TriageError
-	ret
+	RETF
 ;Triage_Init endp
 
 

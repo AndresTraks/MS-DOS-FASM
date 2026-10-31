@@ -260,7 +260,7 @@ noswit:
     lodsb					; Load length
     mov     cl,al				; Move length to cl
     xor     ch,ch				; Zero ch
-    mov     al,[SWITCHAR]			; al = switch character
+    mov     al,[cs:SWITCHAR]			; al = switch character
     cmp     al,0				; Turn off ZF
     repnz   scasb				; Scan for a switch character and return
     pop     di					;  with ZF set if one was found
@@ -277,17 +277,17 @@ not_barryf:
 
 end if
 
-	MOV	byte [FILTYP],0
-	MOV	DL,[SPECDRV]
-	MOV	[IDLEN],DL
+	MOV	byte [cs:FILTYP],0
+	MOV	DL,[cs:SPECDRV]
+	MOV	[cs:IDLEN],DL
 IF IBM
-	MOV	byte [ROM_CALL],0
+	MOV	byte [cs:ROM_CALL],0
 	PUSH	DX
 	MOV	DX,IDLEN
 	CALL	ROM_SCAN
 	POP	DX
 	JNC	DO_SCAN
-	INC	byte [ROM_CALL]
+	INC	byte [cs:ROM_CALL]
 	JMP	PostSave
 DO_SCAN:
 end if
@@ -297,7 +297,7 @@ end if
 	MOV	DI,EXECPATH
 	MOV	byte [DI],0       ; Initialize to current directory
 IF IBM
-	CMP	byte [ROM_CALL],0
+	CMP	byte [cs:ROM_CALL],0
 	JZ	RESEARCH
 	JMP	NeoExecute
 end if
@@ -325,8 +325,8 @@ NeoExecute:
 	INT	int_command			; Now running in "free" space
 	MOV	ES,[RESSEG]
 ;ASSUME	ES:RESGROUP
-	INC	byte [EXTCOM]      ; Indicate external command
-	MOV	byte [RESTDIR],0   ; Since USERDIR1 is in transient, insure
+	INC	byte [es:EXTCOM]      ; Indicate external command
+	MOV	byte [es:RESTDIR],0   ; Since USERDIR1 is in transient, insure
 						;  this flag value for re-entry to COMMAND
 	MOV	DI,FCB
 	MOV	SI,DI
@@ -397,7 +397,7 @@ KanjiScan:
 	LODSB					; get trailing byte
 	CMP	AX,8140h			; is it Kanji space
 	JNZ	KanjiScan			; no, go get next
-	MOV	[SI-2],2020h			; replace with spaces
+	MOV	word [SI-2],2020h			; replace with spaces
 	JMP	KanjiScan			; go get next char
 
 KanjiQuote:
@@ -463,7 +463,7 @@ TRYGREATER:
 	CMP	byte [SI],al
 	JNZ	NOAPPND
 	LODSB
-	INC	byte [RE_OUT_APP]  ; Flag >>
+	INC	byte [es:RE_OUT_APP]  ; Flag >>
 
 NOAPPND:
 ;
@@ -479,7 +479,7 @@ NOAPPND:
 ;
 REOUT_ERRSET:					;AN040; set up for an error
 	mov	byte [di], 0dh      ; Clobber first ">"
-	MOV	word [RE_OUTSTR],09H     ; Cause an error later
+	MOV	word [es:RE_OUTSTR],09H     ; Cause an error later
 	JMP	PRESCANEND
 
 GOTREOFIL:
@@ -547,11 +547,11 @@ IsPipe3:
 ;
 ; Only push the echo flag if we are entering the pipe for the first time.
 ;
-	CMP	byte [PIPEFLAG],0
+	CMP	byte [es:PIPEFLAG],0
 	JNZ	NoEchoPush
-	SHL	byte [ECHOFLAG],1  ; push echo state and turn it off
+	SHL	byte [es:ECHOFLAG],1  ; push echo state and turn it off
 NoEchoPush:
-	INC	byte [PIPEFLAG]
+	INC	byte [es:PIPEFLAG]
 	invoke	SCANOFF
 	CMP	AL,0DH
 	JZ	PIPEERRSYNJ5
@@ -594,10 +594,10 @@ CONTPRESCAN:
 	JMP	PRESCANLP
 
 PRESCANEND:
-	CMP	byte [PIPEFLAG],0
+	CMP	byte [es:PIPEFLAG],0
 	JZ	ISNOPIPE
 	MOV	DI,PIPESTR
-	MOV	[PIPEPTR],DI
+	MOV	[es:PIPEPTR],DI
 	MOV	SI,COMBUF+2
 	invoke	SCANOFF
 
@@ -609,7 +609,7 @@ PIPESETLP:					; Transfer the pipe into the resident
 
 ISNOPIPE:
 	MOV	[COMBUF+1],CL
-	CMP	byte [PIPEFLAG],0
+	CMP	byte [es:PIPEFLAG],0
 	PUSH	CS
 	POP	ES
 	return

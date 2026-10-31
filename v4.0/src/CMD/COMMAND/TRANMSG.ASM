@@ -15,7 +15,7 @@ Extend_Buf_sub	db	0				;AN000;set to no substitutions
 Extend_Buf_off	dw	string_ptr_2                  ;AN000;offset of arg
 Extend_Buf_seg	dw	0				;AN000;segment of arg
 		db	0				;AN000;first subst
-		db	Char_field_ASCIIZ		;AN000;character string
+		db	Char_Field_ASCIIZ		;AN000;character string
 		db	128				;AN000;maximum width
 		db	0				;AN000;minimum width
 		db	blank				;AN000;pad character
@@ -215,7 +215,7 @@ CurDat_Ptr	dw	1032				;AN000;message number
 		dw	arg_buf                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
-		db	Char_field_ASCIIZ		;AN000;character string
+		db	Char_Field_ASCIIZ		;AN000;character string
 		db	3				;AN000;maximum width
 		db	3				;AN000;minimum width
 		db	blank				;AN000;pad character
@@ -224,7 +224,7 @@ CurDat_Ptr	dw	1032				;AN000;message number
 CurDat_yr	dw	0				;AN000;year
 CurDat_mo_day	dw	0				;AN000;month,day
 		db	2				;AN000;second subst
-		db	DATE_MDY_4			;AN000;date
+		db	Date_MDY_4			;AN000;date
 		db	10				;AN000;maximum width
 		db	10				;AN000;minimum width
 		db	blank				;AN000;pad character
@@ -244,7 +244,7 @@ NewDat_Ptr	dw	1034				;AN000;message number
 NewDat_Format	dw	0				;AN000;offset of replacement
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
-		db	Char_field_ASCIIZ		;AN000;character string
+		db	Char_Field_ASCIIZ		;AN000;character string
 		db	8				;AN000;maximum width
 		db	8				;AN000;minimum width
 		db	blank				;AN000;pad character
@@ -263,7 +263,7 @@ CurTim_Ptr	dw	1036				;AN000;message number
 CurTim_hr_min	dw	0				;AN000;hours,minutes
 CurTim_Sec_hn	dw	0				;AN000;seconds,hundredths
 		db	1				;AN000;first subst
-		db	Right_Align+TIME_HHMMSSHH_Cty	;AC059;time
+		db	Right_Align+Time_HHMMSSHH_Cty	;AC059;time
 		db	12				;AC059;maximum width
 		db	12				;AC059;minimum width
 		db	blank				;AN000;pad character
@@ -316,7 +316,7 @@ VolMes_Ptr_2	dw	1041				;AN000;message number
 		dw	vol_drv                  ;AN000;offset of drive
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
-		db	Char_field_Char 		;AN000;character
+		db	Char_Field_Char 		;AN000;character
 		db	128				;AN000;maximum width
 		db	1				;AN000;minimum width
 		db	blank				;AN000;pad character
@@ -339,7 +339,7 @@ VolMes_Ptr	dw	1042				;AN000;message number
 		dw	CHARBUF                  ;AN000;offset of string
 		dw	0				;AN000;segment of arg
 		db	2				;AN000;second subst
-		db	Char_field_ASCIIZ		;AN000;character string
+		db	Char_Field_ASCIIZ		;AN000;character string
 		db	128				;AN000;maximum width
 		db	1				;AN000;minimum width
 		db	blank				;AN000;pad character
@@ -350,7 +350,7 @@ VolSerMes_Ptr	dw	1043				;AN000;message number
 		db	2				;AN000;number of subst
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	vol_serial+2                  ;AN000;offset of serial
+		dw	VOL_SERIAL+2                  ;AN000;offset of serial
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
 		db	Right_Align+Bin_Hex_Word	;AN000;binary to hex
@@ -359,7 +359,7 @@ VolSerMes_Ptr	dw	1043				;AN000;message number
 		db	"0"                             ;AN000;pad character
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	vol_serial                  ;AN000;offset of serial
+		dw	VOL_SERIAL                  ;AN000;offset of serial
 		dw	0				;AN000;segment of arg
 		db	2				;AN000;second subst
 		db	Right_Align+Bin_Hex_Word	;AN000;binary to hex
@@ -397,7 +397,7 @@ DirHead_Ptr	dw	1048				;AN000;message number
 		dw	BWDBUF                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
-		db	Char_field_ASCIIZ		;AN000;character string
+		db	Char_Field_ASCIIZ		;AN000;character string
 		db	128				;AN000;maximum width
 		db	0				;AN000;minimum width
 		db	blank				;AN000;pad character
@@ -441,7 +441,7 @@ CtrlcMes_Ptr	dw	1055				;AN000;message number
 		dw	0				;AN000;offset of on/off (new)
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
-		db	Char_field_ASCIIZ		;AN000;character string
+		db	Char_Field_ASCIIZ		;AN000;character string
 		db	128				;AN000;maximum width
 		db	1				;AN000;minimum width
 		db	blank				;AN000;pad character
@@ -455,7 +455,7 @@ VeriMes_Ptr	dw	1056				;AN000;message number
 		dw	0				;AN000;offset of on/off (new)
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
-		db	Char_field_ASCIIZ		;AN000;character string
+		db	Char_Field_ASCIIZ		;AN000;character string
 		db	128				;AN000;maximum width
 		db	1				;AN000;minimum width
 		db	blank				;AN000;pad character
@@ -469,7 +469,7 @@ EchoMes_Ptr	dw	1057				;AN000;message number
 		dw	0				;AN000;offset of on/off (new)
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
-		db	Char_field_ASCIIZ		;AN000;character string
+		db	Char_Field_ASCIIZ		;AN000;character string
 		db	128				;AN000;maximum width
 		db	1				;AN000;minimum width
 		db	blank				;AN000;pad character
@@ -503,7 +503,7 @@ arg_Buf_Ptr	dw	1063				;AN000;message number
 		dw	arg_buf                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
-		db	Char_field_ASCIIZ		;AN000;character string
+		db	Char_Field_ASCIIZ		;AN000;character string
 		db	128				;AN000;maximum width
 		db	0				;AN000;minimum width
 		db	blank				;AN000;pad character
@@ -517,7 +517,7 @@ File_Name_Ptr	dw	1064				;AN000;message number
 		dw	SRCBUF                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
-		db	Char_field_ASCIIZ		;AN000;character string
+		db	Char_Field_ASCIIZ		;AN000;character string
 		db	128				;AN000;maximum width
 		db	0				;AN000;minimum width
 		db	blank				;AN000;pad character
@@ -545,7 +545,7 @@ String_Buf_Ptr	dw	1066				;AN000;message number
 		dw	string_ptr_2                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
-		db	Char_field_ASCIIZ		;AN000;character string
+		db	Char_Field_ASCIIZ		;AN000;character string
 		db	128				;AN000;maximum width
 		db	0				;AN000;minimum width
 		db	blank				;AN000;pad character
@@ -609,7 +609,7 @@ promptDat_Ptr	dw	1075				;AN000;message number
 		dw	arg_buf                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
-		db	Char_field_ASCIIZ		;AN000;character string
+		db	Char_Field_ASCIIZ		;AN000;character string
 		db	3				;AN000;maximum width
 		db	3				;AN000;minimum width
 		db	blank				;AN000;pad character
@@ -618,7 +618,7 @@ promptDat_Ptr	dw	1075				;AN000;message number
 promptDat_yr	dw	0				;AN000;year
 promptDat_moday dw	0				;AN000;month,day
 		db	2				;AN000;second subst
-		db	DATE_MDY_4			;AN000;date
+		db	Date_MDY_4			;AN000;date
 		db	10				;AN000;maximum width
 		db	8				;AN000;minimum width
 		db	blank				;AN000;pad character
@@ -633,7 +633,7 @@ promTim_Ptr	dw	1076				;AN000;message number
 PromTim_hr_min	dw	0				;AN000;hours,minutes
 PromTim_Sec_hn	dw	0				;AN000;seconds,hundredths
 		db	1				;AN000;first subst
-		db	Right_Align+TIME_HHMMSSHH_24	;AC013;time
+		db	Right_Align+Time_HHMMSSHH_24	;AC013;time
 		db	11				;AN000;maximum width
 		db	11				;AC013;minimum width
 		db	blank				;AN000;pad character
@@ -647,7 +647,7 @@ DirDatTim_Ptr	dw	1077				;AN000;message number
 DirDat_yr	dw	0				;AN000;year
 DirDat_mo_day	dw	0				;AN000;month,day
 		db	1				;AN000;first subst
-		db	Right_Align+DATE_MDY_2		;AN000;date
+		db	Right_Align+Date_MDY_2		;AN000;date
 		db	10				;AN000;maximum width
 		db	8				;AN000;minimum width
 		db	blank				;AN000;pad character
@@ -656,7 +656,7 @@ DirDat_mo_day	dw	0				;AN000;month,day
 DirTim_hr_min	dw	0				;AN000;hours,minutes
 DirTim_Sec_hn	dw	0				;AN000;seconds,hundredths
 		db	2				;AN000;second subst
-		db	Right_align+TIME_HHMM_Cty	;AN000;time
+		db	Right_Align+Time_HHMM_Cty	;AN000;time
 		db	6				;AN000;maximum width
 		db	6				;AN000;minimum width
 		db	blank				;AN000;pad character

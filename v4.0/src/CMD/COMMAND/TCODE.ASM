@@ -113,7 +113,7 @@ SETDRV:
 ;
 
 TCOMMAND:
-	MOV	DS,[RESSEG]
+	MOV	DS,[cs:RESSEG]
 ;ASSUME	DS:RESGROUP
 	MOV	AX,-1
 	XCHG	AX,[VERVAL]
@@ -123,7 +123,7 @@ TCOMMAND:
 	INT	int_command
 
 NOSETVER2:
-	CALL	[HEADCALL]			; Make sure header fixed
+	CALL	[cs:HEADCALL]			; Make sure header fixed
 	XOR	BP,BP				; Flag transient not read
 	CMP	word [SINGLECOM],-1
 	JNZ	COMMAND
@@ -131,7 +131,7 @@ NOSETVER2:
 EXITPREP$:
 	PUSH	CS
 	POP	DS
-	JMP	Exit$				; Have finished the single command
+	JMP	EXIT$				; Have finished the single command
 ;ASSUME	DS:NOTHING
 ;
 ; Main entry point from resident portion.
@@ -165,8 +165,8 @@ COMMAND:
 	MOV	DS,[RESSEG]
 ;ASSUME	DS:RESGROUP
 
-	MOV	byte [UCOMBUF],COMBUFLEN   ; Init UCOMBUF
-	MOV	byte [COMBUF],COMBUFLEN    ; Init COMBUF (Autoexec doing DATE)
+	MOV	byte [ss:UCOMBUF],COMBUFLEN   ; Init UCOMBUF
+	MOV	byte [ss:COMBUF],COMBUFLEN    ; Init COMBUF (Autoexec doing DATE)
 ;
 ; If we have just loaded the transient, then we do NOT need to initialize the
 ; command buffer.  ????  DO WE NEED TO RESTORE THE USERS DIRECTORY ????  I
@@ -176,7 +176,7 @@ COMMAND:
 ;
 	OR	BP,BP				; See if just read
 	JZ	TESTRDIR			; Not read, check user directory
-	MOV	word [UCOMBUF+1],0D01H     ; Reset buffer
+	MOV	word [ss:UCOMBUF+1],0D01H     ; Reset buffer
 	jmp     NOSETBUF
 
 TESTRDIR:
@@ -257,7 +257,7 @@ GETCOM:
 	MOV	byte [CALL_BATCH_FLAG],0   ; G
 	MOV	AH,Get_Default_Drive
 	INT	int_command
-	MOV	[CURDRV],AL
+	MOV	[ss:CURDRV],AL
 	TEST	byte [PIPEFLAG],-1        ; Pipe has highest presedence
 	JZ	NoPipe_TCODE
 	JMP	PIPEPROC			; Continue the pipeline
@@ -279,7 +279,7 @@ NOPDRV:
 	JMP	forproc 			; Continue the FOR
 
 TESTFORBAT:
-	MOV	byte [RE_INSTR],0  ; Turn redirection back off
+	MOV	byte [ss:RE_INSTR],0  ; Turn redirection back off
 	MOV	byte [RE_OUTSTR],0
 	MOV	byte [RE_OUT_APP],0
 	MOV	byte [IFFLAG],0    ; no more ifs...

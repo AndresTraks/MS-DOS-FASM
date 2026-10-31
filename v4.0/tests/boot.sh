@@ -10,14 +10,14 @@
 # initialises the drivers, loads MSDOS.SYS and jumps to SYSINIT; SYSINIT moves
 # the kernel to its final home and calls DOSINIT, which builds the DOS's data
 # and takes over the interrupts; SYSINIT reads CONFIG.SYS through INT 21H,
-# installs the switchable hardware stacks, and EXECs the command interpreter.
+# installs the switchable hardware stacks, and EXECs COMMAND.COM.
 #
-# There is no COMMAND.COM yet -- the utilities under src/CMD are not converted
-# -- so tests/shell.asm stands in for it, and what it prints is the proof:
-# the message only appears if the kernel dispatches, the console driver writes,
-# and EXEC loaded a program.  Then a few keystrokes are sent and echoed back,
-# which is the input side, and ESC makes the shell exit, after which DOS says
-# what it always says when the interpreter goes away.
+# What COMMAND.COM then prints is the proof.  It asks for the date and the
+# time, because there is no AUTOEXEC.BAT on the disk, and both lines are
+# messages the retriever looked up by number and the console driver wrote; the
+# answers go back through the driver's input side and the parser; then the
+# version banner, then the prompt.  VER is answered from the resident, and DIR
+# reads the directory through the kernel and writes it a line at a time.
 set -e
 cd "$(dirname "$0")/.."
 
@@ -39,9 +39,12 @@ mcopy -o -i msdos.img "$OUT/CONFIG.SYS" ::CONFIG.SYS
 # The monitor is on stdin; the screen comes back through pmemsave as the text
 # the adapter is showing.
 {
-    sleep 22
-    for k in h e l l o ret esc; do echo "sendkey $k"; sleep 1; done
+    sleep 24
+    for k in ret ret; do echo "sendkey $k"; sleep 2; done
+    for k in v e r ret; do echo "sendkey $k"; sleep 1; done
     sleep 2
+    for k in d i r ret; do echo "sendkey $k"; sleep 1; done
+    sleep 3
     echo "pmemsave 0xb8000 4000 \"$OUT/screen.bin\""
     sleep 2
     echo quit
@@ -65,13 +68,15 @@ for r in rows:
     if r.strip():
         print("   %s" % r)
 
-want = [("MS-DOS 4.00 built by fasm is running",
-         "the kernel dispatches, the console driver writes and EXEC ran a program"),
-        ("Type anything", "the interpreter got as far as reading the keyboard"),
-        ("ello", "what was typed came back, so console input works"),
-        ("ESC seen", "the shell saw ESC and said so"),
-        ("Bad or missing Command Interpreter",
-         "DOS noticed the interpreter had gone, and found the message to say it")]
+want = [("Current date is",
+         "the kernel dispatches, the console driver writes and COMMAND.COM ran"),
+        ("Enter new date", "the interpreter is asking, so the retriever found its text"),
+        ("Current time is", "the date went in through the console and the parser took it"),
+        ("Microsoft(R) MS-DOS(R) Version 4.00",
+         "both answers were accepted and initialisation finished"),
+        ("A>", "the prompt, from the transient part of the interpreter"),
+        ("MS-DOS Version 4.00", "VER was read from the keyboard and answered"),
+        ("IO       SYS", "DIR read the root directory through the kernel")]
 rc = 0
 print("--- checks")
 for text, why in want:

@@ -481,15 +481,15 @@ NOEXEC:
 ;
 CONTC:
 ;	ASSUME	CS:ResGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
-	test	byte [InitFlag],initInit  ; in initialization?
+	test	byte [cs:InitFlag],initInit  ; in initialization?
 	jz	NotAtInit			; no
-	test	byte [InitFlag],initSpecial       ; doing special stuff?
+	test	byte [cs:InitFlag],initSpecial       ; doing special stuff?
 	jz	CmdIret 			; no, ignore ^C
 	jmp	init_contc_specialcase          ; Yes, go handle it
 CmdIret:
 	iret					; yes, ignore the ^C
 NotAtInit:
-	test	byte [InitFlag],initCtrlC ; are we already in a ^C?
+	test	byte [cs:InitFlag],initCtrlC ; are we already in a ^C?
 	jz	NotInit 			; nope too.
 ;
 ; We are interrupting ourselves in this ^C handler.  We need to set carry
@@ -520,7 +520,7 @@ NotAtInit:
 ; and let the DOS abort.
 ;
 NotInit:
-	or	byte [InitFlag],initCtrlC   ; nested ^c is on
+	or	byte [cs:InitFlag],initCtrlC   ; nested ^c is on
 	STI
 	PUSH	CS				; El Yucko!  Change the user's DS!!
 	POP	DS
@@ -619,7 +619,7 @@ NOSETSING:
 	JMP	LODCOM1
 DODAB:
 	STC					; Tell DOS to abort
-	RET					; Leave flags on stack
+	RETF    ; Leave flags on stack
 ;ContC	ENDP
 
 ;public	ResPipeOff
@@ -627,10 +627,10 @@ DODAB:
 ResPipeOff:
 	SaveReg <AX>
 	xor	ax,ax
-	xchg	[PIPEFLAG],al
+	xchg	[cs:PIPEFLAG],al
 	or	al,al
 	jz	NoPipePop
-	shr	byte [ECHOFLAG],1
+	shr	byte [cs:ECHOFLAG],1
 NoPipePop:
 	RestoreReg  <AX>
 	return

@@ -89,7 +89,7 @@ if SEGSEL = S_TRANCODE	;AC000;
 ;PUBLIC Printf_Init
 printf_init:
 	call	STD_PRINTF
-	ret
+	RETF
 ;printf_init endp
 
 ;Public	Printf_Crlf
@@ -164,10 +164,10 @@ MOVE_SUBST:
 	mov	bx,si				;AN061;save start of sublist
 	mov	cx,parm_block_size		;AN061;get size of sublist
 	rep	movsb				;AN061;move sublist
-	test	byte [bx.M_S_FLAG$],DATE_TYPE     ;AN061;are we doing date/time?
+	test	byte [bx+M_SUBLIST_STRUC$.M_S_FLAG$],Date_Type    ;AN061;are we doing date/time?
 	jz	MOVE_SUBST_CONT 		;AN061;no - no need to reset
-	mov	word [bx.M_S_VALUE$],0     ;AN061;reset original date or time to 0
-	mov	word [bx.M_S_VALUE$+2],0     ;AN061;
+	mov	word [bx+M_SUBLIST_STRUC$.M_S_VALUE$],0    ;AN061;reset original date or time to 0
+	mov	word [bx+M_SUBLIST_STRUC$.M_S_VALUE$+2],0  ;AN061;
 
 MOVE_SUBST_CONT:				;AN061;
 	pop	cx				;AN061;get number of subst back
@@ -191,11 +191,11 @@ CHECK_FIX:					;AN061;
 	push	cx				;AN061;save number of subst
 
 SET_SUBST:					;AN061;store the segment of the subst
-	cmp	word [bx.M_S_VALUE$+2],0     ;AN061;was it set already?
+	cmp	word [bx+M_SUBLIST_STRUC$.M_S_VALUE$+2],0  ;AN061;was it set already?
 	jnz	SUBST_SEG_SET			;AN061;if not 0, don't replace it
-	test	byte [bx.M_S_FLAG$],DATE_TYPE     ;AN061;don't replace if date or time
+	test	byte [bx+M_SUBLIST_STRUC$.M_S_FLAG$],Date_Type    ;AN061;don't replace if date or time
 	jnz	SUBST_SEG_SET			;AN061;yes - skip it
-	mov	word [bx.M_S_VALUE$+2],cs     ;AN061;set segment value
+	mov	word [bx+M_SUBLIST_STRUC$.M_S_VALUE$+2],cs ;AN061;set segment value
 
 SUBST_SEG_SET:					;AN061;
 	add	bx,parm_block_size		;AN061;go to next sublist
@@ -203,10 +203,10 @@ SUBST_SEG_SET:					;AN061;
 	pop	cx				;AN061;get number of subst back
 
 	mov	bx,si				;AN061;get start of sublist to BX
-	cmp	word [bx.M_S_VALUE$],string_ptr_2                      ;AN061;are we using double indirection?
+	cmp	word [bx+M_SUBLIST_STRUC$.M_S_VALUE$],string_ptr_2     ;AN061;are we using double indirection?
 	jnz	READY_TO_PRINT			;AN061;no - we already have address
 	mov	dx,[string_ptr_2] ;AN061;get address in string_ptr_2
-	mov	word [bx.M_S_VALUE$],dx     ;AN061;put it into the subst block
+	mov	word [bx+M_SUBLIST_STRUC$.M_S_VALUE$],dx   ;AN061;put it into the subst block
 
 READY_TO_PRINT:
 	mov	bx,[PRINTF_HANDLE] ;AN000;get print handle
@@ -289,7 +289,7 @@ not_stderr:
 	mov	ax,[print_err_flag]        ;AN026;get extended error number back
 	mov	es,[RESSEG]			; No, set up for error, load the
 ;assume	es:resgroup				;  right error msg, and jmp to cerror.
-	test	byte [PIPEFLAG],-1
+	test	byte [es:PIPEFLAG],-1
 	jz	GO_TO_ERROR_TPRINTF
 	invoke	PipeOff
 	mov	dx,PipeEMes_Ptr
@@ -323,7 +323,7 @@ PRINT_ERR_EXIT: 				;AC000;
 TSYSLOADMSG:			;AN000;
 
 	push	bx				;AN000;
-	call sysloadmsg 			;AN000; call routine
+	call SYSLOADMSG 			;AN000; call routine
 	pop	bx				;AN000;
 	ret					;AN000; exit
 
@@ -347,7 +347,7 @@ TSYSLOADMSG:			;AN000;
 TSYSGETMSG:			;AN000;
 
 	push	cx				;AN000;
-	call sysgetmsg				;AN000; call routine
+	call SYSGETMSG				;AN000; call routine
 	pop	cx				;AN000;
 	ret					;AN000; exit
 

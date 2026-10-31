@@ -80,7 +80,7 @@ if SEGSEL = S_TRANCODE	;AC000;
 ;assume cs:trangroup, ds:trangroup, es:trangroup, ss:nothing
 
 
-BREAK <SEARCH_PATH2>
+BREAK <SEARCH>
 ;----------------------------------------------------------------------------
 ;   SEARCH, when given a pathname, attempts to find a file with
 ; one of the following extensions:  .com, .exe, .bat (highest to
@@ -122,7 +122,7 @@ if SEGSEL = S_TRANSPACE	;AC000;
 end if
 
 ;---------------
-procedure   SEARCH_PATH2,NEAR
+procedure   SEARCH,NEAR
 ;---------------
 	push	CX
 	push	DX
@@ -192,7 +192,7 @@ search_exit:
 	pop	CX
 	ret
 ;---------------
-EndProc SEARCH_PATH2
+EndProc SEARCH
 ;----------------------------------------------------------------------------
 
 
@@ -419,13 +419,13 @@ save_ptr_loop:
 	invoke	argv_calc			; convert to a pointer
 	mov	DX, word [ds:ARG+arg_unit.argv+BX+argv_ele.argpointer]
 	sub	DX, SI				; adjust argpointer
-	mov	word [es:arg_unit.argv+BX+argv_ele.argpointer], DX
+	mov	word [es:arg_unit+arg_unit.argv+BX+argv_ele.argpointer], DX
 	mov	DX, word [ds:ARG+arg_unit.argv+BX+argv_ele.argstartel]
 	sub	DX, SI				; and adjust argstartel
-	mov	word [es:arg_unit.argv+BX+argv_ele.argstartel], DX
+	mov	word [es:arg_unit+arg_unit.argv+BX+argv_ele.argstartel], DX
 	mov	DX, word [ds:ARG+arg_unit.argv+BX+argv_ele.arg_ocomptr]
 	sub	DX, SI				; and adjust arg_ocomptr
-	mov	word [es:arg_unit.argv+BX+argv_ele.arg_ocomptr], DX
+	mov	word [es:arg_unit+arg_unit.argv+BX+argv_ele.arg_ocomptr], DX
 	jmp	save_ptr_loop
 
 save_done:

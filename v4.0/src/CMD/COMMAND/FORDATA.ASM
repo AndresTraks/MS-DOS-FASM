@@ -13,14 +13,14 @@ STRUC for_info
     .fordma          DW          64 DUP (?)             ; FindFirst/Next buffer
     .FOR_VAR         DB          ?                      ; loop control variable
 }
-match =for_info_LAID_OUT, for_info_LAID_OUT
-{
-    for_info_LAID_OUT equ 1
-    virtual at 0
-      for_info for_info
-      sizeof.for_info = $ - for_info
-    end virtual
-}
+; The FOR command is laid down once, so the offsets are taken here, with no
+; MATCH asking whether a reading has already taken them: the question is
+; answered on the first reading of the source, which is laying down another
+; segment altogether.
+virtual at 0
+  for_info for_info
+  sizeof.for_info = $ - for_info
+end virtual
 
 ; empty segment done for bogus addressing
 ; MASM made f the first byte of a segment of nothing, so that TFOR could write
