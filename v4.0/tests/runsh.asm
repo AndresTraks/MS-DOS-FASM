@@ -4,8 +4,8 @@
 ; COMMAND.COM is not converted yet, and a filter reads what it works on from
 ; handle 0, so this does what the interpreter would have done for
 ; "PROGRAM < FILE": it gives back the memory a .COM program is handed, puts
-; the file on handle 0, and EXECs the program.  Which program and which file
-; comes from RUN.INC, which the test writes.
+; the file on handle 0, and EXECs the program.  Which program, which file
+; and what command tail comes from RUN.INC, which the test writes.
 	use16
 	org	100h
 
@@ -94,9 +94,17 @@ fcb1seg dw	0
 	dw	fcb
 fcb2seg dw	0
 
-tail	db	0,13			; nothing on the command line
+include 'RUN.INC'		; the program, the file, and the command tail
+
+; The command tail, which DOS copies to the child's PSP at 80h: a length and
+; then the characters, ended by the carriage return COMMAND.COM leaves there.
+; What the characters are is the test's business, so RUN.INC writes them.
+tail	db	tailend$ - tailtext$
+tailtext$:
+	cmdtail
+tailend$:
+	db	13
 fcb	db	0,"           ",0,0,0,0
-include 'RUN.INC'		; the program to run and the file to give it
 savess	dw	0
 savesp	dw	0
 

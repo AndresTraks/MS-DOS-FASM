@@ -1,100 +1,101 @@
 ;;
 ;;  Long Conditional Jump Macros
 ;;
-lja		macro	Farlabel
+;; MASM's LOCAL gave each expansion a label of its own, and so does fasm's.
+macro		lja	Farlabel {
 		local	Nearlabel
 		jna	Nearlabel
 		jmp	Farlabel
 Nearlabel:
-		endm
-ljae		macro	Farlabel
+}
+macro		ljae	Farlabel {
 		local	Nearlabel
 		jnae	Nearlabel
 		jmp	Farlabel
 Nearlabel:
-		endm
-ljb		macro	Farlabel
+}
+macro		ljb	Farlabel {
 		local	Nearlabel
 		jnb	Nearlabel
 		jmp	Farlabel
 Nearlabel:
-		endm
-ljc		macro	Farlabel
+}
+macro		ljc	Farlabel {
 		local	Nearlabel
 		jnc	Nearlabel
 		jmp	Farlabel
 Nearlabel:
-		endm
-ljbe		macro	Farlabel
+}
+macro		ljbe	Farlabel {
 		local	Nearlabel
 		jnbe	Nearlabel
 		jmp	Farlabel
 Nearlabel:
-		endm
-lje		macro	Farlabel
+}
+macro		lje	Farlabel {
 		local	Nearlabel
 		jne	Nearlabel
 		jmp	Farlabel
 Nearlabel:
-		endm
-ljz		macro	Farlabel
+}
+macro		ljz	Farlabel {
 		local	Nearlabel
 		jnz	Nearlabel
 		jmp	Farlabel
 Nearlabel:
-		endm
-ljg		macro	Farlabel
+}
+macro		ljg	Farlabel {
 		local	Nearlabel
 		jng	Nearlabel
 		jmp	Farlabel
 Nearlabel:
-		endm
-ljge		macro	Farlabel
+}
+macro		ljge	Farlabel {
 		local	Nearlabel
 		jnge	Nearlabel
 		jmp	Farlabel
 Nearlabel:
-		endm
-ljl		macro	Farlabel
+}
+macro		ljl	Farlabel {
 		local	Nearlabel
 		jnl	Nearlabel
 		jmp	Farlabel
 Nearlabel:
-		endm
-ljle		macro	Farlabel
+}
+macro		ljle	Farlabel {
 		local	Nearlabel
 		jnle	Nearlabel
 		jmp	Farlabel
 Nearlabel:
-		endm
-ljnc		macro	Farlabel
+}
+macro		ljnc	Farlabel {
 		local	Nearlabel
 		jc	Nearlabel
 		jmp	Farlabel
 Nearlabel:
-		endm
-ljne		macro	Farlabel
+}
+macro		ljne	Farlabel {
 		local	Nearlabel
 		je	Nearlabel
 		jmp	Farlabel
 Nearlabel:
-		endm
-ljnz		macro	Farlabel
+}
+macro		ljnz	Farlabel {
 		local	Nearlabel
 		jz	Nearlabel
 		jmp	Farlabel
 Nearlabel:
-		endm
-ljno		macro	Farlabel
+}
+macro		ljno	Farlabel {
 		local	Nearlabel
 		jo	Nearlabel
 		jmp	Farlabel
 Nearlabel:
-		endm
-ljo		macro	Farlabel
+}
+macro		ljo	Farlabel {
 		local	Nearlabel
 		jno	Nearlabel
 		jmp	Farlabel
 Nearlabel:
-		endm
+}
 

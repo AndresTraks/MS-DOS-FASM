@@ -36,6 +36,8 @@ fi
 cat > "$OUT/RUN.INC" <<'INC'
 prog	db	"MORE.COM",0
 txtfile	db	"TEST.TXT",0
+macro cmdtail {			; nothing on the command line
+}
 INC
 INCLUDE="$OUT" ; export INCLUDE
 $FASM tests/runsh.asm "$OUT/RUNSH.COM" >/dev/null

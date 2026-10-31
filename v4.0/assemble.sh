@@ -84,3 +84,7 @@ utility MORE MORE MORE.COM
 # SORT, the first of them built as an .EXE: CODE, CONST and CSTACK in one
 # group, which SORTLNK.ASM lays down as one segment.
 utility SORT SORTLNK SORT.EXE
+
+# FIND, an .EXE of two segments and no group, which FINDLNK.ASM lays down in
+# turn.
+utility FIND FINDLNK FIND.EXE
