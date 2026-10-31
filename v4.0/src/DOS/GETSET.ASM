@@ -346,13 +346,13 @@ if  DBCS				;AN000;
 	JNZ	dbcs_char		;AN000;;MS. yes, return error
 end if					;AN000;
 					;AN000;
-	CMP	DL,[NLS_YES]		;AN000;;MS. is 'Y' ?
+	CMP	DL,[ss:NLS_YES]		;AN000;;MS. is 'Y' ?
 	JZ	yesyes			;AN000;;MS. yes
-	CMP	DL,[NLS_yes2]		;AN000;;MS. is 'y' ?
+	CMP	DL,[ss:NLS_yes2]		;AN000;;MS. is 'y' ?
 	JZ	yesyes			;AN000;;MS. yes
-	CMP	DL,[NLS_NO]		;AN000;;MS. is	'N'?
+	CMP	DL,[ss:NLS_NO]		;AN000;;MS. is	'N'?
 	JZ	nono			;AN000;;MS. no
-	CMP	DL,[NLS_no2]		;AN000;;MS. is 'n' ?
+	CMP	DL,[ss:NLS_no2]		;AN000;;MS. is 'n' ?
 	JZ	nono			;AN000;;MS. no
 dbcs_char:				;AN000;
 	INC	AX			;AN000;;MS. not YES or NO

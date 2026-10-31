@@ -192,11 +192,15 @@ def kernel_labels(paths, default=None):
     The segments are the ones the link file selects with SEGSEL, which is how
     the kernel and the .EXE utilities are laid out.  A one-segment .COM has no
     such blocks, and every label is in the segment named by default.
+
+    The modules are read with their includes in place, because a module's
+    SEGSEL block is what says which segment the header it reads inside it
+    contributes to: FIND.ASM reads the parser inside its own.
     """
     where = {}
     for path in paths:
         stack = []
-        for line in lines_of(path):
+        for _, _, line in stream(path):
             if segment_of(line, stack):
                 continue
             seg = next((s for s in reversed(stack) if s), None) or default
@@ -359,8 +363,11 @@ def utility_program(where, source):
             p = find(os.path.dirname(top), n)
             if p:
                 mods.append(p)
-        m = re.search(r"(?m)^segment\s+(\w+?)_?\s*$", text)
-        return top, mods, None, m.group(1).upper() if m else None
+        # One fasm segment holding the lot is the group MASM counted the
+        # offsets from; more than one and there is no group, and a register
+        # reaches only what it is assumed to.
+        segs = re.findall(r"(?m)^segment\s+(\w+?)_?\s*$", text)
+        return top, mods, None, segs[0].upper() if len(segs) == 1 else None
     m = re.search(r"(?i);?\s*ASSUME[^\n]*\bCS\s*:\s*(\w+)", text)
     return top, [top], m.group(1).upper() if m else None, None
 
@@ -375,12 +382,8 @@ def main():
                  paths, bios_labels(bios), None)
 
     mods = kernel_modules()
-    everything = []
-    for p in mods:
-        everything += included(p, set())
-    everything = sorted(set(everything))
     bad += report("the kernel: six segments in DOSGROUP",
-                  mods, kernel_labels(everything), "DOSGROUP")
+                  mods, kernel_labels(mods), "DOSGROUP")
 
     # The utilities read the shared headers out of src/INC.
     SEARCH.append(os.path.join(SRC, "INC"))
@@ -389,13 +392,14 @@ def main():
         if program is None:
             continue
         top, mods, default, group = program
-        everything = []
-        for p in mods:
-            everything += included(p, set())
-        everything = sorted(set(everything))
-        bad += report("%s: %s" % (where, "%s, one segment" % default if default
-                                  else "the segments of the group %s" % group),
-                      mods, kernel_labels(everything, default), group)
+        if default:
+            how = "%s, one segment" % default
+        elif group:
+            how = "the segments of the group %s" % group
+        else:
+            how = "segments of its own, with no group"
+        bad += report("%s: %s" % (where, how),
+                      mods, kernel_labels(mods, default), group)
     return 1 if bad else 0
 
 

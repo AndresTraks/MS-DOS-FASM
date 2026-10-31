@@ -353,7 +353,7 @@ Break	<DIVISION OVERFLOW INTERRUPT>
 	procedure   DIVOV,NEAR
 ;ASSUME	DS:NOTHING,ES:NOTHING,SS:NOTHING
 	MOV	SI,DIVMES
-	MOV	BX,[DivMesLen]
+	MOV	BX,[cs:DivMesLen]
 	MOV	AX,CS
 	MOV	SS,AX
 	MOV	SP,AuxStack ; Enough stack for interrupts

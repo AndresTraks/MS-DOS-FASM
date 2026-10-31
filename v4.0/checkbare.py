@@ -21,9 +21,13 @@ fields are left out too -- ADD SI,SDEVNAME adds the field's offset, which is
 a number in both assemblers -- as are the names inside a string.
 
 It reads the release out of the commit that added each file, so it needs no
-list of its own, and it compares only the files that still have the same
-number of lines, which is all of the kernel's modules but the ones the
-conversion restructured.
+list of its own, and where a file no longer has the same number of lines the
+two are lined up by their instructions instead.
+
+The system is read as one program, because its modules share their variables,
+and each utility assemble.sh builds as another: two utilities may well give
+storage to the same name, and what one of them declares says nothing about
+the other.
 
 Checked against the defect it was written for: take the CS: off MSSTACK.INC's
 "mov bp,[cs:NextEntry]" and it names that line, and the same for a reference
@@ -166,17 +170,26 @@ def compare_aligned(rel, was, now, storage, out):
             judge(rel, b[j + k][0], a[i + k][2], b[j + k][2], storage, out)
 
 
-def main():
-    if not REPO:
-        sys.exit("%s is not in a git repository" % HERE)
+def modules(*where):
+    """Every module under those directories."""
     names = []
     for here, dirs, files in os.walk(os.path.join(HERE, "src")):
         dirs.sort()
         for n in sorted(files):
             if n.upper().endswith((".ASM", ".INC")):
                 rel = os.path.relpath(os.path.join(here, n), HERE)
-                if rel.startswith(("src/DOS", "src/BIOS", "src/BOOT", "src/INC")):
+                if rel.startswith(where):
                     names.append(rel)
+    return names
+
+
+def utilities():
+    """The utilities assemble.sh builds, each its own program."""
+    text = open(os.path.join(HERE, "assemble.sh")).read()
+    return re.findall(r"(?m)^utility\s+(\S+)\s", text)
+
+
+def check(names):
     # Storage is collected from every module, because a module reads
     # variables other modules declare.  What shadows a name is local: a
     # label or a constant of the module's own, which is why MSBIO2's
@@ -214,7 +227,23 @@ def main():
         for line in found:
             print(line)
         total += len(found)
-    print("\n%d operands name a variable and do not read it; %d files are a "
+    return total, lengths
+
+
+def main():
+    if not REPO:
+        sys.exit("%s is not in a git repository" % HERE)
+    # One group for the system, and one for each utility: a program's
+    # variables are its own, and two of them may well name one the same.
+    groups = [modules("src/DOS", "src/BIOS", "src/BOOT", "src/INC")]
+    for u in utilities():
+        groups.append(modules("src/CMD/%s" % u) + modules("src/INC"))
+    total = lengths = 0
+    for names in groups:
+        t, l = check(names)
+        total += t
+        lengths += l
+    print("\n%d operands name a variable and do not read it; %d files were a "
           "different length and were lined up by their instructions instead"
           % (total, lengths))
     return 1 if total else 0
