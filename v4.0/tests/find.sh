@@ -8,8 +8,10 @@
 # that both came through the parser: /N asks for the line number, and only
 # the one line that holds the string comes back, with its number in front.
 #
-# COMMAND.COM cannot do the redirection yet, so tests/runsh.asm stands in for
-# it: it puts the file on handle 0, puts the tail in the PSP and EXECs FIND.
+# COMMAND.COM runs it, from an AUTOEXEC.BAT that puts the file on its input,
+# so the tail FIND parses is the one the interpreter built in its PSP, with
+# the redirection taken out of it, and the prompt at the end is the
+# interpreter having it back.
 set -e
 cd "$(dirname "$0")/.."
 
@@ -22,29 +24,12 @@ mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
 
 ./create_image.sh >/dev/null
-
-if command -v fasm >/dev/null 2>&1; then
-    FASM=fasm
-else
-    FASM="wine ../fasmw17332/FASM.EXE"
-    WINEDEBUG=${WINEDEBUG:--all}
-    export WINEDEBUG
-fi
-
-# Which program the stand-in interpreter is to run, on what, and with what
-# on the command line.
-cat > "$OUT/RUN.INC" <<'INC'
-prog	db	"FIND.EXE",0
-txtfile	db	"LINES.TXT",0
-macro cmdtail {
-	db	' /N "line 07"'
-}
-INC
-INCLUDE="$OUT" ; export INCLUDE
-$FASM tests/runsh.asm "$OUT/RUNSH.COM" >/dev/null
-unset INCLUDE
-mcopy -o -i msdos.img "$OUT/RUNSH.COM" ::COMMAND.COM
 mcopy -o -i msdos.img bin/FIND.EXE ::FIND.EXE
+
+# An AUTOEXEC.BAT, which is also what keeps the interpreter from asking for
+# the date and the time.
+printf 'ECHO OFF\r\nFIND /N "line 07" < LINES.TXT\r\n' > "$OUT/AUTOEXEC.BAT"
+mcopy -o -i msdos.img "$OUT/AUTOEXEC.BAT" ::AUTOEXEC.BAT
 
 # Twelve numbered lines, one of which FIND is to come back with.
 python3 - "$OUT/LINES.TXT" <<'PY'
@@ -56,7 +41,7 @@ PY
 mcopy -o -i msdos.img "$OUT/LINES.TXT" ::LINES.TXT
 
 {
-    sleep 26
+    sleep 28
     echo "pmemsave 0xb8000 4000 \"$OUT/screen.bin\""
     sleep 2
     echo quit
@@ -82,15 +67,11 @@ screen = "\n".join(rows)
 
 rc = 0
 print("--- checks")
-want = [("[7]line 07 of the file FIND is reading",
-         "the line that holds the string came back, numbered by /N"),
-        ("The program returned", "FIND ended and EXEC came back")]
-for text, why in want:
-    if text in screen:
-        print("ok      %s: %s" % (text, why))
-    else:
-        print("MISSING %s" % text)
-        rc = 1
+if "[7]line 07 of the file FIND is reading" in screen:
+    print("ok      the line that holds the string came back, numbered by /N")
+else:
+    print("MISSING [7]line 07 of the file FIND is reading")
+    rc = 1
 others = [n for n in range(1, 13)
           if n != 7 and "line %02d of the file FIND" % n in screen]
 if others:
@@ -98,5 +79,12 @@ if others:
     rc = 1
 else:
     print("ok      no other line came back")
+
+last = [r for r in rows if r.strip()][-1]
+if last.startswith("A>"):
+    print("ok      the prompt is back: FIND ended and COMMAND.COM has it again")
+else:
+    print("MISSING the prompt; the last line is %r" % last)
+    rc = 1
 sys.exit(rc)
 PY

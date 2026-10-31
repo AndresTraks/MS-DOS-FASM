@@ -4,12 +4,13 @@
 # SORT is the first of the utilities to be built as an .EXE -- CODE, CONST
 # and CSTACK in one group, which SORTLNK.ASM lays down as one segment -- and
 # the first to use the parser in INC/PARSE.ASM and the collating table in
-# SORTMES.ASM.  So this gives it four lines in the wrong order, in mixed
-# case, and checks that what comes back is in the order the table says: the
-# table folds case, so Cherry sorts between banana and pear.
+# SORTMES.ASM.  So this gives it four lines in the wrong order, in mixed case,
+# and checks that what comes back is in the order the table says: the table
+# folds case, so Cherry sorts between banana and pear.
 #
-# COMMAND.COM cannot do the redirection yet, so tests/runsh.asm stands in for
-# it: it puts the file on handle 0 and EXECs SORT.
+# COMMAND.COM runs it, from an AUTOEXEC.BAT that puts the file on its input,
+# so the handle SORT reads is one the interpreter redirected for it and the
+# prompt at the end is the interpreter having it back.
 set -e
 cd "$(dirname "$0")/.."
 
@@ -22,33 +23,18 @@ mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
 
 ./create_image.sh >/dev/null
-
-if command -v fasm >/dev/null 2>&1; then
-    FASM=fasm
-else
-    FASM="wine ../fasmw17332/FASM.EXE"
-    WINEDEBUG=${WINEDEBUG:--all}
-    export WINEDEBUG
-fi
-
-# Which program the stand-in interpreter is to run, and on what.
-cat > "$OUT/RUN.INC" <<'INC'
-prog	db	"SORT.EXE",0
-txtfile	db	"WORDS.TXT",0
-macro cmdtail {			; nothing on the command line
-}
-INC
-INCLUDE="$OUT" ; export INCLUDE
-$FASM tests/runsh.asm "$OUT/RUNSH.COM" >/dev/null
-unset INCLUDE
-mcopy -o -i msdos.img "$OUT/RUNSH.COM" ::COMMAND.COM
 mcopy -o -i msdos.img bin/SORT.EXE ::SORT.EXE
+
+# An AUTOEXEC.BAT, which is also what keeps the interpreter from asking for
+# the date and the time.
+printf 'ECHO OFF\r\nSORT < WORDS.TXT\r\n' > "$OUT/AUTOEXEC.BAT"
+mcopy -o -i msdos.img "$OUT/AUTOEXEC.BAT" ::AUTOEXEC.BAT
 
 printf 'pear\r\napple\r\nCherry\r\nbanana\r\n' > "$OUT/WORDS.TXT"
 mcopy -o -i msdos.img "$OUT/WORDS.TXT" ::WORDS.TXT
 
 {
-    sleep 26
+    sleep 28
     echo "pmemsave 0xb8000 4000 \"$OUT/screen.bin\""
     sleep 2
     echo quit
@@ -92,10 +78,12 @@ if len(where) == 4:
     else:
         print("WRONG   the lines came back in the order %s" % order)
         rc = 1
-if "The program returned" in "\n".join(rows):
-    print("ok      SORT ended and EXEC came back")
+
+last = [r for r in rows if r.strip()][-1]
+if last.startswith("A>"):
+    print("ok      the prompt is back: SORT ended and COMMAND.COM has it again")
 else:
-    print("MISSING The program returned")
+    print("MISSING the prompt; the last line is %r" % last)
     rc = 1
 sys.exit(rc)
 PY

@@ -10,8 +10,9 @@
 # at is a message the retriever looked up by number, and a keystroke lets the
 # rest through.
 #
-# COMMAND.COM cannot do the redirection yet, so tests/runsh.asm stands in
-# for it: it puts TEST.TXT on handle 0 and EXECs MORE.
+# COMMAND.COM runs it, from an AUTOEXEC.BAT that puts the file on its input,
+# so the handle MORE reads is one the interpreter redirected for it and the
+# prompt at the end is the interpreter having it back.
 set -e
 cd "$(dirname "$0")/.."
 
@@ -24,26 +25,12 @@ mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
 
 ./create_image.sh >/dev/null
-
-if command -v fasm >/dev/null 2>&1; then
-    FASM=fasm
-else
-    FASM="wine ../fasmw17332/FASM.EXE"
-    WINEDEBUG=${WINEDEBUG:--all}
-    export WINEDEBUG
-fi
-# Which program the stand-in interpreter is to run, and on what.
-cat > "$OUT/RUN.INC" <<'INC'
-prog	db	"MORE.COM",0
-txtfile	db	"TEST.TXT",0
-macro cmdtail {			; nothing on the command line
-}
-INC
-INCLUDE="$OUT" ; export INCLUDE
-$FASM tests/runsh.asm "$OUT/RUNSH.COM" >/dev/null
-unset INCLUDE
-mcopy -o -i msdos.img "$OUT/RUNSH.COM" ::COMMAND.COM
 mcopy -o -i msdos.img bin/MORE.COM ::MORE.COM
+
+# An AUTOEXEC.BAT, which is also what keeps the interpreter from asking for
+# the date and the time.
+printf 'ECHO OFF\r\nMORE < TEST.TXT\r\n' > "$OUT/AUTOEXEC.BAT"
+mcopy -o -i msdos.img "$OUT/AUTOEXEC.BAT" ::AUTOEXEC.BAT
 
 # Forty numbered lines, so that MORE has to stop part way.
 python3 - "$OUT/TEST.TXT" <<'PY'
@@ -57,7 +44,7 @@ mcopy -o -i msdos.img "$OUT/TEST.TXT" ::TEST.TXT
 # The screen is read twice: once where MORE has stopped, and once after a key
 # has let the rest of the file through.
 {
-    sleep 24
+    sleep 26
     echo "pmemsave 0xb8000 4000 \"$OUT/paged.bin\""
     sleep 2
     echo "sendkey spc"
@@ -101,13 +88,19 @@ print("--- checks")
 want = [(paged, "line 01 of the file", "MORE read the file and wrote it out"),
         (paged, "-- More --",
          "MORE stopped, with the message the retriever found by number"),
-        (rest, "line 40 of the file", "a key let the rest of the file through"),
-        (rest, "The program returned", "MORE ended and EXEC came back")]
+        (rest, "line 40 of the file", "a key let the rest of the file through")]
 for screen, text, why in want:
     if text in screen:
         print("ok      %s: %s" % (text, why))
     else:
         print("MISSING %s" % text)
         rc = 1
+
+last = [r for r in after if r.strip()][-1]
+if last.startswith("A>"):
+    print("ok      the prompt is back: MORE ended and COMMAND.COM has it again")
+else:
+    print("MISSING the prompt; the last line is %r" % last)
+    rc = 1
 sys.exit(rc)
 PY
