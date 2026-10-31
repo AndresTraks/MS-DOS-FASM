@@ -62,18 +62,18 @@
 ;*    Prolog edited					  04/88  S. Maes     *
 ;*									     *
 ;*****************************************************************************
-IF1
-	%OUT	COMPONENT=LABEL MODULE=LABELM.SAL
-	%OUT	INCLUDING SYSMSG.INC
-ENDIF
-	INCLUDE sysmsg.inc
+;IF1
+;	%OUT	COMPONENT=LABEL MODULE=LABELM.SAL
+;	%OUT	INCLUDING SYSMSG.INC
+;ENDIF
+	include 'SYSMSG.INC'
 	MSG_UTILNAME <LABL>
 
-CSEG	segment public
-	assume	cs:CSEG,ds:CSEG
-	assume	es:CSEG,ss:CSEG
+;CSEG	segment public
+;	assume	cs:CSEG,ds:CSEG
+;	assume	es:CSEG,ss:CSEG
 
-	PUBLIC	SYSDISPMSG,SYSLOADMSG
+;	PUBLIC	SYSDISPMSG,SYSLOADMSG
 
 	MSG_SERVICES <MSGDATA>
 	MSG_SERVICES <LABL.CLA,LABL.CL1,LABL.CL2> ;AN000;M Support Utility msgs
@@ -84,9 +84,9 @@ CSEG	segment public
 						  ;DEFAULT=NO DATEmsg
 						  ;DEFAULT=NO GETmsg
 	MSG_SERVICES <NEARmsg,DISPLAYmsg,CHARmsg,NUMmsg,INPUTmsg,LOADmsg>
-CSEG	ENDS					  ;AN000;M Access to svcs macro
+;CSEG	ENDS					  ;AN000;M Access to svcs macro
 
-	include msgdcl.inc
+	include 'MSGDCL.INC'
 
-	END
+;	END
 

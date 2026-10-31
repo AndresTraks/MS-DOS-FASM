@@ -64,9 +64,11 @@ $FASM src/DOS/MSDOSLNK.ASM bin/MSDOS.SYS
 #
 # MORE, the smallest of them: one module, the message retriever, and the
 # structured statements in INC/STRUC.INC.
-# utility <directory> <source> <output>
+# The skeleton is named after the message class the utility declares, which
+# is usually the directory's own name but not always -- LABEL's is LABL.SKL.
+# utility <directory> <source> <output> [<skeleton>]
 utility() {
-    python3 buildmsg.py "src/CMD/$1/$1.SKL" >/dev/null
+    python3 buildmsg.py "src/CMD/$1/${4:-$1}.SKL" >/dev/null
     if [ "$FASM" = fasm ]; then
         INCLUDE="$PWD/src/INC:$PWD/src/CMD/$1"
     else
@@ -98,3 +100,7 @@ utility FIND FINDLNK FIND.EXE
 # each of the two copies.  Microsoft's EndProc check prints a line for
 # ReadBat, whose SaveReg has no RestoreReg inside the procedure.
 utility COMMAND COMLNK COMMAND.COM
+
+# LABEL, a .COM of one segment holding the program, its data and its stack,
+# which LABELLNK.ASM lays down in the order LABEL.LNK named the two modules.
+utility LABEL LABELLNK LABEL.COM LABL
