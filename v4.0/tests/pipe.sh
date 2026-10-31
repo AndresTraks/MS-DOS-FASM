@@ -22,18 +22,21 @@ OUT=${TMPDIR:-/tmp}/pipe.$$
 mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
 
-./create_image.sh >/dev/null
-mcopy -o -i msdos.img bin/SORT.EXE ::SORT.EXE
-mcopy -o -i msdos.img bin/FIND.EXE ::FIND.EXE
+# A disk of this test's own: it is read back here after the machine
+# has written to it, so nothing else may lay a fresh one down under it.
+IMG="$OUT/disk.img"
+./create_image.sh "$IMG" >/dev/null
+mcopy -o -i "$IMG" bin/SORT.EXE ::SORT.EXE
+mcopy -o -i "$IMG" bin/FIND.EXE ::FIND.EXE
 
 # One pipeline of two elements and one of three, so that the second element
 # is both the end of a pipe and the middle of one.
 printf 'ECHO OFF\r\nTYPE WORDS.TXT | SORT\r\nTYPE WORDS.TXT | FIND "an" | SORT\r\n' \
     > "$OUT/AUTOEXEC.BAT"
-mcopy -o -i msdos.img "$OUT/AUTOEXEC.BAT" ::AUTOEXEC.BAT
+mcopy -o -i "$IMG" "$OUT/AUTOEXEC.BAT" ::AUTOEXEC.BAT
 
 printf 'pear\r\napple\r\nmango\r\nCherry\r\nbanana\r\n' > "$OUT/WORDS.TXT"
-mcopy -o -i msdos.img "$OUT/WORDS.TXT" ::WORDS.TXT
+mcopy -o -i "$IMG" "$OUT/WORDS.TXT" ::WORDS.TXT
 
 {
     sleep 44
@@ -41,13 +44,13 @@ mcopy -o -i msdos.img "$OUT/WORDS.TXT" ::WORDS.TXT
     sleep 2
     echo quit
 } | "$QEMU" -rtc base=localtime \
-            -drive file=msdos.img,format=raw,if=floppy,index=0 \
+            -drive file="$IMG",format=raw,if=floppy,index=0 \
             -display none -monitor stdio >/dev/null 2>&1 || true
 
 [ -s "$OUT/screen.bin" ] || { echo "$0: the screen never came back" >&2; exit 1; }
 
 # What is left on the disk: the pipe files were made here and must be gone.
-mdir -b -i msdos.img :: > "$OUT/dir.txt" 2>/dev/null || true
+mdir -b -i "$IMG" :: > "$OUT/dir.txt" 2>/dev/null || true
 
 python3 - "$OUT/screen.bin" "$OUT/dir.txt" <<'PY' || exit 1
 import sys

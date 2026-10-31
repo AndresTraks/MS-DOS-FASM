@@ -15,9 +15,13 @@
 #
 # IO.SYS goes on first and MSDOS.SYS second: the boot sector reads the first
 # two entries of the root directory and expects to find them there, by name.
+#
+# The disk is msdos.img unless another path is asked for.  A test that reads
+# the disk back after the machine has written to it takes one of its own, so
+# that nothing else can lay a fresh image down in the middle of it.
 set -e
 cd "$(dirname "$0")"
-IMAGE=msdos.img
+IMAGE=${1:-msdos.img}
 
 ./assemble.sh >/dev/null
 
