@@ -22,6 +22,16 @@ with & and fasm with #; MSBOOT.ASM has one NOP that MASM generated and the
 conversion writes out; and MSEXTRN.INC asks IFNDEF about a block whose body
 is commented out.
 
+COMMAND.COM accounts for twenty more.  NAME told the linker what to call the
+module and END told it where to start, which COMLNK.ASM says instead; an ORG 0
+at the top of a segment says the segment starts at its own beginning, which
+the flat image is already at; IFEQU.ASM's and INIT.ASM's IF1, IF2 and IFNDEF
+blocks spoke to the listing and to nothing else; TBATCH2.ASM names a label
+MATCH, which fasm reads as its own directive unless LABEL names it; TCODE.ASM
+reserves the transient's parameter area where MASM moved the origin over it;
+and TDATA.ASM's inner ENDM closed an IRP, which is a block in its own braces
+here.
+
     python3 checkcode.py
 """
 import os

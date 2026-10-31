@@ -1,124 +1,124 @@
- page 80,132
+ PAGE 80,132
 ;	SCCSID = @(#)tpipe.asm	1.1 85/05/14
 ;	SCCSID = @(#)tpipe.asm	1.1 85/05/14
 TITLE	PART8 COMMAND Transient routines.
 
 
-	INCLUDE comsw.asm
+	include 'COMSW.ASM'
 .xlist
 .xcref
-	INCLUDE DOSSYM.INC
-	INCLUDE comseg.asm
-	INCLUDE comequ.asm
+	include 'DOSSYM.INC'
+	include 'COMSEG.ASM'
+	include 'COMEQU.ASM'
 .list
 .cref
 
 
-DATARES 	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	ECHOFLAG:BYTE
-	EXTRN	InitFlag:byte
-	EXTRN	INPIPEPTR:WORD
-	EXTRN	OUTPIPEPTR:WORD
-	EXTRN	PIPE1:BYTE
-	EXTRN	PIPE1T:BYTE
-	EXTRN	PIPE2:BYTE
-	EXTRN	PIPE2T:BYTE
-	EXTRN	PIPEFILES:BYTE
-	EXTRN	PIPEFLAG:BYTE
-	EXTRN	PIPEPTR:WORD
-	EXTRN	RESTDIR:BYTE
-	EXTRN	SINGLECOM:WORD
-DATARES ENDS
+if SEGSEL = S_DATARES	;AC000;
+;	EXTRN	ECHOFLAG:BYTE
+;	EXTRN	InitFlag:byte
+;	EXTRN	INPIPEPTR:WORD
+;	EXTRN	OUTPIPEPTR:WORD
+;	EXTRN	PIPE1:BYTE
+;	EXTRN	PIPE1T:BYTE
+;	EXTRN	PIPE2:BYTE
+;	EXTRN	PIPE2T:BYTE
+;	EXTRN	PIPEFILES:BYTE
+;	EXTRN	PIPEFLAG:BYTE
+;	EXTRN	PIPEPTR:WORD
+;	EXTRN	RESTDIR:BYTE
+;	EXTRN	SINGLECOM:WORD
+end if
 
-TRANDATA	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	BADDAT_PTR:WORD
-	EXTRN	BADTIM_PTR:WORD
-	EXTRN	curdat_mo_day:word	;AN000;
-	EXTRN	CURDAT_PTR:WORD
-	EXTRN	curdat_yr:word		;AN000;
-	EXTRN	curtim_hr_min:word	;AN000;
-	EXTRN	CURTIM_PTR:WORD
-	EXTRN	curtim_sec_hn:word	;AN000;
-	EXTRN	eurdat_ptr:word
-	EXTRN	japdat_ptr:word
-	EXTRN	newdat_format:word	;AN000;
-	EXTRN	NEWDAT_PTR:WORD
-	EXTRN	NEWTIM_PTR:WORD
-	EXTRN	parse_date:byte 	;AN000;
-	EXTRN	parse_time:byte 	;AN000;
-	EXTRN	PIPEEMES_PTR:WORD
-	EXTRN	promtim_hr_min:word	;AN000;
-	EXTRN	promtim_ptr:word	;AN000;
-	EXTRN	promtim_sec_hn:word	;AN000;
-	EXTRN	STRING_BUF_PTR:WORD	;AC000;
-	EXTRN	SYNTMES_PTR:WORD
-	EXTRN	usadat_ptr:word
+if SEGSEL = S_TRANDATA	;AC000;
+;	EXTRN	BADDAT_PTR:WORD
+;	EXTRN	BADTIM_PTR:WORD
+;	EXTRN	curdat_mo_day:word	;AN000;
+;	EXTRN	CURDAT_PTR:WORD
+;	EXTRN	curdat_yr:word		;AN000;
+;	EXTRN	curtim_hr_min:word	;AN000;
+;	EXTRN	CURTIM_PTR:WORD
+;	EXTRN	curtim_sec_hn:word	;AN000;
+;	EXTRN	eurdat_ptr:word
+;	EXTRN	japdat_ptr:word
+;	EXTRN	newdat_format:word	;AN000;
+;	EXTRN	NEWDAT_PTR:WORD
+;	EXTRN	NEWTIM_PTR:WORD
+;	EXTRN	parse_date:byte 	;AN000;
+;	EXTRN	parse_time:byte 	;AN000;
+;	EXTRN	PIPEEMES_PTR:WORD
+;	EXTRN	promtim_hr_min:word	;AN000;
+;	EXTRN	promtim_ptr:word	;AN000;
+;	EXTRN	promtim_sec_hn:word	;AN000;
+;	EXTRN	STRING_BUF_PTR:WORD	;AC000;
+;	EXTRN	SYNTMES_PTR:WORD
+;	EXTRN	usadat_ptr:word
 
-TRANDATA	ENDS
+end if
 
-TRANSPACE	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	COMBUF:BYTE
-	EXTRN	date_day:byte		;AN000;
-	EXTRN	date_month:byte 	;AN000;
-	EXTRN	date_year:word		;AN000;
-	EXTRN	INTERNATVARS:BYTE
-	EXTRN	RESSEG:WORD
-	EXTRN	time_fraction:byte	;AN000;
-	EXTRN	time_hour:byte		;AN000;
-	EXTRN	time_minutes:byte	;AN000;
-	EXTRN	time_seconds:byte	;AN000;
-TRANSPACE	ENDS
+if SEGSEL = S_TRANSPACE	;AC000;
+;	EXTRN	COMBUF:BYTE
+;	EXTRN	date_day:byte		;AN000;
+;	EXTRN	date_month:byte 	;AN000;
+;	EXTRN	date_year:word		;AN000;
+;	EXTRN	INTERNATVARS:BYTE
+;	EXTRN	RESSEG:WORD
+;	EXTRN	time_fraction:byte	;AN000;
+;	EXTRN	time_hour:byte		;AN000;
+;	EXTRN	time_minutes:byte	;AN000;
+;	EXTRN	time_seconds:byte	;AN000;
+end if
 
-TRANCODE	SEGMENT PUBLIC BYTE
-ASSUME	CS:TRANGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
+if SEGSEL = S_TRANCODE
+;ASSUME	CS:TRANGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
-	EXTRN	CERROR:NEAR
-	EXTRN	NOPIPEPROC:NEAR
-	EXTRN	STD_PRINTF:NEAR
-	EXTRN	TCOMMAND:NEAR
-	EXTRN	TESTDOREIN:NEAR
-	EXTRN	TESTDOREOUT:NEAR
-	EXTRN	TESTKANJ:NEAR		;AN000;3/3/KK
-	EXTRN	TSYSGETMSG:NEAR 	;AN000;
+;	EXTRN	CERROR:NEAR
+;	EXTRN	NOPIPEPROC:NEAR
+;	EXTRN	STD_PRINTF:NEAR
+;	EXTRN	TCOMMAND:NEAR
+;	EXTRN	TESTDOREIN:NEAR
+;	EXTRN	TESTDOREOUT:NEAR
+;	EXTRN	TESTKANJ:NEAR		;AN000;3/3/KK
+;	EXTRN	TSYSGETMSG:NEAR 	;AN000;
 
-	PUBLIC	CTIME
-	PUBLIC	DATE
-	PUBLIC	DATINIT
-	PUBLIC	PIPEDEL
-	PUBLIC	PIPEERRSYN
-	PUBLIC	PIPEPROC
-	PUBLIC	PIPEPROCSTRT
-	PUBLIC	PRINT_TIME
-	PUBLIC	SETREST
-	PUBLIC	SETREST1
-	PUBLIC	SINGLETEST
+;	PUBLIC	CTIME
+;	PUBLIC	DATE
+;	PUBLIC	DATINIT
+;	PUBLIC	PIPEDEL
+;	PUBLIC	PIPEERRSYN
+;	PUBLIC	PIPEPROC
+;	PUBLIC	PIPEPROCSTRT
+;	PUBLIC	PRINT_TIME
+;	PUBLIC	SETREST
+;	PUBLIC	SETREST1
+;	PUBLIC	SINGLETEST
 
 SINGLETEST:
-	ASSUME	DS:NOTHING
+;	ASSUME	DS:NOTHING
 	push	ds
-	MOV	DS,ResSeg
-	ASSUME	DS:ResGroup
-	CMP	[SINGLECOM],0
+	MOV	DS,[RESSEG]
+;	ASSUME	DS:ResGroup
+	CMP	word [SINGLECOM],0
 	JZ	TestDone
-	CMP	[SINGLECOM],0EFFFH
+	CMP	word [SINGLECOM],0EFFFH
 TestDone:
 	pop	ds
 	return
 
 
-ASSUME	DS:TRANGROUP
+;ASSUME	DS:TRANGROUP
 SETREST1:
 	MOV	AL,1
 SETREST:
 	PUSH	DS
 	MOV	DS,[RESSEG]
-ASSUME	DS:RESGROUP
+;ASSUME	DS:RESGROUP
 	MOV	[RESTDIR],AL
 	POP	DS
-ASSUME	DS:TRANGROUP
+;ASSUME	DS:TRANGROUP
 	return
 
-ASSUME	DS:RESGROUP
+;ASSUME	DS:RESGROUP
 
 ;
 ; Note that we need to handle the same thing that RestDir handles:  the
@@ -128,56 +128,56 @@ ASSUME	DS:RESGROUP
 ;
 
 PIPEDEL:
-	assume	ds:nothing
+;	assume	ds:nothing
 	push	ds
 	PUSH	DX
-	mov	ds,ResSeg
-	assume	ds:ResGroup
-	mov	DX,OFFSET RESGROUP:PIPE1	; Clean up in case ^C
-	MOV	AH,UNLINK
+	mov	ds,[RESSEG]
+;	assume	ds:ResGroup
+	mov	DX,Pipe1                 ; Clean up in case ^C
+	MOV	AH,Unlink
 	INT	int_command
-	MOV	DX,OFFSET RESGROUP:PIPE2
-	MOV	AH,UNLINK
+	MOV	DX,Pipe2
+	MOV	AH,Unlink
 	INT	int_command
 	POP	DX
 	call	PipeOff
-	mov	PipeFiles,0
+	mov	byte [PIPEFILES],0
 	pop	ds
 	return
 
 PIPEERRSYN:
-	MOV	DX,OFFSET TRANGROUP:SYNTMES_ptr
+	MOV	DX,SyntMes_Ptr
 	CALL	PIPEDEL
 	PUSH	CS
 	POP	DS
 	JMP	CERROR
 PIPEERR:
 	pushf
-	invoke	triageError
+	invoke	TriageError
 	SaveReg    <AX,DX>			; Save results from TriageError
-	MOV	DX,OFFSET TRANGROUP:PIPEEMES_ptr
+	MOV	DX,PipeEMes_Ptr
 	CALL	PIPEDEL
 	PUSH	CS
 	POP	DS
-	invoke	std_eprintf
+	invoke	STD_EPRINTF
 	RestoreReg <DX,AX>			; Restore results from TriageError
 	popf
 	cmp	ax, 65
 	jnz	tcommandj
 	JMP	CERROR
 tcommandj:
-	jmp	tcommand
+	jmp	TCOMMAND
 
 PIPEPROCSTRT:
-ASSUME	DS:TRANGROUP,ES:TRANGROUP
+;ASSUME	DS:TRANGROUP,ES:TRANGROUP
 	MOV	DS,[RESSEG]
-ASSUME	DS:RESGROUP
-	INC	[PIPEFILES]			; Flag that the pipe files exist
+;ASSUME	DS:RESGROUP
+	INC	byte [PIPEFILES]   ; Flag that the pipe files exist
 	MOV	AH,Get_Default_Drive		; Get current drive
 	INT	int_command
 	ADD	AL,capital_A
-	MOV	[PIPE2],AL			; Make pipe files in root of def drv
-	MOV	BX,OFFSET RESGROUP:PIPE1
+	MOV	[Pipe2],AL			; Make pipe files in root of def drv
+	MOV	BX,Pipe1
 	MOV	[BX],AL
 	xor	ah,ah				; nul terminate path names
 	mov	[Pipe1T],ah
@@ -188,28 +188,28 @@ ASSUME	DS:RESGROUP
 	INT	int_command
 	JC	PIPEERR 			; Couldn't create
 	MOV	BX,AX
-	MOV	AH,CLOSE			; Don't proliferate handles
+	MOV	AH,Close			; Don't proliferate handles
 	INT	int_command
 
-	MOV	DX,OFFSET RESGROUP:PIPE2
-	mov	ah,createTempFile		; the CreateTemp call
+	MOV	DX,Pipe2
+	mov	ah,CreateTempFile		; the CreateTemp call
 	INT	int_command
 	JC	PIPEERR
 	MOV	BX,AX
-	MOV	AH,CLOSE
+	MOV	AH,Close
 	INT	int_command
 
 	CALL	TESTDOREIN			; Set up a redirection if specified
 	MOV	SI,[PIPEPTR]
-	CMP	[SINGLECOM],-1
+	CMP	word [SINGLECOM],-1
 	JNZ	NOSINGP
-	MOV	[SINGLECOM],0F000H		; Flag single command pipe
+	MOV	word [SINGLECOM],0F000H    ; Flag single command pipe
 NOSINGP:
-	JMP	SHORT FIRSTPIPE
+	jmp     FIRSTPIPE
 
 PIPEPROC:
-ASSUME	DS:RESGROUP
-	AND	[ECHOFLAG],0FEh 		; force current echo to be off
+;ASSUME	DS:RESGROUP
+	AND	byte [ECHOFLAG],0FEh       ; force current echo to be off
 	MOV	SI,[PIPEPTR]
 	LODSB
 	CMP	AL,AltPipeChr			; Alternate pipe char?
@@ -219,7 +219,7 @@ ASSUME	DS:RESGROUP
 	jmp	PIPEEND 			; Pipe done
 IsPipe1:
 	MOV	DX,[INPIPEPTR]			; Get the input file name
-	MOV	AX,(OPEN SHL 8)
+	MOV	AX,(Open SHL 8)
 	INT	int_command
 PIPEERRJ:
 	jnc	no_pipeerr
@@ -227,22 +227,22 @@ PIPEERRJ:
 no_pipeerr:
 	MOV	BX,AX
 	MOV	AL,0FFH
-	XCHG	AL,[BX.PDB_JFN_Table]
-	MOV	DS:[PDB_JFN_Table],AL		; Redirect
+	XCHG	AL,[BX+Process_data_block.PDB_JFN_Table]
+	MOV	[ds:PDB_JFN_Table],AL		; Redirect
 
 FIRSTPIPE:
-	MOV	DI,OFFSET TRANGROUP:COMBUF + 2
+	MOV	DI,COMBUF + 2
 	XOR	CX,CX
-	CMP	BYTE PTR [SI],0DH		; '|<CR>'
+	CMP	byte [SI],0DH      ; '|<CR>'
 	JNZ	PIPEOK1
 PIPEERRSYNJ:
 	JMP	PIPEERRSYN
 PIPEOK1:
 	mov	al,vbar
-	CMP	BYTE PTR [SI],al		; '||'
+	CMP	byte [SI],al      ; '||'
 	JZ	PIPEERRSYNJ
-	CMP	BYTE PTR [SI],AltPipeChr	; '##' or '|#'?
-	JZ	PipeErrSynJ			; Yes, Error
+	CMP	byte [SI],AltPipeChr     ; '##' or '|#'?
+	JZ	PIPEERRSYNJ			; Yes, Error
 PIPECOMLP:
 	LODSB
 	STOSB
@@ -270,7 +270,7 @@ NOTKANJ5:
 	CMP	AL,vbar
 	JNZ	PIPECOMLP
 IsPipe2:
-	MOV	BYTE PTR ES:[DI-1],0DH
+	MOV	byte [es:DI-1],0DH
 	DEC	CX
 	MOV	[COMBUF+1],CL
 	DEC	SI
@@ -278,17 +278,17 @@ IsPipe2:
 	MOV	DX,[OUTPIPEPTR]
 	PUSH	CX
 	XOR	CX,CX
-	MOV	AX,(CREAT SHL 8)
+	MOV	AX,(Creat SHL 8)
 	INT	int_command
 	POP	CX
 	JC	PIPEERRJ			; Lost the file
 	MOV	BX,AX
 	MOV	AL,0FFH
-	XCHG	AL,[BX.PDB_JFN_Table]
-	MOV	DS:[PDB_JFN_Table+1],AL
+	XCHG	AL,[BX+Process_data_block.PDB_JFN_Table]
+	MOV	[ds:PDB_JFN_Table+1],AL
 	XCHG	DX,[INPIPEPTR]			; Swap for next element of pipe
 	MOV	[OUTPIPEPTR],DX
-	JMP	SHORT PIPECOM
+	jmp     PIPECOM
 
 LASTPIPE:
 	MOV	[COMBUF+1],CL
@@ -302,19 +302,19 @@ PIPECOM:
 
 PIPEEND:
 	CALL	PIPEDEL
-	CMP	[SINGLECOM],0F000H
+	CMP	word [SINGLECOM],0F000H
 	JNZ	NOSINGP2
-	MOV	[SINGLECOM],-1			; Make it return
+	MOV	word [SINGLECOM],-1        ; Make it return
 NOSINGP2:
 	JMP	TCOMMAND
 
-ASSUME	DS:TRANGROUP,ES:TRANGROUP
+;ASSUME	DS:TRANGROUP,ES:TRANGROUP
 
 ; Date and time are set during initialization and use
 ; this routines since they need to do a long return
 
-DATINIT PROC	FAR
-	mov	cs:[resseg],ds			; SetInitFlag needs resseg initialized
+DATINIT:
+	mov	[cs:RESSEG],ds			; SetInitFlag needs resseg initialized
 	PUSH	ES
 	PUSH	DS				; Going to use the previous stack
 	MOV	AX,CS				; Set up the appropriate segment registers
@@ -323,23 +323,23 @@ DATINIT PROC	FAR
 	invoke	TSYSLOADMSG			;AN000; preload messages
 	invoke	SETSTDINON			;AN026; turn on critical error on STDIN
 	invoke	SETSTDOUTOFF			;AN026; turn off critical error on STDOUT
-	MOV	DX,OFFSET TRANGROUP:INTERNATVARS;Set up internat vars
-	MOV	AX,INTERNATIONAL SHL 8
+	MOV	DX,INTERNATVARS                 ;Set up internat vars
+	MOV	AX,International SHL 8
 	INT	21H
-	MOV	WORD PTR DS:[81H],13		; Want to prompt for date during initialization
-	MOV	[COMBUF],COMBUFLEN		; Init COMBUF
-	MOV	WORD PTR [COMBUF+1],0D01H
+	MOV	word [ds:81H],13      ; Want to prompt for date during initialization
+	MOV	byte [COMBUF],COMBUFLEN    ; Init COMBUF
+	MOV	word [COMBUF+1],0D01H
 	CALL	DATE
 	CALL	CTIME
 	POP	DS
 	POP	ES
 	RET
-DATINIT ENDP
+;DATINIT ENDP
 
 ; DATE - Gets and sets the time
 
 
-	break	Date
+	BREAK	DATE
 
 
 ; ****************************************************************
@@ -359,18 +359,18 @@ DATINIT ENDP
 ; *
 ; ****************************************************************
 
-assume	ds:trangroup,es:trangroup
+;assume	ds:trangroup,es:trangroup
 
 DATE:
 	MOV	SI,81H				; Accepting argument for date inline
-	mov	di,offset trangroup:parse_date	;AN000; Get adderss of PARSE_DATE
+	mov	di,PARSE_DATE                  ;AN000; Get adderss of PARSE_DATE
 	xor	cx,cx				;AN000; clear counter for positionals
 	xor	dx,dx				;AN000;
-	invoke	cmd_parse			;AC000; call parser
+	invoke	Cmd_parse			;AC000; call parser
 	cmp	ax,end_of_line			;AC000; are we at end of line?
 	JZ	PRMTDAT 			;AC000; yes - go ask for date
 	cmp	ax,result_no_error		;AN000; did we have an error?
-	jne	daterr				;AN000; yes - go issue message
+	jne	DATERR				;AN000; yes - go issue message
 	JMP	COMDAT				;AC000; we have a date
 
 PRMTDAT:
@@ -378,33 +378,33 @@ PRMTDAT:
 
 	invoke	GetDate 			;AN000; get date  for output
 	xchg	dh,dl				;AN000; switch month & day
-	mov	CurDat_yr,cx			;AC000; put year into message control block
-	mov	CurDat_mo_day,dx		;AC000; put month and day into message control block
-	mov	dx,offset trangroup:CurDat_ptr	;AC000; set up message for output
-	invoke	std_printf
+	mov	[CurDat_yr],cx ;AC000; put year into message control block
+	mov	[CurDat_mo_day],dx ;AC000; put month and day into message control block
+	mov	dx,CurDat_Ptr                  ;AC000; set up message for output
+	invoke	STD_PRINTF
 ;AD061; mov	CurDat_yr,0			;AC000; reset year, month and day
 ;AD061; mov	CurDat_mo_day,0 		;AC000;     pointers in control block
 
 GET_NEW_DATE:					;AN000;
-	call	getdat				;AC000; prompt user for date
+	call	GETDAT				;AC000; prompt user for date
 	cmp	ax,end_of_line			;AC000; are we at end of line?
 	jz	date_end			;AC000; yes - exit
 	cmp	ax,result_no_error		;AN000; did we have an error?
-	jne	daterr				;AN000; yes - go issue message
+	jne	DATERR				;AN000; yes - go issue message
 COMDAT:
-	mov	cx,date_year			;AC000; get parts of date in
-	mov	dh,date_month			;AC000;    cx and dx for set
-	mov	dl,date_day			;AC000;    date function call.
+	mov	cx,[DATE_YEAR] ;AC000; get parts of date in
+	mov	dh,[DATE_MONTH] ;AC000;    cx and dx for set
+	mov	dl,[DATE_DAY] ;AC000;    date function call.
 	push	cx				;AC000; save date
 	push	dx				;AC000;
 	mov	cx,1				;AC000; set 1 positional entered
 	xor	dx,dx				;AN029;
-	invoke	cmd_parse			;AN029; call parser
+	invoke	Cmd_parse			;AN029; call parser
 	cmp	al,end_of_line			;AN029; Are we at end of line?
 	pop	dx				;AC000; retrieve date
 	pop	cx				;AC000;
-	jnz	daterr				;AC000; extra stuff on line - try again
-	MOV	AH,SET_DATE			;yes - set date
+	jnz	DATERR				;AC000; extra stuff on line - try again
+	MOV	AH,Set_Date			;yes - set date
 	INT	int_command
 	OR	AL,AL
 	JNZ	DATERR
@@ -412,15 +412,15 @@ date_end:
 	ret
 
 DATERR:
-	invoke	crlf2				;AN028; print out a blank line
-	MOV	DX,OFFSET TRANGROUP:BADDAT_ptr
-	invoke	std_printf
+	invoke	CRLF2				;AN028; print out a blank line
+	MOV	DX,BadDat_Ptr
+	invoke	STD_PRINTF
 	JMP	GET_NEW_DATE			;AC000; get date again
 
 
 ; TIME gets and sets the time
 
-	break	Time
+	BREAK	Time
 
 ; ****************************************************************
 ; *
@@ -439,58 +439,58 @@ DATERR:
 ; *
 ; ****************************************************************
 
-assume	ds:trangroup,es:trangroup
+;assume	ds:trangroup,es:trangroup
 
 CTIME:
 	MOV	SI,81H				; Accepting argument for time inline
-	mov	di,offset trangroup:parse_time	;AN000; Get adderss of PARSE_time
+	mov	di,PARSE_TIME                  ;AN000; Get adderss of PARSE_time
 	xor	cx,cx				;AN000; clear counter for positionals
 	xor	dx,dx				;AN000;
-	invoke	cmd_parse			;AC000; call parser
+	invoke	Cmd_parse			;AC000; call parser
 	cmp	ax,end_of_line			;AC000; are we at end of line?
 	JZ	PRMTTIM 			;AC000; yes - prompt for time
 	cmp	ax,result_no_error		;AN000; did we have an error?
-	jne	timerr				;AN000; yes - go issue message
+	jne	TIMERR				;AN000; yes - go issue message
 	JMP	COMTIM				;AC000; we have a time
 
 PRMTTIM:
 	;Printf "Current time is ... "
 
-	MOV	AH,GET_TIME			;AC000; get the current time
+	MOV	AH,Get_Time			;AC000; get the current time
 	INT	int_command			;AC000;    Get time in CX:DX
 	xchg	ch,cl				;AN000; switch hours & minutes
 	xchg	dh,dl				;AN000; switch seconds & hundredths
-	mov	CurTim_hr_min,cx		;AC000; put hours and minutes into message subst block
-	mov	CurTim_sec_hn,dx		;AC000; put seconds and hundredths into message subst block
-	mov	dx,offset trangroup:CurTim_ptr	;AC000; set up message for output
-	invoke	std_printf
+	mov	[CurTim_hr_min],cx ;AC000; put hours and minutes into message subst block
+	mov	[CurTim_Sec_hn],dx ;AC000; put seconds and hundredths into message subst block
+	mov	dx,CurTim_Ptr                  ;AC000; set up message for output
+	invoke	STD_PRINTF
 ;AD061; mov	CurTim_hr_min,0 		;AC000; reset hour, minutes, seconds, and hundredths
 ;AD061; mov	CurTim_sec_hn,0 		;AC000;     pointers in control block
 
 GET_NEW_TIME:
-	call	gettim				;AC000;
+	call	GETTIM				;AC000;
 	cmp	ax,end_of_line			;AC000; are we at end of line?
-	jz	time_end			;AC000;
+	jz	TIME_END			;AC000;
 	cmp	ax,result_no_error		;AN000; did we have an error?
-	jne	timerr				;AN000; yes - go issue message
+	jne	TIMERR				;AN000; yes - go issue message
 
 COMTIM:
-	mov	ch,time_hour			;AC000; get parts of time in
-	mov	cl,time_minutes 		;AC000;    cx and dx for set
-	mov	dh,time_seconds 		;AC000;    time function call
-	mov	dl,time_fraction		;AC000;
+	mov	ch,[TIME_HOUR] ;AC000; get parts of time in
+	mov	cl,[TIME_MINUTES] ;AC000;    cx and dx for set
+	mov	dh,[TIME_SECONDS] ;AC000;    time function call
+	mov	dl,[TIME_FRACTION] ;AC000;
 	push	cx				;AC000; save time
 	push	dx				;AC000;
 	mov	cx,1				;AC000; set 1 positional parm entered
 	xor	dx,dx				;AN029;
-	invoke	cmd_parse			;AN029; call parser
+	invoke	Cmd_parse			;AN029; call parser
 	cmp	al,end_of_line			;AN029; Are we at end of line?
 	pop	dx				;AC000; retieve time
 	pop	cx				;AC000;
-	jnz	timerr				;AC000; extra stuff on line - try again
+	jnz	TIMERR				;AC000; extra stuff on line - try again
 
 SAVTIM:
-	MOV	AH,SET_TIME
+	MOV	AH,Set_Time
 	INT	int_command
 	OR	AL,AL
 	JNZ	TIMERR				;AC000; if an error occured, try again
@@ -500,9 +500,9 @@ TIME_END:
 	ret
 
 TIMERR:
-	invoke	crlf2				;AN028; print out a blank line
-	MOV	DX,OFFSET TRANGROUP:BADTIM_ptr
-	invoke	std_printf			; Print error message
+	invoke	CRLF2				;AN028; print out a blank line
+	MOV	DX,BadTim_Ptr
+	invoke	STD_PRINTF			; Print error message
 	JMP	GET_NEW_TIME			;AC000; Try again
 
 
@@ -511,24 +511,24 @@ TIMERR:
 ;
 SetInitFlag:
 	mov	ds,[RESSEG]
-assume ds:resgroup
-	and	InitFlag,NOT initSpecial
-	or	InitFlag,cL
+;assume ds:resgroup
+	and	byte [InitFlag],NOT initSpecial
+	or	[InitFlag],cL
 	push	cs
 	pop	ds
 	return
 
-Public	PipeOff
+;Public	PipeOff
 PipeOff:
-	ASSUME	DS:NOTHING,ES:NOTHING
+;	ASSUME	DS:NOTHING,ES:NOTHING
 	SaveReg <DS,AX>
-	MOV	DS,ResSeg
-	ASSUME	DS:RESGroup
+	MOV	DS,[RESSEG]
+;	ASSUME	DS:RESGroup
 	XOR	AL,AL
-	XCHG	PipeFlag,AL
+	XCHG	[PIPEFLAG],AL
 	OR	AL,AL
 	JZ	PipeOffDone
-	SHR	EchoFlag,1
+	SHR	byte [ECHOFLAG],1
 PipeOffDone:
 	RestoreReg  <AX,DS>
 	return
@@ -536,7 +536,7 @@ PipeOffDone:
 
 PRINT_TIME:
 
-	MOV	AH,GET_TIME
+	MOV	AH,Get_Time
 	INT	int_command			; Get time in CX:DX
 
 	PUSH	ES
@@ -544,10 +544,10 @@ PRINT_TIME:
 	POP	ES
 	xchg	ch,cl				;AN000; switch hours & minutes
 	xchg	dh,dl				;AN000; switch seconds & hundredths
-	mov	promTim_hr_min,cx		;AC000; put hours and minutes into message subst block
-	mov	promTim_sec_hn,dx		;AC000; put seconds and hundredths into message subst block
-	mov	dx,offset trangroup:promTim_ptr ;AC000; set up message for output
-	invoke	std_printf
+	mov	[PromTim_hr_min],cx        ;AC000; put hours and minutes into message subst block
+	mov	[PromTim_Sec_hn],dx        ;AC000; put seconds and hundredths into message subst block
+	mov	dx,promTim_Ptr                  ;AC000; set up message for output
+	invoke	STD_PRINTF
 ;AD061; mov	promTim_hr_min,0		;AC000; reset hour, minutes, seconds, and hundredths
 ;AD061; mov	promTim_sec_hn,0		;AC000;     pointers in control block
 
@@ -574,45 +574,45 @@ PRINT_TIME:
 ; ****************************************************************
 
 
-GETDAT	proc	near				;AC000;
+GETDAT:			;AC000;
 
 	mov	ax,(International SHL 8)	; Determine what format the date
 	mov	dx,5ch				;  should be entered in and
 	int	int_command			;  print a message describing it
 	mov	si,dx
 	lodsw
-	mov	dx,usadat_ptr			;AC000; get mm-dd-yy
+	mov	dx,[USADat_Ptr] ;AC000; get mm-dd-yy
 	dec	ax
 	js	printformat
-	mov	dx,eurdat_ptr			;AC000; get dd-mm-yy
+	mov	dx,[EurDat_Ptr] ;AC000; get dd-mm-yy
 	jz	printformat
-	mov	dx,japdat_ptr			;AC000; get yy-mm-dd
+	mov	dx,[JapDat_Ptr] ;AC000; get yy-mm-dd
 printformat:
 	mov	ax,dx				;AN000; get message number of format
 	mov	dh,util_msg_class		;AN000; this is a utility message
-	call	Tsysgetmsg			;AN000; get the address of the message
-	mov	newdat_format,si		;AN000; put the address in subst block
-	MOV	DX,OFFSET TRANGROUP:NEWDAT_ptr	;AC000; get address of message to print
-	invoke	std_printf
-	mov	newdat_format,no_subst		;AN000; reset subst block
+	call	TSYSGETMSG			;AN000; get the address of the message
+	mov	[NewDat_Format],si ;AN000; put the address in subst block
+	MOV	DX,NewDat_Ptr                  ;AC000; get address of message to print
+	invoke	STD_PRINTF
+	mov	word [NewDat_Format],no_subst      ;AN000; reset subst block
 
-	MOV	AH,STD_CON_STRING_INPUT
-	MOV	DX,OFFSET TRANGROUP:COMBUF
+	MOV	AH,Std_Con_String_Input
+	MOV	DX,COMBUF
 	mov	cx,initSpecial			; Set bit in InitFlag that indicates
 	call	SetInitFlag			;  prompting for date.
 	INT	int_command			; Get input line
 	xor	cx,cx				; Reset bit in InitFlag that indicates
 	call	SetInitFlag			;  prompting for date.
 	invoke	CRLF2
-	MOV	SI,OFFSET TRANGROUP:COMBUF+2
-	mov	di,offset trangroup:parse_date	;AN000; Get adderss of PARSE_DATE
+	MOV	SI,COMBUF+2
+	mov	di,PARSE_DATE                  ;AN000; Get adderss of PARSE_DATE
 	xor	cx,cx				;AN000; clear counter for positionals
 	xor	dx,dx				;AN000;
-	invoke	cmd_parse			;AC000; call parser
+	invoke	Cmd_parse			;AC000; call parser
 
 	ret
 
-GETDAT	endp					;AC000;
+;GETDAT	endp					;AC000;
 
 
 ; ****************************************************************
@@ -633,28 +633,28 @@ GETDAT	endp					;AC000;
 ; ****************************************************************
 
 
-GETTIM	proc	near				;AC000;
+GETTIM:			;AC000;
 
 	XOR	CX,CX				; Initialize hours and minutes to zero
-	MOV	DX,OFFSET TRANGROUP:NEWTIM_ptr
-	invoke	std_printf
-	MOV	AH,STD_CON_STRING_INPUT
-	MOV	DX,OFFSET TRANGROUP:COMBUF
+	MOV	DX,NewTim_Ptr
+	invoke	STD_PRINTF
+	MOV	AH,Std_Con_String_Input
+	MOV	DX,COMBUF
 	mov	cx,initSpecial			; Set bit in InitFlag that indicates
 	call	SetInitFlag			;  prompting for time.
 	INT	int_command			; Get input line
 	xor	cx,cx				; Reset bit in InitFlag that indicates
 	call	SetInitFlag			;  prompting for time.
 	invoke	CRLF2
-	MOV	SI,OFFSET TRANGROUP:COMBUF+2
-	mov	di,offset trangroup:parse_time	;AN000; Get adderss of PARSE_TIME
+	MOV	SI,COMBUF+2
+	mov	di,PARSE_TIME                  ;AN000; Get adderss of PARSE_TIME
 	xor	cx,cx				;AN000; clear counter for positionals
 	xor	dx,dx				;AN000;
-	invoke	cmd_parse			;AC000; call parser
+	invoke	Cmd_parse			;AC000; call parser
 
 	ret
 
-GETTIM	endp					;AC000;
+;GETTIM	endp					;AC000;
 
-TRANCODE    ENDS
-	    END
+end if
+;	    END

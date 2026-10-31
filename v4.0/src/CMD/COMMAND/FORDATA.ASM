@@ -4,14 +4,14 @@
 
 STRUC for_info
 {
-    .for_args        DB          (sizeof.arg_unit) DUP (?) ; argv[] structure
-    .FOR_COM_START   DB          (?)                    ; beginning of <command>
-    .FOR_EXPAND      DW          (?)                    ; * or ? item in <list>?
-    .FOR_MINARG      DW          (?)                    ; beginning of <list>
-    .FOR_MAXARG      DW          (?)                    ; end of <list>
+    .for_args        DB          (sizeof.arg_unit) DUP (?)      ; argv[] structure
+    .FOR_COM_START   DB          ?                      ; beginning of <command>
+    .FOR_EXPAND      DW          ?                      ; * or ? item in <list>?
+    .FOR_MINARG      DW          ?                      ; beginning of <list>
+    .FOR_MAXARG      DW          ?                      ; end of <list>
     .forbuf          DW          64 DUP (?)             ; temporary buffer
     .fordma          DW          64 DUP (?)             ; FindFirst/Next buffer
-    .FOR_VAR         DB          (?)                    ; loop control variable
+    .FOR_VAR         DB          ?                      ; loop control variable
 }
 match =for_info_LAID_OUT, for_info_LAID_OUT
 {

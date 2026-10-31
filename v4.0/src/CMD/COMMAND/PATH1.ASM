@@ -1,17 +1,17 @@
- page 80,132
+ PAGE 80,132
 ;	SCCSID = @(#)path1.asm	1.1 85/05/14
 ;	SCCSID = @(#)path1.asm	1.1 85/05/14
 .sall
 .xlist
 .xcref
-INCLUDE DOSSYM.INC
-    include comsw.asm
-    include comseg.asm
-    include comequ.asm
+include 'DOSSYM.INC'
+    include 'COMSW.ASM'
+    include 'COMSEG.ASM'
+    include 'COMEQU.ASM'
 .list
 .cref
 
-break <Path.Asm>
+BREAK <PATH.Asm>
 ;----------------------------------------------------------------------------
 ;    PATH.ASM contains the routines to perform pathname incovation.  Path and
 ;    Parse share a temporary buffer and argv[] definitions.  <Path_Search>,
@@ -56,26 +56,26 @@ break <Path.Asm>
 ; DATA:
 ;---------------
 
-TRANDATA	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	baddrv_ptr:word
-TRANDATA	ENDS
+if SEGSEL = S_TRANDATA	;AC000;
+;	EXTRN	baddrv_ptr:word
+end if
 
-TRANSPACE	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	arg:byte
-	EXTRN	BADPMES_ptr:word
-	EXTRN	curdrv:byte
-	EXTRN	EXECPATH:byte
-	EXTRN	search_best_buf:byte
-	EXTRN	search_error:word
-	EXTRN	string_ptr_2:word
-	EXTRN	tpbuf:byte
-TRANSPACE	ENDS
+if SEGSEL = S_TRANSPACE	;AC000;
+;	EXTRN	arg:byte
+;	EXTRN	BADPMES_ptr:word
+;	EXTRN	curdrv:byte
+;	EXTRN	EXECPATH:byte
+;	EXTRN	search_best_buf:byte
+;	EXTRN	search_error:word
+;	EXTRN	string_ptr_2:word
+;	EXTRN	tpbuf:byte
+end if
 
-TRANCODE	SEGMENT PUBLIC BYTE	;AC000;
+if SEGSEL = S_TRANCODE	;AC000;
 
-assume cs:trangroup, ds:trangroup, es:trangroup, ss:nothing
+;assume cs:trangroup, ds:trangroup, es:trangroup, ss:nothing
 
-break <Path_Search>
+BREAK <Path_Search>
 ;------------------------------------------------------------------------------
 ;   PATH_SEARCH tries to find the file it's given, somewhere.  An initial value
 ; of *argv[0].argstartel == 0 implies that there is no command (empty line
@@ -105,13 +105,13 @@ break <Path_Search>
 pbuflen 	equ	128		; length of EXECPATH
 path_sep_char	equ	';'
 
-TRANSPACE	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	fbuf:byte
-	EXTRN	pathinfo:word
-	EXTRN	psep_char:byte
-TRANSPACE	ENDS
+if SEGSEL = S_TRANSPACE	;AC000;
+;	EXTRN	fbuf:byte
+;	EXTRN	pathinfo:word
+;	EXTRN	psep_char:byte
+end if
 
-Procedure   Path_Search,NEAR
+procedure   Path_Search,NEAR
 
 	push	BX
 	push	CX
@@ -120,38 +120,38 @@ Procedure   Path_Search,NEAR
 	push	DI
 	push	BP
 	pushf
-	test	DS:arg.argv[0].argflags, (MASK wildcard) + (MASK sw_flag)
+	test	byte [ds:ARG+arg_unit.argv+0+argv_ele.argflags], (MASK wildcard) + (MASK sw_flag)
 	jz	path_search_ok
 
 path_failure_jmp:
 	jmp	path_failure			; ambiguous commands not allowed
 
 path_search_ok:
-	call	store_pchar			; figure out the pathname separator
-	mov	DX, OFFSET TRANGROUP:fbuf	; clobber old dma value with
-	trap	set_dma 			; a pointer to our dma buffer
+	call	Store_pchar_PATH1			; figure out the pathname separator
+	mov	DX, fbuf                  ; clobber old dma value with
+	trap	Set_DMA 			; a pointer to our dma buffer
 	push	ES
-	invoke	find_path			; get a handle (ES:DI) on user path
-	mov	DS:pathinfo[0], ES		; and squirrel it away
-	mov	DS:pathinfo[2], DI		; "old" pathstring pointer
-	mov	DS:pathinfo[4], DI		; "new" pathstring pointer
+	invoke	FIND_PATH			; get a handle (ES:DI) on user path
+	mov	[ds:pathinfo+0], ES ; and squirrel it away
+	mov	[ds:pathinfo+2], DI ; "old" pathstring pointer
+	mov	[ds:pathinfo+4], DI ; "new" pathstring pointer
 	pop	ES
 
 	mov	BX, pbuflen			; copy/format argv[0] into temp buffer
-	mov	SI, OFFSET TRANGROUP:EXECPATH
-	invoke	strip
+	mov	SI, EXECPATH
+	invoke	Strip
 	jc	path_failure_jmp		; if possible, of course
 
 	mov	DX, SI				; search(EXECPATH, error_message)
-	mov	[search_error], OFFSET TRANGROUP:BADDRV_ptr
-	invoke	search				; must do at least one search
+	mov	word [search_error], BadDrv_Ptr
+	invoke	SEARCH				; must do at least one search
 	or	AX, AX				; find anything?
 	jz	path_noinit			; failure ... search farther
 
 	mov	BP, AX				; success... save filetype code
-	mov	DI, OFFSET TRANGROUP:EXECPATH
-	mov	SI, DS:arg.argv[0].argpointer
-	mov	CX, DS:arg.argv[0].argstartel
+	mov	DI, EXECPATH
+	mov	SI, word [ds:ARG+arg_unit.argv+0+argv_ele.argpointer]
+	mov	CX, word [ds:ARG+arg_unit.argv+0+argv_ele.argstartel]
 	sub	CX, SI				; compute prefix bytes to copy
 ;
 ; We have the number of bytes in the prefix (up to the final component).
@@ -168,10 +168,10 @@ path_search_ok:
 	jz	MoveDrive			; yes, just move it
 
 AddDrive:
-	mov	al,curdrv			; get current drive
+	mov	al,[CURDRV] ; get current drive
 	add	al,"A"                          ; convert to uppercase letter
 	stosw					; store d:
-	jmp	short CheckPath
+	jmp     CheckPath
 
 MoveDrive:
 	lodsw					; move d:
@@ -185,7 +185,7 @@ CheckPath:
 ;
 ; Stick in beginning path char
 ;
-	mov	al,psep_char
+	mov	al,[psep_char]
 	stosb
 ;
 ; Is there a leading /?  If so, then no current dir copy is necessary.
@@ -195,7 +195,7 @@ CheckPath:
 	jb	AddPath 			; no, go add path
 	lodsb
 	dec	cx
-	cmp	al,psep_char			; is there a path separator?
+	cmp	al,[psep_char] ; is there a path separator?
 	jz	MovePath			; yes, go move remainder of path
 	inc	cx
 	dec	si				; undo the lodsb
@@ -203,7 +203,7 @@ CheckPath:
 AddPath:
 	SaveReg <SI>
 	mov	si,di				; remainder of buffer
-	trap	Current_dir
+	trap	Current_Dir
 ;
 ; The previous current dir will succeed a previous find_first already worked.
 ;
@@ -211,12 +211,12 @@ AddPath:
 ;
 	mov	di,si
 	RestoreReg  <SI>
-	mov	al,psep_char
-	cmp	byte ptr [di],0 		; root (empty dir string)?
+	mov	al,[psep_char]
+	cmp	byte [di],0       ; root (empty dir string)?
 	jz	MovePath			; yes, no need for path char
 
 ScanEnd:
-	cmp	byte ptr [dI],0 		; end of string?
+	cmp	byte [dI],0       ; end of string?
 	jz	FoundEnd
 	inc	di
 	jmp	ScanEnd
@@ -235,23 +235,23 @@ MovePath:
 	dec	cx				; drop from count
 
 CopyPath:
-	jcxz	CopyDone			; no chars to move!
+	jcxz	CopyDone_PATH1			; no chars to move!
 	rep	movsb
 
-CopyDone:
+CopyDone_PATH1:
 	jmp	path_success			; run off and form complete pathname
 
 path_noinit:
-	test	DS:arg.argv[0].argflags, MASK path_sep
+	test	byte [ds:ARG+arg_unit.argv+0+argv_ele.argflags], MASK path_sep
 	jnz	path_failure			; complete pathname specified ==> fail
 
 	mov	BH, path_sep_char		; semicolon terminates pathstring
-	mov	DX, DS:arg.argv[0].argstartel	; this is where the last element starts
-	sub	DX, DS:arg.argv[0].argpointer	; form pointer into EXECPATH,
-	add	DX, OFFSET TRANGROUP:EXECPATH	; skipping over drive spec, if any
+	mov	DX, word [ds:ARG+arg_unit.argv+0+argv_ele.argstartel]      ; this is where the last element starts
+	sub	DX, word [ds:ARG+arg_unit.argv+0+argv_ele.argpointer]      ; form pointer into EXECPATH,
+	add	DX, EXECPATH                  ; skipping over drive spec, if any
 
 path_loop:
-	call	path_crunch			; pcrunch(EXECPATH, pathinfo)
+	call	Path_Crunch			; pcrunch(EXECPATH, pathinfo)
 	mov	BP, AX				; save filetype code
 
 	lahf					; save flags, just in case
@@ -266,9 +266,9 @@ path_failure:
 	jmp	path_exit			;AC000;  3/3/KK
 
 path_found:					; pathinfo[] points to winner
-	mov	DI, OFFSET TRANGROUP:EXECPATH
-	mov	CX, pathinfo[4] 		; "new" pointer -- end of string
-	mov	SI, pathinfo[2] 		; "old" pointer -- beginning of string
+	mov	DI, EXECPATH
+	mov	CX, [pathinfo+4]  ; "new" pointer -- end of string
+	mov	SI, [pathinfo+2]  ; "old" pointer -- beginning of string
 
 ;
 ;	BAS Nov 20/84
@@ -276,26 +276,26 @@ path_found:					; pathinfo[] points to winner
 ;   in the pathname (after the drive letter)
 ;
 	push	ES
-	push	pathinfo[0]
+	push	[pathinfo+0]
 	pop	ES
-	cmp	Byte Ptr ES:[SI+2],'.'          ; Look for Current dir at start of path
+	cmp	byte [es:SI+2],'.'              ; Look for Current dir at start of path
 	jnz	path_cpy
 
 	push	CX				; Save pointer to end of string
-	mov	AL, ES:[SI]
+	mov	AL, [es:SI]
 	mov	[DI],AL 			; Copy drive letter, :, and root char
-	mov	AL, ES:[SI+1]			; to EXECPATH
+	mov	AL, [es:SI+1]			; to EXECPATH
 	mov	[DI+1],AL
-	mov	AL,psep_char
+	mov	AL,[psep_char]
 	mov	[DI+2],AL
 	push	SI				; Save pointer to begining of string
-	mov	DL,ES:[SI]			; Convert device letter for cur dir
+	mov	DL,[es:SI]			; Convert device letter for cur dir
 	or	DL,20h
 	sub	DL,"a"-1
 	mov	SI,DI				; pointer to EXECPATH
 	add	SI, 3				; Don't wipe out drive and root info
-	trap	Current_dir
-	invoke	DStrlen 			; Determine length of present info
+	trap	Current_Dir
+	invoke	DSTRLEN 			; Determine length of present info
 	add	SI,CX				; Don't copy over drive and root info
 	dec	SI
 	mov	DI,SI				; Point to end of target string
@@ -307,41 +307,41 @@ path_cpy:
 	pop	ES
 	sub	CX, SI				; yields character count
 	push	DS				; time to switch segments
-	push	pathinfo[0]			; string lives in this segment
+	push	[pathinfo+0]  ; string lives in this segment
 	pop	DS
 	cld
 ;;	rep	movsb	    3/3/KK		; copy the prefix path into EXECPATH
 
-Kloop:						;AN000;  3/3/KK
+Kloop_PATH1:						;AN000;  3/3/KK
 	lodsb					;AN000;  3/3/KK
 	stosb					;AN000;  3/3/KK
-	invoke	testkanj			;AN000;  3/3/KK
-	jz	NotKanj1			;AN000;  3/3/KK
+	invoke	TESTKANJ			;AN000;  3/3/KK
+	jz	NotKanj1_PATH1			;AN000;  3/3/KK
 	dec	cx				;AN000;  3/3/KK
 	JCXZ	PopDone 			;AN000;  Ignore boundary error	 3/3/KK
 	movsb					;AN000;  3/3/KK
 	dec	cx				;AN000;  3/3/KK
 	cmp	cx,1				;AN000;  One char (the terminator) left ? 3/3/KK
-	ja	Kloop				;AN000;  no.			 3/3/KK
+	ja	Kloop_PATH1				;AN000;  no.			 3/3/KK
 
 PopDone:					;AN000;  3/3/KK
 	POP	DS				;AN000;  Yes ES:DI->terminator, last char is 3/3/KK
-	mov	AL, psep_char			;AN000;       KANJI		  3/3/KK
-	jmp	Short path_store		;AN000;  3/3/KK
+	mov	AL, [psep_char] ;AN000;       KANJI		  3/3/KK
+	jmp     path_store    ;AN000;  3/3/KK
 
-NotKanj1:
-	loop	Kloop
+NotKanj1_PATH1:
+	loop	Kloop_PATH1
 	pop	DS				; return to our segment
 	dec	DI				; overwrite terminator
-	mov	AL, psep_char			; with a pathname separator
-	cmp	al,byte ptr [di-1]
+	mov	AL, [psep_char] ; with a pathname separator
+	cmp	al,byte [di-1]
 	jz	path_success
 
 path_store:					;AN000;  3/3/KK
 	stosb
 
 path_success:
-	mov	SI, OFFSET TRANGROUP:search_best_buf
+	mov	SI, search_best_buf
 	xor	CX, CX
 
 path_succ_loop:
@@ -362,7 +362,7 @@ path_exit:
 	ret
 EndProc Path_Search
 
-break <Store_Pchar>
+BREAK <Store_pchar_PATH1>
 ;----------------------------------------------------------------------------
 ;   STORE_PCHAR determines the pathname-element separator and squirrels
 ; it away.  In other words, must we say '/bin/ls' or '\bin\ls'?
@@ -372,12 +372,12 @@ break <Store_Pchar>
 ;   *	Uses <psep_char>, defined in <path_search>.
 ;---------------
 ;---------------
-Procedure   Store_PChar,NEAR
+procedure   Store_pchar_PATH1,NEAR
 ;---------------
 
 	push	AX
 	mov	AL, '/'                         ; is the pathname-element separator
-	invoke	pathchrcmp			; a regular slash?
+	invoke	PATHCHRCMP			; a regular slash?
 	jz	store_slash			; if yes, remember slash
 	mov	al,'\'
 	mov	[psep_char], al 		; otherwise, remember back-slash
@@ -389,10 +389,10 @@ store_slash:
 	pop	ax
 	return
 ;---------------
-EndProc Store_Pchar
+EndProc Store_pchar_PATH1
 ;----------------------------------------------------------------------------
 
-break <Path_Crunch>
+BREAK <Path_Crunch>
 ;----------------------------------------------------------------------------
 ; PATH_CRUNCH takes a prefix from a prefix string, and a suffix from
 ; EXECPATH, and smooshes them into tpbuf.  The caller may supply an
@@ -414,7 +414,7 @@ break <Path_Crunch>
 ;	the user, a la UNIX (e.g., PATH=;c:\bin;c:\etc searches the
 ;	current directory before the bin and etc directories of drive c).
 ;---------------
-Procedure   Path_Crunch,NEAR
+procedure   Path_Crunch,NEAR
 ;---------------
 	push	BX
 	push	CX
@@ -422,12 +422,12 @@ Procedure   Path_Crunch,NEAR
 	push	DI
 	push	SI
 	pushf
-	call	store_pchar			; figure out pathname separator
-	mov	DI, OFFSET TRANGROUP:tpbuf	; destination of concatenated string
-	mov	SI, pathinfo[4] 		; "new" pointer to start with
-	mov	pathinfo[2], SI 		; becomes "old" pointer
+	call	Store_pchar_PATH1			; figure out pathname separator
+	mov	DI, tpbuf                  ; destination of concatenated string
+	mov	SI, [pathinfo+4]  ; "new" pointer to start with
+	mov	[pathinfo+2], SI  ; becomes "old" pointer
 	push	DS				; save old segment pointer
-	push	pathinfo[0]			; replace with pointer to userpath's
+	push	[pathinfo+0]  ; replace with pointer to userpath's
 	pop	DS				; segment
 	xor	cl,cl				;AN000;  clear flag for later use 3/3/KK
 
@@ -437,32 +437,32 @@ path_cr_copy:
 	jz	path_seg			; null terminates segment & pathstring
 	cmp	AL, BH
 	jz	path_seg			; BH terminates a pathstring segment
-	invoke	testkanj			;AN000;  3/3/KK
-	jz	NotKanj2			;AN000;  3/3/KK
+	invoke	TESTKANJ			;AN000;  3/3/KK
+	jz	NotKanj2_PATH1			;AN000;  3/3/KK
 	stosb					;AN000;  3/3/KK
 	movsb					;AN000;  3/3/KK
 	MOV	CL,1				;AN000;  CL=1 means latest stored char is DBCS 3/3/KK
 	jmp	path_cr_copy			;AN000;  3/3/KK
 
-NotKanj2:					;AN000;  3/3/KK
+NotKanj2_PATH1:					;AN000;  3/3/KK
 	xor	cl,cl				;AN000;  CL=0 means latest stored char is SBCS 3/3/KK
 	stosb					; save byte in concat buffer
 	jmp	path_cr_copy			; loop until we see a terminator
 
 path_seg:
 	pop	DS				; restore old data segment
-	mov	pathinfo[4], SI 		; save "new" pointer for next time
+	mov	[pathinfo+4], SI  ; save "new" pointer for next time
 	mov	BL, AL				; remember if we saw null or not...
 						;;; REMOVE NEXT 3 LINES FOR CURDIR SPEC
 	xor	AX, AX				; in case nothing in pathstr...
-	cmp	DI, OFFSET TRANGROUP:tpbuf	; was there really anything in pathstr?
+	cmp	DI, tpbuf                  ; was there really anything in pathstr?
 	je	path_cr_leave			; if nothing was copied, pathstr empty
 
 path_cr_look:					; form complete pathname
-	mov	al, psep_char			; add pathname separator for suffix
+	mov	al, [psep_char] ; add pathname separator for suffix
 	or	cl,cl				;AN000;  3/3/KK
 	jnz	path_cr_store			;AN000;  this is a trailing byte of ECS code 3/3/KK
-	cmp	al,byte ptr [di-1]
+	cmp	al,byte [di-1]
 	jz	path_cr_l1
 
 path_cr_store:					;AN000;  3/3/KK
@@ -476,16 +476,16 @@ path_cr_l2:
 	stosb					; the end of the path, up to and
 	or	AL, AL				; including the terminating null
 	jnz	path_cr_l2
-	mov	DX, OFFSET TRANGROUP:tpbuf	; and look for an appropriate file...
-	mov	[search_error], OFFSET TRANGROUP:BADPMES_ptr
-	invoke	search				; results are in AX & search_best_buf
+	mov	DX, tpbuf                  ; and look for an appropriate file...
+	mov	word [search_error], BadPMes_Ptr
+	invoke	SEARCH				; results are in AX & search_best_buf
 
 path_cr_leave:
 	or	BL, BL				; did we finish off the pathstring?
 	jz	path_cr_empty			; null in BL means all gone...
 	popf					; otherwise, plenty left
 	clc
-	jmp	short path_cr_exit
+	jmp     path_cr_exit
 
 path_cr_empty:
 	popf
@@ -503,5 +503,5 @@ EndProc Path_Crunch
 ;----------------------------------------------------------------------------
 
 
-trancode    ends
-END
+end if
+;END

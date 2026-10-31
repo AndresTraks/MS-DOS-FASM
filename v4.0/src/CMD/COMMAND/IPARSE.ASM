@@ -1,18 +1,18 @@
- page 80,132
+ PAGE 80,132
 ;	SCCSID = @(#)iparse.asm 4.1 87/04/28
 ;	SCCSID = @(#)iparse.asm 4.1 87/04/28
-TITLE	COMMAND interface to SYSPARSE
+TITLE	COMMAND interface to SysParse
 
 .xlist
 .xcref
-	INCLUDE comseg.asm		;AN000;
+	include 'COMSEG.ASM';AN000;
 .list
 .cref
 
 
-INIT		SEGMENT PUBLIC PARA	;AN000;
+if SEGSEL = S_INIT	;AN000;
 
-ASSUME	CS:RESGROUP,DS:RESGROUP,ES:NOTHING,SS:NOTHING	;AN000;
+;ASSUME	CS:RESGROUP,DS:RESGROUP,ES:NOTHING,SS:NOTHING	;AN000;
 
 
 ;AD054; public	SYSPARSE		;AN000;
@@ -33,6 +33,6 @@ ASSUME	CS:RESGROUP,DS:RESGROUP,ES:NOTHING,SS:NOTHING	;AN000;
 .cref
 
 
-INIT	    ends			;AN000;
-	    end 			;AN000;
+end if			;AN000;
+;	    end 			;AN000;
 

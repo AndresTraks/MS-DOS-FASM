@@ -1,4 +1,4 @@
- page 80,132
+ PAGE 80,132
 ;	SCCSID = @(#)tmisc2.asm 4.3 85/06/25
 ;	SCCSID = @(#)tmisc2.asm 4.3 85/06/25
 TITLE	Part7 COMMAND Transient Routines
@@ -8,73 +8,73 @@ TITLE	Part7 COMMAND Transient Routines
 
 .xlist
 .xcref
-	INCLUDE comsw.asm
-	INCLUDE DOSSYM.INC
-	INCLUDE comseg.asm
-	INCLUDE comequ.asm
-	INCLUDE ioctl.inc
+	include 'COMSW.ASM'
+	include 'DOSSYM.INC'
+	include 'COMSEG.ASM'
+	include 'COMEQU.ASM'
+	include 'IOCTL.INC'
 .list
 .cref
 
 
-CODERES 	SEGMENT PUBLIC BYTE	;AC000;
-CodeRes 	ENDS
+if SEGSEL = S_CODERES	;AC000;
+end if
 
-DATARES 	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	IFFlag:BYTE
-	EXTRN	PIPEFLAG:BYTE
-	EXTRN	RE_OUTSTR:BYTE
-	EXTRN	RE_OUT_APP:BYTE
-DATARES 	ENDS
+if SEGSEL = S_DATARES	;AC000;
+;	EXTRN	IFFlag:BYTE
+;	EXTRN	PIPEFLAG:BYTE
+;	EXTRN	RE_OUTSTR:BYTE
+;	EXTRN	RE_OUT_APP:BYTE
+end if
 
-TRANDATA	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	AccDen_PTR:WORD
-	EXTRN	Extend_buf_ptr:word	;AN000;
-	EXTRN	FULDIR_PTR:WORD
-	EXTRN	msg_disp_class:byte	;AN000;
-TRANDATA	ENDS
+if SEGSEL = S_TRANDATA	;AC000;
+;	EXTRN	AccDen_PTR:WORD
+;	EXTRN	Extend_buf_ptr:word	;AN000;
+;	EXTRN	FULDIR_PTR:WORD
+;	EXTRN	msg_disp_class:byte	;AN000;
+end if
 
-TRANSPACE	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	DESTINFO:BYTE
-	EXTRN	DESTISDIR:BYTE
-	EXTRN	KPARSE:BYTE		;AC000;
-	EXTRN	ONE_CHAR_VAL:BYTE	;AN011;
-	EXTRN	PATHCNT:WORD
-	EXTRN	PATHPOS:WORD
-	EXTRN	PATHSW:WORD
-	EXTRN	RE_INSTR:BYTE
-	EXTRN	RESSEG:WORD
-	EXTRN	SRCBUF:BYTE
-	EXTRN	SWITCHAR:BYTE
+if SEGSEL = S_TRANSPACE	;AC000;
+;	EXTRN	DESTINFO:BYTE
+;	EXTRN	DESTISDIR:BYTE
+;	EXTRN	KPARSE:BYTE		;AC000;
+;	EXTRN	ONE_CHAR_VAL:BYTE	;AN011;
+;	EXTRN	PATHCNT:WORD
+;	EXTRN	PATHPOS:WORD
+;	EXTRN	PATHSW:WORD
+;	EXTRN	RE_INSTR:BYTE
+;	EXTRN	RESSEG:WORD
+;	EXTRN	SRCBUF:BYTE
+;	EXTRN	SWITCHAR:BYTE
 
 	IF  IBM
-	EXTRN	ROM_CALL:BYTE
-	EXTRN	ROM_CS:WORD
-	EXTRN	ROM_IP:WORD
-	ENDIF
+;	EXTRN	ROM_CALL:BYTE
+;	EXTRN	ROM_CS:WORD
+;	EXTRN	ROM_IP:WORD
+end if
 
-TRANSPACE	ENDS
+end if
 
-TRANCODE	SEGMENT PUBLIC byte
+if SEGSEL = S_TRANCODE
 
-ASSUME	CS:TRANGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;ASSUME	CS:TRANGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
-	EXTRN	CERROR:NEAR
+;	EXTRN	CERROR:NEAR
 
 	IF	IBM
-	EXTRN	ROM_EXEC:NEAR
-	EXTRN	ROM_SCAN:NEAR
-	ENDIF
+;	EXTRN	ROM_EXEC:NEAR
+;	EXTRN	ROM_SCAN:NEAR
+end if
 
-	PUBLIC	IOSET
-	PUBLIC	MOVE_TO_SRCBUF		;AN000;
-	PUBLIC	PGETARG
-	PUBLIC	SETPATH
-	PUBLIC	TESTDOREIN
-	PUBLIC	TESTDOREOUT
+;	PUBLIC	IOSET
+;	PUBLIC	MOVE_TO_SRCBUF		;AN000;
+;	PUBLIC	PGETARG
+;	PUBLIC	SETPATH
+;	PUBLIC	TESTDOREIN
+;	PUBLIC	TESTDOREOUT
 
 
-ASSUME	DS:TRANGROUP
+;ASSUME	DS:TRANGROUP
 
 SETPATH:
 ;
@@ -86,15 +86,15 @@ SETPATH:
 	MOV	SI,[PATHPOS]			;AC000; get start of source buffer
 
 GETPATH:
-	MOV	[DESTINFO],0
-	MOV	[DESTISDIR],0
+	MOV	byte [DESTINFO],0
+	MOV	byte [DESTISDIR],0
 	MOV	SI,[PATHPOS]
 	MOV	CX,[PATHCNT]
 	MOV	DX,SI
 	JCXZ	PATHDONE
 	PUSH	CX
 	PUSH	SI
-	INVOKE	SWITCH
+	invoke	SWITCH
 	MOV	[PATHSW],AX
 	POP	BX
 	SUB	BX,SI
@@ -105,7 +105,7 @@ GETPATH:
 SKIPPATH:
 
 ;;;;	IF	KANJI	3/3/KK
-	MOV	[KPARSE],0
+	MOV	byte [KPARSE],0
 
 SKIPPATH2:
 ;;;;	ENDIF		3/3/KK
@@ -115,32 +115,32 @@ SKIPPATH2:
 	LODSB
 
 ;;;;	IF	KANJI	3/3/KK
-	INVOKE	TESTKANJ
+	invoke	TESTKANJ
 	JZ	TESTPPSEP
 	DEC	CX
 	INC	SI
-	INC	[KPARSE]
+	INC	byte [KPARSE]
 	JMP	SKIPPATH2
 
 TESTPPSEP:
 ;;;;	ENDIF		3/3/KK
 
-	INVOKE	PATHCHRCMP
+	invoke	PATHCHRCMP
 	JNZ	TESTPMETA
-	INC	[DESTISDIR]
+	INC	byte [DESTISDIR]
 
 TESTPMETA:
 	CMP	AL,'?'
 	JNZ	TESTPSTAR
-	OR	[DESTINFO],2
+	OR	byte [DESTINFO],2
 
 TESTPSTAR:
 	CMP	AL,star
 	JNZ	TESTPDELIM
-	OR	[DESTINFO],2
+	OR	byte [DESTINFO],2
 
 TESTPDELIM:
-	INVOKE	DELIM
+	invoke	DELIM
 	JZ	PATHDONEDEC
 	CMP	AL,[SWITCHAR]
 	JNZ	SKIPPATH
@@ -172,7 +172,7 @@ PGETARG:
 
 PSCANOFF:
 	LODSB
-	INVOKE	DELIM
+	invoke	DELIM
 	JNZ	PSCANOFFD
 	CMP	AL,';'
 	JNZ	PSCANOFF			; ';' is not a delimiter
@@ -185,7 +185,7 @@ IOSET:
 ;
 ; ALL REGISTERS PRESERVED
 ;
-ASSUME	DS:NOTHING,ES:NOTHING,SS:NOTHING
+;ASSUME	DS:NOTHING,ES:NOTHING,SS:NOTHING
 
 	PUSH	DS
 	PUSH	DX
@@ -193,12 +193,12 @@ ASSUME	DS:NOTHING,ES:NOTHING,SS:NOTHING
 	PUSH	BX
 	PUSH	CX
 	MOV	DS,[RESSEG]
-ASSUME	DS:RESGROUP
+;ASSUME	DS:RESGROUP
 
-	CMP	[PIPEFLAG],0
+	CMP	byte [PIPEFLAG],0
 	JNZ	NOREDIR 			; Don't muck up the pipe
-	TEST	IFFlag,-1
-	JNZ	NoRedir
+	TEST	byte [IFFLAG],-1
+	JNZ	NOREDIR
 	CALL	TESTDOREIN
 	CALL	TESTDOREOUT
 
@@ -208,20 +208,20 @@ NOREDIR:
 	POP	AX
 	POP	DX
 	POP	DS
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 	return
 
 TESTDOREIN:
 
-ASSUME	DS:RESGROUP
+;ASSUME	DS:RESGROUP
 
-	CMP	[RE_INSTR],0
+	CMP	byte [RE_INSTR],0
 	retz
 	PUSH	DS
 	PUSH	CS
 	POP	DS
-	MOV	DX,OFFSET tranGROUP:RE_INSTR
-	MOV	AX,(OPEN SHL 8)
+	MOV	DX,RE_INSTR
+	MOV	AX,(Open SHL 8)
 	MOV	BX,AX
 	INT	int_command
 	POP	DS
@@ -232,8 +232,8 @@ ASSUME	DS:RESGROUP
 ; Mega sleaze!! We move the SFN from the new handle spot into the old stdin
 ; spot.  We invalidate the new JFN we got.
 ;
-	XCHG	AL,[BX.PDB_JFN_Table]
-	MOV	DS:[PDB_JFN_Table],AL
+	XCHG	AL,[BX+Process_data_block.PDB_JFN_Table]
+	MOV	[ds:PDB_JFN_Table],AL
 
 	return
 ;
@@ -249,87 +249,87 @@ REDIRERR:
 ; The correct message is in DX
 ;
 	CMP	AX,65
-	JZ	CERRORJ 			;AC000; just issue message returned
-	CMP	BH,OPEN
+	JZ	CERRORJ_TMISC2 			;AC000; just issue message returned
+	CMP	BH,Open
 	JZ	OpenError
 ;
 ; The error was for a create operation.  Report the error as a creation error.
 ;
-	MOV	DX,OFFSET TranGroup:FULDIR_PTR
+	MOV	DX,FulDir_Ptr
 
-CERRORJ:
+CERRORJ_TMISC2:
 	JMP	CERROR
 ;
 ; The system call was an OPEN.	Report either file not found or path not found.
 ;
 
 OpenError:
-	mov	msg_disp_class,ext_msg_class	;AN000; set up extended error msg class
-	mov	dx,offset TranGroup:Extend_Buf_ptr ;AC000; get extended message pointer
-	mov	Extend_Buf_ptr,ax		;AN000; get message number in control block
+	mov	byte [msg_disp_class],ext_msg_class        ;AN000; set up extended error msg class
+	mov	dx,Extend_Buf_ptr                  ;AC000; get extended message pointer
+	mov	[Extend_Buf_ptr],ax        ;AN000; get message number in control block
 	JMP	CERROR
 
 TESTDOREOUT:
 
-ASSUME	DS:RESGROUP
+;ASSUME	DS:RESGROUP
 
-	CMP	[RE_OUTSTR],0
+	CMP	byte [RE_OUTSTR],0
 	JNZ	REOUTEXISTS			;AN017; need long jump
 	JMP	NOREOUT 			;AN017;
 
 REOUTEXISTS:
-	CMP	[RE_OUT_APP],0
+	CMP	byte [RE_OUT_APP],0
 	JZ	REOUTCRT
 ;
 ; The output redirection was for append.  We open for write and seek to the
 ; end.
 ;
-	MOV	DX,OFFSET RESGROUP:RE_OUTSTR
-	MOV	AX,(OPEN SHL 8) OR 2		;AC011; Open for read/write
+	MOV	DX,RE_OUTSTR
+	MOV	AX,(Open SHL 8) OR 2		;AC011; Open for read/write
 	PUSH	AX
 	INT	int_command
 	POP	BX
 	JC	OpenWriteError
 
 	MOV	BX,AX
-	MOV	AX,IOCTL SHL 8			;AN035; Get attributes of handle
+	MOV	AX,IOCtl SHL 8			;AN035; Get attributes of handle
 	INT	int_command			;AN035;
 	TEST	DL,devid_ISDEV			;AN035; Is it a device?
 	JNZ	SET_REOUT			;AN035; Yes, don't read from it
 
-	MOV	AX,(LSEEK SHL 8) OR 2
+	MOV	AX,(LSeek SHL 8) OR 2
 	MOV	CX,-1				;AC011; MOVE TO EOF -1
 	MOV	DX,CX				;AC011;
 	INT	int_command
 	PUSH	CS				;AN011; Get transient seg to DS
 	POP	DS				;AN011;
-	assume	DS:Trangroup			;AN011;
-	MOV	AX,(READ SHL 8) 		;AN011; Read one byte from the
+;	assume	DS:Trangroup			;AN011;
+	MOV	AX,(Read SHL 8) 		;AN011; Read one byte from the
 	MOV	CX,1				;AN011;   file into one_char_val
-	MOV	DX,OFFSET Trangroup:ONE_CHAR_VAL;AN011;
+	MOV	DX,one_char_val                 ;AN011;
 	INT	int_command			;AN011;
 	JC	OpenWriteError			;AN011; If error, exit
 	cmp	ax,cx				;AN017; Did we read 1 byte?
 	jnz	reout_0_length			;AN017; No - file must be 0 length
 
-	cmp	one_char_val,01ah		;AN011; Was char an eof mark?
-	mov	DS,[resseg]			;AN011; Get resident segment back
-	assume	DS:Resgroup			;AN011;
+	cmp	byte [one_char_val],01ah   ;AN011; Was char an eof mark?
+	mov	DS,[RESSEG]			;AN011; Get resident segment back
+;	assume	DS:Resgroup			;AN011;
 	JNZ	SET_REOUT			;AN011; No, just continue
-	MOV	AX,(LSEEK SHL 8) OR 1		;AN011; EOF mark found
+	MOV	AX,(LSeek SHL 8) OR 1		;AN011; EOF mark found
 	MOV	CX,-1				;AN011; LSEEK back one byte
 	MOV	DX,CX				;AN011;
 	INT	int_command			;AN011;
-	JMP	SHORT SET_REOUT
+	jmp     SET_REOUT
 
 reout_0_length: 				;AN017; We have a 0 length file
-	mov	DS,[resseg]			;AN017; Get resident segment back
-	assume	DS:Resgroup			;AN017;
-	MOV	AX,(LSEEK SHL 8)		;AN017; Move to beginning of file
+	mov	DS,[RESSEG]			;AN017; Get resident segment back
+;	assume	DS:Resgroup			;AN017;
+	MOV	AX,(LSeek SHL 8)		;AN017; Move to beginning of file
 	XOR	CX,CX				;AN017; Offset is 0
 	MOV	DX,CX				;AN017;
 	INT	int_command			;AN017;
-	JMP	SHORT SET_REOUT 		;AN017; now finish setting up redirection
+	jmp     SET_REOUT     ;AN017; now finish setting up redirection
 
 OpenWriteError:
 	CMP	AX,error_access_denied
@@ -338,9 +338,9 @@ OpenWriteError:
 	JMP	REDIRERR			;AN017;
 
 REOUTCRT:
-	MOV	DX,OFFSET RESGROUP:RE_OUTSTR
+	MOV	DX,RE_OUTSTR
 	XOR	CX,CX
-	MOV	AH,CREAT
+	MOV	AH,Creat
 	PUSH	AX
 	INT	int_command
 	POP	BX
@@ -356,8 +356,8 @@ SET_REOUT:
 ; spot.  We invalidate the new JFN we got.
 ;
 	MOV	AL,0FFH
-	XCHG	AL,[BX.PDB_JFN_Table]
-	MOV	DS:[PDB_JFN_Table+1],AL
+	XCHG	AL,[BX+Process_data_block.PDB_JFN_Table]
+	MOV	[ds:PDB_JFN_Table+1],AL
 
 NOREOUT:
 	return
@@ -366,7 +366,7 @@ NOREOUT:
 ; Compute length of string (including NUL) in DS:SI into CX.  Change no other
 ; registers
 ;
-Procedure   DSTRLEN,NEAR
+procedure   DSTRLEN,NEAR
 
 	SaveReg <AX>
 	XOR	CX,CX
@@ -382,7 +382,7 @@ DLoop:	LODSB
 
 EndProc DSTRLEN
 
-Break	<Extended error support>
+BREAK	<Extended error support>
 
 ;
 ; TriageError will examine the return from a carry-set system call and
@@ -397,7 +397,7 @@ Break	<Extended error support>
 ;		    No registers changed
 ;
 
-Procedure TriageError,NEAR
+procedure TriageError,NEAR
 
 	retnc					; no carry => do nothing...
 	PUSHF
@@ -405,7 +405,7 @@ Procedure TriageError,NEAR
 	MOV	AH,GetExtendedError
 	INT	21h
 	RestoreReg  <CX,BX>			; restore original AX
-	MOV	DX,OFFSET TranGroup:AccDen_PTR
+	MOV	DX,AccDen_Ptr
 	CMP	AX,65				; network access denied?
 	JZ	NoMove				; Yes, return it.
 	MOV	AX,BX
@@ -418,11 +418,11 @@ NoMove:
 
 EndProc TriageError
 
-PUBLIC Triage_Init
-Triage_Init proc FAR
+;PUBLIC Triage_Init
+Triage_Init:
 	call	TriageError
 	ret
-Triage_Init endp
+;Triage_Init endp
 
 
 ; ****************************************************************
@@ -443,14 +443,14 @@ Triage_Init endp
 ; *
 ; ****************************************************************
 
-assume	es:trangroup,ds:nothing 		;AN000;
+;assume	es:trangroup,ds:nothing 		;AN000;
 
-MOVE_TO_SRCBUF	PROC	NEAR			;AN000;
+MOVE_TO_SRCBUF:			;AN000;
 
 	push	si				;AN000;  save si,di
 	push	di				;AN000;
 	push	cx				;AN000;
-	mov	di,offset TRANGROUP:srcbuf	;AN000;  set ES:DI to srcbuf
+	mov	di,SRCBUF                  ;AN000;  set ES:DI to srcbuf
 	xor	cx,cx				;AN000; clear cx for counint
 	mov	ax,cx				;AN000; clear ax
 	push	di				;AN000; save start of srcbuf
@@ -462,7 +462,7 @@ mts_get_chars:					;AN000;
 	stosb					;AN000; no - store it in srcbuf
 	inc	cx				;AN000; increment length count
 	lodsb					;AN000; get a character from DS:SI
-	jmp	short mts_get_chars		;AN000; go check it
+	jmp     mts_get_chars    ;AN000; go check it
 
 mts_end_string: 				;AN000; we've reached the end of line
 	mov	al,end_of_line_in		;AN000; store 0dH in srcbuf
@@ -471,17 +471,17 @@ mts_end_string: 				;AN000; we've reached the end of line
 
 	push	cs				;AN000; set DS to local segment
 	pop	ds				;AN000;
-assume	ds:trangroup				;AN000;
-	mov	[pathcnt],cx			;AN000; set patchcnt to length count
-	mov	[pathpos],di			;AN000; set pathpos to start of srcbuf
+;assume	ds:trangroup				;AN000;
+	mov	[PATHCNT],cx			;AN000; set patchcnt to length count
+	mov	[PATHPOS],di			;AN000; set pathpos to start of srcbuf
 	pop	cx				;AN000; restore cx,di,si
 	pop	di				;AN000;
 	pop	si				;AN000;
 
 	RET					;AN000; exit
 
-MOVE_TO_SRCBUF	ENDP				;AN000;
+;MOVE_TO_SRCBUF	ENDP				;AN000;
 
-TRANCODE    ENDS
-	    END
+end if
+;	    END
 

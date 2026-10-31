@@ -51,8 +51,11 @@ include        'VERSIONA.INC'	       ;;AN003;;
 
 ; MASM worked an expression out sixteen bits wide, so NOT FALSE was 0FFFFh.
 ; fasm's arithmetic is wider than that, and -1 is what the sixteen bits held.
-FALSE	       = 0		       ;;
-TRUE	       = -1		       ;;    List message services and flags
+; A caller that has set the two already has set them with EQU, which holds
+; the text and cannot be given a value by =, so the question is asked the way
+; VERSION.INC asks it: the name stands for itself while nothing has defined it.
+match =FALSE, FALSE { FALSE = 0 }      ;;
+match =TRUE, TRUE { TRUE = -1 }        ;;    List message services and flags
 				       ;;
 
 ; Control Characters For Message Skeleton file

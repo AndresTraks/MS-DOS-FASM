@@ -53,19 +53,39 @@
 ;   o	Keep things consistent and force the user to have his software named
 ;	differently from the ROM names (BASIC1, BASIC2, etc).
 
-rom_header  STRUC
-    Signature1	DB  ?
-    Signature2	DB  ?
-    rom_length	DB  ?
-    init_jmp	DB  3 dup (?)
-    name_list	DB  ?
+STRUC rom_header
+{
+    .Signature1	DB  ?
+    .Signature2	DB  ?
+    .rom_length	DB  ?
+    .init_jmp	DB  3 dup (?)
+    .name_list	DB  ?
+}
 ;rom_header  ENDS
+match =rom_header_LAID_OUT, rom_header_LAID_OUT
+{
+    rom_header_LAID_OUT equ 1
+    virtual at 0
+      rom_header rom_header
+      sizeof.rom_header = $ - rom_header
+    end virtual
+}
 
-name_struc  STRUC
-    name_len	DB  ?
-    name_text	DB  1 DUP (?)
-    name_jmp	DB  3 DUP (?)
+STRUC name_struc
+{
+    .name_len	DB  ?
+    .name_text	DB  1 DUP (?)
+    .name_jmp	DB  3 DUP (?)
+}
 ;name_struc  ENDS
+match =name_struc_LAID_OUT, name_struc_LAID_OUT
+{
+    name_struc_LAID_OUT equ 1
+    virtual at 0
+      name_struc name_struc
+      sizeof.name_struc = $ - name_struc
+    end virtual
+}
 
 ;ASSUME	CS:TRANGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
@@ -179,7 +199,7 @@ ROM_EXEC:
 	PUSH	DS
 	MOV	DS,[RESSEG]
 ;	ASSUME	DS:RESGROUP
-	MOV	DX,RESGROUP:EXEC_WAIT
+	MOV	DX,EXEC_WAIT
 	INT	int_command
 	MOV	DX,DS
 	MOV	ES,DX
@@ -238,8 +258,8 @@ GOT_STACK:
 ; set up initial registers and go to the guy
 ;
 	NOT	AX
-	PUSH	[ROM_CS]
-	PUSH	[ROM_IP]
+	PUSH	word [ROM_CS]
+	PUSH	word [ROM_IP]
 	MOV	ES,DX
 ;ASSUME ES:NOTHING
 FOOBAR:

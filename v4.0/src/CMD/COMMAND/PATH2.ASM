@@ -1,23 +1,23 @@
- page 80,132
+ PAGE 80,132
 ;	SCCSID = @(#)path2.asm	1.1 85/05/14
 ;	SCCSID = @(#)path2.asm	1.1 85/05/14
 .sall
 .xlist
 .xcref
-INCLUDE DOSSYM.INC
-    include comsw.asm
-    include comseg.asm
-    include comequ.asm
+include 'DOSSYM.INC'
+    include 'COMSW.ASM'
+    include 'COMSEG.ASM'
+    include 'COMEQU.ASM'
 .list
 .cref
 
 
-DATARES SEGMENT PUBLIC BYTE
-	EXTRN	FORFLAG:BYTE
-DATARES ENDS
+if SEGSEL = S_DATARES
+;	EXTRN	FORFLAG:BYTE
+end if
 
 
-break <Path.Asm>
+BREAK <PATH.Asm>
 ;----------------------------------------------------------------------------
 ;    PATH.ASM contains the routines to perform pathname incovation.  Path and
 ;    Parse share a temporary buffer and argv[] definitions.  <Path_Search>,
@@ -62,25 +62,25 @@ break <Path.Asm>
 ; DATA:
 ;---------------
 
-TRANSPACE	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	arg:byte
-	EXTRN	BADPMES_ptr:word
-	EXTRN	curdrv:byte
-	EXTRN	EXECPATH:byte
-	EXTRN	ext_entered:byte	;AN005;
-	EXTRN	fbuf:byte
-	EXTRN	pathinfo:word
-	EXTRN	psep_char:byte
-	EXTRN	string_ptr_2:word
-	EXTRN	tpbuf:byte
-TRANSPACE	ENDS
+if SEGSEL = S_TRANSPACE	;AC000;
+;	EXTRN	arg:byte
+;	EXTRN	BADPMES_ptr:word
+;	EXTRN	curdrv:byte
+;	EXTRN	EXECPATH:byte
+;	EXTRN	ext_entered:byte	;AN005;
+;	EXTRN	fbuf:byte
+;	EXTRN	pathinfo:word
+;	EXTRN	psep_char:byte
+;	EXTRN	string_ptr_2:word
+;	EXTRN	tpbuf:byte
+end if
 
-TRANCODE	SEGMENT PUBLIC BYTE	;AC000;
+if SEGSEL = S_TRANCODE	;AC000;
 
-assume cs:trangroup, ds:trangroup, es:trangroup, ss:nothing
+;assume cs:trangroup, ds:trangroup, es:trangroup, ss:nothing
 
 
-break <Search>
+BREAK <SEARCH_PATH2>
 ;----------------------------------------------------------------------------
 ;   SEARCH, when given a pathname, attempts to find a file with
 ; one of the following extensions:  .com, .exe, .bat (highest to
@@ -114,15 +114,15 @@ wildchar		    equ 	'?'
 ;---------------
 ; DATA:
 ;---------------
-TRANSPACE	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	search_best:byte
-	EXTRN	search_best_buf:byte
-	EXTRN	search_curdir_buf:byte
-	EXTRN	search_error:word
-TRANSPACE	ENDS
+if SEGSEL = S_TRANSPACE	;AC000;
+;	EXTRN	search_best:byte
+;	EXTRN	search_best_buf:byte
+;	EXTRN	search_curdir_buf:byte
+;	EXTRN	search_error:word
+end if
 
 ;---------------
-Procedure   Search,NEAR
+procedure   SEARCH_PATH2,NEAR
 ;---------------
 	push	CX
 	push	DX
@@ -132,9 +132,9 @@ Procedure   Search,NEAR
 
 	push	DX				; check drivespec (save pname ptr)
 	mov	DI, DX				; working copy of pathname
-	mov	SI, OFFSET TRANGROUP:search_curdir_buf
+	mov	SI, search_curdir_buf
 	xor	DX, DX				; zero means current drive
-	cmp	BYTE PTR [DI+1],':'             ; is there a drive spec?
+	cmp	byte [DI+1],':'                 ; is there a drive spec?
 	jne	search_dir_check
 	mov	DL, [DI]			; get the drive byte
 	and	DL, NOT 20H			; uppercase the sucker
@@ -148,16 +148,16 @@ search_dir_check:
 	mov	CX, search_attr 		; filetypes to search for
 	trap	Find_First			; request first match, if any
 	jc	search_no_file
-	mov	search_best, search_file_not_found
-	mov	[search_best_buf], ANULL	; nothing's been found, yet
+	mov	byte [search_best], search_file_not_found
+	mov	byte [search_best_buf], ANULL      ; nothing's been found, yet
 
 search_loop:
-	call	search_ftype			; determine if .com, &c...
-	cmp	AL, search_best 		; better than what we've found so far?
+	call	Search_Ftype			; determine if .com, &c...
+	cmp	AL, [search_best] ; better than what we've found so far?
 	jle	search_next			; no, look for another
-	mov	search_best, AL 		; found something... save its code
-	mov	SI, OFFSET TRANGROUP:fbuf.find_buf_pname
-	mov	DI, OFFSET TRANGROUP:search_best_buf
+	mov	[search_best], AL ; found something... save its code
+	mov	SI, fbuf+find_buf.find_buf_pname
+	mov	DI, search_best_buf
 	mov	CX, fname_max_len
 	cld
 	rep	movsb				; save complete pathname representation
@@ -170,16 +170,16 @@ search_next:					; keep on looking
 	jnc	search_loop
 
 search_done:					; it's all over with...
-	mov	AL, search_best 		; pick best to return with
-	cmp	ext_entered,1			;AN005; Did user request a specific ext?
+	mov	AL, [search_best] ; pick best to return with
+	cmp	byte [ext_entered],1       ;AN005; Did user request a specific ext?
 	jz	search_exit			;AN005; no - exit
-	mov	al,ext_entered			;AN005; yes - get the real file type back
-	mov	search_best,al			;AN005; save the real file type
-	jmp	short search_exit
+	mov	al,[ext_entered] ;AN005; yes - get the real file type back
+	mov	[search_best],al ;AN005; save the real file type
+	jmp     search_exit
 
 search_invalid_drive:				; Tell the user path/drive
 	mov	DX, [search_error]		; appropriate error message
-	invoke	std_printf			; and pretend no file found
+	invoke	STD_PRINTF			; and pretend no file found
 
 search_no_file: 				; couldn't find a match
 	mov	AX, search_file_not_found
@@ -192,11 +192,11 @@ search_exit:
 	pop	CX
 	ret
 ;---------------
-EndProc Search
+EndProc SEARCH_PATH2
 ;----------------------------------------------------------------------------
 
 
-break <Search_Ftype>
+BREAK <Search_Ftype>
 ;----------------------------------------------------------------------------
 ;   SEARCH_FTYPE determines the type of a file by examining its extension.
 ; ENTRY:
@@ -208,16 +208,16 @@ break <Search_Ftype>
 ;---------------
 ; DATA:
 ;---------------
-TRANDATA	SEGMENT PUBLIC BYTE		;AC000;
-	extrn	comext:byte,exeext:byte,batext:byte
-trandata     ends
+if SEGSEL = S_TRANDATA	;AC000;
+;	extrn	comext:byte,exeext:byte,batext:byte
+end if
 ;---------------
-Procedure   Search_Ftype,NEAR
+procedure   Search_Ftype,NEAR
 ;---------------
 	push	DI
 	push	si
 	mov	AX, ANULL			; find the end of the filename
-	mov	DI, OFFSET TRANGROUP:fbuf.find_buf_pname
+	mov	DI, fbuf+find_buf.find_buf_pname
 	mov	CX, fname_max_len
 	cld
 	repnz	scasb				; search for the terminating null
@@ -226,50 +226,50 @@ Procedure   Search_Ftype,NEAR
 ;
 ; Compare .COM
 ;
-	mov	si,offset trangroup:comext
+	mov	si,comext
 	mov	ax,di
 	cmpsw
 	jnz	ftype_exe
 	cmpsw
 	jnz	ftype_exe
 	mov	AX, search_com			; success!
-	jmp	short ftype_exit
+	jmp     ftype_exit
 ;
 ; Compare .EXE
 ;
 
 ftype_exe:					; still looking... now for '.exe'
 	mov	di,ax
-	mov	si,offset trangroup:exeext
+	mov	si,exeext
 	cmpsw
 	jnz	ftype_bat
 	cmpsw
 	jnz	ftype_bat
 	mov	AX, search_exe			; success!
-	jmp	short ftype_exit
+	jmp     ftype_exit
 ;
 ; Compare .BAT
 ;
 
 ftype_bat:					; still looking... now for '.bat'
 	mov	di,ax
-	mov	si,offset trangroup:batext
+	mov	si,batext
 	cmpsw
 	jnz	ftype_fail
 	cmpsw
 	jnz	ftype_fail
 	mov	AX, search_bat			; success!
-	jmp	short ftype_exit
+	jmp     ftype_exit
 
 ftype_fail:					; file doesn't match what we need
 	mov	ax,ANULL
 
 ftype_exit:
-	cmp	ext_entered,1			;AN005; was an extension entered?
+	cmp	byte [ext_entered],1       ;AN005; was an extension entered?
 	jz	ftype_done			;AN005; no - exit
 	cmp	ax,ANULL			;AN005; was any match found
 	jz	ftype_done			;AN005; no - exit
-	mov	ext_entered,al			;AN005; save the match type found
+	mov	[ext_entered],al ;AN005; save the match type found
 	mov	AX, search_com			;AN005; send back best was found to stop search
 
 ftype_done:					;AN005;
@@ -282,7 +282,7 @@ EndProc Search_Ftype
 ;----------------------------------------------------------------------------
 
 
-break <Strip>
+BREAK <Strip>
 ;----------------------------------------------------------------------------
 ;    STRIP copies the source string (argv[0]) into the destination buffer,
 ; replacing any extension with wildcards.
@@ -294,7 +294,7 @@ break <Strip>
 ;	CF		--		set if failure, clear if successful
 ; NOTE(S):
 ;---------------
-Procedure   Strip,NEAR
+procedure   Strip,NEAR
 ;---------------
 	push	AX
 	push	BX
@@ -304,20 +304,20 @@ Procedure   Strip,NEAR
 	push	SI
 	pushf
 
-	mov	ext_entered,1			;AN005; assume no extension on file name
-	mov	DX, DS:arg.argv[0].argpointer	; save pointer to beginning of argstring
-	mov	DI, DS:arg.argv[0].argstartel	; beginning of last pathname element
-	cmp	BYTE PTR [DI], 0		; *STARTEL == NULL means no command
+	mov	byte [ext_entered],1       ;AN005; assume no extension on file name
+	mov	DX, word [ds:ARG+arg_unit.argv+0+argv_ele.argpointer]      ; save pointer to beginning of argstring
+	mov	DI, word [ds:ARG+arg_unit.argv+0+argv_ele.argstartel]      ; beginning of last pathname element
+	cmp	byte [DI], 0      ; *STARTEL == NULL means no command
 	jz	strip_error
 	mov	CX, DX				; compute where end of argstring lies
-	add	CX, DS:arg.argv[0].arglen
+	add	CX, word [ds:ARG+arg_unit.argv+0+argv_ele.arglen]
 	sub	CX, DI				; and then find length of last element
 	inc	CX				; include null as well
 	mov	AL, dot 			; let's find the filetype extension
 	cld
 	repnz	scasb				; wind up pointing to either null or dot
 	jcxz	process_ext			;AN005; if no extension found, just continue
-	mov	ext_entered,0			;AN005; we found an extension
+	mov	byte [ext_entered],0       ;AN005; we found an extension
 	mov	al,ANULL			;AN005; continue scanning until the
 	repnz	scasb				;AN005;    end of line is reached.
 
@@ -331,7 +331,7 @@ process_ext:					;AN005;
 	mov	SI, DX				; source is beginning of pathname
 	cld
 	rep	movsb				; SI=arg,DI=buffer,CX=argend-argbeg
-	cmp	ext_entered,1			;AN005; if an extension was entered
+	cmp	byte [ext_entered],1       ;AN005; if an extension was entered
 	jnz	skip_wilds			;AN005;    don't set up wildcard ext.
 
 	dec	DI				; overwrite null or dot
@@ -346,7 +346,7 @@ process_ext:					;AN005;
 skip_wilds:					;AN005;
 	popf
 	clc					; chill out...
-	jmp	short strip_exit
+	jmp     strip_exit
 
 strip_error:
 	popf
@@ -365,7 +365,7 @@ EndProc Strip
 ;----------------------------------------------------------------------------
 
 
-break <Save_Args>
+BREAK <Save_Args>
 ;----------------------------------------------------------------------------
 ;   SAVE_ARGS attempts to preserve the existing argv[]/argvcnt/argbuffer
 ; structure in newly allocated memory.	The argv[] structure is found at the
@@ -386,7 +386,7 @@ break <Save_Args>
 ;	as the caller of Save_Args requests.
 ;   3)	AX is undefined if CF indicates an error.
 ;---------------
-Procedure   Save_Args,NEAR
+procedure   Save_Args,NEAR
 ;---------------
 	push	BX
 	push	CX
@@ -395,7 +395,7 @@ Procedure   Save_Args,NEAR
 	push	SI
 	push	BP
 	pushf
-	add	BX, SIZE arg_unit + 0FH 	; space for arg structure, round up
+	add	BX, sizeof.arg_unit + 0FH  ; space for arg structure, round up
 	mov	CL, 4				; to paragraph size and convert
 	shr	BX, CL				; size in bytes to size in paragraphs
 	trap	Alloc
@@ -403,41 +403,41 @@ Procedure   Save_Args,NEAR
 	mov	BP, AX				; save segment id
 	push	ES				; save TRANGROUP address
 	mov	ES, AX				; switch to new memory segment
-assume	ES:nothing
-	mov	CX, SIZE arg_unit		; get back structure size
+;assume	ES:nothing
+	mov	CX, sizeof.arg_unit        ; get back structure size
 	xor	DI, DI				; destination is new memory area
-	mov	SI, OFFSET TRANGROUP:arg	; source is arg structure
+	mov	SI, ARG                  ; source is arg structure
 	rep	movsb				; move that sucker!
-	mov	CX, arg.argvcnt 		; adjust argv pointers
+	mov	CX, word [ARG+arg_unit.argvcnt]    ; adjust argv pointers
 	xor	AX, AX				; base address for argv_calc
-	mov	SI, OFFSET TRANGROUP:arg.argbuf - OFFSET arg_unit.argbuf
+	mov	SI, ARG+arg_unit.argbuf - arg_unit.argbuf
 
 save_ptr_loop:
 	dec	CX				; exhausted all args?
 	jl	save_done
 	mov	BX, CX				; get arg index and
 	invoke	argv_calc			; convert to a pointer
-	mov	DX, DS:arg.argv[BX].argpointer
+	mov	DX, word [ds:ARG+arg_unit.argv+BX+argv_ele.argpointer]
 	sub	DX, SI				; adjust argpointer
-	mov	ES:argv[BX].argpointer, DX
-	mov	DX, DS:arg.argv[BX].argstartel
+	mov	word [es:arg_unit.argv+BX+argv_ele.argpointer], DX
+	mov	DX, word [ds:ARG+arg_unit.argv+BX+argv_ele.argstartel]
 	sub	DX, SI				; and adjust argstartel
-	mov	ES:argv[BX].argstartel, DX
-	mov	DX, DS:arg.argv[BX].arg_ocomptr
+	mov	word [es:arg_unit.argv+BX+argv_ele.argstartel], DX
+	mov	DX, word [ds:ARG+arg_unit.argv+BX+argv_ele.arg_ocomptr]
 	sub	DX, SI				; and adjust arg_ocomptr
-	mov	ES:argv[BX].arg_ocomptr, DX
+	mov	word [es:arg_unit.argv+BX+argv_ele.arg_ocomptr], DX
 	jmp	save_ptr_loop
 
 save_done:
 	pop	ES				; back we go to TRANGROUP
-assume	ES:trangroup
+;assume	ES:trangroup
 	mov	AX, BP				; restore segment id
-	jmp	short save_ok
+	jmp     save_ok
 
 save_error:
 	popf
 	stc
-	jmp	short save_exit
+	jmp     save_exit
 
 save_ok:
 	popf
@@ -454,5 +454,5 @@ save_exit:
 EndProc Save_Args
 ;----------------------------------------------------------------------------
 
-trancode    ends
-END
+end if
+;END

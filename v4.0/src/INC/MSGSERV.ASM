@@ -296,7 +296,7 @@ READ_DISK_PROC:                                              ;;AN003;;
 	PUSH	DI					     ;;AN003;;
 	MOV	BP,AX					     ;;AN003;; Save message number
 	MOV	AX,DOS_EXTENDED_OPEN			     ;;AN003;; Set INT 21 function
-	LEA	SI,RESGROUP:COMSPEC			     ;;AN003;; Get addressibilty to COMMAND.COM
+	LEA	SI,[COMSPEC]				     ;;AN003;; Get addressibilty to COMMAND.COM
 	PUSH	CS					     ;;AN003;;
 	POP	DS					     ;;AN003;;
 	MOV	DI,-1					     ;;AN003;; No extended attribute list
@@ -340,7 +340,7 @@ MDO3$:
 		XOR	AH,AH				     ;;AN003;;	   Get number of messages in class
 		MOV	AL,[ds:DI+M_CLASS_ID$.M_NUM_CLS_MSG$]	     ;;AN003;;
 		MOV	SI,M_CLASS_ID_SZ$		     ;;AN003;;	   Initialize index
-		CMP	ds:DI+M_CLASS_ID$.M_COMMAND_VER$,EXPECTED_VERSION ;;AN003;;  Is this the right version of COMMAND.COM?
+		CMP	word [ds:DI+M_CLASS_ID$.M_COMMAND_VER$],EXPECTED_VERSION ;;AN003;;  Is this the right version of COMMAND.COM?
 ;	      $ENDIF					     ;;AN003;;
 MIF4$:
 	      POP     DX				     ;;AN003;;

@@ -1,57 +1,57 @@
- page 80,132
+ PAGE 80,132
 ;	SCCSID = @(#)copypr2.asm	1.1 85/05/14
 ;	SCCSID = @(#)copypr2.asm	1.1 85/05/14
-	INCLUDE comsw.asm
+	include 'COMSW.ASM'
 
 .xlist
 .xcref
-	INCLUDE DOSSYM.INC
-	INCLUDE comseg.asm
-	INCLUDE comequ.asm
+	include 'DOSSYM.INC'
+	include 'COMSEG.ASM'
+	include 'COMEQU.ASM'
 .list
 .cref
 
 
-TRANDATA	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	FulDir_ptr:word 	;AN052;
-TRANDATA ENDS
+if SEGSEL = S_TRANDATA	;AC000;
+;	EXTRN	FulDir_ptr:word 	;AN052;
+end if
 
-TRANSPACE	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	ASCII:BYTE
-	EXTRN	BINARY:BYTE
-	EXTRN	CONCAT:BYTE
-	EXTRN	DESTBUF:BYTE
-	EXTRN	DESTFCB:BYTE
-	EXTRN	DESTINFO:BYTE
-	EXTRN	DESTISDIR:BYTE
-	EXTRN	DESTTAIL:WORD
-	EXTRN	DESTVARS:BYTE
-	EXTRN	DIRBUF:BYTE
-	EXTRN	DIRCHAR:BYTE
-	EXTRN	FIRSTDEST:BYTE
-	EXTRN	INEXACT:BYTE
-	EXTRN	MELCOPY:BYTE
-	EXTRN	NXTADD:WORD
-	EXTRN	PLUS:BYTE
-	EXTRN	SDIRBUF:BYTE
-	EXTRN	SRCINFO:BYTE
-	EXTRN	srcxname:byte
-	EXTRN	TPA:WORD
-	EXTRN	trgxname:byte
-	EXTRN	USERDIR1:BYTE
-TRANSPACE	ENDS
+if SEGSEL = S_TRANSPACE	;AC000;
+;	EXTRN	ASCII:BYTE
+;	EXTRN	BINARY:BYTE
+;	EXTRN	CONCAT:BYTE
+;	EXTRN	DESTBUF:BYTE
+;	EXTRN	DESTFCB:BYTE
+;	EXTRN	DESTINFO:BYTE
+;	EXTRN	DESTISDIR:BYTE
+;	EXTRN	DESTTAIL:WORD
+;	EXTRN	DESTVARS:BYTE
+;	EXTRN	DIRBUF:BYTE
+;	EXTRN	DIRCHAR:BYTE
+;	EXTRN	FIRSTDEST:BYTE
+;	EXTRN	INEXACT:BYTE
+;	EXTRN	MELCOPY:BYTE
+;	EXTRN	NXTADD:WORD
+;	EXTRN	PLUS:BYTE
+;	EXTRN	SDIRBUF:BYTE
+;	EXTRN	SRCINFO:BYTE
+;	EXTRN	srcxname:byte
+;	EXTRN	TPA:WORD
+;	EXTRN	trgxname:byte
+;	EXTRN	USERDIR1:BYTE
+end if
 
-TRANCODE	SEGMENT PUBLIC BYTE
+if SEGSEL = S_TRANCODE
 
-	EXTRN	BADPATH_ERR:NEAR	;AN022;
-	EXTRN	COPERR:NEAR		;AN052;
-	EXTRN	EXTEND_SETUP:NEAR	;AN022;
+;	EXTRN	BADPATH_ERR:NEAR	;AN022;
+;	EXTRN	COPERR:NEAR		;AN052;
+;	EXTRN	EXTEND_SETUP:NEAR	;AN022;
 
-	PUBLIC	BUILDPATH
-	PUBLIC	SETSTARS
-	PUBLIC	SETASC
+;	PUBLIC	BUILDPATH
+;	PUBLIC	SETSTARS
+;	PUBLIC	SETASC
 
-ASSUME	CS:TRANGROUP,DS:TRANGROUP,ES:TRANGROUP,SS:NOTHING
+;ASSUME	CS:TRANGROUP,DS:TRANGROUP,ES:TRANGROUP,SS:NOTHING
 
 SETASC:
 ;
@@ -77,12 +77,12 @@ LOADSW:
 	OR	AL,AL
 	return
 
-public builddest
+;public builddest
 BUILDDEST:
-	cmp	[DESTISDIR],-1
+	cmp	byte [DESTISDIR],-1
 	jnz	KNOWABOUTDEST			; Already done the figuring
-	MOV	DI,OFFSET TRANGROUP:USERDIR1
-	mov	bp,offset trangroup:DESTVARS
+	MOV	DI,USERDIR1
+	mov	bp,DESTVARS
 	call	BUILDPATH
 	invoke	RESTUDIR1
 
@@ -97,17 +97,17 @@ KNOWABOUTDEST:
 
 FIRSTDST:
 	mov	si,[DESTTAIL]			; Create an FCB of the original DEST
-	mov	di,offset trangroup:DESTFCB
-	mov	ax,PARSE_FILE_DESCRIPTOR SHL 8
+	mov	di,DESTFCB
+	mov	ax,Parse_File_Descriptor SHL 8
 	INT	int_command
-	CMP	BYTE PTR [SI],0
+	CMP	byte [SI],0
 	JZ	GoodParse
 ;AD052; MOV	BYTE PTR [DI+1],"|"             ; must be illegal file name character
-	mov	dx,offset trangroup:fuldir_ptr	;AN052; Issue "File creation error"
-	jmp	coperr				;AN052;
+	mov	dx,FulDir_Ptr                  ;AN052; Issue "File creation error"
+	jmp	COPERR				;AN052;
 
 GoodParse:
-	mov	ax,word ptr [DESTBUF]		; Get drive
+	mov	ax,word [DESTBUF]      ; Get drive
 	cmp	ah,':'
 	jz	DRVSPEC4
 	mov	al,'@'
@@ -124,11 +124,11 @@ DRVSPEC4:
 	jz	NOTMELCOPY
 	cmp	al,ah
 	jnz	NOTMELCOPY
-	cmp	[PLUS],0
+	cmp	byte [PLUS],0
 	jz	NOTMELCOPY
-	inc	[MELCOPY]			; ambig source, ambig dest, and pluses
+	inc	byte [MELCOPY]     ; ambig source, ambig dest, and pluses
 	xor	al,al
-	jmp	short SETCONC
+	jmp     SETCONC
 
 NOTMELCOPY:
 	xor	al,2				; al=2 if unambig dest, =0 if ambig dest
@@ -141,7 +141,7 @@ SETCONC:
 	shl	al,1
 	shl	al,1
 	mov	[INEXACT],al			; Concat -> inexact copy
-	cmp	[BINARY],0
+	cmp	byte [BINARY],0
 	jnz	NOTFIRSTDEST			; Binary explicitly given, all OK
 	mov	[ASCII],al			; Concat -> ASCII
 	or	cl,cl
@@ -166,16 +166,16 @@ SETCONC:
 	MOV	[NXTADD],DI			; New buffer
 
 NOTFIRSTDEST:
-	mov	bx,offset trangroup:DIRBUF+1	; Source of replacement chars
-	cmp	[CONCAT],0
+	mov	bx,DIRBUF+1                  ; Source of replacement chars
+	cmp	byte [CONCAT],0
 	jz	GOTCHRSRC			; Not a concat
-	mov	bx,offset trangroup:SDIRBUF+1	; Source of replacement chars
+	mov	bx,SDIRBUF+1                  ; Source of replacement chars
 
 GOTCHRSRC:
-	mov	si,offset trangroup:DESTFCB+1	; Original dest name
+	mov	si,DESTFCB+1                  ; Original dest name
 	mov	di,[DESTTAIL]			; Where to put result
 
-public buildname
+;public buildname
 BUILDNAME:
 	mov	cx,8
 
@@ -183,7 +183,7 @@ BUILDMAIN:
 	lodsb
 	cmp	al,'?'
 	jnz	NOTAMBIG
-	mov	al,byte ptr [BX]
+	mov	al,byte [BX]
 
 NOTAMBIG:
 	cmp	al,' '
@@ -195,7 +195,7 @@ NOSTORE:
 	loop	BUILDMAIN
 	mov	cl,3
 	mov	al,' '
-	cmp	byte ptr [SI],al
+	cmp	byte [SI],al
 	jz	ENDDEST 			; No extension
 	mov	al,dot_chr
 	stosb
@@ -204,7 +204,7 @@ BUILDEXT:
 	lodsb
 	cmp	al,'?'
 	jnz	NOTAMBIGE
-	mov	al,byte ptr [BX]
+	mov	al,byte [BX]
 
 NOTAMBIGE:
 	cmp	al,' '
@@ -220,13 +220,13 @@ ENDDEST:
 	return
 
 BUILDPATH:
-	test	[BP.INFO],2
+	test	byte [BP+VARSTRUC.INFO],2
 	jnz	NOTPFILE			; If ambig don't bother with open
 	mov	dx,bp
-	add	dx,BUF				; Set DX to spec
+	add	dx,VARSTRUC.BUF    ; Set DX to spec
 
 	push	di				;AN000;
-	MOV	AX,EXTOPEN SHL 8		;AC000; open the file
+	MOV	AX,ExtOpen SHL 8		;AC000; open the file
 	mov	bx,read_open_mode		;AN000; get open mode for COPY
 	xor	cx,cx				;AN000; no special files
 	mov	si,dx				;AN030; get file name offset
@@ -235,28 +235,28 @@ BUILDPATH:
 	INT	int_command
 	pop	di				;AN000;
 	jnc	pure_file			;AN022; is pure file
-	invoke	get_ext_error_number		;AN022; get the extended error
+	invoke	Get_ext_error_number		;AN022; get the extended error
 	cmp	ax,error_file_not_found 	;AN022; if file not found - okay
-	jz	notpfile			;AN022;
+	jz	NOTPFILE			;AN022;
 	cmp	ax,error_path_not_found 	;AN022; if path not found - okay
-	jz	notpfile			;AN022;
+	jz	NOTPFILE			;AN022;
 	cmp	ax,error_access_denied		;AN022; if access denied - okay
-	jz	notpfile			;AN022;
+	jz	NOTPFILE			;AN022;
 	jmp	extend_setup			;AN022; exit with error
 
 pure_file:
 	mov	bx,ax				; Is pure file
-	mov	ax,IOCTL SHL 8
+	mov	ax,IOCtl SHL 8
 	INT	int_command
-	mov	ah,CLOSE
+	mov	ah,Close
 	INT	int_command
 	test	dl,devid_ISDEV
 	jnz	ISADEV				; If device, done
-	test	[BP.INFO],4
+	test	byte [BP+VARSTRUC.INFO],4
 	jz	ISSIMPFILE			; If no path seps, done
 
 NOTPFILE:
-	mov	dx,word ptr [BP.BUF]
+	mov	dx,word [BP+VARSTRUC.BUF]
 	cmp	dl,0				;AN034; If no drive specified, get
 	jz	set_drive_spec			;AN034;    default drive dir
 	cmp	dh,':'
@@ -270,25 +270,25 @@ DRVSPEC5:
 	sub	dl,60h				; A = 1
 	invoke	SAVUDIR1
 	jnc	curdir_ok			;AN022; if error - exit
-	invoke	get_ext_error_number		;AN022; get the extended error
+	invoke	Get_ext_error_number		;AN022; get the extended error
 	jmp	extend_setup			;AN022; exit with error
 
 curdir_ok:					;AN022;
 	mov	dx,bp
-	add	dx,BUF				; Set DX for upcomming CHDIRs
-	mov	bh,[BP.INFO]
+	add	dx,VARSTRUC.BUF    ; Set DX for upcomming CHDIRs
+	mov	bh,byte [BP+VARSTRUC.INFO]
 	and	bh,6
 	cmp	bh,6				; Ambig and path ?
 	jnz	CHECKAMB			; jmp if no
-	mov	si,[BP.TTAIL]
+	mov	si,word [BP+VARSTRUC.TTAIL]
 	mov	bl,':'
-	cmp	byte ptr [si-2],bl
+	cmp	byte [si-2],bl
 	jnz	KNOWNOTSPEC
-	mov	[BP.ISDIR],2			; Know is d:/file
-	jmp	short DOPCDJ
+	mov	byte [BP+VARSTRUC.ISDIR],2 ; Know is d:/file
+	jmp     DOPCDJ
 
 KNOWNOTSPEC:
-	mov	[BP.ISDIR],1			; Know is path/file
+	mov	byte [BP+VARSTRUC.ISDIR],1 ; Know is path/file
 	dec	si				; Point to the /
 
 DOPCDJ:
@@ -300,12 +300,12 @@ CHECKAMB:
 
 ISSIMPFILE:
 ISADEV:
-	mov	[BP.ISDIR],0			; Know is file since ambig but no path
+	mov	byte [BP+VARSTRUC.ISDIR],0 ; Know is file since ambig but no path
 	return
 
 CHECKCD:
 	invoke	SETREST1
-	mov	ah,CHDIR
+	mov	ah,CHDir
 	INT	int_command
 	jc	NOTPDIR
 	mov	di,dx
@@ -313,60 +313,60 @@ CHECKCD:
 	mov	cx,ax
 	dec	cx
 
-Kloop:						;AN000;  3/3/KK
-	MOV	AL,ES:[DI]			;AN000;  3/3/KK
+Kloop_COPYPR2:						;AN000;  3/3/KK
+	MOV	AL,[es:DI]			;AN000;  3/3/KK
 	INC	DI				;AN000;  3/3/KK
 	OR	AL,AL				;AN000;  3/3/KK
 	JZ	Done				;AN000;  3/3/KK
 	xor	ah,ah				;AN000;  3/3/KK
-	invoke	Testkanj			;AN000;  3/3/KK
-	JZ	Kloop				;AN000;  3/3/KK
+	invoke	TESTKANJ			;AN000;  3/3/KK
+	JZ	Kloop_COPYPR2				;AN000;  3/3/KK
 	INC	DI				;AN000;  3/3/KK
 	INC	AH				;AN000;  3/3/KK
-	jmp	Kloop				;AN000;  3/3/KK
+	jmp	Kloop_COPYPR2				;AN000;  3/3/KK
 
 Done:						;AN000;  3/3/KK
 	dec	di
 	mov	al,[DIRCHAR]
-	mov	[bp.ISDIR],2			; assume d:/file
+	mov	byte [bp+VARSTRUC.ISDIR],2 ; assume d:/file
 	OR	AH, AH				;AN000; 3/3/KK
-	JNZ	Store_pchar			;AN000; 3/3/KK	 this is the trailing byte of ECS code
+	JNZ	Store_pchar_COPYPR2			;AN000; 3/3/KK	 this is the trailing byte of ECS code
 	cmp	al,[di-1]
 	jz	GOTSRCSLSH
 
-Store_pchar:					;AN000; 3/3/KK
+Store_pchar_COPYPR2:					;AN000; 3/3/KK
 	stosb
-	mov	[bp.ISDIR],1			; know path/file
+	mov	byte [bp+VARSTRUC.ISDIR],1 ; know path/file
 
 GOTSRCSLSH:
-	or	[bp.INFO],6
+	or	byte [bp+VARSTRUC.INFO],6
 	call	SETSTARS
 	return
 
 
 NOTPDIR:
-	invoke	get_ext_error_number		;AN022; get the extended error
+	invoke	Get_ext_error_number		;AN022; get the extended error
 	cmp	ax,error_path_not_found 	;AN022; if path not found - okay
 	jz	notpdir_try			;AN022;
 	cmp	ax,error_access_denied		;AN022; if access denied - okay
-	jnz	extend_setupj			;AN022; otherwise - exit error
+	jnz	EXTEND_SETUPJ			;AN022; otherwise - exit error
 
 notpdir_try:					;AN022;
-	mov	[bp.ISDIR],0			; assume pure file
-	mov	bh,[bp.INFO]
+	mov	byte [bp+VARSTRUC.ISDIR],0 ; assume pure file
+	mov	bh,byte [bp+VARSTRUC.INFO]
 	test	bh,4
 	retz					; Know pure file, no path seps
-	mov	[bp.ISDIR],2			; assume d:/file
-	mov	si,[bp.TTAIL]
-	cmp	byte ptr [si],0
+	mov	byte [bp+VARSTRUC.ISDIR],2 ; assume d:/file
+	mov	si,word [bp+VARSTRUC.TTAIL]
+	cmp	byte [si],0
 	jz	BADCDERRJ2			; Trailing '/'
 	mov	bl,dot_chr
-	cmp	byte ptr [si],bl
+	cmp	byte [si],bl
 	jz	BADCDERRJ2			; If . or .. pure cd should have worked
 	mov	bl,':'
-	cmp	byte ptr [si-2],bl
+	cmp	byte [si-2],bl
 	jz	DOPCD				; Know d:/file
-	mov	[bp.ISDIR],1			; Know path/file
+	mov	byte [bp+VARSTRUC.ISDIR],1 ; Know path/file
 	dec	si				; Point at last '/'
 
 DOPCD:
@@ -382,16 +382,16 @@ DOPCD:
 
 Kloop2: 					;AN000;  3/3/KK
 	LODSB					;AN000;  3/3/KK
-	invoke	TestKanj			;AN000;  3/3/KK
-	jz	NotKanj4			;AN000;  3/3/KK
+	invoke	TESTKANJ			;AN000;  3/3/KK
+	jz	NotKanj4_COPYPR2			;AN000;  3/3/KK
 	LODSB					;AN000;  3/3/KK
 	CMP	SI,CX				;AN000;  3/3/KK
 	JB	Kloop2				;AN000;  3/3/KK
 	POP	CX				;AN000;  3/3/KK
 	POP	SI				;AN000;  3/3/KK
-	JMP	SHORT DoCdr			;AN000;  3/3/KK  Last char is ECS code, don't check for
+	jmp     DoCdr     ;AN000;  3/3/KK  Last char is ECS code, don't check for
 						;		 trailing path sep
-NotKanj4:					;AN000;  3/3/KK
+NotKanj4_COPYPR2:					;AN000;  3/3/KK
 	CMP	SI,CX				;AN000;  3/3/KK
 	JB	Kloop2				;AN000;  3/3/KK
 	POP	CX				;AN000;  3/3/KK
@@ -399,24 +399,24 @@ NotKanj4:					;AN000;  3/3/KK
 
 LookBack:					;AN000;  3/3/KK
 	CMP	BL,[SI-1]			; if double slash, then complain.
-	JZ	BadCDErrJ2
+	JZ	BADCDERRJ2
 
 DoCdr:						;AN000;  3/3/KK
-	mov	ah,CHDIR
+	mov	ah,CHDir
 	INT	int_command
 	xchg	bl,[SI]
 	retnc
-	invoke	get_ext_error_number		;AN022; get the extended error
+	invoke	Get_ext_error_number		;AN022; get the extended error
 
 EXTEND_SETUPJ:					;AN022;
-	JMP	EXTEND_SETUP			;AN022; go issue the error message
+	JMP	extend_setup			;AN022; go issue the error message
 
 BADCDERRJ2:
 	jmp	badpath_err			;AC022; go issue path not found message
 
 SETSTARS:
-	mov	[bp.TTAIL],DI
-	add	[bp.SIZ],12
+	mov	word [bp+VARSTRUC.TTAIL],DI
+	add	byte [bp+VARSTRUC.SIZ],12
 	mov	ax,dot_qmark
 	mov	cx,8
 	rep	stosb
@@ -429,22 +429,22 @@ SETSTARS:
 	stosb
 	return
 
-PUBLIC CompName
+;PUBLIC CompName
 COMPNAME:
 
-	mov	si,offset trangroup:DESTBUF	;g do name translate of target
-	mov	di,offset trangroup:TRGXNAME	;g save for name comparison
-	mov	ah,xnametrans			;g
+	mov	si,DESTBUF                  ;g do name translate of target
+	mov	di,TRGXNAME                  ;g save for name comparison
+	mov	ah,xNameTrans			;g
 	int	int_command			;g
 
-	MOV	si,offset trangroup:SRCXNAME	;g get name translate of source
-	MOV	di,offset trangroup:TRGXNAME	;g get name translate of target
+	MOV	si,SRCXNAME                  ;g get name translate of source
+	MOV	di,TRGXNAME                  ;g get name translate of target
 
 
 	invoke	STRCOMP
 
 	return
 
-TRANCODE ENDS
-	 END
+end if
+;	 END
 

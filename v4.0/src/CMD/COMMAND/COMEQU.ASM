@@ -211,12 +211,12 @@ arg_buf_ovflow	equ	2		; overflowed argbuffer
 
 STRUC argv_ele	; elements in the argv array
 {
-    .argpointer	DW	(?) ; pointer to the argstring
-    .argflags	DB	(?) ; cparse flags for this argstring
-    .argstartel	DW	(?) ; the result of cparse's [STARTEL]
-    .arglen	DW	(?) ; cparse's char count + one (for null)
-    .argsw_word	DW	(?) ; any switches after this?  what kinds?
-    .arg_ocomptr DW	(?) ; pointer into original command string
+    .argpointer	DW	? 		; pointer to the argstring
+    .argflags	DB	? 		; cparse flags for this argstring
+    .argstartel	DW	? 		; the result of cparse's [STARTEL]
+    .arglen	DW	? 		; cparse's char count + one (for null)
+    .argsw_word	DW	? 		; any switches after this?  what kinds?
+    .arg_ocomptr DW	? 		; pointer into original command string
 }
 match =argv_ele_LAID_OUT, argv_ele_LAID_OUT
 {
@@ -230,8 +230,8 @@ match =argv_ele_LAID_OUT, argv_ele_LAID_OUT
 STRUC arg_unit
 {
     .argv	DB	(ARGMAX * sizeof.argv_ele) DUP (?)
-    .argvcnt	DW	(?) ; number of arguments
-    .argswinfo	DW	(?) ; Switch information for entire line
+    .argvcnt	DW	? 		; number of arguments
+    .argswinfo	DW	? 		; Switch information for entire line
     .argbuf	DW	ARGBLEN DUP (?)  ; storage for argv strings
     .argforcombuf db	COMBUFLEN DUP (?)  ; Original for loop command string
 }
@@ -244,7 +244,16 @@ match =arg_unit_LAID_OUT, arg_unit_LAID_OUT
     end virtual
 }
 
-parseflags RECORD special_delim:1, unused:4, path_sep:1, wildcard:1, sw_flag:1
+; MASM's RECORD gave each of these a bit of the byte and MASK asked for the
+; bit.  Nothing asks for anything else -- not the shift count, not the record
+; itself -- so each name stands for its own mask here and MASK for nothing.
+;parseflags RECORD special_delim:1, unused:4, path_sep:1, wildcard:1, sw_flag:1
+define MASK
+special_delim	=	10000000b
+;unused 	=	01111000b
+path_sep	=	00000100b
+wildcard	=	00000010b
+sw_flag 	=	00000001b
 
 SwitchV 	EQU	10h
 SwitchB 	EQU	08h
@@ -257,15 +266,16 @@ fBadSwitch	EQU	4000h
 SwitchDir	EQU	SwitchP + SwitchW + fSwitch
 SwitchCopy	EQU	SwitchV + SwitchA + SwitchB + fSwitch
 
-break <Trap:  Get the attention of MSDOS>
+BREAK <trap:  Get the attention of MSDOS>
 ;   TRAP snares the operating system for a service call
 ; AX, as well as any other registers MS-DOS takes a fancy to, will be crunched.
 macro trap dos_function,dos_info {
-    ifnb    <dos_info>
+    match any, dos_info \{
 	mov	AX, (dos_function SHL 8) + dos_info
-    else
+    \}
+    match , dos_info \{
 	mov	AX, (dos_function SHL 8)
-    endif
+    \}
 	int	int_command
 }
 

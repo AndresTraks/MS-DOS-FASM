@@ -1,208 +1,208 @@
- page 80,132
+ PAGE 80,132
 ;	SCCSID = @(#)tspc.asm	4.1 85/09/22
 ;	SCCSID = @(#)tspc.asm	4.1 85/09/22
 TITLE	COMMAND Transient Uninitialized DATA
 
-	INCLUDE comsw.asm
+	include 'COMSW.ASM'
 .xlist
 .xcref
-	INCLUDE DOSSYM.INC
-	INCLUDE comequ.asm
-	INCLUDE comseg.asm
-	INCLUDE EA.inc			;AN030;
+	include 'DOSSYM.INC'
+	include 'COMEQU.ASM'
+	include 'COMSEG.ASM'
+	include 'EA.INC' ;AN030;
 .list
 .cref
 
 ; Uninitialized transient data
-TRANSPACE	SEGMENT PUBLIC BYTE
+if SEGSEL = S_TRANSPACE
 
-	PUBLIC	ALLSWITCH
-	PUBLIC	append_exec		;AN041;
-	PUBLIC	arg
-	PUBLIC	argbufptr
-	PUBLIC	ARGC
-	PUBLIC	ARG1S
-	PUBLIC	ARG2S
-	PUBLIC	ARGTS
-	PUBLIC	arg_buf
-	PUBLIC	ASCII
-	PUBLIC	BatBuf
-	PUBLIC	BatBufEnd
-	PUBLIC	BatBufPos
-	PUBLIC	BATHAND
-	PUBLIC	BINARY
-	PUBLIC	BITS
-	PUBLIC	BWDBUF
-	PUBLIC	BYTCNT
-	PUBLIC	bytes_free
-	PUBLIC	CFLAG
-	PUBLIC	CHARBUF
-	PUBLIC	CHKDRV
-	PUBLIC	COM
-	PUBLIC	COMBUF
-	PUBLIC	comma
-	PUBLIC	comptr
-	PUBLIC	comspec_flag
-	PUBLIC	COMSW
-	PUBLIC	CONCAT
-	PUBLIC	concat_xa		;AN000;
-	PUBLIC	copy_Num
-	PUBLIC	CPDATE
-	PUBLIC	CPTIME
-	PUBLIC	cpyflag
-	PUBLIC	CURDRV
-	PUBLIC	DATE_DAY		;AN000;
-	PUBLIC	DATE_MONTH		;AN000;
-	PUBLIC	DATE_OUTPUT		;AN000;
-	PUBLIC	DATE_TYPE		;AN000;
-	PUBLIC	DATE_YEAR		;AN000;
-	PUBLIC	DEST
-	PUBLIC	DESTBUF
-	PUBLIC	DestClosed
-	PUBLIC	DESTDIR
-	PUBLIC	DESTFCB
-	PUBLIC	DESTFCB2
-	PUBLIC	DESTHAND
-	PUBLIC	DESTINFO
-	PUBLIC	DESTISDEV
-	PUBLIC	DESTISDIR
-	PUBLIC	DESTNAME
-	PUBLIC	DESTSIZ
-	PUBLIC	DESTSWITCH
-	PUBLIC	DESTTAIL
-	PUBLIC	DESTVARS
-	PUBLIC	DIRBUF
-	PUBLIC	DIRCHAR
-	PUBLIC	dirflag 		;AN015;
-	PUBLIC	Dir_Num
-	PUBLIC	display_ioctl		;AN000;
-	PUBLIC	display_mode		;AN000;
-	PUBLIC	display_width		;AN000;
-	PUBLIC	DRIVE_NUMBER		;AN000;
-	PUBLIC	DRIVE_OUTPUT		;AN000;
-	PUBLIC	DRIVE_TYPE		;AN000;
-	PUBLIC	DRIVE_VALUE		;AN000;
-	PUBLIC	ELCNT
-	PUBLIC	ELPOS
-	PUBLIC	EXECPATH
-	PUBLIC	EXEC_ADDR
-	PUBLIC	EXEFCB
-	PUBLIC	expand_star
-	PUBLIC	ext_entered		;AN005;
-	PUBLIC	ext_open_off		;AN000;
-	PUBLIC	ext_open_parms		;AN000;
-	PUBLIC	ext_open_seg		;AN000;
-	PUBLIC	FBUF
-	PUBLIC	FILECNT
-	PUBLIC	file_size_high
-	PUBLIC	file_size_low
-	PUBLIC	FILTYP
-	PUBLIC	FIRSTDEST
-	PUBLIC	FRSTSRCH
-	PUBLIC	FULLSCR
-	PUBLIC	GOTOLEN
-	PUBLIC	HEADCALL
-	PUBLIC	ID
-	PUBLIC	IDLEN
-	PUBLIC	IFNOTFLAG
-	PUBLIC	if_not_count
-	PUBLIC	INEXACT
-	PUBLIC	INTERNATVARS
-	PUBLIC	KPARSE
-	PUBLIC	last_arg
-	PUBLIC	LINCNT
-	PUBLIC	LINLEN
-	PUBLIC	linperpag		;AN000;
-	PUBLIC	major_ver_num
-	PUBLIC	MELCOPY
-	PUBLIC	MELSTART
-	PUBLIC	minor_ver_num
-	PUBLIC	msg_flag		;AN022;
-	PUBLIC	msg_numb		;AN022;
-	PUBLIC	NOWRITE
-	PUBLIC	NXTADD
-	PUBLIC	objcnt
-	PUBLIC	one_char_val
-	PUBLIC	PARM1
-	PUBLIC	PARM2
-	PUBLIC	parse_last		;AN018;
-	PUBLIC	PARSE1_ADDR		;AN000;
-	PUBLIC	PARSE1_CODE		;AN000;
-	PUBLIC	PARSE1_OUTPUT		;AN000;
-	PUBLIC	PARSE1_SYN		;AN000;
-	PUBLIC	PARSE1_TYPE		;AN000;
-	PUBLIC	PATHCNT
-	PUBLIC	pathinfo
-	PUBLIC	PATHPOS
-	PUBLIC	PATHSW
-	PUBLIC	PLUS
-	PUBLIC	plus_comma
-	PUBLIC	print_err_flag		;AN000;
-	PUBLIC	psep_char
-	PUBLIC	RCH_ADDR
-	PUBLIC	RDEOF
-	PUBLIC	RE_INSTR
-	PUBLIC	RESSEG
-	PUBLIC	SCANBUF
-	PUBLIC	SDIRBUF
-	PUBLIC	search_best
-	PUBLIC	search_best_buf
-	PUBLIC	search_curdir_buf
-	PUBLIC	search_error
-	PUBLIC	SKPDEL
-	PUBLIC	SOURCE
-	PUBLIC	SPECDRV
-	PUBLIC	SRCBUF
-	PUBLIC	SRCHAND
-	PUBLIC	SRCINFO
-	PUBLIC	SRCISDEV
-	PUBLIC	SRCISDIR
-	PUBLIC	SRCPT
-	PUBLIC	SRCSIZ
-	PUBLIC	SRCTAIL
-	PUBLIC	SRCVARS
-	PUBLIC	srcxname
-	PUBLIC	src_xa_seg		;AN000;
-	PUBLIC	src_xa_size		;AN000;
-	PUBLIC	STACK
-	PUBLIC	STARTEL
-	PUBLIC	string_ptr_2
+;	PUBLIC	ALLSWITCH
+;	PUBLIC	append_exec		;AN041;
+;	PUBLIC	arg
+;	PUBLIC	argbufptr
+;	PUBLIC	ARGC
+;	PUBLIC	ARG1S
+;	PUBLIC	ARG2S
+;	PUBLIC	ARGTS
+;	PUBLIC	arg_buf
+;	PUBLIC	ASCII
+;	PUBLIC	BatBuf
+;	PUBLIC	BatBufEnd
+;	PUBLIC	BatBufPos
+;	PUBLIC	BATHAND
+;	PUBLIC	BINARY
+;	PUBLIC	BITS
+;	PUBLIC	BWDBUF
+;	PUBLIC	BYTCNT
+;	PUBLIC	bytes_free
+;	PUBLIC	CFLAG
+;	PUBLIC	CHARBUF
+;	PUBLIC	CHKDRV
+;	PUBLIC	COM
+;	PUBLIC	COMBUF
+;	PUBLIC	comma
+;	PUBLIC	comptr
+;	PUBLIC	comspec_flag
+;	PUBLIC	COMSW
+;	PUBLIC	CONCAT
+;	PUBLIC	concat_xa		;AN000;
+;	PUBLIC	copy_Num
+;	PUBLIC	CPDATE
+;	PUBLIC	CPTIME
+;	PUBLIC	cpyflag
+;	PUBLIC	CURDRV
+;	PUBLIC	DATE_DAY		;AN000;
+;	PUBLIC	DATE_MONTH		;AN000;
+;	PUBLIC	DATE_OUTPUT		;AN000;
+;	PUBLIC	DATE_TYPE		;AN000;
+;	PUBLIC	DATE_YEAR		;AN000;
+;	PUBLIC	DEST
+;	PUBLIC	DESTBUF
+;	PUBLIC	DestClosed
+;	PUBLIC	DESTDIR
+;	PUBLIC	DESTFCB
+;	PUBLIC	DESTFCB2
+;	PUBLIC	DESTHAND
+;	PUBLIC	DESTINFO
+;	PUBLIC	DESTISDEV
+;	PUBLIC	DESTISDIR
+;	PUBLIC	DESTNAME
+;	PUBLIC	DESTSIZ
+;	PUBLIC	DESTSWITCH
+;	PUBLIC	DESTTAIL
+;	PUBLIC	DESTVARS
+;	PUBLIC	DIRBUF
+;	PUBLIC	DIRCHAR
+;	PUBLIC	dirflag 		;AN015;
+;	PUBLIC	Dir_Num
+;	PUBLIC	display_ioctl		;AN000;
+;	PUBLIC	display_mode		;AN000;
+;	PUBLIC	display_width		;AN000;
+;	PUBLIC	DRIVE_NUMBER		;AN000;
+;	PUBLIC	DRIVE_OUTPUT		;AN000;
+;	PUBLIC	DRIVE_TYPE		;AN000;
+;	PUBLIC	DRIVE_VALUE		;AN000;
+;	PUBLIC	ELCNT
+;	PUBLIC	ELPOS
+;	PUBLIC	EXECPATH
+;	PUBLIC	EXEC_ADDR
+;	PUBLIC	EXEFCB
+;	PUBLIC	expand_star
+;	PUBLIC	ext_entered		;AN005;
+;	PUBLIC	ext_open_off		;AN000;
+;	PUBLIC	ext_open_parms		;AN000;
+;	PUBLIC	ext_open_seg		;AN000;
+;	PUBLIC	FBUF
+;	PUBLIC	FILECNT
+;	PUBLIC	file_size_high
+;	PUBLIC	file_size_low
+;	PUBLIC	FILTYP
+;	PUBLIC	FIRSTDEST
+;	PUBLIC	FRSTSRCH
+;	PUBLIC	FULLSCR
+;	PUBLIC	GOTOLEN
+;	PUBLIC	HEADCALL
+;	PUBLIC	ID
+;	PUBLIC	IDLEN
+;	PUBLIC	IFNOTFLAG
+;	PUBLIC	if_not_count
+;	PUBLIC	INEXACT
+;	PUBLIC	INTERNATVARS
+;	PUBLIC	KPARSE
+;	PUBLIC	last_arg
+;	PUBLIC	LINCNT
+;	PUBLIC	LINLEN
+;	PUBLIC	linperpag		;AN000;
+;	PUBLIC	major_ver_num
+;	PUBLIC	MELCOPY
+;	PUBLIC	MELSTART
+;	PUBLIC	minor_ver_num
+;	PUBLIC	msg_flag		;AN022;
+;	PUBLIC	msg_numb		;AN022;
+;	PUBLIC	NOWRITE
+;	PUBLIC	NXTADD
+;	PUBLIC	objcnt
+;	PUBLIC	one_char_val
+;	PUBLIC	PARM1
+;	PUBLIC	PARM2
+;	PUBLIC	parse_last		;AN018;
+;	PUBLIC	PARSE1_ADDR		;AN000;
+;	PUBLIC	PARSE1_CODE		;AN000;
+;	PUBLIC	PARSE1_OUTPUT		;AN000;
+;	PUBLIC	PARSE1_SYN		;AN000;
+;	PUBLIC	PARSE1_TYPE		;AN000;
+;	PUBLIC	PATHCNT
+;	PUBLIC	pathinfo
+;	PUBLIC	PATHPOS
+;	PUBLIC	PATHSW
+;	PUBLIC	PLUS
+;	PUBLIC	plus_comma
+;	PUBLIC	print_err_flag		;AN000;
+;	PUBLIC	psep_char
+;	PUBLIC	RCH_ADDR
+;	PUBLIC	RDEOF
+;	PUBLIC	RE_INSTR
+;	PUBLIC	RESSEG
+;	PUBLIC	SCANBUF
+;	PUBLIC	SDIRBUF
+;	PUBLIC	search_best
+;	PUBLIC	search_best_buf
+;	PUBLIC	search_curdir_buf
+;	PUBLIC	search_error
+;	PUBLIC	SKPDEL
+;	PUBLIC	SOURCE
+;	PUBLIC	SPECDRV
+;	PUBLIC	SRCBUF
+;	PUBLIC	SRCHAND
+;	PUBLIC	SRCINFO
+;	PUBLIC	SRCISDEV
+;	PUBLIC	SRCISDIR
+;	PUBLIC	SRCPT
+;	PUBLIC	SRCSIZ
+;	PUBLIC	SRCTAIL
+;	PUBLIC	SRCVARS
+;	PUBLIC	srcxname
+;	PUBLIC	src_xa_seg		;AN000;
+;	PUBLIC	src_xa_size		;AN000;
+;	PUBLIC	STACK
+;	PUBLIC	STARTEL
+;	PUBLIC	string_ptr_2
 ;AD061; PUBLIC	string_ptr_2_sb 	;AN000;
-	PUBLIC	subst_buffer		;AN061;
-	PUBLIC	SWITCHAR
-	PUBLIC	system_cpage
-	PUBLIC	TERMREAD
-	PUBLIC	TIME_FRACTION		;AN000;
-	PUBLIC	TIME_HOUR		;AN000;
-	PUBLIC	TIME_MINUTES		;AN000;
-	PUBLIC	TIME_OUTPUT		;AN000;
-	PUBLIC	TIME_SECONDS		;AN000;
-	PUBLIC	TIME_TYPE		;AN000;
-	PUBLIC	TPA
-	PUBLIC	tpbuf
-	PUBLIC	TRANSPACEEND
-	PUBLIC	TRAN_TPA
-	PUBLIC	trgxname
-	PUBLIC	UCOMBUF
-	PUBLIC	USERDIR1
-	PUBLIC	vol_drv
-	PUBLIC	vol_ioctl_buf		;AC030;
-	PUBLIC	vol_serial		;AC030;
-	PUBLIC	vol_label		;AC030;
-	PUBLIC	WRITTEN
-	PUBLIC	xa_cp_length		;AN030;
-	PUBLIC	xa_cp_out		;AN030;
-	PUBLIC	xa_list_attr		;AN030;
-	PUBLIC	zflag
+;	PUBLIC	subst_buffer		;AN061;
+;	PUBLIC	SWITCHAR
+;	PUBLIC	system_cpage
+;	PUBLIC	TERMREAD
+;	PUBLIC	TIME_FRACTION		;AN000;
+;	PUBLIC	TIME_HOUR		;AN000;
+;	PUBLIC	TIME_MINUTES		;AN000;
+;	PUBLIC	TIME_OUTPUT		;AN000;
+;	PUBLIC	TIME_SECONDS		;AN000;
+;	PUBLIC	TIME_TYPE		;AN000;
+;	PUBLIC	TPA
+;	PUBLIC	tpbuf
+;	PUBLIC	TRANSPACEEND
+;	PUBLIC	TRAN_TPA
+;	PUBLIC	trgxname
+;	PUBLIC	UCOMBUF
+;	PUBLIC	USERDIR1
+;	PUBLIC	vol_drv
+;	PUBLIC	vol_ioctl_buf		;AC030;
+;	PUBLIC	vol_serial		;AC030;
+;	PUBLIC	vol_label		;AC030;
+;	PUBLIC	WRITTEN
+;	PUBLIC	xa_cp_length		;AN030;
+;	PUBLIC	xa_cp_out		;AN030;
+;	PUBLIC	xa_list_attr		;AN030;
+;	PUBLIC	zflag
 
 	IF  IBM
-	PUBLIC	ROM_CALL
-	PUBLIC	ROM_CS
-	PUBLIC	ROM_IP
-	ENDIF
+;	PUBLIC	ROM_CALL
+;	PUBLIC	ROM_CS
+;	PUBLIC	ROM_IP
+end if
 
 
-	ORG	0
+;	ORG	0	; the flat layout is already here
 ZERO	=	$
 SRCXNAME	DB	DIRSTRLEN + 20 DUP (?)	;g buffer for name translate
 TRGXNAME	DB	DIRSTRLEN + 20 DUP (?)	;g buffer for name translate
@@ -213,7 +213,7 @@ EXECPATH	DB	COMBUFLEN+3 DUP(?)	; Path for external command
 RE_INSTR	DB	DIRSTRLEN+3+13 DUP (?)	; path for input to redirection
 
 ; Variables passed up from resident
-HEADCALL	LABEL	DWORD
+label HEADCALL dword
 		DW	?
 RESSEG		DW	?
 TPA		DW	?
@@ -225,23 +225,23 @@ fTest		DW	?
 TRAN_TPA	DW	?
 
 CHKDRV		DB	?
-RDEOF		LABEL	BYTE			; Misc flags
-IFNOTFLAG	LABEL	BYTE
+label RDEOF byte    ; Misc flags
+label IFNOTFLAG byte
 FILTYP		DB	?
 CURDRV		DB	?
 concat_xa	db	0			;AN000; flag for XA on file concatenations
-CONCAT		LABEL	BYTE
+label CONCAT byte
 PARM1		DB	?
-ARGC		LABEL	BYTE
+label ARGC byte
 PARM2		DB	?
 COMSW		DW	?			; Switches between command and 1st arg
 ARG1S		DW	?			; Switches between 1st and 2nd arg
-DESTSWITCH	LABEL	WORD
+label DESTSWITCH word
 ARG2S		DW	?			; Switches after 2nd arg
-ALLSWITCH	LABEL	WORD
+label ALLSWITCH word
 ARGTS		DW	?			; ALL switches except for COMSW
 CFLAG		DB	?
-DESTCLOSED	LABEL	BYTE
+label DESTCLOSED byte
 SPECDRV 	DB	?
 BYTCNT		DW	?			; Size of buffer between RES and TRANS
 NXTADD		DW	?
@@ -250,17 +250,17 @@ LINCNT		DB	?
 LINLEN		DB	?
 FILECNT 	DW	?
 CHARBUF 	DB	80 DUP (?)		;line byte character buffer for xenix write
-DESTFCB2	LABEL	BYTE
+label DESTFCB2 byte
 IDLEN		DB	?
 ID		DB	8 DUP(?)
 COM		DB	3 DUP(?)
 DEST		DB	37 DUP(?)
 DESTNAME	DB	11 DUP(?)
-DESTFCB 	LABEL	BYTE
+label DESTFCB byte
 DESTDIR 	DB	DIRSTRLEN DUP(?)	; Directory for PATH searches
-GOTOLEN 	LABEL	WORD
-BWDBUF		LABEL	BYTE
-EXEFCB		LABEL	WORD
+label GOTOLEN word
+label BWDBUF byte
+label EXEFCB word
 DIRBUF		DB	DIRSTRLEN+3 DUP(?)
 SDIRBUF 	DB	12 DUP(?)
 BITS		DW	?
@@ -277,13 +277,13 @@ system_cpage	DW	0			;AC001; used for CHCP variable
 src_XA_size	DW	0			;AN000; size of extended attributes
 src_XA_seg	DW	0			;AN000; segment of extended attributes
 
-ext_open_parms	label	byte			;AN000; extended open parameter list
+label ext_open_parms byte   ;AN000; extended open parameter list
 ;emg340 ext_open_off	dw	offset trangroup:srcbuf ;AN000; offset of file name
 ext_open_off	dw	?			;AN030; offset of extended attributes
 ext_open_seg	dw	?			;AN000; segment of extended attributes
 		dw	0			;AN000; no additional parameters
 
-XA_cp_out	label	byte			;AN030; list for one extended attribute
+label XA_cp_out byte   ;AN030; list for one extended attribute
 		DW	1			;AN030; count of entries
 		DB	EAISBINARY		;AN030; ea_type
 		DW	EASYSTEM		;AN030; ea_flags
@@ -315,9 +315,9 @@ IF  IBM
 ROM_CALL	DB	?			; flag for rom function
 ROM_IP		DW	?
 ROM_CS		DW	?
-ENDIF
+end if
 
-DESTVARS	LABEL	BYTE
+label DESTVARS byte
 DESTISDIR	DB	?
 DESTSIZ 	DB	?
 DESTTAIL	DW	?
@@ -330,7 +330,7 @@ FIRSTDEST	DB	?
 MELCOPY 	DB	?
 MELSTART	DW	?
 
-SRCVARS 	LABEL	BYTE
+label SRCVARS byte
 SRCISDIR	DB	?
 SRCSIZ		DB	?
 SRCTAIL 	DW	?
@@ -372,9 +372,9 @@ display_mode	db	?			;AN000; display mode, colors
 		dw	?			;AN000; display width (PELS)
 		dw	?			;AN000; display length (PELS)
 display_width	dw	?			;AN000; display width
-linperpag	dw	linesperpage		;AN000; display length (default to linesperpage)
+linperpag	dw	LINESPERPAGE		;AN000; display length (default to linesperpage)
 
-vol_ioctl_buf	label	byte			;AN000; buffer for ioctl volume label/serial call
+label vol_ioctl_buf byte   ;AN000; buffer for ioctl volume label/serial call
 		dw	0			;AN000; info level
 vol_serial	dd	0			;AN000; volume serial number
 vol_label	db	11 dup (" ")            ;AN000; volume label - init to blanks
@@ -394,21 +394,21 @@ KPARSE		DB	?
 
 ; Data declarations taken out of parse.asm
 
-arg	arg_unit	<>			; pointers, arg count, string buffer
+ARG	arg_unit      ; pointers, arg count, string buffer
 argbufptr	DW	?			; index for argv[].argpointer
 tpbuf		DB	128   DUP (?)		; temporary buffer
 LAST_ARG	DW	?			; point at which to accumulate switch info
 comptr		dw	?			; ptr into combuf
 
 ; Data declarations taken out of path.asm
-fbuf	find_buf	<>			; dma buffer for findfirst/findnext
+fbuf	find_buf      ; dma buffer for findfirst/findnext
 pathinfo	DW	3 DUP (?)		; ES, SI(old), and SI(new) of user path
 psep_char	DB	?			; '/' or '\'
-search_best	DB	(?)			; best code, best filename so far
+search_best	DB	?     ; best code, best filename so far
 fname_max_len	equ	13
 search_best_buf DB	fname_max_len DUP (?)
 search_curdir_buf DB	64 DUP (?)		; a place for CurDir info, if successful
-search_error	DW	(?)			; address of error message to be printed
+search_error	DW	?     ; address of error message to be printed
 
 ; Data declarations taken out of tbatch.asm
 if_not_count	DW	?
@@ -416,9 +416,9 @@ if_not_count	DW	?
 zflag		db	?			; Used by typefil to indicate ^Z's
 
 		DW	80H DUP(0)		; Init to 0 to make sure the linker is not fooled
-STACK		LABEL	WORD
+label STACK_ word
 
-INTERNATVARS	internat_block <>
+INTERNATVARS	internat_block
 		DB	(internat_block_max - ($ - INTERNATVARS)) DUP (?)
 
 BatBufPos	DW	?			; integer position in buffer of next byte
@@ -439,7 +439,7 @@ BatBufEnd	DW	?
 ; Common output blocks for PARSE number, complex, or string values.
 ;
 
-PARSE1_OUTPUT	LABEL	BYTE			;AN000;
+label PARSE1_OUTPUT byte   ;AN000;
 PARSE1_TYPE	DB	0			;AN000;  type
 PARSE1_CODE	DB	0			;AN000;  return value
 PARSE1_SYN	DW	0			;AN000;  es offset of synonym
@@ -450,8 +450,8 @@ PARSE1_ADDR	DD	0			;AN000;  numeric value / address
 ;  Common output block for PARSE date strings.
 ;
 
-DATE_OUTPUT	LABEL	BYTE			;AN000;
-DATE_TYPE	DB	0			;AN000;  type
+label DATE_OUTPUT byte   ;AN000;
+DATE_TYPE_TSPC	DB	0			;AN000;  type
 		DB	0			;AN000;  return value
 		DW	0			;AN000;  es offset of synonym
 DATE_YEAR	DW	0			;AN000;  year
@@ -462,7 +462,7 @@ DATE_DAY	DB	0			;AN000;  day
 ;  Common output block for PARSE time strings.
 ;
 
-TIME_OUTPUT	LABEL	BYTE			;AN000;
+label TIME_OUTPUT byte   ;AN000;
 TIME_TYPE	DB	0			;AN000;  type
 		DB	0			;AN000;  return value
 		DW	0			;AN000;  es offset of synonym
@@ -475,14 +475,14 @@ TIME_FRACTION	DB	0			;AN000;  hundredths
 ;  Common output block for PARSE drive specifier (one based drive number).
 ;
 
-DRIVE_OUTPUT	LABEL	BYTE			;AN000;
+label DRIVE_OUTPUT byte   ;AN000;
 DRIVE_TYPE	DB	0			;AN000;  type
 DRIVE_VALUE	DB	0			;AN000;  return value
 		DW	0			;AN000;  es offset of synonym
 DRIVE_NUMBER	DB	0			;AN000;  drive number
 		DB	0,0,0			;AN000;  reserved
 
-TRANSPACEEND	LABEL	BYTE
+label TRANSPACEEND byte
 
-TRANSPACE	ENDS
-	END
+end if
+;	END

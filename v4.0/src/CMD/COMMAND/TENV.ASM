@@ -1,76 +1,76 @@
- page 80,132
+ PAGE 80,132
 ;	SCCSID = @(#)tenv.asm	4.2 85/08/16
 ;	SCCSID = @(#)tenv.asm	4.2 85/08/16
 TITLE	Part6 COMMAND Transient routines.
 
 ;	Environment utilities and misc. routines
 
-	INCLUDE comsw.asm
+	include 'COMSW.ASM'
 
 .xlist
 .xcref
-	INCLUDE DOSSYM.INC
-	INCLUDE comseg.asm
-	INCLUDE comequ.asm
-	INCLUDE DOSCNTRY.INC		;AN000;
+	include 'DOSSYM.INC'
+	include 'COMSEG.ASM'
+	include 'COMEQU.ASM'
+	include 'DOSCNTRY.INC';AN000;
 .list
 .cref
 
 
-DATARES 	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	comdrv:byte
-	EXTRN	comspec_end:word
-	EXTRN	comspec_print:word
-	EXTRN	cpdrv:byte
-	EXTRN	dbcs_vector_addr:dword	;AN000;
-	EXTRN	ENVIRSEG:WORD
-	EXTRN	fucase_addr:word	;AC000;
-	EXTRN	RESTDIR:BYTE
-DATARES ENDS
+if SEGSEL = S_DATARES	;AC000;
+;	EXTRN	comdrv:byte
+;	EXTRN	comspec_end:word
+;	EXTRN	comspec_print:word
+;	EXTRN	cpdrv:byte
+;	EXTRN	dbcs_vector_addr:dword	;AN000;
+;	EXTRN	ENVIRSEG:WORD
+;	EXTRN	fucase_addr:word	;AC000;
+;	EXTRN	RESTDIR:BYTE
+end if
 
-TRANDATA	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	arg_buf_ptr:word
-	EXTRN	comspec:byte
-	EXTRN	comspec_flag:byte
-	EXTRN	comspecstr:byte
-	EXTRN	ENVERR_PTR:WORD
-	EXTRN	PATH_TEXT:byte
-	EXTRN	PROMPT_TEXT:byte
-	EXTRN	SYNTMES_PTR:WORD
-TRANDATA	ENDS
+if SEGSEL = S_TRANDATA	;AC000;
+;	EXTRN	arg_buf_ptr:word
+;	EXTRN	comspec:byte
+;	EXTRN	comspec_flag:byte
+;	EXTRN	comspecstr:byte
+;	EXTRN	ENVERR_PTR:WORD
+;	EXTRN	PATH_TEXT:byte
+;	EXTRN	PROMPT_TEXT:byte
+;	EXTRN	SYNTMES_PTR:WORD
+end if
 
-TRANSPACE	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	Arg_Buf:BYTE
-	EXTRN	RESSEG:WORD
-	EXTRN	USERDIR1:BYTE
-TRANSPACE	ENDS
+if SEGSEL = S_TRANSPACE	;AC000;
+;	EXTRN	Arg_Buf:BYTE
+;	EXTRN	RESSEG:WORD
+;	EXTRN	USERDIR1:BYTE
+end if
 
-TRANCODE	SEGMENT PUBLIC byte
+if SEGSEL = S_TRANCODE
 
-ASSUME	CS:TRANGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;ASSUME	CS:TRANGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
-	EXTRN	cerror:near
+;	EXTRN	cerror:near
 
-	PUBLIC	add_name_to_environment
-	PUBLIC	add_prompt
-	PUBLIC	delete_path
-	PUBLIC	find_name_in_environment
-	PUBLIC	find_path
-	PUBLIC	find_prompt
-	PUBLIC	move_name
-	PUBLIC	restudir
-	PUBLIC	restudir1
-	PUBLIC	scan_double_null
-	PUBLIC	scasb2
-	PUBLIC	store_char
-	PUBLIC	Testkanj		;AN000;  3/3/KK
-	PUBLIC	upconv
+;	PUBLIC	add_name_to_environment
+;	PUBLIC	add_prompt
+;	PUBLIC	delete_path
+;	PUBLIC	find_name_in_environment
+;	PUBLIC	find_path
+;	PUBLIC	find_prompt
+;	PUBLIC	move_name
+;	PUBLIC	restudir
+;	PUBLIC	restudir1
+;	PUBLIC	scan_double_null
+;	PUBLIC	scasb2
+;	PUBLIC	store_char
+;	PUBLIC	Testkanj		;AN000;  3/3/KK
+;	PUBLIC	upconv
 
 BREAK	<Environment utilities>
-ASSUME DS:TRANGROUP
+;ASSUME DS:TRANGROUP
 
-	break	Prompt command
-assume	ds:trangroup,es:trangroup
+	BREAK	[PROMPT] COMMAND
+;assume	ds:trangroup,es:trangroup
 
 ADD_PROMPT:
 	CALL	DELETE_PROMPT			; DELETE ANY EXISTING PROMPT
@@ -84,11 +84,11 @@ ADD_PROMPT2:
 	CALL	MOVE_NAME			; MOVE IN NAME
 	CALL	GETARG
 	PUSH	SI
-	JMP	SHORT ADD_NAME
+	jmp     ADD_NAME
 
 
-	break	The SET command
-assume	ds:trangroup,es:trangroup
+	BREAK	The SET COMMAND
+;assume	ds:trangroup,es:trangroup
 
 ;
 ; Input: DS:SI points to a CR terminated string
@@ -115,7 +115,7 @@ EQLP:
 	CMP	AL,'='                          ;LOOK FOR = SIGN
 	JNZ	EQLP				;NOT THERE, GET NEXT CHAR
 	INC	BL				;OTHERWISE INCREMENT EQ COUNT
-	CMP	BYTE PTR [SI],13		;LOOK FOR CR FOLLOWING = SIGN
+	CMP	byte [SI],13      ;LOOK FOR CR FOLLOWING = SIGN
 	JNZ	EQLP
 	INC	BH				;SET BH=1 MEANS NO PARAMETERS
 	JMP	EQLP				;AND LOOK FOR MORE
@@ -124,12 +124,12 @@ QUEQ:
 	POP	SI				;RESTORE BEGINNING OF LINE
 	DEC	BL				;ZERO FLAG MEANS ONLY ONE EQ
 	JZ	ONEQ				;GOOD LINE
-	MOV	DX,OFFSET TRANGROUP:SYNTMES_ptr
+	MOV	DX,SyntMes_Ptr
 	JMP	CERROR
 
 ONEQ:
 	PUSH	BX
-	CALL	DELETE_NAME_IN_ENVIRONMENT
+	CALL	DELETE_NAME_IN_environment
 	POP	BX
 	DEC	BH
 	retz
@@ -145,14 +145,14 @@ ONEQ:
 ; necessary in the resident for re-reading the transient.  Let's look for
 ; COMSPEC=
 ;
-	mov	si,offset trangroup:comspecstr	; Load ptr to string "COMSPEC"
+	mov	si,comspecstr                  ; Load ptr to string "COMSPEC"
 	mov	cx,4				; If the new env var is comspec, set
 	repz	cmpsw				;  the comspec_flag
 ;
 ; Zero set => exact match
 ;
 	jnz	not_comspec
-	mov	comspec_flag,1
+	mov	byte [comspec_flag],1
 
 not_comspec:
 	mov	di,bx				; Load ptr to end of env var name
@@ -166,42 +166,42 @@ add_name1:
 	CMP	AL,13
 	jz	add_name_ret
 	CALL	STORE_CHAR
-	JMP	ADD_NAME1
+	JMP	add_name1
 
 add_name_ret:
 	pop	si
-	cmp	comspec_flag,0			; If the new env var is comspec,
+	cmp	byte [comspec_flag],0      ; If the new env var is comspec,
 	retz					;  copy the value into the
 ;
 ; We have changed the COMSPEC variable.  We need to update the resident
 ; pieces necessary to reread in the info.  First, skip all delimiters
 ;
-	invoke	ScanOff
-	mov	es,[resseg]			;  comspec var in the resident
-	assume	es:resgroup
+	invoke	SCANOFF
+	mov	es,[RESSEG]			;  comspec var in the resident
+;	assume	es:resgroup
 ;
 ; Make sure that the printer knows where the beginning of the string is
 ;
-	mov	di,offset resgroup:comspec
+	mov	di,COMSPEC
 	mov	bx,di
 ;
 ; Generate drive letter for display
 ;
 	xor	ax,ax				;g assume no drive first
-	mov	comdrv,al			;g
+	mov	[COMDRV],al ;g
 	push	ax				;AN000;  3/3/KK
 	mov	al,[si] 			;AN000;  3/3/KK
-	call	testkanj			;AN000;  3/3/KK
+	call	TESTKANJ			;AN000;  3/3/KK
 	pop	ax				;AN000;  3/3/KK
-	jnz	GotDrive
-	cmp	byte ptr [si+1],':'             ; drive specified?
-	jnz	GotDrive
+	jnz	gotdrive_TENV
+	cmp	byte [si+1],':'                 ; drive specified?
+	jnz	gotdrive_TENV
 	mov	al,[si] 			; get his specified drive
-	call	UpConv				; convert to uppercase
+	call	upconv				; convert to uppercase
 	sub	al,'A'                          ; convert to 0-based
 	add	di,2
 	inc	al				; convert to 1-based number
-	mov	comdrv,al
+	mov	[COMDRV],al
 ;
 ; Stick the drive letter in the prompt message.  Nothing special needs to be
 ; done here..
@@ -209,9 +209,9 @@ add_name_ret:
 
 	add	al,'A'-1
 
-GotDrive:					;g
-	mov	comspec_print,di		;g point to beginning of name after drive
-	mov	es:cpdrv,al
+gotdrive_TENV:					;g
+	mov	[COMSPEC_PRINT],di ;g point to beginning of name after drive
+	mov	[es:cpdrv],al
 ;
 ; Copy chars until delim
 ;
@@ -220,55 +220,55 @@ GotDrive:					;g
 
 copy_comspec:
 	lodsb
-	invoke	Delim
-	jz	CopyDone
+	invoke	DELIM
+	jz	CopyDone_TENV
 	cmp	al,13
-	jz	CopyDone
+	jz	CopyDone_TENV
 	stosb
-	jmp	short copy_comspec
+	jmp     copy_comspec
 
-CopyDone:
+CopyDone_TENV:
 	xor	al,al				; Null terminate the string and quit
 	stosb
-	mov	comspec_flag,0
+	mov	byte [comspec_flag],0
 	dec	di
-	mov	comspec_end,di
+	mov	[comspec_end],di
 
 	ret
 
 DISP_ENV:
 	MOV	DS,[RESSEG]
-ASSUME	DS:RESGROUP
+;ASSUME	DS:RESGROUP
 	MOV	DS,[ENVIRSEG]
-ASSUME	DS:NOTHING
+;ASSUME	DS:NOTHING
 	XOR	SI,SI
 
 PENVLP:
-	CMP	BYTE PTR [SI],0
+	CMP	byte [SI],0
 	retz
-	mov	di,offset trangroup:arg_buf
+	mov	di,arg_buf
 
 PENVLP2:
 	LODSB
 	stosb
 	OR	AL,AL
 	JNZ	PENVLP2
-	mov	dx,offset trangroup:arg_buf_ptr
+	mov	dx,arg_Buf_Ptr
 	push	ds
 	push	es
 	pop	ds
-	invoke	printf_crlf
+	invoke	PRINTF_CRLF
 	pop	ds
 	JMP	PENVLP
 
-ASSUME	DS:TRANGROUP
+;ASSUME	DS:TRANGROUP
 
 DELETE_PATH:
-	MOV	SI,OFFSET TRANGROUP:PATH_TEXT
-	JMP	SHORT DELETE_NAME_IN_environment
+	MOV	SI,PATH_TEXT
+	jmp     DELETE_NAME_IN_environment
 
 DELETE_PROMPT:
-	MOV	SI,OFFSET TRANGROUP:PROMPT_TEXT
+	MOV	SI,PROMPT_TEXT
 
 DELETE_NAME_IN_environment:
 ;
@@ -295,11 +295,11 @@ DEL1:
 	return
 
 FIND_PATH:
-	MOV	SI,OFFSET TRANGROUP:PATH_TEXT
-	JMP	SHORT FIND_NAME_IN_environment
+	MOV	SI,PATH_TEXT
+	jmp     FIND_NAME_IN_environment
 
 FIND_PROMPT:
-	MOV	SI,OFFSET TRANGROUP:PROMPT_TEXT
+	MOV	SI,PROMPT_TEXT
 
 FIND_NAME_IN_environment:
 ;
@@ -318,9 +318,9 @@ FIND:
 	CLD
 	CALL	COUNT0				; CX = LENGTH OF NAME
 	MOV	ES,[RESSEG]
-ASSUME	ES:RESGROUP
+;ASSUME	ES:RESGROUP
 	MOV	ES,[ENVIRSEG]
-ASSUME	ES:NOTHING
+;ASSUME	ES:NOTHING
 	XOR	DI,DI
 
 FIND1:
@@ -336,16 +336,16 @@ FIND11:
 	LODSW
 	INC	DI
 	INC	DI
-	CMP	AX,ES:[DI-2]
+	CMP	AX,[es:DI-2]
 	JNZ	FIND12
 	DEC	CX
 	LOOP	FIND11
-	JMP	SHORT FIND12
+	jmp     FIND12
 
 NOTKANJ3:
-	CALL	UPCONV
+	CALL	upconv
 	INC	DI
-	CMP	AL,ES:[DI-1]
+	CMP	AL,[es:DI-1]
 	JNZ	FIND12
 	LOOP	FIND11
 
@@ -357,7 +357,7 @@ FIND12:
 	PUSH	CX
 	CALL	SCASB2				; SCAN FOR A NUL
 	POP	CX
-	CMP	BYTE PTR ES:[DI],0
+	CMP	byte [es:DI],0
 	JNZ	FIND1
 	STC					; INDICATE NOT FOUND
 	return
@@ -370,7 +370,7 @@ COUNT0:
 COUNT1:
 	PUSH	DI				; COUNT NUMBER OF CHARS UNTIL "="
 	CALL	SCASB1
-	JMP	SHORT COUNTX
+	jmp     COUNTX
 
 COUNT2:
 	PUSH	DI				; COUNT NUMBER OF CHARS UNTIL NUL
@@ -383,22 +383,22 @@ COUNTX:
 	return
 
 MOVE_NAME:
-	CMP	BYTE PTR DS:[SI],13
+	CMP	byte [ds:SI],13
 	retz
 	LODSB
 
 ;;;;	IF	KANJI			3/3/KK
 	CALL	TESTKANJ
-	JZ	NOTKANJ1
+	JZ	NotKanj1_TENV
 	CALL	STORE_CHAR
 	LODSB
 	CALL	STORE_CHAR
-	JMP	SHORT MOVE_NAME
+	jmp     MOVE_NAME
 
-NOTKANJ1:
+NotKanj1_TENV:
 ;;;;	ENDIF				3/3/KK
 
-	CALL	UPCONV
+	CALL	upconv
 	CALL	STORE_CHAR
 	CMP	AL,'='
 	JNZ	MOVE_NAME
@@ -419,22 +419,22 @@ GETARG:
 ;
 SCAN_DOUBLE_NULL:
 	MOV	ES,[RESSEG]
-ASSUME	ES:RESGROUP
+;ASSUME	ES:RESGROUP
 	MOV	ES,[ENVIRSEG]
-ASSUME	ES:NOTHING
+;ASSUME	ES:NOTHING
 	XOR	DI,DI
 ;
 ; Top cycle-point.  If the string here is empty, then we are done
 ;
 SDN1:
-	cmp	byte ptr es:[di],0		; nul string?
+	cmp	byte [es:di],0      ; nul string?
 	retz					; yep, all done
 	CALL	SCASB2
 	JMP	SDN1
 
 SCASB1:
 	MOV	AL,'='                          ; SCAN FOR AN =
-	JMP	SHORT SCASBX
+	jmp     SCASBX
 SCASB2:
 	XOR	AL,AL				; SCAN FOR A NUL
 SCASBX:
@@ -446,28 +446,28 @@ TESTKANJ:
 	push	ds				;AN000;  3/3/KK
 	push	si				;AN000;  3/3/KK
 	push	ax				;AN000;  3/3/KK
-	mov	ds,cs:[resseg]			;AN000;  Get resident segment
-	assume	ds:resgroup			;AN000;
-	lds	si,dbcs_vector_addr		;AN000;  get DBCS vector
-ktlop:						;AN000;  3/3/KK
-	cmp	word ptr ds:[si],0		;AN000;  end of Table	3/3/KK
-	je	notlead 			;AN000;  3/3/KK
+	mov	ds,[cs:RESSEG]			;AN000;  Get resident segment
+;	assume	ds:resgroup			;AN000;
+	lds	si,dword [Dbcs_vector_addr]        ;AN000;  get DBCS vector
+ktlop_TENV:						;AN000;  3/3/KK
+	cmp	word [ds:si],0      ;AN000;  end of Table	3/3/KK
+	je	Notlead_TENV 			;AN000;  3/3/KK
 	pop	ax				;AN000;  3/3/KK
 	push	ax				;AN000;  3/3/KK
-	cmp	al, byte ptr ds:[si]		;AN000;  3/3/KK
-	jb	notlead 			;AN000;  3/3/KK
+	cmp	al, byte [ds:si]      ;AN000;  3/3/KK
+	jb	Notlead_TENV 			;AN000;  3/3/KK
 	inc	si				;AN000;  3/3/KK
-	cmp	al, byte ptr ds:[si]		;AN000;  3/3/KK
-	jbe	islead				;AN000;  3/3/KK
+	cmp	al, byte [ds:si]      ;AN000;  3/3/KK
+	jbe	Islead_TENV				;AN000;  3/3/KK
 	inc	si				;AN000;  3/3/KK
-	jmp	short ktlop			;AN000;  try another range ; 3/3/KK
-Notlead:					;AN000;  3/3/KK
+	jmp     ktlop_TENV     ;AN000;  try another range ; 3/3/KK
+Notlead_TENV:					;AN000;  3/3/KK
 	xor	ax,ax				;AN000;  set zero 3/3/KK
-	jmp	short ktret			;AN000;  3/3/KK
-Islead: 					;AN000;  3/3/KK
+	jmp     ktret_TENV     ;AN000;  3/3/KK
+Islead_TENV: 					;AN000;  3/3/KK
 	xor	ax,ax				;AN000;  reset zero  3/3/KK
 	inc	ax				;AN000;  3/3/KK
-ktret:						;AN000;  3/3/KK
+ktret_TENV:						;AN000;  3/3/KK
 	pop	ax				;AN000;  3/3/KK
 	pop	si				;AN000;  3/3/KK
 	pop	ds				;AN000;  3/3/KK
@@ -491,24 +491,24 @@ ktret:						;AN000;  3/3/KK
 ; *
 ; ****************************************************************
 
-assume	ds:trangroup				;AN000;
+;assume	ds:trangroup				;AN000;
 
-upconv	proc	near				;AN000;
+upconv:			;AN000;
 
 	cmp	al,80h				;AN000;  see if char is > ascii 128
 	jb	oth_fucase			;AN000;  no - upper case math
 	sub	al,80h				;AN000;  only upper 128 chars in table
 	push	ds				;AN000;
 	push	bx				;AN000;
-	mov	ds,[resseg]			;AN000;  get resident data segment
-assume	ds:resgroup				;AN000;
-	lds	bx,dword ptr fucase_addr+1	;AN000;  get table address
+	mov	ds,[RESSEG]			;AN000;  get resident data segment
+;assume	ds:resgroup				;AN000;
+	lds	bx,dword [FUCASE_ADDR+1]   ;AN000;  get table address
 	add	bx,2				;AN000;  skip over first word
-	xlat	ds:byte ptr [bx]		;AN000;  convert to upper case
+	xlat	byte [ds:bx]      ;AN000;  convert to upper case
 	pop	bx				;AN000;
 	pop	ds				;AN000;
-assume	ds:trangroup				;AN000;
-	jmp	short upconv_end		;AN000;  we finished - exit
+;assume	ds:trangroup				;AN000;
+	jmp     upconv_end    ;AN000;  we finished - exit
 
 oth_fucase:					;AN000;
 	cmp	al,small_a			;AC000; if between "a" and "z",
@@ -520,7 +520,7 @@ oth_fucase:					;AN000;
 upconv_end:					;AN000;
 	ret
 
-upconv	endp					;AN000;
+;upconv	endp					;AN000;
 
 
 ;
@@ -532,11 +532,11 @@ STORE_CHAR:
 	PUSH	ES				;AN056;
 	PUSH	DS				;AN056; Save local DS
 	MOV	DS,[RESSEG]			;AN056; Get resident segment
-	ASSUME	DS:RESGROUP			;AN056;
+;	ASSUME	DS:RESGROUP			;AN056;
 	MOV	ES,[ENVIRSEG]			;AN056; Get environment segment
-	ASSUME	ES:NOTHING			;AN056;
+;	ASSUME	ES:NOTHING			;AN056;
 	POP	DS				;AN056; Get local segment back
-	ASSUME	DS:TRANGROUP			;AN056;
+;	ASSUME	DS:TRANGROUP			;AN056;
 	CALL	GETENVSIZ
 	MOV	BX,CX
 	SUB	BX,2				; SAVE ROOM FOR DOUBLE NULL
@@ -546,7 +546,7 @@ STORE_CHAR:
 	PUSH	AX
 	PUSH	CX
 	PUSH	BX				; Save Size of environment
-	invoke	FREE_TPA
+	invoke	Free_TPA
 	POP	BX
 	ADD	BX,2				; Recover true environment size
 
@@ -566,24 +566,24 @@ ENVSIZ_OK:
 	MOV	AX,CS				;AN056; Get the transient segment
 	CMP	CX,AX				;AN056; Are we hitting the transient?
 	JNB	BAD_ENV_SIZE			;AN056; Yes - don't do it!!!
-	MOV	AH,SETBLOCK
+	MOV	AH,Setblock
 	INT	int_command
 ENVNOSET:
 	PUSHF
 	PUSH	ES
 	MOV	ES,[RESSEG]
-	invoke	ALLOC_TPA
+	invoke	Alloc_TPA
 	POP	ES
 	POPF
 	POP	CX
 	POP	AX
 	JNC	STORE1
 	POP	ES				;AN056;
-	MOV	DX,OFFSET TRANGROUP:ENVERR_ptr
+	MOV	DX,EnvErr_Ptr
 	JMP	CERROR
 STORE1:
 	STOSB
-	MOV	WORD PTR ES:[DI],0		; NULL IS AT END
+	MOV	word [es:DI],0      ; NULL IS AT END
 	POP	ES				;AN056;
 	POP	BX
 	POP	CX
@@ -599,7 +599,7 @@ GETENVSIZ:
 	MOV	AX,ES
 	DEC	AX				;Point at arena
 	MOV	ES,AX
-	MOV	AX,ES:[arena_size]
+	MOV	AX,[es:arena_size]
 	MOV	CL,4
 	SHL	AX,CL				;Convert to bytes
 	MOV	CX,AX
@@ -608,26 +608,26 @@ GETENVSIZ:
 	return
 
 
-ASSUME	DS:TRANGROUP
+;ASSUME	DS:TRANGROUP
 
 
 RESTUDIR1:
 	PUSH	DS
 	MOV	DS,[RESSEG]
-ASSUME	DS:RESGROUP
-	CMP	[RESTDIR],0
+;ASSUME	DS:RESGROUP
+	CMP	byte [RESTDIR],0
 	POP	DS
-ASSUME	DS:TRANGROUP
+;ASSUME	DS:TRANGROUP
 	retz
 
 RESTUDIR:
-	MOV	DX,OFFSET TRANGROUP:USERDIR1
-	MOV	AH,CHDIR
+	MOV	DX,USERDIR1
+	MOV	AH,CHDir
 	INT	int_command			; Restore users DIR
 	XOR	AL,AL
 	invoke	SETREST
-RET56:
+ret56_TENV:
 	return
 
-trancode    ends
-	    end
+end if
+;	    end

@@ -1,19 +1,19 @@
- page 80,132
+ PAGE 80,132
 ;	SCCSID = @(#)parse.asm	1.1 85/05/14
 ;	SCCSID = @(#)parse.asm	1.1 85/05/14
 .sall
 .xlist
 .xcref
-    INCLUDE DOSSYM.INC
-    INCLUDE DEVSYM.INC
-    include comsw.asm
-    include comseg.asm
-    include comequ.asm
+    include 'DOSSYM.INC'
+    include 'DEVSYM.INC'
+    include 'COMSW.ASM'
+    include 'COMSEG.ASM'
+    include 'COMEQU.ASM'
 .list
 .cref
 
 
-break <Parse.Asm>
+BREAK <parse.Asm>
 ;----------------------------------------------------------------------------
 ;    PARSE.ASM contains the routines to perform command line parsing.
 ;    Parse and Path share a buffer and argv[] definitions.
@@ -47,27 +47,27 @@ break <Parse.Asm>
 ; DATA:
 ;---------------
 
-DATARES 	SEGMENT PUBLIC BYTE
-	EXTRN	FORFLAG:BYTE
-DATARES     ENDS
+if SEGSEL = S_DATARES
+;	EXTRN	FORFLAG:BYTE
+end if
 
-TRANSPACE	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	combuf:byte
-	EXTRN	cpyflag:byte
-	EXTRN	expand_star:byte
-	EXTRN	RESSEG:word
-	EXTRN	STARTEL:word
-TRANSPACE   ENDS
+if SEGSEL = S_TRANSPACE	;AC000;
+;	EXTRN	combuf:byte
+;	EXTRN	cpyflag:byte
+;	EXTRN	expand_star:byte
+;	EXTRN	RESSEG:word
+;	EXTRN	STARTEL:word
+end if
 
-TRANCODE	SEGMENT PUBLIC BYTE	;AC000;
-	PUBLIC	argv_calc		; convert array index into address
-	PUBLIC	parseline
-
-
-assume cs:trangroup, ds:trangroup, es:trangroup, ss:nothing
+if SEGSEL = S_TRANCODE	;AC000;
+;	PUBLIC	argv_calc		; convert array index into address
+;	PUBLIC	parseline
 
 
-break <Parseline:  Munch on the command line>
+;assume cs:trangroup, ds:trangroup, es:trangroup, ss:nothing
+
+
+BREAK <parseline:  Munch on the COMMAND line>
 ;----------------------------------------------------------------------------
 ;    PARSELINE takes an MSDOS command line and maps it into a UNIX-style
 ; argv[argvcnt] array.	The most important difference between this array and
@@ -124,13 +124,13 @@ break <Parseline:  Munch on the command line>
 ; DATA:
 ;---------------
 
-TRANSPACE	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	arg:byte
-	EXTRN	argbufptr:word
-	EXTRN	comptr:word
-	EXTRN	last_arg:word
-	EXTRN	tpbuf:byte
-TRANSPACE	ENDS
+if SEGSEL = S_TRANSPACE	;AC000;
+;	EXTRN	arg:byte
+;	EXTRN	argbufptr:word
+;	EXTRN	comptr:word
+;	EXTRN	last_arg:word
+;	EXTRN	tpbuf:byte
+end if
 
 ;---------------
 parseline:
@@ -143,17 +143,17 @@ parseline:
 	push	DI
 	push	SI
 	pushf
-	mov	cpyflag,0			; Turn "CPARSE called from COPY flag" off
+	mov	byte [cpyflag],0   ; Turn "CPARSE called from COPY flag" off
 
-	mov	[LAST_ARG], -1			; last argument at which to accumulate
+	mov	word [LAST_ARG], -1        ; last argument at which to accumulate
 	xor	ax,ax
-	mov	cx,SIZE arg_unit
-	mov	di,offset trangroup:arg
+	mov	cx,sizeof.arg_unit
+	mov	di,ARG
 	rep	stosb
-	mov	argbufptr,offset trangroup:arg.argbuf
-	mov	arg.argswinfo, 0		; switch information, and info to date
-	mov	arg.argvcnt, 0			; initialize argvcnt/argv[]
-	mov	SI, OFFSET TRANGROUP:combuf+2	; prescan leaves cooked input in combuf
+	mov	word [argbufptr],ARG+arg_unit.argbuf
+	mov	word [ARG+arg_unit.argswinfo], 0   ; switch information, and info to date
+	mov	word [ARG+arg_unit.argvcnt], 0     ; initialize argvcnt/argv[]
+	mov	SI, COMBUF+2                  ; prescan leaves cooked input in combuf
 
 ; This next section of code (up to pcont:)  makes sure that si is set up for
 ; parsing.  It should point at COMBUF if FORFLAG is set and arg.argforcombuf
@@ -166,28 +166,28 @@ parseline:
 
 	push	ds
 	mov	ds,[RESSEG]
-	assume	ds:resgroup
-	cmp	FORFLAG,0
+;	assume	ds:resgroup
+	cmp	byte [FORFLAG],0
 	pop	ds
-	assume	ds:trangroup
+;	assume	ds:trangroup
 	jnz	pcont
-	mov	di,OFFSET TRANGROUP:arg.argforcombuf
+	mov	di,ARG+arg_unit.argforcombuf
 	xor	ch,ch
 	mov	cl,[COMBUF+1]
 	inc	cl
 	rep	movsb
-	mov	si,OFFSET TRANGROUP:arg.argforcombuf
+	mov	si,ARG+arg_unit.argforcombuf
 
 pcont:
-	mov	DI, OFFSET TRANGROUP:tpbuf	; destination is temporary token buffer
+	mov	DI, tpbuf                  ; destination is temporary token buffer
 	mov	BL, ' '                         ; no special delimiter, for now
 
 parseloop:
-	mov	comptr,si			; save ptr into original command buffer
+	mov	[comptr],si ; save ptr into original command buffer
 	xor	BP, BP				; switch information put here by cparse
-	mov	byte ptr [expand_star],0	; don't expand *'s to ?'s
-	invoke	scanoff 			; skip leading blanks...
-	invoke	cparse				; byte off a token (args in SI, DI, BL)
+	mov	byte [expand_star],0     ; don't expand *'s to ?'s
+	invoke	SCANOFF 			; skip leading blanks...
+	invoke	CPARSE				; byte off a token (args in SI, DI, BL)
 	jnc	More_prse
 	or	BP,BP				; Check for trailing switch character
 	jz	parsedone
@@ -196,18 +196,18 @@ parseloop:
 						;   switch char IMMEDIATELY preceeds
 						;   the CR. We have an argument, but it
 						;   is sort of an error.
-	jmp	short parsedone 		; We're done (found the CR).
+	jmp     parsedone     ; We're done (found the CR).
 
 More_prse:
-	mov	cpyflag,2			; tell CPARSE that 1st token is done
+	mov	byte [cpyflag],2   ; tell CPARSE that 1st token is done
 	call	newarg				; add to argv array (CX has char count)
 	jnc	parseloop			; was everything OK?
-	jmp	short parse_error		; NO, it wasn't -- bug out (CF set)
+	jmp     parse_error    ; NO, it wasn't -- bug out (CF set)
 
 parsedone:					; successful completion of parseline
 	popf
 	clc
-	jmp	short parse_exit
+	jmp     parse_exit
 
 parse_error:					; error entry (er, exit) point
 	popf
@@ -226,7 +226,7 @@ parse_exit:					; depend on not changing CF
 ;----------------------------------------------------------------------------
 
 
-break <NewArg>
+BREAK <newarg>
 ;----------------------------------------------------------------------------
 ;   NEWARG adds the supplied argstring and cparse data to arg.argv[].
 ; ENTRY:
@@ -253,48 +253,48 @@ newarg:
 	push	DI
 	push	SI
 	pushf
-	call	arg_switch			; if it's a switch, record switch info
+	call	Arg_Switch			; if it's a switch, record switch info
 						; LEAVE SWITCH ON COMMAND LINE!!
 ;;;	jc	newarg_done			; previous arg's switches -- and leave
 
-	cmp	arg.argvcnt, ARGMAX		; check to ensure we've not
+	cmp	word [ARG+arg_unit.argvcnt], ARGMAX        ; check to ensure we've not
 	jge	too_many_args			; exceeded array limits
 	mov	DH, BH				; save argflags
-	mov	BX, arg.argvcnt 		; argv[argvcnt++] = arg data
-	inc	arg.argvcnt
-	mov	AX, OFFSET TRANGROUP:arg.argv
+	mov	BX, word [ARG+arg_unit.argvcnt]    ; argv[argvcnt++] = arg data
+	inc	word [ARG+arg_unit.argvcnt]
+	mov	AX, ARG+arg_unit.argv
 	call	argv_calc			; convert offset to pointer
-	mov	[BX].argsw_word, 0		; no switch information, yet...
-	mov	[BX].arglen, CX 		; argv[argvcnt].arglen = arg length
-	mov	[BX].argflags, DH		; argv[argvcnt].argflags = cparse flags
-	mov	SI, argbufptr
-	mov	[BX].argpointer, SI		; argv[argvcnt].argpointer = [argbufptr]
+	mov	word [BX+argv_ele.argsw_word], 0   ; no switch information, yet...
+	mov	word [BX+argv_ele.arglen], CX      ; argv[argvcnt].arglen = arg length
+	mov	byte [BX+argv_ele.argflags], DH    ; argv[argvcnt].argflags = cparse flags
+	mov	SI, [argbufptr]
+	mov	word [BX+argv_ele.argpointer], SI  ; argv[argvcnt].argpointer = [argbufptr]
 	add	SI, [STARTEL]			; save startel from new location
 	sub	SI, DI				; form pointer into argbuf
-	mov	[BX].argstartel, SI		; argv[argvcnt].argstartel = new [STARTEL]
+	mov	word [BX+argv_ele.argstartel], SI  ; argv[argvcnt].argstartel = new [STARTEL]
 	mov	si,[comptr]
-	mov	[BX].arg_ocomptr,si		; arg_ocomptr=ptr into original com line
+	mov	word [BX+argv_ele.arg_ocomptr],si  ; arg_ocomptr=ptr into original com line
 
 	mov	SI, DI				; now save argstring in argbuffer
-	mov	DI, argbufptr			; load the argbuf pointer and make
+	mov	DI, [argbufptr] ; load the argbuf pointer and make
 	add	DI, CX				; sure we're not about to run off
-	cmp	DI, OFFSET TRANGROUP:arg.argbuf+ARGBLEN-1
+	cmp	DI, ARG+arg_unit.argbuf+ARGBLEN-1
 	jge	buf_ovflow			; the end of the buffer (plus null byte)
 	sub	DI, CX				; adjust the pointer
 	cld
 	rep	movsb				; and save the string in argbuffer
 	mov	AL, ANULL			; tack a null byte on the end
 	stosb
-	mov	argbufptr, DI			; update argbufptr after copy
+	mov	[argbufptr], DI ; update argbufptr after copy
 
 newarg_done:
 	popf
 	clc
-	jmp	short newarg_exit
+	jmp     newarg_exit
 
 too_many_args:
 	mov	AX, arg_cnt_error
-	jmp	short newarg_error
+	jmp     newarg_error
 
 buf_ovflow:
 	mov	AX, arg_buf_ovflow
@@ -316,7 +316,7 @@ newarg_exit:
 ;----------------------------------------------------------------------------
 
 
-break <Arg_Switch>
+BREAK <Arg_Switch>
 ;----------------------------------------------------------------------------
 ;   ARG_SWITCH decides if an argument might really be a switch.  In the
 ; event that it is, and we can recognize
@@ -341,10 +341,10 @@ break <Arg_Switch>
 ; DATA:
 ;---------------
 
-TRANSPACE	SEGMENT PUBLIC BYTE		;AC000;
-    extrn   switch_list:byte
+if SEGSEL = S_TRANSPACE	;AC000;
+;    extrn   switch_list:byte
     switch_count    EQU     $-switch_list
-transpace   ends
+end if
 
 ;---------------
 Arg_Switch:
@@ -357,21 +357,21 @@ Arg_Switch:
 	pushf
 	test	BH, MASK sw_flag		; is it a switch? (preserve flag word)
 	jz	arg_no_switch0
-	cmp	[LAST_ARG], -1			; have we encountered any REAL args yet?
+	cmp	word [LAST_ARG], -1        ; have we encountered any REAL args yet?
 	je	arg_no_switch1			; no, so leading switches don't matter
 	mov	BX, [LAST_ARG]			; yes, add switch info to last REAL arg
-	mov	AX, OFFSET TRANGROUP:arg.argv
+	mov	AX, ARG+arg_unit.argv
 	call	argv_calc
-	or	[BX].argsw_word, BP
-	or	arg.argswinfo, BP
+	or	word [BX+argv_ele.argsw_word], BP
+	or	word [ARG+arg_unit.argswinfo], BP
 
 arg_yes_switch: 				; ah, sweet success...
 	popf
 	stc
-	jmp	short arg_switch_exit
+	jmp     arg_switch_exit
 
 arg_no_switch0:
-	mov	AX, arg.argvcnt 		; future switches should then affect
+	mov	AX, word [ARG+arg_unit.argvcnt]    ; future switches should then affect
 	mov	[LAST_ARG], AX			; this argument
 
 arg_no_switch1: 				; wasn't a switch, or we're pretending
@@ -390,7 +390,7 @@ arg_switch_exit:
 ;----------------------------------------------------------------------------
 
 
-break <Argv_calc>
+BREAK <argv_calc>
 ;----------------------------------------------------------------------------
 ;   ARGV_CALC maps an array index into a byte-offset from the base of
 ; the supplied array.  Method used for computing the address is:
@@ -405,7 +405,7 @@ break <Argv_calc>
 argv_calc:
 	push	ax				; Save base
 	mov	al,bl				; al = array index
-	mov	bl,SIZE argv_ele		; bl = size of an argv element
+	mov	bl,sizeof.argv_ele ; bl = size of an argv element
 	mul	bl				; ax = base offset
 	pop	bx				; Get base
 	add	ax,bx				; Add in base offset
@@ -418,5 +418,5 @@ argv_calc:
 
 
 
-trancode    ends
-	    end
+end if
+;	    end

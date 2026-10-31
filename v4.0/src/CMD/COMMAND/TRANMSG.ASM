@@ -3,8 +3,8 @@
 ;* TRANSIENT MESSAGE POINTERS & SUBSTITUTION BLOCKS *
 ;****************************************************
 
-msg_disp_class	db	Util_msg_class
-msg_cont_flag	db	No_cont_flag
+msg_disp_class	db	util_msg_class
+msg_cont_flag	db	no_cont_flag
 
 ;  extended error string output
 ;
@@ -12,7 +12,7 @@ Extend_Buf_ptr	dw	0				;AN000;set to no message
 Extend_Buf_sub	db	0				;AN000;set to no substitutions
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-Extend_Buf_off	dw	OFFSET	TranGroup:String_ptr_2	;AN000;offset of arg
+Extend_Buf_off	dw	string_ptr_2                  ;AN000;offset of arg
 Extend_Buf_seg	dw	0				;AN000;segment of arg
 		db	0				;AN000;first subst
 		db	Char_field_ASCIIZ		;AN000;character string
@@ -87,7 +87,7 @@ Copied_Ptr	dw	1018				;AN000;message number
 		db	1				;AN000;number of subst
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:Copy_num	;AN000;offset of arg
+		dw	copy_Num                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
 		db	Right_Align+Unsgn_Bin_Word	;AN000;binary to decimal
@@ -101,7 +101,7 @@ DirMes_Ptr	dw	1019				;AN000;message number
 		db	1				;AN000;number of subst
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:Dir_num	;AN000;offset of arg
+		dw	Dir_Num                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
 		db	Right_Align+Unsgn_Bin_Word	;AN000;binary to decimal
@@ -115,7 +115,7 @@ BytMes_Ptr	dw	1020				;AN000;message number
 		db	1				;AN000;number of subst
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:Bytes_Free	;AN000;offset of arg
+		dw	bytes_free                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
 		db	Right_Align+Unsgn_Bin_DWord	;AN000;long binary to decimal
@@ -135,7 +135,7 @@ CP_not_set_Ptr	dw	1022				;AN000;message number
 		db	1				;AN000;number of subst
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:System_cpage	;AN000;offset of arg
+		dw	system_cpage                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
 		db	Right_Align+Unsgn_Bin_Word	;AN000;binary to decimal
@@ -149,7 +149,7 @@ CP_not_all_Ptr	dw	1023				;AN000;message number
 		db	1				;AN000;number of subst
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:System_cpage	;AN000;offset of arg
+		dw	system_cpage                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
 		db	Right_Align+Unsgn_Bin_Word	;AN000;binary to decimal
@@ -163,7 +163,7 @@ CP_active_Ptr	dw	1024				;AN000;message number
 		db	1				;AN000;number of subst
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:System_cpage	;AN000;offset of arg
+		dw	system_cpage                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
 		db	Right_Align+Unsgn_Bin_Word	;AN000;binary to decimal
@@ -212,7 +212,7 @@ CurDat_Ptr	dw	1032				;AN000;message number
 		db	2				;AN000;number of subst
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:Arg_Buf	;AN000;offset of arg
+		dw	arg_buf                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
 		db	Char_field_ASCIIZ		;AN000;character string
@@ -290,7 +290,7 @@ VerMes_Ptr	dw	1040				;AN000;message number
 		db	2				;AN000;number of subst
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:Major_Ver_Num ;AN000;offset of arg
+		dw	major_ver_num                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
 		db	Right_Align+Unsgn_Bin_Word	;AN000;binary to decimal
@@ -299,7 +299,7 @@ VerMes_Ptr	dw	1040				;AN000;message number
 		db	blank				;AN000;pad character
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:Minor_Ver_Num ;AN000;offset of arg
+		dw	minor_ver_num                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	2				;AN000;second subst
 		db	Unsgn_Bin_Word			;AN000;binary to decimal
@@ -313,7 +313,7 @@ VolMes_Ptr_2	dw	1041				;AN000;message number
 		db	1				;AN000;number of subst
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:vol_drv	;AN000;offset of drive
+		dw	vol_drv                  ;AN000;offset of drive
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
 		db	Char_field_Char 		;AN000;character
@@ -327,7 +327,7 @@ VolMes_Ptr	dw	1042				;AN000;message number
 		db	2				;AN000;number of subst
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:vol_drv	;AN000;offset of drive
+		dw	vol_drv                  ;AN000;offset of drive
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
 		db	00000000b			;AN000;character
@@ -336,7 +336,7 @@ VolMes_Ptr	dw	1042				;AN000;message number
 		db	blank				;AN000;pad character
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:CHARBUF	;AN000;offset of string
+		dw	CHARBUF                  ;AN000;offset of string
 		dw	0				;AN000;segment of arg
 		db	2				;AN000;second subst
 		db	Char_field_ASCIIZ		;AN000;character string
@@ -350,7 +350,7 @@ VolSerMes_Ptr	dw	1043				;AN000;message number
 		db	2				;AN000;number of subst
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:vol_serial+2	;AN000;offset of serial
+		dw	vol_serial+2                  ;AN000;offset of serial
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
 		db	Right_Align+Bin_Hex_Word	;AN000;binary to hex
@@ -359,7 +359,7 @@ VolSerMes_Ptr	dw	1043				;AN000;message number
 		db	"0"                             ;AN000;pad character
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:vol_serial	;AN000;offset of serial
+		dw	vol_serial                  ;AN000;offset of serial
 		dw	0				;AN000;segment of arg
 		db	2				;AN000;second subst
 		db	Right_Align+Bin_Hex_Word	;AN000;binary to hex
@@ -394,7 +394,7 @@ DirHead_Ptr	dw	1048				;AN000;message number
 		db	1				;AN000;number of subst
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:BWDBUF	;AN000;offset of arg
+		dw	BWDBUF                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
 		db	Char_field_ASCIIZ		;AN000;character string
@@ -500,7 +500,7 @@ arg_Buf_Ptr	dw	1063				;AN000;message number
 		db	1				;AN000;number of subst
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:Arg_Buf	;AN000;offset of arg
+		dw	arg_buf                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
 		db	Char_field_ASCIIZ		;AN000;character string
@@ -514,7 +514,7 @@ File_Name_Ptr	dw	1064				;AN000;message number
 		db	1				;AN000;number of subst
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:SRCBUF	;AN000;offset of arg
+		dw	SRCBUF                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
 		db	Char_field_ASCIIZ		;AN000;character string
@@ -528,7 +528,7 @@ Disp_File_Size_Ptr dw	1065				;AN000;message number
 		db	1				;AN000;number of subst
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:File_size_low ;AN000;offset of arg
+		dw	file_size_low                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
 		db	Right_Align+Unsgn_Bin_DWord	;AN000;long binary to decimal
@@ -542,7 +542,7 @@ String_Buf_Ptr	dw	1066				;AN000;message number
 		db	1				;AN000;number of subst
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:String_ptr_2	;AN000;offset of arg
+		dw	string_ptr_2                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
 		db	Char_field_ASCIIZ		;AN000;character string
@@ -606,7 +606,7 @@ promptDat_Ptr	dw	1075				;AN000;message number
 		db	2				;AN000;number of subst
 		db	parm_block_size 		;AN000;size of sublist
 		db	0				;AN000;reserved
-		dw	OFFSET	TranGroup:Arg_Buf	;AN000;offset of arg
+		dw	arg_buf                  ;AN000;offset of arg
 		dw	0				;AN000;segment of arg
 		db	1				;AN000;first subst
 		db	Char_field_ASCIIZ		;AN000;character string

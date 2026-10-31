@@ -26,24 +26,41 @@
 
 use16
 
-; MASM's listing directives, in the spellings the modules use.
+; MASM's listing directives, in every spelling the modules use, fasm
+; telling one from another where MASM did not.
 macro TITLE [x] {
 }
+macro Title [x] {
+}
 macro PAGE [x] {
+}
+macro page [x] {
 }
 macro SUBTTL [x] {
 }
 macro .XLIST [x] {
 }
+macro .xlist [x] {
+}
 macro .LIST [x] {
+}
+macro .list [x] {
 }
 macro .XCREF [x] {
 }
+macro .xcref [x] {
+}
 macro .CREF [x] {
 }
-macro .SALL [x] {
+macro .cref [x] {
+}
+macro .sall [x] {
 }
 macro BREAK [x] {
+}
+macro Break [x] {
+}
+macro break [x] {
 }
 
 S_CODERES     = 1
@@ -126,3 +143,12 @@ macro group$ selector, para
 	group$ S_TRANDATA,    0
 	group$ S_TRANSPACE,   0
 	group$ S_TRANTAIL,    1
+
+; What is not done yet: every module assembles, and the one thing in the way
+; of a program is that the message retriever goes in twice.  RUCODE asks for
+; it as COMR and TPRINTF as COMT, because the resident must still be able to
+; speak when the transient has been overwritten, and MASM gave each of the two
+; modules its own copy with its own local labels.  One assembly reads the
+; whole program, so the second copy's SYSLOADMSG is the first copy's name
+; again.  The data table already has an answer -- MSGSERV.ASM's COMR switch
+; moves it to M_RT2$ -- and the code needs one of the same kind.

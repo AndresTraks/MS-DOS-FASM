@@ -1,8 +1,8 @@
- page 80,132
+ PAGE 80,132
 ;	SCCSID = @(#)command1.asm	1.1 85/05/14
 ;	SCCSID = @(#)command1.asm	1.1 85/05/14
 TITLE	COMMAND - resident code for COMMAND.COM
-NAME	COMMAND
+;NAME	COMMAND
 
 ;*****************************************************************************
 ;
@@ -318,97 +318,97 @@ NAME	COMMAND
 
 .XCREF
 .XLIST
-	INCLUDE DOSSYM.INC
-	INCLUDE comsw.asm
-	INCLUDE comequ.asm
-	INCLUDE resmsg.equ		;AN000;
+	include 'DOSSYM.INC'
+	include 'COMSW.ASM'
+	include 'COMEQU.ASM'
+	include 'RESMSG.EQU';AN000;
 .LIST
 .CREF
 
-CODERES 	SEGMENT PUBLIC BYTE	;AC000;
-CODERES ENDS
+if SEGSEL = S_CODERES	;AC000;
+end if
 
-DATARES SEGMENT PUBLIC BYTE
-	EXTRN	BATCH:WORD
-	EXTRN	ECHOFLAG:BYTE
-	EXTRN	disp_class:byte 	;AN055;
-	EXTRN	execemes_block:byte	;AC000;
-	EXTRN	execemes_off:word	;AC000;
-	EXTRN	execemes_subst:byte	;AC000;
-	EXTRN	execemes_seg:word	;AC000;
-	EXTRN	EXTCOM:BYTE
-	EXTRN	FORFLAG:BYTE
-	EXTRN	IFFlag:BYTE
-	EXTRN	InitFlag:BYTE
-	EXTRN	NEST:WORD
-	EXTRN	number_subst:byte	;AC000;
-	EXTRN	PIPEFLAG:BYTE
-	EXTRN	RETCODE:WORD
-	EXTRN	SINGLECOM:WORD
-DATARES ENDS
+if SEGSEL = S_DATARES
+;	EXTRN	BATCH:WORD
+;	EXTRN	ECHOFLAG:BYTE
+;	EXTRN	disp_class:byte 	;AN055;
+;	EXTRN	execemes_block:byte	;AC000;
+;	EXTRN	execemes_off:word	;AC000;
+;	EXTRN	execemes_subst:byte	;AC000;
+;	EXTRN	execemes_seg:word	;AC000;
+;	EXTRN	EXTCOM:BYTE
+;	EXTRN	FORFLAG:BYTE
+;	EXTRN	IFFlag:BYTE
+;	EXTRN	InitFlag:BYTE
+;	EXTRN	NEST:WORD
+;	EXTRN	number_subst:byte	;AC000;
+;	EXTRN	PIPEFLAG:BYTE
+;	EXTRN	RETCODE:WORD
+;	EXTRN	SINGLECOM:WORD
+end if
 
-BATARENA	SEGMENT PUBLIC PARA	;AC000;
-BATARENA ENDS
+if SEGSEL = S_BATARENA	;AC000;
+end if
 
-BATSEG		SEGMENT PUBLIC PARA	;AC000;
-BATSEG	 ENDS
+if SEGSEL = S_BATSEG	;AC000;
+end if
 
-ENVARENA	SEGMENT PUBLIC PARA	;AC000;
-ENVARENA  ENDS
+if SEGSEL = S_ENVARENA	;AC000;
+end if
 
-ENVIRONMENT SEGMENT PUBLIC PARA 	; Default COMMAND environment
-ENVIRONMENT ENDS
+if SEGSEL = S_ENVIRONMENT	; Default COMMAND environment
+end if
 
-INIT	SEGMENT PUBLIC PARA
-	EXTRN	CONPROC:NEAR
-	EXTRN	init_contc_specialcase:near
-INIT	ENDS
+if SEGSEL = S_INIT
+;	EXTRN	CONPROC:NEAR
+;	EXTRN	init_contc_specialcase:near
+end if
 
-TAIL	SEGMENT PUBLIC PARA
-TAIL	ENDS
+if SEGSEL = S_TAIL
+end if
 
-TRANCODE	SEGMENT PUBLIC PARA
-TRANCODE	ENDS
+if SEGSEL = S_TRANCODE
+end if
 
-TRANDATA	SEGMENT PUBLIC BYTE
-TRANDATA	ENDS
+if SEGSEL = S_TRANDATA
+end if
 
-TRANSPACE	SEGMENT PUBLIC BYTE
-TRANSPACE	ENDS
+if SEGSEL = S_TRANSPACE
+end if
 
-TRANTAIL	SEGMENT PUBLIC PARA
-TRANTAIL	ENDS
+if SEGSEL = S_TRANTAIL
+end if
 
-RESGROUP  GROUP CODERES,DATARES,BATARENA,BATSEG,ENVARENA,ENVIRONMENT,INIT,TAIL
-TRANGROUP GROUP TRANCODE,TRANDATA,TRANSPACE,TRANTAIL
+;RESGROUP  GROUP CODERES,DATARES,BATARENA,BATSEG,ENVARENA,ENVIRONMENT,INIT,TAIL
+;TRANGROUP GROUP TRANCODE,TRANDATA,TRANSPACE,TRANTAIL
 
-	INCLUDE envdata.asm
+	include 'ENVDATA.ASM'
 
 ; START OF RESIDENT PORTION
 
-CODERES 	SEGMENT PUBLIC BYTE	;AC000;
+if SEGSEL = S_CODERES	;AC000;
 
 
-	PUBLIC	EXT_EXEC
-	PUBLIC	CONTC
-	PUBLIC	Exec_Wait
+;	PUBLIC	EXT_EXEC
+;	PUBLIC	CONTC
+;	PUBLIC	Exec_Wait
 
-ASSUME	CS:RESGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;ASSUME	CS:RESGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
-	EXTRN	lodcom:near
-	EXTRN	LODCOM1:near
+;	EXTRN	lodcom:near
+;	EXTRN	LODCOM1:near
 
 	ORG	0
 ZERO	=	$
 
 	ORG 80h-1
-	PUBLIC	RESCOM
-RESCOM	LABEL BYTE
+;	PUBLIC	RESCOM
+label RESCOM byte
 
 	ORG	100H
 
 PROGSTART:
-	JMP	RESGROUP:CONPROC
+	JMP	CONPROC
 
 ;
 ; COMMAND has issued an EXEC system call and it has returned an error.	We
@@ -419,34 +419,34 @@ EXEC_ERR:
 	pop	es				;AC000;     into ES
 	push	cs				;AC000; get resident segment
 	pop	ds				;AC000;     into DS
-ASSUME	DS:RESGROUP				;AN000;
-	MOV	BX,RBADNAM			;AC000; Get message number for Bad command
+;ASSUME	DS:RESGROUP				;AN000;
+	MOV	BX,[RBADNAM] ;AC000; Get message number for Bad command
 	CMP	AX,error_file_not_found
 	JZ	GOTEXECEMES
-	MOV	BX,TOOBIG			;AC000; Get message number for file not found
+	MOV	BX,[TOOBIG] ;AC000; Get message number for file not found
 	CMP	AX,error_not_enough_memory
 	JZ	GOTEXECEMES
-	MOV	BX,EXEBAD			;AC000; Get message number for bad exe file
+	MOV	BX,[EXEBAD] ;AC000; Get message number for bad exe file
 	CMP	AX,error_bad_format
 	JZ	GOTEXECEMES
-	MOV	BX,AccDen			;AC000; Get message number for access denied
+	MOV	BX,[AccDen] ;AC000; Get message number for access denied
 	CMP	AX,error_access_denied
 	JZ	GOTEXECEMES			;AC000; go print message
 
 DEFAULT_MESSAGE:
-	MOV	BX,EXECEMES			;AC000; Get message number for default message
-	MOV	EXECEMES_OFF,DX 		;AN000; put offset of EXEC string in subst block
-	MOV	EXECEMES_SEG,ES 		;AN000; put segment of EXEC string in subst block
-	MOV	AL,EXECEMES_SUBST		;AN000; get number of substitutions
-	MOV	NUMBER_SUBST,AL 		;AN000;
-	MOV	SI,OFFSET RESGROUP:EXECEMES_BLOCK ;AN000; get address of subst block
+	MOV	BX,[EXECEMES] ;AC000; Get message number for default message
+	MOV	[EXECEMES_OFF],DX ;AN000; put offset of EXEC string in subst block
+	MOV	[EXECEMES_SEG],ES ;AN000; put segment of EXEC string in subst block
+	MOV	AL,[EXECEMES_SUBST]        ;AN000; get number of substitutions
+	MOV	[NUMBER_SUBST],AL ;AN000;
+	MOV	SI,EXECEMES_BLOCK                 ;AN000; get address of subst block
 GOTEXECEMES:
 	PUSH	CS
 	POP	ES				;AC000; get resident segment into ES
-ASSUME	ES:RESGROUP				;AN000;
+;ASSUME	ES:RESGROUP				;AN000;
 	MOV	DX,BX				;AN000; get message number in DX
-	INVOKE	RPRINT
-	JMP	SHORT NOEXEC
+	invoke	RPRINT
+	jmp     NOEXEC
 ;
 ; The transient has set up everything for an EXEC system call.	For
 ; cleanliness, we issue the EXEC here in the resident so that we may be able
@@ -463,7 +463,7 @@ EXT_EXEC:
 EXEC_WAIT:
 	push	cs				;AC000; get resident segment
 	pop	ds				;AC000;     into DS
-	MOV	AH,WAITPROCESS			;AC000; Get errorlevel
+	MOV	AH,WaitProcess			;AC000; Get errorlevel
 	INT	int_command			; Get the return code
 	MOV	[RETCODE],AX
 ;
@@ -479,17 +479,17 @@ NOEXEC:
 ; ALLOC and diddle the header!	Also, if we are prompting for date/time in the
 ; init code, we are to treat ^C as empty responses.
 ;
-CONTC	PROC	FAR
-	ASSUME	CS:ResGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
-	test	InitFlag,initINIT		; in initialization?
+CONTC:
+;	ASSUME	CS:ResGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING
+	test	byte [InitFlag],initInit  ; in initialization?
 	jz	NotAtInit			; no
-	test	InitFlag,initSpecial		; doing special stuff?
-	jz	CmdIRet 			; no, ignore ^C
-	jmp	resgroup:init_contc_specialcase ; Yes, go handle it
+	test	byte [InitFlag],initSpecial       ; doing special stuff?
+	jz	CmdIret 			; no, ignore ^C
+	jmp	init_contc_specialcase          ; Yes, go handle it
 CmdIret:
 	iret					; yes, ignore the ^C
 NotAtInit:
-	test	InitFlag,initCtrlC		; are we already in a ^C?
+	test	byte [InitFlag],initCtrlC ; are we already in a ^C?
 	jz	NotInit 			; nope too.
 ;
 ; We are interrupting ourselves in this ^C handler.  We need to set carry
@@ -497,9 +497,9 @@ NotAtInit:
 ; Otherwise, we ignore the ^C.
 ;
 	cmp	ah,1
-	jb	CmdIRet
+	jb	CmdIret
 	cmp	ah,12
-	ja	CmdIRet
+	ja	CmdIret
 	add	sp,6				; remove int frame
 	stc
 	ret	2				; remove those flags...
@@ -520,64 +520,64 @@ NotAtInit:
 ; and let the DOS abort.
 ;
 NotInit:
-	or	InitFlag,initCtrlC		; nested ^c is on
+	or	byte [InitFlag],initCtrlC   ; nested ^c is on
 	STI
 	PUSH	CS				; El Yucko!  Change the user's DS!!
 	POP	DS
-ASSUME	DS:RESGROUP
-	MOV	DISP_CLASS,UTIL_MSG_CLASS	;AN055; reset display class
-	MOV	NUMBER_SUBST,NO_SUBST		;AN055; reset number of substitutions
-	MOV	AX,SingleCom
+;ASSUME	DS:RESGROUP
+	MOV	byte [DISP_CLASS],util_msg_class   ;AN055; reset display class
+	MOV	byte [NUMBER_SUBST],no_subst       ;AN055; reset number of substitutions
+	MOV	AX,[SINGLECOM]
 	OR	AX,AX
-	JNZ	NoReset
+	JNZ	NoReset_COMMAND1
 	PUSH	AX
-	MOV	AH,DISK_RESET
+	MOV	AH,Disk_Reset
 	INT	int_command			; Reset disks in case files were open
 	POP	AX
-NoReset:
+NoReset_COMMAND1:
 ;
 ; In the generalized version of FOR, PIPE and BATCH, we would walk the entire
 ; active list and free each segment.  Here, we just free the single batch
 ; segment.
 ;
-	TEST	Batch,-1
+	TEST	word [BATCH],-1
 	JZ	CONTCTERM
 	OR	AX,AX
-	JNZ	Contcterm
-	invoke	SavHand
+	JNZ	CONTCTERM
+	invoke	SAVHAND
 	invoke	ASKEND				; See if user wants to terminate batch
 ;
 ; If the carry flag is clear, we do NOT free up the batch file
 ;
 	JNC	ContBatch
-	mov	cl,echoflag			;AN000; get current echo flag
+	mov	cl,[ECHOFLAG] ;AN000; get current echo flag
 	PUSH	BX				;G
 
 ClearBatch:
 	MOV	ES,[BATCH]			; get batch segment
-	mov	di,batfile			;AN000; get offset of batch file name
+	mov	di,BatchSegment.BatFile    ;AN000; get offset of batch file name
 	mov	ax,mult_shell_brk		;AN000; does the SHELL want this terminated?
 	int	2fh				;AN000; call the SHELL
 	cmp	al,shell_action 		;AN000; does shell want this batch?
 	jz	shell_bat_cont			;AN000; yes - keep it
 
-	MOV	BX,ES:[BATFORPTR]		;G get old FOR segment
+	MOV	BX,word [es:BatchSegment.Batforptr]        ;G get old FOR segment
 	cmp	bx,0				;G is a FOR in progress
 	jz	no_bat_for			;G no - don't deallocate
 	push	es				;G
 	mov	es,bx				;G yes - free it up...
-	MOV	AH,DEALLOC			;G
+	MOV	AH,Dealloc			;G
 	INT	21H				;G
 	pop	es				;G restore to batch segment
 
 no_bat_for:
-	mov	cl,ES:[batechoflag]		;G get old echo flag
-	MOV	BX,ES:[BATLAST] 		;G get old batch segment
-	MOV	AH,DEALLOC			; free it up...
+	mov	cl,byte [es:BatchSegment.Batechoflag]      ;G get old echo flag
+	MOV	BX,word [es:BatchSegment.Batlast]  ;G get old batch segment
+	MOV	AH,Dealloc			; free it up...
 	INT	21H
 	MOV	[BATCH],BX			;G get ready to deallocate next batch
-	DEC	NEST				;G Is there another batch file?
-	JNZ	CLEARBATCH			;G Keep going until no batch file
+	DEC	word [NEST]        ;G Is there another batch file?
+	JNZ	ClearBatch			;G Keep going until no batch file
 
 ;
 ; We are terminating a batch file; restore the echo status
@@ -586,11 +586,11 @@ no_bat_for:
 shell_bat_cont: 				;AN000; continue batch for SHELL
 
 	POP	BX				;G
-	MOV	ECHOFLAG,CL			;G reset echo status
-	MOV	PIPEFLAG,0			;G turn off pipeflag
+	MOV	[ECHOFLAG],CL ;G reset echo status
+	MOV	byte [PIPEFLAG],0  ;G turn off pipeflag
 ContBatch:
 	invoke	CRLF				;G print out crlf before returning
-	invoke	RestHand
+	invoke	RESTHAND
 ;
 ; Yes, we are terminating.  Turn off flags and allow the DOS to abort.
 ;
@@ -601,38 +601,38 @@ CONTCTERM:
 ; The following resetting of the state flags is good for the generalized batch
 ; processing.
 ;
-	MOV	IfFlag,AL			; turn off iffing
+	MOV	[IFFLAG],AL ; turn off iffing
 	MOV	[FORFLAG],AL			; Turn off for processing
 	call	ResPipeOff
 	CMP	[SINGLECOM],AX			; See if we need to set SINGLECOM
 	JZ	NOSETSING
-	MOV	[SINGLECOM],-1			; Cause termination on pipe, batch, for
+	MOV	word [SINGLECOM],-1        ; Cause termination on pipe, batch, for
 NOSETSING:
 ;
 ; If we are doing an internal command, go through the reload process.  If we
 ; are doing an external, let DOS abort the process.  In both cases, we are
 ; now done with the ^C processing.
 ;
-	AND	InitFlag,NOT initCtrlC
+	AND	byte [InitFlag],NOT initCtrlC
 	CMP	[EXTCOM],AL
 	JNZ	DODAB				; Internal ^C
 	JMP	LODCOM1
 DODAB:
 	STC					; Tell DOS to abort
 	RET					; Leave flags on stack
-ContC	ENDP
+;ContC	ENDP
 
-public	ResPipeOff
-	assume	ds:nothing,es:nothing
+;public	ResPipeOff
+;	assume	ds:nothing,es:nothing
 ResPipeOff:
 	SaveReg <AX>
 	xor	ax,ax
-	xchg	PipeFlag,al
+	xchg	[PIPEFLAG],al
 	or	al,al
 	jz	NoPipePop
-	shr	EchoFlag,1
+	shr	byte [ECHOFLAG],1
 NoPipePop:
 	RestoreReg  <AX>
 	return
-CODERES ENDS
-	END	PROGSTART
+end if
+;	END	PROGSTART

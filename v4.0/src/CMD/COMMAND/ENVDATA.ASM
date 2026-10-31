@@ -13,6 +13,12 @@ if SEGSEL = S_ENVIRONMENT	; Default COMMAND environment
 ;	PUBLIC	ECOMSPEC,ENVIREND,PATHSTRING
 
 ;	ORG	0	; the flat layout is already here
+; MASM counted an offset from the group, except where a segment register was
+; assumed to this segment on its own -- COMMAND builds the environment at the
+; paragraph PATHSTRING sits on and points ES there, and the offsets it uses
+; inside it are counted from the segment.  The flat image has one address
+; space, so those references take this away.
+ENVIRONMENT$ = PATHSTRING
 PATHSTRING DB	"PATH="
 label USERPATH byte
 

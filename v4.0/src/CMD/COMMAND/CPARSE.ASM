@@ -1,45 +1,45 @@
- page 80,132
+ PAGE 80,132
 ;	SCCSID = @(#)cparse.asm 1.1 85/05/14
 ;	SCCSID = @(#)cparse.asm 1.1 85/05/14
-	INCLUDE comsw.asm
+	include 'COMSW.ASM'
 
 .xlist
 .xcref
-	INCLUDE DOSSYM.INC
-	INCLUDE DEVSYM.INC
-	INCLUDE comseg.asm
-	INCLUDE comequ.asm
+	include 'DOSSYM.INC'
+	include 'DEVSYM.INC'
+	include 'COMSEG.ASM'
+	include 'COMEQU.ASM'
 .list
 .cref
 
 
-TRANDATA	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	BADCD_PTR:WORD		;AC022;
-	EXTRN	BADCPMES_ptr:word	;AC000;
-TRANDATA	ENDS
+if SEGSEL = S_TRANDATA	;AC000;
+;	EXTRN	BADCD_PTR:WORD		;AC022;
+;	EXTRN	BADCPMES_ptr:word	;AC000;
+end if
 
-TRANSPACE	SEGMENT PUBLIC BYTE	;AC000;
-	EXTRN	comma:byte
-	EXTRN	cpyflag:byte
-	EXTRN	CURDRV:BYTE
-	EXTRN	ELCNT:BYTE
-	EXTRN	ELPOS:BYTE
-	EXTRN	EXPAND_STAR:BYTE
-	EXTRN	SKPDEL:BYTE
-	EXTRN	STARTEL:WORD
-	EXTRN	SWITCHAR:BYTE
-	EXTRN	switch_list:byte
-	EXTRN	TPA:WORD
-TRANSPACE	ENDS
+if SEGSEL = S_TRANSPACE	;AC000;
+;	EXTRN	comma:byte
+;	EXTRN	cpyflag:byte
+;	EXTRN	CURDRV:BYTE
+;	EXTRN	ELCNT:BYTE
+;	EXTRN	ELPOS:BYTE
+;	EXTRN	EXPAND_STAR:BYTE
+;	EXTRN	SKPDEL:BYTE
+;	EXTRN	STARTEL:WORD
+;	EXTRN	SWITCHAR:BYTE
+;	EXTRN	switch_list:byte
+;	EXTRN	TPA:WORD
+end if
 
-TRANCODE	SEGMENT PUBLIC BYTE
+if SEGSEL = S_TRANCODE
 
-ASSUME	CS:TRANGROUP,DS:TRANGROUP,ES:TRANGROUP,SS:NOTHING
+;ASSUME	CS:TRANGROUP,DS:TRANGROUP,ES:TRANGROUP,SS:NOTHING
 
-	EXTRN	CERROR:NEAR
+;	EXTRN	CERROR:NEAR
 
-	PUBLIC	BADCDERR		;AC022;
-	PUBLIC	CPARSE
+;	PUBLIC	BADCDERR		;AC022;
+;	PUBLIC	CPARSE
 
 SWCOUNT EQU	5			; Must agree with length of switch_list
 
@@ -100,7 +100,7 @@ SWCOUNT EQU	5			; Must agree with length of switch_list
 ;---------------
 
 CPARSE:
-ASSUME	DS:TRANGROUP,ES:TRANGROUP
+;ASSUME	DS:TRANGROUP,ES:TRANGROUP
 
 	xor	ax,ax
 	mov	[STARTEL],DI			; No path element (Is DI correct?)
@@ -110,21 +110,21 @@ ASSUME	DS:TRANGROUP,ES:TRANGROUP
 	pushf					; save flags
 	push	di				; save the token buffer addrss
 	xor	cx,cx				; no chars in token buffer
-	mov	comma,cl			;g reset comma flag
-moredelim:
+	mov	[comma],cl ;g reset comma flag
+moredelim_CPARSE:
 	LODSB
-	INVOKE	DELIM
+	invoke	DELIM
 	JNZ	SCANCDONE
 	CMP	AL,' '
-	JZ	moredelim
+	JZ	moredelim_CPARSE
 	CMP	AL,9
-	JZ	moredelim
+	JZ	moredelim_CPARSE
 	xchg	al,[SKPDEL]
 	or	al,al
-	jz	moredelim			; One non space/tab delimiter allowed
+	jz	moredelim_CPARSE			; One non space/tab delimiter allowed
 	test	bh,080h 			;g  has a special char been found?
 	jz	no_comma			;g  no - just exit
-	mov	comma,1 			;g  set comma flag
+	mov	byte [comma],1     ;g  set comma flag
 no_comma:
 	JMP	x_done				; Nul argument
 
@@ -143,7 +143,7 @@ cpcont1:
 	cmp	al,bl				; Special delimiter?
 	jnz	nospec
 	or	bh,80H
-	jmp	short moredelim
+	jmp     moredelim_CPARSE
 
 nospec:
 	cmp	al,0DH				; a CR?
@@ -157,15 +157,15 @@ ncperror:
 
 na_switch:
 	mov	dl,':'
-	cmp	byte ptr [si],dl
+	cmp	byte [si],dl
 	jne	anum_chard			; Drive not specified
 
 ;;;;	IF	KANJI		3/3/KK
 ;---------------
 ; Mod to avoid upper-case conversion.
-	cmp	cpyflag,1
+	cmp	byte [cpyflag],1
 	jnz	cpcont2
-	invoke	UPCONV
+	invoke	upconv
 cpcont2:
 ;---------------
 ;;;;	ENDIF			3/3/KK
@@ -174,13 +174,13 @@ cpcont2:
 	lodsb					; Get the ':'
 	call	move_char
 	mov	[STARTEL],di
-	mov	[ELCNT],0
+	mov	byte [ELCNT],0
 	jmp	anum_test
 
 anum_chard:
 	mov	[STARTEL],di
-	mov	[ELCNT],0			; Store of this char sets it to one
-	cmp	cpyflag,1			; Was CPARSE called from COPY?
+	mov	byte [ELCNT],0     ; Store of this char sets it to one
+	cmp	byte [cpyflag],1   ; Was CPARSE called from COPY?
 	jnz	anum_char			; No, don't add drive spec.
 	invoke	PATHCHRCMP			; Starts with a pathchar?
 	jnz	anum_char			; no
@@ -192,20 +192,20 @@ anum_chard:
 	call	move_char
 	pop	ax
 	mov	[STARTEL],di
-	mov	[ELCNT],0
+	mov	byte [ELCNT],0
 
 anum_char:
 
 ;;;;	IF	KANJI		3/3/KK
 	invoke	TESTKANJ
-	jz	NOTKANJ 			;AC048;
+	jz	NOTKANJ_CPARSE 			;AC048;
 	call	move_char
 	lodsb
-	jmp	short notspecial
+	jmp     notspecial
 
-NOTKANJ:					;AN048; If not kanji
-	cmp	cpyflag,1			;AN048; and if we're in COPY
-	jnz	testdot 			;AN048;
+NOTKANJ_CPARSE:					;AN048; If not kanji
+	cmp	byte [cpyflag],1   ;AN048; and if we're in COPY
+	jnz	TESTDOT 			;AN048;
 	invoke	upconv				;AN048; upper case the char
 
 TESTDOT:
@@ -213,8 +213,8 @@ TESTDOT:
 
 	cmp	al,dot_chr
 	jnz	testquest
-	inc	[ELPOS] 			; flag in extension
-	mov	[ELCNT],0FFH			; Store of the '.' resets it to 0
+	inc	byte [ELPOS]       ; flag in extension
+	mov	byte [ELCNT],0FFH  ; Store of the '.' resets it to 0
 
 testquest:
 	cmp	al,'?'
@@ -225,16 +225,16 @@ testsplat:
 	cmp	al,star
 	jnz	testpath
 	or	bh,2
-	cmp	byte ptr [expand_star],0
+	cmp	byte [expand_star],0
 	jnz	expand_filename
-	jmp	SHORT testpath
+	jmp     testpath
 
 badperr2j:
 	jmp	badperr2
 
 expand_filename:
 	mov	ah,7
-	cmp	[ELPOS],0
+	cmp	byte [ELPOS],0
 	jz	gotelcnt
 	mov	ah,2
 
@@ -258,16 +258,16 @@ testpath:
 	invoke	PATHCHRCMP
 	jnz	notspecial
 	or	bh,4
-	cmp	byte ptr [expand_star],0
+	cmp	byte [expand_star],0
 	jz	no_err_check
 	test	bh,2				; If just hit a '/', cannot have ? or * yet
 	jnz	badperr
 
 no_err_check:
 	mov	[STARTEL],di			; New element
-	INC	[STARTEL]			; Point to char after /
-	mov	[ELCNT],0FFH			; Store of '/' sets it to 0
-	mov	[ELPOS],0
+	INC	word [STARTEL]     ; Point to char after /
+	mov	byte [ELCNT],0FFH  ; Store of '/' sets it to 0
+	mov	byte [ELPOS],0
 
 notspecial:
 	call	move_char			; just an alphanum string
@@ -285,7 +285,7 @@ cpcont3:
 ;---------------
 ;;;;	ENDIF				3/3/KK
 
-	INVOKE	DELIM
+	invoke	DELIM
 	je	x_done
 
 	cmp	al,0DH
@@ -310,7 +310,7 @@ FOO15:
 ; case, EVERY colon is changed to a space; e.g., 'f:' yields 'f ',
 ; but so does 'echo foo:bar' yield 'echo foo bar'.
 ;---------------
-	cmp	cpyflag,2			; Is CPARSE parsing the 1st token from
+	cmp	byte [cpyflag],2   ; Is CPARSE parsing the 1st token from
 						;  from PARSELINE?
 	jnz	cpcont4 			; No, continue
 	call	move_char			; Yes, save the ':' and go get another
@@ -318,18 +318,18 @@ FOO15:
 
 cpcont4:
 	inc	si				;Skip the ':'
-	jmp	short x_done
+	jmp     x_done
 
 anum_charj:
 	jmp	anum_char
 
 badperr2:
-	mov	dx,offset trangroup:BADCPMES_ptr
+	mov	dx,BadCPMes_Ptr
 	jmp	CERROR
 
 badperr:
 BADCDERR:					;AC022; Issue "Invalid Directory"
-	MOV	DX,OFFSET TRANGROUP:BADCD_ptr	;AC022;     message
+	MOV	DX,BadCD_Ptr                  ;AC022;     message
 	JMP	CERROR				;AC022;
 
 cperror:
@@ -345,20 +345,20 @@ x_done:
 ; Mod to recognize right and left parens as integral tokens.
 x_done2:
 ;---------------
-	jmp	short out_token
+	jmp     out_token
 
 a_switch:
 	OR	BH,1				; Indicate switch
 	OR	BP,fSwitch
-	INVOKE	SCANOFF
+	invoke	SCANOFF
 	INC	SI
-	invoke	testkanj			;AN057; See if DBCS lead byte
+	invoke	TESTKANJ			;AN057; See if DBCS lead byte
 	jz	a_switch_notkanj		;AN057; no - continue processing
 	call	move_char			;AN057; DBCS - store first byte
 	lodsb					;AN057; get second byte
 	call	move_char			;AN057; store second byte
 	or	bp,fBadSwitch			;AN057; DBCS switch is invalid
-	jmp	short out_token 		;AN057; don't bother checking switch
+	jmp     out_token     ;AN057; don't bother checking switch
 a_switch_notkanj:				;AN057;
 	cmp	al,0DH
 	jne	Store_swt
@@ -374,7 +374,7 @@ Store_swt:
 ;---------------
 ; This upconv call must stay.  It is used to identify copy-switches
 ; on the command line, and won't store anything into the output buffer.
-	invoke	UPCONV
+	invoke	upconv
 ;---------------
 ;
 	PUSH	ES
@@ -382,8 +382,8 @@ Store_swt:
 	PUSH	CX
 	PUSH	CS
 	POP	ES
-ASSUME	ES:TRANGROUP
-	MOV	DI,OFFSET TRANGROUP:switch_list
+;ASSUME	ES:TRANGROUP
+	MOV	DI,switch_list
 	MOV	CX,SWCOUNT
 	OR	BP,fBadSwitch
 	REPNE	SCASB
@@ -398,7 +398,7 @@ out_tokenp:
 	POP	DI
 	POP	ES
 
-ASSUME	ES:NOTHING
+;ASSUME	ES:NOTHING
 out_token:
 	mov	al,0
 	stosb				; null at the end
@@ -410,8 +410,8 @@ out_token:
 move_char:
 	stosb				; store char in token buffer
 	inc	cx			; increment char count
-	inc	[ELCNT] 		; increment element count for * substi
+	inc	byte [ELCNT]       ; increment element count for * substi
 	return
 
-TRANCODE	ENDS
-	END
+end if
+;	END
