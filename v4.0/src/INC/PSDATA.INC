@@ -71,6 +71,14 @@ P_Make_Upper	   equ	(0ffh-P_Make_Lower) ;AN000; make upper case character
 P_DOS_Get_CDI	   equ	3800h		;AN000; get country dependent information
 					; by this call, following information
 ; Filled in where it stands, so the first field is the macro's argument.
+; MASM's structure fields were names of their own, and fasm takes the
+; offsets from the structure laid out once at nought.  The headers that
+; every module reads ask MATCH whether they have been read before; this
+; one is read where the parser's data goes, and the twelve readings
+; of the source pick different segments, so the question would be answered
+; on a reading where the segment was not the one being laid down.  It is
+; read once, and the offsets are taken there.
+
 STRUC P_CDI P_CDI_DateF_=0
 {
 .P_CDI_DateF	   dw	P_CDI_DateF_;AN000;
@@ -86,14 +94,10 @@ STRUC P_CDI P_CDI_DateF_=0
 		   db	0,0		;AN000;
 		   dw	5 dup(0)	;AN000;
 }
-match =P_CDI_LAID_OUT, P_CDI_LAID_OUT
-{
-    P_CDI_LAID_OUT equ 1
-    virtual at 0
-      P_CDI P_CDI
-      sizeof.P_CDI = $ - P_CDI
-    end virtual
-}
+virtual at 0
+  P_CDI P_CDI
+  sizeof.P_CDI = $ - P_CDI
+end virtual
 
 P_Date_MDY	   equ	0		;AN000;
 P_Date_DMY	   equ	1		;AN000;
@@ -117,14 +121,10 @@ STRUC P_DOS_TBL
 .P_DOS_TBL_Off	   dw	0		;AN000; offset address of the table
 .P_DOS_TBL_Seg	   dw	0		;AN000; segment address of the table
 }
-match =P_DOS_TBL_LAID_OUT, P_DOS_TBL_LAID_OUT
-{
-    P_DOS_TBL_LAID_OUT equ 1
-    virtual at 0
-      P_DOS_TBL P_DOS_TBL
-      sizeof.P_DOS_TBL = $ - P_DOS_TBL
-    end virtual
-}
+virtual at 0
+  P_DOS_TBL P_DOS_TBL
+  sizeof.P_DOS_TBL = $ - P_DOS_TBL
+end virtual
 		   PAGE 		;AN000;
 ;---------------------------------------------------------------------------------------------------------
 ; PARMS 	LABEL	BYTE
@@ -145,14 +145,10 @@ STRUC P_PARMS_Blk
 .P_Num_Extra	   db	0		;AN000; Number of extra stuff
 .P_Len_Extra_Delim db	0		;AN000; Length of extra delimiter
 }
-match =P_PARMS_Blk_LAID_OUT, P_PARMS_Blk_LAID_OUT
-{
-    P_PARMS_Blk_LAID_OUT equ 1
-    virtual at 0
-      P_PARMS_Blk P_PARMS_Blk
-      sizeof.P_PARMS_Blk = $ - P_PARMS_Blk
-    end virtual
-}
+virtual at 0
+  P_PARMS_Blk P_PARMS_Blk
+  sizeof.P_PARMS_Blk = $ - P_PARMS_Blk
+end virtual
 
 P_Len_PARMS	   equ	4		;AN000;
 P_I_Use_Default   equ	0		;AN000; no extra stuff specified
@@ -179,14 +175,10 @@ STRUC P_PARMSX_Blk
 .P_Maxp 	   db	0		;AN000; Maximum positional number
 .P_1st_Control	   dw	0		;AN000; Address of the 1st CONTROL block
 }
-match =P_PARMSX_Blk_LAID_OUT, P_PARMSX_Blk_LAID_OUT
-{
-    P_PARMSX_Blk_LAID_OUT equ 1
-    virtual at 0
-      P_PARMSX_Blk P_PARMSX_Blk
-      sizeof.P_PARMSX_Blk = $ - P_PARMSX_Blk
-    end virtual
-}
+virtual at 0
+  P_PARMSX_Blk P_PARMSX_Blk
+  sizeof.P_PARMSX_Blk = $ - P_PARMSX_Blk
+end virtual
 		   PAGE 		;AN000;
 ;---------------------------------------------------------------------------------------------------------
 ; << Control field definition  >>
@@ -290,14 +282,10 @@ STRUC P_Control_Blk
 .P_nid		   db	0		;AN000; # of keyword/SW synonyms
 .P_KeyorSW	   db	0		;AN000; keyword or sw
 }
-match =P_Control_Blk_LAID_OUT, P_Control_Blk_LAID_OUT
-{
-    P_Control_Blk_LAID_OUT equ 1
-    virtual at 0
-      P_Control_Blk P_Control_Blk
-      sizeof.P_Control_Blk = $ - P_Control_Blk
-    end virtual
-}
+virtual at 0
+  P_Control_Blk P_Control_Blk
+  sizeof.P_Control_Blk = $ - P_Control_Blk
+end virtual
 		   PAGE 		;AN000;
 ;---------------------------------------------------------------------------------------------------------
 ; << Value List Definition >>
@@ -346,14 +334,10 @@ STRUC P_Val_List
 .P_Val_YL	   dw	0		;AN000; lower word of another value
 .P_Val_YH	   dw	0		;AN000; higher word of another value
 }
-match =P_Val_List_LAID_OUT, P_Val_List_LAID_OUT
-{
-    P_Val_List_LAID_OUT equ 1
-    virtual at 0
-      P_Val_List P_Val_List
-      sizeof.P_Val_List = $ - P_Val_List
-    end virtual
-}
+virtual at 0
+  P_Val_List P_Val_List
+  sizeof.P_Val_List = $ - P_Val_List
+end virtual
 		   PAGE 		;AN000;
 ;---------------------------------------------------------------------------------------------------------
 ; << Result Buffer Definition  >>
@@ -406,14 +390,10 @@ STRUC P_Result_Blk
 .P_SYNONYM_Ptr	   dw	0		;AN000; pointer to Synonym list returned
 .P_Picked_Val	   db	0,0,0,0 	;AN000; value
 }
-match =P_Result_Blk_LAID_OUT, P_Result_Blk_LAID_OUT
-{
-    P_Result_Blk_LAID_OUT equ 1
-    virtual at 0
-      P_Result_Blk P_Result_Blk
-      sizeof.P_Result_Blk = $ - P_Result_Blk
-    end virtual
-}
+virtual at 0
+  P_Result_Blk P_Result_Blk
+  sizeof.P_Result_Blk = $ - P_Result_Blk
+end virtual
 ;--------------------------------
 ;**** values for the type field in the result block
 
@@ -454,7 +434,9 @@ P_Terminator	   db	0		;AN000; Terminator code (ASCII)
 P_DBCSEV_OFF	   dw	0		;AN000; Offset of DBCS EV
 P_DBCSEV_SEG	   dw	0		;AN000; Segment of DBCS EV
 P_Flags	   dw	0		;AN000; Parser internal flags
-P_Flags1	   equ	byte ptr P_Flags ;AN038; to reference first byte flags
+; MASM read this as a byte at P_Flags; in fasm the size goes on the
+; reference, so the equate is the address and nothing more.
+P_Flags1	   equ	P_Flags ;AN038; to reference first byte flags
 ; MASM read this as a byte at P_Flags+1; in fasm the size goes on the
 ; instruction, so this is the address alone.
 P_Flags2	   equ	(P_Flags+1) ;AN038; to reference second byte flags only

@@ -53,6 +53,10 @@
 ;   o	Keep things consistent and force the user to have his software named
 ;	differently from the ROM names (BASIC1, BASIC2, etc).
 
+; The transient's code is where this file is read, and it is read nowhere
+; else, so the two structures' offsets are taken once and need no guard
+; against being taken a second time.
+
 STRUC rom_header
 {
     .Signature1	DB  ?
@@ -62,14 +66,10 @@ STRUC rom_header
     .name_list	DB  ?
 }
 ;rom_header  ENDS
-match =rom_header_LAID_OUT, rom_header_LAID_OUT
-{
-    rom_header_LAID_OUT equ 1
     virtual at 0
       rom_header rom_header
       sizeof.rom_header = $ - rom_header
     end virtual
-}
 
 STRUC name_struc
 {
@@ -78,14 +78,10 @@ STRUC name_struc
     .name_jmp	DB  3 DUP (?)
 }
 ;name_struc  ENDS
-match =name_struc_LAID_OUT, name_struc_LAID_OUT
-{
-    name_struc_LAID_OUT equ 1
     virtual at 0
       name_struc name_struc
       sizeof.name_struc = $ - name_struc
     end virtual
-}
 
 ;ASSUME	CS:TRANGROUP,DS:NOTHING,ES:NOTHING,SS:NOTHING
 
@@ -139,14 +135,14 @@ SCAN_END:
 ; trundle down list of names
 ;
 SCAN_LIST:
-	MOV	BL,[es:DI+rom_length]	; number of 512-byte jobbers
+	MOV	BL,[es:DI+rom_header.rom_length]	; number of 512-byte jobbers
 	XOR	BH,BH			; nothing in the high byte
 	SHL	BX,1
 	SHL	BX,1			; number of paragraphs
 	ADD	BX,7Fh
 	AND	BX,0FF80h		; round to 2k
 
-	MOV	DI,name_list
+	MOV	DI,rom_header.name_list
 SCAN_NAME:
 	MOV	CL,[es:DI]		; length of name
 	INC	DI			; point to name
@@ -176,8 +172,8 @@ SCAN_FOUND:
 	CMP	byte [SI],' '
 	JNZ	SCAN_NEXT
 SCAN_SAVE:
-	MOV	[rom_cs],ES
-	MOV	[ROM_ip],DI
+	MOV	[cs:ROM_CS],ES
+	MOV	[cs:ROM_IP],DI
 	STC
 	JMP	ROM_RET
 
@@ -186,18 +182,18 @@ SCAN_SAVE:
 ;
 ROM_EXEC:
 	MOV	BX,0FFFFh
-	MOV	AH,ALLOC
+	MOV	AH,Alloc
 	INT	int_command
-	MOV	AH,ALLOC
+	MOV	AH,Alloc
 	INT	int_command
 	PUSH	BX
 	PUSH	AX
 ;
 ; set terminate addresses
 ;
-	MOV	AX,(set_interrupt_vector SHL 8) + int_terminate
+	MOV	AX,(Set_Interrupt_Vector SHL 8) + int_terminate
 	PUSH	DS
-	MOV	DS,[RESSEG]
+	MOV	DS,[cs:RESSEG]
 ;	ASSUME	DS:RESGROUP
 	MOV	DX,EXEC_WAIT
 	INT	int_command
@@ -210,27 +206,27 @@ ROM_EXEC:
 ; and create program header and dup all jfn's
 ;
 	POP	DX
-	MOV	AH,DUP_PDB
+	MOV	AH,Dup_PDB
 	INT	int_command
 ;
 ; set up dma address
 ;
 	MOV	DS,DX
 	MOV	DX,080h
-	MOV	AH,SET_DMA
+	MOV	AH,Set_DMA
 	INT	int_command
 ;
 ; copy in environment info
 ;
-	MOV	AX,[ENVIRSEG]
-	MOV	[PDB_environ],AX
+	MOV	AX,[es:ENVIRSEG]
+	MOV	[Process_data_block.PDB_environ],AX
 ;
 ; set up correct size of block
 ;
 	POP	BX			; BX has size, DS has segment
 	MOV	DX,DS
 	ADD	DX,BX
-	MOV	[PDB_block_len],DX
+	MOV	[Process_data_block.PDB_block_len],DX
 ;
 ; change ownership of block
 ;
@@ -238,7 +234,7 @@ ROM_EXEC:
 	DEC	DX
 	MOV	DS,DX
 	INC	DX
-	MOV	[arena_owner],DX
+	MOV	[arena.arena_owner],DX
 	MOV	DS,DX
 ;
 ; set up correct stack
@@ -258,8 +254,8 @@ GOT_STACK:
 ; set up initial registers and go to the guy
 ;
 	NOT	AX
-	PUSH	word [ROM_CS]
-	PUSH	word [ROM_IP]
+	PUSH	word [cs:ROM_CS]
+	PUSH	word [cs:ROM_IP]
 	MOV	ES,DX
 ;ASSUME ES:NOTHING
 FOOBAR:

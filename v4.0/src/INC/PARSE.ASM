@@ -17,6 +17,11 @@
 ; fasm's EQU is made as the line is read whichever way the IF went, so the
 ; question is asked with MATCH instead: a name the caller has not set stands
 ; for itself, which is what the first of the three looks for.
+;
+; MASM read one spelling of a name as any other, and this file wrote basesw
+; and incsw in three spellings between them.  They are written here the way
+; PSDATA.INC writes the rest of the parser's switches, and a caller that sets
+; one spells it the same way.
 ;if ~ defined basesw;AN022;
 ;   psdata_seg EQU   CS			;AN022;
 ;else					;AN022;
@@ -26,15 +31,15 @@
 ;       psdata_seg EQU	ES		;AN022;ELSE only other choice is ES (basesw EQU 0)
 ;   end if				;AN022;
 ;end if					;AN022;
-match =basesw, basesw { psdata_seg EQU CS } ;AN022;
-match =1, basesw { psdata_seg EQU DS }	;AN022;
-match =0, basesw { psdata_seg EQU ES }	;AN022;
+match =BaseSW, BaseSW { psdata_seg EQU CS } ;AN022;
+match =1, BaseSW { psdata_seg EQU DS }	;AN022;
+match =0, BaseSW { psdata_seg EQU ES }	;AN022;
 
 ; fasm's EQU is made as the line is read, whether or not the IF holds, so
 ; MATCH asks the question where it counts.
-match =incsw, incsw { incsw equ 1 }	;AN000; include psdata.inc (tm03)
+match =IncSW, IncSW { IncSW equ 1 }	;AN000; include psdata.inc (tm03)
 ;end if					;AN000; (tm03)
-if incsw				;AN000; If incsw = 1 then (tm03)
+if IncSW				;AN000; If incsw = 1 then (tm03)
    INCLUDE '../INC/PSDATA.INC'			;AN000;    include psdata.inc (tm03)
 end if					;AN000; endif		  (tm03)
    PAGE 				;AN000;
@@ -228,9 +233,9 @@ end if					;AN000;(of FarSW)
 ;	$SALUT	(4,9,17,41)
 	mov	[psdata_seg:P_Flags],0	;AC034; Clear all internal flags
 if	TimeSW				;AN039; FOR TIME ONLY
-	MOV    psdata_seg:[cs:P_ORIG_ORD],CX ;AN039; ORIGINAL ORDINAL FROM CX
-	MOV    psdata_seg:[cs:P_ORIG_STACK],SP ;AN039; ORIGINAL VALUE OF STACK FROM SP
-	MOV    psdata_seg:[cs:P_ORIG_SI],SI ;AN039; ORIGINAL START PARSE POINTER FROM SI
+	MOV    [psdata_seg:P_ORIG_ORD],CX ;AN039; ORIGINAL ORDINAL FROM CX
+	MOV    [psdata_seg:P_ORIG_STACK],SP ;AN039; ORIGINAL VALUE OF STACK FROM SP
+	MOV    [psdata_seg:P_ORIG_SI],SI ;AN039; ORIGINAL START PARSE POINTER FROM SI
 P_REDO_TIME:				;AN039; try to parse time again
 end if					;AN039; FOR TIME ONLY
 	cld				      ;AN000; confirm forward direction
@@ -1155,8 +1160,8 @@ P_DCC00:				;AN000;
 ; call, regardless of what base register is currently be defined as PSDATA_SEG.
 ;BASESW EQU 0 means that ES is the psdata_seg reg.
 
-if defined BASESW;AN037; If BASESW has been defined, and
-  if (BASESW) = 0;AN037; If ES is psdata base
+if defined BaseSW;AN037; If BASESW has been defined, and
+  if (BaseSW) = 0;AN037; If ES is psdata base
 	push	psdata_seg		;AN037; save current base reg
   end if 				;AN037;
 end if					;AN037;
@@ -1181,8 +1186,8 @@ end if					;AN037;
 	pop	dx			;AN000;
 	pop	cx			;AN000;
 	pop	ax			;AN000;
-if defined BASESW;AN037; If BASESW has been defined, and
-  if (BASESW) = 0;AN037; If ES is psdata base
+if defined BaseSW;AN037; If BASESW has been defined, and
+  if (BaseSW) = 0;AN037; If ES is psdata base
 	pop	psdata_seg		;AN037; restore current base reg
   end if 				;AN037;
 end if					;AN037;
@@ -1192,8 +1197,8 @@ P_DCC01:				;AN000;
 ; by the previous GET COUNTRY INFO DOS call.  This usage of ES is made
 ; regardless of which base reg is currently the PSDATA_SEG reg.
 
-if defined BASESW;AN037; If BASESW has been defined, and
-  if (BASESW) = 0;AN037; If ES is psdata base
+if defined BaseSW;AN037; If BASESW has been defined, and
+  if (BaseSW) = 0;AN037; If ES is psdata base
 	push	psdata_seg		;AN037; save current base reg
   end if 				;AN037;
 end if					;AN037;
@@ -1206,8 +1211,8 @@ end if					;AN037;
 	sub	al,P_ASCII80		;AN000; make char to index
 	xlat	byte [es:bx] 		;AN000; perform case map
 
-if defined BASESW;AN037; If BASESW has been defined, and
-  if (BASESW) = 0;AN037; If ES is psdata base
+if defined BaseSW;AN037; If BASESW has been defined, and
+  if (BaseSW) = 0;AN037; If ES is psdata base
 	pop	psdata_seg		;AN037; restore current base reg
   end if 				;AN037;
 end if					;AN037;
@@ -1769,7 +1774,7 @@ P_DateF_Err0:				;AN000; Bridge	  <-----------+
 	jne	P_DateF_Error		;AN000;
 
 P_DateF_YMD:				;AN000;
-	mov	bx,[psdata_seg:P_Country_Info].P_CDI_DateF ;AC034; get date format
+	mov	bx,[psdata_seg:P_COUNTRY_INFO+P_CDI.P_CDI_DateF] ;AC034; get date format
 	cmp	bx,P_Date_YMD		;AN000;
 	je	P_DateF00		;AN000;
 
@@ -1844,7 +1849,7 @@ if	TimeSW+DateSW			;AN000;(Check if time or date format is supported)
 ; Use:	INT 21h w/ AH = 38h
 ;***********************************************************************
 P_Set_CDI:				;AN000;
-	lea	si,[psdata_seg:P_Country_Info] ;AC034;
+	lea	si,[psdata_seg:P_COUNTRY_INFO] ;AC034;
 	cmp	[psdata_seg:si+P_CDI.P_CDI_DateF],P_NeedToBeRead ;AN000; already read ?
 	je	P_Read_CDI		;AN000;
 
@@ -2024,7 +2029,7 @@ P_TimeF00:				;AN000;
 ;(DELETED ;AN039;)  je P_TimeF_Rlt	;AN000;
 	jne	P_Time_4		;AN039; NOT END OF LINE,
 					;AN039;   GO TO 4TH NUMBER
-	test	[psdata_seg:P_Flags1],P_TIME_AGAIN ;AN039; HAS TIME PARSE
+	test	byte [psdata_seg:P_Flags1],P_TIME_AGAIN ;AN039; HAS TIME PARSE
 					;AN039;    BEEN REPEATED?
 	jnz	P_TimeF_RLT		;AN039; yes, this is really
 					;AN039;   the end of line
@@ -2041,7 +2046,7 @@ P_TimeF00:				;AN000;
 					;AN039;    comma to a decimal point
 					;AN039;     parse can understand
 	mov	[psdata_seg:P_Flags],0	;AN039; Clear all internal flags
-	or	[psdata_seg:P_Flags1],P_TIME_AGAIN ;AN039; indicate TIME
+	or	byte [psdata_seg:P_Flags1],P_TIME_AGAIN ;AN039; indicate TIME
 					;AN039; is being repeated
 	mov	cx,[psdata_seg:P_ORIG_ORD] ;AN039; ORIGINAL ORDINAL FROM CX
 	mov	sp,[psdata_seg:P_ORIG_STACK] ;AN039; ORIGINAL VALUE
@@ -2064,7 +2069,7 @@ P_TimeF_RLT:				;AN000;
 	or	ah,ah			;AN000; if overflow then error
 	jne	P_TimeF_Err		;AN000;
 
-	test	[psdata_seg:P_Flags1],P_time12am ;AN038;if "am" specified
+	test	byte [psdata_seg:P_Flags1],P_time12am ;AN038;if "am" specified
 	jz	P_Time_notAM		;AN038;skip if no "AM" specified
 					;since "AM" was specified,
 	cmp	al,12			;AN038: if hour specified as later than noon
@@ -2146,7 +2151,10 @@ P_T12_Loop:				;AN000;
 	or	al,al			;AN000;       to
 	jne	P_T12_Loop		;AN000; 	end of string
 
-	mov	al,[psdata_seg:si]-word] ;AN000; get char just before NULL
+; MASM read WORD in an expression as the two bytes one takes up, which is
+; what the two taken off SI here are; fasm reads it as a size and nothing
+; else, so the number is written.
+	mov	al,[psdata_seg:si-2] ;AN000; get char just before NULL
 	or	al,P_Make_Lower	;AN000; lower case map
 	cmp	al,"p"                  ;AN000; only "p" of "pm" ?
 	je	P_T1200		;AN000;
@@ -2158,7 +2166,7 @@ P_T12_Loop:				;AN000;
 	jne	P_T12_Exit		;AN000;
 
 	dec	si			;AN000;
-	mov	al,[psdata_seg:si]-word] ;AN000;
+	mov	al,[psdata_seg:si-2] ;AN000;
 	or	al,P_Make_Lower	;AN000; lower case map
 	cmp	al,"p"                  ;AN000; "p" of "pm" ?
 	je	P_T1200		;AN000;
@@ -2173,7 +2181,7 @@ P_T1200:				;AN000; "P" found
 	jmp	short P_Tclr_chr	;AN038; go clear the special char
 
 P_T1201:				;AN000; "A" found
-	or	[psdata_seg:P_Flags1],P_time12am ;AN038; flag "AM" found
+	or	byte [psdata_seg:P_Flags1],P_time12am ;AN038; flag "AM" found
 P_Tclr_chr:				;AN038;
 	mov	byte [psdata_seg:si-2],P_NULL ;AN000; null out special char
 P_T12_Exit:				;AN000;
@@ -2857,7 +2865,7 @@ P_Chk_Switch:				;AN000;
 		STC			;AN020;not in first position and is slash, now see if might be in date string
 if	DateSW				;AN020;caller looking for date, see if this may be part of one
 		PUSH	AX		;AN020;save input char
-		MOV	AL,psdata_seg:[BX-1] ;AN026;AL=char before the current char
+		MOV	AL,[psdata_seg:BX-1] ;AN026;AL=char before the current char
 		CALL	P_0099 	;AN020;return carry set if not numeric
 ;		.IF   NC ;AND		;AN020;IF previous char numeric AND
 		jc	P_STRUC_L7	;AN000;
