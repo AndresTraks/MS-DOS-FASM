@@ -57,6 +57,14 @@
 	mov	ah,9
 	mov	dx,done
 	int	21h
+
+; Handle 0 is still the file, and reading a character reads from there, so
+; what is left of the file would be echoed over everything the program
+; printed.  The console goes back on handle 0 first.
+	mov	bx,2
+	xor	cx,cx
+	mov	ah,46h
+	int	21h
 rest:
 	mov	ah,1			; read a character, with echo
 	int	21h
