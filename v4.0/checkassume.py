@@ -282,7 +282,25 @@ def stream(path, seen=None):
     return out
 
 
-def scan(path, labels, group):
+# A group MASM counted offsets from, as COMSEG.ASM names one: the segments
+# in it are reached through any register assumed to the group.
+GROUPLINE = re.compile(r"(?i)^\s*;\s*(" + N + r")\s+GROUP\s+([\w\s,]+)$")
+
+
+def groups_of(paths):
+    """The groups a program's modules declare, and what is in each."""
+    out = {}
+    for path in paths:
+        for line in lines_of(path):
+            m = GROUPLINE.match(line)
+            if m:
+                out[m.group(1).upper()] = {s.strip().upper()
+                                           for s in m.group(2).split(",")
+                                           if s.strip()}
+    return out
+
+
+def scan(path, labels, groups):
     """Every reference in one module, judged against the ASSUMEs around it."""
     assume = {"CS": None, "DS": None, "ES": None, "SS": None}
     findings, notes = [], []
@@ -293,10 +311,14 @@ def scan(path, labels, group):
             for reg, seg in re.findall(r"(CS|DS|ES|SS)\s*:\s*(\w+)", m.group(1), re.I):
                 assume[reg.upper()] = None if seg.upper() == "NOTHING" else seg.upper()
             continue
+        # A listing directive's argument is text, and LEA takes the offset
+        # of a label rather than what is at it, so neither needs a segment.
+        if re.match(r"(?i)\s*(TITLE|SUBTTL|PAGE|BREAK|LEA)\b", code):
+            continue
         m = re.match(r"\s*Context\s+(DS|ES)\b", code, re.I)
         if m:
             # PUSH SS / POP reg: the data segment, whatever the ASSUMEs say.
-            assume[m.group(1).upper()] = group or "CODE"
+            assume[m.group(1).upper()] = next(iter(groups), "CODE")
             continue
         for ref in REFERENCE.finditer(code):
             prefix = ref.group(1).upper() if ref.group(1) else None
@@ -304,7 +326,21 @@ def scan(path, labels, group):
             if label in REGISTERS or label not in labels:
                 continue
             seg = labels[label]
-            reaches = lambda r: assume[r] is not None and assume[r] in (seg, group)
+
+            def reaches(r):
+                """Whether a register points where the label lives.
+
+                A register assumed to a group reaches every segment in it;
+                where the group's segments are not named, as in the kernel,
+                the group is all there is and reaches everything.
+                """
+                a = assume[r]
+                if a is None:
+                    return False
+                if a == seg:
+                    return True
+                return a in groups and (not groups[a] or seg in groups[a])
+
             if prefix:
                 if not reaches(prefix):
                     notes.append((where, n, label, seg, "%s: is %s" %
@@ -317,13 +353,13 @@ def scan(path, labels, group):
     return findings, notes
 
 
-def report(title, paths, labels, group):
+def report(title, paths, labels, groups):
     print("======== %s" % title)
     print("%d labels, %d modules" % (len(labels), len(paths)))
     total = 0
     allnotes = 0
     for path in paths:
-        findings, notes = scan(path, labels, group)
+        findings, notes = scan(path, labels, groups)
         total += len(findings)
         allnotes += len(notes)
         if findings:
@@ -367,9 +403,12 @@ def utility_program(where, source):
         # offsets from; more than one and there is no group, and a register
         # reaches only what it is assumed to.
         segs = re.findall(r"(?m)^segment\s+(\w+?)_?\s*$", text)
-        return top, mods, None, segs[0].upper() if len(segs) == 1 else None
+        groups = {segs[0].upper(): None} if len(segs) == 1 else {}
+        # COMMAND.COM declares no fasm segment at all: its twelve are two
+        # groups laid down as two address spaces, and COMSEG.ASM names them.
+        return top, mods, None, groups or groups_of(mods)
     m = re.search(r"(?i);?\s*ASSUME[^\n]*\bCS\s*:\s*(\w+)", text)
-    return top, [top], m.group(1).upper() if m else None, None
+    return top, [top], m.group(1).upper() if m else None, {}
 
 
 def main():
@@ -379,11 +418,11 @@ def main():
     for p in paths:
         everything += included(p, set())
     bad = report("the BIOS: CODE and SYSINITSEG, no group",
-                 paths, bios_labels(bios), None)
+                 paths, bios_labels(bios), {})
 
     mods = kernel_modules()
     bad += report("the kernel: six segments in DOSGROUP",
-                  mods, kernel_labels(mods), "DOSGROUP")
+                  mods, kernel_labels(mods), {"DOSGROUP": None})
 
     # The utilities read the shared headers out of src/INC.
     SEARCH.append(os.path.join(SRC, "INC"))
@@ -391,15 +430,15 @@ def main():
         program = utility_program(where, source)
         if program is None:
             continue
-        top, mods, default, group = program
+        top, mods, default, groups = program
         if default:
             how = "%s, one segment" % default
-        elif group:
-            how = "the segments of the group %s" % group
+        elif groups:
+            how = "the segments of " + " and ".join(sorted(groups))
         else:
             how = "segments of its own, with no group"
         bad += report("%s: %s" % (where, how),
-                      mods, kernel_labels(mods, default), group)
+                      mods, kernel_labels(mods, default), groups)
     return 1 if bad else 0
 
 
