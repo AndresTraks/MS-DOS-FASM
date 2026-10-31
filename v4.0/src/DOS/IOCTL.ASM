@@ -483,12 +483,12 @@ ioctl_rem_media:
 					;   call.
 	TEST	[es:DI+SYSDEV.SDEVATT],DEVOPCL ; See if device can
 	JZ	ioctl_bad_fun		; NO
-	MOV	[IOCALL.REQFUNC],DEVRMD
+	MOV	[ss:IOCALL.REQFUNC],DEVRMD
 	MOV	AL,REMHL
 	MOV	AH,BL			; Unit number
-	MOV	word [IOCALL.REQLEN],AX
+	MOV	word [ss:IOCALL.REQLEN],AX
 	XOR	AX,AX
-	MOV	[IOCALL.REQSTAT],AX
+	MOV	[ss:IOCALL.REQSTAT],AX
 	PUSH	ES
 	POP	DS
 ;ASSUME	DS:NOTHING
@@ -499,7 +499,7 @@ ioctl_rem_media:
 	SaveReg <DS,SI>
 	invoke	DEVIOCALL2
 	RestoreReg <SI,DS>
-	MOV	AX,[IOCALL.REQSTAT]	; Get Status word
+	MOV	AX,[ss:IOCALL.REQSTAT]	; Get Status word
 	AND	AX,STBUI		; Mask to busy bit
 	MOV	CL,9
 	SHR	AX,CL			; Busy bit to bit 0
@@ -573,17 +573,17 @@ ioctl_do_string:
 	DEC	AL
 	DEC	AL
 	JZ	ioctl_control_read
-	MOV	[IOCALL.REQFUNC],DEVWRIOCTL
+	MOV	[ss:IOCALL.REQFUNC],DEVWRIOCTL
 	JMP	SHORT ioctl_control_call
 ioctl_control_read:
-	MOV	[IOCALL.REQFUNC],DEVRDIOCTL
+	MOV	[ss:IOCALL.REQFUNC],DEVRDIOCTL
 ioctl_control_call:
 	MOV	AL,DRDWRHL
 ioctl_setup_pkt:
 	MOV	AH,BL			; Unit number
-	MOV	word [IOCALL.REQLEN],AX
+	MOV	word [ss:IOCALL.REQLEN],AX
 	XOR	AX,AX
-	MOV	[IOCALL.REQSTAT],AX
+	MOV	[ss:IOCALL.REQSTAT],AX
 	MOV	[ss:IOMED],AL
 	MOV	[ss:IOSCNT],CX
 	MOV	word [ss:IOXAD],DX
@@ -597,13 +597,13 @@ ioctl_setup_pkt:
 	MOV	BX,IOCALL   ; ES:BX -> Call header
 ioctl_do_IO:
 	invoke	DEVIOCALL2
-	TEST	[IOCALL.REQSTAT],STERR	    ;Error?
+	TEST	[ss:IOCALL.REQSTAT],STERR	    ;Error?
 	JNZ	Ioctl_string_err
 	MOV	AX,[ss:IOSCNT]		; Get actual bytes transferred
 	transfer    SYS_RET_OK
 
 Ioctl_string_err:
-	MOV	DI,[IOCALL.REQSTAT]	;Get Error
+	MOV	DI,[ss:IOCALL.REQSTAT]	;Get Error
 device_err:
 	AND	DI,STECODE		; mask out irrelevant bits
 	MOV	AX,DI
@@ -694,16 +694,16 @@ ioctl_drive_owner:
 	JZ	ioctl_bad_funj3 	; NO
 	dec	al
 	jz	GetOwner
-	MOV	[IOCALL.REQFUNC],DEVSETOWN
+	MOV	[ss:IOCALL.REQFUNC],DEVSETOWN
 	jmp	short ioctl_do_own
 GetOwner:
-	MOV	[IOCALL.REQFUNC],DEVGETOWN
+	MOV	[ss:IOCALL.REQFUNC],DEVGETOWN
 ioctl_do_own:
 	MOV	AL,OWNHL
 	MOV	AH,BL			; Unit number
-	MOV	word [IOCALL.REQLEN],AX
+	MOV	word [ss:IOCALL.REQLEN],AX
 	XOR	AX,AX
-	MOV	[IOCALL.REQSTAT],AX
+	MOV	[ss:IOCALL.REQSTAT],AX
 	PUSH	ES
 	POP	DS
 ;ASSUME	DS:NOTHING
@@ -714,9 +714,9 @@ ioctl_do_own:
 	SaveReg <DS,SI>
 	invoke	DEVIOCALL2
 	RestoreReg <SI,DS>
-	test	[IOCALL.REQSTAT],STERR
+	test	[ss:IOCALL.REQSTAT],STERR
 	jnz	ioctl_string_errj
-	MOV	AL,byte [IOCALL.REQUNIT]	; Get owner returned by device
+	MOV	AL,byte [ss:IOCALL.REQUNIT]	; Get owner returned by device
 						; owner returned is 1-based.
 	transfer    SYS_RET_OK
 

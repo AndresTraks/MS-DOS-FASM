@@ -86,10 +86,13 @@ DEFLABEL = re.compile(r"^(" + N + r"):")
 DEFFASM = re.compile(r"^\s*label\s+(" + N + r")\s", re.I)
 DECLARES = re.compile(r"(?i)^\s*I_am\s+(" + N + r")\s*,")
 STRUCT = re.compile(r"(?i)^\s*(" + N + r")\s+(" + N + r")\s*$")
-# The offset may be written with spaces round it -- [FOOSTRNG + 2] -- and
-# missing those is not harmless: SYSINIT1 reads the second half of the CDS
-# text that way, and that reference went unexamined.
-REFERENCE = re.compile(r"\[(?:(cs|ds|es|ss):)?\s*(" + N + r")(?:\s*[-+][^\]]*)?\]", re.I)
+# The offset may be written with spaces round it -- [FOOSTRNG + 2] -- and a
+# structure's field follows the name with a dot -- [DEVCALL.REQSTAT].  Missing
+# either is not harmless: SYSINIT1 reads the second half of the CDS text the
+# first way, and DskRead reads the device driver's status the second, and both
+# of those references went unexamined.
+REFERENCE = re.compile(r"\[(?:(cs|ds|es|ss):)?\s*(" + N + r")(?:\." + N + r")*"
+                       r"(?:\s*[-+][^\]]*)?\]", re.I)
 # A reference through a register says nothing about where a variable lives.
 REGISTERS = {"AX", "BX", "CX", "DX", "SI", "DI", "BP", "SP",
              "AL", "BL", "CL", "DL", "AH", "BH", "CH", "DH"}

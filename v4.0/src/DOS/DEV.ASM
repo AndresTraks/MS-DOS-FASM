@@ -191,7 +191,7 @@ SETIN:					;AN000;
 	MOV	DS,DX
 ;ASSUME	DS:NOTHING
 	CALL	DEVIOCALL
-	MOV	DI,[IOCALL.REQSTAT]
+	MOV	DI,[ss:IOCALL.REQSTAT]
 	TEST	DI,STERR
 	JNZ	DevErr
 OkDevIO:
@@ -261,7 +261,7 @@ NO_RETRY_DEV:
 ;   Know user must have wanted Ignore OR Fail.	Make sure device shows ready
 ;   so that DOS doesn't get caught in a status loop when user simply wants
 ;   to ignore the error.
-	AND	byte [IOCALL.REQSTAT+1], NOT (STBUI SHR 8)
+	AND	byte [ss:IOCALL.REQSTAT+1], NOT (STBUI SHR 8)
 	JMP	OkDevIO
 
 IOTOFILE:
@@ -607,7 +607,7 @@ Break	<RW_SC -- Read Write Secondary Cache>
 	PUSH	ES			    ;AN000;;LB.
 	PUSH	DI			    ;AN000;;LB.
 	MOV	DX,word [ss:CALLSSEC]	    ;AN000;;LB.  starting sector
-	CMP	byte [DEVCALL.REQFUNC],DEVRD ;AN000;LB. read ?		      ;AN000;
+	CMP	byte [ss:DEVCALL.REQFUNC],DEVRD ;AN000;LB. read ?		      ;AN000;
 	JZ	doread_DEV			;AN000;LB. yes				      ;AN000;
 	CALL	INVALIDATE_SC		    ;AN000;LB. invalidate SC		      ;AN000;
 	JMP	scexit2 		    ;AN000;LB. back to normal		      ;AN000;
@@ -617,7 +617,7 @@ scexit4:				    ;AN000;				       ;AN000;
 doread_DEV: 				    ;AN000;				       ;AN000;
 	CALL	SC2BUF			    ;AN000;LB. check if in SC		      ;AN000;
 	JC	readSC			    ;AN000;LB.					  ;AN000;
-	MOV	[DEVCALL.REQSTAT],STDON     ;AN000;LB. fake done and ok 	  ;AN000;
+	MOV	[ss:DEVCALL.REQSTAT],STDON     ;AN000;LB. fake done and ok 	  ;AN000;
 	STC				    ;AN000;LB. set carry		  ;AN000;
 	JMP	saveseq 		    ;AN000;LB. save seq. sector #	  ;AN000;
 readSC: 				    ;AN000;
@@ -766,7 +766,7 @@ Break	<VIRREAD- virtually Read data into buffer>
 	MOV	byte [ss:SC_FLAG],0		    ;AN000;;LB.  reset sc_flag
 	MOV	word [ss:CALLSCNT],1		    ;AN000;;LB.  one sector transferred
 
-	TEST	[DEVCALL.REQSTAT],STERR     ;AN000;;LB.  error?
+	TEST	[ss:DEVCALL.REQSTAT],STERR     ;AN000;;LB.  error?
 	JNZ	scerror 		    ;AN000;;LB. yes
 	PUSH	DS			    ;AN000;;LB.
 	PUSH	SI			    ;AN000;;LB.

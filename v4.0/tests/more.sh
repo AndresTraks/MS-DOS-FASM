@@ -12,31 +12,6 @@
 #
 # COMMAND.COM cannot do the redirection yet, so tests/runsh.asm stands in
 # for it: it puts TEST.TXT on handle 0 and EXECs MORE.
-#
-# This fails as it stands, and what is known about it is worth writing down.
-# MORE runs and pages when its image is an even number of bytes long and
-# hangs when it is odd: 2136 bytes and 2138 pass, 2137 fails, and the only
-# difference between the two assemblies is one segment prefix and the byte of
-# shift it puts on everything after it.  When it hangs it has printed the
-# whole file without stopping, the message it should have stopped at does not
-# appear, MAXROW and CURROW are still 25 and 1, and the machine is in the
-# kernel's idle loop with keystrokes going nowhere.
-#
-# Later than that, the memory MORE was loaded into holds something else --
-# the PSP is no longer a PSP -- so MORE does end, and whatever hangs happens
-# after it: the interpreter's own way back from EXEC is the next place to
-# look, and a debugger with a breakpoint on the return from function 4BH
-# would settle it faster than another screen capture.
-#
-# What has been ruled out, each by a program written for the purpose: the
-# loader reads the last partial cluster of a 2137-byte .COM (it prints the
-# eight bytes at its own end); a read into a buffer at an odd offset lands
-# where it was asked to and leaves the bytes below it alone; the same read
-# through a duplicated handle behaves the same; and the file's clusters are
-# one contiguous run, with the failure following MORE rather than the place
-# on the disk.  MORE's own conversion was held against the release line by
-# line -- every memory reference, the structure's field offsets and the
-# instruction stream all agree.
 set -e
 cd "$(dirname "$0")/.."
 

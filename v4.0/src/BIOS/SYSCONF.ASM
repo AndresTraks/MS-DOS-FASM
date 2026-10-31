@@ -2683,9 +2683,9 @@ Set_DevMark:				;AN004;
 SDVMK_IFS:
 	mov	al, DEVMARK_IFS 	;AN004; ='I'
 SDVMK_ID:				;AN004;
-	mov	[DEVMARK.DEVMARK_ID], al	;AN004;
+	mov	[cs:DEVMARK.DEVMARK_ID], al	;AN004;
 	inc	di			;AN008;
-	mov	[DEVMARK.DEVMARK_SEG], di	;AN008;
+	mov	[cs:DEVMARK.DEVMARK_SEG], di	;AN008;
 	xor	al,al			;AN004;
 	push	si			;AN004;
 	pop	di			;AN004; now es:si = es:di = [path]filename,0

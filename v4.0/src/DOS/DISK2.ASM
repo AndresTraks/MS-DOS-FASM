@@ -191,7 +191,7 @@ DODSKOP:
 	POP	DI
 	SUB	CX,DI
 	NEG	CX		; Number of sectors not transferred
-	MOV	AX,[DEVCALL.REQSTAT]
+	MOV	AX,[ss:DEVCALL.REQSTAT]
 	MOV	[ss:IFS_DRIVER_ERR],AX ;IFS. save it for IFS			;AN000;
 	TEST	AX,STERR
 	return
