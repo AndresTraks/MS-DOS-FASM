@@ -346,7 +346,10 @@ def compile_skeleton(skeleton, messages, outdir):
                 written[name] = list(head) + table_class(
                     skeleton, messages, name, [], routine, identifier)
         control = os.path.join(outdir, "%s.CTL" % base)
-        with open(control, "w") as f:
+        # Written in the encoding it was read in: a message may hold a
+        # character above 7Fh -- TREE draws its shape with four of them --
+        # and the assembler takes the file a byte at a time.
+        with open(control, "w", encoding="cp437") as f:
             f.write("\n".join(head + [
                 "; How many classes of its own this utility has, which is how",
                 "; many times SYSMSG.INC's M_BUILD_PTRS$ asks for one.  It is an",
@@ -357,7 +360,7 @@ def compile_skeleton(skeleton, messages, outdir):
 
     for name, lines in written.items():
         path = os.path.join(outdir, "%s.CL%s" % (base, name))
-        with open(path, "w") as f:
+        with open(path, "w", encoding="cp437") as f:
             f.write("\n".join(lines) + "\n")
         print(path)
 
