@@ -9,7 +9,8 @@ QEMU=${QEMU:-qemu-system-i386}
 # tests want of it -- two of them count what is on the disk.  A machine driven
 # by hand wants the utilities as well, so they go on here: the ones under
 # src/CMD that are converted, in the order assemble.sh builds them.
-for util in MORE.COM SORT.EXE FIND.EXE LABEL.COM TREE.COM COMP.COM EXE2BIN.EXE; do
+for util in MORE.COM SORT.EXE FIND.EXE LABEL.COM TREE.COM COMP.COM EXE2BIN.EXE \
+            RECOVER.COM; do
     mcopy -o -i msdos.img "bin/$util" "::$util"
 done
 

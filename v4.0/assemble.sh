@@ -121,3 +121,12 @@ utility COMP COMPLNK COMP.COM
 # one byte naming where the file being converted is read -- which E2BLNK.ASM
 # lays down in turn.
 utility EXE2BIN E2BLNK EXE2BIN.EXE
+
+# RECOVER, four modules in five segments and one group -- DATA, CODE, CONST,
+# CSTACK and LASTSEG -- which RECLNK.ASM lays down as one address space, the
+# way the group was.  It is the first of the utilities to read and write the
+# disk itself, with the kernel's absolute read and write, and the release
+# ends its build by running TOOLS/CONVERT over the linked .EXE; DOS reads the
+# signature and not the extension, so what comes out here is the MZ image
+# under the name the release gives it.
+utility RECOVER RECLNK RECOVER.COM

@@ -1,21 +1,21 @@
 ; define the segment ordering						       ;AN000;bgb
 									       ;AN000;bgb
-data	segment public para 'DATA'                                             ;AN000;bgb
-data	ends ;put this 1st so that the recmsg works			       ;AN000;bgb
+if SEGSEL = S_DATA;AN000;bgb
+end if ;put this 1st so that the recmsg works			       ;AN000;bgb
 									       ;AN000;bgb
-code	segment public PARA 'CODE'                                             ;AN000;bgb
-code	ends								       ;AN000;bgb
+if SEGSEL = S_CODE;AN000;bgb
+end if ;AN000;bgb
 									       ;AN000;bgb
-const	segment public para 'const'                                            ;AN000;bgb
-const	ends								       ;AN000;bgb
+if SEGSEL = S_CONST;AN000;bgb
+end if ;AN000;bgb
 									       ;AN000;bgb
-cstack	segment stack word 'stack'                                             ;AN000;bgb
-	db	(362 - 80h) + 256 dup (?) ; (362 - 80h) == IBM's ROM requirements ;AN000;bgb
-cstack	ends	; (New - Old) == size of growth 				;AN005;bgb
+if SEGSEL = S_CSTACK;AN000;bgb
+	rb      (362 - 80h) + 256    ; (362 - 80h) == IBM's ROM requirements ;AN000;bgb
+end if ; (New - Old) == size of growth 				;AN005;bgb
 										;AN005;bgb
-lastseg segment public para 'last'                                              ;AN005;bgb
-lastseg ends			 ;put last because 'table' writes over memory   ;AN005;bgb
+if SEGSEL = S_LASTSEG;AN005;bgb
+end if ;put last because 'table' writes over memory   ;AN005;bgb
 										;AN000;bgb
-dg	group	data,const,code,cstack,lastseg					;AN000;bgb
-	assume	cs:dg,ds:dg,es:dg,ss:CSTACK					;AN000;bgb
+;DG_	group	data,const,code,cstack,lastseg					;AN000;bgb
+;	assume	cs:DG_,ds:DG_,es:DG_,ss:CSTACK					;AN000;bgb
 

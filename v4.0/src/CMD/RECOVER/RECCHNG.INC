@@ -123,7 +123,7 @@
 ;*	 Date:	1/25/88    
 ;* procedures changed - recover.sal, recdata.inc			     *
 ;* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - *
-;* 025 - DOS 4.00 ptm p3280 - include basesw for parser			     *
+;* 025 - DOS 4.00 ptm p3280 - include BaseSW for parser			     *
 ;*	 Date:	1/29/88    
 ;* procedures changed - recparse.inc					     *
 ;* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - *
