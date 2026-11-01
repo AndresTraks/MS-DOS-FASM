@@ -115,3 +115,9 @@ utility TREE TREELNK TREE.COM
 # down in the order COMP.LNK named them.  It carries the parser as well, and
 # reads two files at once to say where they differ.
 utility COMP COMPLNK COMP.COM
+
+# EXE2BIN, the step the release's own build ran over a linked .EXE to make a
+# .COM of it.  Four segments and no group -- CODE, DATA, STACK, and ZLOAD,
+# one byte naming where the file being converted is read -- which E2BLNK.ASM
+# lays down in turn.
+utility EXE2BIN E2BLNK EXE2BIN.EXE

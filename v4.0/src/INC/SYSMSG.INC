@@ -204,9 +204,15 @@ M_SL$			EQU   ds:si    ;; Refer to SUBLIST as $M_SL
 ; for every reference from the ASSUME the program had set: SORT says ASSUME
 ; ds:nothing before it asks for the services, so MASM wrote CS overrides
 ; through the whole of MSGSERV, while MORE assumes DS on its one segment and
-; MASM wrote none.  The table is assembled into the program's code segment
-; either way, so CS is what reaches it, and it is written out here.
-M_SEG$			EQU   cs       ;; The segment the data table is in
+; MASM wrote none.  A program of one segment has the table in it with the
+; code, so CS is what reaches it, and that is the default here.
+;
+; A program of several segments can ask for the table in another one of them
+; -- EXE2BIN asks for it in DATA, which it keeps DS on -- and such a program
+; says so by setting M_SEG$ itself before this file is read.  The MATCH is
+; the question "has the caller set it?": a name nobody has set stands for
+; itself.
+match =M_SEG$, M_SEG$ { M_SEG$ EQU cs } ;; The segment the data table is in
 M_NO_HANDLE$		EQU	-1     ;; No handle flag
 M_TEMP_BUF_SZ$		EQU	64     ;; Size of temporary buffer	 ;AN003;
 M_NEXT_DBCS_VECTOR$	EQU	2      ;; Amount to increment to get next vector

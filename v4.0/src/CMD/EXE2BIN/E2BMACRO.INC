@@ -11,17 +11,18 @@
 ;******************************************************************************
 ;
 
-      EXTRN Display_Interface:near
+;      EXTRN Display_Interface:near
 
 
 ;-----------------------------------------------------------------------------
 
-MESSAGE macro   Message_Name                    ;                               ;AN000;
+macro MESSAGE Message_Name
+{
                                                 ;
-        mov     dx,offset Message_Name          ;                               ;AN000;
+        mov     dx,Message_Name                 ;                               ;AN000;
         call    Display_Interface               ;                               ;AN000;
                                                 ;
-        endm                                    ;                               ;AN000;
+} ;                               ;AN000;
 
 
 ;
@@ -30,51 +31,55 @@ MESSAGE macro   Message_Name                    ;                               
 ;*****************************************************************************
 ;
 
-Procedure       macro   Proc_Name
+macro Procedure Proc_Name
+{
 
-Public  Proc_Name
-Proc_Name    proc
+;Public  Proc_Name
+Proc_Name:
 
-        endm
+}
 ;-----------------------------------------------------------------------------
 
-DOS_Call        macro   Function
+macro DOS_Call Function
+{
 
         mov     ah,Function
         int     21h
 
-        endm
+}
 ;-----------------------------------------------------------------------------
 
-Parse_Message macro                                                             ;AN000;
+macro Parse_Message 
+{
 
 
         push    ds                                                              ;AN000;
-        mov     dx,SEG parse_ptr                                                ;AN000;
+        mov     dx,DATA_                                                ;AN000;
         mov     ds,dx                                                           ;AN000;
-        ASSUME  DS:DATA                                                         ;AN000;
-        ASSUME  ES:DATA                                                         ;AN000;
-        mov     word ptr Parse_Error_Msg,ax                                     ;AN000;
-        mov     dx,offset Parse_Error_Msg       ;                               ;AN000;
+;        ASSUME  DS:DATA                                                         ;AN000;
+;        ASSUME  ES:DATA                                                         ;AN000;
+        mov     word [parse_error_msg],ax                                       ;AN000;
+        mov     dx,parse_error_msg              ;                               ;AN000;
         call    Display_Interface               ;                               ;AN000;
         pop     ds
-        endm                                    ;                               ;AN000;
+} ;                               ;AN000;
 
 ;-----------------------------------------------------------------------------
 
-Extend_Message macro                            ;                               ;AN001;
+macro Extend_Message 
+{
 
                                                 ;
         push    ds                                                              ;AN001;
-        mov     dx,SEG parse_ptr                                                ;AN001;
+        mov     dx,DATA_                                                ;AN001;
         mov     ds,dx                                                           ;AN001;
-        ASSUME  DS:DATA                                                         ;AN001;
-        ASSUME  ES:DATA                                                         ;AN001;
-        mov     word ptr Extend_Error_Msg,ax     ;                              ;AN001;
-        mov     dx,offset Extend_Error_Msg       ;                              ;AN001;
+;        ASSUME  DS:DATA                                                         ;AN001;
+;        ASSUME  ES:DATA                                                         ;AN001;
+        mov     word [extend_error_msg],ax       ;                              ;AN001;
+        mov     dx,extend_error_msg              ;                              ;AN001;
         call    Display_Interface               ;                               ;AN001;
         pop     ds                                                              ;AN001;
-        endm                                    ;                               ;AN001;
+} ;                               ;AN001;
 
 ;-----------------------------------------------------------------------------
 

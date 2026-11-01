@@ -1,7 +1,7 @@
 
 
 
-data    segment public 'DATA'
+if SEGSEL = S_DATA
 
 
 
@@ -79,25 +79,43 @@ Command_Line_Parms      equ     81h             ;                               
 ;*****************************************************************************
 ;
 
-Control          struc
+STRUC Control Match_Flags_=0, Function_Flags_=0, Result_=0, Values_=0, Num_Keywords_=0, Keyword_=0
+{
 
-Match_Flags     dw      ?
-Function_Flags  dw      ?
-Result          dw      ?
-Values          dw      ?
-Num_Keywords    db      ?
-Keyword         db      ?
+.Match_Flags     dw      Match_Flags_
+.Function_Flags  dw      Function_Flags_
+.Result          dw      Result_
+.Values          dw      Values_
+.Num_Keywords    db      Num_Keywords_
+.Keyword         db      Keyword_
 
-Control         ends
+}
+match =Control_LAID_OUT, Control_LAID_OUT
+{
+    Control_LAID_OUT equ 1
+    virtual at 0
+      Control Control
+      sizeof.Control = $ - Control
+    end virtual
+}
 
-File_Name_Return        struc                   ;                               ;AN000;
+STRUC File_Name_Return Drive_Type_=0, Drive_Item_Tag_=0, Synonym_=0, String_Value_ptr_=0
+{
 
-Drive_Type      db      0                       ;                               ;AN000;
-Drive_Item_Tag  db      0                       ;                               ;AN000;
-Synonym         dw      0                       ;                               ;AN000;
-String_Value_ptr db     0                       ;File Name                      ;AN000;
+.Drive_Type      db      Drive_Type_ ;                               ;AN000;
+.Drive_Item_Tag  db      Drive_Item_Tag_ ;                               ;AN000;
+.Synonym         dw      Synonym_ ;                               ;AN000;
+.String_Value_ptr db     String_Value_ptr_ ;File Name                      ;AN000;
 
-File_Name_Return     ends                       ;                               ;AN000;
+}
+match =File_Name_Return_LAID_OUT, File_Name_Return_LAID_OUT
+{
+    File_Name_Return_LAID_OUT equ 1
+    virtual at 0
+      File_Name_Return File_Name_Return
+      sizeof.File_Name_Return = $ - File_Name_Return
+    end virtual
+}
 
 
 ;
@@ -106,7 +124,7 @@ File_Name_Return     ends                       ;                               
 ;**************************************************************************
 ;
 
-Command_Line_Table label byte                      ;                               ;AN000;
+label Command_Line_Table byte                      ;                               ;AN000;
 
         dw      Command_Control                 ;Point to next level            ;AN000;
         db      Delimiters_Only                 ;                               ;AN000;
@@ -120,7 +138,7 @@ Command_Line_Table label byte                      ;                            
 ;**************************************************************************
 ;
 
-Command_Control label byte                      ;                               ;AN000;
+label Command_Control byte                      ;                               ;AN000;
 
         db      1,2                             ;File names Positional (1 required) ;AN000;
         dw      Positional_Control1             ;Pointer to control table       ;AN000;
@@ -134,24 +152,24 @@ Command_Control label byte                      ;                               
 ;**************************************************************************
 ;
 
-Positional_Control1 label byte                  ;                               ;AN000;
+label Positional_Control1 byte                  ;                               ;AN000;
 
         dw      Filespec                        ;Match_Flag                     ;AN000;
         dw      File_Table_Capitalize           ;No function flags              ;AN000;
-        dw      File_Name_Buffer1               ;Where it will be returned      ;AN000;
+        dw      File_name_Buffer1               ;Where it will be returned      ;AN000;
         dw      No_Value                        ;No value ranges defined        ;AN000;
         db      None                            ;No defined switches/keywords   ;AN000;
 
-Positional_Control2 label byte                  ;                               ;AN000;
+label Positional_Control2 byte                  ;                               ;AN000;
 
         dw      Filespec+Optional               ;Match_Flag                     ;AN000;
 
         dw      File_Table_Capitalize           ;No function flags              ;AN000;
-        dw      File_Name_Buffer2               ;Where it will be returned      ;AN000;
+        dw      File_name_Buffer2               ;Where it will be returned      ;AN000;
         dw      No_Value                        ;No value ranges defined        ;AN000;
         db      None                            ;No defined switches/keywords   ;AN000;
 
-No_Value        label   byte                    ;                               ;AN000;
+label No_Value byte                             ;                               ;AN000;
         db      0                               ;                               ;AN000;
 
 ;
@@ -159,7 +177,7 @@ No_Value        label   byte                    ;                               
 ; PARSE Return Buffers
 ;************************************************************************
 ;
-File_name_Buffer1   label  byte                 ;                               ;AN000;
+label File_name_Buffer1 byte                    ;                               ;AN000;
 
 rb_type1       db      0                        ;type returned                  ;AN000;
 rb_item_tag1   db      0                        ;matched item tag               ;AN000;
@@ -167,7 +185,7 @@ rb_synonym1    dw      0                        ;found synonyms                 
 rb_string1_off dw      0                        ;Offset of string               ;AN000;
 rb_string1_seg dw      0                        ;Offset of string               ;AN000;
 
-File_name_Buffer2   label  byte                 ;                               ;AN000;
+label File_name_Buffer2 byte                    ;                               ;AN000;
 
 rb_type2       db      0                        ;type returned                  ;AN000;
 rb_item_tag2   db      0                        ;matched item tag               ;AN000;
@@ -175,6 +193,6 @@ rb_synonym2    dw      0                        ;found synonyms                 
 rb_string2_off dw      0                        ;Offset of string               ;AN000;
 rb_string2_seg dw      0                        ;Offset of string               ;AN000;
 
-data    ends
+end if
 
 
