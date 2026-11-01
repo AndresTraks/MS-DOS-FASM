@@ -110,3 +110,8 @@ utility LABEL LABELLNK LABEL.COM LABL
 # COMMAND.COM to carry the parser, and the first to be written with the
 # structured statements Microsoft's SALUT preprocessor left behind.
 utility TREE TREELNK TREE.COM
+
+# COMP, five modules in one segment like TREE's four, which COMPLNK.ASM lays
+# down in the order COMP.LNK named them.  It carries the parser as well, and
+# reads two files at once to say where they differ.
+utility COMP COMPLNK COMP.COM

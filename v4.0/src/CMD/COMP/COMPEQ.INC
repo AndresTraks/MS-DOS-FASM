@@ -9,9 +9,9 @@
 ;   V4.0      Bill L.	     9/17/87  moved equates from comp2.sal to here!
 ;
 ;*****************************************************************************
-               if1                                                              ;AN000;
-                     %OUT INCLUDING COMPEQ.INC...                               ;AN000;
-               endif                                                            ;AN000;
+;               if1                                                              ;AN000;
+;                     %OUT INCLUDING COMPEQ.INC...                               ;AN000;
+;               endif                                                            ;AN000;
 
 EAISBINARY     equ  02h           ;extended attribute is a binary integer       ;AN001;
 EASYSTEM       equ  8000h         ;extended attr. is system defined             ;AN001;
@@ -147,38 +147,56 @@ CLASS_A        EQU   -1           ;CLASS A TYPE MESSAGE                         
 ; Message Retriever structures                                                  ;AN000;
 ;*****************************                                                  ;AN000;
 
-msg_desc          struc                                                         ;AN000;
-msg_num           dw    0         ;MESSAGE NUMBER (TO AX)                       ;AN000;
-msg_handle        dw    STDOUT    ;HANDLE OF OUTPUT DEVICE (TO BX)              ;AN000;
-msg_sublist       dw    0         ;POINTER TO SUBLIST (TO SI)                   ;AN000;
-msg_count         dw    0         ;SUBSTITUTION COUNT (TO CX)                   ;AN000;
-msg_class         dw    CLASS_A shl 8 ;MESSAGE CLASS (IN HIGH BYTE, TO DH)      ;AN000;
+STRUC MSG_DESC
+{
+.MSG_NUM           dw    0         ;MESSAGE NUMBER (TO AX)                       ;AN000;
+.MSG_HANDLE        dw    STDOUT    ;HANDLE OF OUTPUT DEVICE (TO BX)              ;AN000;
+.MSG_SUBLIST       dw    0         ;POINTER TO SUBLIST (TO SI)                   ;AN000;
+.MSG_COUNT         dw    0         ;SUBSTITUTION COUNT (TO CX)                   ;AN000;
+.MSG_CLASS         dw    CLASS_A shl 8 ;MESSAGE CLASS (IN HIGH BYTE, TO DH)      ;AN000;
                                   ;LOW BYTE HAS 0 (FUNCTION "NO INPUT", TO DL)  ;AN000;
-msg_input         dw    ?         ;######EXTRA WORD - ONLY FOR MESSAGES WITH BUFFERED INPUT        ;AN000;
+.MSG_INPUT         dw    ?         ;######EXTRA WORD - ONLY FOR MESSAGES WITH BUFFERED INPUT        ;AN000;
                                   ;######OTHERWISE THIS WORD IS NOT VALID AS PART OF THE STRUCT    ;AN000;
                                   ;POINTER TO INPUT BUFFER                      ;AN000;
-msg_desc          ends                                                          ;AN000;
+}
+match =MSG_DESC_LAID_OUT, MSG_DESC_LAID_OUT
+{
+    MSG_DESC_LAID_OUT equ 1
+    virtual at 0
+      MSG_DESC MSG_DESC
+      sizeof.MSG_DESC = $ - MSG_DESC
+    end virtual
+}
 
 MAX_0             equ   0         ;MAXIMUM WIDTH OF STRING FIELD (0=NO LIMIT)   ;AN000;
 PAD_BLK           equ   " "       ;CHAR FOR PAD FIELD                           ;AN000;
 
 
-sublist           struc                                                         ;AN000;
-sub_size          db    11        ;SUBLIST SIZE (POINTER TO NEXT SUBLIST)       ;AN000;
-sub_res           db    0         ;RESERVED                                     ;AN000;
+STRUC SUBLIST
+{
+.SUB_SIZE          db    11        ;SUBLIST SIZE (POINTER TO NEXT SUBLIST)       ;AN000;
+.SUB_RES           db    0         ;RESERVED                                     ;AN000;
                                   ;NEXT FIELD IS TO BE USED AS A DOUBLE WORD    ;AN000;
-sub_value         dw    0         ;TIME, DATE, OR PTR TO DATA ITEM              ;AN000;
-sub_value_seg     dw    0         ;SEG ID OF PTR                                ;AN000;
+.SUB_VALUE         dw    0         ;TIME, DATE, OR PTR TO DATA ITEM              ;AN000;
+.SUB_VALUE_SEG     dw    0         ;SEG ID OF PTR                                ;AN000;
                                   ;(ABOVE FIELD MUST BE FILLED AT EXECUTION TIME ;AN000;
                                   ; IF THIS IS A .COM FILE)                     ;AN000;
-sub_id            db    0         ;N OF %N                                      ;AN000;
-sub_flags         db    0         ;DATA TYPE FLAGS                              ;AN000;
-sub_max_width     db    MAX_0     ;MAXIMUM FIELD WIDTH (0=UNLIMITED)            ;AN000;
-sub_min_width     db    0         ;MINIMUM FIELD WIDTH                          ;AN000;
-sub_pad_char      db    PAD_BLK   ;CHARACTER FOR PAD FIELD                      ;AN000;
+.SUB_ID            db    0         ;N OF %N                                      ;AN000;
+.SUB_FLAGS         db    0         ;DATA TYPE FLAGS                              ;AN000;
+.SUB_MAX_WIDTH     db    MAX_0     ;MAXIMUM FIELD WIDTH (0=UNLIMITED)            ;AN000;
+.SUB_MIN_WIDTH     db    0         ;MINIMUM FIELD WIDTH                          ;AN000;
+.SUB_PAD_CHAR      db    PAD_BLK   ;CHARACTER FOR PAD FIELD                      ;AN000;
                                   ; CAN BE " ", "0" OR ",".                     ;AN000;
                                   ; "," CAUSES INSERTION OF THE ACTIVE          ;AN000;
                                   ; THOUSANDS SEPARATOR BETWEEN EVERY 3 DIGITS. ;AN000;
-sublist           ends                                                          ;AN000;
+}
+match =SUBLIST_LAID_OUT, SUBLIST_LAID_OUT
+{
+    SUBLIST_LAID_OUT equ 1
+    virtual at 0
+      SUBLIST SUBLIST
+      sizeof.SUBLIST = $ - SUBLIST
+    end virtual
+}
 
 ;end of COMPEQ.INC                                                              ;AN000;

@@ -103,36 +103,37 @@
 ;		 DOS 4.0  modifications by Edwin M. K., Bill L.
 ;****************** END OF SPECIFICATIONS *****************************
 ;									 ;AN000;
-	IF1								 ;AN000;
-	    %OUT    COMPONENT=COMP, MODULE=COMPSM.SAL...		 ;AN000;
-	ENDIF								 ;AN000;
+;	IF1								 ;AN000;
+;	    %OUT    COMPONENT=COMP, MODULE=COMPSM.SAL...		 ;AN000;
+;	ENDIF								 ;AN000;
 ; =  =	=  =  =  =  =  =  =  =	=  =					 ;AN000;
 ;									 ;AN000;
-HEADER	MACRO	TEXT							 ;AN000;
+macro HEADER [TEXT]
+{							 ;AN000;
 .XLIST									 ;AN000;
 	SUBTTL	TEXT							 ;AN000;
 .LIST									 ;AN000;
 	PAGE								 ;AN000;
-	ENDM								 ;AN000;
+}								 ;AN000;
 ; =  =	=  =  =  =  =  =  =  =	=  =					 ;AN000;
-	INCLUDE SYSMSG.INC		;PERMIT SYSTEM MESSAGE HANDLER DEFINITION ;AN000;
-	MSG_UTILNAME <COMP>		;IDENTIFY THE UTILITY		 ;AN000;
+	include 'SYSMSG.INC' ;PERMIT SYSTEM MESSAGE HANDLER DEFINITION ;AN000;
+	MSG_UTILNAME <comp>		;IDENTIFY THE UTILITY		 ;AN000;
 ; =  =	=  =  =  =  =  =  =  =	=  =					 ;AN000;
 	HEADER	<DEFINITION OF MESSAGES>				 ;AN000;
 ;	   $SALUT (4,12,18,36)						 ;AN000;
-CSEG	   SEGMENT PARA PUBLIC	'CODE'					 ;AN000;
-	   ASSUME CS:CSEG,DS:CSEG,ES:CSEG,SS:CSEG			 ;AN000;
+;CSEG	   SEGMENT PARA PUBLIC	'CODE'					 ;AN000;
+;	   ASSUME CS:CSEG,DS:CSEG,ES:CSEG,SS:CSEG			 ;AN000;
 ;									 ;AN000;
-	   PUBLIC COPYRIGHT						 ;AN000;
+;	   PUBLIC COPYRIGHT						 ;AN000;
 COPYRIGHT  DB	 "The DOS COMP Utility" 	       ;AN000;
-	   INCLUDE MSGHAN.INC	   ;DEFINE THE MESSAGE HANDLER CONTROL BLOCKS ;AN000;
-	   INCLUDE COMPMS.INC	   ;DEFINE THE MESSAGES, AND CONTROL BLOCKS ;AN000;
+	   include 'MSGHAN.INC'  ;DEFINE THE MESSAGE HANDLER CONTROL BLOCKS ;AN000;
+	   include 'COMPMS.INC'  ;DEFINE THE MESSAGES, AND CONTROL BLOCKS ;AN000;
 	   MSG_SERVICES <MSGDATA>					 ;AN000;
 ; =  =	=  =  =  =  =  =  =  =	=  =					 ;AN000;
 	   HEADER <SYSTEM MESSAGE HANDLER>				 ;AN000;
-	   PUBLIC SYSLOADMSG						 ;AN000;
-	   PUBLIC SYSDISPMSG						 ;AN000;
-	   PUBLIC SYSGETMSG						 ;AN000;
+;	   PUBLIC SYSLOADMSG						 ;AN000;
+;	   PUBLIC SYSDISPMSG						 ;AN000;
+;	   PUBLIC SYSGETMSG						 ;AN000;
 ;									 ;AN000;
 ;	   MSG_SERVICES <LOADmsg,GETmsg,DISPLAYmsg,CHARmsg,INPUTmsg,NUMmsg> ;AN000;
 				   ;DEFAULT=CHECK DOS VERSION		 ;AN000;
@@ -149,11 +150,11 @@ COPYRIGHT  DB	 "The DOS COMP Utility" 	       ;AN000;
 .LIST									 ;AN000;
 .CREF									 ;AN000;
 ;									 ;AN000;
-	   MSG_SERVICES <COMP.CLA,COMP.CL1,COMP.CL2> ;TEXTS OF MESSAGES  ;AN000;
+	   MSG_SERVICES <comp.CLA,comp.CL1,comp.CL2> ;TEXTS OF MESSAGES  ;AN000;
 ; = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =	 ;AN000;
-CSEG	   ENDS 							 ;AN000;
+;CSEG	   ENDS 							 ;AN000;
 
-	include msgdcl.inc
+	include 'MSGDCL.INC'
 
-	   END								 ;AN000;
+;	   END								 ;AN000;
 
