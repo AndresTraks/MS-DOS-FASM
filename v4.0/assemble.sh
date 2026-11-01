@@ -104,3 +104,9 @@ utility COMMAND COMLNK COMMAND.COM
 # LABEL, a .COM of one segment holding the program, its data and its stack,
 # which LABELLNK.ASM lays down in the order LABEL.LNK named the two modules.
 utility LABEL LABELLNK LABEL.COM LABL
+
+# TREE, four modules in one segment like LABEL's two, which TREELNK.ASM lays
+# down in the order TREE.LNK named them.  It is the second program after
+# COMMAND.COM to carry the parser, and the first to be written with the
+# structured statements Microsoft's SALUT preprocessor left behind.
+utility TREE TREELNK TREE.COM
