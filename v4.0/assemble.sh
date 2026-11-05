@@ -130,3 +130,10 @@ utility EXE2BIN E2BLNK EXE2BIN.EXE
 # signature and not the extension, so what comes out here is the MZ image
 # under the name the release gives it.
 utility RECOVER RECLNK RECOVER.COM
+
+# DISKCOMP, five modules in one segment, CSEG, and no group, which
+# DCMPLNK.ASM reads in the order DISKCOMP.LNK names them.  DISKCOMP.ASM's
+# ORG 100H is where DOS enters a .COM and nothing but comments and the
+# headers stands before it; the release links the five and runs EXE2BIN over
+# the result, which is what this writes directly.
+utility DISKCOMP DCMPLNK DISKCOMP.COM
