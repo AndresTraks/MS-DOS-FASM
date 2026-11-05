@@ -1,36 +1,41 @@
-	IF1				;AN000;
-	    %OUT    COMPONENT=DISKCOPY, INCLUDING DCPYMACR.INC...;AN000;
-	ENDIF				;AN000;
+;	IF1				;AN000;
+;	    %OUT    COMPONENT=DISKCOPY, INCLUDING DCPYMACR.INC...;AN000;
+;	ENDIF				;AN000;
 ;***************************************************************************;
 ;			     MACRO DEFINITION				    ;
 ;***************************************************************************;
 
-HEADER	MACRO	TEXT			;AN000;
+macro HEADER [TEXT]
+{			;AN000;
 .XLIST					;AN000;
 	SUBTTL	&TEXT			;AN000;
 .LIST					;AN000;
 	PAGE				;AN000;
-	ENDM				;AN000;
+}				;AN000;
 ;  =  =  =  =  =  =  =	=  =
 ;				   $SALUT (0,36,40,44)
-DOSCALL 			   MACRO FUNC,SUBFUNC ;;AN000;
-				   IFNB <FUNC> ;;AN000;IS THERE ANY PARMS AT ALL?
-				   IFNB <SUBFUNC> ;;AN000;
+macro DOSCALL FUNC,SUBFUNC
+{
+				   match any, FUNC \{ ;;AN000;IS THERE ANY PARMS AT ALL?
+				   match any, SUBFUNC \\{ ;;AN000;
 				   MOV AX,(FUNC SHL 8)+SUBFUNC ;;AN000;FUNC TO AH,SUBFUNC TO AL
-				   ELSE    ;;AN000;SINCE THERE IS NO SUBFUNC
+				   \\} ;;AN000;
+				   match , SUBFUNC \\{ ;;AN000;SINCE THERE IS NO SUBFUNC
 				   MOV AH,FUNC ;;AN000;
-				   ENDIF   ;;AN000;
-				   ENDIF   ;;AN000;
+				   \\} ;;AN000;
+				   \} ;;AN000;
 				   INT 21H ;;AN000;
-				   ENDM    ;;AN000;
+} ;;AN000;
 ;  =  =  =  =  =  =  =	=  =
-PRINT				   MACRO MESSAGE;;AN000;
-				   MOV DI,OFFSET MESSAGE  ;;AC000;
+macro PRINT MESSAGE
+{
+				   MOV DI,MESSAGE         ;;AC000;
 				   CALL SENDMSG 	  ;;AC000;
-				   ENDM 		  ;;AN000;
+} ;;AN000;
 ;  =  =  =  =  =  =  =	=  =
 ;	       $SALUT (0,16,22,36)
-MY_TRACKLAYOUT MACRO		   ;AN000;
+macro MY_TRACKLAYOUT 
+{
 	       LOCAL CSECT_F							;AN000;
 CSECT_F        DW    0		   ;;AN000;# OF SECTORS IN A TRACK. Currently 18 is max.
 				   ;;  THE REST IS FOR FUTURE MEDIA
@@ -160,5 +165,5 @@ CSECT_F        DW    0		   ;;AN000;# OF SECTORS IN A TRACK. Currently 18 is max.
 	       DW    512	   ;;AN000;
 	       DW    63 	   ;;AN000;
 	       DW    512	   ;;AN000;
-	       ENDM								;AN000;
+} ;AN000;
 

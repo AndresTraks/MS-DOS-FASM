@@ -137,3 +137,9 @@ utility RECOVER RECLNK RECOVER.COM
 # headers stands before it; the release links the five and runs EXE2BIN over
 # the result, which is what this writes directly.
 utility DISKCOMP DCMPLNK DISKCOMP.COM
+
+# DISKCOPY, five modules in one segment like DISKCOMP's five, which
+# DCPYLNK.ASM reads in the order DISKCOPY.LNK names them.  It writes and
+# formats as well as reads, so a diskette with no format on it is one it can
+# still copy onto.
+utility DISKCOPY DCPYLNK DISKCOPY.COM
