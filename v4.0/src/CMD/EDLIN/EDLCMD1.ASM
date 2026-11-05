@@ -41,102 +41,102 @@
 ;
 ;======================= END OF SPECIFICATIONS ===========================
 
-include edlequ.asm
+include 'EDLEQU.ASM'
 
 SUBTTL	Contants and Data areas
 PAGE
 
 
-CODE	SEGMENT PUBLIC
-CODE	ENDS
+if SEGSEL = S_CODE
+end if
 
-CONST	SEGMENT PUBLIC WORD
-CONST	ENDS
+if SEGSEL = S_CONST
+end if
 
-cstack	segment stack
-cstack	ends
+if SEGSEL = S_CSTACK
+end if
 
-DATA	SEGMENT PUBLIC WORD
-DATA	ENDS
+if SEGSEL = S_DATA
+end if
 
-DG	GROUP	CODE,CONST,cstack,DATA
+;DG_	GROUP	CODE,CONST,cstack,DATA
 
-CONST	SEGMENT PUBLIC WORD
-	EXTRN	DSKFUL_ptr:word,READ_ERR_PTR:word
-	EXTRN	NOSUCH_ptr:word,TOOLNG_ptr:word,EOF_ptr:word
-	extrn	txt1:byte,txt2:byte
-CONST	ENDS
+if SEGSEL = S_CONST
+;	EXTRN	DSKFUL_ptr:word,READ_ERR_PTR:word
+;	EXTRN	NOSUCH_ptr:word,TOOLNG_ptr:word,EOF_ptr:word
+;	extrn	txt1:byte,txt2:byte
+end if
 
-cstack	segment stack
-cstack	ends
+if SEGSEL = S_CSTACK
+end if
 
-DATA	SEGMENT PUBLIC WORD
-	extrn	ParamCt:WORD
-	extrn	current:word,pointer:word,start:word,endtxt:word
-	extrn	wrt_handle:word,editbuf:byte,path_name:byte,fname_len:word
-	extrn	arg_buf:byte,arg_buf_ptr:word
-	extrn	olddat:byte,oldlen:word,newlen:word,param1:word,param2:word
-	extrn	srchflg:byte,srchmod:byte,comline:word,lstfnd:word,numpos:word
-	extrn	lstnum:word,srchcnt:word,amnt_req:word,delflg:byte,lastlin:word
-	extrn	three4th:word,one4th:word,last:word,rd_handle:word,ending:byte
-	extrn	haveof:byte
-	extrn	Disp_Len:Byte
+if SEGSEL = S_DATA
+;	extrn	ParamCt:WORD
+;	extrn	current:word,pointer:word,start:word,endtxt:word
+;	extrn	wrt_handle:word,editbuf:byte,path_name:byte,fname_len:word
+;	extrn	arg_buf:byte,arg_buf_ptr:word
+;	extrn	olddat:byte,oldlen:word,newlen:word,param1:word,param2:word
+;	extrn	srchflg:byte,srchmod:byte,comline:word,lstfnd:word,numpos:word
+;	extrn	lstnum:word,srchcnt:word,amnt_req:word,delflg:byte,lastlin:word
+;	extrn	three4th:word,one4th:word,last:word,rd_handle:word,ending:byte
+;	extrn	haveof:byte
+;	extrn	Disp_Len:Byte
 
-DATA	ENDS
+end if
 
-CODE SEGMENT PUBLIC
-ASSUME	CS:DG,DS:DG,SS:CStack,ES:DG
+if SEGSEL = S_CODE
+;ASSUME	CS:DG_,DS:DG_,SS:CStack,ES:DG_
 
-	extrn	findlin:near,shownum:near,loadbuf:near
-	extrn	delbak:near,unquote:near,lf:near
-	extrn	dispone:near,display:near,query:near
-	extrn	quit:near,scanln:near,scaneof:near
-	extrn	fndfirst:near,fndnext:near,replace:near,memerr:near
-	extrn	std_printf:near,chkrange:near,comerr:near
+;	extrn	findlin:near,shownum:near,loadbuf:near
+;	extrn	delbak:near,unquote:near,lf:near
+;	extrn	dispone:near,DISPLAY_:near,query:near
+;	extrn	quit:near,scanln:near,scaneof:near
+;	extrn	fndfirst:near,fndnext:near,replace:near,memerr:near
+;	extrn	std_printf:near,chkrange:near,comerr:near
 
-	public	xerror,bad_read,append,nocom,pager,list
-	public	delete,replac_from_curr,search_from_curr,ewrite,wrt
+;	public	xerror,bad_read,append,nocom,pager,list
+;	public	delete,replac_from_curr,search_from_curr,ewrite,wrt
 
 NOMOREJ:JMP	NOMORE
 
 APPEND:
-	CMP	ParamCt,1
+	CMP	word [ParamCt],1
 	JZ	AppendOK
-	JMP	ComErr
+	JMP	COMERR
 AppendOK:
-	TEST	BYTE PTR [HAVEOF],-1
+	TEST	byte [HAVEOF],-1
 	JNZ	NOMOREJ
 	MOV	DX,[ENDTXT]
-	CMP	[PARAM1],0	;See if parameter is missing
+	CMP	word [PARAM1],0 ;See if parameter is missing
 	JNZ	PARMAPP
 	CMP	DX,[THREE4TH]	;See if already 3/4ths full
-	jb	parmapp
+	jb	PARMAPP
 	return			;If so, then done already
 PARMAPP:
 	MOV	DI,DX
 	MOV	CX,[LAST]
 	SUB	CX,DX		;Amount of memory available
 	jnz	sj53
-	jmp	memerr
+	jmp	MEMERR
 sj53:
 	MOV	DX,[ENDTXT]
 	MOV	BX,[RD_HANDLE]
 	mov	[amnt_req],cx	;Save number of chars requested
-	MOV	AH,READ
+	MOV	AH,Read
 	INT	21H		;Fill memory with file data
 	CMP	CX,AX		;Did we read less than we asked for?
-	JZ	SJ55
+	JZ	sj55
 ; Make sure this is an end-of-file by trying to read more
 	PUSH	AX		;Save old byte count
 	ADD	DX,AX		;Point to next open space in buffer
 	MOV	CX,1		;Just one character past EOF
-	MOV	AH,READ
+	MOV	AH,Read
 	INT	21H
 	CMP	AX,0		      ;Is it EOF?
 	POP	AX
 	JNZ	SJ54		      ;No -- we have one more character
-	MOV	BYTE PTR [HAVEOF],1   ;Yes - set old style system call flag
-	JMP	SHORT SJ55
+	MOV	byte [HAVEOF],1       ;Yes - set old style system call flag
+	JMP	SHORT sj55
 SJ54:
 	INC	AX		      ;Include one more char in byte count
 sj55:
@@ -144,7 +144,7 @@ sj55:
 	PUSH	CX		      ;Save actual byte count
 	CALL	SCANEOF
 	JNZ	NOTEND
-	MOV	BYTE PTR [HAVEOF],1	;Set flag if 1AH found in file
+	MOV	byte [HAVEOF],1     ;Set flag if 1AH found in file
 NOTEND:
 	XOR	DX,DX
 	MOV	BX,[PARAM1]
@@ -162,14 +162,14 @@ COUNTLN:
 	CALL	SCANLN		;Look for BX lines
 	CMP	[DI-1],AL	;Check for full line
 	JZ	FULLN
-	CMP	HavEof,1
+	CMP	byte [HAVEOF],1
 	JNZ	DoBackScan
 ;
 ; We have an incomplete line in the buffer at end of file.  Fix it up to be
 ; pretty.
 ;
-	MOV	BYTE PTR [DI],13	; CR
-	MOV	BYTE PTR [DI+1],10	; LF
+	MOV	byte [DI],13     ; CR
+	MOV	byte [DI+1],10     ; LF
 	ADD	DI,2			; length is 2 greater
 	POP	CX
 	ADD	CX,2
@@ -187,7 +187,7 @@ DoBackScan:
 	DEC	DX
 FULLN:
 	POP	CX				    ;Actual amount read
-	MOV	WORD PTR [DI],1AH		    ;Place EOF after last line
+	MOV	word [DI],1AH          ;Place EOF after last line
 	SUB	CX,DI
 	XCHG	DI,[ENDTXT]
 	ADD	DI,CX				    ;Amount of file read but not used
@@ -201,7 +201,7 @@ FULLN:
 	NEG	DX
 	MOV	CX,-1
 	MOV	AL,1
-	MOV	AH,LSEEK
+	MOV	AH,LSeek
 	INT	21H
 	POP	BX
 	POP	DX
@@ -209,32 +209,32 @@ FULLN:
 FULLN1:
 	CMP	BX,DX
 	JNZ	EOFCHK
-	MOV	BYTE PTR [HAVEOF],0
+	MOV	byte [HAVEOF],0
 	return
 NOMORE:
-	MOV	DX,OFFSET DG:EOF_ptr
+	MOV	DX,eof_ptr
 	call	std_printf
 ret3:	return
 
 BAD_READ:
-	MOV	DX,OFFSET DG:READ_ERR_ptr
-	MOV	DI,offset dg:path_name
+	MOV	DX,read_err_ptr
+	MOV	DI,PATH_NAME
 	ADD	DI,[FNAME_LEN]
 	MOV	AL,0
 	STOSB
-	JMP	XERROR
+	JMP	xERROR
 
 EOFCHK:
-	TEST	BYTE PTR [HAVEOF],-1
+	TEST	byte [HAVEOF],-1
 	JNZ	NOMORE
-	TEST	BYTE PTR [ENDING],-1
+	TEST	byte [ENDING],-1
 	retnz			;Suppress memory error during End
 	JMP	MEMERR
 
 EWRITE:
-	CMP	ParamCt,1
+	CMP	word [ParamCt],1
 	JBE	EWriteOK
-	JMP	ComErr
+	JMP	COMERR
 EWriteOK:
 	MOV	BX,[PARAM1]
 	OR	BX,BX
@@ -242,9 +242,9 @@ EWriteOK:
 	MOV	CX,[ONE4TH]
 	MOV	DI,[ENDTXT]
 	SUB	DI,CX		;Write everything in front of here
-	JBE	RET3
-	CMP	DI,OFFSET DG:START	;See if there's anything to write
-	JBE	RET3
+	JBE	ret3
+	CMP	DI,START        ;See if there's anything to write
+	JBE	ret3
 	XOR	DX,DX
 	MOV	BX,1		;Look for one more line
 	CALL	SCANLN
@@ -253,7 +253,7 @@ WRT:
 	INC	BX
 	CALL	FINDLIN
 WRTADD:
-	CMP	BYTE PTR [DELFLG],0
+	CMP	byte [DELFLG],0
 	JNZ	WRTADD1
 	PUSH	DI
 	CALL	DELBAK			;Want to delete the .BAK file
@@ -261,17 +261,17 @@ WRTADD:
 	POP	DI
 WRTADD1:
 	MOV	CX,DI
-	MOV	DX,OFFSET DG:START
+	MOV	DX,START
 	SUB	CX,DX			;Amount to write
 	retz
 	MOV	BX,[WRT_HANDLE]
-	MOV	AH,WRITE
+	MOV	AH,Write
 	INT	21H
 	JC	WRTERR
 	CMP	AX,CX			; MZ correct full disk detection
 	JNZ	WRTERR			; MZ correct full disk detection
 	MOV	SI,DI
-	MOV	DI,OFFSET DG:START
+	MOV	DI,START
 	MOV	[POINTER],DI
 	MOV	CX,[ENDTXT]
 	SUB	CX,SI
@@ -280,36 +280,36 @@ WRTADD1:
 	REP	MOVSB
 	DEC	DI			;Point to EOF
 	MOV	[ENDTXT],DI
-	MOV	[CURRENT],1
+	MOV	word [CURRENT],1
 	return
 
 WRTERR:
 	MOV	BX,[WRT_HANDLE]
-	MOV	AH,CLOSE
+	MOV	AH,Close
 	INT	21H
-	MOV	DX,OFFSET DG:DSKFUL_ptr
+	MOV	DX,dskful_ptr
 xERROR:
 	push	cs
 	pop	ds
 	call	std_printf
 	mov	al,0ffh
-	mov	ah,exit
+	mov	ah,Exit
 	int	21h
 
 NOTFNDJ:JMP	NOTFND
 
 replac_from_curr:
-	CMP	ParamCt,2
+	CMP	word [ParamCt],2
 	JBE	Replace1
-	JMP	ComErr
+	JMP	COMERR
 Replace1:
-	mov	byte ptr [srchmod],1   ;search from curr+1 line
+	mov	byte [srchmod],1       ;search from curr+1 line
 	jmp	short sj6
 
 REPLAC:
-	mov	byte ptr [srchmod],0   ;search from beg of buffer
+	mov	byte [srchmod],0       ;search from beg of buffer
 sj6:
-	MOV	BYTE PTR [SRCHFLG],0
+	MOV	byte [SRCHFLG],0
 	CALL	FNDFIRST
 	JNZ	NOTFNDJ
 REPLP:
@@ -330,10 +330,10 @@ len_ok:
 	MOV	SI,[NUMPOS]
 	SUB	CX,SI		;Get no. of char on line before change
 	DEC	CX
-	mov	di,offset dg:arg_buf	;Initialize the output string buffer
+	mov	di,arg_buf        ;Initialize the output string buffer
 	CALL	OUTCNT		;Output first part of line
 	PUSH	SI
-	MOV	SI,1+ OFFSET DG:TXT2
+	MOV	SI,1+ TXT2
 	MOV	CX,[NEWLEN]
 	CALL	OUTCNT		;Output change
 	POP	SI
@@ -343,14 +343,14 @@ len_ok:
 	CALL	OUTCNT		;Output last part of line
 	xor	al,al
 	stosb
-	mov	dx,offset dg:arg_buf_ptr
+	mov	dx,arg_buf_ptr
 	call	std_printf
 	CALL	QUERY		;Check if change OK
 	JNZ	REPNXT
 	CALL	PUTCURS
 	MOV	DI,[LSTFND]
 	DEC	DI
-	MOV	SI,1+ OFFSET DG:TXT2
+	MOV	SI,1+ TXT2
 	MOV	DX,[OLDLEN]
 	MOV	CX,[NEWLEN]
 	DEC	CX
@@ -359,7 +359,7 @@ len_ok:
 	DEC	DX
 	SUB	[SRCHCNT],DX	;Old text will not be searched
 	JAE	SOMELEFT
-	MOV	[SRCHCNT],0
+	MOV	word [SRCHCNT],0
 SOMELEFT:
 	INC	DX
 	CALL	REPLACE
@@ -378,21 +378,21 @@ OUTLP:
 RET8:	return
 
 TOOLONG:
-	MOV	DX,OFFSET DG:TOOLNG_ptr
+	MOV	DX,toolng_ptr
 	JMP	SHORT PERR
 
 search_from_curr:
-	CMP	ParamCt,2
+	CMP	word [ParamCt],2
 	JBE	Search1
-	JMP	ComErr
+	JMP	COMERR
 Search1:
-	mov	byte ptr [srchmod],1   ;search from curr+1 line
+	mov	byte [srchmod],1       ;search from curr+1 line
 	jmp	short sj7
 
 SEARCH:
-	mov	byte ptr [srchmod],0   ;search from beg of buffer
+	mov	byte [srchmod],0       ;search from beg of buffer
 sj7:
-	MOV	BYTE PTR [SRCHFLG],1
+	MOV	byte [SRCHFLG],1
 	CALL	FNDFIRST
 	JNZ	NOTFND
 SRCH:
@@ -408,13 +408,13 @@ SRCH:
 	MOV	[LSTFND],DI
 	MOV	[NUMPOS],DI
 	MOV	[SRCHCNT],CX
-	INC	[LSTNUM]
+	INC	word [LSTNUM]
 	CALL	QUERY
-	JZ	PUTCURS1
+	JZ	putcurs1
 	CALL	FNDNEXT
 	JZ	SRCH
 NOTFND:
-	MOV	DX,OFFSET DG:NOSUCH_ptr
+	MOV	DX,nosuch_ptr
 PERR:
 	call	std_printf
 	return
@@ -446,22 +446,22 @@ putcursor:
 ; D	    deletes the current line
 ;
 DELETE:
-	CMP	ParamCt,2		; at most two parameters specified.
-	JA	ComErrJ
-	MOV	BX,Param1
+	CMP	word [ParamCt],2 ; at most two parameters specified.
+	JA	COMERRJ
+	MOV	BX,[PARAM1]
 	OR	BX,BX			; default first arg?
 	JNZ	DelParm2
-	MOV	BX,Current		; use current as default
-	MOV	Param1,BX
+	MOV	BX,[CURRENT] ; use current as default
+	MOV	[PARAM1],BX
 DelParm2:
-	MOV	BX,Param2		; did we default second arg?
+	MOV	BX,[PARAM2] ; did we default second arg?
 	OR	BX,BX
 	JNZ	DelCheck		; no, use it.
-	MOV	BX,Param1		; use param1 as default
-	MOV	Param2,BX
+	MOV	BX,[PARAM1] ; use param1 as default
+	MOV	[PARAM2],BX
 DelCheck:
-	MOV	BX,Param1
-	CALL	ChkRange		; returns by itself if bad range
+	MOV	BX,[PARAM1]
+	CALL	CHKRANGE		; returns by itself if bad range
 ;
 ; BX is first line of range to be deleted. Param2 is last line in range to
 ; be deleted.  Get pointer to beginning of block.  Save location
@@ -473,7 +473,7 @@ DelCheck:
 ;
 ; Get pointer past end of block (Param2+1).
 ;
-	MOV	BX,Param2
+	MOV	BX,[PARAM2]
 	INC	BX
 	CALL	FINDLIN
 ;
@@ -481,41 +481,41 @@ DelCheck:
 ;
 	MOV	SI,DI			; move from second line+1
 	POP	DI			; restore destination (first line)
-	POP	Current 		; Current line is first param
-	MOV	Pointer,DI		; internal current line
-	MOV	CX,EndTxt		; compute count
+	POP	[CURRENT] ; Current line is first param
+	MOV	[POINTER],DI ; internal current line
+	MOV	CX,[ENDTXT] ; compute count
 	SUB	CX,SI
-	JB	ComErrJ 		; should never occur: ChkRange
+	JB	COMERRJ 		; should never occur: ChkRange
 	INC	CX			; remember ^Z at end
 	CLD
 	REP	MOVSB			; move data
 	DEC	DI
-	MOV	EndTxt,DI		; reset end pointer
+	MOV	[ENDTXT],DI ; reset end pointer
 	return
 
 COMERRJ:
 	JMP	COMERR
 
 PAGER:
-	CMP	ParamCt,2
-	JA	ComErrJ
+	CMP	word [ParamCt],2
+	JA	COMERRJ
 	xor	bx,bx		;get last line in the buffer
-	call	findlin
-	mov	[lastlin],dx
+	call	FINDLIN
+	mov	[LASTLIN],dx
 
-	mov	bx,[param1]
+	mov	bx,[PARAM1]
 	or	bx,bx		;was it specified?
 	jnz	frstok		;yes, use it
-	mov	bx,[current]
+	mov	bx,[CURRENT]
 	cmp	bx,1		;if current line =1 start from there
 	je	frstok
 	inc	bx		;start from current+1 line
 frstok:
-	cmp	bx,[lastlin]	;check that we are in the buffer
+	cmp	bx,[LASTLIN]	;check that we are in the buffer
 	jbe	frstok1
 	return			;if not just quit
 frstok1:
-	mov	dx,[param2]
+	mov	dx,[PARAM2]
 	or	dx,dx		;was param2 specified?
 	jnz	scndok		;yes,....
 	mov	dx,bx		;no, take the end line to be the
@@ -531,7 +531,7 @@ frstok1:
 	push	ax		;an000;save affected registers
 
 	mov	ah,00h		;an000;zero out high byte
-	mov	al,dg:disp_len	;an000;set ax to active display length
+	mov	al,[Disp_Len] ;an000;set ax to active display length
 	sub	ax,2		;an000;adjust for length of screen & current
 				;      line
 	add	dx,ax		;an000;this gives us the last line to be
@@ -542,24 +542,24 @@ frstok1:
 
 scndok:
 	inc	dx
-	cmp	dx,[lastlin]	;check that we are in the buffer
+	cmp	dx,[LASTLIN]	;check that we are in the buffer
 	jbe	infile
-	mov	dx,[lastlin]	;we are not, take the last line as end
+	mov	dx,[LASTLIN]	;we are not, take the last line as end
 infile:
 	cmp	dx,bx		;is param1 < param2 ?
 	retz
 	ja	sj33
-	jmp	comerr		;yes, no backwards listing, print error
+	jmp	COMERR		;yes, no backwards listing, print error
 sj33:
 	push	dx		;save the end line
 	push	bx		;save start line
 	mov	bx,dx		;set the current line
 	dec	bx
-	call	findlin
-	mov	[pointer],di
-	mov	[current],dx
+	call	FINDLIN
+	mov	[POINTER],di
+	mov	[CURRENT],dx
 	pop	bx		;restore start line
-	call	findlin 	;get pointer to start line
+	call	FINDLIN 	;get pointer to start line
 	mov	si,di		;save pointer
 	pop	di		;get end line
 	sub	di,bx		;number of lines
@@ -567,9 +567,9 @@ sj33:
 
 
 LIST:
-	CMP	ParamCt,2
+	CMP	word [ParamCt],2
 	JBE	ListOK
-	JMP	ComERR
+	JMP	COMERR
 ListOK:
 	MOV	BX,[PARAM1]
 	OR	BX,BX
@@ -585,7 +585,7 @@ CHKP2:
 	MOV	DI,[PARAM2]
 	INC	DI
 	SUB	DI,BX
-	JA	DISPLAY_lines
+	JA	display_lines
 
 ;=========================================================================
 ; This modification is to provide support for screens larger than
@@ -597,7 +597,7 @@ CHKP2:
 	push	ax			;an000;save affected registers
 
 	mov	ah,00h			;an000;zero out high byte
-	mov	al,dg:disp_len		;an000;set ax to active display length	       dec     ax		       ;an000;allow room at bottom for
+	mov	al,[Disp_Len] ;an000;set ax to active display length	       dec     ax		       ;an000;allow room at bottom for
 					;      messages
 	mov	di,ax			;an000;number of lines to print an
 					;      entire screen less 1.
@@ -606,21 +606,21 @@ CHKP2:
 ;=========================================================================
 
 display_lines:
-	call	DISPLAY
+	call	DISPLAY_
 	return
 
-Break <NOCOM - edit a single line>
+BREAK <NOCOM - edit a single line>
 
 ;
 ; NOCOM is called when there is a single line being edited.  This occurs when
 ; the command letter is CR or is ;.
 ;
 NOCOM:
-	CMP	ParamCt,2
+	CMP	word [ParamCt],2
 	JB	NoComOK
-	JMP	ComErr
+	JMP	COMERR
 NoComOK:
-	DEC	[COMLINE]
+	DEC	word [COMLINE]
 	MOV	BX,[PARAM1]
 	OR	BX,BX
 	JNZ	HAVLIN
@@ -642,23 +642,23 @@ sj12:
 	MOV	SI,[POINTER]
 	CALL	DISPONE
 	CALL	SHOWNUM
-	MOV	AH,STD_CON_STRING_INPUT 	  ;Get input buffer
-	MOV	DX,OFFSET DG:EDITBUF
+	MOV	AH,Std_Con_String_Input 	  ;Get input buffer
+	MOV	DX,EDITBUF
 	INT	21H
-	CALL	lf
+	CALL	LF
 	MOV	CL,[EDITBUF+1]
 	MOV	CH,0
-	JCXZ	RET12
+	JCXZ	ret12
 	MOV	DX,[OLDLEN]
-	MOV	SI,2 + OFFSET DG:EDITBUF
+	MOV	SI,2 + EDITBUF
 ;-----------------------------------------------------------------------
 	call	unquote 		;scan for quote chars if any
 ;-----------------------------------------------------------------------
-	mov	cl,[EditBuf+1]		;an000; dms;get new line length
+	mov	cl,[EDITBUF+1]		;an000; dms;get new line length
 	mov	ch,0			;an000; dms;clear high byte
 	MOV	DI,[POINTER]
-	JMP	Replace 		; MZ 11/30
+	JMP	REPLACE 		; MZ 11/30
 
-CODE	ENDS
-	END
+end if
+;	END
 

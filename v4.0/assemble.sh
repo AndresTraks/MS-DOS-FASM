@@ -143,3 +143,11 @@ utility DISKCOMP DCMPLNK DISKCOMP.COM
 # formats as well as reads, so a diskette with no format on it is one it can
 # still copy onto.
 utility DISKCOPY DCPYLNK DISKCOPY.COM
+
+# EDLIN, five modules in four segments and one group -- CODE, CONST, cstack
+# and DATA -- which EDLLNK.ASM lays down as one address space, the way the
+# group was, with the stack a segment of its own because EDLIN points SS at
+# it by name.  The release ends its build by running TOOLS/CONVERT over the
+# linked .EXE, as RECOVER's does, and DOS reads the signature and not the
+# extension, so what comes out here is the MZ image under the release's name.
+utility EDLIN EDLLNK EDLIN.COM

@@ -23,10 +23,10 @@ ZEROEXT EQU	TRUE
 ESCCH	EQU	1FH			;Yes. Use 1FH for escape character
 	ELSE
 ESCCH	EQU	1BH
-	ENDIF
+	end if
 CANCEL	EQU	"X"-"@"                 ;Cancel with Ctrl-X
 TOGLPRN EQU	FALSE			;Separate keys for printer echo on
 					;and off
 ZEROEXT EQU	TRUE
-	ENDIF
+	end if
 

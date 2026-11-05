@@ -1,8 +1,34 @@
+STRUC Display_Buffer_Struc
+{
+
+	Display_Info_Level db	   ?	;an000;dms;
+	Display_Reserved db	 ?	;an000;dms;
+	Display_Buffer_Size dw	    ?	;an000;dms;
+	Display_Flags dw      ? 	;an000;dms;
+	Display_Mode db      ?		;an000;dms;
+					;  TEXT=01
+					;  APA =02
+	Display_Mode_Reserved db      ? ;an000;dms;
+	Display_Colors dw      ?	;an000;dms;# of colors
+	Display_Width_Pixels dw      ?	;an000;dms;# of pixels in width
+	Display_Length_Pixels dw      ? ;an000;dms;# of pixels in len.
+	Display_Width_Char dw	   ?	;an000;dms;# of chars in width
+	Display_Length_Char dw	    ?	;an000;dms;# of chars in length
+
+}
+match =Display_Buffer_Struc_LAID_OUT, Display_Buffer_Struc_LAID_OUT
+{
+    Display_Buffer_Struc_LAID_OUT equ 1
+    virtual at 0
+      Display_Buffer_Struc Display_Buffer_Struc
+      sizeof.Display_Buffer_Struc = $ - Display_Buffer_Struc
+    end virtual
+}
 	page	60,132			;
 
 	.xlist
-	include DOSSYM.INC
-	include EDLSTDSW.INC
+	include 'DOSSYM.INC'
+	include 'EDLSTDSW.INC'
 	.list
 
 ;======================= START OF SPECIFICATIONS =========================
@@ -58,7 +84,7 @@ COMAND_LINE_LENGTH EQU 128
 QUOTE_CHAR EQU	16H			;Quote character = ^V
 CR	EQU	13
 STKSIZ	EQU	200h
-STACK	equ	stksiz
+STACK_	equ	STKSIZ
 
 asian_blk equ	40h			;an000;asian blank 2nd. byte
 dbcs_lead_byte equ 81h			;an000;asian blank lead byte
@@ -94,7 +120,7 @@ Def_Disp_Width equ 80			;an000;default display width
 
 ;======== extended open equates ==========================================
 
-rw	equ	0082h			;an000;read/write
+rw_	equ	0082h			;an000;read/write
 					;      compatibility
 					;      noinherit
 					;      int 24h handler
@@ -134,23 +160,6 @@ sw_missing equ	03h			;an000;not a valid switch
 
 ;======== Strucs =========================================================
 
-Display_Buffer_Struc Struc		;an000;dms;
-
-	Display_Info_Level db	   ?	;an000;dms;
-	Display_Reserved db	 ?	;an000;dms;
-	Display_Buffer_Size dw	    ?	;an000;dms;
-	Display_Flags dw      ? 	;an000;dms;
-	Display_Mode db      ?		;an000;dms;
-					;  TEXT=01
-					;  APA =02
-	Display_Mode_Reserved db      ? ;an000;dms;
-	Display_Colors dw      ?	;an000;dms;# of colors
-	Display_Width_Pixels dw      ?	;an000;dms;# of pixels in width
-	Display_Length_Pixels dw      ? ;an000;dms;# of pixels in len.
-	Display_Width_Char dw	   ?	;an000;dms;# of chars in width
-	Display_Length_Char dw	    ?	;an000;dms;# of chars in length
-
-Display_Buffer_Struc ends		;an000;dms;
 
 
 
