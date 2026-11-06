@@ -159,3 +159,12 @@ utility EDLIN EDLLNK EDLIN.COM
 # the PSP, which is why the release could run EXE2BIN over the linked .EXE
 # and ship a flat .COM.
 utility SYS SYSLNK SYS.COM
+
+# CHKDSK, nine modules in five segments and one group -- data, const, code,
+# cstack and lastseg -- which CHKLNK.ASM lays down as one address space, the
+# way EDLIN's group is.  The sixth segment, PSP, is outside the group and
+# holds nothing: it names the two FCBs DOS leaves in the program's prefix,
+# and the reading that gives them their offsets writes nothing.  The release
+# ends its build by running TOOLS/CONVERT over the linked .EXE, as EDLIN's
+# does, so what comes out here is the MZ image under the release's name.
+utility CHKDSK CHKLNK CHKDSK.COM

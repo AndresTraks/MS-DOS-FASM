@@ -1,3 +1,21 @@
+STRUC Message_Table Entry1_=0, Entry2_=0, Entry3_=0, Entry4_=0, Entry5_=0, Entry6_=0, Entry7_=0
+{
+.Entry1	dw	Entry1_ ;				;an000;bgb;AN000;
+.Entry2	dw	Entry2_ ;				;an000;bgb;AN000;
+.Entry3	dw	Entry3_ ;				;an000;bgb;AN000;
+.Entry4	dw	Entry4_ ;				;an000;bgb;AN000;
+.Entry5	db	Entry5_ ;				;an000;bgb;AN000;
+.Entry6	db	Entry6_ ;				;an000;bgb;AN000;
+.Entry7	dw	Entry7_ ;				;an000;bgb;AN000;
+}
+match =Message_Table_LAID_OUT, Message_Table_LAID_OUT
+{
+    Message_Table_LAID_OUT equ 1
+    virtual at 0
+      Message_Table Message_Table
+      sizeof.Message_Table = $ - Message_Table
+    end virtual
+}
 page	,132	;								;an000;bgb
 ;*****************************************************************************	;an000;bgb
 ;*****************************************************************************	;an000;bgb
@@ -12,24 +30,24 @@ page	,132	;								;an000;bgb
 ;	       AC000 - Changed code DOS 3.3 spec additions			;an000;bgb
 ;*****************************************************************************	;an000;bgb
 										;an000;bgb
-	EXTRN	command_line_buffer:byte					;an000;bgb;an005;bgb
+;	EXTRN	command_line_buffer:byte					;an000;bgb;an005;bgb
 ;*****************************************************************************	;an000;bgb
 ; Include Files 								;an000;bgb
 ;*****************************************************************************	;an000;bgb
 .xlist										;an000;bgb
-include pathmac.inc								;an040;bgb
-include chkseg.inc								;an000;bgb
-INCLUDE CPMFCB.INC								;an000;bgb
-INCLUDE CHKEQU.INC								;an000;bgb
+include 'PATHMAC.INC'      ;an040;bgb
+include 'CHKSEG.INC'      ;an000;bgb
+include 'CPMFCB.INC'      ;an000;bgb
+include 'CHKEQU.INC'      ;an000;bgb
 .list										;an000;bgb
-INCLUDE CHKMSG.INC								;an000;bgb
+include 'CHKMSG.INC'      ;an000;bgb
 .xlist										;an000;bgb
-INCLUDE SYSMSG.INC								;an000;bgb
+include 'SYSMSG.INC'      ;an000;bgb
 .list										;an000;bgb
       ; 									;an000;bgb
-cstack	 segment para stack 'STACK'                                             ;an000;bgb
+if SEGSEL = S_CSTACK;an000;bgb
 	db	62 dup ("-Stack!-")      ; (362-80h) is the additional IBM ROM  ;an000;bgb
-cstack	 ends									;an000;bgb
+end if ;an000;bgb
 										;an000;bgb
 										;an000;bgb
 ;*****************************************************************************	;an000;bgb
@@ -38,43 +56,34 @@ cstack	 ends									;an000;bgb
 MSG_UTILNAME  <CHKDSK>								;an000;bgb
 										;an000;bgb
 ;.xlist 									 ;an000;bgb
-data	segment public para 'DATA'                                              ;an000;bgb
-Msg_Services	<MSGDATA>							;an000;bgb
-data	ends									;an000;bgb
+if SEGSEL = S_DATA;an000;bgb
+MSG_SERVICES	<MSGDATA>							;an000;bgb
+end if ;an000;bgb
 										;an000;bgb
-code	segment public para 'CODE'                                              ;an000;bgb
+if SEGSEL = S_CODE;an000;bgb
 pathlabl	msgret								;an040;bgb
-Msg_Services	<NEARmsg>							;an000;bgb
-Msg_Services	<LOADmsg>							;an000;bgb
-Msg_Services	<DISPLAYmsg,CHARmsg,NUMmsg,TIMEmsg,DATEmsg>			;an000;bgb
+MSG_SERVICES	<NEARmsg>							;an000;bgb
+MSG_SERVICES	<LOADmsg>							;an000;bgb
+MSG_SERVICES	<DISPLAYmsg,CHARmsg,NUMmsg,TIMEmsg,DATEmsg>			;an000;bgb
 pathlabl	msgret								;an040;bgb
-Msg_Services	<CHKDSK.CLA,CHKDSK.CLB,CHKDSK.CLC,CHKDSK.CLD,CHKDSK.CL1,CHKDSK.CL2,CHKDSK.CTL> ;an037;bgb
-code	ends									;an000;bgb
+MSG_SERVICES	<CHKDSK.CLA,CHKDSK.CLB,CHKDSK.CLC,CHKDSK.CLD,CHKDSK.CL1,CHKDSK.CL2,CHKDSK.CTL> ;an037;bgb
+end if ;an000;bgb
 .list										;an000;bgb
 										;an000;bgb
 ;										;an000;bgb
 ;*****************************************************************************	;an000;bgb
 ; Public Declarations								;an000;bgb
 ;*****************************************************************************	;an000;bgb
-	Public	SysLoadMsg							;an000;bgb
-	Public	SysDispMsg							;an000;bgb
+;	Public	SysLoadMsg							;an000;bgb
+;	Public	SysDispMsg							;an000;bgb
 										;an000;bgb
 										;an000;bgb
 ;										;an000;bgb
 ;***************************************************************************	;an000;bgb
 ; Message Structures								;an000;bgb
 ;***************************************************************************	;an000;bgb
-Message_Table struc				;				;an000;bgb;AN000;
-Entry1	dw	0				;				;an000;bgb;AN000;
-Entry2	dw	0				;				;an000;bgb;AN000;
-Entry3	dw	0				;				;an000;bgb;AN000;
-Entry4	dw	0				;				;an000;bgb;AN000;
-Entry5	db	0				;				;an000;bgb;AN000;
-Entry6	db	0				;				;an000;bgb;AN000;
-Entry7	dw	0				;				;an000;bgb;AN000;
-Message_Table ends				;				;an000;bgb;AN000;
 										;an000;bgb
-code	segment public para 'CODE'              ;                               ;an000;bgb;AN000;
+if SEGSEL = S_CODE;                               ;an000;bgb;AN000;
 ;*****************************************************************************	;an000;bgb
 ;Routine name&gml Display_Interface						;an000;bgb
 ;*****************************************************************************	;an000;bgb
@@ -103,8 +112,8 @@ code	segment public para 'CODE'              ;                               ;an
 ;	Restore registers							;an000;bgb
 ;	ret									;an000;bgb
 ;*****************************************************************************	;an000;bgb
-Public	Display_Interface							;an000;bgb
-Display_Interface   proc			;				;an000;bgb;AN000;
+;Public	Display_Interface							;an000;bgb
+Display_Interface:         ;				;an000;bgb;AN000;
 	push	ds								;an000;bgb
 	push	ax								;an000;bgb
 	push	bx								;an000;bgb
@@ -113,16 +122,16 @@ Display_Interface   proc			;				;an000;bgb;AN000;
 	push	si								;an000;bgb
 	push	di								;an000;bgb
 	mov	di,dx				;Change pointer to table	;an000;bgb;AN000;
-	mov	dx,dg				;Point to group 		;an000;bgb
+	mov	dx,DG_				;Point to group 		;an000;bgb
 	mov	ds,dx				;				;an000;bgb
-	mov	ax,[di].Entry1			;Message number 		;an000;bgb;AN000;
-	mov	bx,[di].Entry2			;Handle 			;an000;bgb;AN000;
-	mov	si,[di].Entry3			;Sublist			;an000;bgb;AN000;
-	mov	cx,[di].Entry4			;Count				;an000;bgb;AN000;
-	mov	dh,[di].Entry5			;Class				;an000;bgb;AN000;
-	mov	dl,[di].Entry6			;Function			;an000;bgb;AN000;
-	mov	di,[di].Entry7			;Input				;an000;bgb;AN000;
-	call	SysDispMsg			;Display the message		;an000;bgb;AN000;
+	mov	ax,[di+Message_Table+Message_Table.Entry1] ;Message number 		;an000;bgb;AN000;
+	mov	bx,[di+Message_Table+Message_Table.Entry2] ;Handle 			;an000;bgb;AN000;
+	mov	si,[di+Message_Table+Message_Table.Entry3] ;Sublist			;an000;bgb;AN000;
+	mov	cx,[di+Message_Table+Message_Table.Entry4] ;Count				;an000;bgb;AN000;
+	mov	dh,[di+Message_Table+Message_Table.Entry5] ;Class				;an000;bgb;AN000;
+	mov	dl,[di+Message_Table+Message_Table.Entry6] ;Function			;an000;bgb;AN000;
+	mov	di,[di+Message_Table+Message_Table.Entry7] ;Input				;an000;bgb;AN000;
+	call	SYSDISPMSG			;Display the message		;an000;bgb;AN000;
 	pop	di								;an000;bgb
 	pop	si								;an000;bgb
 	pop	dx								;an000;bgb
@@ -131,9 +140,9 @@ Display_Interface   proc			;				;an000;bgb;AN000;
 	pop	ax								;an000;bgb
 	pop	ds								;an000;bgb
 	ret					;All done			;an000;bgb;AN000;
-Display_Interface      endp			;				;an000;bgb;AN000;
+;Display_Interface      endp			;				;an000;bgb;AN000;
 										;an000;bgb
-include msgdcl.inc
+include 'MSGDCL.INC'
 
-code	ends									;an000;bgb
-	end									;an000;bgb
+end if ;an000;bgb
+;	end									;an000;bgb

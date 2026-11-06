@@ -1,8 +1,90 @@
+STRUC Control Match_Flags_=0, Function_Flags_=0, Result_=0, Values_=0, Num_Keywords_=0, Keyword_=0
+{
+										;an000;bgb
+.Match_Flags	dw	Match_Flags_ ;an000;bgb
+.Function_Flags	dw	Function_Flags_ ;an000;bgb
+.Result		dw	Result_ ;an000;bgb
+.Values		dw	Values_ ;an000;bgb
+.Num_Keywords	db	Num_Keywords_ ;an000;bgb
+.Keyword 	db	Keyword_ ;an000;bgb
+										;an000;bgb
+}
+match =Control_LAID_OUT, Control_LAID_OUT
+{
+    Control_LAID_OUT equ 1
+    virtual at 0
+      Control Control
+      sizeof.Control = $ - Control
+    end virtual
+}
+STRUC single_Return dftype_=0, Item_=0, Pointer_=0, drnum_stroff_=0, return_strseg_=0
+{
+.dftype		  db	  dftype_ ;AN000;SM				;an000;bgb
+.Item		  db	  Item_ ;AN000;SM				;an000;bgb
+.Pointer 	  dw	  Pointer_ ;AN000;SM				;an000;bgb
+.drnum_stroff	  dw	  drnum_stroff_ ;AN000;SM				;an000;bgb
+.return_strseg		 dw	 return_strseg_ ;an000;bgb
+}
+match =single_Return_LAID_OUT, single_Return_LAID_OUT
+{
+    single_Return_LAID_OUT equ 1
+    virtual at 0
+      single_Return single_Return
+      sizeof.single_Return = $ - single_Return
+    end virtual
+}
+STRUC Switch_Return Switch_Type_=0, Switch_Item_Tag_=0, Switch_Pointer_=0
+{
+.Switch_Type	db	Switch_Type_ ;				;an000;bgb;AN000;
+.Switch_Item_Tag db	Switch_Item_Tag_ ;				;an000;bgb;AN000;
+.Switch_Pointer	dw	Switch_Pointer_ ;				;an000;bgb;AN000;
+.Switch_Debug	db	4 dup(0)						;an000;bgb
+}
+match =Switch_Return_LAID_OUT, Switch_Return_LAID_OUT
+{
+    Switch_Return_LAID_OUT equ 1
+    virtual at 0
+      Switch_Return Switch_Return
+      sizeof.Switch_Return = $ - Switch_Return
+    end virtual
+}
+STRUC Switch_Num_Return Switch_Num_Type_=0, Switch_Num_Item_Tag_=0, Switch_Num_Pointer_=0, Switch_Number_Low_=0, Switch_Number_High_=0
+{
+.Switch_Num_Type     db	    Switch_Num_Type_ ;				;an000;bgb    ;AN000;
+.Switch_Num_Item_Tag db	    Switch_Num_Item_Tag_ ;				;an000;bgb    ;AN000;
+.Switch_Num_Pointer  dw	    Switch_Num_Pointer_ ;				;an000;bgb    ;AN000;
+.Switch_Number_Low   dw	    Switch_Number_Low_ ;				    ;AN0;an000;bgb00;
+.Switch_Number_High  dw	    Switch_Number_High_ ;				    ;AN0;an000;bgb00;
+}
+match =Switch_Num_Return_LAID_OUT, Switch_Num_Return_LAID_OUT
+{
+    Switch_Num_Return_LAID_OUT equ 1
+    virtual at 0
+      Switch_Num_Return Switch_Num_Return
+      sizeof.Switch_Num_Return = $ - Switch_Num_Return
+    end virtual
+}
+STRUC Switch_String_Return Switch_String_Type_=0, Switch_String_Item_Tag_=0, Switch_String_Pointer_=0, Switch_String_Off_=0, Switch_String_Seg_=0
+{
+.Switch_String_Type     db      Switch_String_Type_ ;			;an000;bgb	 ;AN000;
+.Switch_String_Item_Tag db      Switch_String_Item_Tag_ ;			;an000;bgb	 ;AN000;
+.Switch_String_Pointer  dw      Switch_String_Pointer_ ;			;an000;bgb	 ;AN000;
+.Switch_String_Off	dw	Switch_String_Off_ ;				;an000;bgb;AN000;
+.Switch_String_Seg	dw	Switch_String_Seg_ ;				;an000;bgb;AN000;
+}
+match =Switch_String_Return_LAID_OUT, Switch_String_Return_LAID_OUT
+{
+    Switch_String_Return_LAID_OUT equ 1
+    virtual at 0
+      Switch_String_Return Switch_String_Return
+      sizeof.Switch_String_Return = $ - Switch_String_Return
+    end virtual
+}
 										;an000;bgb
 										;an000;bgb
 										;an000;bgb
 										;an000;bgb
-data	segment public para 'DATA'                                              ;an000;bgb     ;AN000;
+if SEGSEL = S_DATA;an000;bgb     ;AN000;
 										;an000;bgb
 										;an000;bgb
 ;										;an000;bgb
@@ -12,11 +94,11 @@ data	segment public para 'DATA'                                              ;an
 ;										;an000;bgb
 										;an000;bgb
 ;	Public	Drive_Letter_Buffer						;an000;bgb
-	Public	SwBuffer							;an000;bgb
-	Public	Switch_F_Buffer 						;an000;bgb
+;	Public	SwBuffer							;an000;bgb
+;	Public	Switch_F_Buffer 						;an000;bgb
 ;	Public	FileSpec_Buffer 						;an000;bgb
-	public	buffer								;an000;bgb
-	public	sw_v, sw_f							;an000;bgb;an020;bgb
+;	public	buffer								;an000;bgb
+;	public	sw_v, sw_f							;an000;bgb;an020;bgb
 										;an000;bgb
 ;										;an000;bgb
 ;***************************************************************************	;an000;bgb
@@ -95,16 +177,6 @@ Command_Line_Parms	equ	81h		;				;an000;bgb;AN000;
 ;*****************************************************************************	;an000;bgb
 ;										;an000;bgb
 										;an000;bgb
-Control 	 struc								;an000;bgb
-										;an000;bgb
-Match_Flags	dw	?							;an000;bgb
-Function_Flags	dw	?							;an000;bgb
-Result		dw	?							;an000;bgb
-Values		dw	?							;an000;bgb
-Num_Keywords	db	?							;an000;bgb
-Keyword 	db	?							;an000;bgb
-										;an000;bgb
-Control 	ends								;an000;bgb
 										;an000;bgb
 ;Drive_Letter_Return	 struc			 ;				;an000;bgb ;AN000;
 ;Drive_Type		 db	 0			 ;			;an000;bgb	   ;AN000;
@@ -122,37 +194,10 @@ Control 	ends								;an000;bgb
 ;FileSpec_String_Seg	 dw	 0						;an000;bgb
 ;FileSpec_Return ends								;an000;bgb
 										;an000;bgb
-single_Return struc			      ;AN000;SM 			;an000;bgb
-dftype		  db	  0		  ;AN000;SM				;an000;bgb
-Item		  db	  0		  ;AN000;SM				;an000;bgb
-Pointer 	  dw	  0		  ;AN000;SM				;an000;bgb
-drnum_stroff	  dw	  0		  ;AN000;SM				;an000;bgb
-return_strseg		 dw	 0						;an000;bgb
-single_return	ends								;an000;bgb
 										;an000;bgb
 										;an000;bgb
-Switch_Return	 struc				;				;an000;bgb;AN000;
-Switch_Type	db	0			;				;an000;bgb;AN000;
-Switch_Item_Tag db	0			;				;an000;bgb;AN000;
-Switch_Pointer	dw	0			;				;an000;bgb;AN000;
-Switch_Debug	db	4 dup(0)						;an000;bgb
-Switch_Return	 ends				;				;an000;bgb;AN000;
 										;an000;bgb
-Switch_Num_Return    struc			;				;an000;bgb;AN000;
-Switch_Num_Type     db	    0			    ;				;an000;bgb    ;AN000;
-Switch_Num_Item_Tag db	    0			    ;				;an000;bgb    ;AN000;
-Switch_Num_Pointer  dw	    0			    ;				;an000;bgb    ;AN000;
-Switch_Number_Low   dw	    0		    ;				    ;AN0;an000;bgb00;
-Switch_Number_High  dw	    0		    ;				    ;AN0;an000;bgb00;
-Switch_Num_Return    ends			;				;an000;bgb;AN000;
 										;an000;bgb
-Switch_String_Return   struc			;				;an000;bgb;AN000;
-Switch_String_Type     db      0		       ;			;an000;bgb	 ;AN000;
-Switch_String_Item_Tag db      0		       ;			;an000;bgb	 ;AN000;
-Switch_String_Pointer  dw      0		       ;			;an000;bgb	 ;AN000;
-Switch_String_Off	dw	0		;				;an000;bgb;AN000;
-Switch_String_Seg	dw	0		;				;an000;bgb;AN000;
-Switch_String_Return ends			;				;an000;bgb;AN000;
 										;an000;bgb
 										;an000;bgb
 ;										;an000;bgb
@@ -160,17 +205,17 @@ Switch_String_Return ends			;				;an000;bgb;AN000;
 ; Parse tables									;an000;bgb
 ;**************************************************************************	;an000;bgb
 ;										;an000;bgb
-Public	input_Table								;an000;bgb
-input_Table	 label	 byte		 ;				 ;AN000;;an000;bgb
+;Public	input_Table								;an000;bgb
+label input_Table byte     ;				 ;AN000;;an000;bgb
 										;an000;bgb
-	dw	offset dg:ext_table		;Point to next level	      ;A;an000;bgbN000;
+	dw	ext_table         ;Point to next level	      ;A;an000;bgbN000;
 	db	Delimiters_Only 		;				;an000;bgb;AN000;
 	db	1				;				;an000;bgb;AN000;
 	db	Semi_Colon			;				;an000;bgb;AN000;
 										;an000;bgb
-Drive_Table		label	byte						;an000;bgb;AN000;
+label Drive_Table byte       ;an000;bgb;AN000;
 						;				;an000;bgb
-	dw	offset dg:Drive_Control_Definition ;Point to next level 	;an000;bgb   ;AN000;
+	dw	Drive_Control_Definition        ;Point to next level 	;an000;bgb   ;AN000;
 	db	Delimiters_Only 		;				;an000;bgb;AN000;
 	db	1				;				;an000;bgb;AN000;
 	db	Semi_Colon			;				;an000;bgb;AN000;
@@ -181,19 +226,19 @@ Drive_Table		label	byte						;an000;bgb;AN000;
 ;**************************************************************************	;an000;bgb
 ;										;an000;bgb
 										;an000;bgb
-Public	ext_table								;an000;bgb
-ext_table		   label   byte 	;				;an000;bgb;AN000;
+;Public	ext_table								;an000;bgb
+label ext_table byte        ;				;an000;bgb;AN000;
 						;				;an000;bgb
 	db	0,1			;up to one parm, either drive or file	;an000;bgb;an026;bgb
-	dw	dg:dfcontrol			     ;Pointer to control table	;an000;bgb     ;AN000;
+	dw	dfControl			     ;Pointer to control table	;an000;bgb     ;AN000;
 	db	1				;1 switch  def			;an000;bgb;AN020;bgb
-	dw	dg:SwControl		;switch control block			;an000;bgb;AN020;bgb
+	dw	SwControl		;switch control block			;an000;bgb;AN020;bgb
 	db	None				;No Keywords (maxk)		;an000;bgb;AN000;
 						;				;an000;bgb
-Drive_Control_Definition  label   byte		;				;an000;bgb;AN000;
+label Drive_Control_Definition byte     ;				;an000;bgb;AN000;
 						;				;an000;bgb
 	db	0,1				;Only drive letter positional	;an000;bgb;AN000;
-	dw	dg:dfControl		    ;Pointer to control table	    ;AN0;an000;bgb00;
+	dw	dfControl		    ;Pointer to control table	    ;AN0;an000;bgb00;
 	db	None				;0 switches			;an000;bgb;AN000;
 	db	None				;No Keywords (maxk)		;an000;bgb;AN000;
 						;				;an000;bgb
@@ -205,20 +250,20 @@ Drive_Control_Definition  label   byte		;				;an000;bgb;AN000;
 ;**************************************************************************	;an000;bgb
 ;										;an000;bgb
 ;this is the new control block for both drive letters and filespecs		;an000;bgb
-Public	dfControl								;an000;bgb
-dfControl	 label	 byte		 ;				 ;AN000;;an000;bgb
-	dw	drive_only+FileSpec+Optional		   ;			;an000;bgb	     ;AN000;
+;Public	dfControl								;an000;bgb
+label dfControl byte     ;				 ;AN000;;an000;bgb
+	dw	Drive_Only+Filespec+Optional		   ;			;an000;bgb	     ;AN000;
 	dw	None				;				;an000;bgb;AN000;
-	dw	dg:Buffer	       ;			       ;AN000;	;an000;bgb
-	dw	dg:No_Value			;				;an000;bgb;AN000;
+	dw	buffer	       ;			       ;AN000;	;an000;bgb
+	dw	No_Value			;				;an000;bgb;AN000;
 	db	None				;				;an000;bgb;AN000;
 										;an000;bgb
-Public	SwControl							   ;an02;an000;bgb0;bgb
-SwControl	 label	 byte		 ;				 ;AN020;;an000;bgbbgb
+;Public	SwControl							   ;an02;an000;bgb0;bgb
+label SwControl byte     ;				 ;AN020;;an000;bgbbgb
 	dw	None				;				;an000;bgb;AN000;
 	dw	None				;				;an000;bgb;AN000;
-	dw	dg:SwBuffer		 ;				 ;AN000;;an000;bgb
-	dw	dg:No_Value							;an000;bgb   ;AN000;
+	dw	SwBuffer		 ;				 ;AN000;;an000;bgb
+	dw	No_Value							;an000;bgb   ;AN000;
 	db	2				;				;an000;bgb;AN020;bgb
 sw_v	db	"/V",0                          ;                               ;an000;bgb;AN020;bgb
 sw_f	db	"/F",0                          ;                               ;an000;bgb;AN020;bgb
@@ -241,10 +286,10 @@ No_Value	db	0			 ;				;an000;bgb;AN000;
 ; these buffers were replaced by a single buffer due to the parser bug		;an000;bgb
 ;Drive_Letter_Buffer	 Drive_Letter_Return	 <>  ;Example of structure	;an000;bgb ;AN000;
 ;FileSpec_Buffer	 FileSpec_Return	 <>  ;				;an000;bgb
-SwBuffer		Switch_Return		<>  ;				;an000;bgb;AN000;
-Switch_F_Buffer 	Switch_Return		<>  ;				;an000;bgb;AN000;
-buffer			single_return		<>  ; new results buffer	;an000;bgb
-data	ends					;				;an000;bgb;AN000;
+SwBuffer		Switch_Return      ;				;an000;bgb;AN000;
+Switch_F_Buffer 	Switch_Return      ;				;an000;bgb;AN000;
+buffer			single_Return      ; new results buffer	;an000;bgb
+end if ;				;an000;bgb;AN000;
 										;an000;bgb
 ;										;an000;bgb
 ;*****************************************************************************	;an000;bgb
@@ -253,7 +298,7 @@ data	ends					;				;an000;bgb;AN000;
 ;										;an000;bgb
 										;an000;bgb
 										;an000;bgb
-code	segment public	para 'CODE'                                             ;an000;bgb
+if SEGSEL = S_CODE;an000;bgb
 										;an000;bgb
 FarSW	equ	Not_Include			;				;an000;bgb;AN000; ;AN000;
 DateSW	equ	Not_Include			;				;an000;bgb;AN000;
@@ -269,17 +314,17 @@ Val2SW	equ	Not_Include			;				;an000;bgb;AN000;
 Val3SW	equ	Not_Include			;				;an000;bgb;AN000;
 DrvSW	equ	Do_Include			;				;an000;bgb;AN000;
 QusSW	equ	Not_Include			;				;an000;bgb;AN000;
-basesw	equ	1 ;use ds as the default register				;an025;bgb
-incsw	equ	0 ;include psdata myself					;an028;bgb
-code	ends									;an028;bgb
+BaseSW	equ	1 ;use ds as the default register				;an025;bgb
+IncSW	equ	0 ;include psdata myself					;an028;bgb
+end if ;an028;bgb
 
 
-data	segment PUBLIC para 'DATA'                                              ;an028;bgb
-include psdata.inc								;an028;bgb
-data	ends									;an028;bgb
+if SEGSEL = S_DATA;an028;bgb
+include 'PSDATA.INC'      ;an028;bgb
+end if ;an028;bgb
 
-code	segment PUBLIC para 'CODE'                                              ;an028;bgb
+if SEGSEL = S_CODE;an028;bgb
 pathlabl parser 								;an028;bgb
-INCLUDE PARSE.ASM				;AN000; 			;an028;bgb
+include 'PARSE.ASM'  ;AN000; 			;an028;bgb
 pathlabl parser 								;an028;bgb
-code	ends									;an000;bgb
+end if ;an000;bgb

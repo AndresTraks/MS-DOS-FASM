@@ -8,25 +8,33 @@
 ; LOGIC: if masm is in pass1 (pass2 will gen dup labels)
 ;           if this label has not been gen before
 ;              then create the label
-;                   - $$A to place at begin of map
+;                   - A$$ to place at begin of map
 ;                   - start means first occurence
 ;                   - use module/proc name last
 ;                   define this label for creation of 'stop' label
 ;              else create stop label
 ;                   - same as start except name
 ;***********************************************************************
-.LALL
-pathlabl MACRO pnam
-IF1                                     ;if pass 1
-    IFNDEF LBL_&pnam                    ;switch not defined if first creation
-        $$A_START_&pnam:                ;create label
-        PUBLIC $$A_START_&pnam          ;make it public
-        LBL_&pnam = 1                   ;set switch
-    ELSE                                ;start label already created
-        $$A_STOP_&pnam:                 ;create stop label
-        PUBLIC $$A_STOP_&pnam           ;make it public
-    ENDIF
-ENDIF
-ENDM
+; The two labels this made, $$A_START_<name> and $$A_STOP_<name>, were
+; public symbols for PATHGEN to find a module's extent by in the link map.
+; They are the only thing the macro wrote, nothing in a program refers to
+; them, and they lay down no bytes, so here the name stands for nothing.
+; The IF1 around it was MASM's "on the first pass only", which kept the
+; second pass from declaring the same label again.
+macro pathlabl pnam
+{
+}
+;pathlabl MACRO pnam
+;IF1                                     ;if pass 1
+;    IFNDEF LBL_&pnam                    ;switch not defined if first creation
+;        $$A_START_&pnam:                ;create label
+;        PUBLIC $$A_START_&pnam          ;make it public
+;        LBL_&pnam = 1                   ;set switch
+;    ELSE                                ;start label already created
+;        $$A_STOP_&pnam:                 ;create stop label
+;        PUBLIC $$A_STOP_&pnam           ;make it public
+;    ENDIF
+;ENDIF
+;ENDM
 
 

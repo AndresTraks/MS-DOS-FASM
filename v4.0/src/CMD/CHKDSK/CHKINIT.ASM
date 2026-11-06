@@ -54,34 +54,34 @@ page	,132					;
 ; Include files
 ;*****************************************************************************
 .xlist										;an000;bgb
-include chkseg.inc					   ;an005;bgb		;an000;bgb
-include pathmac.inc								;an000;bgb
-INCLUDE CHKEQU.INC				;				;an000;bgb;AN000;
-INCLUDE CHKCHNG.INC				;List of changes		;an000;bgb
-include dossym.inc								;an000;bgb
-INCLUDE SYSCALL.INC				;				;an000;bgb;AN000;
-INCLUDE CHKMACRO.INC				;				;an000;bgb;AN000;
-INCLUDE CHKPARSE.INC				;				;an000;bgb;AN000;
-INCLUDE IOCTL.INC								;an000;bgb
+include 'CHKSEG.INC'      ;an005;bgb		;an000;bgb
+include 'PATHMAC.INC'      ;an000;bgb
+include 'CHKEQU.INC'  ;				;an000;bgb;AN000;
+include 'CHKCHNG.INC'  ;List of changes		;an000;bgb
+include 'DOSSYM.INC'      ;an000;bgb
+include 'SYSCALL.INC'  ;				;an000;bgb;AN000;
+include 'CHKMACRO.INC'  ;				;an000;bgb;AN000;
+include 'CHKPARSE.INC'  ;				;an000;bgb;AN000;
+include 'IOCTL.INC'      ;an000;bgb
 .list										;an000;bgb
 										;an000;bgb
 										;an000;bgb
 										;an000;bgb
-psp    segment public para 'DUMMY'						;an000;bgb
+if SEGSEL = S_PSP;an000;bgb
 	org	05Ch								;an000;bgb
-FCB1	label	byte								;an000;bgb
+label FCB1 byte        ;an000;bgb
 	org	06Ch								;an000;bgb
-FCB2	label	byte								;an000;bgb
-psp    ends									;an000;bgb
+label FCB2 byte        ;an000;bgb
+end if ;an000;bgb
 										;an000;bgb
 ;										;an000;bgb
-DATA	segment public para 'DATA'						;an000;bgb
+if SEGSEL = S_DATA;an000;bgb
 ;*****************************************************************************	;an000;bgb
 ; Data	Area									;an000;bgb
 ;*****************************************************************************	;an000;bgb
 old_drive db 0									;an000;bgb
 
-include version.inc
+include 'VERSION.INC'
 
 IF  IBMCOPYRIGHT
 
@@ -89,37 +89,39 @@ ELSE
 
 myramdisk db 'RDV 1.20'
 
-ENDIF
+end if
 
 myvdisk   db 'VDISK'								;an000;bgb
 bytes_per_sector     dw   0			;an005;bgb			;an000;bgb
-BPB_Buffer A_DeviceParameters <>		;				;an000;bgb;AN000;
+BPB_Buffer A_DeviceParameters     ;				;an000;bgb;AN000;
 										;an000;bgb
-Data_Start_Low dw ?				;				;an000;bgb;AN000;
-Data_Start_High dw ?				;				;an000;bgb
+Data_Start_Low rw      1 ;				;an000;bgb;AN000;
+Data_Start_High rw      1 ;				;an000;bgb
 										;an000;bgb
-public command_line_buffer							;an046;bgb
+;public command_line_buffer							;an046;bgb
 Command_Line_Buffer db 128 dup(0)		;				;an000;bgb;AN000;
-Command_Line_Length equ $ - Command_Line_Buffer ;				;an000;bgb;AN000;
+; = and not equ: fasm's equ is text put in where the name is used, so a $
+; in it would be the address of the use and not of this line.
+Command_Line_Length = $ - Command_Line_Buffer ;				;an000;bgb;AN000;
 										;an046;bgb
 Fatal_Error db	0				;				;an000;bgb;AN000;
 										;an000;bgb
 Command_Line db NO				;				;an000;bgb
 Append	db	0				;				;an000;bgb
 										;an000;bgb
-ifdef	fsexec									;an038;bgb
+if defined fsexec    ;an038;bgb
  ;These should stay together			 ;				;an038;bgb
  ; ---------------------------------------	 ;  ;				;an038;bgb
  FS_String_Buffer db 13 dup(" ")		 ;				;an038;bgb
  FS_String_End db "CHK.EXE",0			 ;				;an038;bgb
- Len_FS_String_End equ $ - FS_String_End	 ;				;an038;bgb
+ Len_FS_String_End = $ - FS_String_End	 ;				;an038;bgb
  ;----------------------------------------	 ;				;an038;bgb
  FS_Not_Fat db	 0				 ;				;an038;bgb
  FAT12_String db "FAT12   "			 ;				;an038;bgb
  FAT16_String db "FAT16   "			 ;				;an038;bgb
- Len_FS_ID_String equ $ - FAT16_String		 ;				;an038;bgb
+ Len_FS_ID_String = $ - FAT16_String		 ;				;an038;bgb
  Media_ID_Buffer Media_ID <>			 ;				;an038;bgb
-endif										;an038;bgb
+end if ;an038;bgb
 
 ExitStatus db	0				;				;an000;bgb;AN000;
 										;an000;bgb
@@ -131,68 +133,68 @@ fat_dir_secs  dw  0		     ;sectors in fat, directory and resvd	;an000;bgb;an006;
 ;*****************************************************************************	;an000;bgb
 ; Public Data Declarations							;an000;bgb
 ;*****************************************************************************	;an000;bgb
-	public	bpb_buffer							;an000;bgb;an006;bgb
-	public	tot_bytes_lo							;an000;bgb;an006;bgb
-	public	tot_bytes_hi							;an000;bgb;an006;bgb
-	public	fat_dir_secs							;an000;bgb;an006;bgb
-	public	bytes_per_sector						;an000;bgb;an005;bgb
-	Public	Data_Start_Low							;an000;bgb
-	Public	Data_Start_High 						;an000;bgb
-	Public	Fatal_Error							;an000;bgb
-	Public	ExitStatus							;an000;bgb
-	Public	PSP_Segment							;an000;bgb
-ifdef	fsexec									;an038;bgb
-	Public	FS_String_Buffer						;an038;bgb
-endif										;an038;bgb
+;	public	bpb_buffer							;an000;bgb;an006;bgb
+;	public	tot_bytes_lo							;an000;bgb;an006;bgb
+;	public	tot_bytes_hi							;an000;bgb;an006;bgb
+;	public	fat_dir_secs							;an000;bgb;an006;bgb
+;	public	bytes_per_sector						;an000;bgb;an005;bgb
+;	Public	Data_Start_Low							;an000;bgb
+;	Public	Data_Start_High 						;an000;bgb
+;	Public	Fatal_Error							;an000;bgb
+;	Public	ExitStatus							;an000;bgb
+;	Public	PSP_Segment							;an000;bgb
+if defined fsexec    ;an038;bgb
+;	Public	FS_String_Buffer						;an038;bgb
+end if ;an038;bgb
 ;										;an000;bgb
 ;*****************************************************************************	;an000;bgb
 ; External Data Declarations							;an000;bgb
 ;*****************************************************************************	;an000;bgb
-	EXTRN	movsi:word  ;move si pointer here for display of invalid parm	;an046;bgb;an000;bgb;an005;bgb
-	EXTRN	fatcnt:Byte							;an000;bgb;an005;bgb
-	EXTRN	AllDrv:Byte							;an000;bgb
-	EXTRN	VolNam:Byte							;an000;bgb
-	EXTRN	BadDrvM:Byte							;an000;bgb
-	EXTRN	OrphFCB:Byte							;an000;bgb
-	EXTRN	Arg_Buf:Byte							;an000;bgb
-	EXTRN	Noisy:Byte							;an000;bgb
-	EXTRN	DoFix:Byte							;an000;bgb
-	EXTRN	SubstErr:Byte							;an000;bgb
-	EXTRN	No_Net_Arg:Byte 						;an000;bgb
-	EXTRN	UserDev:Byte							;an000;bgb
-	EXTRN	BadDrv_Arg:Byte 						;an000;bgb
-	EXTRN	TranSrc:Byte							;an000;bgb
-	EXTRN	ContCh:Word							;an000;bgb
-	EXTRN	HardCh:Word							;an000;bgb
-	EXTRN	Fragment:Byte							;an000;bgb
-	EXTRN	Parse_Error_Msg:Byte						;an000;bgb
-	EXTRN	Chkprmt_End:Byte						;an000;bgb
-	extrn	save_drive:byte 						;an000;bgb
-	EXTRN	Read_Write_Relative:Byte					;an000;bgb
-	EXTRN	inval_media:byte						;an000;bgb;an033;bgb
-data	ends									;an000;bgb
+;	EXTRN	movsi:word  ;move si pointer here for display of invalid parm	;an046;bgb;an000;bgb;an005;bgb
+;	EXTRN	fatcnt:Byte							;an000;bgb;an005;bgb
+;	EXTRN	AllDrv:Byte							;an000;bgb
+;	EXTRN	VolNam:Byte							;an000;bgb
+;	EXTRN	BadDrvM:Byte							;an000;bgb
+;	EXTRN	OrphFCB:Byte							;an000;bgb
+;	EXTRN	Arg_Buf:Byte							;an000;bgb
+;	EXTRN	Noisy:Byte							;an000;bgb
+;	EXTRN	DoFix:Byte							;an000;bgb
+;	EXTRN	SubstErr:Byte							;an000;bgb
+;	EXTRN	No_Net_Arg:Byte 						;an000;bgb
+;	EXTRN	UserDev:Byte							;an000;bgb
+;	EXTRN	BadDrv_Arg:Byte 						;an000;bgb
+;	EXTRN	TranSrc:Byte							;an000;bgb
+;	EXTRN	ContCh:Word							;an000;bgb
+;	EXTRN	HardCh:Word							;an000;bgb
+;	EXTRN	Fragment:Byte							;an000;bgb
+;	EXTRN	Parse_Error_Msg:Byte						;an000;bgb
+;	EXTRN	Chkprmt_End:Byte						;an000;bgb
+;	extrn	save_drive:byte 						;an000;bgb
+;	EXTRN	Read_Write_Relative:Byte					;an000;bgb
+;	EXTRN	inval_media:byte						;an000;bgb;an033;bgb
+end if ;an000;bgb
 										;an000;bgb
 										;an000;bgb
-code	segment public para 'CODE'						;an000;bgb
+if SEGSEL = S_CODE;an000;bgb
 ;*****************************************************************************	;an000;bgb
 ; External Routine Declarations 						;an000;bgb
 ;*****************************************************************************	;an000;bgb
-ifdef	fsexec									;an038;bgb
-	EXTRN	Exec_FS_CHKDSK:Near						;an000;bgb
-endif
-	EXTRN	SysLoadMsg:Near 						;an000;bgb
-	EXTRN	SysDispMsg:Near 						;an000;bgb
-	EXTRN	Done:Near							;an000;bgb
-	EXTRN	Main_Routine:Near						;an000;bgb
-	EXTRN	INT_23:Near							;an000;bgb
-	EXTRN	INT_24:Near							;an000;bgb
-	EXTRN	Path_Name:Near							;an000;bgb
-	extrn	read_once:near							;an000;bgb
+if defined fsexec    ;an038;bgb
+;	EXTRN	Exec_FS_CHKDSK:Near						;an000;bgb
+end if
+;	EXTRN	SysLoadMsg:Near 						;an000;bgb
+;	EXTRN	SysDispMsg:Near 						;an000;bgb
+;	EXTRN	Done:Near							;an000;bgb
+;	EXTRN	Main_Routine:Near						;an000;bgb
+;	EXTRN	INT_23:Near							;an000;bgb
+;	EXTRN	INT_24:Near							;an000;bgb
+;	EXTRN	Path_Name:Near							;an000;bgb
+;	extrn	read_once:near							;an000;bgb
 
-	public	p97, multiply_32_bits						;an000;bgb
-	public	func60								;an000;bgb
-	public	hook_interrupts 						;an000;bgb
-	public get_bpb									;an000;bgb
+;	public	p97, multiply_32_bits						;an000;bgb
+;	public	func60								;an000;bgb
+;	public	hook_interrupts 						;an000;bgb
+;	public get_bpb									;an000;bgb
 
    pathlabl chkinit							   ;an000;bgb
 ;*****************************************************************************	;an000;bgb
@@ -242,28 +244,28 @@ Procedure Main_Init				;				;an000;bgb;AN000;
 	call get_psp								;an000;bgb
 ;;;;;;;;DOS_Call GetCurrentPSP			;Get PSP segment address	;an000;bgb;ac034;bgb
 ;;;;;;;;mov	PSP_Segment,bx			;Save it for later		;an000;bgb;ac034;bgb
-	mov	Fatal_Error,No			;Init the error flag		;an000;bgb;AN000;
-	Dos_Call	Disk_Reset		;Flush all buffers		;an000;bgb
+	mov	byte [Fatal_Error],NO ;Init the error flag		;an000;bgb;AN000;
+	DOS_Call	Disk_Reset		;Flush all buffers		;an000;bgb
 	call	Init_IO 			;Setup messages and parse	;an000;bgb;AN000;
-	cmp	Fatal_Error,Yes 		;Error occur?			;an000;bgb;AN000;
-;	$IF	NE				;Nope, keep going		;an000;bgb;AN000;
-	JE $$IF1
+	cmp	byte [Fatal_Error],YES ;Error occur?			;an000;bgb;AN000;
+;	IF$	NE				;Nope, keep going		;an000;bgb;AN000;
+	JE IF1$$I
 	   call    Validate_Target_Drive	;Check drive letter		;an000;bgb;AN000;
-	   cmp	   Fatal_Error,Yes		;Error occur?			;an000;bgb;AN000;
-;	   $IF	   NE				;Nope, keep going		;an000;bgb;AN000;
-	   JE $$IF2
+	   cmp	   byte [Fatal_Error],YES ;Error occur?			;an000;bgb;AN000;
+;	   IF$	   NE				;Nope, keep going		;an000;bgb;AN000;
+	   JE IF2$$I
 ;;;;;;;;;;;;;;call    Hook_Interrupts		;Set CNTRL -Break hook		;an000;bgb;AN000;
 	      call    Clear_Append_X		;				;an000;bgb;AN000;
 	      call    CHKDSK_IFS		;Chkdsk correct file system	;an000;bgb;AN000;
 	      call    Reset_Append_X		;				;an000;bgb;AN000;
-;	   $ENDIF				;				;an000;bgb;AN000;
-$$IF2:
-;	$ENDIF					;				;an000;bgb;AN000;
-$$IF1:
-	mov	al,ExitStatus			;Get Errorlevel 		;an000;bgb;AN000;
+;	   ENDIF$				;				;an000;bgb;AN000;
+IF2$$I:
+;	ENDIF$					;				;an000;bgb;AN000;
+IF1$$I:
+	mov	al,[ExitStatus] ;Get Errorlevel 		;an000;bgb;AN000;
 	DOS_Call Exit				;Exit program			;an000;bgb;AN000;
 	int	20h				;If other exit fails		;an000;bgb;AN000;
-Main_Init endp					;				;an000;bgb;AN000;
+;Main_Init endp					;				;an000;bgb;AN000;
 										;an000;bgb
 ;*****************************************************************************	;an000;bgb
 ;Routine name: get_psp								;an000;bgb
@@ -292,15 +294,15 @@ Procedure get_psp			;;AN000;				;an000;bgb
 ;;;;;;;;DOS_Call GetCurrentPSP		;Get PSP segment address	:AN035;b;an000;bgbgb
 ;;;;;;;;mov	PSP_Segment,bx		;Save it for later		;AN035;b;an000;bgbgb
 ; get command line from psp							;an000;bgb;AN000;bgb
-	mov	cx,PSP_Segment		;point ds to data seg			;an000;bgb;AN000;bgb
+	mov	cx,[PSP_Segment] ;point ds to data seg			;an000;bgb;AN000;bgb
 	mov	ds,cx			;  "   "   "   "    "                   ;an000;bgb;AN000;bgb
-	assume	ds:NOTHING,es:dg	;  "   "   "   "    "                   ;an000;bgb;AN000;bgb
+;	assume	ds:NOTHING,es:DG_	;  "   "   "   "    "                   ;an000;bgb;AN000;bgb
 ; get the drive number of the target from the psp (0=default, a=1, b=2, c=3) ;AN;an000;bgb000;bgb
-	mov	bl,ds:[FCB1]	    ;Get target drive from FCB -74	    ;AN0;an000;bgb00;
+	mov	bl,[ds:FCB1]	    ;Get target drive from FCB -74	    ;AN0;an000;bgb00;
 	Set_Data_Segment	    ;Set DS,ES to Data segment		    ;AN0;an000;bgb00;bgb
 	call	get_drive							;an000;bgb
 	ret									;an000;bgb
-get_psp   endp				;				;AN000; ;an000;bgb
+;get_psp   endp				;				;AN000; ;an000;bgb
 										;an000;bgb
 										;an000;bgb
 ;*****************************************************************************	;an000;bgb
@@ -329,30 +331,30 @@ get_psp   endp				;				;AN000; ;an000;bgb
 Procedure get_drive			;;AN000;				;an000;bgb
 ; convert drive number to drive letter						;an000;bgb
 	    cmp     bl,0  ;a=1 b=2 c=3	;Is it default drive? 0=default ;AN000; ;an000;bgb
-;	    $IF     E			;Yes, turn it into drive letter ;AN000; ;an000;bgb
-	    JNE $$IF5
+;	    IF$     E			;Yes, turn it into drive letter ;AN000; ;an000;bgb
+	    JNE IF5$$I
 ; get default drive number							;an000;bgb
 		DOS_Call Get_Default_Drive ;Get default drive num in al    ;AN00;an000;bgb0;
 					;a=0, b=1, c=2				;an000;bgb
-;	    $ELSE			;Not default, A=1		;AN000; ;an000;bgb
-	    JMP SHORT $$EN5
-$$IF5:
+;	    ELSE$			;Not default, A=1		;AN000; ;an000;bgb
+	    JMP SHORT EN5$$I
+IF5$$I:
 ; bl already contains the correct drive number - save it			;an000;bgb
 		dec	bl		;make it zero based			;an000;bgb
 		mov	al,bl							;an000;bgb
-;	    $ENDIF			; 74+40=b4				;an000;bgb
-$$EN5:
-	    mov     BadDrvm+1,al		 ; "  "    "  " 		;an000;bgb ;AN000;
+;	    ENDIF$			; 74+40=b4				;an000;bgb
+EN5$$I:
+	    mov     [ss:baddrvm+1],al ; "  "    "  " 		;an000;bgb ;AN000;
 	    inc     al								;an000;bgb
-	    mov     byte ptr Buffer.drnum_stroff,al			     ;	;an000;bgb   ;
-	    mov     AllDrv,al			 ;				;an000;bgb ;AC000;
-	    mov     VolNam,al			 ;				;an000;bgb ;AC000;
-	    mov     OrphFCB,al			 ;				;an000;bgb ;AC000;
+	    mov     byte [ss:buffer.drnum_stroff],al       ;	;an000;bgb   ;
+	    mov     [ss:ALLDRV],al ;				;an000;bgb ;AC000;
+	    mov     [ss:VOLNAM],al ;				;an000;bgb ;AC000;
+	    mov     [ss:ORPHFCB],al ;				;an000;bgb ;AC000;
 	    dec     al								;an000;bgb
 	    add     al,"A"		;convert it to letter		;AN000; ;an000;bgb
-	    mov     arg_buf,al	    ;set up prompt msg			    ;AN0;an000;bgb00;bgb
+	    mov     [ss:ARG_BUF],al ;set up prompt msg			    ;AN0;an000;bgb00;bgb
 	ret									;an000;bgb
-get_drive endp				;				;AN000; ;an000;bgb
+;get_drive endp				;				;AN000; ;an000;bgb
 										;an000;bgb
 ;*****************************************************************************	;an000;bgb
 ;Routine name: Init_Input_Output						;an000;bgb
@@ -394,74 +396,74 @@ get_drive endp				;				;AN000; ;an000;bgb
 Procedure Init_IO		      ; 			      ;AN000;	;an000;bgb
 										;an000;bgb
 	call	Preload_Messages		;Load up message retriever	;an000;bgb;AN000;
-ifdef	fsexec									;an038;bgb
-	mov	FS_Not_FAT,No							;an038;bgb
-	cmp	Fatal_Error,YES 		;Quit?				;an038;bgb;AN000;
-;	$IF	NE				;Nope, keep going		;an038;bgb;AN000;
-	JE $$IF8
+if defined fsexec    ;an038;bgb
+	mov	byte [ss:FS_Not_Fat],NO ;an038;bgb
+	cmp	byte [ss:Fatal_Error],YES ;Quit?				;an038;bgb;AN000;
+;	IF$	NE				;Nope, keep going		;an038;bgb;AN000;
+	JE IF8$$I
 	   mov	   al,GENERIC_IOCTL		;Generic IOCtl call		;an038;bgb;AN000;
 	   push    ds				;				;an038;bgb;AN000;
-	   mov	   bx,PSP_Segment		;				;an038;bgb;AN000;
+	   mov	   bx,[ss:PSP_Segment] ;				;an038;bgb;AN000;
 	   mov	   ds,bx			;				;an038;bgb;AN000;
-	   assume  ds:nothing			;				;an038;bgb;AN000;
+;	   assume  ds:nothing			;				;an038;bgb;AN000;
 										;an038;bgb
-	   mov	   bl,ds:FCB1			;Get drive (A=1)		;an038;bgb;AN000;
+	   mov	   bl,[ds:FCB1] ;Get drive (A=1)		;an038;bgb;AN000;
 										;an038;bgb
 	   pop	   ds				;				;an038;bgb;AN000;
-	   assume  ds:dg			;				;an038;bgb;AN000;
+;	   assume  ds:DG_			;				;an038;bgb;AN000;
 	   xor	   bh,bh			;Set bh=0			;an038;bgb;AN000;
-	   mov	   ch,RawIO			;Get Media ID call		;an038;bgb;AN000;
+	   mov	   ch,RAWIO			;Get Media ID call		;an038;bgb;AN000;
 	   mov	   cl,GET_MEDIA_ID		;				;an038;bgb;AN000;
-	   lea	   dx,Media_ID_Buffer		;Point at buffer		;an038;bgb;AN000;
+	   lea	   dx,[Media_ID_Buffer];Point at buffer		;an038;bgb;AN000;
 	   DOS_Call IOCtl			;Do function call		;an038;bgb;AN000;
-;	   $IF	   C,OR 			;Old style diskette, OR 	;an038;bgb;AN000;
-	   JC $$LL9
-	   lea	   si,FAT12_String		;Check for FAT_12 string	;an038;bgb;AN000;
-	   lea	   di,Media_ID_Buffer.Media_ID_File_System ;		 ;AN000;;an038;bgb
+;	   IF$	   C,OR 			;Old style diskette, OR 	;an038;bgb;AN000;
+	   JC LL9$$I
+	   lea	   si,[FAT12_String];Check for FAT_12 string	;an038;bgb;AN000;
+	   lea	   di,[Media_ID_Buffer.Media_ID_File_System] ;		 ;AN000;;an038;bgb
 	   mov	   cx,Len_FS_ID_String		;Length of compare		;an038;bgb;AN000;
 	   repe    cmpsb			;Find it?			;an038;bgb;AN000;
-;	   $IF	   E,OR 			;Nope, keep going		;an038;bgb;AN000;
-	   JE $$LL9
-	   lea	   si,FAT16_String		;Check for FAT_16 string	;an038;bgb;AN000;
-	   lea	   di,Media_ID_Buffer.Media_ID_File_System ;		 ;AN000;;an038;bgb
+;	   IF$	   E,OR 			;Nope, keep going		;an038;bgb;AN000;
+	   JE LL9$$I
+	   lea	   si,[FAT16_String];Check for FAT_16 string	;an038;bgb;AN000;
+	   lea	   di,[Media_ID_Buffer.Media_ID_File_System] ;		 ;AN000;;an038;bgb
 	   mov	   cx,Len_FS_ID_String		;Length of compare		;an038;bgb;AN000;
 	   repe    cmpsb			;Do compare			;an038;bgb;AN000;
-;	   $IF	   E				;Find it?			;an038;bgb;AN000;
-	   JNE $$IF9
-$$LL9:
-endif										;an038;bgb
+;	   IF$	   E				;Find it?			;an038;bgb;AN000;
+	   JNE IF9$$I
+LL9$$I:
+end if ;an038;bgb
 	      call    Parse_Command_Line	;Parse in command line input	;an038;bgb;AN000;
-ifdef	fsexec									;an038;bgb
-;	   $ELSE				;We got FS other than FAT	;an038;bgb;AN000;
-	   JMP SHORT $$EN9
-$$IF9:
+if defined fsexec    ;an038;bgb
+;	   ELSE$				;We got FS other than FAT	;an038;bgb;AN000;
+	   JMP SHORT EN9$$I
+IF9$$I:
 ;;;;;;;;;;;;;;call    Parse_Drive_Letter	;Only look for drive letter	;an038;bgb;AN000;
-	      mov     FS_Not_FAT,Yes		;Indicate exec file system	;an038;bgb;AN000;
+	      mov     byte [FS_Not_Fat],YES ;Indicate exec file system	;an038;bgb;AN000;
 		mov	cx,8							;an038;bgb;an027;bgb
-		lea	si,Media_ID_Buffer.Media_ID_File_System ;get file system;an038;bgb ;an027;bgb
-		lea	di,fs_string_buffer ;put it here			;an038;bgb;an027;bgb
+		lea	si,[Media_ID_Buffer.Media_ID_File_System] ;get file system;an038;bgb ;an027;bgb
+		lea	di,[FS_String_Buffer] ;put it here			;an038;bgb;an027;bgb
 		rep	movsb							;an038;bgb;an027;bgb
-		lea	di,fs_string_buffer ;point to beginning again		;an038;bgb;an027;bgb
-;		$DO	COMPLEX 	;search th string until eol found	;an038;bgb;an027;bgb
-		JMP SHORT $$SD11
-$$DO11:
+		lea	di,[FS_String_Buffer] ;point to beginning again		;an038;bgb;an027;bgb
+;		DO$	COMPLEX 	;search th string until eol found	;an038;bgb;an027;bgb
+		JMP SHORT SD11$$I
+DO11$$I:
 		    inc     di		;next char				;an038;bgb;an027;bgb
-;		$STRTDO 		;start loop here			;an038;bgb;an027;bgb
-$$SD11:
-		    cmp     byte ptr [di],' '	 ;end of string ?		;an038;bgb;an027;bgb
-;		$ENDDO	E		;end loop when eol found		;an038;bgb;an027;bgb
-		JNE $$DO11
-		lea	si,fs_string_end ;get end of string - rec.exe		;an038;bgb;an027;bgb
+;		STRTDO$ 		;start loop here			;an038;bgb;an027;bgb
+SD11$$I:
+		    cmp     byte [di],' '      ;end of string ?		;an038;bgb;an027;bgb
+;		ENDDO$	E		;end loop when eol found		;an038;bgb;an027;bgb
+		JNE DO11$$I
+		lea	si,[FS_String_End] ;get end of string - rec.exe		;an038;bgb;an027;bgb
 		mov	cx,8		; 8 more chars				;an038;bgb;an027;bgb
 		rep	movsb		;move it in				;an038;bgb;an027;bgb
-;	   $ENDIF				;				;an038;bgb;AN000;
-$$EN9:
-;	$ENDIF					;				;an038;bgb;AN000;
-$$IF8:
-endif										;an038;bgb
+;	   ENDIF$				;				;an038;bgb;AN000;
+EN9$$I:
+;	ENDIF$					;				;an038;bgb;AN000;
+IF8$$I:
+end if ;an038;bgb
 	ret					;				;an000;bgb;AN000;
 										;an000;bgb
-Init_IO endp			      ; 			      ;AN000;	;an000;bgb
+;Init_IO endp			      ; 			      ;AN000;	;an000;bgb
 										;an000;bgb
 ;*****************************************************************************	;an000;bgb
 ;Routine name: Preload_Messages 						;an000;bgb
@@ -491,16 +493,16 @@ Init_IO endp			      ; 			      ;AN000;	;an000;bgb
 										;an000;bgb
 Procedure Preload_Messages			;				;an000;bgb;AN000;
 						;				;an000;bgb
-	call	SysLoadMsg			;Preload the messages		;an000;bgb;AN000;
-;	$IF	C				;Error? 			;an000;bgb;AN000;
-	JNC $$IF16
-	   call    SysDispMsg			;Display preload msg		;an000;bgb;AN000;
-	   mov	   Fatal_Error, YES		;Indicate error exit		;an000;bgb;AN000;
-;	$ENDIF					;				;an000;bgb;AN000;
-$$IF16:
+	call	SYSLOADMSG			;Preload the messages		;an000;bgb;AN000;
+;	IF$	C				;Error? 			;an000;bgb;AN000;
+	JNC IF16$$I
+	   call    SYSDISPMSG			;Display preload msg		;an000;bgb;AN000;
+	   mov	   byte [Fatal_Error], YES ;Indicate error exit		;an000;bgb;AN000;
+;	ENDIF$					;				;an000;bgb;AN000;
+IF16$$I:
 	ret					;				;an000;bgb;AN000;
 										;an000;bgb
-Preload_Messages endp				;				;an000;bgb;AN000;
+;Preload_Messages endp				;				;an000;bgb;AN000;
 										;an000;bgb
 ;*****************************************************************************	;an000;bgb
 ;Routine name: Parse_Drive_Letter						;an000;bgb
@@ -541,14 +543,14 @@ Preload_Messages endp				;				;an000;bgb;AN000;
 ;	Set_Data_Segment			;				;an000;bgb;AN000;
 ;	lea	si,Command_Line_Buffer		;Pointer to parse line		;an000;bgb;AN000;
 ;	lea	di,input_table			;Pointer to control table	;an000;bgb;AN000;
-;	$DO					;Parse for drive letter 	;an000;bgb;AN000;
+;	DO$					;Parse for drive letter 	;an000;bgb;AN000;
 ;	   xor	   dx,dx			;Parse line @SI 		;an000;bgb;AN000;
 ;	   xor	   cx,cx			;Parse table @DI		;an000;bgb;AN000;
 ;	   call    SysParse			;Go parse			;an000;bgb;AN000;
 ;	   cmp	   ax,End_Of_Parse		;Check for end of parse 	;an000;bgb;AN000;
-;	$LEAVE	E				;In other words, no drive letter;an000;bgb;AN000;
+;	LEAVE$	E				;In other words, no drive letter;an000;bgb;AN000;
 ;	   cmp	   ax,Operand_Missing		; exit if positional missing	;an000;bgb;AN000;
-;	$ENDDO	E				;Ignore errors!!!		;an000;bgb;AN000;
+;	ENDDO$	E				;Ignore errors!!!		;an000;bgb;AN000;
 ;	Set_Data_Segment			;				;an000;bgb;AN000;
 ;	ret					;				;an000;bgb;AN000;
 ;										;an000;bgb
@@ -594,86 +596,86 @@ Procedure Parse_Command_Line			;				;an000;bgb;AN000;
 										;an000;bgb
 	push	ds				;Save data segment		;an000;bgb;AN000;
 	Set_Data_Segment			;				;an000;bgb;AN000;
-	mov	cx,PSP_Segment			;Get segment of PSP		;an000;bgb;AN000;
+	mov	cx,[PSP_Segment] ;Get segment of PSP		;an000;bgb;AN000;
 	mov	ds,cx				;  "  "    "  " 		;an000;bgb;AN000;
 										;an000;bgb
-	assume	ds:nothing,es:dg		;				;an000;bgb;AN000;
+;	assume	ds:nothing,es:DG_		;				;an000;bgb;AN000;
 										;an000;bgb
 	mov	si,Command_Line_Parms		;Point at command line		;an000;bgb;AN000;
-	lea	di,Command_Line_Buffer		;Where to put a copy of it	;an000;bgb;AN000;
+	lea	di,[Command_Line_Buffer];Where to put a copy of it	;an000;bgb;AN000;
 	mov	cx,Command_Line_Length		;How long was input?		;an000;bgb;AN000;
 	repnz	movsb				;Copy it			;an000;bgb;AN000;
-	lea	Di,Command_Line_Buffer		;				;an046;bgb
-public nextdi									;an046;bgb
+	lea	Di,[Command_Line_Buffer];				;an046;bgb
+;public nextdi									;an046;bgb
 nextdi: 									;an046;bgb
 	mov	al,0dh				;search for end of line 	;an046;bgb
-	cmp	al,ES:[Di]			   ;zero terminate string	   ;an046;bgb
-;	$IF	NZ								;an046;bgb
-	JZ $$IF18
+	cmp	al,[es:Di]			   ;zero terminate string	   ;an046;bgb
+;	IF$	NZ								;an046;bgb
+	JZ IF18$$I
 	    inc    di								;an046;bgb
 	    jmp    nextdi							;an046;bgb
-;	$ELSE									;an046;bgb
-	JMP SHORT $$EN18
-$$IF18:
-	    mov    byte ptr ES:[di+1],00					;an046;bgb
-;	$ENDIF									;an046;bgb
-$$EN18:
+;	ELSE$									;an046;bgb
+	JMP SHORT EN18$$I
+IF18$$I:
+	    mov    byte [es:di+1],00         ;an046;bgb
+;	ENDIF$									;an046;bgb
+EN18$$I:
 										;an046;bgb
 	Set_Data_Segment			;Set DS,ES to Data segment	;an000;bgb;AN000;
 	xor	cx,cx				;				;an000;bgb;AN000;
 	xor    dx,dx			       ;Required for SysParse call     ;;an000;bgbAN000;
-	lea	si,Command_Line_Buffer		;Pointer to parse line		;an000;bgb  ;AN000;
-	lea	di,input_table			;Pointer to control table	;an000;bgb   ;AN000;
-;	$SEARCH 				;Loop until all parsed		;an000;bgb;AN000;
-$$DO21:
-	   cmp	   Fatal_Error,Yes		;Interpret something bad?	;an000;bgb;AN000;
-;	$EXITIF E,OR				;If so, don't parse any more    ;an000;bgb;AN000;
-	JE $$LL22
+	lea	si,[Command_Line_Buffer];Pointer to parse line		;an000;bgb  ;AN000;
+	lea	di,[input_Table] ;Pointer to control table	;an000;bgb   ;AN000;
+;	SEARCH$ 				;Loop until all parsed		;an000;bgb;AN000;
+DO21$$I:
+	   cmp	   byte [ss:Fatal_Error],YES ;Interpret something bad?	;an000;bgb;AN000;
+;	EXITIF$ E,OR				;If so, don't parse any more    ;an000;bgb;AN000;
+	JE LL22$$I
 	   call    SysParse			;Go parse			;an000;bgb;AN000;
 	   cmp	   ax,End_Of_Parse		;Check for end of parse 	;an000;bgb;AN000;
-;	$EXITIF E				;Is it? 			;an000;bgb;AN000;
-	JNE $$IF21
-$$LL22:
+;	EXITIF$ E				;Is it? 			;an000;bgb;AN000;
+	JNE IF21$$I
+LL22$$I:
 						;All done			;an000;bgb;AN000;
-;	$ORELSE 				;Not end			;an000;bgb;AN000;
-	JMP SHORT $$SR21
-$$IF21:
+;	ORELSE$ 				;Not end			;an000;bgb;AN000;
+	JMP SHORT SR21$$I
+IF21$$I:
 	   cmp	   ax,0 			;Check for parse error		;an000;bgb;AN000;
-;	$LEAVE	NE				;Stop if there was one		;an000;bgb;AN000;
-	JNE $$EN21
+;	LEAVE$	NE				;Stop if there was one		;an000;bgb;AN000;
+	JNE EN21$$I
 	   call    Interpret_Parse		;Go find what we parsed 	;an000;bgb;AN000;
-;	$ENDLOOP				;Parse error, see what it was	;an000;bgb;AN000;
-	JMP SHORT $$DO21
-$$EN21:
+;	ENDLOOP$				;Parse error, see what it was	;an000;bgb;AN000;
+	JMP SHORT DO21$$I
+EN21$$I:
 
 	   dec	  si			;point to last byte of invalid parm
-public decsi
-decsi:	   cmp	   byte ptr [si],' '	;are we pointing to a space?		;an046;bgb
-;	   $IF	   E,OR 		;if so, we dont want to do that
-	   JE $$LL26
-	   cmp	   byte ptr [si],0dh	;are we pointing to CR? 		;an046;bgb
-;	   $IF	   E			;if so, we dont want to do that
-	   JNE $$IF26
-$$LL26:
+;public decsi
+decsi:	   cmp	   byte [si],' '     ;are we pointing to a space?		;an046;bgb
+;	   IF$	   E,OR 		;if so, we dont want to do that
+	   JE LL26$$I
+	   cmp	   byte [si],0dh     ;are we pointing to CR? 		;an046;bgb
+;	   IF$	   E			;if so, we dont want to do that
+	   JNE IF26$$I
+LL26$$I:
 	       dec   si 		;find the last byte of parm
 	       jmp   decsi
-;	   $ENDIF
-$$IF26:
-	   mov	   byte ptr [si+1],00	  ;zero terminate display string  ;an046;bgb
+;	   ENDIF$
+IF26$$I:
+	   mov	   byte [si+1],00       ;zero terminate display string  ;an046;bgb
 nextsi:
-public nextsi
+;public nextsi
 	   dec	   si			;look at previous char			;an046;bgb
-	   cmp	   byte ptr [si],' '	;find parm separator			;an046;bgb
+	   cmp	   byte [si],' '     ;find parm separator			;an046;bgb
 	   jnz	   nextsi		;loop until begin of parm found
-	   mov	   movsi,si		;mov si into display parms		;an046;bgb
-	   PARSE_MESSAGE			;Display parse error		;an000;bgb;AN000;
-	   mov	   Fatal_Error,YES		;Indicate death!		;an000;bgb;AN000;
-;	$ENDSRCH				;				;an000;bgb;AN000;
-$$SR21:
+	   mov	   [ss:movsi],si ;mov si into display parms		;an046;bgb
+	   Parse_Message			;Display parse error		;an000;bgb;AN000;
+	   mov	   byte [ss:Fatal_Error],YES ;Indicate death!		;an000;bgb;AN000;
+;	ENDSRCH$				;				;an000;bgb;AN000;
+SR21$$I:
 	pop	ds				;				;an000;bgb;AN000;
 	ret					;				;an000;bgb;AN000;
 										;an000;bgb
-Parse_Command_Line endp 			;				;an000;bgb;AN000;
+;Parse_Command_Line endp 			;				;an000;bgb;AN000;
 										;an000;bgb
 ;*****************************************************************************	;an000;bgb
 ;Routine name: Interpret_Parse							;an000;bgb
@@ -722,54 +724,54 @@ Procedure Interpret_Parse			;				;an000;bgb;AN000;
 	push	cx				;				;an000;bgb;AN000;
 	push	di				;				;an000;bgb
 	Set_Data_Segment			;				;an000;bgb
-	cmp	byte ptr Buffer.dfType,Type_Drive ;Have drive letter?	;AN000; ;an000;bgb
-;	$IF	E				;Yes, save info 		;an000;bgb;AN000;
-	JNE $$IF29
-	   and	   word ptr dfcontrol,filespec	;dont let another drive letter	;an000;bgb
-	   mov	   al,byte ptr Buffer.Drnum_stroff ;Get drive entered	       ;;an000;bgbAN000;
-	   mov	   AllDrv,al			;				;an000;bgb;AC000;
-	   mov	   VolNam,al			;				;an000;bgb;AC000;
-	   mov	   OrphFCB,al			;				;an000;bgb;AC000;
+	cmp	byte [ss:buffer.dftype],Type_Drive ;Have drive letter?	;AN000; ;an000;bgb
+;	IF$	E				;Yes, save info 		;an000;bgb;AN000;
+	JNE IF29$$I
+	   and	   word [ss:dfControl],Filespec ;dont let another drive letter	;an000;bgb
+	   mov	   al,byte [ss:buffer.drnum_stroff] ;Get drive entered	       ;;an000;bgbAN000;
+	   mov	   [ss:ALLDRV],al ;				;an000;bgb;AC000;
+	   mov	   [ss:VOLNAM],al ;				;an000;bgb;AC000;
+	   mov	   [ss:ORPHFCB],al ;				;an000;bgb;AC000;
 	   dec	   al				;Make it 0 based		;an000;bgb;AN000;
-	   mov	   BadDrvm+1,al 		; "  "	  "  "			;an000;bgb;AN000;
+	   mov	   [ss:baddrvm+1],al ; "  "	  "  "			;an000;bgb;AN000;
 	   add	   al,'A'			;Make it a drive letter 	;an000;bgb;AN000;
-	   mov	   Arg_Buf,al			;Save it			;an000;bgb;AN000;
-;	$ENDIF					;				;an000;bgb;AN000;
-$$IF29:
-	cmp	SwBuffer.Switch_Pointer,offset Sw_v			 ;AN020;;an000;bgbbgb
-;	$IF	E				;				;an000;bgb;AN000;
-	JNE $$IF31
-	   mov	   Noisy,ON			;Set flag			;an000;bgb;AC000;
-	   mov	   byte ptr sw_v,blank						;an000;bgb;an020;bgb
-;	$ENDIF					;				;an000;bgb;AN000;
-$$IF31:
-	cmp	SwBuffer.Switch_Pointer,offset sw_f			 ;AN020;;an000;bgbbgb
-;	$IF	E				;				;an000;bgb;AN000;
-	JNE $$IF33
-	   mov	   DoFix,ON			;Set flag			;an000;bgb;AC000;
-	   mov	   byte ptr sw_f,blank					       ;;an000;bgban020;bgb
-;	$ENDIF					;				;an000;bgb;AN000;
-$$IF33:
+	   mov	   [ss:ARG_BUF],al ;Save it			;an000;bgb;AN000;
+;	ENDIF$					;				;an000;bgb;AN000;
+IF29$$I:
+	cmp	[ss:SwBuffer.Switch_Pointer],sw_v      ;AN020;;an000;bgbbgb
+;	IF$	E				;				;an000;bgb;AN000;
+	JNE IF31$$I
+	   mov	   byte [ss:NOISY],ON ;Set flag			;an000;bgb;AC000;
+	   mov	   byte [ss:sw_v],Blank     ;an000;bgb;an020;bgb
+;	ENDIF$					;				;an000;bgb;AN000;
+IF31$$I:
+	cmp	[ss:SwBuffer.Switch_Pointer],sw_f      ;AN020;;an000;bgbbgb
+;	IF$	E				;				;an000;bgb;AN000;
+	JNE IF33$$I
+	   mov	   byte [ss:DOFIX],ON ;Set flag			;an000;bgb;AC000;
+	   mov	   byte [ss:sw_f],Blank           ;;an000;bgban020;bgb
+;	ENDIF$					;				;an000;bgb;AN000;
+IF33$$I:
 ;;;;;;; cmp	FileSpec_Buffer.FileSpec_Pointer,offset FileSpec_Control.Keyword;an000;bgb ;AN000;
-	cmp	buffer.dftype, type_filespec					;an000;bgb
-;	$IF	E				;				;an000;bgb;AN000;
-	JNE $$IF35
-	   mov	   word ptr dfcontrol,0 ;dont let another drive letter or filesp;an000;bgbec
-	   mov	   si,Buffer.drnum_StrOff ;			  ;AN000;	;an000;bgb
-	   lea	   di,Path_Name 		;Point to where to build path	;an000;bgb;AN000;
+	cmp	[ss:buffer.dftype], Type_Filespec ;an000;bgb
+;	IF$	E				;				;an000;bgb;AN000;
+	JNE IF35$$I
+	   mov	   word [ss:dfControl],0 ;dont let another drive letter or filesp;an000;bgbec
+	   mov	   si,[ss:buffer.drnum_stroff] ;			  ;AN000;	;an000;bgb
+	   lea	   di,[PATH_NAME] ;Point to where to build path	;an000;bgb;AN000;
 	   cld					;SI-DI dir is up		;an000;bgb;AN000;
-;	   $DO					;Move string one char at a time ;an000;bgb;AN000;
-$$DO36:
-	      cmp     byte ptr [si],Asciiz_End	;Is it the end? 		;an000;bgb;AN000;
-;	   $LEAVE  E				;You got it			;an000;bgb;AN000;
-	   JE $$EN36
+;	   DO$					;Move string one char at a time ;an000;bgb;AN000;
+DO36$$I:
+	      cmp     byte [si],Asciiz_End     ;Is it the end? 		;an000;bgb;AN000;
+;	   LEAVE$  E				;You got it			;an000;bgb;AN000;
+	   JE EN36$$I
 	      movsb				;Nope, move the character	;an000;bgb;AN000;
-;	   $ENDDO				;And keep crusin		;an000;bgb;AN000;
-	   JMP SHORT $$DO36
-$$EN36:
-	   inc	   fragment			;To be compat with old code	;an000;bgb;AN000;
-;	$ENDIF					;				;an000;bgb;AN000;
-$$IF35:
+;	   ENDDO$				;And keep crusin		;an000;bgb;AN000;
+	   JMP SHORT DO36$$I
+EN36$$I:
+	   inc	   byte [ss:FRAGMENT] ;To be compat with old code	;an000;bgb;AN000;
+;	ENDIF$					;				;an000;bgb;AN000;
+IF35$$I:
 	pop	di				;Restore parse regs		;an000;bgb;AN000;
 	pop	cx				;				;an000;bgb;AN000;
 	pop	si				;				;an000;bgb;AN000;
@@ -777,7 +779,7 @@ $$IF35:
 	ret					;				;an000;bgb;AN000;
 										;an000;bgb
 										;an000;bgb
-Interpret_Parse endp				;				;an000;bgb;AN000;
+;Interpret_Parse endp				;				;an000;bgb;AN000;
 										;an000;bgb
 										;an000;bgb
 										;an000;bgb
@@ -814,27 +816,27 @@ Interpret_Parse endp				;				;an000;bgb;AN000;
 										;an000;bgb
 Procedure Validate_Target_Drive 		;				;an000;bgb;AN000;
     call    Check_For_Network		 ;See if Network drive letter	 ;an000;;an043;bgbbgb;AN000;
-    cmp     Fatal_Error,YES		    ;Can we continue?		    ;an0;an043;bgb00;bgb;AN000;
-;   $IF     NE				    ;Yep			    ;an0;an043;bgb00;bgb;AN000;
-    JE $$IF40
+    cmp     byte [ss:Fatal_Error],YES ;Can we continue?		    ;an0;an043;bgb00;bgb;AN000;
+;   IF$     NE				    ;Yep			    ;an0;an043;bgb00;bgb;AN000;
+    JE IF40$$I
 	call	Check_Target_Drive		;See if valid drive letter	;an000;bgb;AN000;
-	cmp	Fatal_Error,YES 		;Can we continue?		;an000;bgb;AN000;
-;	$IF	NE				;Yep				;an000;bgb;AN000;
-	JE $$IF41
+	cmp	byte [ss:Fatal_Error],YES ;Can we continue?		;an000;bgb;AN000;
+;	IF$	NE				;Yep				;an000;bgb;AN000;
+	JE IF41$$I
 	   call    Check_For_Network		;See if Network drive letter	;an000;bgb;AN000;
-	   cmp	   Fatal_Error,YES		;Can we continue?		;an000;bgb;AN000;
-;	   $IF	   NE				;Yep				;an000;bgb;AN000;
-	   JE $$IF42
+	   cmp	   byte [ss:Fatal_Error],YES ;Can we continue?		;an000;bgb;AN000;
+;	   IF$	   NE				;Yep				;an000;bgb;AN000;
+	   JE IF42$$I
 	      call    Check_Translate_Drive	;See if Subst, Assigned 	;an000;bgb;AN000;
-;	   $ENDIF				;- Fatal_Error passed back	;an000;bgb;AN000;
-$$IF42:
-;	$ENDIF					;				;an000;bgb;AN000;
-$$IF41:
-;   $ENDIF									;an000;bgb
-$$IF40:
+;	   ENDIF$				;- Fatal_Error passed back	;an000;bgb;AN000;
+IF42$$I:
+;	ENDIF$					;				;an000;bgb;AN000;
+IF41$$I:
+;   ENDIF$									;an000;bgb
+IF40$$I:
 	ret					;				;an000;bgb;AN000;
 										;an000;bgb
-Validate_Target_Drive endp			;				;an000;bgb;AN000;
+;Validate_Target_Drive endp			;				;an000;bgb;AN000;
 										;an000;bgb
 ;*****************************************************************************	;an000;bgb
 ;Routine name: Check_Target_Drive						;an000;bgb
@@ -873,115 +875,115 @@ Validate_Target_Drive endp			;				;an000;bgb;AN000;
 ;*****************************************************************************	;an000;bgb
 Procedure Check_Target_Drive			;				;an000;bgb;AN000;
     call    func60				;				;an000;bgb
-    mov     al,save_drive							;an000;bgb
+    mov     al,[ss:save_drive]  ;an000;bgb
     cmp     al,0ffh			;save drive spec			;an000;bgb
-;   $IF     E									;an000;bgb
-    JNE $$IF46
-	   Message BadDrv_Arg			;Print message			;an000;bgb;AC000;
-	   mov	   Fatal_Error,Yes		;Indicate error 		;an000;bgb;AN000;
+;   IF$     E									;an000;bgb
+    JNE IF46$$I
+	   Message baddrv_arg			;Print message			;an000;bgb;AC000;
+	   mov	   byte [ss:Fatal_Error],YES ;Indicate error 		;an000;bgb;AN000;
 	   jmp	   Exit_Baddrv			;dont do rest of proc		;an000;bgb;an021;bgb;an099;
-;   $ENDIF									;an000;bgb
-$$IF46:
+;   ENDIF$									;an000;bgb
+IF46$$I:
 	DOS_Call Get_Default_Drive		;Find the current drive  19	;an000;bgb;AC000;
-	mov	UserDev,al			;Save it			;an000;bgb;	;
-	cmp	AllDrv,0			;Was drive entered?		;an000;bgb;AN002;
-;	$IF	E				;No				;an000;bgb;AN002;
-	JNE $$IF48
-	   mov	   BadDrvm+1,al 		;Save 0 based number		;an000;bgb;AN002;
+	mov	[ss:USERDEV],al ;Save it			;an000;bgb;	;
+	cmp	byte [ss:ALLDRV],0 ;Was drive entered?		;an000;bgb;AN002;
+;	IF$	E				;No				;an000;bgb;AN002;
+	JNE IF48$$I
+	   mov	   [ss:baddrvm+1],al ;Save 0 based number		;an000;bgb;AN002;
 	   inc	   al				;Make 1 based			;an000;bgb;AN002;
-	   mov	   byte ptr Buffer.Drnum_stroff,al			    ;	;an000;bgb  ;
-	   mov	   AllDrv,al			;Use default drive for		;an000;bgb;AN002;
-	   mov	   VolNam,al			;entries for drive fields	;an000;bgb;AN002;
-	   mov	   OrphFCB,al			;				;an000;bgb;AN002;
+	   mov	   byte [ss:buffer.drnum_stroff],al      ;	;an000;bgb  ;
+	   mov	   [ss:ALLDRV],al ;Use default drive for		;an000;bgb;AN002;
+	   mov	   [ss:VOLNAM],al ;entries for drive fields	;an000;bgb;AN002;
+	   mov	   [ss:ORPHFCB],al ;				;an000;bgb;AN002;
 	   add	   al,'A'-1			;Make it a drive letter 	;an000;bgb;AN002;
-	   mov	   Arg_Buf,al			;Save it			;an000;bgb;AN002;
-;	$ENDIF					;				;an000;bgb;AN002;
-$$IF48:
-	mov	bl,alldrv			;Get drive number (A=1)    ;AN00;an044;bgb;an000;bgb0;
+	   mov	   [ss:ARG_BUF],al ;Save it			;an000;bgb;AN002;
+;	ENDIF$					;				;an000;bgb;AN002;
+IF48$$I:
+	mov	bl,[ss:ALLDRV] ;Get drive number (A=1)    ;AN00;an044;bgb;an000;bgb0;
 	mov	al,09h				;See if drive is local		;an000;bgb;AC000;
 	DOS_Call IOCtl				;-this will fail if bad drive	;an000;bgb;AC000;
-;	$IF	C				;CY means invalid drive 	;an000;bgb;AC000;
-	JNC $$IF50
-	   Message BadDrv_Arg			;Print message			;an000;bgb;AC015;bgb
-	   mov	   Fatal_Error,Yes		;Indicate error 		;an000;bgb;AN015;bgb
-;	$ENDIF					;				;an000;bgb;AN000;
-$$IF50:
-	cmp	fatal_error,no							;an000;bgb
-;	$IF	E								;an000;bgb
-	JNE $$IF52
+;	IF$	C				;CY means invalid drive 	;an000;bgb;AC000;
+	JNC IF50$$I
+	   Message baddrv_arg			;Print message			;an000;bgb;AC015;bgb
+	   mov	   byte [ss:Fatal_Error],YES ;Indicate error 		;an000;bgb;AN015;bgb
+;	ENDIF$					;				;an000;bgb;AN000;
+IF50$$I:
+	cmp	byte [ss:Fatal_Error],NO ;an000;bgb
+;	IF$	E								;an000;bgb
+	JNE IF52$$I
 get_bpb:   mov	   al,GENERIC_IOCTL		   ;Get BPB information 	;an000;bgb   ;AN000;
-	   mov	   ch,RawIO			   ; "  "   "  "		;an000;bgb   ;AN000;
+	   mov	   ch,RAWIO			   ; "  "   "  "		;an000;bgb   ;AN000;
 	   mov	   cl,GET_DEVICE_PARAMETERS	   ;				;an000;bgb   ;AN000;
-	   mov	   bl,AllDrv			   ; "  "   "  "		;an000;bgb   ;AN000;
-	   lea	   dx,BPB_Buffer		   ; dx points to bpb area	;an000;bgb   ;AN000;
-	   mov	   byte ptr bpb_buffer, 0ffh	   ;turn bit 0 on to get bpb inf;an000;bgbo of disk ;an008;bgb
+	   mov	   bl,[ss:ALLDRV] ; "  "   "  "		;an000;bgb   ;AN000;
+	   lea	   dx,[BPB_Buffer]   ; dx points to bpb area	;an000;bgb   ;AN000;
+	   mov	   byte [ss:BPB_Buffer], 0ffh   ;turn bit 0 on to get bpb inf;an000;bgbo of disk ;an008;bgb
 	   DOS_Call IOCtl			   ; "  "   "  "		;an000;bgb   ;AN000;
 	   mov	   bx,dx			   ;use bx as the pointer to bpb;an000;bgb   ;an015;bgb
-;	   $IF	   C			   ;is ioct not supported or bad?	;an000;bgb   ;an015;bgb
-	   JNC $$IF53
-	      mov     al,BadDrvm+1		   ; drive number a=0		;an000;bgb   ;AN015;bgb
-	      lea     bx,chkprmt_end		   ; transfer address es:bx	;an000;bgb   ;an015;bgb
+;	   IF$	   C			   ;is ioct not supported or bad?	;an000;bgb   ;an015;bgb
+	   JNC IF53$$I
+	      mov     al,[ss:baddrvm+1] ; drive number a=0		;an000;bgb   ;AN015;bgb
+	      lea     bx,[Chkprmt_End]   ; transfer address es:bx	;an000;bgb   ;an015;bgb
 	      ;warning! this label must be the last in the code segment 	;an000;bgb
 	      mov     cx,1			   ; 1 sector - boot record	;an000;bgb   ;an015;bgb
 	      mov     dx,0			   ; logical sector 0		;an000;bgb   ;an015;bgb
-	      mov     Read_Write_Relative.Start_Sector_High,0 ; 		;an000;bgb   ;an015;bgb
-	      call    read_once 						;an000;bgb   ;an015;bgb
-;	      $IF     C 		   ;couldnt read the boot?		;an000;bgb   ;an015;bgb
-	      JNC $$IF54
-		  Message BadDrv_Arg		       ;Print message		;an000;bgb	 ;AC015;bgb
-		  mov	  Fatal_Error,Yes	       ;Indicate error		;an000;bgb	 ;AN015;bgb
-;	      $ELSE			;ioct not supported - is it vdisk	;an000;bgb   ;an015;bgb
-	      JMP SHORT $$EN54
-$$IF54:
+	      mov     [ss:Read_Write_Relative.Start_Sector_High],0 ; 		;an000;bgb   ;an015;bgb
+	      call    Read_once 						;an000;bgb   ;an015;bgb
+;	      IF$     C 		   ;couldnt read the boot?		;an000;bgb   ;an015;bgb
+	      JNC IF54$$I
+		  Message baddrv_arg		       ;Print message		;an000;bgb	 ;AC015;bgb
+		  mov	  byte [ss:Fatal_Error],YES ;Indicate error		;an000;bgb	 ;AN015;bgb
+;	      ELSE$			;ioct not supported - is it vdisk	;an000;bgb   ;an015;bgb
+	      JMP SHORT EN54$$I
+IF54$$I:
 ;		  mov	di,bx							;an000;bgb;an022;bgb
 ;		  add	di,3		;es:di --> to vdisk area in boot rcd	;an000;bgb;an022;bgb
 ;		  lea	si,myvdisk	;ds:si --> proper vdisk string		;an000;bgb;an022;bgb
 ;		  mov	cx,5		; compare 5 bytes			;an000;bgb;an022;bgb
 ;		  repe	cmpsb		;compare both strings			;an000;bgb;an022;bgb
 IF  IBMCOPYRIGHT
-;		  $IF	NE							;an000;bgb;an022;bgb
+;		  IF$	NE							;an000;bgb;an022;bgb
 ;		      jmp     baddrv						;an000;bgb
-;		  $ENDIF							;an000;bgb;an022;bgb
+;		  ENDIF$							;an000;bgb;an022;bgb
 ELSE
-;		  $IF	NE
+;		  IF$	NE
 			mov   di,bx
 			add   di,3
-			lea   si,myramdisk
+			lea   si,[myramdisk]
 			mov   cx,8
 			repe  cmpsb
 
-;			$IF   NE
-			JE $$IF56
+;			IF$   NE
+			JE IF56$$I
 			jmp   baddrv
-;			$ENDIF
-$$IF56:
-;		  $ENDIF
-ENDIF
-;	      $ENDIF								;an000;bgb;an022;bgb
-$$EN54:
+;			ENDIF$
+IF56$$I:
+;		  ENDIF$
+end if
+;	      ENDIF$								;an000;bgb;an022;bgb
+EN54$$I:
 	      add     bx,4		   ;boot-record-offset - device-paramete;an000;bgbr offset ;an015;bgb
-;	   $ENDIF								;an000;bgb   ;an015;bgb
-$$IF53:
-;	$ENDIF									;an000;bgb
-$$IF52:
-	   cmp	   fatal_error,no						;an000;bgb
-;	   $IF	   E								;an000;bgb
-	   JNE $$IF61
+;	   ENDIF$								;an000;bgb   ;an015;bgb
+IF53$$I:
+;	ENDIF$									;an000;bgb
+IF52$$I:
+	   cmp	   byte [ss:Fatal_Error],NO ;an000;bgb
+;	   IF$	   E								;an000;bgb
+	   JNE IF61$$I
 	      call    get_boot_info						;an053;bgb
-	      call    calc_space						;an000;bgb
-;	   $ENDIF								;an000;bgb
-$$IF61:
-	      cmp     bytes_per_sector,0					;an000;bgb;an033;bgb
-;	      $IF     E 							;an000;bgb;an033;bgb
-	      JNE $$IF63
-baddrv: 	  mov  fatal_error,yes						;an000;bgb;an033;bgb
-		  mov	  dx,offset dg:inval_media				;an000;bgb;an033;bgb
-		  invoke  printf_crlf						;an000;bgb;an033;bgb
-;	      $ENDIF								;an000;bgb;an033;bgb
-$$IF63:
+	      call    Calc_Space						;an000;bgb
+;	   ENDIF$								;an000;bgb
+IF61$$I:
+	      cmp     word [ss:bytes_per_sector],0 ;an000;bgb;an033;bgb
+;	      IF$     E 							;an000;bgb;an033;bgb
+	      JNE IF63$$I
+baddrv: 	  mov  byte [ss:Fatal_Error],YES ;an000;bgb;an033;bgb
+		  mov	  dx,inval_media           ;an000;bgb;an033;bgb
+		  invoke  PRINTF_CRLF						;an000;bgb;an033;bgb
+;	      ENDIF$								;an000;bgb;an033;bgb
+IF63$$I:
 Exit_Baddrv:					;AN099;
 	     ret				;And we're outa here            ;an000;bgb;AN000;
-Check_Target_Drive endp 			;				;an000;bgb;AN000;
+;Check_Target_Drive endp 			;				;an000;bgb;AN000;
 										;an000;bgb
 										;an000;bgb
 
@@ -994,66 +996,66 @@ Check_Target_Drive endp 			;				;an000;bgb;AN000;
 ;	Outputs :								;an053;bgb
 ;****************************************************************************** ;an053;bgb;an000;bgb
 Procedure get_boot_info        ;						;an053;bgb;an000;bgb
-	      mov     cx,[bx].BytePerSector	; usually 512			;an053;bgb;an000;bgb	  ;an015;bgb
+	      mov     cx,[bx+A_DeviceParameters+A_DeviceParameters.BytePerSector] ; usually 512			;an053;bgb;an000;bgb	  ;an015;bgb
 	      cmp     cx,512 ;vdisk sizes					;an053;bgb
-;	      $IF     NE,AND ;vdisk sizes					;an053;bgb
-	      JE $$IF65
+;	      IF$     NE,AND ;vdisk sizes					;an053;bgb
+	      JE IF65$$I
 	      cmp     cx,256 ;vdisk sizes					;an053;bgb
-;	      $IF     NE,AND ;vdisk sizes					;an053;bgb
-	      JE $$IF65
+;	      IF$     NE,AND ;vdisk sizes					;an053;bgb
+	      JE IF65$$I
 	      cmp     cx,128 ;vdisk sizes					;an053;bgb
-;	      $IF     NE     ;vdisk sizes					;an053;bgb
-	      JE $$IF65
+;	      IF$     NE     ;vdisk sizes					;an053;bgb
+	      JE IF65$$I
 		  jmp	 baddrv 						;an053;bgb
-;	      $ENDIF								;an053;bgb
-$$IF65:
-	      mov     bytes_per_sector,cx     ; 		 ;		;an053;bgb;an000;bgb	  ;an005;bgb
+;	      ENDIF$								;an053;bgb
+IF65$$I:
+	      mov     [ss:bytes_per_sector],cx ; 		 ;		;an053;bgb;an000;bgb	  ;an005;bgb
 										;an053;bgb
 	      xor     cx,cx			      ;Find # sectors used by FA;an053;bgb;an000;bgbT's   ;AN000;
-	      mov     cl,[bx].NumberOfFats	; "  "	 "  "			;an053;bgb;an000;bgb	  ;an015;bgb
+	      mov     cl,[bx+A_DeviceParameters+A_DeviceParameters.NumberOfFATs] ; "  "	 "  "			;an053;bgb;an000;bgb	  ;an015;bgb
 	      cmp     cx,2		;make sure it is ok			;an053;bgb;an032;bgb
-;	      $IF     NE,AND							;an053;bgb
-	      JE $$IF67
+;	      IF$     NE,AND							;an053;bgb
+	      JE IF67$$I
 	      cmp     cx,1		;make sure it is ok			;an053;bgb;an032;bgb
-;	      $IF     NE							;an053;bgb
-	      JE $$IF67
+;	      IF$     NE							;an053;bgb
+	      JE IF67$$I
 		  jmp	  baddrv	    ;must be 2 fats			;an053;bgb    ;an032;bgb
-;	      $ENDIF								;an053;bgb
-$$IF67:
-	      mov     fatcnt,cl 						;an053;bgb;an000;bgb	  ;an005;bgb
+;	      ENDIF$								;an053;bgb
+IF67$$I:
+	      mov     [ss:fatcnt],cl  ;an053;bgb;an000;bgb	  ;an005;bgb
 										;an053;bgb
 										;an053;bgb
 	      xor     ax,ax							;an053;bgb
-	      mov     al,[bx].SectorsPerCluster   ;get total sectors		;an053;bgb	;an000;bgb;an015;bgb
+	      mov     al,[bx+A_DeviceParameters+A_DeviceParameters.SectorsPerCluster] ;get total sectors		;an053;bgb	;an000;bgb;an015;bgb
 	      cmp     ax,1		;make sure it is ok			;an053;bgb;an032;bgb
-;	      $IF     NE,AND							;an053;bgb
-	      JE $$IF69
+;	      IF$     NE,AND							;an053;bgb
+	      JE IF69$$I
 	      cmp     ax,2		;make sure it is ok			;an053;bgb;an032;bgb
-;	      $IF     NE,AND							;an053;bgb
-	      JE $$IF69
+;	      IF$     NE,AND							;an053;bgb
+	      JE IF69$$I
 	      cmp     ax,4		;make sure it is ok			;an053;bgb;an032;bgb
-;	      $IF     NE,AND							;an053;bgb
-	      JE $$IF69
+;	      IF$     NE,AND							;an053;bgb
+	      JE IF69$$I
 	      cmp     ax,8		;make sure it is ok			;an053;bgb;an032;bgb
-;	      $IF     NE,AND							;an053;bgb
-	      JE $$IF69
+;	      IF$     NE,AND							;an053;bgb
+	      JE IF69$$I
 	      cmp     ax,16		;make sure it is ok			;an053;bgb;an032;bgb
-;	      $IF     NE,AND							;an053;bgb
-	      JE $$IF69
+;	      IF$     NE,AND							;an053;bgb
+	      JE IF69$$I
 	      cmp     ax,32		;make sure it is ok			;an053;bgb;an032;bgb
-;	      $IF     NE,AND							;an053;bgb
-	      JE $$IF69
+;	      IF$     NE,AND							;an053;bgb
+	      JE IF69$$I
 	      cmp     ax,64		;make sure it is ok			;an053;bgb;an032;bgb
-;	      $IF     NE,AND							;an053;bgb
-	      JE $$IF69
+;	      IF$     NE,AND							;an053;bgb
+	      JE IF69$$I
 	      cmp     ax,128		;make sure it is ok			;an053;bgb;an032;bgb
-;	      $IF     NE							;an053;bgb
-	      JE $$IF69
+;	      IF$     NE							;an053;bgb
+	      JE IF69$$I
 		  jmp	  baddrv	    ;this is not!			;an053;bgb    ;an032;bgb
-;	      $ENDIF								;an053;bgb
-$$IF69:
+;	      ENDIF$								;an053;bgb
+IF69$$I:
 										;an053;bgb
-	      mov     ax,[bx].SectorsPerFAT	; "  "	 "  "			;an053;bgb;an000;bgb	  ;an015;bgb
+	      mov     ax,[bx+A_DeviceParameters+A_DeviceParameters.SectorsPerFAT] ; "  "	 "  "			;an053;bgb;an000;bgb	  ;an015;bgb
 	      cmp     ax,0		;make sure it is ok			;an053;bgb;an032;bgb
 	      jz      baddrv		;this is not!				;an053;bgb;an032;bgb
 	      mul     cx			      ; "  "   "  "		;an053;bgb;an000;bgb	  ;AN000;
@@ -1061,38 +1063,38 @@ $$IF69:
 	      push    dx			      ;Save results		;an053;bgb;an000;bgb	  ;AN000;
 	      push    ax			      ;     "  "		;an053;bgb;an000;bgb	  ;AN000;
 										;an053;bgb
-	      mov     ax,[bx].RootEntries	;Find number of sectors in root ;an053;bgb;an000;bgb	  ;an015;bgb
+	      mov     ax,[bx+A_DeviceParameters+A_DeviceParameters.RootEntries] ;Find number of sectors in root ;an053;bgb;an000;bgb	  ;an015;bgb
 	      cmp     ax,2		;make sure it is ok			;an053;bgb;an032;bgb
-;	      $IF     B,OR		;this is not!				;an053;bgb;an032;bgb
-	      JB $$LL71
+;	      IF$     B,OR		;this is not!				;an053;bgb;an032;bgb
+	      JB LL71$$I
 	      cmp     ax,512		;make sure it is ok			;an053;bgb;an032;bgb
-;	      $IF     A 		;this is not!				;an053;bgb;an032;bgb
-	      JNA $$IF71
-$$LL71:
+;	      IF$     A 		;this is not!				;an053;bgb;an032;bgb
+	      JNA IF71$$I
+LL71$$I:
 		jmp	baddrv							;an053;bgb
-;	      $ENDIF								;an053;bgb
-$$IF71:
+;	      ENDIF$								;an053;bgb
+IF71$$I:
 										;an053;bgb
 	      mov     cl,Dir_Entries_Per_Sector       ; by dividing RootEntries ;an053;bgb;an000;bgb	  ;AN000;
 	      cmp     cl,0							;an053;bgb;an000;bgb;an022;bgb
-;	      $IF     NE							;an053;bgb;an000;bgb;an022;bgb
-	      JE $$IF73
+;	      IF$     NE							;an053;bgb;an000;bgb;an022;bgb
+	      JE IF73$$I
 		  div	  cl				  ; by (512/32) 	;an053;bgb;an000;bgb;an022;bgb;AN000;
-;	      $ENDIF								;an053;bgb;an000;bgb;an022;bgb
-$$IF73:
+;	      ENDIF$								;an053;bgb;an000;bgb;an022;bgb
+IF73$$I:
 	      pop     bx			      ;Get low sectors per FAT b;an053;bgb;an000;bgback   ;AN000;
 	      pop     dx			      ;Get high part		;an053;bgb;an000;bgb	  ;AN000;
 	      add     ax,bx			      ;Add to get FAT+Dir sector;an053;bgb;an000;bgbs	  ;AN000;
 	      adc     dx,0			      ;High part		;an053;bgb;an000;bgb	  ;AN000;
-	      mov     fat_dir_secs,ax		      ;save it			;an053;bgb;an000;bgb	  ;an006;bgb
-	      inc     fat_dir_secs		      ; 1 for reserved sector	;an053;bgb;an000;bgb	  ;an006;bgb
+	      mov     [ss:fat_dir_secs],ax   ;save it			;an053;bgb;an000;bgb	  ;an006;bgb
+	      inc     word [ss:fat_dir_secs] ; 1 for reserved sector	;an053;bgb;an000;bgb	  ;an006;bgb
 	      pop     bx		      ;restore bpb pointer		;an053;bgb;an000;bgb	  ;an015;bgb
-	      add     ax,[bx].ReservedSectors	;Add in Boot record sectors	;an053;bgb;an000;bgb	  ;an015;bgb
+	      add     ax,[bx+A_DeviceParameters+A_DeviceParameters.ReservedSectors] ;Add in Boot record sectors	;an053;bgb;an000;bgb	  ;an015;bgb
 	      adc     dx,0			      ;to get start of data (DX:;an053;bgb;an000;bgbAX)   ;AN000;
-	      mov     Data_Start_Low,ax 	      ;Save it			;an053;bgb;an000;bgb	  ;AN000;
-	      mov     Data_Start_High,dx	      ; 			;an053;bgb;an000;bgb	  ;AN000;
+	      mov     [ss:Data_Start_Low],ax   ;Save it			;an053;bgb;an000;bgb	  ;AN000;
+	      mov     [ss:Data_Start_High],dx  ; 			;an053;bgb;an000;bgb	  ;AN000;
 	ret					 ;				;an053;bgb;an000;bgb
-get_boot_info endp	       ;						;an053;bgb;an000;bgb
+;get_boot_info endp	       ;						;an053;bgb;an000;bgb
 
 
 
@@ -1112,28 +1114,28 @@ Procedure Calc_Space	       ;						;an000;bgb
 ; get the total number of clusters on the disk					;an000;bgb ;an006;bgb
 p97:	xor	ax,ax				 ;clear ax			;an000;bgb
 	mov	ah,36h				 ;Get disk free space		;an000;bgb
-	mov	dl,alldrv		; 1 based drive number			;an000;bgb
+	mov	dl,[ss:ALLDRV] ; 1 based drive number			;an000;bgb
 	push	bx			;save bpb pointer			;an000;bgb;an015;bgb
 	int	21h				 ;bx = total space avail	;an000;bgb
 ;multiply by sectors per cluster						;an000;bgb
 gtsecs: mov	ax,dx				 ;get total clusters		;an000;bgb
 	xor	cx,cx				 ;clear cx			;an000;bgb
 	pop	bx			;restore bpb pointer			;an000;bgb;an015;bgb
-	mov	cl,[bx].SectorsPerCluster   ;get total sectors			;an000;bgb;an015;bgb
+	mov	cl,[bx+A_DeviceParameters+A_DeviceParameters.SectorsPerCluster] ;get total sectors			;an000;bgb;an015;bgb
 	push	bx			;save bpb pointer			;an000;bgb;an015;bgb
 	xor	bx,bx				 ;clear bx			;an000;bgb
 	call	Multiply_32_Bits		 ;multiply			;an000;bgb
 ;multiply by bytes per sector							;an000;bgb
 	mov	dx,bx			;save bx				;an000;bgb;an015;bgb
 	pop	bx			;get bpb addr				;an000;bgb;an015;bgb
-	mov	cx,[bx].BytePerSector	;get total bytes			;an000;bgb;an015;bgb
+	mov	cx,[bx+A_DeviceParameters+A_DeviceParameters.BytePerSector] ;get total bytes			;an000;bgb;an015;bgb
 	mov	bx,dx			;restore bx				;an000;bgb;an015;bgb
 	call	Multiply_32_Bits		 ; multiply			;an000;bgb
 ;result is bytes on disk							;an000;bgb
-	mov	tot_bytes_lo,ax 	     ;save high word			;an000;bgb
-	mov	tot_bytes_hi,bx 	   ;save low word			;an000;bgb
+	mov	[ss:tot_bytes_lo],ax  ;save high word			;an000;bgb
+	mov	[ss:tot_bytes_hi],bx ;save low word			;an000;bgb
 	ret					 ;				;an000;bgb
-Calc_Space    endp	       ;						;an000;bgb
+;Calc_Space    endp	       ;						;an000;bgb
 
 
 ;*****************************************************************************	;an000;bgb
@@ -1172,29 +1174,29 @@ Calc_Space    endp	       ;						;an000;bgb
 										;an000;bgb
 Procedure Check_For_Network			;				;an000;bgb;AN000;
 						;				;an000;bgb
-	mov	bl,alldrv			;Drive is 1=A, 2=B		;an000;bgb;	;
+	mov	bl,[ss:ALLDRV] ;Drive is 1=A, 2=B		;an000;bgb;	;
 	mov	al,09h				;See if drive is local or remote;an000;bgb;AC000;
-	DOS_CALL IOCtl				;We will not check for error	;an000;bgb;AC000;
+	DOS_Call IOCtl				;We will not check for error	;an000;bgb;AC000;
 	test	dx,Net_Check			;if (x & 1200H)(redir or shared);an000;bgb;	;
-;	$IF	NZ				;Found a net drive		;an000;bgb;AC000;
-	JZ $$IF75
-	   Message No_Net_Arg			;Tell 'em                       ;an000;bgb;AC000;
-	   mov	   Fatal_Error,Yes		;Indicate bad stuff		;an000;bgb;AN000;
-;	$ELSE					;Local drive, now check assign	;an000;bgb;AN000;
-	JMP SHORT $$EN75
-$$IF75:
+;	IF$	NZ				;Found a net drive		;an000;bgb;AC000;
+	JZ IF75$$I
+	   Message no_net_arg			;Tell 'em                       ;an000;bgb;AC000;
+	   mov	   byte [ss:Fatal_Error],YES ;Indicate bad stuff		;an000;bgb;AN000;
+;	ELSE$					;Local drive, now check assign	;an000;bgb;AN000;
+	JMP SHORT EN75$$I
+IF75$$I:
 	   test    dx,Assign_Check		;8000h bit is bad news		;an000;bgb;	;
-;	   $IF	   NZ				;Found it			;an000;bgb;AC000;
-	   JZ $$IF77
+;	   IF$	   NZ				;Found it			;an000;bgb;AC000;
+	   JZ IF77$$I
 	      Message SubstErr			;Tell error			;an000;bgb;AC000;
-	      mov     Fatal_Error,Yes		;Indicate bad stuff		;an000;bgb;AN000;
-;	   $ENDIF				;				;an000;bgb;AN000;
-$$IF77:
-;	$ENDIF					;				;an000;bgb;AN000;
-$$EN75:
+	      mov     byte [ss:Fatal_Error],YES ;Indicate bad stuff		;an000;bgb;AN000;
+;	   ENDIF$				;				;an000;bgb;AN000;
+IF77$$I:
+;	ENDIF$					;				;an000;bgb;AN000;
+EN75$$I:
 	ret					;				;an000;bgb;AN000;
 										;an000;bgb
-Check_For_Network endp				;				;an000;bgb;AN000;
+;Check_For_Network endp				;				;an000;bgb;AN000;
 										;an000;bgb
 ;*****************************************************************************	;an000;bgb
 ;Routine name: Check_Translate_Drive						;an000;bgb
@@ -1224,16 +1226,16 @@ Check_For_Network endp				;				;an000;bgb;AN000;
 ;*****************************************************************************	;an000;bgb
 Procedure Check_Translate_Drive 		;				;an000;bgb;AN000;
 	call	func60				;				;an000;bgb
-	mov	bl,byte ptr [TranSrc]		;Get drive letter from path	;an000;bgb;	;
-	cmp	bl,byte ptr [Chkprmt_End]	;Did drive letter change?	;an000;bgb;	;
-;	$IF	NE				;If not the same, it be bad	;an000;bgb;AC000;
-	JE $$IF80
+	mov	bl,byte [ss:TRANSRC]   ;Get drive letter from path	;an000;bgb;	;
+	cmp	bl,byte [ss:Chkprmt_End]  ;Did drive letter change?	;an000;bgb;	;
+;	IF$	NE				;If not the same, it be bad	;an000;bgb;AC000;
+	JE IF80$$I
 	   Message SubstErr			;Tell user			;an000;bgb;AC000;
-	   mov	   Fatal_Error,Yes		;Setup error flag		;an000;bgb;AN000;
-;	$ENDIF					;				;an000;bgb;AN000;
-$$IF80:
+	   mov	   byte [ss:Fatal_Error],YES ;Setup error flag		;an000;bgb;AN000;
+;	ENDIF$					;				;an000;bgb;AN000;
+IF80$$I:
 	ret					;				;an000;bgb;AN000;
-Check_Translate_Drive endp			;				;an000;bgb;AN000;
+;Check_Translate_Drive endp			;				;an000;bgb;AN000;
 										;an000;bgb
 										;an000;bgb
 Procedure func60				;				;an000;bgb;AN000;
@@ -1251,17 +1253,17 @@ Procedure func60				;				;an000;bgb;AN000;
 ;  pop	   bx			   ;ICE 					;an000;bgb
 ;  POP	   DS			   ;ICE 					;an000;bgb
 										;an000;bgb
-	mov	byte ptr [transrc],'A'						;an000;bgb
-	mov	bl,alldrv			;Get drive		    ;	;an000;bgb  ;
+	mov	byte [ss:TRANSRC],'A'       ;an000;bgb
+	mov	bl,[ss:ALLDRV] ;Get drive		    ;	;an000;bgb  ;
 	dec	bl				;Make it 0 based		;an000;bgb;AN001;
-	add	byte ptr [TranSrc],bl		;Make string "d:\"		;an000;bgb;	;
-	lea	si,TranSrc			;Point to translate string	;an000;bgb;	;
+	add	byte [ss:TRANSRC],bl   ;Make string "d:\"		;an000;bgb;	;
+	lea	si,[TRANSRC] ;Point to translate string	;an000;bgb;	;
 	push	ds				;Set ES=DS (Data segment)	;an000;bgb;	;
 	pop	es				;     "  "	"  "		;an000;bgb;	;
-	lea	di,Chkprmt_End			;Point at output buffer 	;an000;bgb;	;
+	lea	di,[Chkprmt_End] ;Point at output buffer 	;an000;bgb;	;
 	DOS_Call xNameTrans			;Get real path			;an000;bgb;AC000;
 	ret					;				;an000;bgb;AN000;
-func60 endp			 ;				 ;AN000;	;an000;bgb
+;func60 endp			 ;				 ;AN000;	;an000;bgb
 										;an000;bgb
 										;an000;bgb
 ;*****************************************************************************	;an000;bgb
@@ -1287,15 +1289,15 @@ func60 endp			 ;				 ;AN000;	;an000;bgb
 ;	ret									;an000;bgb
 ;*****************************************************************************	;an000;bgb
 										;an000;bgb
-procedure Hook_Interrupts			;				;an000;bgb;AN000;
+Procedure Hook_Interrupts			;				;an000;bgb;AN000;
 						;				;an000;bgb
 	mov	al,23h								;an000;bgb
 	DOS_Call Get_Interrupt_Vector		;Get the INT 23h handler	;an000;bgb;AC000;
-	mov	word ptr [CONTCH],bx		;				;an000;bgb
+	mov	word [ss:CONTCH],bx   ;				;an000;bgb
 	mov	bx,es				;				;an000;bgb;AN000;
-	mov	word ptr [CONTCH+2],bx		;				;an000;bgb
+	mov	word [ss:CONTCH+2],bx   ;				;an000;bgb
 	mov	al,23h				;Specify CNTRL handler		;an000;bgb;	;
-	lea	dx, INT_23			;Point at it			;an000;bgb;	;
+	lea	dx,[INT_23]  ;Point at it			;an000;bgb;	;
 	push	ds				;Save data seg			;an000;bgb;	;
 	push	cs				;Point to code segment		;an000;bgb;	;
 	pop	ds				;				;an000;bgb;	;
@@ -1303,11 +1305,11 @@ procedure Hook_Interrupts			;				;an000;bgb;AN000;
 	pop	ds				;Get Data degment back		;an000;bgb;	;
 	mov	al,24h				;				;an000;bgb
 	DOS_Call Get_Interrupt_Vector		;Get the INT 24h handler	;an000;bgb;AC000;
-	mov	word ptr [HardCh],bx		;Save it			;an000;bgb
+	mov	word [ss:HARDCH],bx   ;Save it			;an000;bgb
 	mov	bx,es				;				;an000;bgb
-	mov	word ptr [HardCh+2],bx		;				;an000;bgb
+	mov	word [ss:HARDCH+2],bx   ;				;an000;bgb
 	mov	al,24h				;Specify handler		;an000;bgb ;	 ;
-	lea	dx, INT_24			;Point at it			;an000;bgb;	;
+	lea	dx,[iNT_24]  ;Point at it			;an000;bgb;	;
 	push	ds				;Save data seg			;an000;bgb;	;
 	push	cs				;Point to code segment		;an000;bgb;	;
 	pop	ds				;				;an000;bgb;	;
@@ -1315,7 +1317,7 @@ procedure Hook_Interrupts			;				;an000;bgb;AN000;
 	pop	ds				;Get Data degment back		;an000;bgb;	;
 	ret					;				;an000;bgb;AN000;
 										;an000;bgb
-hook_Interrupts endp				;				;an000;bgb;AN000;
+;hook_Interrupts endp				;				;an000;bgb;AN000;
 										;an000;bgb
 ;*****************************************************************************	;an000;bgb
 ;Routine name: Clear_Append_X							;an000;bgb
@@ -1347,21 +1349,21 @@ hook_Interrupts endp				;				;an000;bgb;AN000;
 										;an000;bgb
 Procedure Clear_Append_X			;				;an000;bgb ;AN000;
 										;an000;bgb
-	mov	Append,NO			;Init the Append /X flag	;an000;bgb;AN000;
+	mov	byte [ss:Append],NO ;Init the Append /X flag	;an000;bgb;AN000;
 	mov	ax,Append_X			;Is Append /X there?		;an000;bgb;AN000;
 	int	Multiplex			; "  "	   "  " 		;an000;bgb;AN000;
 	cmp	bx,Append_X_Set 		;Was it turned on?		;an000;bgb;AN000;
-;	$IF	E				;Yep				;an000;bgb;AN000;
-	JNE $$IF82
-	   mov	   Append,YES			;Indicate that it was on	;an000;bgb;AN000;
+;	IF$	E				;Yep				;an000;bgb;AN000;
+	JNE IF82$$I
+	   mov	   byte [ss:Append],YES ;Indicate that it was on	;an000;bgb;AN000;
 	   mov	   ax,Set_Append_X		;Turn Append /X off		;an000;bgb;AN000;
 	   mov	   bx,Append_Off		; "  "	  "  "			;an000;bgb;AN000;
 	   int	   Multiplex			; "  "	  "  "			;an000;bgb;AN000;
-;	$ENDIF					;				;an000;bgb;AN000;
-$$IF82:
+;	ENDIF$					;				;an000;bgb;AN000;
+IF82$$I:
 	ret					;				;an000;bgb;AN000;
 										;an000;bgb
-Clear_Append_X endp				;				;an000;bgb;AN000;
+;Clear_Append_X endp				;				;an000;bgb;AN000;
 										;an000;bgb
 										;an000;bgb
 ;*****************************************************************************	;an000;bgb
@@ -1395,24 +1397,24 @@ Clear_Append_X endp				;				;an000;bgb;AN000;
 										;an000;bgb
 Procedure CHKDSK_IFS				;				;an000;bgb;AN000;
 										;an000;bgb
-ifdef	fsexec									;an038;bgb
-	cmp	FS_Not_Fat,YES			;Is the target FS a FAT?	;an038;bgb;AN000;
-;	$IF	E				;No, so need to exec the	;an038;bgb;AN000;
-	JNE $$IF84
+if defined fsexec    ;an038;bgb
+	cmp	byte [ss:FS_Not_Fat],YES ;Is the target FS a FAT?	;an038;bgb;AN000;
+;	IF$	E				;No, so need to exec the	;an038;bgb;AN000;
+	JNE IF84$$I
 	   call    EXEC_FS_CHKDSK		; file system specific prog.	;an038;bgb;AN000;
-;	$ELSE					;It's a FAT                     ;an038;bgb;AN000;
-	JMP SHORT $$EN84
-$$IF84:
-endif										;an038;bgb
+;	ELSE$					;It's a FAT                     ;an038;bgb;AN000;
+	JMP SHORT EN84$$I
+IF84$$I:
+end if ;an038;bgb
 	   call    Main_Routine 		;Use canned code!		;an038;bgb;AN000;
-ifdef	fsexec									;an038;bgb
-;	$ENDIF					;				;an038;bgb;AN000;
-$$EN84:
-endif										;an038;bgb
-	call	Done				;Restore current drive		;an000;bgb;AN000;
+if defined fsexec    ;an038;bgb
+;	ENDIF$					;				;an038;bgb;AN000;
+EN84$$I:
+end if ;an038;bgb
+	call	DONE				;Restore current drive		;an000;bgb;AN000;
 	ret					;				;an000;bgb;AN000;
 										;an000;bgb
-CHKDSK_IFS endp 				;				;an000;bgb;AN000;
+;CHKDSK_IFS endp 				;				;an000;bgb;AN000;
 										;an000;bgb
 ;*****************************************************************************	;an000;bgb
 ;Routine name: Reset_Append_X							;an000;bgb
@@ -1440,17 +1442,17 @@ CHKDSK_IFS endp 				;				;an000;bgb;AN000;
 										;an000;bgb
 Procedure Reset_Append_X			;				;an000;bgb;AN000;
 										;an000;bgb
-	cmp	Append,Yes			;Was Append /X on to start with?;an000;bgb;AN000;
-;	$IF	E				;Yep				;an000;bgb;AN000;
-	JNE $$IF87
+	cmp	byte [ss:Append],YES ;Was Append /X on to start with?;an000;bgb;AN000;
+;	IF$	E				;Yep				;an000;bgb;AN000;
+	JNE IF87$$I
 	   mov	   ax,Set_Append_X		;Turn Append /X off		;an000;bgb;AN000;
-	   mov	   bx,Append_On 		; "  "	  "  "			;an000;bgb;AN000;
+	   mov	   bx,Append_ON 		; "  "	  "  "			;an000;bgb;AN000;
 	   int	   Multiplex			; "  "	  "  "			;an000;bgb;AN000;
-;	$ENDIF					;				;an000;bgb;AN000;
-$$IF87:
+;	ENDIF$					;				;an000;bgb;AN000;
+IF87$$I:
 	ret					;				;an000;bgb;AN000;
 										;an000;bgb
-Reset_Append_X endp				;				;an000;bgb;AN000;
+;Reset_Append_X endp				;				;an000;bgb;AN000;
 										;an000;bgb
 ;*****************************************************************************	;an000;bgb
 ;Routine name: Multiply_32_Bits 						;an000;bgb
@@ -1488,61 +1490,61 @@ Reset_Append_X endp				;				;an000;bgb;AN000;
 ;	ret									;an000;bgb
 ;*****************************************************************************	;an000;bgb
 										;an000;bgb
-Public Multiply_32_Bits 							;an000;bgb
-Multiply_32_Bits proc				;				;an000;bgb;AN000;
+;Public Multiply_32_Bits 							;an000;bgb
+Multiply_32_Bits:        ;				;an000;bgb;AN000;
 										;an000;bgb
 	push	di				;				;an000;bgb;AN000;
 	push	si				;				;an000;bgb;AN000;
 	xor	di,di				;Init result to zero		;an000;bgb
 	xor	si,si				;				;an000;bgb
 	cmp	cx,0				;Multiply by 0? 		;an000;bgb;AN000;
-;	$IF	NE				;Keep going if not		;an000;bgb;AN000;
-	JE $$IF89
-;	   $DO					;This works by adding the result;an000;bgb;AN000;
-$$DO90:
+;	IF$	NE				;Keep going if not		;an000;bgb;AN000;
+	JE IF89$$I
+;	   DO$					;This works by adding the result;an000;bgb;AN000;
+DO90$$I:
 	      test    cx,1			;Need to add in sum of this bit?;an000;bgb;AN000;
-;	      $IF     NZ			;Yes				;an000;bgb;AN000;
-	      JZ $$IF91
+;	      IF$     NZ			;Yes				;an000;bgb;AN000;
+	      JZ IF91$$I
 		 add	 si,ax			;Add in the total so far for	;an000;bgb;AN000;
 		 adc	 di,bx			; this bit multiplier (CY oflow);an000;bgb;AN000;
-;	      $ELSE				;Don't split multiplier         ;an000;bgb;AN000;
-	      JMP SHORT $$EN91
-$$IF91:
+;	      ELSE$				;Don't split multiplier         ;an000;bgb;AN000;
+	      JMP SHORT EN91$$I
+IF91$$I:
 		 clc				;Force non exit 		;an000;bgb;AN000;
-;	      $ENDIF				;				;an000;bgb;AN000;
-$$EN91:
-;	   $LEAVE  C				;Leave on overflow		;an000;bgb;AN000;
-	   JC $$EN90
+;	      ENDIF$				;				;an000;bgb;AN000;
+EN91$$I:
+;	   LEAVE$  C				;Leave on overflow		;an000;bgb;AN000;
+	   JC EN90$$I
 	      shr     cx,1			;See if need to multiply value	;an000;bgb;AN000;
 	      cmp     cx,0			;by 2				;an000;bgb;AN000;
-;	   $LEAVE  E				;Done if cx shifted down to zero;an000;bgb;AN000;
-	   JE $$EN90
+;	   LEAVE$  E				;Done if cx shifted down to zero;an000;bgb;AN000;
+	   JE EN90$$I
 	      add     ax,ax			;Each time cx is shifted, add	;an000;bgb;AN000;
 	      adc     bx,bx			;value to itself (Multiply * 2) ;an000;bgb;AN000;
-;	   $ENDDO  C				;CY set on overflow		;an000;bgb;AN000;
-	   JNC $$DO90
-$$EN90:
-;	   $IF	   NC				;If no overflow, add in DI:SI	;an000;bgb;AN000;
-	   JC $$IF97
+;	   ENDDO$  C				;CY set on overflow		;an000;bgb;AN000;
+	   JNC DO90$$I
+EN90$$I:
+;	   IF$	   NC				;If no overflow, add in DI:SI	;an000;bgb;AN000;
+	   JC IF97$$I
 	      mov     ax,si			; which contains the original	;an000;bgb;AN000;
 	      mov     bx,di			; value if odd, 0 if even. This ;an000;bgb;AN000;
 	      clc				;Set no overflow flag		;an000;bgb;AN000;
-;	   $ENDIF				;				;an000;bgb;AN000;
-$$IF97:
-;	$ELSE					;				;an000;bgb
-	JMP SHORT $$EN89
-$$IF89:
+;	   ENDIF$				;				;an000;bgb;AN000;
+IF97$$I:
+;	ELSE$					;				;an000;bgb
+	JMP SHORT EN89$$I
+IF89$$I:
 	   xor	   ax,ax			;				;an000;bgb
 	   xor	   bx,bx			;				;an000;bgb
-;	$ENDIF					;Multiply by 0			;an000;bgb;AN000;
-$$EN89:
+;	ENDIF$					;Multiply by 0			;an000;bgb;AN000;
+EN89$$I:
 	pop	si				;				;an000;bgb;AN000;
 	pop	di				;				;an000;bgb;AN000;
 	ret					;				;an000;bgb;AN000;
 										;an000;bgb
-Multiply_32_Bits endp								;an000;bgb
+;Multiply_32_Bits endp								;an000;bgb
 	pathlabl chkinit							;an000;bgb
-code	ends									;an000;bgb
-	end									;an000;bgb
+end if ;an000;bgb
+;	end									;an000;bgb
 										;an000;bgb
 

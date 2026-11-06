@@ -1,8 +1,9 @@
 
-BREAK	MACRO	subtitle
+macro BREAK subtitle
+{
 	SUBTTL	subtitle
 	PAGE
-ENDM
+}
 
 
 ;
@@ -11,95 +12,102 @@ ENDM
 ;******************************************************************************
 ;
 
-      EXTRN Display_Interface:near
+;      EXTRN Display_Interface:near
 
 
 ;-----------------------------------------------------------------------------
 
-Message macro	Message_Name			;				;AN000;
+macro Message Message_Name
+{
 						;
-	mov	dx,offset dg:Message_Name	;				;AN000;
+	mov	dx,Message_Name        ;				;AN000;
 	call	Display_Interface		;				;AN000;
 						;
-	endm					;				;AN000;
+} ;				;AN000;
 
 ;-----------------------------------------------------------------------------
 
-Parse_Message macro				;				;AN000;
+macro Parse_Message 
+{
 
 						;
 	push	ds
-	mov	dx,dg
+	mov	dx,DG_
 	mov	ds,dx
-	mov	word ptr Parse_Error_Msg,ax	;				;AN000;
-	mov	dx,offset dg:Parse_Error_Msg	;				;AN000;
+	mov	word [Parse_Error_Msg],ax   ;				;AN000;
+	mov	dx,Parse_Error_Msg        ;				;AN000;
 	call	Display_Interface		;				;AN000;
 	pop	ds				;
-	endm					;				;AN000;
+} ;				;AN000;
 
 ;-----------------------------------------------------------------------------
 
-Extended_Message macro				;				;AN000;
+macro Extended_Message 
+{
 						;
 
 	push	ds
-	mov	dx,dg
+	mov	dx,DG_
 	mov	ds,dx
-	mov	word ptr Extended_Error_Msg,ax	  ;				  ;AN000;
-	mov	dx,offset dg:Extended_Error_Msg    ;				   ;AN000;
+	mov	word [Extended_Error_Msg],ax     ;				  ;AN000;
+	mov	dx,Extended_Error_Msg           ;				   ;AN000;
 	call	Display_Interface		;				;AN000;
 	pop	ds
-	endm					;				;AN000;
+} ;				;AN000;
 ;
 ;*****************************************************************************
 ; General Macro's
 ;*****************************************************************************
 ;
 
-Procedure	macro	Proc_Name,Seg_Name	;				;AN000;
+macro Procedure Proc_Name,Seg_Name
+{
 						;
-Public	Proc_Name				;				;AN000;
-Proc_Name    proc				;				;AN000;
+;Public	Proc_Name				;				;AN000;
+Proc_Name:           ;				;AN000;
 
-	endm					;				;AN000;
+} ;				;AN000;
 ;-----------------------------------------------------------------------------
 
-DOS_Call	macro	Function		;				;AN000;
+macro DOS_Call Function
+{
 						;
 	mov	ah,Function			;				;AN000;
 	int	21h				;				;AN000;
 						;
-	endm					;				;AN000;
+} ;				;AN000;
 
 ;-----------------------------------------------------------------------------
 
-Popff	macro
+macro Popff 
+{
 
-Assume	cs:DG
+;Assume	cs:DG_
 
 	jmp	$+3
 	iret
 	push	cs
 	call	$-2
 
-Assume	cs:code
+;Assume	cs:code
 
-	endm
+}
 
 ;-----------------------------------------------------------------------------
 
-Set_Data_Segment     macro
+macro Set_Data_Segment 
+{
 
 	push	ax
-	mov	ax,dg				;Point to data segment
+	mov	ax,DG_				;Point to data segment
 	mov	ds,ax				;
 	push	ds
 	pop	es
 	pop	ax
 
 	.LALL
-	assume	ds:dg,es:dg
+;	assume	ds:DG_,es:DG_
 	.XALL
-	endm
+}
 
 
