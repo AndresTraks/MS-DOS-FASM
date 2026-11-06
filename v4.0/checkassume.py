@@ -300,9 +300,39 @@ def groups_of(paths):
     return out
 
 
-def scan(path, labels, groups):
+def macro_assumes(paths):
+    """The ASSUMEs inside a macro's body, by the macro's name.
+
+    MASM read a macro's expansion as it read anything else, so an ASSUME
+    written in one holds from the call onwards.  CHKMACRO.INC's
+    Set_Data_Segment points DS and ES at the group and says so, and
+    RECMACRO.INC's does the same, which is what puts the ASSUMEs back after
+    a stretch of ASSUME DS:NOTHING.  Without this every reference in such a
+    stretch is read as having lost an override it never had.
+    """
+    out, here = {}, None
+    for path in paths:
+        for where, n, line in stream(path):
+            if here is None:
+                m = re.match(r"(?i)^\s*macro\s+(" + N + r")\b", line)
+                if m:
+                    here = m.group(1).upper()
+                    out.setdefault(here, [])
+                continue
+            if re.match(r"^\s*\}", line):
+                here = None
+                continue
+            m = re.match(r"\s*;?\s*ASSUME\s+(.*)", line, re.I)
+            if m:
+                out[here] += re.findall(r"(CS|DS|ES|SS)\s*:\s*(\w+)",
+                                        m.group(1), re.I)
+    return {name: pairs for name, pairs in out.items() if pairs}
+
+
+def scan(path, labels, groups, macros=None):
     """Every reference in one module, judged against the ASSUMEs around it."""
     assume = {"CS": None, "DS": None, "ES": None, "SS": None}
+    macros = macros or {}
     findings, notes = [], []
     for where, n, line in stream(path):
         code = line.split(";")[0]
@@ -319,6 +349,14 @@ def scan(path, labels, groups):
         if m:
             # PUSH SS / POP reg: the data segment, whatever the ASSUMEs say.
             assume[m.group(1).upper()] = next(iter(groups), "CODE")
+            continue
+        # A call of a macro whose body holds an ASSUME, which MASM read
+        # where the call stands.
+        m = re.match(r"\s*(" + N + r")\b", code)
+        if m and m.group(1).upper() in macros:
+            for reg, seg in macros[m.group(1).upper()]:
+                assume[reg.upper()] = (None if seg.upper() == "NOTHING"
+                                       else seg.upper())
             continue
         for ref in REFERENCE.finditer(code):
             prefix = ref.group(1).upper() if ref.group(1) else None
@@ -358,8 +396,9 @@ def report(title, paths, labels, groups):
     print("%d labels, %d modules" % (len(labels), len(paths)))
     total = 0
     allnotes = 0
+    macros = macro_assumes(paths)
     for path in paths:
-        findings, notes = scan(path, labels, groups)
+        findings, notes = scan(path, labels, groups, macros)
         total += len(findings)
         allnotes += len(notes)
         if findings:
@@ -402,7 +441,7 @@ def utility_program(where, source):
         # One fasm segment holding the lot is the group MASM counted the
         # offsets from; more than one and there is no group, and a register
         # reaches only what it is assumed to.
-        segs = re.findall(r"(?m)^segment\s+(\w+?)_?\s*$", text)
+        segs = re.findall(r"(?m)^segment\s+(\w+)\s*$", text)
         groups = {segs[0].upper(): None} if len(segs) == 1 else {}
         # COMMAND.COM declares no fasm segment at all: its twelve are two
         # groups laid down as two address spaces, and COMSEG.ASM names them.
