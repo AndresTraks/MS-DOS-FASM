@@ -207,7 +207,7 @@
 ;       INCLUDE DOSSYM.INC              ;also defines version of dos
 .xlist
 .xcref
-        INCLUDE DOSSYM.INC
+        include 'DOSSYM.INC'
 .cref
 .list
 
@@ -215,7 +215,7 @@
 ;       INCLUDE IOCTL.INC               ; Get / Set Device Parameters IOCTL
 .xlist
 .xcref
-        INCLUDE IOCTL.INC
+        include 'IOCTL.INC'
 .cref
 .list
 
@@ -223,27 +223,27 @@
 ;       INCLUDE BOOTFORM.INC            ; Boot Record Structure
 .xlist
 .xcref
-        INCLUDE BOOTFORM.INC
+        include 'BOOTFORM.INC'
 .cref
 
 
 ;       INCLUDE PATHMAC.INC            ; PATH macro for PATHGEN
 .xlist
 .xcref
-        INCLUDE PATHMAC.INC
+        include 'PATHMAC.INC'
 .cref
 .list
 
 IBMJAPVER EQU   FALSE                   ; this and the following are mutually
 IBMVER  EQU     TRUE                    ; exclusive
 
-CODE    SEGMENT PARA PUBLIC
-CODE    ENDS
+if SEGSEL = S_CODE
+end if
 
-DATA    SEGMENT PARA PUBLIC
-DATA    ENDS
+if SEGSEL = S_DATA
+end if
 
-;                       $SALUT (4,25,30,41)
+;                       SALUT$ (4,25,30,41)
                                         ;--------------------------------------
                                         ; constants
                                         ;--------------------------------------

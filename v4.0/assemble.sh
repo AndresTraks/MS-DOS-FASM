@@ -151,3 +151,11 @@ utility DISKCOPY DCPYLNK DISKCOPY.COM
 # linked .EXE, as RECOVER's does, and DOS reads the signature and not the
 # extension, so what comes out here is the MZ image under the release's name.
 utility EDLIN EDLLNK EDLIN.COM
+
+# SYS, three modules in two segments and no group -- CODE and DATA -- which
+# SYSLNK.ASM lays down as two address spaces over one stretch of output, the
+# way COMMAND.COM's two groups are.  DATA is not reached through a fixed-up
+# segment: BEGIN rounds the end of the code up to the next paragraph and adds
+# the PSP, which is why the release could run EXE2BIN over the linked .EXE
+# and ship a flat .COM.
+utility SYS SYSLNK SYS.COM

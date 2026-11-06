@@ -1,17 +1,51 @@
+; SYS2.ASM gives the name Xfer_Data to the routine that moves a cluster,
+; and MASM, which assembled the two modules apart, let this module have
+; it as well.  One assembly can only have the one, so the structure --
+; this module's own -- is the one that gives way.
+STRUC Xfer_data_ InFH_=0, LenLow_=0, LenHigh_=0, FTime_=0, FDate_=0, OutFH_=0
+{
+
+.InFH			DW   InFH_ ; file handle of source
+.LenLow			DW   LenLow_ ; 32-bit length of source
+.LenHigh 		DW   LenHigh_
+.FTime			DW   FTime_ ; place to store time of write
+.FDate			DW   FDate_ ; place to store date of write
+.OutFH			DW   OutFH_ ; fh of destination
+
+}
+match =Xfer_data__LAID_OUT, Xfer_data__LAID_OUT
+{
+    Xfer_data__LAID_OUT equ 1
+    virtual at 0
+      Xfer_data_ Xfer_data_
+      sizeof.Xfer_data_ = $ - Xfer_data_
+    end virtual
+}
 	TITLE	SYS-1-	Program
-	INCLUDE SYSHDR.INC
-	include version.inc
+	include 'SYSHDR.INC'
+	include 'VERSION.INC'
 	page	80,132
 
-false	= 0
+; INC/DOSSYM.INC, which SYSHDR.INC reads a few lines above, already says
+; FALSE EQU 0, and MASM let this module say it again for itself.  One
+; assembly can only have the one, and the two agree, so the shared name
+; is what is kept.
+;false	= 0
 
-DATA	SEGMENT PARA PUBLIC
+; The offset of the command line in the PSP, which Parse_Command_Line
+; declares in the middle of itself.  MASM looked a name up on its
+; second pass; fasm's EQU is text put in where the name is used, so the
+; declaration has to be read before the first use -- which is in
+; Init_Input_Output, a few hundred lines above the declaration.
+command_line		  equ	 081H	; offset of command line in PSP
 
-	public	TargDrvNum, TargSpec, bio_owns_it, DOS_VER
-	public	packet, packet_sectors, packet_buffer
-	extrn	THIS_DPB:dword, BUF:word, DIR_SECTOR:word, first_dir_sector:word
+if SEGSEL = S_DATA
 
-;			$SALUT (4,25,30,41)
+;	public	TargDrvNum, TargSpec, bio_owns_it, DOS_VER
+;	public	packet, packet_sectors, packet_buffer
+;	extrn	THIS_DPB:dword, BUF:word, DIR_SECTOR:word, first_dir_sector:word
+
+;			SALUT$ (4,25,30,41)
 
 DOS_VER 		DB   0		; DOS Version - 0 = current
 					;		1 = 3.2 or 3
@@ -25,22 +59,24 @@ DOSName 		DB   "A:\IBMDOS.COM",0 ; z string for target name
 ELSE
 BIOSName		DB   "A:\IO.SYS",0
 DOSName 		DB   "A:\MSDOS.SYS",0
-ENDIF
+end if
 
-SourceBIOSName		LABEL WORD
+label SourceBIOSName word
 SourceSpec		DB   "A:"
 			DB   53 dup (0)
 IF IBMCOPYRIGHT
 SourceBIOS		DB   "\IBMBIO.COM",0
 ELSE
 SourceBIOS		DB   "\IO.SYS",0
-ENDIF
+end if
 
 IF  IBMCOPYRIGHT
-NameLen 		equ  $ - SourceBios
+; = and not equ: fasm's equ is text put in where the name is used, so a $
+; in it would be the address of the use and not of this line.
+NameLen 		=  $ - SourceBIOS
 ELSE
-BiosNameLen		equ  $ - SourceBios
-ENDIF
+BiosNameLen		=  $ - SourceBIOS
+end if
 
 SourceDOSName		DB   "A:"
 			DB   53 dup (0)
@@ -48,12 +84,12 @@ IF IBMCOPYRIGHT
 SourceDOS		DB   "\IBMDOS.COM",0
 ELSE
 SourceDOS		DB   "\MSDOS.SYS",0
-ENDIF
+end if
 
 IF  IBMCOPYRIGHT
 ELSE
-DosNameLen		equ  $ - SourceDOS
-ENDIF
+DosNameLen		=  $ - SourceDOS
+end if
 
 SourceSize		dw   2
 Spec_flag		db   0
@@ -76,13 +112,13 @@ Need_Clusters		dw   0
 Bytes_Per_Cluster	dw   0
 Number_Free_Clusters	dw   0
 
-;	$SALUT	(4,9,17,41)
+;	SALUT$	(4,9,17,41)
 					;---------------------------------------
 					;  SRORAGE FOR COMMAND LINE PARAMETERS
 					;---------------------------------------
 
-PARMS	LABEL	WORD
-	DW	OFFSET PARMSX		; POINTER TO PARMS STRUCTURE
+label PARMS word
+	DW	PARMSX         ; POINTER TO PARMS STRUCTURE
 	DB	0			; NO DELIMITER LIST FOLLOWS
 	DB	0			; NUMBER OF ADDITIONAL DELIMITERS
 
@@ -90,11 +126,11 @@ PARMS	LABEL	WORD
 					;  STRUCTURE TO DEFINE SYS SYNTAX REQUIREMENT
 					;---------------------------------------
 
-PARMSX	LABEL	BYTE
+label PARMSX byte
 PAR_MIN DB	1			; MINIMUM POSITIONAL PARAMETERS = 1    ;AC021;
 	DB	2			; MAXIMUM PARAMETERS = 2	       ;AC021;
-	DW	OFFSET POS1		; POINTER TO POSITIONAL DEFINITION
-	DW	OFFSET POS1		; POINTER TO SAME POSITIONAL DEFINITION;AC021;
+	DW	POS1         ; POINTER TO POSITIONAL DEFINITION
+	DW	POS1         ; POINTER TO SAME POSITIONAL DEFINITION;AC021;
 	DB	0			; THERE ARE NO SWITCHES
 	DB	0			; THERE ARE NO KEYWORDS IN PRINT SYNTAX
 
@@ -102,12 +138,12 @@ PAR_MIN DB	1			; MINIMUM POSITIONAL PARAMETERS = 1    ;AC021;
 					;  STRUCTURE TO DEFINE THE POSITIONAL PARAMETER (Drive ID)
 					;---------------------------------------
 
-POS1	LABEL	WORD
+label POS1 word
 POSREP	DB	reqd			; MATCH FLAG LOW		       ;AC021;
 POSTYP	DB	f_spec + drv_id 	; MATCH FLAG HIGH		       ;AC021;
 	DW	0001H			; CAPS BY FILE TABLE
-	DW	OFFSET POS_BUFF 	; PLACE RESULT IN POSITIONAL BUFFER
-	DW	OFFSET NOVALS		; NO VALUES LIST REQUIRED
+	DW	POS_BUFF         ; PLACE RESULT IN POSITIONAL BUFFER
+	DW	NOVALS         ; NO VALUES LIST REQUIRED
 	DB	0			; NO KEYWORDS
 
 reqd	equ	0
@@ -117,32 +153,32 @@ drv_id	equ	1
 					;  VALUE LIST FOR POSITIONAL
 					;---------------------------------------
 
-NOVALS	LABEL	WORD
+label NOVALS word
 	DB	0			; NO VALUES
 
-;			$SALUT (4,25,30,41)
+;			SALUT$ (4,25,30,41)
 
 					;---------------------------------------
 					;  RETURN BUFFER FOR POSITIONAL INFORMATION
 					;---------------------------------------
-POS_BUFF		LABEL BYTE
-POS_TYPE		DB   ?		; TYPE RETURNED
-POS_ITEM_TAG		DB   ?		; SPACE FOR ITEM TAG
-POS_SYN 		DW   ?		; POINTER TO LIST ENTRY
-POS_OFF 		LABEL WORD
-POS_DRV_ID		DB   ?		; SPACE FOR DRIVE NUMBER (1=A, 2=B, ect)
+label POS_BUFF byte
+POS_TYPE		rb      1 ; TYPE RETURNED
+POS_ITEM_TAG		rb      1 ; SPACE FOR ITEM TAG
+POS_SYN 		rw      1 ; POINTER TO LIST ENTRY
+label POS_OFF word
+POS_DRV_ID		rb      1 ; SPACE FOR DRIVE NUMBER (1=A, 2=B, ect)
 			DB   ?		;				       ;AC021;
-POS_SEG 		DW   ?		;				       ;AC021;
+POS_SEG 		rw      1 ;				       ;AC021;
 
 
 failopen		equ  0		; extended open 'does not exist action
 openit			equ  1		; extended open 'exists' action
 replaceit		equ  2		; extended open 'exists' action - replace
 
-OPEN_PARMS		label dword
+label OPEN_PARMS dword
 
-open_off		dw   ?		; name pointer offset
-open_seg		dw   ?		; name pointer segment
+open_off		rw      1 ; name pointer offset
+open_seg		rw      1 ; name pointer segment
 
 PACKET			dw   0,0	; CONTROL PACKET		       ;AN001;
 packet_sectors		dw   0		; COUNT 			       ;AN001;
@@ -152,23 +188,23 @@ PACKET_BUFFER		dw   0,0	; BUFFER ADDRESS		       ;AN001;
 					;  Buffer for IOCtl Get/Set Media
 					;---------------------------------------
 
-IOCTL_BUF		LABEL BYTE
+label IOCTL_BUF byte
 
 IOCtl_Level		DW   0		; INFO LEVEL (SET ON INPUT)
-IOCtl_Ser_No_Low	DW   ?		; SERIAL #
-IOCtl_Ser_No_Hi 	DW   ?		; SERIAL #
+IOCtl_Ser_No_Low	rw      1 ; SERIAL #
+IOCtl_Ser_No_Hi 	rw      1 ; SERIAL #
 IOCtl_Vol_ID		DB   "NO NAME    " ; VOLUME LABEL - 11 bytes
 IOCTL_File_Sys		DB   8 DUP(' ') ; FILE SYSTEM TYPE
 
-IOCTL_Ser_Vol_Sys	equ  $ - IOCtl_Ser_No_Low
-file_sys_size		equ  $ - IOCtl_File_Sys
+IOCTL_Ser_Vol_Sys	=  $ - IOCtl_Ser_No_Low
+file_sys_size		=  $ - IOCTL_File_Sys
 
-File_Sys_End		LABEL WORD
+label File_Sys_End word
 
 			db   0		; safety
 
 fat_12			DB   "FAT12   " ; 12 bit FAT
-FAT_len 		equ  $ - fat_12
+FAT_len 		=  $ - fat_12
 fat_16			DB   "FAT16   " ; 16 or 32 bit FAT
 
 					;---------------------------------------
@@ -176,19 +212,19 @@ fat_16			DB   "FAT16   " ; 16 or 32 bit FAT
 					;---------------------------------------
 
 .xlist
-			include sysmsg.inc
+			include 'SYSMSG.INC'
 
 			MSG_UTILNAME <SYS> ;				       ;AN000;
 
 			MSG_SERVICES <MSGDATA> ;			       ;AN000;
 .list
 
-SUBLIST 		LABEL DWORD
+label SUBLIST dword
 
 			DB   sub_size	; size of sublist
 			DB   0		; reserved
-insert_ptr_off		DW   ?		; pointer to insert - offset
-insert_ptr_seg		DW   ?		; pointer to insert - segment
+insert_ptr_off		rw      1 ; pointer to insert - offset
+insert_ptr_seg		rw      1 ; pointer to insert - segment
 insert_number		DB   1		; number of insert
 			DB   Char_Field_ASCIIZ ;type flag
 insert_max		DB   3		; maximum field size (limited to 3)
@@ -197,7 +233,7 @@ insert_max		DB   3		; maximum field size (limited to 3)
 			DB   1		; minimum field size
 			DB   " "	; pad character
 
-sub_size		equ  $ - SUBLIST ; size of sublist
+sub_size		=  $ - SUBLIST ; size of sublist
 
 sys_ptr 		db   "SYS",0
 
@@ -209,29 +245,19 @@ EntryFree		db   0		; for create file
 DOSEntFree		DB   1
 BIOSEntFree		DB   1
 
-Xfer_data		STRUC
 
-InFH			DW   ?		; file handle of source
-LenLow			DW   ?		; 32-bit length of source
-LenHigh 		DW   ?
-FTime			DW   ?		; place to store time of write
-FDate			DW   ?		; place to store date of write
-OutFH			DW   ?		; fh of destination
-
-Xfer_data		ENDS
-
-BIOSInFH		DW   ?		; file handle of source BIOS
-BIOSLenLow		DW   ?		; 32-bit length of BIOS
-BIOSLenHigh		DW   ?
-BIOSTime		DW   2 DUP (?)	; place to store time of BIOS write
-BIOSOutFH		DW   ?		; fh of BIOS destination
+BIOSInFH		rw      1 ; file handle of source BIOS
+BIOSLenLow		rw      1 ; 32-bit length of BIOS
+BIOSLenHigh		rw      1
+BIOSTime		rw      2      ; place to store time of BIOS write
+BIOSOutFH		rw      1 ; fh of BIOS destination
 BIOSPos 		dw   0,0	;AN001;lseek position into file
 
-DOSInFH 		DW   ?		; file handle of source DOS
-DOSLenLow		DW   ?		; 32-bit length of DOS
-DOSLenHigh		DW   ?
-DOSTime 		DW   2 DUP (?)	; place to store time of DOS write
-DOSOutFH		DW   ?		; fh of DOS destination
+DOSInFH 		rw      1 ; file handle of source DOS
+DOSLenLow		rw      1 ; 32-bit length of DOS
+DOSLenHigh		rw      1
+DOSTime 		rw      2      ; place to store time of DOS write
+DOSOutFH		rw      1 ; fh of DOS destination
 DOSPos			dw   0,0	;AN001;lseek position into file
 
 IF IBMCOPYRIGHT
@@ -240,7 +266,7 @@ FCBBIO			DB   "IBMBIO  COM"
 ELSE
 FCBDOS			DB   "MSDOS   SYS"
 FCBBIO			DB   "IO      SYS"
-ENDIF
+end if
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;   The following is a Extended FCB
 ExtFCB			db   0FFh
@@ -251,30 +277,30 @@ ExtFCB_Name		db   "???????????"
 			db   24 dup (0)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-DOS_BUFFER		DB   80h DUP (?)
-cbBuf			DW   ?		; number of bytes in buffer
-pDOS			DW   ?		; offset of beginning of DOS in buffer
-pDOSEnd 		DW   ?		; offset of end of DOS in buffer
+DOS_BUFFER		rb      80h
+cbBuf			rw      1 ; number of bytes in buffer
+pDOS			rw      1 ; offset of beginning of DOS in buffer
+pDOSEnd 		rw      1 ; offset of end of DOS in buffer
 
 
-public			boot
-BOOT			LABEL BYTE
+;public			boot
+label BOOT byte
 .xlist
-			INCLUDE BOOT.INC
+			include 'BOOT.INC'
 .list
 					;
 					; Following structure used by Generic IOCTL call Get Device Parameters to get
 					; the BPB of a hard disk. It 'overflows' into area of BUF.
 					;
-DeviceParameters	a_DeviceParameters <1,DEV_HARDDISK>
+DeviceParameters	A_DEVICEPARAMETERS 1,DEV_HARDDISK
 
-DATA			ENDS
+end if
 
-CODE			SEGMENT PARA PUBLIC
+if SEGSEL = S_CODE
 
-			EXTRN SYSLOADMSG:near, SYSDISPMSG:near, SYSPARSE:near
-			EXTRN Data_Space:WORD, Find_DPB:near,
-			EXTRN Move_DIR_Entry:near, Free_Cluster:near, Direct_Access:near
+;			EXTRN SYSLOADMSG:near, SYSDISPMSG:near, SYSPARSE:near
+;			EXTRN Data_Space:WORD, Find_DPB:near,
+;			EXTRN Move_DIR_Entry:near, Free_Cluster:near, Direct_Access:near
 
 			BREAK <SYS - Main>
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -349,11 +375,18 @@ CODE			SEGMENT PARA PUBLIC
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-			ASSUME CS:CODE,DS:NOTHING,ES:NOTHING
+;			ASSUME CS:CODE,DS:NOTHING,ES:NOTHING
 
 			ORG  80H
 
-PSP_PRAM		DB   128 DUP(?)
+; The 128 bytes are the command line DOS leaves in the PSP, which the
+; file does not hold: MASM's ORG wrote the filler it passed over and
+; LINK and EXE2BIN then dropped the first 100H of it, so the file began
+; at START.  fasm's ORG moves the address counter and writes nothing, so
+; the name is given its place and the counter moved to where DOS enters
+; a .COM, and the file begins there.
+label PSP_PRAM byte
+			org  100H
 
 START:			JMP  BEGIN
 
@@ -364,18 +397,18 @@ START:			JMP  BEGIN
 
 			db   510 dup(0) ; stack
 
-EOS			EQU  BYTE PTR $
+EOS			=  $
 
 			DW   0		; RETURN OFFSET
 
 
-public			Begin
+;public			Begin
 
-BEGIN			PROC NEAR
+BEGIN:
 
-;  $SALUT (4,4,9,41)
+;  SALUT$ (4,4,9,41)
 
-   mov	ax,OFFSET Data_Space
+   mov	ax,Data_Space
    add	ax,15				; round up to next segment
    mov	cl,4				; convert to segment value
    shr	ax,cl
@@ -383,64 +416,64 @@ BEGIN			PROC NEAR
    add	ax,cx				; generate DATA segment value
    mov	ds,ax
 
-   ASSUME DS:DATA,ES:NOTHING
+;   ASSUME DS:DATA,ES:NOTHING
 
    mov	cx,sp				; get lowest available spot
-   mov	sp,OFFSET EOS			; set up internal stack
-   sub	cx,FAT_BUF + (OFFSET BUF)	; leave room for:
+   mov	sp,EOS          ; set up internal stack
+   sub	cx,FAT_BUF + (BUF)        ; leave room for:
 					;     CODE +
 					;     DATA +
 					;     FAT_BUF (12 sectors of FAT)
 
-   mov	cbBuf,cx			; store length of Xfer buffer
+   mov	[cbBuf],cx ; store length of Xfer buffer
 
-   mov	dx,OFFSET DOS_BUFFER		; set up DTA
-   mov	ah,SET_DMA
+   mov	dx,DOS_BUFFER         ; set up DTA
+   mov	ah,Set_DMA
    INT	21h
 
    call Init_Input_Output		; setup messages and parsing	       ;AN000;
 
-;  $if	nc,and				; there is no error and 	       ;AN000;
-   JC $$IF1
+;  if$	nc,and				; there is no error and 	       ;AN000;
+   JC IF1$$
 
    call Validate_Target_Drive		; verify target drive is valid	       ;AN000;
 
-;  $if	nc,and				; there is no error		       ;AN000;
-   JC $$IF1
+;  if$	nc,and				; there is no error		       ;AN000;
+   JC IF1$$
 
    call Get_System_Files		; get system files loaded	       ;AN000;
 
-;  $if	nc,and				; there is no error		       ;AN000;
-   JC $$IF1
+;  if$	nc,and				; there is no error		       ;AN000;
+   JC IF1$$
 
    call Check_SYS_Conditions		; verify target drive is SYSable       ;AN000;
 
-;  $if	nc,and				; there is no error		       ;AN000;
-   JC $$IF1
+;  if$	nc,and				; there is no error		       ;AN000;
+   JC IF1$$
 
    call Do_SYS				; perform SYS operation 	       ;AN000;
 
-;  $if	nc,and				; no error and			       ;AN000;
-   JC $$IF1
+;  if$	nc,and				; no error and			       ;AN000;
+   JC IF1$$
 
    call Do_End				; clean up loose ends		       ;AN000;
 
-;  $if	nc				; no error			       ;AN000;
-   JC $$IF1
+;  if$	nc				; no error			       ;AN000;
+   JC IF1$$
 
        mov  ax,(util_B shl 8) + done	; load return code (System transfered) ;AN000;
 
-;  $endif				;				       ;AN000;
-$$IF1:
+;  endif$				;				       ;AN000;
+IF1$$:
 
    call Message 			; display message		       ;AN000;
 
-   mov	ah,exit 			; just set function - RC set by MAIN
+   mov	ah,Exit 			; just set function - RC set by MAIN
    int	21h				; if version is < DOS 2.0 the int 21
 
    ret					; ret if version < 2.00
 
-BEGIN ENDP
+;BEGIN ENDP
 
    BREAK <SYS - Init_Input_Output >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -486,75 +519,75 @@ BEGIN ENDP
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-public Init_Input_Output
+;public Init_Input_Output
 
-   Init_Input_Output PROC NEAR
+Init_Input_Output:
 
-   call SysLoadMsg			; preload all error messages	       ;AN000;
+   call SYSLOADMSG			; preload all error messages	       ;AN000;
 
-;  $if	c				; if error  - set to Utility	       ;AN000;
-   JNC $$IF3
+;  if$	c				; if error  - set to Utility	       ;AN000;
+   JNC IF3$$
        mov  ah,0bh			;				       ;AN000;
-;  $else				;				       ;AN019;
-   JMP SHORT $$EN3
-$$IF3:
-       mov  ax,(GET_VERSION shl 8)	;				       ;AN019;
+;  else$				;				       ;AN019;
+   JMP SHORT EN3$$
+IF3$$:
+       mov  ax,(Get_Version shl 8)	;				       ;AN019;
        int  21h 			;				       ;AN019;
        xchg al,ah			;				       ;AN019;
-       cmp  ax,(major_version shl 8) + minor_version ;			       ;AN019;
-;      $if  ne				;				       ;AN019;
-       JE $$IF5
-	   mov	DOS_VER,0ffh		; keep track that DOS is down a level  ;AN019;
+       cmp  ax,(MAJOR_VERSION shl 8) + MINOR_VERSION ;			       ;AN019;
+;      if$  ne				;				       ;AN019;
+       JE IF5$$
+	   mov	byte [DOS_VER],0ffh ; keep track that DOS is down a level  ;AN019;
 					;    0 = current (default)
-;      $endif				;   ff = down one level 	       ;AN021;
-$$IF5:
-;      $if  be,and			;				       ;AN019;
-       JNBE $$IF7
+;      endif$				;   ff = down one level 	       ;AN021;
+IF5$$:
+;      if$  be,and			;				       ;AN019;
+       JNBE IF7$$
        cmp  ax,DOS_low			;				       ;AC023;
-;      $if  ae				;				       ;AN019;
-       JNAE $$IF7
+;      if$  ae				;				       ;AN019;
+       JNAE IF7$$
 
 
 
 cmp	   ax,(3 shl 8) + 40		;;;;		 to
-;	   $if	e			;;;;	       cover
-	   JNE $$IF8
-mov	       DOS_VER,0		;;;;		4.00
-;	   $endif			;;;;	  this must be remover
-$$IF8:
+;	   if$	e			;;;;	       cover
+	   JNE IF8$$
+mov	       byte [DOS_VER],0 ;;;;		4.00
+;	   endif$			;;;;	  this must be remover
+IF8$$:
 
 
 
 
 	   clc				;				       ;AN019;
-;      $else				;				       ;AN019;
-       JMP SHORT $$EN7
-$$IF7:
+;      else$				;				       ;AN019;
+       JMP SHORT EN7$$
+IF7$$:
 	   mov	ax,(util shl 8) + DOS_error ;				       ;AN019;
 	   stc				;				       ;AN019;
-;      $endif				;				       ;AN019;
-$$EN7:
+;      endif$				;				       ;AN019;
+EN7$$:
 
-;      $if  nc,and			; no error and			       ;AN000;
-       JC $$IF12
+;      if$  nc,and			; no error and			       ;AN000;
+       JC IF12$$
 
        xor  cx,cx			; zero out # of parms processed so far ;AN000;
        mov  si,command_line		; move here to loop thru twice	       ;AN000;
        call Parse_Command_Line		; parse the saved command line	       ;AN000;
 
-;      $if  nc				; no error			       ;AN000;
-       JC $$IF12
+;      if$  nc				; no error			       ;AN000;
+       JC IF12$$
 
 	   mov	al,noerror		; load return code (success)	       ;AN000;
 
-;      $endif				;				       ;AN000;
-$$IF12:
-;  $endif				;				       ;AC019;
-$$EN3:
+;      endif$				;				       ;AN000;
+IF12$$:
+;  endif$				;				       ;AC019;
+EN3$$:
 
    ret					;				       ;AN000;
 
-   ENDPROC Init_Input_Output
+   EndProc Init_Input_Output
 
    BREAK <SYS - Parse_Command_Line >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -622,20 +655,20 @@ $$EN3:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-public Parse_Command_Line
+;public Parse_Command_Line
 
-   Parse_Command_Line PROC NEAR
+Parse_Command_Line:
 					;---------------------------------------
 					; Parse Equates
 					;---------------------------------------
-;			  $SALUT (4,27,34,41)
+;			  SALUT$ (4,27,34,41)
 
 eol			  equ	 -1	; Indicator for End-Of-Line	       ;AN000;
 noerror 		  equ	 0	; Return Indicator for No Errors       ;AN000;
-command_line		  equ	 081H	; offset of command line in PSP        ;AN000;
+;command_line		  equ	 081H	; offset of command line in PSP        ;AN000;
 Syntax_Error		  equ	 9	; PARSE syntax error		       ;AN000;
 
-;  $SALUT (4,4,9,41)
+;  SALUT$ (4,4,9,41)
 
 					;---------------------------------------
 					;  Get address of command line
@@ -643,33 +676,33 @@ Syntax_Error		  equ	 9	; PARSE syntax error		       ;AN000;
 
    push ds				;				       ;AN000;
    pop	es				;				       ;AN000;
-   lea	di,PARMS			;				       ;AC021:
+   lea	di,[PARMS] ;				       ;AC021:
 
    call Do_Parse			;				       ;AC021:
 
    cmp	ax,0				; did we find our required parm?       ;AN000;
 
-;  $if	ne				; no -check what happened	       ;AN000;
-   JE $$IF15
+;  if$	ne				; no -check what happened	       ;AN000;
+   JE IF15$$
 
        call Get_Error			;				       ;AC021;
 
-;  $else				;				       ;AC021;
-   JMP SHORT $$EN15
-$$IF15:
+;  else$				;				       ;AC021;
+   JMP SHORT EN15$$
+IF15$$:
 
-       cmp  POS_TYPE,5			; is it a file spec?		       ;AN021;
-;      $if  e				; if it is a file spec		       ;AN021;
-       JNE $$IF17
+       cmp  byte [POS_TYPE],5 ; is it a file spec?		       ;AN021;
+;      if$  e				; if it is a file spec		       ;AN021;
+       JNE IF17$$
 	   push ds			; copy spec into source 	       ;AN021;
 	   push di			;				       ;AN021;
 	   push si			;				       ;AN021;
-	   lea	di,SourceSpec		;				       ;AN021;
-	   mov	si,word ptr POS_OFF	;				       ;AN021;
-	   mov	ax,POS_SEG		;				       ;AN021;
+	   lea	di,[SourceSpec];				       ;AN021;
+	   mov	si,word [POS_OFF]   ;				       ;AN021;
+	   mov	ax,[POS_SEG] ;				       ;AN021;
 	   mov	ds,ax			;				       ;AN021;
 
-	   ASSUME ds:nothing,es:DATA
+;	   ASSUME ds:nothing,es:DATA
 
 	   xor	bx,bx			;				       ;AN021;
 
@@ -679,147 +712,147 @@ $$IF15:
 	   pop	di			;				       ;AN021;
 	   pop	ds			;				       ;AN021;
 
-	   ASSUME ds:DATA,es:nothing
+;	   ASSUME ds:DATA,es:nothing
 
-	   mov	SourceSize,bx		;				       ;AN021;
-	   mov	Spec_Flag,1		; set spec flag 		       ;AN021;
-;      $else				; must be a drive id		       ;AN021;
-       JMP SHORT $$EN17
-$$IF17:
+	   mov	[SourceSize],bx ;				       ;AN021;
+	   mov	byte [Spec_flag],1 ; set spec flag 		       ;AN021;
+;      else$				; must be a drive id		       ;AN021;
+       JMP SHORT EN17$$
+IF17$$:
 	   call Set_Target		; initialize target just in case       ;AN021;
-	   mov	SourceSpec,al		; save Source Spec		       ;AN000;
+	   mov	[SourceSpec],al ; save Source Spec		       ;AN000;
 					; remember that the colon and size
-;      $endif				;				       ;AN021;
-$$EN17:
-       and  POSTYP,drv_id		; off filespec bit - on drive bit      ;AN021;
-       cmp  Spec_Flag,0 		; do we have a source spec ?	       ;AN021;
-;      $if  e				; if spec flag not set		       ;AN021;
-       JNE $$IF20
-	   inc	POSREP			; turn on optional		       ;AN021;
-;      $else				;				       ;AN021;
-       JMP SHORT $$EN20
-$$IF20:
-	   inc	PAR_MIN 		; must have the second parm.	       ;AN021;
-;      $endif				;				       ;AN021;
-$$EN20:
+;      endif$				;				       ;AN021;
+EN17$$:
+       and  byte [POSTYP],drv_id ; off filespec bit - on drive bit      ;AN021;
+       cmp  byte [Spec_flag],0 ; do we have a source spec ?	       ;AN021;
+;      if$  e				; if spec flag not set		       ;AN021;
+       JNE IF20$$
+	   inc	byte [POSREP] ; turn on optional		       ;AN021;
+;      else$				;				       ;AN021;
+       JMP SHORT EN20$$
+IF20$$:
+	   inc	byte [PAR_MIN] ; must have the second parm.	       ;AN021;
+;      endif$				;				       ;AN021;
+EN20$$:
 
        call Do_Parse			;				       ;AN021;
 
        cmp  ax,0			; no parse errors?		       ;AN000;
 
-;      $if  e				; if no error - must be a drive id     ;AN021;
-       JNE $$IF23
+;      if$  e				; if no error - must be a drive id     ;AN021;
+       JNE IF23$$
 	   call Set_Target		; initialize target		       ;AN021;
-	   cmp	Spec_Flag,0		; do we have a source spec ?	       ;AN021;
-;	   $if	e			; if spec flag not set		       ;AN021;
-	   JNE $$IF24
-	       inc  Spec_Flag		; turn it on			       ;AN021;
-;	   $endif			;				       ;AN021;
-$$IF24:
+	   cmp	byte [Spec_flag],0 ; do we have a source spec ?	       ;AN021;
+;	   if$	e			; if spec flag not set		       ;AN021;
+	   JNE IF24$$
+	       inc  byte [Spec_flag] ; turn it on			       ;AN021;
+;	   endif$			;				       ;AN021;
+IF24$$:
 
 	   call Do_Parse		; make sure there are no extra parms.  ;AN021;
 	   cmp	ax,eol			;				       ;AN021;
-;	   $if	e			;				       ;AN021;
-	   JNE $$IF26
+;	   if$	e			;				       ;AN021;
+	   JNE IF26$$
 	       clc			;				       ;AN021;
-;	   $else			;				       ;AN021;
-	   JMP SHORT $$EN26
-$$IF26:
+;	   else$			;				       ;AN021;
+	   JMP SHORT EN26$$
+IF26$$:
 	       call Get_Error		;				       ;AN021;
-;	   $endif			;				       ;AN021;
-$$EN26:
-;      $else				; could be EOL or error 	       ;AN021;
-       JMP SHORT $$EN23
-$$IF23:
+;	   endif$			;				       ;AN021;
+EN26$$:
+;      else$				; could be EOL or error 	       ;AN021;
+       JMP SHORT EN23$$
+IF23$$:
 	   cmp	ax,eol			; is it EOL ?			       ;AN021;
-;	   $if	ne			; if it is not eol		       ;AN021;
-	   JE $$IF30
+;	   if$	ne			; if it is not eol		       ;AN021;
+	   JE IF30$$
 	       call Get_Error		; error - make sure it makes sense     ;AN021;
-;	   $else			;				       ;AN021;
-	   JMP SHORT $$EN30
-$$IF30:
+;	   else$			;				       ;AN021;
+	   JMP SHORT EN30$$
+IF30$$:
 	       clc			;				       ;AN021;
-;	   $endif			;				       ;AN021;
-$$EN30:
-;      $endif				;				       ;AN021;
-$$EN23:
-;  $endif				;				       ;AN000;
-$$EN15:
+;	   endif$			;				       ;AN021;
+EN30$$:
+;      endif$				;				       ;AN021;
+EN23$$:
+;  endif$				;				       ;AN000;
+EN15$$:
 
    ret					;				       ;AN000;
 
 
-   Move_Source PROC NEAR
+Move_Source:
 
-;  $search				;				       ;AN021;
-$$DO35:
+;  search$				;				       ;AN021;
+DO35$$:
        lodsb				;				       ;AN021;
        stosb				;				       ;AN021;
        inc  bl				;				       ;AN021;
        cmp  bl,54			; are we past the maximum?	       ;AN021;
-;  $exitif a				;				       ;AN021;
-   JNA $$IF35
+;  exitif$ a				;				       ;AN021;
+   JNA IF35$$
        mov  ax,(util_B SHL 8) + bad_path ; Invalid path 		       ;AN021;
        stc				;				       ;AN021;
-;  $orelse				;				       ;AN021;
-   JMP SHORT $$SR35
-$$IF35:
+;  orelse$				;				       ;AN021;
+   JMP SHORT SR35$$
+IF35$$:
        or   al,al			;				       ;AN021;
-;  $endloop z				;				       ;AN021;
-   JNZ $$DO35
+;  endloop$ z				;				       ;AN021;
+   JNZ DO35$$
        dec  bl				;				       ;AN021;
        clc				;				       ;AN021;
-;  $endsrch				;				       ;AN021;
-$$SR35:
+;  endsrch$				;				       ;AN021;
+SR35$$:
 
    ret					;				       ;AN021;
 
-   ENDPROC Move_Source
+   EndProc Move_Source
 
-   Do_Parse PROC NEAR
+Do_Parse:
 
-   mov	insert_ptr_off,si		; save it in case of error	       ;AN024;
+   mov	[insert_ptr_off],si ; save it in case of error	       ;AN024;
    push cs				;				       ;AN000;
    pop	ds				;				       ;AN000;
    xor	dx,dx				;				       ;AN021;
 
-   ASSUME ds:nothing,es:DATA
+;   ASSUME ds:nothing,es:DATA
 
    call SysParse			; parse command line		       ;AN000;
 
    push es				;				       ;AN000;
    pop	ds				;				       ;AN000;
 
-   ASSUME ds:DATA,es:nothing
+;   ASSUME ds:DATA,es:nothing
 
 
    ret					;				       ;AN021;
 
-   ENDPROC Do_Parse
+   EndProc Do_Parse
 
-   Set_Target PROC NEAR
+Set_Target:
 
-   mov	al,byte ptr pos_drv_id		; initalize drive id		       ;AN000;
-   mov	TargDrvNum,al			; save it for later		       ;AN000;
-   mov	ExtFCB_Drive,al 		; save it for finding VOL id	       ;AN000;
+   mov	al,byte [POS_DRV_ID]    ; initalize drive id		       ;AN000;
+   mov	[TargDrvNum],al ; save it for later		       ;AN000;
+   mov	[ExtFCB_Drive],al ; save it for finding VOL id	       ;AN000;
    or	al,num_2_letter 		; convert to a drive letter	       ;AC000;
-   mov	TargSpec,al			; save it for later		       ;AN000;
-   mov	TargDrv,al			;				       ;AC000;
+   mov	[TargSpec],al ; save it for later		       ;AN000;
+   mov	[TargDrv],al ;				       ;AC000;
    ret					;				       ;AN021;
 
-   ENDPROC Set_Target
+   EndProc Set_Target
 
-   Get_Error PROC NEAR
+Get_Error:
 
-   lea	bx,Parse_Ret_Code		; error - make sure it makes sense     ;AN000;
-   xlat cs:[bx] 			;				       ;AN000;
-   mov	ah,parse_error			; indicate parse error CLASS	       ;AN000;
+   lea	bx,[Parse_Ret_Code]; error - make sure it makes sense     ;AN000;
+   xlat [cs:bx] 			;				       ;AN000;
+   mov	ah,PARSE_error			; indicate parse error CLASS	       ;AN000;
    stc					; set fail flag 		       ;AN000;
    ret					;				       ;AN021;
 
-   ENDPROC Get_Error
+   EndProc Get_Error
 
-Parse_Ret_Code label byte
+label Parse_Ret_Code byte
 
    db	0				; Ret Code 0 -			       ;AN000;
    db	1				; Ret Code 1 - Too many operands       ;AN000;
@@ -832,7 +865,7 @@ Parse_Ret_Code label byte
    db	9				; Ret Code 8 - Not in string list provided
    db	9				; Ret Code 9 - Syntax error
 
-   ENDPROC Parse_Command_Line
+   EndProc Parse_Command_Line
 
    BREAK <SYS - Validate_Target_Drive >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -869,28 +902,28 @@ Parse_Ret_Code label byte
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-public Validate_Target_Drive
+;public Validate_Target_Drive
 
-   Validate_Target_Drive PROC NEAR
+Validate_Target_Drive:
 
    call Check_Default_Drive		; can't have target as default         ;AN000;
 
-;  $if	nc,and				; no error and			       ;AN000;
-   JC $$IF40
+;  if$	nc,and				; no error and			       ;AN000;
+   JC IF40$$
 
    call Check_For_Network		; can't have target as network         ;AC022;
 
-;  $if	nc				; no error			       ;AN000;
-   JC $$IF40
+;  if$	nc				; no error			       ;AN000;
+   JC IF40$$
 
        call Check_Target_Drive		; see if valid drive letter	       ;AC022;
 
-;  $endif				;				       ;AN000;
-$$IF40:
+;  endif$				;				       ;AN000;
+IF40$$:
 
    ret					;				       ;AN000;
 
-   ENDPROC Validate_Target_Drive
+   EndProc Validate_Target_Drive
 
    BREAK <SYS - Check_Default_Drive >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -936,93 +969,93 @@ $$IF40:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-public Check_Default_Drive
+;public Check_Default_Drive
 
-   Check_Default_Drive PROC NEAR
+Check_Default_Drive:
 
    push ds
    pop	es
 
-   ASSUME DS:DATA,ES:DATA
+;   ASSUME DS:DATA,ES:DATA
 
-   mov	DOSEntFree,1			; set to not found		       ;AC021;
-   mov	BIOSEntFree,1			; set to not found		       ;AC021;
-   cmp	Spec_Flag,1			; was a source specified ?	       ;AN021;
-;  $if	e				; if a source was specified	       ;AN021;
-   JNE $$IF42
-       lea  si,SourceSpec		; copy source for IBMDOS.COM	       ;AN021;
+   mov	byte [DOSEntFree],1 ; set to not found		       ;AC021;
+   mov	byte [BIOSEntFree],1 ; set to not found		       ;AC021;
+   cmp	byte [Spec_flag],1 ; was a source specified ?	       ;AN021;
+;  if$	e				; if a source was specified	       ;AN021;
+   JNE IF42$$
+       lea  si,[SourceSpec]; copy source for IBMDOS.COM	       ;AN021;
        mov  al,[si]			; get the drive ID		       ;AN025;
        sub  al,num_2_letter		; convert it to a 1 base number        ;AN025;
-       mov  DEFALT,al			; save it in case its removable        ;AN025;
-       lea  di,SourceDOSName		;				       ;AN021;
-       mov  cx,SourceSize		; set up size to move		       ;AN021;
+       mov  [DEFALT],al ; save it in case its removable        ;AN025;
+       lea  di,[SourceDOSName];				       ;AN021;
+       mov  cx,[SourceSize] ; set up size to move		       ;AN021;
        rep  movsb			; move it!			       ;AN021;
 
-;  $else				; figure out what the default is       ;AN021;
-   JMP SHORT $$EN42
-$$IF42:
+;  else$				; figure out what the default is       ;AN021;
+   JMP SHORT EN42$$
+IF42$$:
 
        mov  ax,(Get_Default_Drive shl 8) + not_used ; get_default_drive
        INT  21h 			;   Get_Default_Drive  <1900>
        inc  al				; turn from phys drive to logical drive
-       mov  DEFALT,al			; save default for later
-       mov  SourceSpec,al
-       or   SourceSpec,num_2_letter	; covert number to letter
-       cmp  al,TargDrvNum		; is target drive = default drive
-;      $if  e				; if it is the same - we have a problem;AC000;
-       JNE $$IF44
+       mov  [DEFALT],al ; save default for later
+       mov  [SourceSpec],al
+       or   byte [SourceSpec],num_2_letter ; covert number to letter
+       cmp  al,[TargDrvNum] ; is target drive = default drive
+;      if$  e				; if it is the same - we have a problem;AC000;
+       JNE IF44$$
 
 	   mov	ax,(util_B shl 8) + not_on_default ; load return code
 					;      - Can not specify default drive
 	   stc				; set fail flag
 
-;      $else				; it wasn't = so its ok                ;AC000;
-       JMP SHORT $$EN44
-$$IF44:
+;      else$				; it wasn't = so its ok                ;AC000;
+       JMP SHORT EN44$$
+IF44$$:
 
 					; initalize SourceBIOSNane, SourceDOSName
-	   mov	al,DEFALT
+	   mov	al,[DEFALT]
 	   or	al,num_2_letter 	; turn into letter
-	   mov	byte ptr SourceBIOSName,AL ; twiddle source name
-	   mov	SourceDOSName,AL	; twiddle source name
+	   mov	byte [SourceBIOSName],AL   ; twiddle source name
+	   mov	[SourceDOSName],AL ; twiddle source name
 	   clc				; reset fail flag		       ;AN000;
 
-;      $endif				;				       ;AC000;
-$$EN44:
-;  $endif				;				       ;AN021;
-$$EN42:
-;  $if	nc				; if no error to this point	       ;AN021;
-   JC $$IF48
+;      endif$				;				       ;AC000;
+EN44$$:
+;  endif$				;				       ;AN021;
+EN42$$:
+;  if$	nc				; if no error to this point	       ;AN021;
+   JC IF48$$
        cld				;				       ;AN021;
 
        IF   IBMCOPYRIGHT
        mov  bx,NameLen			;				       ;AN021;
        mov  cx,bx			;				       ;AN021;
        ELSE
-       mov  cx,BIOSNameLen
-       ENDIF
+       mov  cx,BiosNameLen
+       end if
 
-       lea  di,SourceBiosName		; move IBMBIO.COM into place	       ;AN021;
-       add  di,SourceSize		; move to end of specified part        ;AN021;
-       lea  si,SourceBIOS		; point to system file name	       ;AN021;
+       lea  di,[SourceBIOSName]; move IBMBIO.COM into place	       ;AN021;
+       add  di,[SourceSize] ; move to end of specified part        ;AN021;
+       lea  si,[SourceBIOS]; point to system file name	       ;AN021;
        rep  movsb			;				       ;AN021;
 
        IF   IBMCOPYRIGHT
        mov  cx,bx			;				       ;AN021;
        ELSE
        mov  cx,DosNameLen
-       ENDIF
+       end if
 
-       lea  di,SourceDOSName		; move IBMDOS.COM into place	       ;AN021;
-       add  di,SourceSize		; move to end of specified part        ;AN021;
-       lea  si,SourceDOS		; point to system file name	       ;AN021;
+       lea  di,[SourceDOSName]; move IBMDOS.COM into place	       ;AN021;
+       add  di,[SourceSize] ; move to end of specified part        ;AN021;
+       lea  si,[SourceDOS]; point to system file name	       ;AN021;
        rep  movsb			;				       ;AN021;
-;  $endif				;				       ;AN021;
-$$IF48:
+;  endif$				;				       ;AN021;
+IF48$$:
 
    ret					;				       ;AN000;
 
-   ENDPROC Check_Default_Drive
+   EndProc Check_Default_Drive
 
    BREAK <SYS - Check_Target_Drive >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -1071,62 +1104,62 @@ $$IF48:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-public Check_Target_Drive
+;public Check_Target_Drive
 
-   Check_Target_Drive PROC NEAR
+Check_Target_Drive:
 
-   mov	bl,TargDrvNum			; get the target drive number	       ;AN000;
-   mov	ax,(IOCTL SHL 8) + IOCTL_CHANGEABLE? ; do a media check 	       ;AC000;
+   mov	bl,[TargDrvNum] ; get the target drive number	       ;AN000;
+   mov	ax,(IOCtl SHL 8) + IOCTL_CHANGEABLE? ; do a media check 	       ;AC000;
    INT	21h				;	  IOCtl + 08 <4408>	       ;AC000;
 
    cmp	ax,0fh				; is it invalid - al = F (CF may be set;AC000;
 
-;  $if	e				;				       ;AC000;
-   JNE $$IF50
+;  if$	e				;				       ;AC000;
+   JNE IF50$$
 
        mov  ax,(DOS_error shl 8) + extended_15 ; load return code	       ;AC000;
 					;		- invalid drive
        stc				;				       ;AC000;
 
-;  $else				; if valid device so far - make sure   ;AN012;
-   JMP SHORT $$EN50
-$$IF50:
+;  else$				; if valid device so far - make sure   ;AN012;
+   JMP SHORT EN50$$
+IF50$$:
 					; its not ASSIGNed or SUBSTed drive
-       mov  si,offset TargSpec		; point to Target Spec		       ;AN012;
-       mov  di,offset DIR_SECTOR	; point at output buffer	       ;AN012;
+       mov  si,TargSpec         ; point to Target Spec		       ;AN012;
+       mov  di,DIR_SECTOR        ; point at output buffer	       ;AN012;
        mov  ax,(xNameTrans SHL 8)	; check for name translation	       ;AN012;
        int  21h 			; get real path 		       ;AN012;
-;      $if  nc				;				       ;AC012;
-       JC $$IF52
-	   mov	bl,byte ptr [TargSpec]	; get drive letter from path	       ;AN012;
-	   cmp	bl,byte ptr DIR_SECTOR	; did drive letter change?	       ;AN012;
-;	   $if	ne			; if not the same, it be bad	       ;AN012;
-	   JE $$IF53
-	       lea  si,sys_ptr		; set insert pointer in SUBLIST        ;AN012;
+;      if$  nc				;				       ;AC012;
+       JC IF52$$
+	   mov	bl,byte [TargSpec]     ; get drive letter from path	       ;AN012;
+	   cmp	bl,byte [DIR_SECTOR]   ; did drive letter change?	       ;AN012;
+;	   if$	ne			; if not the same, it be bad	       ;AN012;
+	   JE IF53$$
+	       lea  si,[sys_ptr]; set insert pointer in SUBLIST        ;AN012;
 	       mov  [insert_ptr_off],si ;				       ;AN012;
 	       mov  [insert_ptr_seg],ds ;				       ;AN012;
-	       lea  si,sublist		; set pointer to SUBLIST	       ;AN012;
+	       lea  si,[SUBLIST]; set pointer to SUBLIST	       ;AN012;
 	       mov  ax,(util_C shl 8) + cant_assign ; load ret cd (Cannot..SUB);AN012;
 	       stc			; tell user			       ;AN012;
-;	   $else			; - its ok			       ;AN012;
-	   JMP SHORT $$EN53
-$$IF53:
+;	   else$			; - its ok			       ;AN012;
+	   JMP SHORT EN53$$
+IF53$$:
 	       clc			; keep going			       ;AN012;
-;	   $endif			;				       ;AN012;
-$$EN53:
-;      $else				; - its a critical error	       ;AN012;
-       JMP SHORT $$EN52
-$$IF52:
+;	   endif$			;				       ;AN012;
+EN53$$:
+;      else$				; - its a critical error	       ;AN012;
+       JMP SHORT EN52$$
+IF52$$:
 	   xor	ah,ah			; set up for extended error call       ;AN012;
 	   inc	ah			;				       ;AN012;
-;      $endif				;				       ;AN012;
-$$EN52:
-;  $endif				;				       ;AN012;
-$$EN50:
+;      endif$				;				       ;AN012;
+EN52$$:
+;  endif$				;				       ;AN012;
+EN50$$:
 
    ret					;				       ;AC000;
 
-   ENDPROC Check_Target_Drive
+   EndProc Check_Target_Drive
 
    BREAK <SYS - Check_For_Network >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -1168,42 +1201,42 @@ $$EN50:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-public Check_For_Network
+;public Check_For_Network
 
-   Check_For_Network PROC NEAR
+Check_For_Network:
 
 					; IOCtl call to see if target drive is local
-   mov	bl,TargDrvNum			;   x = IOCTL (getdrive, Drive+1)      ;AC022;
-   mov	ax,(IOCTL SHL 8) + dev_local
+   mov	bl,[TargDrvNum] ;   x = IOCTL (getdrive, Drive+1)      ;AC022;
+   mov	ax,(IOCtl SHL 8) + dev_local
    INT	21h				; IOCtl + dev_local  <4409>
 
-;  $if	nc,and				; target drive local and	       ;AC000;
-   JC $$IF59
+;  if$	nc,and				; target drive local and	       ;AC000;
+   JC IF59$$
 
    test dx,1200H			; check if (x & 0x1000)
 					;      (redirected or shared)
-;  $if	nz				; return code indicates network drive  ;AC000;
-   JZ $$IF59
+;  if$	nz				; return code indicates network drive  ;AC000;
+   JZ IF59$$
 
-       lea  si,sys_ptr			; set insert pointer in SUBLIST        ;AN000;
+       lea  si,[sys_ptr] ; set insert pointer in SUBLIST        ;AN000;
        mov  [insert_ptr_off],si 	;				       ;AN000;
        mov  [insert_ptr_seg],ds 	;				       ;AN000;
-       lea  si,sublist			; set pointer to SUBLIST	       ;AN000;
+       lea  si,[SUBLIST] ; set pointer to SUBLIST	       ;AN000;
        mov  ax,(util_C shl 8) + cant_network ; load return code (Cannot SYS to.;AC000;
        stc				; set fail flag 		       ;AN000;
 
-;  $else				;				       ;AC000;
-   JMP SHORT $$EN59
-$$IF59:
+;  else$				;				       ;AC000;
+   JMP SHORT EN59$$
+IF59$$:
 
        clc				; reset fail flag		       ;AC000;
 
-;  $endif				;				       ;AC000;
-$$EN59:
+;  endif$				;				       ;AC000;
+EN59$$:
 
    ret					;				       ;AN000;
 
-   ENDPROC Check_For_Network
+   EndProc Check_For_Network
 
    BREAK <SYS - Get_System_Files >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -1274,130 +1307,130 @@ $$EN59:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-public Get_System_Files
+;public Get_System_Files
 
-   Get_System_Files PROC NEAR
+Get_System_Files:
    cld
 
-;  $search				;				       ;AC018;
-$$DO62:
+;  search$				;				       ;AC018;
+DO62$$:
 
-       lea  si,DOS_BUFFER		; set up addressability
-       mov  dx,OFFSET SourceBIOSName	; look on source for IBMBIOS
+       lea  si,[DOS_BUFFER]; set up addressability
+       mov  dx,SourceBIOSName        ; look on source for IBMBIOS
        mov  CX,DOS_system_atrib 	; its an 'everything' file
        mov  ah,Find_First		; do a find first INT21
        INT  21h 			;      Find_First <4Exx>
 
-;      $if  nc,and			; if found and.....................    ;AC000;
-       JC $$IF63
-       mov  ax,ds:[si].find_buf_size_l	; move size (low and high)	       ;AC000;
-       mov  WORD PTR NEWBIO_SIZE_LOW,AX ;     from DTA
-       mov  ax,ds:[si].find_buf_size_h	;	to			       ;AC000;
-       mov  WORD PTR NEWBIO_SIZE_HIGH,AX ;	  SYS data space
-       mov  dx,OFFSET SourceBIOSName	; point to source name
-       mov  di,OFFSET BIOSInFH		; pointer to block of data
+;      if$  nc,and			; if found and.....................    ;AC000;
+       JC IF63$$
+       mov  ax,[ds:si+find_buf.find_buf_size_l] ; move size (low and high)	       ;AC000;
+       mov  word [NEWBIO_SIZE_LOW],AX   ;     from DTA
+       mov  ax,[ds:si+find_buf.find_buf_size_h] ;	to			       ;AC000;
+       mov  word [NEWBIO_SIZE_HIGH],AX   ;	  SYS data space
+       mov  dx,SourceBIOSName        ; point to source name
+       mov  di,BIOSInFH         ; pointer to block of data
 
        call Open_File			; open file
 
-;      $if  nc,and			; if no error and....................  ;AC000;
-       JC $$IF63
+;      if$  nc,and			; if no error and....................  ;AC000;
+       JC IF63$$
 
-       mov  dx,OFFSET SourceDOSName	; look on source for IBMDOS
+       mov  dx,SourceDOSName        ; look on source for IBMDOS
        mov  CX,DOS_system_atrib 	; its an 'everything' file
        mov  ah,Find_First		; do a find first INT21
        INT  21h 			;      Find_First <4Exx>
 
-;      $if  nc,and			; if found and.......................  ;AC000;
-       JC $$IF63
+;      if$  nc,and			; if found and.......................  ;AC000;
+       JC IF63$$
 
-       mov  ax,ds:[si].find_buf_size_l	; move size (low and high)	       ;AC000;
-       mov  WORD PTR NEWDOS_SIZE_LOW,AX ;   from DTA
-       mov  ax,ds:[si].find_buf_size_h	;	to			       ;AC000;
-       mov  WORD PTR NEWDOS_SIZE_HIGH,AX ;	   SYS data space
-       mov  dx,OFFSET SourceDOSName	; pointer to source of DOS
-       mov  di,OFFSET DOSInFH		; pointer to block of data
+       mov  ax,[ds:si+find_buf.find_buf_size_l] ; move size (low and high)	       ;AC000;
+       mov  word [NEWDOS_SIZE_LOW],AX   ;   from DTA
+       mov  ax,[ds:si+find_buf.find_buf_size_h] ;	to			       ;AC000;
+       mov  word [NEWDOS_SIZE_HIGH],AX   ;	   SYS data space
+       mov  dx,SourceDOSName        ; pointer to source of DOS
+       mov  di,DOSInFH         ; pointer to block of data
 
        call Open_File			; open file
 
-;      $if  nc,and			; if no error and......................;AC000;
-       JC $$IF63
+;      if$  nc,and			; if no error and......................;AC000;
+       JC IF63$$
 
        call Fill_Memory 		; load memory with files
 
-;      $if  nc,and			; if no error..................:       ;AC019;
-       JC $$IF63
+;      if$  nc,and			; if no error..................:       ;AC019;
+       JC IF63$$
 
-       cmp  WORD PTR BUF+FAT_BUF+3,expected_version ; point to beginning       ;AN019;
+       cmp  word [BUF+FAT_BUF+3],EXPECTED_VERSION   ; point to beginning       ;AN019;
 					;  of buffer + near jump instruction
 
-;      $if  e				; if correct version of IBMBIO	       ;AN019;
-       JNE $$IF63
+;      if$  e				; if correct version of IBMBIO	       ;AN019;
+       JNE IF63$$
 
 	   clc				; reset fail flag		       ;AN019:
 	   mov	al,noerror		; load success return code	       ;AN000;
 
-;      $else				; ELSE - something wrong with source   ;AC000;
-       JMP SHORT $$EN63
-$$IF63:
+;      else$				; ELSE - something wrong with source   ;AC000;
+       JMP SHORT EN63$$
+IF63$$:
 
-	   mov	bl,defalt		;; specify drive ;;dcl		       ;AN001;
+	   mov	bl,[DEFALT] ;; specify drive ;;dcl		       ;AN001;
 	   call Check_Removeable	; check if source media replaceable    ;AC000;
 
-;	   $if	nc			; fail flag reset (replaceable)        ;AC000;
-	   JC $$IF65
+;	   if$	nc			; fail flag reset (replaceable)        ;AC000;
+	   JC IF65$$
 
 	       mov  ax,(util_C shl 8) + sys_disk ; load message number	       ;AC000;
 					;    - Insert system disk....
-	       lea  si,SourceSpec	; set insert pointer to DRIVE ID       ;AC000;
-	       mov  bx,SourceSize	; only display correct path length     ;AN025;
+	       lea  si,[SourceSpec] ; set insert pointer to DRIVE ID       ;AC000;
+	       mov  bx,[SourceSize] ; only display correct path length     ;AN025;
 
 	       call Prompt_For_Media	; prompt for source media	       ;AN000;
 
-;	       $if  nc			; fail flag reset		       ;AC000;
-	       JC $$IF66
+;	       if$  nc			; fail flag reset		       ;AC000;
+	       JC IF66$$
 
 		   mov	ax,error_RC	; load return code (try again)	       ;AN000;
 
-;	       $endif			;				       ;AC000;
-$$IF66:
+;	       endif$			;				       ;AC000;
+IF66$$:
 
-;	   $endif			;				       ;AC000;
-$$IF65:
+;	   endif$			;				       ;AC000;
+IF65$$:
 
-;      $endif				;				       ;AC000;
-$$EN63:
+;      endif$				;				       ;AC000;
+EN63$$:
 
-;  $leave c				; if fail flag set		       ;AC018;
-   JC $$EN62
+;  leave$ c				; if fail flag set		       ;AC018;
+   JC EN62$$
 
        cmp  al,noerror			; is it an error return code?	       ;AC018;
 
-;  $exitif e				; quit if success return code	       ;AC018;
-   JNE $$IF62
+;  exitif$ e				; quit if success return code	       ;AC018;
+   JNE IF62$$
 
-       mov  bx,BIOSInFH 		;				       ;AC018;
+       mov  bx,[BIOSInFH] ;				       ;AC018;
        mov  ah,Close			;				       ;AC018;
        int  21h 			;				       ;AC018;
 
-       mov  bx,DOSInFH			;				       ;AC018;
+       mov  bx,[DOSInFH] ;				       ;AC018;
        mov  ah,Close			;				       ;AC018;
        int  21h 			;				       ;AC018;
 
-;  $orelse				;				       ;AN018;
-   JMP SHORT $$SR62
-$$IF62:
+;  orelse$				;				       ;AN018;
+   JMP SHORT SR62$$
+IF62$$:
 
-;  $endloop long			;				       ;AC018;
-   JMP $$DO62
-$$EN62:
-;  $endsrch				;				       ;AN018;
-$$SR62:
+;  endloop$ long			;				       ;AC018;
+   JMP DO62$$
+EN62$$:
+;  endsrch$				;				       ;AN018;
+SR62$$:
 
 
 
    ret					;				       ;AN000;
 
-   ENDPROC Get_System_Files
+   EndProc Get_System_Files
 
    BREAK <SYS - Prompt_For_Media >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -1442,19 +1475,19 @@ $$SR62:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-public Prompt_For_Media
+;public Prompt_For_Media
 
-   Prompt_For_Media PROC NEAR
+Prompt_For_Media:
 
    mov	[insert_ptr_off],si		; set up for message call	       ;AN000;
    mov	[insert_ptr_seg],ds
-   mov	insert_max,bl			; only display correct path length     ;AN025;
-   lea	si,sublist			; set pointer to SUBLIST	       ;AN000;
+   mov	[insert_max],bl ; only display correct path length     ;AN025;
+   lea	si,[SUBLIST] ; set pointer to SUBLIST	       ;AN000;
 
    call Message 			; display first line		       ;AN000;
 
-;  $if	nc				; if no error			       ;AN000;
-   JC $$IF75
+;  if$	nc				; if no error			       ;AN000;
+   JC IF75$$
 
        mov  ax,(util_D shl 8) + press_key ; load Message		       ;AN000;
 					;    - Press any key to continue
@@ -1463,20 +1496,20 @@ public Prompt_For_Media
 					;	 (direct CON in no echo)
        call Message			; display second line		       ;AN000;
 
-;  $endif				;				       ;AN000;
-$$IF75:
+;  endif$				;				       ;AN000;
+IF75$$:
 
-;  $if	c				; if an error occured		       ;AN000;
-   JNC $$IF77
+;  if$	c				; if an error occured		       ;AN000;
+   JNC IF77$$
 
        mov  ah,DOS_error		; load return code (DOS extended error);AN000;
 
-;  $endif				;				       ;AN000;
-$$IF77:
+;  endif$				;				       ;AN000;
+IF77$$:
 
    ret					;				       ;AN000;
 
-   ENDPROC Prompt_For_Media
+   EndProc Prompt_For_Media
 
    BREAK <SYS - Check_Removeable >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -1522,41 +1555,41 @@ $$IF77:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-public Check_Removeable
+;public Check_Removeable
 
-   Check_Removeable PROC NEAR
+Check_Removeable:
 
-   mov	ax,(IOCTL SHL 8) + IOCTL_CHANGEABLE? ; do a media check
+   mov	ax,(IOCtl SHL 8) + IOCTL_CHANGEABLE? ; do a media check
    INT	21h				;	  IOCtl + 08 <4408>
 					; cy set if remote or invalid device ;;dcl;;
-;  $if	nc				;
-   JC $$IF79
+;  if$	nc				;
+   JC IF79$$
        cmp  ax,0			;
-;      $if  e				;
-       JNE $$IF80
+;      if$  e				;
+       JNE IF80$$
 	   clc				;
-;      $else				;
-       JMP SHORT $$EN80
-$$IF80:
-	   cmp	Spec_Flag,1		;				       ;AC025;
-;	   $if	ne			;				       ;AC025;
-	   JE $$IF82
+;      else$				;
+       JMP SHORT EN80$$
+IF80$$:
+	   cmp	byte [Spec_flag],1 ;				       ;AC025;
+;	   if$	ne			;				       ;AC025;
+	   JE IF82$$
 	       mov  ax,(util_B shl 8) + no_sys_on_def ; No system on...        ;AC000;
-;	   $else			;				       ;AC025;
-	   JMP SHORT $$EN82
-$$IF82:
+;	   else$			;				       ;AC025;
+	   JMP SHORT EN82$$
+IF82$$:
 	       mov  ax,(util_B shl 8) + system_not_found ; Invalid path or Sy..;AN021;
-;	   $endif			;				       ;AC025;
-$$EN82:
+;	   endif$			;				       ;AC025;
+EN82$$:
 	   stc				;
-;      $endif				;
-$$EN80:
-;  $endif				;
-$$IF79:
+;      endif$				;
+EN80$$:
+;  endif$				;
+IF79$$:
 
    ret					;				       ;AN021;
 
-   ENDPROC Check_Removeable
+   EndProc Check_Removeable
 
    BREAK <SYS - Open_File >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -1600,45 +1633,45 @@ $$IF79:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-public open_file
+;public open_file
 
-   Open_File PROC NEAR
+Open_File:
 
-   mov	ax,(OPEN SHL 8) + not_used	; open file for read
+   mov	ax,(Open SHL 8) + not_used	; open file for read
    INT	21h				;    Read + not_used <3D00>
 
-;  $if	nc				; no error			       ;AC000;
-   JC $$IF87
+;  if$	nc				; no error			       ;AC000;
+   JC IF87$$
 
-       mov  es:[di].InFH,ax		; save file handle		       ;AC000;
+       mov  [es:di+Xfer_data_.InFH],ax ; save file handle		       ;AC000;
        mov  bx,ax			; get ready for seeks
        mov  ax,(LSeek SHL 8) + LSeek_EOF ; seek relative to eof
        xor  cx,cx			; zero offset
        xor  dx,dx			; zero offset
        INT  21h 			; find End Of File to get offsets
 					;	LSeak + LSeek_EOF <4202>
-       mov  es:[di].LenLow,ax		; save low part of size 	       ;AC000;
-       mov  es:[di].LenHigh,dx		; save high part of size	       ;AC000;
+       mov  [es:di+Xfer_data_.LenLow],ax ; save low part of size 	       ;AC000;
+       mov  [es:di+Xfer_data_.LenHigh],dx ; save high part of size	       ;AC000;
        xor  dx,dx			; zero offset
        mov  ax,(LSeek SHL 8) + LSeek_Start ; seek relative to beginning
        INT  21h 			;	 LSeak + LSeek_Start <4200>
        mov  ax,(File_Times SHL 8) + 0	; find last write time
        INT  21h 			;	 File_Times + not_used <5700>
-       mov  es:[di].FTime,cx		; save time			       ;AC000;
-       mov  es:[di].FDate,dx		; save date			       ;AC000;
+       mov  [es:di+Xfer_data_.FTime],cx ; save time			       ;AC000;
+       mov  [es:di+Xfer_data_.FDate],dx ; save date			       ;AC000;
 
-;  $else				;				       ;AC000;
-   JMP SHORT $$EN87
-$$IF87:
+;  else$				;				       ;AC000;
+   JMP SHORT EN87$$
+IF87$$:
 
        mov  ah,DOS_error		; load return code (DOS extended error);AC000;
 
-;  $endif				;				       ;AC000;
-$$EN87:
+;  endif$				;				       ;AC000;
+EN87$$:
 
    ret
 
-   ENDPROC Open_File
+   EndProc Open_File
 
    BREAK <SYS - Fill_Memory >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -1701,127 +1734,127 @@ $$EN87:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-public fill_memory
+;public fill_memory
 
-   Fill_Memory PROC NEAR
+Fill_Memory:
 
    mov	ax,4200h			; LSEEK to end of last read	       ;AN001;
-   mov	bx,BIOSInFH			;				       ;AN001;
-   mov	cx,BIOSPos[2]			;				       ;AN001;
-   mov	dx,BIOSPos[0]			;				       ;AN001;
+   mov	bx,[BIOSInFH] ;				       ;AN001;
+   mov	cx,[BIOSPos+2]  ;				       ;AN001;
+   mov	dx,[BIOSPos+0]  ;				       ;AN001;
    int	21h				;				       ;AN001;
    mov	ax,4200h			; LSEEK to end of last read	       ;AN001;
-   mov	bx,DOSInFH			;				       ;AN001;
-   mov	cx,DOSPos[2]			;				       ;AN001;
-   mov	dx,DOSPos[0]			;				       ;AN001;
+   mov	bx,[DOSInFH] ;				       ;AN001;
+   mov	cx,[DOSPos+2]  ;				       ;AN001;
+   mov	dx,[DOSPos+0]  ;				       ;AN001;
    int	21h				;				       ;AN001;
 
-   mov	cx,cbBuf			; get length of buffer
-   mov	bx,BIOSInFH			; get bios source handle
-   mov	dx,OFFSET BUF+FAT_BUF		; point to beginning of buffer
+   mov	cx,[cbBuf] ; get length of buffer
+   mov	bx,[BIOSInFH] ; get bios source handle
+   mov	dx,BUF+FAT_BUF         ; point to beginning of buffer
 					; past area to read in boot rec
    push cx				; save away total length
-   cmp	BIOSLenHigh,0			; is there < 64K to read?
+   cmp	word [BIOSLenHigh],0 ; is there < 64K to read?
 
-;  $if	e,and				; if so - or...................        ;AC000;
-   JNE $$IF90
+;  if$	e,and				; if so - or...................        ;AC000;
+   JNE IF90$$
 					;			      :
-   cmp	BIOSLenLow,cx			; more left to read?	      :
+   cmp	[BIOSLenLow],cx ; more left to read?	      :
 					; ie: is amount to read < buffer
-;  $if	b				; if amount to read < buffer..:        ;AC000;
-   JNB $$IF90
+;  if$	b				; if amount to read < buffer..:        ;AC000;
+   JNB IF90$$
 
-       mov  cx,BIOSLenLow		; set length to IBMBIO length
+       mov  cx,[BIOSLenLow] ; set length to IBMBIO length
 
-;  $endif				;				       ;AC000;
-$$IF90:
+;  endif$				;				       ;AC000;
+IF90$$:
 
    cmp	cx,0				; is there anything to read?
 
-;  $if	a				; if so - read it
-   JNA $$IF92
+;  if$	a				; if so - read it
+   JNA IF92$$
 
        mov  ah,Read			; read the file
        int  21h 			;     read + not_used <3F00>)
 
-;  $else				; don't bother
-   JMP SHORT $$EN92
-$$IF92:
+;  else$				; don't bother
+   JMP SHORT EN92$$
+IF92$$:
 
        xor  ax,ax
        clc
 
-;  $endif
-$$EN92:
+;  endif$
+EN92$$:
 
-;  $if	c,or				; if error or..................        ;AC000;
-   JC $$LL95
+;  if$	c,or				; if error or..................        ;AC000;
+   JC LL95$$
 
    cmp	ax,cx				; Did we get it all?	      :
 
-;  $if	nz				; if not all of file read.....:        ;AC000;
-   JZ $$IF95
-$$LL95:
+;  if$	nz				; if not all of file read.....:        ;AC000;
+   JZ IF95$$
+LL95$$:
 
        pop  cx				; recover size
        stc				; set fail flag
 
-;  $else				;				       ;AC000;
-   JMP SHORT $$EN95
-$$IF95:
+;  else$				;				       ;AC000;
+   JMP SHORT EN95$$
+IF95$$:
 
-       add  BIOSPos[0],ax		; save amount read for later lseek     ;AN001;
-       adc  BIOSPos[2],0		; save amount read for later lseek     ;AN001;
+       add  [BIOSPos+0],ax ; save amount read for later lseek     ;AN001;
+       adc  [BIOSPos+2],0 ; save amount read for later lseek     ;AN001;
 
        add  dx,ax			; update pointer for DOS Read
-       mov  pDOS,dx			; point to beginning of DOS
-       sub  BIOSLenLow,ax		; decrement remaining
-       sbb  BIOSLenHigh,0		; do 32 bit
+       mov  [pDOS],dx ; point to beginning of DOS
+       sub  [BIOSLenLow],ax ; decrement remaining
+       sbb  [BIOSLenHigh],0 ; do 32 bit
        pop  cx				; get original length
        sub  cx,ax			; this much is left
-       mov  bx,DOSInFH			; get bios source handle
-       cmp  DOSLenHigh,0		; > 64K to read?
-;      $if  e,and			; if < 64k to read and..........       ;AC000;
-       JNE $$IF97
-       cmp  DOSLenLow,cx		; is amount to read < buffer   :
+       mov  bx,[DOSInFH] ; get bios source handle
+       cmp  word [DOSLenHigh],0 ; > 64K to read?
+;      if$  e,and			; if < 64k to read and..........       ;AC000;
+       JNE IF97$$
+       cmp  [DOSLenLow],cx ; is amount to read < buffer   :
 
-;      $if  b				; if its less .................:       ;AC000;
-       JNB $$IF97
+;      if$  b				; if its less .................:       ;AC000;
+       JNB IF97$$
 
-	   mov	cx,DOSLenLow		; set length to IBMDOS length
+	   mov	cx,[DOSLenLow] ; set length to IBMDOS length
 
-;      $endif				;				       ;AC000;
-$$IF97:
+;      endif$				;				       ;AC000;
+IF97$$:
 
        mov  ah,Read			; read the file
        INT  21h 			;     read + not_used <3F00>)
 
-;      $if  nc,and			; no error and...................      ;AC000;
-       JC $$IF99
+;      if$  nc,and			; no error and...................      ;AC000;
+       JC IF99$$
 
        cmp  ax,cx			; is all of file read ? 	:
 
-;      $if  z				; all of file read..............:      ;AC000;
-       JNZ $$IF99
+;      if$  z				; all of file read..............:      ;AC000;
+       JNZ IF99$$
 
-	   add	DOSPos[0],ax		; save amount read for later lseek     ;AN001;
-	   adc	DOSPos[2],0		; save amount read for later lseek     ;AN001;
+	   add	[DOSPos+0],ax ; save amount read for later lseek     ;AN001;
+	   adc	[DOSPos+2],0 ; save amount read for later lseek     ;AN001;
 
 	   add	dx,ax			; update pointer for DOS Read
-	   mov	pDOSEnd,DX		; point to End of dos DOS
-	   sub	DOSLenLow,AX		; decrement remaining
-	   sbb	DOSLenHigh,0		; do 32 bit arithmetic
+	   mov	[pDOSEnd],DX ; point to End of dos DOS
+	   sub	[DOSLenLow],AX ; decrement remaining
+	   sbb	[DOSLenHigh],0 ; do 32 bit arithmetic
 	   clc				; reset fail flag
 
-;      $endif				;				       ;AC000;
-$$IF99:
+;      endif$				;				       ;AC000;
+IF99$$:
 
-;  $endif				;				       ;AC000;
-$$EN95:
+;  endif$				;				       ;AC000;
+EN95$$:
 
    ret
 
-   ENDPROC Fill_Memory
+   EndProc Fill_Memory
 
    BREAK <SYS - Check_SYS_Conditions >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -1866,33 +1899,33 @@ $$EN95:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-public Check_SYS_Conditions
+;public Check_SYS_Conditions
 
-   Check_SYS_Conditions PROC NEAR
+Check_SYS_Conditions:
 
    call Verify_File_System		; verify target is a FAT file system   ;AN000;
 
-;  $if	nc,and				; no error and			       ;AN000;
-   JC $$IF102
+;  if$	nc,and				; no error and			       ;AN000;
+   JC IF102$$
 
    call Read_Directory			; load root directory of target        ;AN000;
 
-;  $if	nc,and				; no error and			       ;AN000;
-   JC $$IF102
+;  if$	nc,and				; no error and			       ;AN000;
+   JC IF102$$
 
    call Verify_File_Location		; check that IBMBIO,IBMDOS are in right;AN000;
 					;    place
-;  $if	nc				; no error and			       ;AN000;
-   JC $$IF102
+;  if$	nc				; no error and			       ;AN000;
+   JC IF102$$
 
        call Determine_Free_Space	; check if enough space for system file;AN000;
 
-;  $endif				;				       ;AN000;
-$$IF102:
+;  endif$				;				       ;AN000;
+IF102$$:
 
    ret					;				       ;AN000;
 
-   ENDPROC Check_SYS_Conditions
+   EndProc Check_SYS_Conditions
 
    BREAK <SYS - Verify_File_System >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -1956,113 +1989,113 @@ $$IF102:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-public Verify_File_System
+;public Verify_File_System
 
-   Verify_File_System PROC NEAR
+Verify_File_System:
 
-   cmp	DOS_VER,0			; running on current DOS ?	       ;AN019;
-;  $if	e				; if we are			       ;AN019;
-   JNE $$IF104
-       mov  bl,TargDrvNum		; load drive id (BL)		       ;AN000;
-       lea  dx,IOCtl_Buf		; point to output buffer	       ;AN000;
+   cmp	byte [DOS_VER],0 ; running on current DOS ?	       ;AN019;
+;  if$	e				; if we are			       ;AN019;
+   JNE IF104$$
+       mov  bl,[TargDrvNum] ; load drive id (BL)		       ;AN000;
+       lea  dx,[IOCTL_BUF]; point to output buffer	       ;AN000;
        mov  ax,(GetSetMediaID shl 8) + 0 ; get volid, ser# and filetype        ;AC019;
        INT  21h 			;  INT 21 GetSetMediaID request <6900> ;AC019;
 
-;      $if  c				; error - check if old version dest    ;AN000;
-       JNC $$IF105
+;      if$  c				; error - check if old version dest    ;AN000;
+       JNC IF105$$
 
 	   call Get_DOS_Error		; find out what the error was	       ;AN000;
 
 	   cmp	al,old_type_media	; is it IBM but < 4.0 ? 	       ;AN000;
 
-;	   $if	ne			; not old version error 	       ;AN000;
-	   JE $$IF106
+;	   if$	ne			; not old version error 	       ;AN000;
+	   JE IF106$$
 
 	       mov  ah,DOS_error	; load return code (DOS Extended Error);AN000;
 	       stc			; set fail flag 		       ;AN000;
 
-;	   $else			;				       ;AN000;
-	   JMP SHORT $$EN106
-$$IF106:
+;	   else$			;				       ;AN000;
+	   JMP SHORT EN106$$
+IF106$$:
 
 	       clc			; reset fail flag		       ;AN000;
 
-;	   $endif			;				       ;AN000;
-$$EN106:
+;	   endif$			;				       ;AN000;
+EN106$$:
 
-;      $else				; ELSE it is => 4.00		       ;AN000;
-       JMP SHORT $$EN105
-$$IF105:
+;      else$				; ELSE it is => 4.00		       ;AN000;
+       JMP SHORT EN105$$
+IF105$$:
 
-	   lea	si,IOCtl_File_Sys	; see if file type is fat12	       ;AN000;
-	   lea	di,fat_12		;				       ;AN000;
+	   lea	si,[IOCTL_File_Sys] ; see if file type is fat12	       ;AN000;
+	   lea	di,[fat_12];				       ;AN000;
 	   mov	cx,file_sys_size	;				       ;AN000;
 	   cld				;				       ;AN000;
 	   repe cmpsb			;				       ;AN000;
 	   cmp	cx,3			; did it fail at the 2 in fat12 ?      ;AN000;
 
-;	   $if	e,and			; if it did and............	       ;AN000;
-	   JNE $$IF110
+;	   if$	e,and			; if it did and............	       ;AN000;
+	   JNE IF110$$
 
-	   cmp	BYTE PTR ds:[si-1],"6"	; was it a 6 ?		  :	       ;AN000;
+	   cmp	byte [ds:si-1],"6"     ; was it a 6 ?		  :	       ;AN000;
 
-;	   $if	e			; if it was...............:	       ;AN000;
-	   JNE $$IF110
+;	   if$	e			; if it was...............:	       ;AN000;
+	   JNE IF110$$
 
 	       repe cmpsb		; then keep going		       ;AN000;
 
-;	   $endif			;				       ;AN000;
-$$IF110:
+;	   endif$			;				       ;AN000;
+IF110$$:
 
 	   cmp	cx,0			; did we reach the end ?	       ;AN000;
 
-;	   $if	e			; if we did it was "FAT12   " or       ;AN000;
-	   JNE $$IF112
+;	   if$	e			; if we did it was "FAT12   " or       ;AN000;
+	   JNE IF112$$
 					;     "FAT16   " so its OK to SYS
 
 	       clc			; reset fail flag		       ;AN000;
 
-;	   $else			;				       ;AN000;
-	   JMP SHORT $$EN112
-$$IF112:
+;	   else$			;				       ;AN000;
+	   JMP SHORT EN112$$
+IF112$$:
 
-	       lea  di,File_Sys_End	; set up pointer to end of insert      ;AN000;
+	       lea  di,[File_Sys_End] ; set up pointer to end of insert      ;AN000;
 	       dec  di			; back up to last character	       ;AN000;
 	       mov  cx,file_sys_size	; strip off trailing blanks	       ;AN017;
 	       mov  al," "		; strip off trailing blanks	       ;AN017;
 	       std			; scan backwards		       ;AN017;
-	       repe scas IOCTL_File_Sys ;				       ;AN017;
+	       repe scasb               ;				       ;AN017;
 	       cld			; stops at 2 past last " "	       ;AN017;
 	       inc  di			; 1 past			       ;AN017;
 	       inc  di			; last (first) blank		       ;AN017;
 	       xor  al,al		; make it an ASCIIZ		       ;AN017;
-	       stos IOCTL_File_Sys	;				       ;AN017;
-	       lea  si,IOCTL_File_Sys	; set up pointer to the insert	       ;AN000;
+	       stosb               ;				       ;AN017;
+	       lea  si,[IOCTL_File_Sys] ; set up pointer to the insert	       ;AN000;
 	       mov  [insert_ptr_off],si ;				       ;AN017;
 	       mov  [insert_ptr_seg],ds ;				       ;AN017;
-	       lea  si,sublist		; set pointer to SUBLIST	       ;AN017;
+	       lea  si,[SUBLIST]; set pointer to SUBLIST	       ;AN017;
 	       mov  ax,(util_C shl 8) + cant_sys ; load return code	       ;AN000;
 					;  - Unable to SYS to xxx file system
 	       stc			; set fail flag 		       ;AN000;
 
-;	   $endif			;				       ;AN000;
-$$EN112:
+;	   endif$			;				       ;AN000;
+EN112$$:
 
-;      $endif				;				       ;AN000;
-$$EN105:
+;      endif$				;				       ;AN000;
+EN105$$:
 
-;  $else				; not running on current DOS	       ;AN019;
-   JMP SHORT $$EN104
-$$IF104:
+;  else$				; not running on current DOS	       ;AN019;
+   JMP SHORT EN104$$
+IF104$$:
 
        clc				; keep going			       ;AN019;
 
-;  $endif				; running on current DOS	       ;AN019;
-$$EN104:
+;  endif$				; running on current DOS	       ;AN019;
+EN104$$:
 
    ret					;				       ;AN000;
 
-   ENDPROC Verify_File_System
+   EndProc Verify_File_System
 
    BREAK <SYS - Read_Directory >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -2103,15 +2136,15 @@ $$EN104:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-   public Read_Directory
+;   public Read_Directory
 
-   Read_Directory PROC NEAR
+Read_Directory:
 
-   mov	al,TargDrv			; set up drive letter in destignation filespecs
-   mov	BIOSName,al			; point names at destination drive
-   mov	DOSName,al			;
+   mov	al,[TargDrv] ; set up drive letter in destignation filespecs
+   mov	[BIOSName],al ; point names at destination drive
+   mov	[DOSName],al ;
 
-   MOV	DL,TargDrvNum			; load drive
+   MOV	DL,[TargDrvNum] ; load drive
    PUSH DS				; save register
    call Find_DPB			; initalize DPB parameters
    POP	AX
@@ -2119,11 +2152,11 @@ $$EN104:
    mov	es,ax
    xor	ax,ax				; request a read
    mov	dx,[first_dir_sector]		; read starting dir sector
-   mov	[packet],dx			; get starting dir sector	       ;AN001;
-   mov	bx,offset DIR_SECTOR
-   mov	PACKET_BUFFER[0],bx		;				       ;AN001;
-   mov	PACKET_BUFFER[2],ds		;				       ;AN001;
-   mov	word ptr [packet_sectors],1	;				       ;AN001;
+   mov	[PACKET],dx			; get starting dir sector	       ;AN001;
+   mov	bx,DIR_SECTOR
+   mov	[PACKET_BUFFER+0],bx ;				       ;AN001;
+   mov	[PACKET_BUFFER+2],ds ;				       ;AN001;
+   mov	word [packet_sectors],1     ;				       ;AN001;
    call Direct_Access			; to read the sector
 
    mov	ax, (util_B shl 8) + write_fail ; load message			       ;AC000;
@@ -2131,7 +2164,7 @@ $$EN104:
 					;  in case an error occured
    ret
 
-   ENDPROC Read_Directory
+   EndProc Read_Directory
 
    BREAK <SYS - Verify_File_Location >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -2205,175 +2238,175 @@ $$EN104:
 ;	END  Verify_File_Location
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-   public Verify_File_Location
+;   public Verify_File_Location
 
-   Verify_File_Location PROC NEAR
+Verify_File_Location:
 					;---------------------------------------
 					; Now see if the first two directory
 					; entries are available...
 					; First check for being free:
 					;---------------------------------------
-   mov	bp,OFFSET DIR_SECTOR
+   mov	bp,DIR_SECTOR
    mov	si,bp
-   cmp	BYTE PTR [si],empty		; empty dir?
+   cmp	byte [si],empty      ; empty dir?
 
-;  $if	e,or				; if all files deleted		       ;AC012;
-   JE $$LL118
+;  if$	e,or				; if all files deleted		       ;AC012;
+   JE LL118$$
 					;   (Dir_Name in dir is 00h)
 
-   cmp	BYTE PTR [si],deleted		; is first file deleted ?
+   cmp	byte [si],deleted      ; is first file deleted ?
 
-;  $if	e				; if it is			       ;AC012;
-   JNE $$IF118
-$$LL118:
+;  if$	e				; if it is			       ;AC012;
+   JNE IF118$$
+LL118$$:
 					;   (Dir_Name is 0E5h)................:
        clc				; clear error flag		       ;AN003;
        call Free_Cluster		; check the cluster chain just in case ;AC012;
 
-;  $else long				; not empty			       ;AC000;
-   JMP $$EN118
-$$IF118:
+;  else$ long				; not empty			       ;AC000;
+   JMP EN118$$
+IF118$$:
 					;---------------------------------------
 					; The first entry is not free.	See if
 					;     the BIOS is there.
 					;---------------------------------------
-       mov  di,OFFSET FCBBIO		; pointer to name
+       mov  di,FCBBIO         ; pointer to name
        mov  cx,file_spec_length 	; length of name
        cld				; go forward
        rep  cmpsb			; check it
 
-;      $if  e				; first file IBMBIO.COM 	       ;AC000;
-       JNE $$IF120
+;      if$  e				; first file IBMBIO.COM 	       ;AC000;
+       JNE IF120$$
 
-	   dec	BIOSEntFree		; indicate we found IBMBIO ( = 0)
+	   dec	byte [BIOSEntFree] ; indicate we found IBMBIO ( = 0)
 	   mov	si,bp
-	   mov	ax,word ptr ds:[si].dir_size_l ; Get the size of IBMBIO        ;AC000;
-	   mov	word ptr IBMBIO_Low,ax
-	   mov	ax,word ptr ds:[si].dir_size_h ;			       ;AC000;
-	   mov	word ptr IBMBIO_High,ax
-	   cmp	ds:[si].dir_first,2	; does IBMBIO own Clust 2?	       ;AC005;
-;	   $if	e			; if so 			       ;AC005;
-	   JNE $$IF121
-	       inc  [bio_owns_it]	;     - keep track		       ;AC005;
-;	   $endif			;				       ;AC005;
-$$IF121:
+	   mov	ax,word [ds:si+dir_entry.dir_size_l] ; Get the size of IBMBIO        ;AC000;
+	   mov	word [IBMBIO_LOW],ax
+	   mov	ax,word [ds:si+dir_entry.dir_size_h] ;			       ;AC000;
+	   mov	word [IBMBIO_HIGH],ax
+	   cmp	[ds:si+dir_entry.dir_first],2 ; does IBMBIO own Clust 2?	       ;AC005;
+;	   if$	e			; if so 			       ;AC005;
+	   JNE IF121$$
+	       inc  byte [bio_owns_it] ;     - keep track		       ;AC005;
+;	   endif$			;				       ;AC005;
+IF121$$:
 
 	   call Free_Cluster		;				       ;AN003;
 
-;      $else				; its not IBMBIO		       ;AC000;
-       JMP SHORT $$EN120
-$$IF120:
+;      else$				; its not IBMBIO		       ;AC000;
+       JMP SHORT EN120$$
+IF120$$:
 
 	   mov	si,bp			; restore pointer to start of entry    ;AN003;
 	   call Move_DIR_Entry		; move the entry out of the way        ;AN003;
 
-;	   $if	nc,and			;				       ;AN003;
-	   JC $$IF124
+;	   if$	nc,and			;				       ;AN003;
+	   JC IF124$$
 
 	   call Free_Cluster		; make sure reqd. clusters are free    ;AN003;
 
-;	   $if	nc			;				       ;AC000;
-	   JC $$IF124
+;	   if$	nc			;				       ;AC000;
+	   JC IF124$$
 
 	       xor  ax,ax		;
 
-;	   $else			;				       ;AC000;
-	   JMP SHORT $$EN124
-$$IF124:
+;	   else$			;				       ;AC000;
+	   JMP SHORT EN124$$
+IF124$$:
 
 	       mov  ax,(util_B shl 8) + no_room ; load return code in case we fail;AN000;
 	       stc			;    - No room for system on dest...   ;AC000;
 
-;	   $endif			;				       ;AC000;
-$$EN124:
+;	   endif$			;				       ;AC000;
+EN124$$:
 
-;      $endif				;				       ;AC000;
-$$EN120:
+;      endif$				;				       ;AC000;
+EN120$$:
 
-;  $endif				;				       ;AC000;
-$$EN118:
+;  endif$				;				       ;AC000;
+EN118$$:
 
 					;---------------------------------------
 					; Check the second entry
 					;---------------------------------------
 
-;  $if	nc				; if no errors so far		       ;AC000;
-   JC $$IF129
+;  if$	nc				; if no errors so far		       ;AC000;
+   JC IF129$$
 
 					; ensure that the first sector of root ;AN003;
 					;    is loaded			       ;AN003;
        mov  ax,[first_dir_sector]	; get starting dir sector	       ;AN001;
-       mov  packet,ax			;				       ;AN001;
-       mov  [packet_buffer],offset DIR_SECTOR ; 			       ;AN001;
-       mov  word ptr [packet_sectors],1 ;				       ;AN001;
+       mov  [PACKET],ax ;				       ;AN001;
+       mov  word [PACKET_BUFFER],DIR_SECTOR   ; 			       ;AN001;
+       mov  word [packet_sectors],1     ;				       ;AN001;
        xor  ax,ax			; request a read
        call Direct_Access		; to read the root
 
-;      $if  nc				;				       ;AC000;
-       JC $$IF130
+;      if$  nc				;				       ;AC000;
+       JC IF130$$
 
-	   add	bp,TYPE dir_entry	;				       ;AC000;
+	   add	bp,sizeof.dir_entry ;				       ;AC000;
 	   mov	si,bp			;				       ;AC000;
 	   mov	ax,(util_B shl 8) + no_room ; load return code in case we fail ;AC000;
 					;    - No room for system on dest..
-	   cmp	BYTE PTR [si],empty	; empty dir entry?
+	   cmp	byte [si],empty     ; empty dir entry?
 
-;	   $if	e,or			; if deleted starting at 2nd entry or. ;AC000;
-	   JE $$LL131
+;	   if$	e,or			; if deleted starting at 2nd entry or. ;AC000;
+	   JE LL131$$
 
-	   cmp	BYTE PTR [si],deleted	; deleted ?			    :
+	   cmp	byte [si],deleted     ; deleted ?			    :
 
-;	   $if	e			; if deleted (0E5h)...................:;AC000;
-	   JNE $$IF131
-$$LL131:
+;	   if$	e			; if deleted (0E5h)...................:;AC000;
+	   JNE IF131$$
+LL131$$:
 
 	       clc			; reset fail flag
 
-;	   $else			;				       ;AC000;
-	   JMP SHORT $$EN131
-$$IF131:
+;	   else$			;				       ;AC000;
+	   JMP SHORT EN131$$
+IF131$$:
 
 					; This entry is not free.
-	       mov  di,OFFSET FCBDOS	;   see if it is IBMDOS
+	       mov  di,FCBDOS        ;   see if it is IBMDOS
 	       mov  cx,file_spec_length ; length of name
 	       rep  cmpsb		; compare it
 	       mov  si,bp		; restore pointer to start	       ;AC000;
 
-;	       $if  e			; if second file is IBMDOS.COM.        ;AC000;
-	       JNE $$IF133
+;	       if$  e			; if second file is IBMDOS.COM.        ;AC000;
+	       JNE IF133$$
 
-		   dec	DOSEntFree	; indicate we found IBMDOS
-		   mov	ax,word ptr ds:[si].dir_size_l ; Get the size of       ;AC000;
-		   mov	word ptr IBMDOS_Low,ax ;	   file for IBMDOS
-		   mov	ax,word ptr ds:[si].dir_size_h ;		       ;AC000;
-		   mov	word ptr IBMDOS_High,ax
+		   dec	byte [DOSEntFree] ; indicate we found IBMDOS
+		   mov	ax,word [ds:si+dir_entry.dir_size_l] ; Get the size of       ;AC000;
+		   mov	word [IBMDOS_LOW],ax   ;	   file for IBMDOS
+		   mov	ax,word [ds:si+dir_entry.dir_size_h] ;		       ;AC000;
+		   mov	word [IBMDOS_HIGH],ax
 		   clc			; reset fail flag		       ;AN000;
 
-;	       $else			; error condition		       ;AC000;
-	       JMP SHORT $$EN133
-$$IF133:
+;	       else$			; error condition		       ;AC000;
+	       JMP SHORT EN133$$
+IF133$$:
 
 		   call Move_DIR_Entry	;				       ;AN003;
 
-;	       $endif			;				       ;AC000;
-$$EN133:
+;	       endif$			;				       ;AC000;
+EN133$$:
 
-;	   $endif			;				       ;AC000;
-$$EN131:
+;	   endif$			;				       ;AC000;
+EN131$$:
 
-;      $else				;				       ;AC000;
-       JMP SHORT $$EN130
-$$IF130:
+;      else$				;				       ;AC000;
+       JMP SHORT EN130$$
+IF130$$:
 	   mov	ax,(util_B shl 8) + no_room ; load return code in case we fail ;AN000;
-;      $endif				;				       ;AC000;
-$$EN130:
+;      endif$				;				       ;AC000;
+EN130$$:
 
-;  $endif				;				       ;AC000;
-$$IF129:
+;  endif$				;				       ;AC000;
+IF129$$:
 
    ret					;				       ;AN000;
 
-   ENDPROC Verify_File_Location
+   EndProc Verify_File_Location
 
    BREAK <SYS - Determine_Free_Space >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -2438,12 +2471,12 @@ $$IF129:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-   public Determine_Free_Space
+;   public Determine_Free_Space
 
-   Determine_Free_Space PROC NEAR
+Determine_Free_Space:
 
    mov	ah,Get_Drive_Freespace		; get disk free space
-   mov	dl,TargDrvNum			; get the drive number
+   mov	dl,[TargDrvNum] ; get the drive number
    INT	21h				; Get_Drive_Freespace  <36xx>
 					; compute Bytes/Cluster - 16 bit math ok
 					;   AX = sectors / cluster
@@ -2451,56 +2484,56 @@ $$IF129:
 					;   BX = available clusters
    mul	cx				; get bytes/cluster
 					; result left in AX
-   mov	Bytes_Per_Cluster,ax		; save this value for Get_Clusters
-   mov	Number_Free_Clusters,bx 	; save available space
+   mov	[Bytes_Per_Cluster],ax ; save this value for Get_Clusters
+   mov	[Number_Free_Clusters],bx ; save available space
 
-   mov	ax,IBMBIO_Low			; low result in AX, High result in DX
-   mov	dx,IBMBIO_High
+   mov	ax,[IBMBIO_LOW] ; low result in AX, High result in DX
+   mov	dx,[IBMBIO_HIGH]
    call Get_Cluster			; convert old IBMBIO into cluster size
 
-   add	Number_Free_Clusters,ax 	; add it to available space
+   add	[Number_Free_Clusters],ax ; add it to available space
 
-   mov	ax,IBMDOS_Low			; low result in AX, High result in DX
-   mov	dx,IBMDOS_High
+   mov	ax,[IBMDOS_LOW] ; low result in AX, High result in DX
+   mov	dx,[IBMDOS_HIGH]
    call Get_Cluster			; convert old IBMDOS into cluster size
 
-   add	Number_Free_Clusters,AX 	; get total number of clusters available
+   add	[Number_Free_Clusters],AX ; get total number of clusters available
 
-   mov	ax,NEWBIO_Size_Low		; find total size of new DOS and BIOS
-   mov	dx,NEWBIO_Size_High
+   mov	ax,[NEWBIO_SIZE_LOW] ; find total size of new DOS and BIOS
+   mov	dx,[NEWBIO_SIZE_HIGH]
 
    call Get_Cluster			; convert new IBMBIO into cluster size
 
-   mov	Need_Clusters,ax		;save new BIO clusters
+   mov	[Need_Clusters],ax ;save new BIO clusters
 
-   mov	ax,NEWDOS_Size_Low
-   mov	dx,NEWDOS_Size_High
+   mov	ax,[NEWDOS_SIZE_LOW]
+   mov	dx,[NEWDOS_SIZE_HIGH]
 
    call Get_Cluster			; convert new IBMDOS into cluster size
 
-   add	AX,Need_Clusters		; get total number of clusters needed
+   add	AX,[Need_Clusters] ; get total number of clusters needed
 
-   cmp	AX,Number_Free_Clusters 	;Now see if there is enough room
+   cmp	AX,[Number_Free_Clusters] ;Now see if there is enough room
 					;	for all of it on the disk
-;  $if	a				; if needed > available clusters       ;AC000;
-   JNA $$IF140
+;  if$	a				; if needed > available clusters       ;AC000;
+   JNA IF140$$
 
        mov  ax,(util_B shl 8) + no_room ; load return code		       ;AC000;
 					; - No room for system on dest..
        stc				; set fail flag
 
-;  $else				;				       ;AC000;
-   JMP SHORT $$EN140
-$$IF140:
+;  else$				;				       ;AC000;
+   JMP SHORT EN140$$
+IF140$$:
 
        clc				; reset fail flag
 
-;  $endif				;				       ;AC000;
-$$EN140:
+;  endif$				;				       ;AC000;
+EN140$$:
 
    ret					;				       ;AN000;
 
-   ENDPROC Determine_Free_Space
+   EndProc Determine_Free_Space
 
    BREAK <SYS - Get_Cluster >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -2536,25 +2569,25 @@ $$EN140:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-   public Get_Cluster
+;   public Get_Cluster
 
-   Get_Cluster PROC NEAR
+Get_Cluster:
 
-   mov	bx,Bytes_Per_Cluster		; Bytes/cluster
+   mov	bx,[Bytes_Per_Cluster] ; Bytes/cluster
    div	bx				; divide size by bytes_per_cluster
    cmp	dx,0				; is there a remainder in DX?
 
-;  $if	ne				; if there is a remainder	       ;AC000;
-   JE $$IF143
+;  if$	ne				; if there is a remainder	       ;AC000;
+   JE IF143$$
 					; we have another cluster to round up
        inc  ax				; round up to next cluster
 
-;  $endif				;				       ;AC000;
-$$IF143:
+;  endif$				;				       ;AC000;
+IF143$$:
 
    ret
 
-   ENDPROC Get_Cluster
+   EndProc Get_Cluster
 
    BREAK <SYS - Do_SYS >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -2603,114 +2636,114 @@ $$IF143:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-   public Do_SYS
+;   public Do_SYS
 
-   Do_SYS PROC NEAR
+Do_SYS:
 
-   call CREATE_SYSTEM			; create IBMBIO and IBMDOS, in place   ;AN000;
+   call Create_System			; create IBMBIO and IBMDOS, in place   ;AN000;
 
-;  $if	nc				; no error			       ;AC000;
-   JC $$IF145
+;  if$	nc				; no error			       ;AC000;
+   JC IF145$$
 
        push ds
-       lds  bx,THIS_DPB 		; set up pointer to DPB 	       ;AC000;
-       mov  [bx.dpb_next_free],2	; reset Allocation to start of disk    ;AC000;
+       lds  bx,[THIS_DPB] ; set up pointer to DPB 	       ;AC000;
+       mov  [bx+dpb.dpb_next_free],2 ; reset Allocation to start of disk    ;AC000;
        pop  ds				;  so BIOS goes in right place!
 
-;      $search				;				       ;AC000;
-$$DO146:
+;      search$				;				       ;AC000;
+DO146$$:
 
 	   call Dump_Memory		; write out contents of memory to file
 
 	   mov	ax,(util_B shl 8) + no_room ; load error RC (assume error)     ;AC000;
 
-;      $leave c 			; quit if error 		       ;AC000;
-       JC $$EN146
+;      leave$ c 			; quit if error 		       ;AC000;
+       JC EN146$$
 
-	   mov	ax,DOSLenHigh		; more DOS to move ?
-	   or	AX,DOSLenLow		; more low dos
-	   or	AX,BIOSLenHigh		; more high BIOS
-	   or	AX,BIOSLenLow		; more low BIOS
+	   mov	ax,[DOSLenHigh] ; more DOS to move ?
+	   or	AX,[DOSLenLow] ; more low dos
+	   or	AX,[BIOSLenHigh] ; more high BIOS
+	   or	AX,[BIOSLenLow] ; more low BIOS
 
-;      $exitif z			; if all files copied		       ;AC000;
-       JNZ $$IF146
+;      exitif$ z			; if all files copied		       ;AC000;
+       JNZ IF146$$
 
 	   clc				;	 reset fail flag	       ;AC000;
 
-;      $orelse				;				       ;AC000;
-       JMP SHORT $$SR146
-$$IF146:
+;      orelse$				;				       ;AC000;
+       JMP SHORT SR146$$
+IF146$$:
 
-	   call get_rest_of_system
+	   call Get_Rest_of_System
 
 	   mov	ax,(util_B shl 8) + no_room ; load error RC (assume error)     ;AC000;
 
-;      $leave c 			; if error			       ;AC000;
-       JC $$EN146
+;      leave$ c 			; if error			       ;AC000;
+       JC EN146$$
 
-;      $endloop 			;				       ;AC000;
-       JMP SHORT $$DO146
-$$EN146:
+;      endloop$ 			;				       ;AC000;
+       JMP SHORT DO146$$
+EN146$$:
 
-;      $endsrch 			;				       ;AC000;
-$$SR146:
+;      endsrch$ 			;				       ;AC000;
+SR146$$:
 
-;  $endif				;				       ;AC000;
-$$IF145:
+;  endif$				;				       ;AC000;
+IF145$$:
 
    ret					;				       ;AN000;
 
-   ENDPROC Do_SYS
+   EndProc Do_SYS
 
-   PUBLIC Get_Rest_of_System
+;   PUBLIC Get_Rest_of_System
 
-   Get_Rest_of_System Proc near
+Get_Rest_of_System:
 
    pushf				;				       ;AN001;
 
-   mov	bx,BIOSOutFH			;				       ;AN001;
+   mov	bx,[BIOSOutFH] ;				       ;AN001;
    mov	ah,Close			;				       ;AN001;
    int	21h				;				       ;AN001;
 
-   mov	bx,DOSOutFH			;				       ;AN001;
+   mov	bx,[DOSOutFH] ;				       ;AN001;
    mov	ah,Close			;				       ;AN001;
    int	21h				;				       ;AN001;
 
-   mov	dx,offset SourceBIOSName	;				       ;AN001;
-   mov	ax,(OPEN SHL 8) + not_used	; open file for read
+   mov	dx,SourceBIOSName        ;				       ;AN001;
+   mov	ax,(Open SHL 8) + not_used	; open file for read
    int	21h				;				       ;AN001;
-   mov	biosinfh,ax
+   mov	[BIOSInFH],ax
 
-   mov	dx,offset SourceDOSName 	;				       ;AN001;
-   mov	ax,(OPEN SHL 8) + not_used	; open file for read
+   mov	dx,SourceDOSName         ;				       ;AN001;
+   mov	ax,(Open SHL 8) + not_used	; open file for read
    int	21h				;				       ;AN001;
-   mov	dosinfh,ax
+   mov	[DOSInFH],ax
 
    call Fill_Memory			; read in file from source
 
-   mov	bx,BIOSInFH			;				       ;AN001;
+   mov	bx,[BIOSInFH] ;				       ;AN001;
    mov	ah,Close			;				       ;AN001;
    int	21h				;				       ;AN001;
 
-   mov	bx,DOSInFH			;				       ;AN001;
+   mov	bx,[DOSInFH] ;				       ;AN001;
    mov	ah,Close			;				       ;AN001;
    int	21h				;				       ;AN001;
 
-   mov	dx,offset BIOSName		;				       ;AN001;
+   mov	dx,BIOSName         ;				       ;AN001;
    mov	ax,(Open shl 8) + 2		; Open file
    INT	21h
-   mov	BIOSOutFH,ax
+   mov	[BIOSOutFH],ax
 
-   mov	dx,offset DOSName		;				       ;AN001;
+   mov	dx,DOSName         ;				       ;AN001;
    mov	ax,(Open shl 8) + 2		; Open file
    INT	21h
-   mov	DOSOutfh,ax
+   mov	[DOSOutFH],ax
 
    popf 				;				       ;AN001;
 
    RET
 
-   endproc get_rest_of_system
+   EndProc Get_Rest_of_System
 
    BREAK <SYS - Create_System >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -2747,38 +2780,38 @@ $$IF145:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-   public Create_System
+;   public Create_System
 
-   Create_System PROC NEAR
+Create_System:
 
    mov	[open_seg],ds
-   mov	dx,OFFSET BIOSName		; point to IBMBIO ASCIIZ string
+   mov	dx,BIOSName         ; point to IBMBIO ASCIIZ string
    mov	al,[BIOSEntFree]		; get status of IBMBIO		       ;AN006;
    mov	[EntryFree],al			; update file status (0 = found,1 = not;AN006;
 
    call Create_File			; create IBMBIO 		       ;AN000;
 
-;  $if	nc,and				; no error and			       ;AC000;
-   JC $$IF154
+;  if$	nc,and				; no error and			       ;AC000;
+   JC IF154$$
 
-   mov	BIOSOutFH,ax			; save handle to IBMBIO_Handle
-   mov	dx,OFFSET DOSName		; pointer to IBMDOS ASCIIZ string
+   mov	[BIOSOutFH],ax ; save handle to IBMBIO_Handle
+   mov	dx,DOSName         ; pointer to IBMDOS ASCIIZ string
    mov	al,[DOSEntFree] 		; get status of IBMDOS		       ;AN006;
    mov	[EntryFree],al			; update file status (0 = found,1 = not;AN006;
 
    call Create_File			; create IBMDOS 		       ;AN000;
 
-;  $if	nc				; no error			       ;AC000;
-   JC $$IF154
+;  if$	nc				; no error			       ;AC000;
+   JC IF154$$
 
-       mov  DOSOutFH,ax 		; save handle to IBMDOS_Handle
+       mov  [DOSOutFH],ax ; save handle to IBMDOS_Handle
 
-;  $endif				;				       ;AC000;
-$$IF154:
+;  endif$				;				       ;AC000;
+IF154$$:
 
    ret					;				       ;AN000;
 
-   ENDPROC Create_System
+   EndProc Create_System
 
    BREAK <SYS - Create_File >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -2827,57 +2860,57 @@ $$IF154:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-   public Create_File
+;   public Create_File
 
-   Create_File PROC NEAR
+Create_File:
 
    mov	ax,(CHMod shl 8) + SetAtrib	; set file attributes to 0
    xor	cx,cx				; set attributes to 0
    mov	[open_off],dx			; save pointer to ASCIIZ for OPEN
    INT	21h				;   CHMod + SetAtrib <4301>)
 
-;  $if	nc				; no error			       ;AC000;
-   JC $$IF156
+;  if$	nc				; no error			       ;AC000;
+   JC IF156$$
 
-       cmp  [EntryFree],0		; is file in the correct spot?	       ;AN006;
-;      $if  ne				; if it is not - we have a problem     ;AN006;
-       JE $$IF157
+       cmp  byte [EntryFree],0 ; is file in the correct spot?	       ;AN006;
+;      if$  ne				; if it is not - we have a problem     ;AN006;
+       JE IF157$$
 	   mov	dx,[open_off]		; get pointer to ASCIIZ for UNLINK     ;AN006;
-	   mov	ax,(UNLINK shl 8)	; UNLINK the file
+	   mov	ax,(Unlink shl 8)	; UNLINK the file
 	   INT	21h			;   UNLINK	     <4100>)	       ;AN006;
-;      $endif				;				       ;AN006;
-$$IF157:
-;  $else				; - check the error		       ;AN006;
-   JMP SHORT $$EN156
-$$IF156:
+;      endif$				;				       ;AN006;
+IF157$$:
+;  else$				; - check the error		       ;AN006;
+   JMP SHORT EN156$$
+IF156$$:
        call Get_DOS_Error		; find out what went wrong	       ;AN000;
        cmp  al,file_not_found		; not there?
 
-;      $if  e				;   IBMBIO was not there	       ;AC000;
-       JNE $$IF160
+;      if$  e				;   IBMBIO was not there	       ;AC000;
+       JNE IF160$$
 	   clc				;      ok to open		       ;AC000;
-;      $else				;				       ;AC000;
-       JMP SHORT $$EN160
-$$IF160:
+;      else$				;				       ;AC000;
+       JMP SHORT EN160$$
+IF160$$:
 	   stc				;      some other error - quit	       ;AC000;
-;      $endif				;				       ;AC000;
-$$EN160:
-;  $endif				;				       ;AC000;
-$$EN156:
-;  $if	nc				; if no error			       ;AC006;
-   JC $$IF164
+;      endif$				;				       ;AC000;
+EN160$$:
+;  endif$				;				       ;AC000;
+EN156$$:
+;  if$	nc				; if no error			       ;AC006;
+   JC IF164$$
 
-       lds  si,OPEN_PARMS		;				       ;AC005;
+       lds  si,[OPEN_PARMS] ;				       ;AC005;
        xor  cx,cx			; DOS system file atributes	       ;AC005;
-       cmp  DOS_VER,0			; running on current DOS ?	       ;AN019;
+       cmp  byte [DOS_VER],0 ; running on current DOS ?	       ;AN019;
 
-;      $if  ne				; if on old DOS 		       ;AN019;
-       JE $$IF165
+;      if$  ne				; if on old DOS 		       ;AN019;
+       JE IF165$$
 	   mov	dx,si			; DS:DX - file name		       ;AN019;
 	   mov	ax,(Creat shl 8) + 0	; Create file  <3D00>		       ;AN019;
-;      $else				;				       ;AN019;
-       JMP SHORT $$EN165
-$$IF165:
+;      else$				;				       ;AN019;
+       JMP SHORT EN165$$
+IF165$$:
 	   mov	di,cx			;				       ;AC005;
 	   dec	di			;				       ;AC005;
 	   mov	bx,open_mode		; set up for mode		       ;AN000;
@@ -2885,27 +2918,27 @@ $$IF165:
 					;     replace it if it does
 	   mov	ax,(ExtOpen shl 8) + 0	; ext Open file with attributes of 0   ;AN000;
 					; ExtOpen + SetAtrib  <6C12> CX=0
-;      $endif				;				       ;AN019;
-$$EN165:
+;      endif$				;				       ;AN019;
+EN165$$:
 
        INT  21h 			; do the open
 
-;  $endif				;				       ;AC000;
-$$IF164:
+;  endif$				;				       ;AC000;
+IF164$$:
 
-;  $if	c				; if error			       ;AN000;
-   JNC $$IF169
+;  if$	c				; if error			       ;AN000;
+   JNC IF169$$
 
        call Get_DOS_Error		; find out what went wrong	       ;AN000;
        mov  ah,DOS_error		; load return code (DOS Extended Error);AN000;
        stc				;				       ;AN006;
 
-;  $endif				;				       ;AN000;
-$$IF169:
+;  endif$				;				       ;AN000;
+IF169$$:
 
    ret					;				       ;AC000;
 
-   ENDPROC Create_File
+   EndProc Create_File
 
    BREAK <SYS - Dump_Memory >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -2954,78 +2987,78 @@ $$IF169:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-   public Dump_Memory
+;   public Dump_Memory
 
-   Dump_Memory PROC NEAR
+Dump_Memory:
 
    mov	ax,4202h			; LSEEK to end of file		       ;AN001;
-   mov	bx,BIOSOutFH			;				       ;AN001;
+   mov	bx,[BIOSOutFH] ;				       ;AN001;
    xor	cx,cx				;				       ;AN001;
    xor	dx,dx				;				       ;AN001;
    int	21h				;				       ;AN001;
    mov	ax,4202h			; LSEEK to end of file		       ;AN001;
-   mov	bx,DOSOutFH			;				       ;AN001;
+   mov	bx,[DOSOutFH] ;				       ;AN001;
    xor	cx,cx				;				       ;AN001;
    xor	dx,dx				;				       ;AN001;
    int	21h				;				       ;AN001;
 
-   mov	dx,OFFSET BUF+FAT_BUF		; get pointer to start of buffer
-   mov	cx,pDOS 			; beginning of next guy
+   mov	dx,BUF+FAT_BUF         ; get pointer to start of buffer
+   mov	cx,[pDOS]  ; beginning of next guy
    sub	cx,dx				; difference is length
 
-;  $if	nz,and				; if lenght is non-zero and.......     ;AC000;
-   JZ $$IF171
+;  if$	nz,and				; if lenght is non-zero and.......     ;AC000;
+   JZ IF171$$
 
-   mov	bx,BIOSOutFH			; load IBMBIOS handle		  :
+   mov	bx,[BIOSOutFH] ; load IBMBIOS handle		  :
    mov	ah,Write			; write out IBMBIOS		  :
    INT	21h				; Write + 00 <4000>		  :
 
-;  $if	nc,and				; if no error and.................:    ;AC000;
-   JC $$IF171
+;  if$	nc,and				; if no error and.................:    ;AC000;
+   JC IF171$$
 
    cmp	ax,cx				; Did it work?			  :
 
-;  $if	ne				; all data written................:    ;AC000;
-   JE $$IF171
+;  if$	ne				; all data written................:    ;AC000;
+   JE IF171$$
 
        stc				; set fail flag
 
-;  $endif				;				       ;AC000;
-$$IF171:
+;  endif$				;				       ;AC000;
+IF171$$:
 
-;  $if	nc				; if no error so far		       ;AC000;
-   JC $$IF173
+;  if$	nc				; if no error so far		       ;AC000;
+   JC IF173$$
 
-       mov  dx,pDOS			; get beginning of dos
-       mov  cx,pDOSEnd			; subtract end of dos
+       mov  dx,[pDOS] ; get beginning of dos
+       mov  cx,[pDOSEnd] ; subtract end of dos
        sub  cx,dx			; difference is length
 
-;      $if  nz,and			; if lenght is non-zero and........    ;AC000;
-       JZ $$IF174
+;      if$  nz,and			; if lenght is non-zero and........    ;AC000;
+       JZ IF174$$
 
-       mov  bx,DOSOutFH 		; load IBMDOS handle		  :
+       mov  bx,[DOSOutFH] ; load IBMDOS handle		  :
        mov  ah,Write			; write out IBMDOS		  :
        INT  21h 			; Write + 00 <4000>		  :
 
-;      $if  nc,and			; if no error.....................:    ;AC000;
-       JC $$IF174
+;      if$  nc,and			; if no error.....................:    ;AC000;
+       JC IF174$$
 
        cmp  ax,cx			; Did it work?			  :
 
-;      $if  ne				; all data written................:    ;AC000;
-       JE $$IF174
+;      if$  ne				; all data written................:    ;AC000;
+       JE IF174$$
 
 	   stc				; set fail flag
 
-;      $endif				;				       ;AC000;
-$$IF174:
+;      endif$				;				       ;AC000;
+IF174$$:
 
-;  $endif				;				       ;AC000;
-$$IF173:
+;  endif$				;				       ;AC000;
+IF173$$:
 
    ret
 
-   ENDPROC Dump_Memory
+   EndProc Dump_Memory
 
 
    BREAK <SYS - Do_End >
@@ -3057,9 +3090,9 @@ $$IF173:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-   public Do_End
+;   public Do_End
 
-   Do_End PROC NEAR
+Do_End:
 
    call Close_File			; finish off & close IBMBIOS and IBMDOS;AN000;
 
@@ -3067,7 +3100,7 @@ $$IF173:
 
    ret					;				       ;AN000;
 
-   ENDPROC Do_End
+   EndProc Do_End
 
    BREAK <SYS - Close_File >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -3104,38 +3137,38 @@ $$IF173:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-   public Close_File
+;   public Close_File
 
-   Close_File PROC NEAR
+Close_File:
 
-   mov	cx,BIOSTime			; load IBMBIOS time and date
-   mov	dx,BIOSTime+2
-   mov	bx,BIOSOutFH			; load IBMBIOS handle
+   mov	cx,[BIOSTime] ; load IBMBIOS time and date
+   mov	dx,[BIOSTime+2]
+   mov	bx,[BIOSOutFH] ; load IBMBIOS handle
    mov	ax,(File_Times SHL 8) + set	; update file times
    INT	21h				; File_Times + 01 <5701>
    mov	ah,Close			; close file IBMBIO
    INT	21h				; Close + not_used <3Exx>
-   mov	cx,DOSTime			; load IBMDOS time and date
-   mov	dx,DOSTime+2
-   mov	bx,DOSOutFH			; load IBMDOS handle
+   mov	cx,[DOSTime] ; load IBMDOS time and date
+   mov	dx,[DOSTime+2]
+   mov	bx,[DOSOutFH] ; load IBMDOS handle
    mov	ax,(File_Times SHL 8) + set	; update file times
    INT	21h				; File_Times + 01 <5701>
    mov	ah,Close			; close file IBMDOS
    INT	21h				; Close + not_used <3Exx>
 
-   mov	dx,offset BIOSName		;				       ;AN001;
+   mov	dx,BIOSName         ;				       ;AN001;
    mov	ax,(CHMod shl 8) + SetAtrib	; set file attributes to 0
    mov	cx,DOS_system_atrib		; DOS system file atributes
    INT	21h				;   CHMod + SetAtrib <4301>)
 
-   mov	dx,offset DOSName		;				       ;AN001;
+   mov	dx,DOSName         ;				       ;AN001;
    mov	ax,(CHMod shl 8) + SetAtrib	; set file attributes to 0
    mov	cx,DOS_system_atrib		; DOS system file atributes
    INT	21h				;   CHMod + SetAtrib <4301>)
 
    ret					;				       ;AN000;
 
-   ENDPROC Close_File
+   EndProc Close_File
 
    BREAK <SYS - Write_Boot_Record >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -3186,80 +3219,80 @@ $$IF173:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-   public Write_Boot_Record
+;   public Write_Boot_Record
 
-   Write_Boot_Record PROC NEAR
+Write_Boot_Record:
 
-   mov	bl,TargDrvNum			; Drive number			       ;AN000;
-   mov	dx,offset DeviceParameters	;				       ;AN000;
-   mov	cx,(rawio shl 8) + get_device_parameters ; Generic IOCtl Request       ;AN000;
+   mov	bl,[TargDrvNum] ; Drive number			       ;AN000;
+   mov	dx,DeviceParameters        ;				       ;AN000;
+   mov	cx,(RAWIO shl 8) + GET_DEVICE_PARAMETERS ; Generic IOCtl Request       ;AN000;
 					;     CX=0860
-   mov	ax,(IOCtl shl 8) + generic_ioctl ; get BPB using Set Device Parm       ;AN000;
+   mov	ax,(IOCtl shl 8) + GENERIC_IOCTL ; get BPB using Set Device Parm       ;AN000;
    INT	21h				; IOCtl + gen_IOCtl_request <440d>     ;AN000;
 
-   cmp	DOS_VER,0ffh			; is it DOS 3.3?		       ;AN019;
-;  $if	ne				; only do a GET if DOS 4.00		;AN019;
-   JE $$IF177
-       lea  dx,IOCtl_Buf		; point to output buffer	       ;AN000;
+   cmp	byte [DOS_VER],0ffh ; is it DOS 3.3?		       ;AN019;
+;  if$	ne				; only do a GET if DOS 4.00		;AN019;
+   JE IF177$$
+       lea  dx,[IOCTL_BUF]; point to output buffer	       ;AN000;
        mov  ax,(GetSetMediaID shl 8) + 0 ; get volid, ser# and file type       ;AC008;
        INT  21h 			; GetSetMediaID + 0  INT 21 <6900>     ;AC008;
 
-;      $if  c				; error - see if its 'unknown media'   ;AN000;
-       JNC $$IF178
+;      if$  c				; error - see if its 'unknown media'   ;AN000;
+       JNC IF178$$
 
 	   call Get_DOS_Error		; get error			       ;AN000;
 	   cmp	al,old_type_media	;				       ;AN000;
 
-;	   $if	e			;				       ;AN019;
-	   JNE $$IF179
+;	   if$	e			;				       ;AN019;
+	   JNE IF179$$
 	       stc			; do it all manually		       ;AN019;
-;	   $else			;				       ;AN019;
-	   JMP SHORT $$EN179
-$$IF179:
+;	   else$			;				       ;AN019;
+	   JMP SHORT EN179$$
+IF179$$:
 	       clc			; some other dos error occured - le    ;AN019;
-;	   $endif			;	       it go by 	       ;AN019;
-$$EN179:
+;	   endif$			;	       it go by 	       ;AN019;
+EN179$$:
 
-;      $endif				;				       ;AN019;
-$$IF178:
-;  $else				;				       ;AN019;
-   JMP SHORT $$EN177
-$$IF177:
+;      endif$				;				       ;AN019;
+IF178$$:
+;  else$				;				       ;AN019;
+   JMP SHORT EN177$$
+IF177$$:
        stc				; do it all manually		       ;AN019;
-;  $endif				;				       ;AN019;
-$$EN177:
+;  endif$				;				       ;AN019;
+EN177$$:
 
-;  $if	c				; if it is pre 4.00 IBM format	       ;AN000;
-   JNC $$IF185
+;  if$	c				; if it is pre 4.00 IBM format	       ;AN000;
+   JNC IF185$$
 
        call Create_Serial_ID		; compute serial id and put in field   ;AN000;
 
 					; find first with type = VOLUME ID
 
-       mov  dx,OFFSET ExtFCB		; set up for FCB call		       ;AN019;
+       mov  dx,ExtFCB         ; set up for FCB call		       ;AN019;
        mov  ah,Dir_Search_First 	; do a find first INT21 	       ;AN019;
 
        INT  21h 			;      Find_First <11xx>	       ;AN000;
 
        cmp  al,0			; was a match found?  al = 0 yes       ;AN019;
 					;		      al = ff no
-;      $if  e				; if so - copy it in		       ;AN000;
-       JNE $$IF186
+;      if$  e				; if so - copy it in		       ;AN000;
+       JNE IF186$$
 
-	   lea	si,DOS_BUFFER + 8	; source id is in DTA		       ;AN019;
-	   lea	di,IOCtl_Vol_ID 	; destination is in IOCtl_Buf	       ;AN000;
+	   lea	si,[DOS_BUFFER + 8] ; source id is in DTA		       ;AN019;
+	   lea	di,[IOCtl_Vol_ID]; destination is in IOCtl_Buf	       ;AN000;
 	   mov	cx,file_spec_length	; move 11 bytes worth		       ;AN000;
 	   cld				; copy it in			       ;AN000;
 	   rep	movsb			;				       ;AN000;
 
-;      $else
-       JMP SHORT $$EN186
-$$IF186:
+;      else$
+       JMP SHORT EN186$$
+IF186$$:
 
 	   clc				; leave it as default - NO NAME
 
-;      $endif				; endif 			       ;AN000;
-$$EN186:
+;      endif$				; endif 			       ;AN000;
+EN186$$:
 
 					; NOTE:
 					; since the GET MEDIA ID failed - its
@@ -3269,25 +3302,25 @@ $$EN186:
 
        mov  cx,FAT_len			; move file system string into	       ;AN000;
 					;     Boot_System_ID field
-       lea  di,IOCTL_File_Sys		; update buffer 		       ;AN000;
+       lea  di,[IOCTL_File_Sys]; update buffer 		       ;AN000;
        cld				;				       ;AN000;
        rep  movsb			;				       ;AN000;
-;  $endif
-$$IF185:
+;  endif$
+IF185$$:
 
-;  $if	nc				;				       ;AN000;
-   JC $$IF190
+;  if$	nc				;				       ;AN000;
+   JC IF190$$
 
-       lea  si,DeviceParameters.DP_BPB
-       lea  di,boot.EXT_BOOT_BPB
-       mov  cx,type EXT_BPB_INFO
+       lea  si,[DeviceParameters.DP_BPB]
+       lea  di,[BOOT+EXT_IBMBOOT_HEADER.EXT_BOOT_BPB]
+       mov  cx,sizeof.EXT_BPB_INFO
        cld
        rep  movsb
 
-       cmp  DeviceParameters.DP_BPB.BPB_MediaDescriptor,hard_drive ; is it Hard drive?;AC000;
+       cmp  byte [DeviceParameters.DP_BPB+A_BPB.BPB_MEDIADESCRIPTOR],hard_drive ; is it Hard drive?;AC000;
 
-;      $if  e				; if its a hard drive		       ;AC000;
-       JNE $$IF191
+;      if$  e				; if its a hard drive		       ;AC000;
+       JNE IF191$$
 
 					; NOTE: The physical hard drive number
 					;	is placed in the third byte from
@@ -3297,57 +3330,57 @@ $$IF185:
 
 					; fill in PhyDrv in canned boot record
 	   mov	al,80h			; (set physical hard drive number)     ;AC016;
-;      $else
-       JMP SHORT $$EN191
-$$IF191:
+;      else$
+       JMP SHORT EN191$$
+IF191$$:
 	   xor	al,al			; (set physical drive number to zero)  ;AC016;
-;      $endif				;				       ;AC000;
-$$EN191:
+;      endif$				;				       ;AC000;
+EN191$$:
 
-       mov  BOOT.EXT_PHYDRV,al		; (set physical hard drive number)     ;AC016;
+       mov  byte [BOOT+EXT_IBMBOOT_HEADER.EXT_PHYDRV],al ; (set physical hard drive number)     ;AC016;
 
-       cmp  DOS_VER,0			;				       ;AN019;
-;      $if  ne				; copy IOCTL stuff into boot record    ;AN019;
-       JE $$IF194
+       cmp  byte [DOS_VER],0 ;				       ;AN019;
+;      if$  ne				; copy IOCTL stuff into boot record    ;AN019;
+       JE IF194$$
 					;     (no set ID available for 3.3)
-	   lea	si,IOCtl_Ser_No_Low	; point to source buffer (IOCTL)       ;AN000;
-	   lea	di,BOOT.EXT_BOOT_SERIAL ; point to target buffer (BOOT record) ;AN000;
+	   lea	si,[IOCtl_Ser_No_Low] ; point to source buffer (IOCTL)       ;AN000;
+	   lea	di,[BOOT+EXT_IBMBOOT_HEADER.EXT_BOOT_SERIAL] ; point to target buffer (BOOT record) ;AN000;
 
-	   mov	cx,IOCTL_Ser_Vol_SyS	; move serial # , Volid , System       ;AN019;
+	   mov	cx,IOCTL_Ser_Vol_Sys	; move serial # , Volid , System       ;AN019;
 	   cld				;				       ;AN019;
 	   rep	movsb			;				       ;AN019;
-;      $endif				;				       ;AN019;
-$$IF194:
+;      endif$				;				       ;AN019;
+IF194$$:
 
        xor  cx,cx			; Sector 0			       ;AN019;
-       mov  [packet],cx 		; set starting sector as 0	       ;AN019;
-       mov  bx,offset BOOT		;				       ;AN019;
-       mov  packet_buffer[0],bx 	;				       ;AN019;
-       mov  word ptr [packet_sectors],1 ;				       ;AN019;
+       mov  [PACKET],cx 		; set starting sector as 0	       ;AN019;
+       mov  bx,BOOT         ;				       ;AN019;
+       mov  [PACKET_BUFFER+0],bx ;				       ;AN019;
+       mov  word [packet_sectors],1     ;				       ;AN019;
        mov  ah,1			; request a write		       ;AN019;
        call Direct_Access		;				       ;AN019;
 
-;      $if  c				;				       ;AC000;
-       JNC $$IF196
-;      $endif				;				       ;AC000;
-$$IF196:
+;      if$  c				;				       ;AC000;
+       JNC IF196$$
+;      endif$				;				       ;AC000;
+IF196$$:
 
-       cmp  DOS_VER,0			;				       ;AN019
-;      $if  e				; only do a SET if DOS 4.00
-       JNE $$IF198
-	   mov	bl,TargDrvNum		; Drive number			       ;AN000;
-	   lea	dx,IOCtl_Buf		; point to output buffer	       ;AN000;
+       cmp  byte [DOS_VER],0 ;				       ;AN019
+;      if$  e				; only do a SET if DOS 4.00
+       JNE IF198$$
+	   mov	bl,[TargDrvNum] ; Drive number			       ;AN000;
+	   lea	dx,[IOCTL_BUF]; point to output buffer	       ;AN000;
 	   mov	ax,(GetSetMediaID shl 8) + 1 ; set volid, ser# and filetype    ;AC008;
 	   INT	21h			; GetSetMediaID + 1  INT 21 <6901>     ;AC008;
-;      $endif				;AN019;
-$$IF198:
+;      endif$				;AN019;
+IF198$$:
 
-;  $endif				;				       ;AC000;
-$$IF190:
+;  endif$				;				       ;AC000;
+IF190$$:
 
    ret
 
-   ENDPROC Write_Boot_Record
+   EndProc Write_Boot_Record
 
    BREAK <SYS - FAT_Size >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -3404,9 +3437,9 @@ $$IF190:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-   public FAT_Size
+;   public FAT_Size
 
-   FAT_Size PROC NEAR
+FAT_Size:
 
 					;--------------------------
 					; Calculate UsedSectors
@@ -3414,53 +3447,53 @@ $$IF190:
 
 					; Calculate the number of directory sectors
 
-   mov	ax, deviceParameters.DP_BPB.BPB_RootEntries ;			       ;AN000;
-   mov	bx, TYPE dir_entry		;				       ;AN000;
+   mov	ax, word [DeviceParameters.DP_BPB+A_BPB.BPB_ROOTENTRIES] ;			       ;AN000;
+   mov	bx, sizeof.dir_entry ;				       ;AN000;
    mul	bx				;				       ;AN000;
-   add	ax, deviceParameters.DP_BPB.BPB_BytesPerSector ;		       ;AN000;
+   add	ax, word [DeviceParameters.DP_BPB+A_BPB.BPB_BYTESPERSECTOR] ;		       ;AN000;
    dec	ax				;				       ;AN000;
    xor	dx,dx				;				       ;AN000;
-   div	deviceParameters.DP_BPB.BPB_BytesPerSector ;			       ;AN000;
+   div	word [DeviceParameters.DP_BPB+A_BPB.BPB_BYTESPERSECTOR] ;			       ;AN000;
    mov	cx,ax				;				       ;AN000;
 
 					; Calculate the number of FAT sectors
 
-   mov	ax, deviceParameters.DP_BPB.BPB_SectorsPerFAT ; 		       ;AN000;
-   mul	deviceParameters.DP_BPB.BPB_NumberOfFATs ;			       ;AN000;
+   mov	ax, word [DeviceParameters.DP_BPB+A_BPB.BPB_SECTORSPERFAT] ; 		       ;AN000;
+   mul	byte [DeviceParameters.DP_BPB+A_BPB.BPB_NUMBEROFFATS] ;			       ;AN000;
 
 					; Add in the number of boot sectors
 
-   add	ax, deviceParameters.DP_BPB.BPB_ReservedSectors ;		       ;AN000;
+   add	ax, word [DeviceParameters.DP_BPB+A_BPB.BPB_RESERVEDSECTORS] ;		       ;AN000;
    add	cx,ax				;				       ;AN000;
 
 					;--------------------------
 					; Calculate t_clusters
 					;--------------------------
 
-   mov	ax, deviceParameters.DP_BPB.BPB_TotalSectors ;			       ;AN000;
+   mov	ax, word [DeviceParameters.DP_BPB+A_BPB.BPB_TOTALSECTORS] ;			       ;AN000;
 
    sub	ax,cx				;Get sectors in data area	       ;AN000;
    xor	dx,dx				;				       ;AN000;
    xor	bx,bx				;				       ;AN000;
-   mov	bl,deviceParameters.DP_BPB.BPB_SectorsPerCluster ;		       ;AN000;
+   mov	bl,byte [DeviceParameters.DP_BPB+A_BPB.BPB_SECTORSPERCLUSTER] ;		       ;AN000;
    div	bx				;Get total clusters		       ;AN000;
    cmp	ax,BIG_FAT_THRESHOLD		;Is clusters < 4086?		       ;AN000;
 
-;  $if	be				; if less then its a FAT12	       ;AN000;
-   JNBE $$IF201
-       lea  si,FAT_12			;				       ;AN000;
-;  $else				;				       ;AN000;
-   JMP SHORT $$EN201
-$$IF201:
-       lea  si,FAT_16			;				       ;AN000;
-;  $endif				;				       ;AN000;
-$$EN201:
+;  if$	be				; if less then its a FAT12	       ;AN000;
+   JNBE IF201$$
+       lea  si,[fat_12] ;				       ;AN000;
+;  else$				;				       ;AN000;
+   JMP SHORT EN201$$
+IF201$$:
+       lea  si,[fat_16] ;				       ;AN000;
+;  endif$				;				       ;AN000;
+EN201$$:
 
    clc					; leave cleanly
 
    return				;				       ;AN000;
 
-   ENDPROC FAT_Size
+   EndProc FAT_Size
 
    BREAK <SYS - Create_Serial_ID >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -3493,9 +3526,9 @@ $$EN201:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-   public Create_Serial_ID
+;   public Create_Serial_ID
 
-   Create_Serial_ID PROC NEAR
+Create_Serial_ID:
 
    mov	ax,(Get_Date shl 8) + not_used	; Get date			       ;AN000;
    INT	21h				; Get_Date + not_used <2A00>	       ;AN000;
@@ -3503,12 +3536,12 @@ $$EN201:
    INT	21h				; Get_Time + not_used <2C00>	       ;AN000;
    add	dx,dx				; Boot_Serial+0 = DX (date) + DX (date);AN000;
    add	cx,cx				; Boot_Serial+2 = CX (time) + CX (time);AN000;
-   mov	IOCtl_Ser_No_Low,dx		; SERIAL # - low		       ;AN000;
-   mov	IOCtl_Ser_No_Hi,cx		; SERIAL # - hi 		       ;AN000;
+   mov	[IOCtl_Ser_No_Low],dx ; SERIAL # - low		       ;AN000;
+   mov	[IOCtl_Ser_No_Hi],cx ; SERIAL # - hi 		       ;AN000;
 
    ret					;				       ;AN000;
 
-   ENDPROC Create_Serial_ID
+   EndProc Create_Serial_ID
 
    BREAK <SYS - Message >
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -3561,99 +3594,99 @@ $$EN201:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-   public Message
+;   public Message
 
-   Message PROC NEAR
+Message:
 
    xor	dx,dx				; reset response  (DL)		       ;AN000;
    xor	cx,cx				; reset insert	(CX)		       ;AC024;
    dec	dh				; assume CLASS is Utility	       ;AN000;
 
-   cmp	ah,PARSE_Error			;				       ;AN000;
+   cmp	ah,PARSE_error			;				       ;AN000;
 
-;  $if	be,and				; if DOS or PARSE error 	       ;AN000;
-   JNBE $$IF204
+;  if$	be,and				; if DOS or PARSE error 	       ;AN000;
+   JNBE IF204$$
 
    mov	dh,ah				;				       ;AN000;
 
-;  $if	e,and				; if PARSE error		       ;AN024;
-   JNE $$IF204
+;  if$	e,and				; if PARSE error		       ;AN024;
+   JNE IF204$$
    cmp	al,reqd_missing 		;				       ;AC024;
-;  $if	ne				; and if theres something there        ;AC024;
-   JE $$IF204
+;  if$	ne				; and if theres something there        ;AC024;
+   JE IF204$$
 
        push cs				; set up for insert		       ;AN024;
        pop  [insert_ptr_seg]		;   (offset set by parse routine)      ;AN024;
-       mov  cs:[si],dl			; make it an ASCIIZ string	       ;AN024;
-       mov  insert_number,dl		; zero out for %0
-       mov  insert_max,030h		; set length to something reasonable   ;AN024;
+       mov  [cs:si],dl			; make it an ASCIIZ string	       ;AN024;
+       mov  [insert_number],dl ; zero out for %0
+       mov  byte [insert_max],030h ; set length to something reasonable   ;AN024;
        inc  cx				; there's an insert                    ;AC024;
-       lea  si,SUBLIST			; point to the sublist		       ;AC024;
+       lea  si,[SUBLIST] ; point to the sublist		       ;AC024;
 
-;  $endif				;				       ;AN024;
-$$IF204:
+;  endif$				;				       ;AN024;
+IF204$$:
 
 
-   cmp	ah,DOS_Error			;				       ;AN000;
+   cmp	ah,DOS_error			;				       ;AN000;
 
-;  $if	be				; if DOS error			       ;AC019;
-   JNBE $$IF206
+;  if$	be				; if DOS error			       ;AC019;
+   JNBE IF206$$
 
-       call Get_DOS_error		; to find out what message to display  ;AN000;
-       mov  dh,DOS_Error		; ensure message type is DOS_Error     ;AN019;
+       call Get_DOS_Error		; to find out what message to display  ;AN000;
+       mov  dh,DOS_error		; ensure message type is DOS_Error     ;AN019;
 
-;  $endif				;				       ;AN000;
-$$IF206:
+;  endif$				;				       ;AN000;
+IF206$$:
 
    mov	bx,STDERR			; set output handle (BX)	       ;AN000;
 
    cmp	ah,util_C			; is it CLASS C 		       ;AN000;
 
-;  $if	e				; CLASS C requires insert	       ;AN000;
-   JNE $$IF208
+;  if$	e				; CLASS C requires insert	       ;AN000;
+   JNE IF208$$
 
        inc  cx				; load insert required		       ;AN000;
 
-;  $endif				;				       ;AN000;
-$$IF208:
+;  endif$				;				       ;AN000;
+IF208$$:
 
    cmp	ah,util_D			; is it CLASS D 		       ;AN000;
 
-;  $if	e				; CLASS D requires response	       ;AN000;
-   JNE $$IF210
+;  if$	e				; CLASS D requires response	       ;AN000;
+   JNE IF210$$
 
        mov  dl,DOS_CON_INP		; load response required  - con: input ;AN000;
 
-;  $endif				;				       ;AN000;
-$$IF210:
+;  endif$				;				       ;AN000;
+IF210$$:
 
    xor	ah,ah				;				       ;AN000;
 
 
-   call SysDispMsg			; to display message		       ;AN000;
+   call SYSDISPMSG			; to display message		       ;AN000;
 
-;  $if	c,and				; error and...............	       ;AN000;
-   JNC $$IF212
+;  if$	c,and				; error and...............	       ;AN000;
+   JNC IF212$$
 
-   call SysDispMsg			; to try again		 :	       ;AN000;
+   call SYSDISPMSG			; to try again		 :	       ;AN000;
 
-;  $if	c				; if reaaly bad .........:	       ;AN000;
-   JNC $$IF212
+;  if$	c				; if reaaly bad .........:	       ;AN000;
+   JNC IF212$$
 
        mov  ax,return_error		; load error exit code		       ;AN000;
 
-;  $else				;				       ;AN000;
-   JMP SHORT $$EN212
-$$IF212:
+;  else$				;				       ;AN000;
+   JMP SHORT EN212$$
+IF212$$:
 
        mov  ax,success			; load success exit code	       ;AN000;
 
-;  $endif				;				       ;AN000;
-$$EN212:
+;  endif$				;				       ;AN000;
+EN212$$:
 
    ret					;				       ;AN000;
 
-   ENDPROC Message
+   EndProc Message
 
 
    BREAK <SYS - Get_DOS_Error >
@@ -3684,9 +3717,9 @@ $$EN212:
 ;
 ;******************-  END  OF PSEUDOCODE -**************************************
 
-   public Get_DOS_Error
+;   public Get_DOS_Error
 
-   Get_DOS_Error PROC NEAR
+Get_DOS_Error:
 
    push bx
    mov	ax,(GetExtendedError shl 8) + not_used ; call DOS for extended error   ;AN000;
@@ -3699,12 +3732,12 @@ $$EN212:
 
    ret					;				       ;AN000;
 
-   ENDPROC Get_DOS_Error
+   EndProc Get_DOS_Error
 
-   CODE ENDS
+end if
 
-   include msgdcl.inc
+   include 'MSGDCL.INC'
 
-   END	START
+;   END	START
 
 
