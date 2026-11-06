@@ -21,6 +21,7 @@ command -v mcopy >/dev/null 2>&1 || { echo "$0: mtools not found" >&2; exit 2; }
 OUT=${TMPDIR:-/tmp}/pipe.$$
 mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
+. ./tests/await.sh
 
 # A disk of this test's own: it is read back here after the machine
 # has written to it, so nothing else may lay a fresh one down under it.
@@ -39,9 +40,8 @@ printf 'pear\r\napple\r\nmango\r\nCherry\r\nbanana\r\n' > "$OUT/WORDS.TXT"
 mcopy -o -i "$IMG" "$OUT/WORDS.TXT" ::WORDS.TXT
 
 {
-    sleep 44
-    echo "pmemsave 0xb8000 4000 \"$OUT/screen.bin\""
-    sleep 2
+    awaitprompt
+    cp "$SHOT" "$OUT/screen.bin"
     echo quit
 } | "$QEMU" -rtc base=localtime \
             -drive file="$IMG",format=raw,if=floppy,index=0 \

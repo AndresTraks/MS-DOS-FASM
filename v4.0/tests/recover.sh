@@ -25,6 +25,7 @@ command -v mcopy >/dev/null 2>&1 || { echo "$0: mtools not found" >&2; exit 2; }
 OUT=${TMPDIR:-/tmp}/recover.$$
 mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
+. ./tests/await.sh
 
 # A disk of this test's own: the second run writes all over it, and it is
 # read back here afterwards.
@@ -44,13 +45,12 @@ mcopy -o -i "$IMG" "$OUT/AUTOEXEC.BAT" ::AUTOEXEC.BAT
 # screen is COMMAND.COM asking for the disk with the batch file on it, which
 # RECOVER has just renamed out from under it.
 {
-    sleep 32
+    await "Press any key to begin recovery of the"
     echo "sendkey a"
-    sleep 10
+    await "Press any key to begin recovery of the" 2
     echo "sendkey a"
-    sleep 12
-    echo "pmemsave 0xb8000 4000 \"$OUT/screen.bin\""
-    sleep 2
+    await "file(s) recovered"
+    cp "$SHOT" "$OUT/screen.bin"
     echo quit
 } | "$QEMU" -rtc base=localtime \
             -drive file="$IMG",format=raw,if=floppy,index=0 \

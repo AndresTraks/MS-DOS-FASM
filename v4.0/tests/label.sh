@@ -23,6 +23,7 @@ command -v mcopy >/dev/null 2>&1 || { echo "$0: mtools not found" >&2; exit 2; }
 OUT=${TMPDIR:-/tmp}/label.$$
 mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
+. ./tests/await.sh
 
 # A disk of this test's own: it is read back here after the machine
 # has written to it, so nothing else may lay a fresh one down under it.
@@ -39,11 +40,10 @@ mcopy -o -i "$IMG" "$OUT/AUTOEXEC.BAT" ::AUTOEXEC.BAT
 # The second LABEL has no name on its line, so it waits for one.  It is typed
 # in lower case: LABEL upper cases it on the way to the directory.
 {
-    sleep 36
-    for k in t h i r d ret; do echo "sendkey $k"; sleep 1; done
-    sleep 10
-    echo "pmemsave 0xb8000 4000 \"$OUT/screen.bin\""
-    sleep 2
+    await "Volume label (11 characters, ENTER for none)?"
+    for k in t h i r d ret; do echo "sendkey $k"; sleep 0.1; done
+    awaitprompt
+    cp "$SHOT" "$OUT/screen.bin"
     echo quit
 } | "$QEMU" -rtc base=localtime \
             -drive file="$IMG",format=raw,if=floppy,index=0 \

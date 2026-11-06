@@ -35,6 +35,7 @@ command -v mcopy >/dev/null 2>&1 || { echo "$0: mtools not found" >&2; exit 2; }
 OUT=${TMPDIR:-/tmp}/exe2bin.$$
 mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
+. ./tests/await.sh
 
 # A disk of this test's own: the file EXE2BIN writes is read back here after
 # the machine has written it, so nothing else may lay a fresh one down under
@@ -83,9 +84,8 @@ printf 'ECHO OFF\r\nEXE2BIN HELLO.EXE OURS.COM\r\nOURS\r\nEXE2BIN NOSUCH.EXE X.C
 mcopy -o -i "$IMG" "$OUT/AUTOEXEC.BAT" ::AUTOEXEC.BAT
 
 {
-    sleep 44
-    echo "pmemsave 0xb8000 4000 \"$OUT/screen.bin\""
-    sleep 2
+    awaitprompt
+    cp "$SHOT" "$OUT/screen.bin"
     echo quit
 } | "$QEMU" -rtc base=localtime \
             -drive file="$IMG",format=raw,if=floppy,index=0 \

@@ -24,6 +24,7 @@ command -v mcopy >/dev/null 2>&1 || { echo "$0: mtools not found" >&2; exit 2; }
 OUT=${TMPDIR:-/tmp}/find.$$
 mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
+. ./tests/await.sh
 
 ./create_image.sh >/dev/null
 mcopy -o -i msdos.img bin/FIND.EXE ::FIND.EXE
@@ -44,9 +45,8 @@ PY
 mcopy -o -i msdos.img "$OUT/LINES.TXT" ::LINES.TXT
 
 {
-    sleep 36
-    echo "pmemsave 0xb8000 4000 \"$OUT/screen.bin\""
-    sleep 2
+    awaitprompt
+    cp "$SHOT" "$OUT/screen.bin"
     echo quit
 } | "$QEMU" -rtc base=localtime \
             -drive file=msdos.img,format=raw,if=floppy,index=0 \

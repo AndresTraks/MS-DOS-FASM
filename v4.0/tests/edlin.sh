@@ -25,6 +25,7 @@ command -v mcopy >/dev/null 2>&1 || { echo "$0: mtools not found" >&2; exit 2; }
 OUT=${TMPDIR:-/tmp}/edlin.$$
 mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
+. ./tests/await.sh
 
 IMG="$OUT/disk.img"
 ./create_image.sh "$IMG" >/dev/null
@@ -38,17 +39,15 @@ mcopy -o -i "$IMG" "$OUT/AUTOEXEC.BAT" ::AUTOEXEC.BAT
 # l lists, 2d deletes the second line, l lists again, e writes and ends.
 # The screen is taken twice: after the first listing and after the second.
 {
-    sleep 30
-    for k in l ret; do echo "sendkey $k"; sleep 3; done
-    sleep 2
-    echo "pmemsave 0xb8000 4000 \"$OUT/first.bin\""
-    sleep 1
-    for k in 2 d ret l ret; do echo "sendkey $k"; sleep 2; done
-    sleep 2
-    echo "pmemsave 0xb8000 4000 \"$OUT/second.bin\""
-    sleep 1
-    for k in e ret; do echo "sendkey $k"; sleep 4; done
-    sleep 4
+    await "End of input file"
+    for k in l ret; do echo "sendkey $k"; sleep 0.1; done
+    await "3: third line"
+    cp "$SHOT" "$OUT/first.bin"
+    for k in 2 d ret l ret; do echo "sendkey $k"; sleep 0.1; done
+    await "2:*third line"
+    cp "$SHOT" "$OUT/second.bin"
+    for k in e ret; do echo "sendkey $k"; sleep 0.1; done
+    awaitprompt
     echo quit
 } | "$QEMU" -rtc base=localtime \
             -drive file="$IMG",format=raw,if=floppy,index=0 \

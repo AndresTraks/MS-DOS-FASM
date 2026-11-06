@@ -26,6 +26,7 @@ command -v mmd >/dev/null 2>&1 || { echo "$0: mtools not found" >&2; exit 2; }
 OUT=${TMPDIR:-/tmp}/tree.$$
 mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
+. ./tests/await.sh
 
 IMG="$OUT/disk.img"
 ./create_image.sh "$IMG" >/dev/null
@@ -42,9 +43,8 @@ printf 'ECHO OFF\r\nTREE\r\nTREE /F\r\n' > "$OUT/AUTOEXEC.BAT"
 mcopy -o -i "$IMG" "$OUT/AUTOEXEC.BAT" ::AUTOEXEC.BAT
 
 {
-    sleep 36
-    echo "pmemsave 0xb8000 4000 \"$OUT/screen.bin\""
-    sleep 2
+    awaitprompt
+    cp "$SHOT" "$OUT/screen.bin"
     echo quit
 } | "$QEMU" -rtc base=localtime \
             -drive file="$IMG",format=raw,if=floppy,index=0 \

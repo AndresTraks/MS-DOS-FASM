@@ -27,6 +27,7 @@ command -v mcopy >/dev/null 2>&1 || { echo "$0: mtools not found" >&2; exit 2; }
 OUT=${TMPDIR:-/tmp}/chkdsk.$$
 mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
+. ./tests/await.sh
 
 IMG="$OUT/a.img"
 ./create_image.sh "$IMG" >/dev/null
@@ -37,7 +38,7 @@ printf 'ECHO OFF\r\nCHKDSK /V > PRN\r\n' > "$OUT/AUTOEXEC.BAT"
 mcopy -o -i "$IMG" "$OUT/AUTOEXEC.BAT" ::AUTOEXEC.BAT
 
 {
-    sleep 36
+    awaitprompt
     echo quit
 } | "$QEMU" -rtc base=localtime \
             -drive file="$IMG",format=raw,if=floppy,index=0 \
@@ -77,11 +78,11 @@ printf 'ECHO OFF\r\nCHKDSK /F > PRN\r\n' > "$OUT/AUTOEXEC.BAT"
 mcopy -o -i "$OUT/lost.img" "$OUT/AUTOEXEC.BAT" ::AUTOEXEC.BAT
 
 {
-    sleep 36
+    awaitprint "$OUT/fixed.txt" "Convert lost chains to files (Y/N)?"
     echo "sendkey y"
-    sleep 2
+    sleep 0.1
     echo "sendkey ret"
-    sleep 10
+    awaitprompt
     echo quit
 } | "$QEMU" -rtc base=localtime \
             -drive file="$OUT/lost.img",format=raw,if=floppy,index=0 \

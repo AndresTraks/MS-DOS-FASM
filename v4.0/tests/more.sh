@@ -23,6 +23,7 @@ command -v mcopy >/dev/null 2>&1 || { echo "$0: mtools not found" >&2; exit 2; }
 OUT=${TMPDIR:-/tmp}/more.$$
 mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
+. ./tests/await.sh
 
 ./create_image.sh >/dev/null
 mcopy -o -i msdos.img bin/MORE.COM ::MORE.COM
@@ -44,13 +45,11 @@ mcopy -o -i msdos.img "$OUT/TEST.TXT" ::TEST.TXT
 # The screen is read twice: once where MORE has stopped, and once after a key
 # has let the rest of the file through.
 {
-    sleep 26
-    echo "pmemsave 0xb8000 4000 \"$OUT/paged.bin\""
-    sleep 2
+    await "-- More --"
+    cp "$SHOT" "$OUT/paged.bin"
     echo "sendkey spc"
-    sleep 4
-    echo "pmemsave 0xb8000 4000 \"$OUT/rest.bin\""
-    sleep 2
+    awaitprompt
+    cp "$SHOT" "$OUT/rest.bin"
     echo quit
 } | "$QEMU" -rtc base=localtime \
             -drive file=msdos.img,format=raw,if=floppy,index=0 \

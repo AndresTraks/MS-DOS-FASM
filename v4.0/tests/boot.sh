@@ -30,6 +30,7 @@ command -v mcopy >/dev/null 2>&1 || { echo "$0: mtools not found" >&2; exit 2; }
 OUT=${TMPDIR:-/tmp}/boot.$$
 mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
+. ./tests/await.sh
 
 ./create_image.sh >/dev/null
 
@@ -46,16 +47,17 @@ mcopy -o -i msdos.img "$OUT/CONFIG.SYS" ::CONFIG.SYS
 # the adapter is showing.  It is read twice: the directory listing is long
 # enough to scroll the date and the time off the top.
 {
-    sleep 24
-    for k in ret ret; do echo "sendkey $k"; sleep 2; done
-    for k in v e r ret; do echo "sendkey $k"; sleep 1; done
-    sleep 2
-    echo "pmemsave 0xb8000 4000 \"$OUT/early.bin\""
-    sleep 2
-    for k in d i r ret; do echo "sendkey $k"; sleep 1; done
-    sleep 3
-    echo "pmemsave 0xb8000 4000 \"$OUT/screen.bin\""
-    sleep 2
+    await "Enter new date"
+    echo "sendkey ret"
+    await "Current time is"
+    echo "sendkey ret"
+    awaitprompt
+    for k in v e r ret; do echo "sendkey $k"; sleep 0.1; done
+    await "MS-DOS Version 4.00"
+    cp "$SHOT" "$OUT/early.bin"
+    for k in d i r ret; do echo "sendkey $k"; sleep 0.1; done
+    await "bytes free"
+    cp "$SHOT" "$OUT/screen.bin"
     echo quit
 } | "$QEMU" -rtc base=localtime \
             -drive file=msdos.img,format=raw,if=floppy,index=0 \

@@ -30,6 +30,7 @@ command -v mformat >/dev/null 2>&1 || { echo "$0: mtools not found" >&2; exit 2;
 OUT=${TMPDIR:-/tmp}/sys.$$
 mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
+. ./tests/await.sh
 
 IMG="$OUT/a.img"
 ./create_image.sh "$IMG" >/dev/null
@@ -45,9 +46,8 @@ dd if="$OUT/b.img" of="$OUT/before.bin" bs=512 count=1 status=none
 # SYS says what it did on the screen, which comes back from the adapter's
 # text buffer the way the boot test reads it.
 {
-    sleep 36
-    echo "pmemsave 0xb8000 4000 \"$OUT/screen.bin\""
-    sleep 2
+    awaitprompt
+    cp "$SHOT" "$OUT/screen.bin"
     echo quit
 } | "$QEMU" -rtc base=localtime \
             -drive file="$IMG",format=raw,if=floppy,index=0 \
@@ -65,7 +65,7 @@ printf 'ECHO OFF\r\nVER > PRN\r\nDIR > PRN\r\n' > "$OUT/AUTOEXEC.BAT"
 mcopy -o -i "$OUT/b.img" "$OUT/AUTOEXEC.BAT" ::AUTOEXEC.BAT
 
 {
-    sleep 30
+    awaitprompt
     echo quit
 } | "$QEMU" -rtc base=localtime \
             -drive file="$OUT/b.img",format=raw,if=floppy,index=0 \

@@ -19,6 +19,7 @@ command -v mcopy >/dev/null 2>&1 || { echo "$0: mtools not found" >&2; exit 2; }
 OUT=${TMPDIR:-/tmp}/comp.$$
 mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
+. ./tests/await.sh
 
 ./create_image.sh >/dev/null
 mcopy -o -i msdos.img bin/COMP.COM ::COMP.COM
@@ -38,13 +39,12 @@ mcopy -o -i msdos.img "$OUT/AUTOEXEC.BAT" ::AUTOEXEC.BAT
 
 # "Compare more files (Y/N) ?" is answered no, twice.
 {
-    sleep 34
-    for k in n ret; do echo "sendkey $k"; sleep 1; done
-    sleep 8
-    for k in n ret; do echo "sendkey $k"; sleep 1; done
-    sleep 6
-    echo "pmemsave 0xb8000 4000 \"$OUT/screen.bin\""
-    sleep 2
+    await "Compare more files (Y/N) ?"
+    for k in n ret; do echo "sendkey $k"; sleep 0.1; done
+    await "Compare more files (Y/N) ?" 2
+    for k in n ret; do echo "sendkey $k"; sleep 0.1; done
+    awaitprompt
+    cp "$SHOT" "$OUT/screen.bin"
     echo quit
 } | "$QEMU" -rtc base=localtime \
             -drive file=msdos.img,format=raw,if=floppy,index=0 \

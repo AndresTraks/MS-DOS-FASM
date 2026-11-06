@@ -21,6 +21,7 @@ command -v mcopy >/dev/null 2>&1 || { echo "$0: mtools not found" >&2; exit 2; }
 OUT=${TMPDIR:-/tmp}/sort.$$
 mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
+. ./tests/await.sh
 
 ./create_image.sh >/dev/null
 mcopy -o -i msdos.img bin/SORT.EXE ::SORT.EXE
@@ -34,9 +35,8 @@ printf 'pear\r\napple\r\nCherry\r\nbanana\r\n' > "$OUT/WORDS.TXT"
 mcopy -o -i msdos.img "$OUT/WORDS.TXT" ::WORDS.TXT
 
 {
-    sleep 28
-    echo "pmemsave 0xb8000 4000 \"$OUT/screen.bin\""
-    sleep 2
+    awaitprompt
+    cp "$SHOT" "$OUT/screen.bin"
     echo quit
 } | "$QEMU" -rtc base=localtime \
             -drive file=msdos.img,format=raw,if=floppy,index=0 \

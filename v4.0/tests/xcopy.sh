@@ -29,6 +29,7 @@ command -v mmd >/dev/null 2>&1 || { echo "$0: mtools not found" >&2; exit 2; }
 OUT=${TMPDIR:-/tmp}/xcopy.$$
 mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
+. ./tests/await.sh
 
 IMG="$OUT/a.img"
 ./create_image.sh "$IMG" >/dev/null
@@ -51,13 +52,12 @@ mcopy -o -i "$IMG" "$OUT/AUTOEXEC.BAT" ::AUTOEXEC.BAT
 
 # D for directory, at the question XCOPY asks before it starts.
 {
-    sleep 42
+    awaitprint "$OUT/prn.txt" "(F = file, D = directory)?"
     echo "sendkey d"
-    sleep 1
+    sleep 0.1
     echo "sendkey ret"
-    sleep 20
-    echo "pmemsave 0xb8000 4000 \"$OUT/screen.bin\""
-    sleep 2
+    awaitprompt
+    cp "$SHOT" "$OUT/screen.bin"
     echo quit
 } | "$QEMU" -rtc base=localtime \
             -drive file="$IMG",format=raw,if=floppy,index=0 \

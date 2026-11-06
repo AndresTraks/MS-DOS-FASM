@@ -28,6 +28,7 @@ command -v mdir >/dev/null 2>&1 || { echo "$0: mtools not found" >&2; exit 2; }
 OUT=${TMPDIR:-/tmp}/diskcopy.$$
 mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
+. ./tests/await.sh
 
 IMG="$OUT/a.img"
 ./create_image.sh "$IMG" >/dev/null
@@ -41,9 +42,13 @@ mcopy -o -i "$IMG" "$OUT/AUTOEXEC.BAT" ::AUTOEXEC.BAT
 dd if=/dev/zero of="$OUT/b.img" bs=512 count=2880 status=none
 
 {
-    sleep 32
-    for k in a n ret; do echo "sendkey $k"; sleep 6; done
-    sleep 10
+    awaitprint "$OUT/prn.txt" "Press any key to continue"
+    echo "sendkey a"
+    awaitprint "$OUT/prn.txt" "Copy another diskette (Y/N)?"
+    echo "sendkey n"
+    sleep 0.1
+    echo "sendkey ret"
+    awaitprompt
     echo quit
 } | "$QEMU" -rtc base=localtime \
             -drive file="$IMG",format=raw,if=floppy,index=0 \
