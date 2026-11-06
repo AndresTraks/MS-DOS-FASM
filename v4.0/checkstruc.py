@@ -61,6 +61,12 @@ FASM = re.compile(r"^\s*(?:(\.\w+)\s+)?(D[BWDQTF])\s+(.*)$", re.I)
 # name the structure and get its fields with it, so the two read differently
 # and reserve the same.
 NESTED = re.compile(r"^\s*(\.\w+)\s+(\w+)\s*$")
+# A field that reserves rather than writes.  MASM said "DB 11 DUP (?)" and
+# the conversion says "rb 11", with the count as the whole operand; a field
+# with no name of its own keeps none here either, which is how the release
+# wrote the FCB's reserved bytes and the first half of the PSP.
+RESERVE = re.compile(r"^\s*(?:(\.\w+)\s+)?(R[BWD])\s+(.*)$", re.I)
+RESERVED_UNIT = {"RB": 1, "RW": 2, "RD": 4}
 
 
 def git(*args):
@@ -121,8 +127,15 @@ def norm(expr):
     return expr.strip("()") or "1"
 
 
-def fields(body, pattern):
-    """The fields of one structure body, in order."""
+def fields(body, pattern, defaults=None):
+    """The fields of one structure body, in order.
+
+    A converted field is laid down from a parameter of the structure, whose
+    default is what the release declared -- ".TARGET_DRV_LET DB
+    TARGET_DRV_LET_" with TARGET_DRV_LET_=" :" is the release's two
+    characters -- so the parameter is read as the value it stands for.
+    """
+    defaults = defaults or {}
     out = []
     for line in body.splitlines():
         code = line.split(";")[0].rstrip()
@@ -131,7 +144,14 @@ def fields(body, pattern):
         m = pattern.match(code)
         if m:
             name = (m.group(1) or "").lstrip(".").upper()
-            out.append((name, size(m.group(2), m.group(3))))
+            operand = defaults.get(m.group(3).strip(), m.group(3))
+            out.append((name, size(m.group(2), operand)))
+            continue
+        m = RESERVE.match(code) if pattern is FASM else None
+        if m:
+            out.append(((m.group(1) or "").lstrip(".").upper(),
+                        "%s*%d" % (norm(m.group(3)),
+                                   RESERVED_UNIT[m.group(2).upper()])))
             continue
         m = NESTED.match(code) if pattern is FASM else None
         if m:
@@ -149,8 +169,9 @@ def masm_strucs(text):
 
 def fasm_strucs(text):
     found = {}
-    for m in re.finditer(r"^\s*STRUC\s+(\w+)[^\n]*\n\s*\{(.*?)^\s*\}", text, re.M | re.S | re.I):
-        found[m.group(1).upper()] = fields(m.group(2), FASM)
+    for m in re.finditer(r"^\s*STRUC\s+(\w+)([^\n]*)\n\s*\{(.*?)^\s*\}", text, re.M | re.S | re.I):
+        defaults = dict(re.findall(r"(\w+)\s*=\s*([^,]*)", m.group(2)))
+        found[m.group(1).upper()] = fields(m.group(3), FASM, defaults)
     return found
 
 
