@@ -1160,9 +1160,14 @@ int_24:
 ;	assume	ds:nothing,es:nothing,ss:nothing
 	pushf				; ** MAKE CHANGES **
 	push	cs
-	push	[int_24_retaddr]
-	push	word [hardch+2]
-	push	word [hardch]
+; INT 24H is entered with DS, ES and SS belonging to DOS, which is what
+; the ASSUME above says.  MASM reached the program's own data through
+; CS, the one register that still points at the group, and wrote the
+; override on these three; without it the handler pushes whatever DOS
+; happens to have at those offsets and the far return below goes there.
+	push	[cs:int_24_retaddr]
+	push	word [cs:hardch+2]
+	push	word [cs:hardch]
 ;	assume	ds:DG_,es:DG_,ss:DG_	;AN000;bgb
 	retf
 EndProc int_24
