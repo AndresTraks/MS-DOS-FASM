@@ -145,6 +145,6 @@ MSG_INV_SW	  EQU	  35	       ;AN004;DUPLICATE / INVALID SW FROM PARSE
 ;			 DB	 CR, LF, BELL, END_OF_MESSAGE
 ;------------------------------------------------------------------------------
 ;******************* COPY RIGHT STATEMENT *************************************
-include copyrigh.inc
+include 'COPYRIGH.INC'
 ;------------------------------------------------------------------------------
 ;XCPYINIT_MSG_END	 LABEL	 BYTE

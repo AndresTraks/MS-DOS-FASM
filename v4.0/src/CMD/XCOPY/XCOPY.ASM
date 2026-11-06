@@ -1,3 +1,91 @@
+STRUC HEADER CONTINUE_INFO_=0, NEXT_PTR_=0, BEFORE_PTR_=0, DIR_DEPTH_=0, CX_BYTES_=0, ATTR_FOUND_=0, FILE_TIME_FOUND_=0, FILE_DATE_FOUND_=0, LOW_SIZE_FOUND_=0, HIGH_SIZE_FOUND_=0, TARGET_DRV_LET_=" :", ATTRIB_LIST_=0
+{
+	.CONTINUE_INFO DB      CONTINUE_INFO_ ;set for filesize bigger then 0FFD0h
+	.NEXT_PTR DW	 NEXT_PTR_ ;next buffer ptr in para
+	.BEFORE_PTR DW	   BEFORE_PTR_ ;before ptr in para
+	.DIR_DEPTH DB	  DIR_DEPTH_ ;same as S_DEPTH
+	.CX_BYTES DW	 CX_BYTES_ ;actual # of bytes in this buffer seg.
+	.ATTR_FOUND DB	   ATTR_FOUND_ ;attribute found
+	.FILE_TIME_FOUND DW	FILE_TIME_FOUND_
+	.FILE_DATE_FOUND DW	FILE_DATE_FOUND_
+	.LOW_SIZE_FOUND DW      LOW_SIZE_FOUND_
+	.HIGH_SIZE_FOUND DW	HIGH_SIZE_FOUND_
+	.TARGET_DRV_LET DB      TARGET_DRV_LET_ ;used for writing
+	.FILENAME_FOUND DB      13 DUP (0) ;AC015; FILENAME
+	.TERMINATE_STRING DB    16 DUP (0) ;AC015;TERM FILENAME STRING FOR DOS
+	.ATTRIB_LIST DW	 ATTRIB_LIST_ ;AC005;EXTENDED ATTRIBUTE BUFFER
+;-------------------------------------------------------------------
+;	extended attribute list used by extended open & get extended
+;-------------------------------------------------------------------
+;	ATTRIB_LIST LABEL BYTE		 extended attribute buffer
+;
+;EA		STRUC		; EXTENDED ATTRIBUTE
+;EA_TYPE	DB	?	; TYPE
+;EAISUNDEF	EQU	0	; UNDEFINED TYPE	      (ATTRIB SKIPS)
+;				;   (OR TYPE NOT APPLICABLE)
+;				;   LENGTH: 0 TO 64K-1 BYTES
+;EAISLOGICAL	EQU	1	; LOGICAL (0 OR 1)	      (ATTRIB DISPLAYS) 				  ;   LENGTH: 1 BYTE
+;EAISBINARY	EQU	2	; BINARY INTEGER	      (ATTRIB DISPLAYS)
+;				;   LENGTH: 1, 2, 4 BYTES
+;EAISASCII	EQU	3	; ASCII TYPE		      (ATTRIB DISPLAYS)
+;				;   LENGTH: 0 TO 128 BYTES
+;EAISDATE	EQU	4	; DOS FILE DATE FORMAT	      (ATTRIB DISPLAYS)
+;				;   LENGTH: 2 BYTES
+;EAISTIME	EQU	5	; DOS FILE TIME FORMAT	      (ATTRIB DISPLAYS)
+;				;   LENGTH: 2 BYTES
+;				; OTHER VALUES RESERVED
+;EA_FLAGS	DW	?	; FLAGS
+;EASYSTEM	EQU	8000H	; EA IS SYSTEM DEFINED
+;				; (BUILTIN, NOT APPLICATION DEFINED)
+;EAREADONLY	EQU	4000H	; EA IS READ ONLY (CANT BE CHANGED)
+;EAHIDDEN	EQU	2000H	; EA IS HIDDEN FROM ATTRIB
+;EACREATEONLY	EQU	1000H	; EA IS SETABLE ONLY AT CREATE TIME
+;				; OTHER BITS RESERVED
+;EA_RC		DB	?	; FAILURE REASON CODE (SET BY DOS)
+;EARCNOTFOUND	EQU	1	; NAME NOT FOUND
+;EARCNOSPACE	EQU	2	; NO SPACE TO HOLD NAME OR VALUE
+;EARCNOTNOW	EQU	3	; NAME CAN'T BE SET ON THIS FUNCTION
+;EARCNOTEVER	EQU	4	; NAME CAN'T BE SET
+;EARCUNDEF	EQU	5	; NAME KNOWN TO THIS FS BUT NOT SUPPORTED
+;EARCDEFBAD	EQU	6	; EA DEFINTION BAD (TYPE, LENGTH, ETC)
+;EARCACCESS	EQU	7	; EA ACCESS DENIED
+;EARCUNKNOWN	EQU	-1	; UNDETERMINED CAUSE
+;EA_NAMELEN	DB	?	; LENGTH OF NAME
+;EA_VALLEN	DW	?	; LENGTH OF VALUE
+;EA_NAME	DB	?	; FIRST BYTE OF NAME
+;
+;EA_VALUE	DB	?	; FIRST BYTE OF VALUE
+;
+}
+match =HEADER_LAID_OUT, HEADER_LAID_OUT
+{
+    HEADER_LAID_OUT equ 1
+    virtual at 0
+      HEADER HEADER
+      sizeof.HEADER = $ - HEADER
+    end virtual
+}
+STRUC SUB_LIST DATA_OFF_=0, DATA_SEG_=0, MSG_ID_=0, FLAGS_=0, MAX_WIDTH_=0, MIN_WIDTH_=0, PAD_CHAR_=0
+{
+	DB	11			;AN000;
+	DB	0			;AN000;
+.DATA_OFF DW	DATA_OFF_ ;AN000; offset of data to be inserted
+.DATA_SEG DW	DATA_SEG_ ;AN000; offset of data to be inserted
+.MSG_ID	DB	MSG_ID_ ;AN000; n of %n
+.FLAGS	DB	FLAGS_ ;AN000; Flags
+.MAX_WIDTH DB	MAX_WIDTH_ ;AN000; Maximum field width
+.MIN_WIDTH DB	MIN_WIDTH_ ;AN000; Minimum field width
+.PAD_CHAR DB	PAD_CHAR_ ;AN000; character for pad field
+
+}
+match =SUB_LIST_LAID_OUT, SUB_LIST_LAID_OUT
+{
+    SUB_LIST_LAID_OUT equ 1
+    virtual at 0
+      SUB_LIST SUB_LIST
+      sizeof.SUB_LIST = $ - SUB_LIST
+    end virtual
+}
 	PAGE,	132			;
 TITLE	XCOPY	WITH FULL MEMORY USE - Ver. 4.00
 
@@ -226,11 +314,11 @@ TITLE	XCOPY	WITH FULL MEMORY USE - Ver. 4.00
 ;--------------------------------
 ;   Include Files
 ;--------------------------------
-INCLUDE XMAINMSG.EQU			;AN000;message file
-INCLUDE DOS.EQU 			;AN000;
-INCLUDE XCOPY.EQU			;AN000;
+include 'XMAINMSG.EQU' ;AN000;message file
+include 'DOS.EQU'  ;AN000;
+include 'XCOPY.EQU' ;AN000;
 
-INCLUDE SYSMSG.INC			;AN000;
+include 'SYSMSG.INC' ;AN000;
 
 MSG_UTILNAME <XCOPY>			;AN000;
 
@@ -245,146 +333,76 @@ MSG_UTILNAME <XCOPY>			;AN000;
 ;Next_Ptr      -> points to the next header segment
 ;Before_Ptr    -> points to the old header segment
 
-HEADER	STRUC
-	CONTINUE_INFO DB      0 	;set for filesize bigger then 0FFD0h
-	NEXT_PTR DW	 ?		;next buffer ptr in para
-	BEFORE_PTR DW	   ?		;before ptr in para
-	DIR_DEPTH DB	  ?		;same as S_DEPTH
-	CX_BYTES DW	 0		;actual # of bytes in this buffer seg.
-	ATTR_FOUND DB	   ?		;attribute found
-	FILE_TIME_FOUND DW	?
-	FILE_DATE_FOUND DW	?
-	LOW_SIZE_FOUND DW      ?
-	HIGH_SIZE_FOUND DW	?
-	TARGET_DRV_LET DB      " :"	;used for writing
-	FILENAME_FOUND DB      13 DUP (0) ;AC015; FILENAME
-	TERMINATE_STRING DB    16 DUP (0) ;AC015;TERM FILENAME STRING FOR DOS
-	ATTRIB_LIST DW	 ?		;AC005;EXTENDED ATTRIBUTE BUFFER
-;-------------------------------------------------------------------
-;	extended attribute list used by extended open & get extended
-;-------------------------------------------------------------------
-;	ATTRIB_LIST LABEL BYTE		 extended attribute buffer
-;
-;EA		STRUC		; EXTENDED ATTRIBUTE
-;EA_TYPE	DB	?	; TYPE
-;EAISUNDEF	EQU	0	; UNDEFINED TYPE	      (ATTRIB SKIPS)
-;				;   (OR TYPE NOT APPLICABLE)
-;				;   LENGTH: 0 TO 64K-1 BYTES
-;EAISLOGICAL	EQU	1	; LOGICAL (0 OR 1)	      (ATTRIB DISPLAYS) 				  ;   LENGTH: 1 BYTE
-;EAISBINARY	EQU	2	; BINARY INTEGER	      (ATTRIB DISPLAYS)
-;				;   LENGTH: 1, 2, 4 BYTES
-;EAISASCII	EQU	3	; ASCII TYPE		      (ATTRIB DISPLAYS)
-;				;   LENGTH: 0 TO 128 BYTES
-;EAISDATE	EQU	4	; DOS FILE DATE FORMAT	      (ATTRIB DISPLAYS)
-;				;   LENGTH: 2 BYTES
-;EAISTIME	EQU	5	; DOS FILE TIME FORMAT	      (ATTRIB DISPLAYS)
-;				;   LENGTH: 2 BYTES
-;				; OTHER VALUES RESERVED
-;EA_FLAGS	DW	?	; FLAGS
-;EASYSTEM	EQU	8000H	; EA IS SYSTEM DEFINED
-;				; (BUILTIN, NOT APPLICATION DEFINED)
-;EAREADONLY	EQU	4000H	; EA IS READ ONLY (CANT BE CHANGED)
-;EAHIDDEN	EQU	2000H	; EA IS HIDDEN FROM ATTRIB
-;EACREATEONLY	EQU	1000H	; EA IS SETABLE ONLY AT CREATE TIME
-;				; OTHER BITS RESERVED
-;EA_RC		DB	?	; FAILURE REASON CODE (SET BY DOS)
-;EARCNOTFOUND	EQU	1	; NAME NOT FOUND
-;EARCNOSPACE	EQU	2	; NO SPACE TO HOLD NAME OR VALUE
-;EARCNOTNOW	EQU	3	; NAME CAN'T BE SET ON THIS FUNCTION
-;EARCNOTEVER	EQU	4	; NAME CAN'T BE SET
-;EARCUNDEF	EQU	5	; NAME KNOWN TO THIS FS BUT NOT SUPPORTED
-;EARCDEFBAD	EQU	6	; EA DEFINTION BAD (TYPE, LENGTH, ETC)
-;EARCACCESS	EQU	7	; EA ACCESS DENIED
-;EARCUNKNOWN	EQU	-1	; UNDETERMINED CAUSE
-;EA_NAMELEN	DB	?	; LENGTH OF NAME
-;EA_VALLEN	DW	?	; LENGTH OF VALUE
-;EA_NAME	DB	?	; FIRST BYTE OF NAME
-;
-;EA_VALUE	DB	?	; FIRST BYTE OF VALUE
-;
-HEADER	ENDS
 
-SUB_LIST STRUC
-	DB	11			;AN000;
-	DB	0			;AN000;
-DATA_OFF DW	0			;AN000; offset of data to be inserted
-DATA_SEG DW	0			;AN000; offset of data to be inserted
-MSG_ID	DB	0			;AN000; n of %n
-FLAGS	DB	0			;AN000; Flags
-MAX_WIDTH DB	0			;AN000; Maximum field width
-MIN_WIDTH DB	0			;AN000; Minimum field width
-PAD_CHAR DB	0			;AN000; character for pad field
-
-SUB_LIST ENDS
 
 
 
 
 ;******************************************************************************
-SSEG	SEGMENT PARA STACK
+if SEGSEL = S_SSEG
 	DB	64     DUP ('STACK   ') ;256 words
-SSEG	ENDS
+end if
 
 
 
 ;******************************************************************************
-DGROUP	GROUP	DSEG,DSEG_INIT		;FOR CONVENIENT ADDRESSIBLITY OF
+;DGROUP_	GROUP	DSEG,DSEG_INIT		;FOR CONVENIENT ADDRESSIBLITY OF
 					;DSEG_INIT in INIT routine
 ;******************************************************************************
-DSEG	SEGMENT PARA PUBLIC		; DATA Segment
+if SEGSEL = S_DSEG; DATA Segment
 ;--- EXTERNAL VARIABLES ---
-EXTRN	PARM_FLAG: BYTE
-EXTRN	COMMAND_LINE: BYTE		;AN000;THE COMMAND LINE FOR THE PARSER
+;EXTRN	PARM_FLAG: BYTE
+;EXTRN	COMMAND_LINE: BYTE		;AN000;THE COMMAND LINE FOR THE PARSER
 ;--- PUBLIC VARIABLES ---
-PUBLIC	ERRORLEVEL
+;PUBLIC	ERRORLEVEL
 
-PUBLIC	DISP_S_PATH
-PUBLIC	DISP_T_PATH
-PUBLIC	S_DRV
-PUBLIC	S_DRV_1
-PUBLIC	T_DRV
-PUBLIC	T_DRV_1
-PUBLIC	T_DRV_2
-PUBLIC	S_DRV_PATH
-PUBLIC	S_PATH
-PUBLIC	T_DRV_PATH
-PUBLIC	T_PATH
-PUBLIC	S_FILE
-PUBLIC	T_FILENAME
-PUBLIC	T_TEMPLATE
-PUBLIC	T_MKDIR_LVL
-PUBLIC	S_ARC_DRV
-PUBLIC	S_ARC_PATH
+;PUBLIC	DISP_S_PATH
+;PUBLIC	DISP_T_PATH
+;PUBLIC	S_DRV
+;PUBLIC	S_DRV_1
+;PUBLIC	T_DRV
+;PUBLIC	T_DRV_1
+;PUBLIC	T_DRV_2
+;PUBLIC	S_DRV_PATH
+;PUBLIC	S_PATH
+;PUBLIC	T_DRV_PATH
+;PUBLIC	T_PATH
+;PUBLIC	S_FILE
+;PUBLIC	T_FILENAME
+;PUBLIC	T_TEMPLATE
+;PUBLIC	T_MKDIR_LVL
+;PUBLIC	S_ARC_DRV
+;PUBLIC	S_ARC_PATH
 ;
-PUBLIC	PSP_SEG
-PUBLIC	SAV_DEFAULT_DRV
-PUBLIC	SAV_DEFAULT_DIR
-PUBLIC	SAV_S_DRV
-PUBLIC	SAV_S_CURDIR
-PUBLIC	SAV_T_DRV
-PUBLIC	SAV_T_CURDIR
-PUBLIC	S_DRV_NUMBER
-PUBLIC	T_DRV_NUMBER
-PUBLIC	TOP_OF_MEMORY
-PUBLIC	BUFFER_PTR
-PUBLIC	BUFFER_BASE
-PUBLIC	BUFFER_LEFT
-PUBLIC	MAX_BUFFER_SIZE
-PUBLIC	MAX_CX
+;PUBLIC	PSP_SEG
+;PUBLIC	SAV_DEFAULT_DRV
+;PUBLIC	SAV_DEFAULT_DIR
+;PUBLIC	SAV_S_DRV
+;PUBLIC	SAV_S_CURDIR
+;PUBLIC	SAV_T_DRV
+;PUBLIC	SAV_T_CURDIR
+;PUBLIC	S_DRV_NUMBER
+;PUBLIC	T_DRV_NUMBER
+;PUBLIC	TOP_OF_MEMORY
+;PUBLIC	BUFFER_PTR
+;PUBLIC	BUFFER_BASE
+;PUBLIC	BUFFER_LEFT
+;PUBLIC	MAX_BUFFER_SIZE
+;PUBLIC	MAX_CX
 ;
-PUBLIC	MY_FLAG
-PUBLIC	SYS_FLAG
-PUBLIC	COPY_STATUS
-PUBLIC	OPTION_FLAG
-PUBLIC	INPUT_DATE
-PUBLIC	INPUT_TIME
+;PUBLIC	MY_FLAG
+;PUBLIC	SYS_FLAG
+;PUBLIC	COPY_STATUS
+;PUBLIC	OPTION_FLAG
+;PUBLIC	INPUT_DATE
+;PUBLIC	INPUT_TIME
 
-PUBLIC	SUBST_COUNT			;AN000;
-PUBLIC	MSG_CLASS			;AN000;
-PUBLIC	INPUT_FLAG			;AN000;
-PUBLIC	MSG_NUM 			;AN000;
+;PUBLIC	SUBST_COUNT			;AN000;
+;PUBLIC	MSG_CLASS			;AN000;
+;PUBLIC	INPUT_FLAG			;AN000;
+;PUBLIC	MSG_NUM 			;AN000;
 
-PUBLIC	SUBLIST1			;AN000;MSG SUBLIST USED BY INIT
+;PUBLIC	SUBLIST1			;AN000;MSG SUBLIST USED BY INIT
 
 
 ;--- VARIABLES DEFINED ---
@@ -394,8 +412,8 @@ PUBLIC	SUBLIST1			;AN000;MSG SUBLIST USED BY INIT
 ERRORLEVEL DB	0			;errorlevel
 INPUT_DATE DW	0
 INPUT_TIME DW	0
-PSP_SEG DW	?
-SAV_DEFAULT_DRV DB ?			;1 = A, 2 = B etc. saved default
+PSP_SEG rw      1
+SAV_DEFAULT_DRV rb      1 ;1 = A, 2 = B etc. saved default
 SAV_DEF_DIR_ROOT DB '\'
 SAV_DEFAULT_DIR DB 80 DUP (0)
 SAV_S_DRV DB	'A:\'
@@ -412,7 +430,7 @@ DISP_T_FILE DB	13 DUP (0)
 B_SLASH DB	'\',0			;AN000;
 
 
-FILE_COUNT LABEL WORD			;AN000;
+label FILE_COUNT word   ;AN000;
 FILE_CNT_LOW DW 0			;copied file count
 FILE_CNT_HIGH DW 0
 ;
@@ -424,7 +442,7 @@ FOUND_FILE_FLAG DB 0			;used for showing the message "File not found"
 S_DRV_NUMBER DB 0			;source, target drv #
 T_DRV_NUMBER DB 0
 ;
-S_DRV_PATH LABEL BYTE			;source drv, path used for single_drv_copy
+label S_DRV_PATH byte   ;source drv, path used for single_drv_copy
 S_DRV	DB	'A:\'
 S_PATH	DB	80 DUP (0)		;AN000;Initialized by calling GET CUR DIR
 S_DEPTH DB	0
@@ -437,21 +455,21 @@ S_DIR_OVERFLO DB 20 DUP (0)		;AN011;BUFFER IF MORE THAN 12 CHARS.
 S_PARENT DB	'..',0			;source parent used for non single_drv_copy
 S_HANDLE DW	0			;file handle opened
 
-S_ARC_DRV_PATH LABEL BYTE		;informations used to change source file's
+label S_ARC_DRV_PATH byte  ;informations used to change source file's
 S_ARC_DRV DB	'A:\'			;archieve bits.
 S_ARC_PATH DB	64 DUP (0)
 S_ARC_DEPTH DB	0
 
-T_DRV_PATH LABEL BYTE			;target drv, path used all the time
+label T_DRV_PATH byte   ;target drv, path used all the time
 T_DRV	DB	'B:\'
 T_PATH	DB	80 DUP (0)		;AC016;init by call GET CUR DIR in INIT
 T_DEPTH DB	0
-T_FILE	LABEL	BYTE			;target filename for file creation
+label T_FILE byte   ;target filename for file creation
 T_DRV_1 DB	'B:'			;target drv letter
 T_FILENAME DB	15 DUP (0)		;target filename
 T_TEMPLATE DB	15 DUP (0)		;if global chr entered, this will be used instead of filename.
 
-T_PARENT LABEL	BYTE
+label T_PARENT byte
 T_DRV_2 DB	'B:'
 T_PARENT_1 DB	'..',0
 T_HANDLE DW	0			;target handle created
@@ -472,7 +490,7 @@ INPUT_BUFF db	20  dup(0)		;AN000; keyboard input buffer used
 ;--------------------------------------------------------------
 ; Following three sublists are used by the  Message Retriever
 ;--------------------------------------------------------------
-SUBLIST1 LABEL	DWORD			;AN000;SUBSTITUTE LIST 1
+label SUBLIST1 dword   ;AN000;SUBSTITUTE LIST 1
 	DB	11			;AN000;sublist size
 	DB	0			;AN000;reserved
 	DD	0			;AN000;substition data Offset
@@ -483,7 +501,7 @@ SUBLIST1 LABEL	DWORD			;AN000;SUBSTITUTE LIST 1
 	DB	0			;AN000;characters for Pad field
 
 
-SUBLIST2 LABEL	DWORD			;AN000;SUBSTITUTE LIST 2
+label SUBLIST2 dword   ;AN000;SUBSTITUTE LIST 2
 	DB	11			;AN000;sublist size
 	DB	0			;AN000;reserved
 	DD	0			;AN000;substition data Offset
@@ -494,7 +512,7 @@ SUBLIST2 LABEL	DWORD			;AN000;SUBSTITUTE LIST 2
 	DB	0			;AN000;characters for Pad field
 
 
-SUBLIST3 LABEL	DWORD			;AN000;SUBSTITUTE LIST 3
+label SUBLIST3 dword   ;AN000;SUBSTITUTE LIST 3
 	DB	11			;AN000;sublist size
 	DB	0			;AN000;reserved
 	DD	0			;AN000;substition data Offset
@@ -505,8 +523,8 @@ SUBLIST3 LABEL	DWORD			;AN000;SUBSTITUTE LIST 3
 	DB	0			;AN000;characters for Pad field
 
 
-FILE_SEARCH_ATTR DW NORM_ATTR
-DIR_SEARCH_ATTR DW INCL_H_S_DIR_ATTR
+FILE_SEARCH_ATTR DW norm_attr
+DIR_SEARCH_ATTR DW incl_h_s_dir_attr
 ;
 OPEN_MODE DB	Read_Only_Deny_Write	;READ_ONLY_DENY_WRITE	 ;access, sharing mode
 ;
@@ -597,25 +615,29 @@ BUFFER_LEFT DW	0			;para
 BUFFER_PTR DW	0			;para. If buffer_left=0 then invalid value
 DATA_PTR DW	0			;buffer_ptr + HEADER
 OLD_BUFFER_PTR DW 0			;last buffer_ptr
-SIZ_OF_BUFF DW	?			;AN005;para. EXTENDED ATTRIB BUFF SIZE
-BYTS_OF_HDR DW	?			;AN005;bytes TOTAL HEADER SIZE
+SIZ_OF_BUFF rw      1 ;AN005;para. EXTENDED ATTRIB BUFF SIZE
+BYTS_OF_HDR rw      1 ;AN005;bytes TOTAL HEADER SIZE
 PARA_OF_HDR DW	3			;AC008;para. TOTAL HDR SIZE INIT TO 3
-OPEN_FILE_COUNT DW ?			;AN005;TRACKING OF OPEN FLS FOR BUFFER
+OPEN_FILE_COUNT rw      1 ;AN005;TRACKING OF OPEN FLS FOR BUFFER
 ;					      ;SIZE CALCULATION.
 DBCSEV_OFF DW	0			;AN010; remember where dbcs vector is
 DBCSEV_SEG DW	0			;AN010;next time I don't have to look
 ;
 ;structured data storage allocation
-FILE_DTA Find_DTA <>			;DTA for find file
-DTAS	Find_DTA 32 dup (<>)		;DTA STACK for find dir
+FILE_DTA Find_DTA      ;DTA for find file
+; Find_DTA declares a zero in every field, so what the 32 of them
+; take up is that many zero bytes; the name is what the
+; program asks for and the fields are reached from it.
+label DTAS byte
+	times 32*sizeof.Find_DTA db 0;DTA STACK for find dir
 ;** Througout the program BP will be used for referencing fieldsname in DTAS.
 ;For example, DS:[BP].dta_filename.
-DSEG	ENDS
+end if
 
 ;******************************************************************************
 
-CSEG	SEGMENT PUBLIC
-	ASSUME	CS:CSEG, DS:DGROUP, SS:SSEG
+if SEGSEL = S_CSEG
+;	ASSUME	CS:CSEG, DS:DGROUP_, SS:SSEG
 
 	MSG_SERVICES <LOADmsg,GETmsg,DISPLAYmsg,INPUTmsg,CHARmsg,NUMmsg> ;AN000;
 	MSG_SERVICES <XCOPY.CLA,XCOPY.CL1,XCOPY.CL2> ;AN000;
@@ -624,50 +646,50 @@ CSEG	SEGMENT PUBLIC
 
 
 ;--- EXTERNAL PROCEDURES ---
-EXTRN	INIT:	NEAR			;INIT PROC
+;EXTRN	INIT:	NEAR			;INIT PROC
 ;
 ;--- PUBLIC   PROCEDURES ---		;USED BY INIT
-PUBLIC	SET_BUFFER_PTR
-PUBLIC	STRING_LENGTH
-PUBLIC	CONCAT_ASCIIZ
-PUBLIC	LAST_DIR_OUT
-PUBLIC	CHK_DRV_LETTER
-PUBLIC	COMPRESS_FILENAME
-PUBLIC	PRINT_STDOUT
-PUBLIC	PRINT_STDERR
-PUBLIC	SET_DEFAULT_DRV
-PUBLIC	MAIN_EXIT
-PUBLIC	MAIN_EXIT_A
-PUBLIC	CTRL_BREAK_EXIT
-PUBLIC	SWITCH_DS_ES
-PUBLIC	MY_INT24
+;PUBLIC	SET_BUFFER_PTR
+;PUBLIC	STRING_LENGTH
+;PUBLIC	CONCAT_ASCIIZ
+;PUBLIC	LAST_DIR_OUT
+;PUBLIC	CHK_DRV_LETTER
+;PUBLIC	COMPRESS_FILENAME
+;PUBLIC	PRINT_STDOUT
+;PUBLIC	PRINT_STDERR
+;PUBLIC	SET_DEFAULT_DRV
+;PUBLIC	MAIN_EXIT
+;PUBLIC	MAIN_EXIT_A
+;PUBLIC	CTRL_BREAK_EXIT
+;PUBLIC	SWITCH_DS_ES
+;PUBLIC	MY_INT24
 
 ;--- INT 24 ADDR ----------
-PUBLIC	SAV_INT24_OFF
-PUBLIC	SAV_INT24_SEG
+;PUBLIC	SAV_INT24_OFF
+;PUBLIC	SAV_INT24_SEG
 
-PUBLIC	SYSLOADMSG			;AN000;
-PUBLIC	SYSDISPMSG
-PUBLIC	SYSGETMSG
+;PUBLIC	SYSLOADMSG			;AN000;
+;PUBLIC	SYSDISPMSG
+;PUBLIC	SYSGETMSG
 
-SAV_INT24 LABEL DWORD
+label SAV_INT24 dword
 SAV_INT24_OFF DW 0			;original int 24 addr holder
 SAV_INT24_SEG DW 0
 ;--- START OF A PROGRAM ---
-	ASSUME	DS:NOTHING		;AN000;
-	ASSUME	ES:NOTHING		;AN000;
-MAIN	PROC	FAR
+;	ASSUME	DS:NOTHING		;AN000;
+;	ASSUME	ES:NOTHING		;AN000;
+MAIN:
 	PUSH	AX			;AN000;PRESERVE FOR INIT DRV VALIDITY
-	MOV	BX,DGROUP
+	MOV	BX,DGROUP_
 	MOV	ES,BX			;AN000;SET UP ADDRESS OF DSEG IN ES
-	ASSUME	ES:DGROUP		;AN000;
+;	ASSUME	ES:DGROUP_		;AN000;
 	MOV	SI,81H			;AN000;POINT TO THE INPUT STRING
-	LEA	DI,COMMAND_LINE 	;AN000;POINT TO THE SAVE AREA IN PARSER
+	LEA	DI,[COMMAND_LINE];AN000;POINT TO THE SAVE AREA IN PARSER
 	MOV	CX,127			;AN000;GET ALL THE DATA(LOOP COUNT)
 	REP	MOVSB			;AN000;MOVE IT
-	MOV	PSP_SEG,DS		;AN000;REMEMBER WHERE THE PSP IS
+	MOV	[es:PSP_SEG],DS ;AN000;REMEMBER WHERE THE PSP IS
 	MOV	DS,BX			;AN000;SET UP ADDRESS OF DSEG IN DS
-	ASSUME	DS:DGROUP		;AN000;
+;	ASSUME	DS:DGROUP_		;AN000;
 
 	CALL	SYSLOADMSG		;AN000; preload all messages
 	jnc	XCOPY_INIT		;AN000; no error, do xcopy init
@@ -680,8 +702,8 @@ XCOPY_INIT:
 	POP	AX			;AN000;WAS PRESERVED FOR DRV VALIDATION
 	CALL	INIT			;initialization
 	JC	MAIN_EXIT		;error. (Already message has been displayed)
-	MOV	BP, OFFSET DTAS 	;initialize BP
-	OR	ACTION_FLAG, READING_FLAG ;set reading flag for copy message
+	MOV	BP, DTAS         ;initialize BP
+	OR	byte [ACTION_FLAG], reading_flag ;set reading flag for copy message
 
 ;Before walking the tree, find out the /X status of APPEND and save it.
 ;Then terminate the /X feature.  After the tree search, restore the
@@ -690,61 +712,61 @@ XCOPY_INIT:
 	MOV	AX,CHK_APPEND		;AN000;CHECK IF APPEND INSTALLED
 	INT	2FH			;AN000;
 	OR	AL,AL			;AN000;INSTALLED?
-;	$IF	NZ			;AN000;YES
-	JZ $$IF1
+;	IF$	NZ			;AN000;YES
+	JZ IF1$$
 	    MOV     AX,VER_APPEND	;AN019;ASK IF DOS VERSION OF APPEND
 	    INT     2FH 		;AN019;CALL THE FUNCTION
 	    CMP     AX,D_V_APPEND	;AN000;DOS VERSION?
-;	    $IF     E			;AN000;YES
-	    JNE $$IF2
+;	    IF$     E			;AN000;YES
+	    JNE IF2$$
 		MOV	AX,GET_APPEND	;AN000;GET THE APPEND STATE
 		INT	2FH		;AN000;
-		MOV	APPENDFLAG,BX	;AN000;SAVE THE STATE TO RESTORE
-		TEST	APPENDFLAG,F_APPEND  ;AN019;IS THE /X BIT ON?
-;		$IF	NZ		;AN000;YES
-		JZ $$IF3
+		MOV	[APPENDFLAG],BX ;AN000;SAVE THE STATE TO RESTORE
+		TEST	word [APPENDFLAG],F_APPEND ;AN019;IS THE /X BIT ON?
+;		IF$	NZ		;AN000;YES
+		JZ IF3$$
 		    MOV     AX,SET_APPEND ;AN000;SET THE APPEND STATE
-		    MOV     BX,APPENDFLAG ;AN000;GET THE SAVED STATE
+		    MOV     BX,[APPENDFLAG] ;AN000;GET THE SAVED STATE
 		    XOR     BX,F_APPEND ;AN000;TURN OFF THE /X BIT
 		    INT     2FH 	;AN000;DO IT
-;		$ENDIF			;AN000;
-$$IF3:
-;	    $ENDIF			;AN000;
-$$IF2:
-;	$ENDIF				;AN000;
-$$IF1:
+;		ENDIF$			;AN000;
+IF3$$:
+;	    ENDIF$			;AN000;
+IF2$$:
+;	ENDIF$				;AN000;
+IF1$$:
 
 	CALL	TREE_COPY
 	CALL	ORG_S_DEF		;restore the original source default dir
 	CALL	WRITE_FROM_BUFFER	;write from buffer if we missed it.
 
 MAIN_EXIT:
-	MOV	BX, DGROUP
+	MOV	BX, DGROUP_
 	MOV	DS, BX			;re initialize ds, es
 	MOV	ES, BX			;exit here if the status of source, target or default drv has been changed.
 	CALL	CHK_FILE_NOT_FOUND	;if no files has been found, show the message.
 					;
 ; Set message substitution list
-	LEA	SI,SUBLIST1		;AN000; get addressability to sublist
-	LEA	DX,FILE_COUNT		;AN000; offset to file count
-	MOV	[SI].DATA_OFF,DX	;AN000; save data offset
-	MOV	[SI].DATA_SEG,DS	;AN000; save data segment
-	MOV	[SI].MSG_ID,1		;AN000; message ID
-	MOV	[SI].FLAGS,RIGHT_ALIGN+UNSGN_BIN_DWORD ;AN018;
-	MOV	[SI].MAX_WIDTH,9	;AN018; MAXIMUM FIELD WITH
-	MOV	[SI].MIN_WIDTH,9	;AN018; MINIMUM FIELD WITH
-	MOV	[SI].PAD_CHAR,SPACE	;AN018; MINIMUM FIELD WITH
+	LEA	SI,[SUBLIST1];AN000; get addressability to sublist
+	LEA	DX,[FILE_COUNT];AN000; offset to file count
+	MOV	[SI+SUB_LIST+SUB_LIST.DATA_OFF],DX ;AN000; save data offset
+	MOV	[SI+SUB_LIST+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
+	MOV	[SI+SUB_LIST+SUB_LIST.MSG_ID],1 ;AN000; message ID
+	MOV	[SI+SUB_LIST+SUB_LIST.FLAGS],Right_Align+Unsgn_Bin_DWord ;AN018;
+	MOV	[SI+SUB_LIST+SUB_LIST.MAX_WIDTH],9 ;AN018; MAXIMUM FIELD WITH
+	MOV	[SI+SUB_LIST+SUB_LIST.MIN_WIDTH],9 ;AN018; MINIMUM FIELD WITH
+	MOV	[SI+SUB_LIST+SUB_LIST.PAD_CHAR],SPACE ;AN018; MINIMUM FIELD WITH
 
 ; Set message parameters
 	MOV	AX,MSG_FILES_COPIED	;AN000; message number
-	MOV	MSG_NUM,AX		;AN000; set message number
-	MOV	SUBST_COUNT,PARM_SUBST_ONE ;AN000; one message substitution
-	MOV	MSG_CLASS,UTILITY_MSG_CLASS ;AN000; message class
-	MOV	INPUT_FLAG,NO_INPUT	;AN000; no user input
+	MOV	[MSG_NUM],AX ;AN000; set message number
+	MOV	word [SUBST_COUNT],PARM_SUBST_ONE ;AN000; one message substitution
+	MOV	byte [MSG_CLASS],UTILITY_MSG_CLASS ;AN000; message class
+	MOV	byte [INPUT_FLAG],NO_INPUT ;AN000; no user input
 	CALL	PRINT_STDOUT		;AN000; display file count
 
 MAIN_EXIT_A:
-	MOV	BX, DGROUP
+	MOV	BX, DGROUP_
 	MOV	DS, BX			;re initialize ds, es
 	MOV	ES, BX			;exit here if the status of source, target or default drv has been changed.
 	CALL	CHK_MKDIR_LVL		;starting target directory has been created?
@@ -755,125 +777,125 @@ JUST_EXIT:				;unconditional immediate exit
 ; Restore the original status of APPEND if active.
 
 
-	MOV	BX,APPENDFLAG		;AN000;GET THE STATUS WORD
+	MOV	BX,[APPENDFLAG] ;AN000;GET THE STATUS WORD
 	OR	BX,BX			;AN019;IF FLAGS SAVED, THIS IS DOS VER.
-;	$IF	NZ			;AN019;IF ACTIVE,
-	JZ $$IF7
+;	IF$	NZ			;AN019;IF ACTIVE,
+	JZ IF7$$
 	    MOV     AX,SET_APPEND	;AN000;SET TO THE ORIGINAL STATE
 	    INT     2FH 		;AN000; turn on the /X feature
-;	$ENDIF				;AN000;
-$$IF7:
+;	ENDIF$				;AN000;
+IF7$$:
 ;
 	MOV	AH, 4Ch 		;return to dos
-	MOV	AL, ERRORLEVEL		;set return code whatever
+	MOV	AL, [ERRORLEVEL] ;set return code whatever
 	INT	21H
 CTRL_BREAK_EXIT:
-	MOV	ERRORLEVEL, 2		;set errorlevel to 2 for control break
+	MOV	byte [ERRORLEVEL], 2 ;set errorlevel to 2 for control break
 	JMP	MAIN_EXIT_A
 
-MAIN	ENDP
+;MAIN	ENDP
 ;
 
 
 ;----------------- SUBROUTINES ---------------------------------------------
 
-TREE_COPY PROC	NEAR
+TREE_COPY:
 
 ;Walk the source tree to read files and subdirectories
 
-	OR	MY_FLAG, FINDFILE_FLAG	;deals with files
-	OR	MY_FLAG, FIND_FIRST_FLAG ;find first
+	OR	byte [MY_FLAG], findfile_flag ;deals with files
+	OR	byte [MY_FLAG], find_first_flag ;find first
 	CALL	SET_MY_DTA		;set DTA to FILE_DTA
-;	$DO
-$$DO9:
+;	DO$
+DO9$$:
 	    CALL    FIND_FILE		;find first (next)
-	    TEST    MY_FLAG, NO_MORE_FILE ;no more file?
-;	$LEAVE	NZ			;then exit loop
-	JNZ $$EN9
+	    TEST    byte [MY_FLAG], no_more_file ;no more file?
+;	LEAVE$	NZ			;then exit loop
+	JNZ EN9$$
 	    CALL    READ_INTO_BUFFER	;else read the file into the buffer
-;	$ENDDO
-	JMP SHORT $$DO9
-$$EN9:
+;	ENDDO$
+	JMP SHORT DO9$$
+EN9$$:
 
-	TEST	OPTION_FLAG, SLASH_S	;walk the tree?
-;	$IF	NZ,LONG
-	JNZ $$XL1
-	JMP $$IF12
-$$XL1:
+	TEST	byte [OPTION_FLAG], slash_s ;walk the tree?
+;	IF$	NZ,LONG
+	JNZ XL1$$
+	JMP IF12$$
+XL1$$:
 
-	    AND     MY_FLAG, RESET_FINDFILE ;now, deals with directory
-	    OR	    MY_FLAG, FIND_FIRST_FLAG ;find first
-;	    $DO
-$$DO13:
+	    AND     byte [MY_FLAG], reset_findfile ;now, deals with directory
+	    OR	    byte [MY_FLAG], find_first_flag ;find first
+;	    DO$
+DO13$$:
 		CALL	SET_MY_DTA	;set DTA to DTAS according to BP
 		CALL	FIND_DIR	;find first (next)
-		TEST	MY_FLAG, NO_MORE_FILE ;no more subdirectory?
-;	    $LEAVE  NZ			;then leave this loop to return to caller
-	    JNZ $$EN13
-		LEA	DI, S_DRV_PATH
-		LEA	SI, [BP].DTA_FILENAME
-		CMP	S_PATH, 0	;root directory?
-;		$IF	E
-		JNE $$IF15
+		TEST	byte [MY_FLAG], no_more_file ;no more subdirectory?
+;	    LEAVE$  NZ			;then leave this loop to return to caller
+	    JNZ EN13$$
+		LEA	DI,[S_DRV_PATH]
+		LEA	SI, [BP+Find_DTA+Find_DTA.DTA_Filename]
+		CMP	byte [S_PATH], 0 ;root directory?
+;		IF$	E
+		JNE IF15$$
 		    MOV     AL, 0FFh	;then '\' is already provided. Just concat.
-;		$ELSE
-		JMP SHORT $$EN15
-$$IF15:
-		    MOV     AL, PATH_DELIM ;put delimiter
-;		$ENDIF
-$$EN15:
+;		ELSE$
+		JMP SHORT EN15$$
+IF15$$:
+		    MOV     AL, path_delim ;put delimiter
+;		ENDIF$
+EN15$$:
 		CALL	CONCAT_ASCIIZ	;make new path
-		test	option_flag, slash_p ;prompt mode?
-;		$IF	NZ
-		JZ $$IF18
-		    call    p_concat_display_path
-;		$ENDIF
-$$IF18:
-		INC	S_DEPTH 	;increase depth
+		test	byte [OPTION_FLAG], slash_p ;prompt mode?
+;		IF$	NZ
+		JZ IF18$$
+		    call    P_concat_display_path
+;		ENDIF$
+IF18$$:
+		INC	byte [S_DEPTH] ;increase depth
 		CALL	MAKE_HEADER	;make header in the buffer
-		OR	MY_FLAG, IS_SOURCE_FLAG ;dealing with source
-		AND	MY_FLAG, RESET_VISIT_PARENT ;going to visit child node
+		OR	byte [MY_FLAG], is_source_flag ;dealing with source
+		AND	byte [MY_FLAG], reset_visit_parent ;going to visit child node
 		CALL	CHANGE_S_DIR	;change source dir
-		ADD	BP, type FIND_DTA ;increase DTAS stack pointer
+		ADD	BP, sizeof.Find_DTA ;increase DTAS stack pointer
 		CALL	TREE_COPY	;tree copy the sub directory
-;	    $ENDDO
-	    JMP SHORT $$DO13
-$$EN13:
+;	    ENDDO$
+	    JMP SHORT DO13$$
+EN13$$:
 
-	    CMP     S_DEPTH, 0		;starting directory? then exit
-;	    $IF     NE			;else
-	    JE $$IF21
-		DEC	S_DEPTH 	;dec depth
-		TEST	OPTION_FLAG, SLASH_E ;copy subdirectories even if empty?
-;		$IF	Z
-		JNZ $$IF22
+	    CMP     byte [S_DEPTH], 0 ;starting directory? then exit
+;	    IF$     NE			;else
+	    JE IF21$$
+		DEC	byte [S_DEPTH] ;dec depth
+		TEST	byte [OPTION_FLAG], slash_e ;copy subdirectories even if empty?
+;		IF$	Z
+		JNZ IF22$$
 		    CALL    DEL_EMPTY	;then check the old_buffer_ptr and
 					;if it is a directory, then restore
 					;buffer_ptr to old.
-;		$ENDIF
-$$IF22:
-		LEA	DI, S_DRV_PATH
+;		ENDIF$
+IF22$$:
+		LEA	DI,[S_DRV_PATH]
 		CALL	LAST_DIR_OUT	;change environments
-		test	option_flag, slash_p ;prompt mode?
-;		$IF	NZ
-		JZ $$IF24
-		    call    p_cut_display_path
-;		$ENDIF
-$$IF24:
-		LEA	DX, S_DRV_PATH	;before returning to the caller
-		OR	MY_FLAG, IS_SOURCE_FLAG
-		OR	MY_FLAG, VISIT_PARENT_FLAG
+		test	byte [OPTION_FLAG], slash_p ;prompt mode?
+;		IF$	NZ
+		JZ IF24$$
+		    call    P_cut_display_path
+;		ENDIF$
+IF24$$:
+		LEA	DX,[S_DRV_PATH];before returning to the caller
+		OR	byte [MY_FLAG], is_source_flag
+		OR	byte [MY_FLAG], visit_parent_flag
 		CALL	CHANGE_S_DIR
-		SUB	BP, type FIND_DTA
-;	    $ENDIF
-$$IF21:
-;	$ENDIF				;walk the tree
-$$IF12:
+		SUB	BP, sizeof.Find_DTA
+;	    ENDIF$
+IF21$$:
+;	ENDIF$				;walk the tree
+IF12$$:
 	RET
-TREE_COPY ENDP
+;TREE_COPY ENDP
 ;
 
-DEL_EMPTY PROC	NEAR
+DEL_EMPTY:
 ;If buffer is not full, and the tree walk is going to return to the parents,
 ;this routine should be called.
 ;If old_buffer_ptr points to a directory, then set buffer_ptr to this, and
@@ -884,173 +906,173 @@ DEL_EMPTY PROC	NEAR
 
 	PUSH	CS
 	POP	AX
-	CMP	OLD_BUFFER_PTR, AX	;buffer is empty?
+	CMP	[OLD_BUFFER_PTR], AX ;buffer is empty?
 	JE	DE_EXIT 		;yes, exit
 
-	MOV	ES, OLD_BUFFER_PTR
-	TEST	ES:ATTR_FOUND, 10h	;directory?
+	MOV	ES, [OLD_BUFFER_PTR]
+	TEST	[es:HEADER.ATTR_FOUND], 10h ;directory?
 	JZ	DE_EXIT 		;if not, exit
-	MOV	AX, OLD_BUFFER_PTR
-	MOV	BUFFER_PTR, AX		;set new BUFFER_PTR
-	MOV	AX, ES:BEFORE_PTR
-	MOV	OLD_BUFFER_PTR, AX	;set new OLD_BUFFER_PTR
-	MOV	AX, PARA_OF_HDR 	;AN005;GET THE HEADER SIZE (para.)
-	ADD	BUFFER_LEFT, AX 	;AC005;dir entry must be only hdr SIZE.
+	MOV	AX, [OLD_BUFFER_PTR]
+	MOV	[BUFFER_PTR], AX ;set new BUFFER_PTR
+	MOV	AX, [es:HEADER.BEFORE_PTR]
+	MOV	[OLD_BUFFER_PTR], AX ;set new OLD_BUFFER_PTR
+	MOV	AX, [PARA_OF_HDR] ;AN005;GET THE HEADER SIZE (para.)
+	ADD	[BUFFER_LEFT], AX ;AC005;dir entry must be only hdr SIZE.
 
 DE_EXIT:
 	POP	ES
 	RET
-DEL_EMPTY ENDP
+;DEL_EMPTY ENDP
 ;
 
 
-P_concat_display_path proc near
+P_concat_display_path:
 ;concatenate subdirectory name found from DTAS to the
 ;DISP_S_PATH which will be used for prompts
 ;DS - data seg
-	MOV	DI, OFFSET DISP_S_PATH
-	LEA	SI, [BP].DTA_FILENAME
-	CMP	S_DEPTH, 0		;this will be the first subdir?
-;	$IF	E
-	JNE $$IF28
+	MOV	DI, DISP_S_PATH
+	LEA	SI, [BP+Find_DTA+Find_DTA.DTA_Filename]
+	CMP	byte [S_DEPTH], 0 ;this will be the first subdir?
+;	IF$	E
+	JNE IF28$$
 	    MOV     AL, 0FFh		;then do not put '\'
-;	$ELSE
-	JMP SHORT $$EN28
-$$IF28:
-	    MOV     AL, Path_delim
-;	$ENDIF
-$$EN28:
+;	ELSE$
+	JMP SHORT EN28$$
+IF28$$:
+	    MOV     AL, path_delim
+;	ENDIF$
+EN28$$:
 	CALL	CONCAT_ASCIIZ
 	RET
-P_concat_display_path endp
+;P_concat_display_path endp
 ;
 
 
-P_cut_display_path proc near
+P_cut_display_path:
 ;take the last dir out from the DISP_S_PATH for prompt.
 ;DS,ES - data seg
-	MOV	SI, OFFSET DISP_S_PATH
-	MOV	DI, OFFSET DISP_S_PATH
+	MOV	SI, DISP_S_PATH
+	MOV	DI, DISP_S_PATH
 	CALL	LAST_DIR_OUT
-;	$IF	C
-	JNC $$IF31
+;	IF$	C
+	JNC IF31$$
 	    CALL    CHK_DRV_LETTER
-;	    $IF     NC
-	    JC $$IF32
-		MOV	BYTE PTR DS:[SI], 0
-;	    $ELSE
-	    JMP SHORT $$EN32
-$$IF32:
-		MOV	BYTE PTR [DI], 0
-;	    $ENDIF
-$$EN32:
-;	$ELSE
-	JMP SHORT $$EN31
-$$IF31:
-	    CMP     S_DEPTH, 0
-;	    $IF     E
-	    JNE $$IF36
+;	    IF$     NC
+	    JC IF32$$
+		MOV	byte [ds:SI], 0
+;	    ELSE$
+	    JMP SHORT EN32$$
+IF32$$:
+		MOV	byte [DI], 0
+;	    ENDIF$
+EN32$$:
+;	ELSE$
+	JMP SHORT EN31$$
+IF31$$:
+	    CMP     byte [S_DEPTH], 0
+;	    IF$     E
+	    JNE IF36$$
 		MOV	DI, AX
 		DEC	DI
-		MOV	BYTE PTR [DI], '\'
-		MOV	BYTE PTR [DI+1], 0
-;	    $ENDIF
-$$IF36:
-;	$ENDIF
-$$EN31:
+		MOV	byte [DI], '\'
+		MOV	byte [DI+1], 0
+;	    ENDIF$
+IF36$$:
+;	ENDIF$
+EN31$$:
 	RET
-P_cut_display_path endp
+;P_cut_display_path endp
 ;
 
 
-READ_INTO_BUFFER PROC NEAR
+READ_INTO_BUFFER:
 ;Read *** a *** file	into buffer
-	TEST	MY_FLAG, SINGLE_COPY_FLAG ;single copy?
-;	$IF	Z,AND			;no, multi copy
-	JNZ $$IF39
-	TEST	ACTION_FLAG, READING_FLAG ;show message?
-;	$IF	NZ			;yes.
-	JZ $$IF39
+	TEST	byte [MY_FLAG], single_copy_flag ;single copy?
+;	IF$	Z,AND			;no, multi copy
+	JNZ IF39$$
+	TEST	byte [ACTION_FLAG], reading_flag ;show message?
+;	IF$	NZ			;yes.
+	JZ IF39$$
 	    MOV     AX,MSG_READING_SOURCE ;AN000; message number
-	    MOV     MSG_NUM,AX		;AN000; set message number
-	    MOV     SUBST_COUNT,NO_SUBST ;AN000; no message substitution
-	    MOV     MSG_CLASS,UTILITY_MSG_CLASS ;AN000; message class
-	    MOV     INPUT_FLAG,NO_INPUT ;AN000; no input
+	    MOV     [MSG_NUM],AX ;AN000; set message number
+	    MOV     word [SUBST_COUNT],NO_SUBST ;AN000; no message substitution
+	    MOV     byte [MSG_CLASS],UTILITY_MSG_CLASS ;AN000; message class
+	    MOV     byte [INPUT_FLAG],NO_INPUT ;AN000; no input
 	    CALL    PRINT_STDOUT	;AN000;show message "Reading source files"
 
-	    AND     ACTION_FLAG, RESET_READING ;reset it
-;	$ENDIF
-$$IF39:
+	    AND     byte [ACTION_FLAG], reset_reading ;reset it
+;	ENDIF$
+IF39$$:
 
-	AND	FILE_FLAG, RESET_READFILE ;reset file_flag to read a file
-	MOV	AX,FILE_DTA.DTA_FILE_SIZE_HIGH
-	MOV	HIGH_FILE_SIZE, AX
-	MOV	AX,FILE_DTA.DTA_FILE_SIZE_LOW
-	MOV	LOW_FILE_SIZE, AX
+	AND	byte [FILE_FLAG], reset_readfile ;reset file_flag to read a file
+	MOV	AX,[FILE_DTA.DTA_File_Size_High]
+	MOV	[HIGH_FILE_SIZE], AX
+	MOV	AX,[FILE_DTA.DTA_File_Size_Low]
+	MOV	[LOW_FILE_SIZE], AX
 	CALL	CMP_FILESIZE_TO_BUFFER_LEFT ;compare sizes
 
-	MOV	AX, PARA_OF_HDR 	;AN005;GET THE HEADER SIZE (para.)
-	CMP	MAX_BUFFER_SIZE, AX	;AN005;IS EA BUFFER TOO LARGE?
-;	$IF	B
-	JNB $$IF41
+	MOV	AX, [PARA_OF_HDR] ;AN005;GET THE HEADER SIZE (para.)
+	CMP	[MAX_BUFFER_SIZE], AX ;AN005;IS EA BUFFER TOO LARGE?
+;	IF$	B
+	JNB IF41$$
 	    CLC 			;AN005;CLEAR CARRY
 	    MOV     AX, MSG_INSUF_MEMORY ;AC005;GET THE MESSAGE ID
-	    MOV     MSG_NUM,AX		;AN005;NEED MESSAGE ID FOR PRINT
-	    MOV     SUBST_COUNT,NO_SUBST ;AN005;NO SUBSTITUTION TEXT
-	    MOV     INPUT_FLAG,NO_INPUT ;AN005;NO INPUT = 0
-	    MOV     MSG_CLASS,UTILITY_MSG_CLASS ;AN005;MESSAGE CLASS = -1
+	    MOV     [MSG_NUM],AX ;AN005;NEED MESSAGE ID FOR PRINT
+	    MOV     word [SUBST_COUNT],NO_SUBST ;AN005;NO SUBSTITUTION TEXT
+	    MOV     byte [INPUT_FLAG],NO_INPUT ;AN005;NO INPUT = 0
+	    MOV     byte [MSG_CLASS],UTILITY_MSG_CLASS ;AN005;MESSAGE CLASS = -1
 	    CALL    PRINT_STDERR	;AN005;print error. AX points to msg ID
-;	$ENDIF				;AN005;WE HAVE ENOUGH MEMORY
-$$IF41:
-	MOV	AX, PARA_OF_HDR 	;AN005;GET THE HEADER SIZE (para.)
-	CMP	MAX_BUFFER_SIZE,AX	;AN005;IS EA BUFFER TOO LARGE?
+;	ENDIF$				;AN005;WE HAVE ENOUGH MEMORY
+IF41$$:
+	MOV	AX, [PARA_OF_HDR] ;AN005;GET THE HEADER SIZE (para.)
+	CMP	[MAX_BUFFER_SIZE],AX ;AN005;IS EA BUFFER TOO LARGE?
 	JB	RIB_ERROR		;AN005;CLOSE THE FILE AND GET THE NEXT
 
-	TEST	FILE_FLAG, FILE_BIGGER_FLAG ;filesize > buffer_left - HEADER ?
+	TEST	byte [FILE_FLAG], file_bigger_flag ;filesize > buffer_left - HEADER ?
 	JZ	RIB_SMALL		;if not, then small file
-	MOV	BX, S_HANDLE		;AN005;
+	MOV	BX, [S_HANDLE] ;AN005;
 	CALL	CLOSE_A_FILE		;AN005;ONLY OPENED TO GET BUFFER SIZE
 	CALL	WRITE_FROM_BUFFER
 	CALL	CMP_FILESIZE_TO_BUFFER_LEFT ;compare again
-	TEST	FILE_FLAG, FILE_BIGGER_FLAG ;still bigger?
+	TEST	byte [FILE_FLAG], file_bigger_flag ;still bigger?
 	JNZ	RIB_BIG 		;yes.  Big file
 RIB_SMALL:
 	CALL	SMALL_FILE
 	JC	RIB_ERROR
 	JMP	RIB_EXIT
 RIB_BIG:
-	MOV	BX, S_HANDLE		;AN005;
+	MOV	BX, [S_HANDLE] ;AN005;
 	CALL	CLOSE_A_FILE		;AN005;ONLY OPENED TO GET BUFFER SIZE
 	CALL	BIG_FILE
 	JNC	RIB_EXIT
 RIB_ERROR:
-	TEST	COPY_STATUS, OPEN_ERROR_FLAG ;open error?
+	TEST	byte [COPY_STATUS], open_error_flag ;open error?
 	JNZ	RIB_EXIT		;just exit. find next file
-	MOV	BX, S_HANDLE		;else write error
+	MOV	BX, [S_HANDLE] ;else write error
 	CALL	CLOSE_A_FILE		;close the troubled file
 					;and find next file
 RIB_EXIT:
-	TEST	MY_FLAG, SINGLE_COPY_FLAG ;single copy?
-;	$IF	NZ
-	JZ $$IF43
+	TEST	byte [MY_FLAG], single_copy_flag ;single copy?
+;	IF$	NZ
+	JZ IF43$$
 	    CALL    WRITE_FROM_BUFFER	;then write a file
-;	$ENDIF
-$$IF43:
+;	ENDIF$
+IF43$$:
 	RET
-READ_INTO_BUFFER ENDP
+;READ_INTO_BUFFER ENDP
 ;
 
 
-SMALL_FILE PROC NEAR
+SMALL_FILE:
 ;handles a file smaller than max_buffer_size or buffer_left, i.e. fit in memory.
 ;This routine will call MAKE_HEADER, SET_BUFFER_PTR< READ_A_FILE,
 ;CALC_FILE_SIZE, CMP_FILE_FFD0h, CLOSE_A_FILE.
 
 SMF_CONT:
 	CALL	CMP_FILE_FFD0h		;filesize > 0FFD0h ?
-	TEST	FILE_FLAG, FILE_BIGGER_FLAG
+	TEST	byte [FILE_FLAG], file_bigger_flag
 	JZ	SMF_EOF 		;filesize <= 0FFD0h
-	OR	FILE_FLAG, CONT_FLAG	;filesize > 0FFD0h. set cont_flag
+	OR	byte [FILE_FLAG], cont_flag ;filesize > 0FFD0h. set cont_flag
 	MOV	CX, 0FFD0h		;# of bytes to read
 	CALL	READ_A_FILE
 	JC	SMF_ERROR		;unsuccessful read?
@@ -1059,43 +1081,43 @@ SMF_CONT:
 	JMP	SMF_CONT		;loop. compare again with the rest
 
 SMF_EOF:
-	MOV	CX, LOW_FILE_SIZE	;rest of the bytes to read
-	OR	FILE_FLAG, EOF_FLAG	;AN000;set EOF
+	MOV	CX, [LOW_FILE_SIZE] ;rest of the bytes to read
+	OR	byte [FILE_FLAG], eof_flag ;AN000;set EOF
 	CALL	READ_A_FILE
 	JC	SMF_ERROR
 	CALL	MAKE_HEADER
-	MOV	BX, S_HANDLE
+	MOV	BX, [S_HANDLE]
 	CALL	CLOSE_A_FILE
 	JMP	SMF_EXIT
 SMF_ERROR:
 					;
 SMF_EXIT:
 	RET
-SMALL_FILE ENDP
+;SMALL_FILE ENDP
 ;
 
 
-BIG_FILE PROC	NEAR
+BIG_FILE:
 ;handles a file which is bigger than max_buffer_size
 ;Needs 2 file handles open concurrently for read and write
 
-	OR	FILE_FLAG, BIG_FILE_FLAG
-	OR	FILE_FLAG, CONT_FLAG
+	OR	byte [FILE_FLAG], big_file_flag
+	OR	byte [FILE_FLAG], cont_flag
 	CALL	OPEN_A_FILE
 	JC	BIF_ERROR		;error in open?
-	CMP	MAX_BUFFER_SIZE, 0FFFh	;max buffer size > 0FFFh in para ?
+	CMP	word [MAX_BUFFER_SIZE], 0FFFh ;max buffer size > 0FFFh in para ?
 	JA	BIF_BIG 		;yes. large buffer system
 					;else small buffer
-	MOV	CX, MAX_CX		;CX = max_buffer_size * 16 - HEADER
+	MOV	CX, [MAX_CX] ;CX = max_buffer_size * 16 - HEADER
 BIF_SM:
 	CALL	READ_A_FILE
 	JC	BIF_ERROR		;read error?
 	CALL	MAKE_HEADER
 	CALL	WRITE_FROM_BUFFER
 	JC	BIF_ERROR		;write error?
-	TEST	FILE_FLAG, EOF_FLAG	;end of file set by READ_A_FILE?
+	TEST	byte [FILE_FLAG], eof_flag ;end of file set by READ_A_FILE?
 	JZ	BIF_SM			;if not, read again
-	MOV	BX, S_HANDLE
+	MOV	BX, [S_HANDLE]
 	CALL	CLOSE_A_FILE
 	JMP	BIF_EXIT		;finished.
 BIF_BIG:
@@ -1107,19 +1129,19 @@ BIF_BIG1:
 	CALL	CALC_FILE_SIZE		;modify file size
 BIF_BIG2:
 	CALL	CMP_FILESIZE_TO_BUFFER_LEFT ;filesize > buffer_left?
-	TEST	FILE_FLAG, FILE_BIGGER_FLAG ;yes.
+	TEST	byte [FILE_FLAG], file_bigger_flag ;yes.
 	JZ	BIF_END 		;if it is not, call small_file
-	MOV	AX, PARA_OF_HDR 	;AN021;GET THE ATTR. HDR SIZE
+	MOV	AX, [PARA_OF_HDR] ;AN021;GET THE ATTR. HDR SIZE
 	ADD	AX, 0FFFh		;AN021;
-	CMP	BUFFER_LEFT, AX 	;AC021;BUFFER_LEFT >= 0FFF0h+HDR SIZE?
+	CMP	[BUFFER_LEFT], AX ;AC021;BUFFER_LEFT >= 0FFF0h+HDR SIZE?
 	JAE	BIF_BIG 		;then loop again.
-	MOV	AX, PARA_OF_HDR 	;AN021;GET THE ATTR. HDR SIZE
+	MOV	AX, [PARA_OF_HDR] ;AN021;GET THE ATTR. HDR SIZE
 	ADD	AX, 140H		;AN021;
-	CMP	BUFFER_LEFT, AX 	;AC021;BUFFER_LEFT >= 5Kbytes+HDR SIZE?
+	CMP	[BUFFER_LEFT], AX ;AC021;BUFFER_LEFT >= 5Kbytes+HDR SIZE?
 					;minimum buffer size this pgm supports.
 	JL	BIF_BIG3		;then flush buffer and try again. **IF system buffer left < 5 K then infinit loop can happen.
-	MOV	AX,BUFFER_LEFT
-	SUB	AX,PARA_OF_HDR		;AC005;FOR HEADER SIZE para.
+	MOV	AX,[BUFFER_LEFT]
+	SUB	AX,[PARA_OF_HDR] ;AC005;FOR HEADER SIZE para.
 	MOV	CX,16
 	MUL	CX			;AN020;MAKE IT NUMBER OF BYTES
 	MOV	CX,AX			;AN020;FOR READ
@@ -1137,11 +1159,11 @@ BIF_ERROR:
 					;what happened?
 BIF_EXIT:
 	RET
-BIG_FILE ENDP
+;BIG_FILE ENDP
 ;
 
 
-MAKE_HEADER PROC NEAR
+MAKE_HEADER:
 ;When called by READ_A_FILE after the data had been read into the buffer, this
 ;routine will put the header which is just below the data area where the
 ;current BUFFER_PTR points.  The header E.A.BUFFER SIZE + (3 para) long. And
@@ -1161,121 +1183,121 @@ MAKE_HEADER PROC NEAR
 	PUSH	AX
 
 MH_AGAIN:
-	MOV	AX,BUFFER_PTR		;buffer_ptr is a segment
+	MOV	AX,[BUFFER_PTR] ;buffer_ptr is a segment
 	MOV	ES, AX			;now, ES is a header seg.
 ;
 
-	MOV	AX, PARA_OF_HDR 	;AN005;GET THE HEADER SIZE (para.)
-	CMP	BUFFER_LEFT,AX		;AC005;buffer_left=less than NEEDED?
+	MOV	AX, [PARA_OF_HDR] ;AN005;GET THE HEADER SIZE (para.)
+	CMP	[BUFFER_LEFT],AX ;AC005;buffer_left=less than NEEDED?
 	JAE	MH_START
 	CALL	WRITE_FROM_BUFFER	;if so, flush buffer
 	JC	MH_ERROR_BRIDGE 	;write error?
 	JMP	SHORT MH_AGAIN		;reinitialize ES to new buffer ptr
 MH_START:
-	TEST	MY_FLAG, FINDFILE_FLAG	;identify caller.
+	TEST	byte [MY_FLAG], findfile_flag ;identify caller.
 	JNZ	MH_FILE 		;if a file, jmp to MH_FILE
 					;else deals with directory.
-	MOV	ES:CONTINUE_INFO, 0	;not a continuation.
-	MOV	AX,OLD_BUFFER_PTR
-	MOV	ES:BEFORE_PTR, AX	;set before_ptr in header
-	MOV	AX,BUFFER_PTR
-	MOV	OLD_BUFFER_PTR, AX	;set variable OLD_BUFFER_PTR
-	ADD	AX,PARA_OF_HDR		;AC005;AX = BUFFER_PTR+HEADER(para)
-	MOV	BUFFER_PTR, AX		;set new BUFFER_PTR
-	MOV	ES:NEXT_PTR, AX 	;set NEXT_PTR in the header
-	MOV	AX, PARA_OF_HDR 	;AN005;GET THE HEADER SIZE (para.)
-	SUB	BUFFER_LEFT,AX		;AC005;adjust BUFFER_LEFT
-	CMP	BUFFER_LEFT,AX		;AC005;less than HEADER SIZE (para) ?
-;	$IF	B
-	JNB $$IF45
-	    MOV     BUFFER_LEFT, 0	;indicate buffer_full
-;	$ENDIF
-$$IF45:
-	MOV	AL, S_DEPTH
-	MOV	ES:DIR_DEPTH, AL	;now save other info's
-	MOV	AL, DS:[BP].DTA_ATTRIBUTE
-	MOV	ES:ATTR_FOUND, AL	;in this case, DIR
-	MOV	AL, BYTE PTR T_DRV
-	MOV	ES:TARGET_DRV_LET, AL	;mov target drive letter
-	MOV	ES:TARGET_DRV_LET+1, DRV_delim ; ':'
+	MOV	[es:HEADER.CONTINUE_INFO], 0 ;not a continuation.
+	MOV	AX,[OLD_BUFFER_PTR]
+	MOV	[es:HEADER.BEFORE_PTR], AX ;set before_ptr in header
+	MOV	AX,[BUFFER_PTR]
+	MOV	[OLD_BUFFER_PTR], AX ;set variable OLD_BUFFER_PTR
+	ADD	AX,[PARA_OF_HDR] ;AC005;AX = BUFFER_PTR+HEADER(para)
+	MOV	[BUFFER_PTR], AX ;set new BUFFER_PTR
+	MOV	[es:HEADER.NEXT_PTR], AX ;set NEXT_PTR in the header
+	MOV	AX, [PARA_OF_HDR] ;AN005;GET THE HEADER SIZE (para.)
+	SUB	[BUFFER_LEFT],AX ;AC005;adjust BUFFER_LEFT
+	CMP	[BUFFER_LEFT],AX ;AC005;less than HEADER SIZE (para) ?
+;	IF$	B
+	JNB IF45$$
+	    MOV     word [BUFFER_LEFT], 0 ;indicate buffer_full
+;	ENDIF$
+IF45$$:
+	MOV	AL, [S_DEPTH]
+	MOV	[es:HEADER.DIR_DEPTH], AL ;now save other info's
+	MOV	AL, [ds:BP+Find_DTA+Find_DTA.DTA_Attribute]
+	MOV	[es:HEADER.ATTR_FOUND], AL ;in this case, DIR
+	MOV	AL, byte [T_DRV]
+	MOV	[es:HEADER.TARGET_DRV_LET], AL ;mov target drive letter
+	MOV	[es:HEADER.TARGET_DRV_LET+1], drv_delim ; ':'
 	MOV	CX, 13
-	LEA	SI, [BP].DTA_FILENAME	;DS:SI
-	MOV	DI, OFFSET ES:FILENAME_FOUND ;ES:DI
+	LEA	SI, [BP+Find_DTA+Find_DTA.DTA_Filename] ;DS:SI
+	MOV	DI, HEADER.FILENAME_FOUND        ;ES:DI
 	REP	MOVSB			;mov sting until cx = 0
 	JMP	MH_EXIT
 MH_ERROR_BRIDGE: JMP MH_ERROR
 MH_FILE:				;handles a file header hereafter.
-	TEST	FILE_FLAG, CONT_FLAG	;continuation?
+	TEST	byte [FILE_FLAG], cont_flag ;continuation?
 	JZ	MH_WHOLE_FILE		;no, just a whole file
-	TEST	FILE_FLAG, EOF_FLAG	;Eof flag set?
+	TEST	byte [FILE_FLAG], eof_flag ;Eof flag set?
 	JNZ	MH_CONT_END		;yes, must be end of continuation
-	TEST	FILE_FLAG, BIG_FILE_FLAG ;Is this a big file?
+	TEST	byte [FILE_FLAG], big_file_flag ;Is this a big file?
 	JNZ	MH_BIG			;yes
-	MOV	ES:CONTINUE_INFO, 1	;else small file continuation.
+	MOV	[es:HEADER.CONTINUE_INFO], 1 ;else small file continuation.
 	JMP	MH_A_FILE
 MH_WHOLE_FILE:
-	MOV	ES:CONTINUE_INFO, 0
+	MOV	[es:HEADER.CONTINUE_INFO], 0
 	JMP	MH_A_FILE
 MH_CONT_END:
-	MOV	ES:CONTINUE_INFO, 3
+	MOV	[es:HEADER.CONTINUE_INFO], 3
 	JMP	MH_A_FILE
 MH_BIG:
-	MOV	ES:CONTINUE_INFO, 2
+	MOV	[es:HEADER.CONTINUE_INFO], 2
 MH_A_FILE:
-	MOV	AX,FILE_DTA.DTA_FILE_TIME
-	MOV	ES:FILE_TIME_FOUND, AX
-	MOV	AX, FILE_DTA.DTA_FILE_DATE
-	MOV	ES:FILE_DATE_FOUND, AX
-	MOV	AX, FILE_DTA.DTA_FILE_SIZE_LOW
-	MOV	ES:LOW_SIZE_FOUND, AX
-	MOV	AX, FILE_DTA.DTA_FILE_SIZE_HIGH
-	MOV	ES:HIGH_SIZE_FOUND, AX
-	MOV	AL, BYTE PTR T_DRV
-	MOV	ES:TARGET_DRV_LET, AL
-	MOV	ES:TARGET_DRV_LET+1, DRV_DELIM
+	MOV	AX,[FILE_DTA.DTA_File_Time]
+	MOV	[es:HEADER.FILE_TIME_FOUND], AX
+	MOV	AX, [FILE_DTA.DTA_File_Date]
+	MOV	[es:HEADER.FILE_DATE_FOUND], AX
+	MOV	AX, [FILE_DTA.DTA_File_Size_Low]
+	MOV	[es:HEADER.LOW_SIZE_FOUND], AX
+	MOV	AX, [FILE_DTA.DTA_File_Size_High]
+	MOV	[es:HEADER.HIGH_SIZE_FOUND], AX
+	MOV	AL, byte [T_DRV]
+	MOV	[es:HEADER.TARGET_DRV_LET], AL
+	MOV	[es:HEADER.TARGET_DRV_LET+1], drv_delim
 	MOV	CX, 13
-	MOV	SI, OFFSET FILE_DTA.DTA_FILENAME
-	MOV	DI, OFFSET ES:FILENAME_FOUND
+	MOV	SI, FILE_DTA.DTA_Filename
+	MOV	DI, HEADER.FILENAME_FOUND
 	REP	MOVSB
 
 ; Get Extended Attribute list of the opened file and save in attribute buff.
 
-	MOV	BX,S_HANDLE		;AN005; BX = handle
+	MOV	BX,[S_HANDLE] ;AN005; BX = handle
 	MOV	SI,ALL_ATTR		;AN005; SELECT ALL ATTRIBUTES SIZE
 	MOV	CL, PARAGRAPH		;AN005; PARAGRAPH = 4 FOR DIV BY 16
-	MOV	AX,SIZ_OF_BUFF		;AN005; GET THE SIZE EXPRESSED IN para.
+	MOV	AX,[SIZ_OF_BUFF] ;AN005; GET THE SIZE EXPRESSED IN para.
 	SHL	AX, CL			;AN005; GET # OF BYTES FROM para.
 	MOV	CX, AX			;AN005; NEEDS TO BE IN CX
-	MOV	DI, OFFSET ES:ATTRIB_LIST ;AN005; ES:DI = E A LIST IN BUFFER
+	MOV	DI, HEADER.ATTRIB_LIST        ;AN005; ES:DI = E A LIST IN BUFFER
 	MOV	AX, GET_ATTRIB		;AN005; extended attribute code 5702H
 	INT	21H			;AN005; get extended attribute list
 
 	JC	MH_ERROR		;AN000; jump if error
 
-	MOV	AX, OLD_BUFFER_PTR
-	MOV	ES:BEFORE_PTR, AX
-	MOV	AX, ACT_BYTES
-	MOV	ES:CX_BYTES, AX
+	MOV	AX, [OLD_BUFFER_PTR]
+	MOV	[es:HEADER.BEFORE_PTR], AX
+	MOV	AX, [ACT_BYTES]
+	MOV	[es:HEADER.CX_BYTES], AX
 	CALL	SET_BUFFER_PTR		;set buffer_ptr for next. AX is already set.
-	MOV	AX, BUFFER_PTR
-	MOV	ES:NEXT_PTR, AX 	;next buffer_ptr is next_ptr
-	MOV	AL, S_DEPTH
-	MOV	ES:DIR_DEPTH, AL	;same as source depth
-	MOV	AL, FILE_DTA.DTA_ATTRIBUTE
-	MOV	ES:ATTR_FOUND, AL	;attribute found
+	MOV	AX, [BUFFER_PTR]
+	MOV	[es:HEADER.NEXT_PTR], AX ;next buffer_ptr is next_ptr
+	MOV	AL, [S_DEPTH]
+	MOV	[es:HEADER.DIR_DEPTH], AL ;same as source depth
+	MOV	AL, [FILE_DTA.DTA_Attribute]
+	MOV	[es:HEADER.ATTR_FOUND], AL ;attribute found
 	JMP	MH_EXIT 		;AN000;
 MH_ERROR:
-	OR	COPY_STATUS, OPEN_ERROR_FLAG ;AN000;
+	OR	byte [COPY_STATUS], open_error_flag ;AN000;
 	CALL	EXTENDED_ERROR_HANDLER	;AN000;
 MH_EXIT:
 	POP	AX
 	POP	ES
 	RET
-MAKE_HEADER ENDP
+;MAKE_HEADER ENDP
 ;
 
 
-OPEN_A_FILE PROC NEAR
+OPEN_A_FILE:
 
 ;-------------------------------------------------------------------------
 ; Use extended open DOS call to open source file,
@@ -1283,61 +1305,61 @@ OPEN_A_FILE PROC NEAR
 ; And update the open file count.
 ;-------------------------------------------------------------------------
 
-	LEA	SI,FILE_DTA.DTA_FILENAME ;AN005; DS:SI-->NAME TO OPEN
+	LEA	SI,[FILE_DTA.DTA_Filename] ;AN005; DS:SI-->NAME TO OPEN
 	MOV	DX,OPN_FLAG		;AN000; flag = 0101H
 	MOV	CX,OPN_ATTR		;AN000; attribute = 0
 	MOV	BX,OPN_MODE		;AN007; open mode = 0000H (READ)
 	MOV	DI, NUL_LIST		;AN005; ES:DI = -1
-	MOV	AX, Ext_Open		;AN000; = 6Ch
+	MOV	AX, EXT_OPEN		;AN000; = 6Ch
 	INT	21H			;AN000; OPEN SOURCE FILE
 
 	JC	OF_ERROR
-	MOV	S_HANDLE, AX		;save filehandle
-	INC	OPEN_FILE_COUNT 	;AN005;UPDATE THE OPEN FILE COUNTER
+	MOV	[S_HANDLE], AX ;save filehandle
+	INC	word [OPEN_FILE_COUNT] ;AN005;UPDATE THE OPEN FILE COUNTER
 
 	JMP	OF_EXIT 		;AN000; exit
 
 OF_ERROR:
-	OR	COPY_STATUS, OPEN_ERROR_FLAG
+	OR	byte [COPY_STATUS], open_error_flag
 	CALL	EXTENDED_ERROR_HANDLER
 OF_EXIT:
 	RET
-OPEN_A_FILE ENDP
+;OPEN_A_FILE ENDP
 ;
 
 
-CMP_FILE_FFD0h PROC NEAR
+CMP_FILE_FFD0h:
 ;check whether the filesize in HIGH_FILE_SIZE, LOW_FILE_SIZE is bigger than
 ;0FFD0h.  If it is, then set FILE_BIGGER_FLAG, else reset it.
-	CMP	HIGH_FILE_SIZE, 0
-;	$IF	E,AND
-	JNE $$IF47
-	CMP	LOW_FILE_SIZE, 0FFD0h
-;	$IF	BE
-	JNBE $$IF47
-	    AND     FILE_FLAG, RESET_FILE_BIGGER ;filesize <= 0FFD0h
-;	$ELSE
-	JMP SHORT $$EN47
-$$IF47:
-	    OR	    FILE_FLAG, FILE_BIGGER_FLAG
-;	$ENDIF
-$$EN47:
+	CMP	word [HIGH_FILE_SIZE], 0
+;	IF$	E,AND
+	JNE IF47$$
+	CMP	word [LOW_FILE_SIZE], 0FFD0h
+;	IF$	BE
+	JNBE IF47$$
+	    AND     byte [FILE_FLAG], reset_file_bigger ;filesize <= 0FFD0h
+;	ELSE$
+	JMP SHORT EN47$$
+IF47$$:
+	    OR	    byte [FILE_FLAG], file_bigger_flag
+;	ENDIF$
+EN47$$:
 	RET
-CMP_FILE_FFD0h ENDP
+;CMP_FILE_FFD0h ENDP
 ;
 
-CALC_FILE_SIZE PROC NEAR
+CALC_FILE_SIZE:
 ;subtract the bytes read (ACT_BYTES) from the filesize in HIGH_FILE_SIZE,
 ;LOW_FILE_SIZE.
-	MOV	AX, ACT_BYTES
-	SUB	LOW_FILE_SIZE, AX
-	SBB	HIGH_FILE_SIZE, 0
+	MOV	AX, [ACT_BYTES]
+	SUB	[LOW_FILE_SIZE], AX
+	SBB	[HIGH_FILE_SIZE], 0
 	RET
-CALC_FILE_SIZE ENDP
+;CALC_FILE_SIZE ENDP
 ;
 
 
-READ_A_FILE PROC NEAR
+READ_A_FILE:
 ;read a file.
 ;if after reading, AX < CX or AX = 0 the set EOF_FLAG.
 ;INPUT:CX - # of bytes to read
@@ -1347,9 +1369,9 @@ READ_A_FILE PROC NEAR
 
 	PUSH	DS			;save program data seg
 	MOV	AH, Read
-	MOV	BX, S_HANDLE
-	MOV	DX, BUFFER_PTR		;current buffer header seg
-	ADD	DX, PARA_OF_HDR 	;AC005;skip the header part
+	MOV	BX, [S_HANDLE]
+	MOV	DX, [BUFFER_PTR] ;current buffer header seg
+	ADD	DX, [PARA_OF_HDR] ;AC005;skip the header part
 	MOV	DS, DX			;now DS = buffer_ptr + HDR, data area
 	XOR	DX, DX			;offset DX = 0
 	INT	21H
@@ -1357,135 +1379,135 @@ READ_A_FILE PROC NEAR
 	JC	RF_ERROR		;read error?
 	CMP	AX, CX
 	JE	RF_OK
-	OR	FILE_FLAG, EOF_FLAG	;EOF reached. AX = 0 or AX < CX
+	OR	byte [FILE_FLAG], eof_flag ;EOF reached. AX = 0 or AX < CX
 RF_OK:
 	CLC				;clear carry caused from CMP
-	MOV	ACT_BYTES, AX		;save actual bytes read
+	MOV	[ACT_BYTES], AX ;save actual bytes read
 	JMP	RF_EXIT
 RF_ERROR:
-	OR	COPY_STATUS, READ_ERROR_FLAG
+	OR	byte [COPY_STATUS], read_error_flag
 	CALL	EXTENDED_ERROR_HANDLER
 RF_EXIT:
 	RET
-READ_A_FILE ENDP
+;READ_A_FILE ENDP
 ;
 
 
-FIND_IT PROC	NEAR
+FIND_IT:
 ;set first or next depending on FIND_FIRST_FLAG.
 ;once called, reset FIND_FIRST_FLAG.
-	TEST	MY_FLAG, FIND_FIRST_FLAG
-;	$IF	NZ			;yes
-	JZ $$IF50
+	TEST	byte [MY_FLAG], find_first_flag
+;	IF$	NZ			;yes
+	JZ IF50$$
 	    MOV     AH, Find_First
-;	$ELSE
-	JMP SHORT $$EN50
-$$IF50:
+;	ELSE$
+	JMP SHORT EN50$$
+IF50$$:
 	    MOV     AH, Find_Next
-;	$ENDIF
-$$EN50:
-	AND	MY_FLAG, RESET_FIND_FIRST ;reset FIND_FIRST_FLAG
+;	ENDIF$
+EN50$$:
+	AND	byte [MY_FLAG], reset_find_first ;reset FIND_FIRST_FLAG
 	INT	21H
 	RET
-FIND_IT ENDP
+;FIND_IT ENDP
 ;
 
 
-FIND_FILE PROC	NEAR
+FIND_FILE:
 ;find a file
 ;set NO_MORE_FILE if carry.
-;	$SEARCH
-$$DO53:
-	    TEST    MY_FLAG, FIND_FIRST_FLAG ;find first ?
-;	    $IF     NZ
-	    JZ $$IF54
-		MOV	DX, OFFSET S_FILE
-		MOV	CX, File_Search_Attr ;normal = 0
-;	    $ELSE
-	    JMP SHORT $$EN54
-$$IF54:
-		MOV	DX, OFFSET FILE_DTA
-;	    $ENDIF
-$$EN54:
+;	SEARCH$
+DO53$$:
+	    TEST    byte [MY_FLAG], find_first_flag ;find first ?
+;	    IF$     NZ
+	    JZ IF54$$
+		MOV	DX, S_FILE
+		MOV	CX, [FILE_SEARCH_ATTR] ;normal = 0
+;	    ELSE$
+	    JMP SHORT EN54$$
+IF54$$:
+		MOV	DX, FILE_DTA
+;	    ENDIF$
+EN54$$:
 	    CALL    FIND_IT
-;	$EXITIF C
-	JNC $$IF53
-	    OR	    MY_FLAG, NO_MORE_FILE ;no more file in this directory
-;	$ORELSE
-	JMP SHORT $$SR53
-$$IF53:
-	    MOV     FOUND_FILE_FLAG, 1	;set the flag for "File not found" msg.
+;	EXITIF$ C
+	JNC IF53$$
+	    OR	    byte [MY_FLAG], no_more_file ;no more file in this directory
+;	ORELSE$
+	JMP SHORT SR53$$
+IF53$$:
+	    MOV     byte [FOUND_FILE_FLAG], 1 ;set the flag for "File not found" msg.
 	    CALL    FILTER_FILES	;found. filter it with options
-	    TEST    MY_FLAG, FOUND_FLAG
-;	$ENDLOOP NZ			;if found, leave this loop else start again
-	JZ $$DO53
-	    AND     MY_FLAG, RESET_NO_MORE
-;	$ENDSRCH
-$$SR53:
+	    TEST    byte [MY_FLAG], found_flag
+;	ENDLOOP$ NZ			;if found, leave this loop else start again
+	JZ DO53$$
+	    AND     byte [MY_FLAG], reset_no_more
+;	ENDSRCH$
+SR53$$:
 	RET
-FIND_FILE ENDP
+;FIND_FILE ENDP
 ;
-FIND_DIR PROC	NEAR
+FIND_DIR:
 ;find directory entry
 ;set NO_MORE_FLAG if carry.
-;	$SEARCH
-$$DO61:
-	    TEST    MY_FLAG, FIND_FIRST_FLAG
-;	    $IF     NZ
-	    JZ $$IF62
-		MOV	DX, OFFSET  S_DIR
-		MOV	CX, DIR_SEARCH_ATTR
-;	    $ELSE
-	    JMP SHORT $$EN62
-$$IF62:
+;	SEARCH$
+DO61$$:
+	    TEST    byte [MY_FLAG], find_first_flag
+;	    IF$     NZ
+	    JZ IF62$$
+		MOV	DX, S_DIR
+		MOV	CX, [DIR_SEARCH_ATTR]
+;	    ELSE$
+	    JMP SHORT EN62$$
+IF62$$:
 		MOV	DX, BP
-;	    $ENDIF
-$$EN62:
+;	    ENDIF$
+EN62$$:
 	    CALL    FIND_IT
-;	$EXITIF C			;no more file
-	JNC $$IF61
-	    OR	    MY_FLAG, NO_MORE_FILE ;set MY_FLAG and exit this loop
-;	$ORELSE 			;otherwise found a file
-	JMP SHORT $$SR61
-$$IF61:
-	    CMP     DS:[BP].DTA_ATTRIBUTE, Is_subdirectory ; directory?
-;	    $IF     E,AND
-	    JNE $$IF67
-	    CMP     DS:[BP].DTA_FILENAME, A_dot ;starts with . ?
-;	    $IF     NE			;if not, then desired subdir
-	    JE $$IF67
-		OR	MY_FLAG, FOUND_FLAG ;found
-;	    $ELSE
-	    JMP SHORT $$EN67
-$$IF67:
-		AND	MY_FLAG, RESET_FOUND
-;	    $ENDIF
-$$EN67:
-	    TEST    MY_FLAG, FOUND_FLAG
-;	$ENDLOOP NZ			;if found, leave this loop else start again
-	JZ $$DO61
-	    AND     MY_FLAG, RESET_NO_MORE ;found. set my_flag and exit
-;	$ENDSRCH
-$$SR61:
+;	EXITIF$ C			;no more file
+	JNC IF61$$
+	    OR	    byte [MY_FLAG], no_more_file ;set MY_FLAG and exit this loop
+;	ORELSE$ 			;otherwise found a file
+	JMP SHORT SR61$$
+IF61$$:
+	    CMP     [ds:BP+Find_DTA+Find_DTA.DTA_Attribute], is_subdirectory ; directory?
+;	    IF$     E,AND
+	    JNE IF67$$
+	    CMP     [ds:BP+Find_DTA+Find_DTA.DTA_Filename], A_dot ;starts with . ?
+;	    IF$     NE			;if not, then desired subdir
+	    JE IF67$$
+		OR	byte [MY_FLAG], found_flag ;found
+;	    ELSE$
+	    JMP SHORT EN67$$
+IF67$$:
+		AND	byte [MY_FLAG], reset_found
+;	    ENDIF$
+EN67$$:
+	    TEST    byte [MY_FLAG], found_flag
+;	ENDLOOP$ NZ			;if found, leave this loop else start again
+	JZ DO61$$
+	    AND     byte [MY_FLAG], reset_no_more ;found. set my_flag and exit
+;	ENDSRCH$
+SR61$$:
 	RET
-FIND_DIR ENDP
+;FIND_DIR ENDP
 ;
 
 
-FILTER_FILES PROC NEAR
+FILTER_FILES:
 ;FILE_DTA.XXX HAS INFORMATIONS
 ;this routine also show the prompt of source path, filename, if SLASH_P is on.
 
-	TEST	OPTION_FLAG, SLASH_A	;soft archieve?
+	TEST	byte [OPTION_FLAG], slash_a ;soft archieve?
 	JNZ	SLASH_AM_RTN		;yes
-	TEST	OPTION_FLAG, SLASH_M	;then hard archieve?
+	TEST	byte [OPTION_FLAG], slash_m ;then hard archieve?
 	JNZ	SLASH_AM_RTN		;yes
 FF_D:
-	TEST	OPTION_FLAG, SLASH_D	;date?
+	TEST	byte [OPTION_FLAG], slash_d ;date?
 	JNZ	SLASH_D_RTN
 FF_P:
-	TEST	OPTION_FLAG, SLASH_P	;prompt mode? ** this should be placed last.
-	JNZ	SLASH_P_RTN
+	TEST	byte [OPTION_FLAG], slash_p ;prompt mode? ** this should be placed last.
+	JNZ	slash_p_rtn
 	JMP	SHORT FF_FOUND		;no more selective options. copy this file.
 SLASH_AM_RTN:				;soft or hard archieve.
 	CALL	CHK_ARCHIEVE_BIT
@@ -1496,51 +1518,51 @@ SLASH_D_RTN:
 	JC	FF_NOT_FOUND
 	JMP	SHORT FF_P
 slash_p_rtn:
-	call	prompt_path_file	;show message and get input from the user
-	jc	ff_not_found		;user does not want this file
+	call	PROMPT_PATH_FILE	;show message and get input from the user
+	jc	FF_NOT_FOUND		;user does not want this file
 FF_FOUND:
-	OR	MY_FLAG, FOUND_FLAG	;set found_flag
+	OR	byte [MY_FLAG], found_flag ;set found_flag
 	JMP	SHORT FF_EXIT
 FF_NOT_FOUND:
-	AND	MY_FLAG, RESET_FOUND	;this file is not what we want to copy
+	AND	byte [MY_FLAG], reset_found ;this file is not what we want to copy
 FF_EXIT:
 	RET
-FILTER_FILES ENDP
+;FILTER_FILES ENDP
 ;
-CHK_ARCHIEVE_BIT PROC NEAR
+CHK_ARCHIEVE_BIT:
 ;check the current FILE.DTA area and if archieve bit is on, found.
-	TEST	FILE_DTA.DTA_ATTRIBUTE, 20h ;archieve on?
-;	$IF	NZ			;yes
-	JZ $$IF72
+	TEST	[FILE_DTA.DTA_Attribute], 20h ;archieve on?
+;	IF$	NZ			;yes
+	JZ IF72$$
 	    CLC 			;clear carry
-;	$ELSE
-	JMP SHORT $$EN72
-$$IF72:
+;	ELSE$
+	JMP SHORT EN72$$
+IF72$$:
 	    STC 			;archieve bit is off. Don't
-;	$ENDIF				;have to copy this file
-$$EN72:
+;	ENDIF$				;have to copy this file
+EN72$$:
 	RET
-CHK_ARCHIEVE_BIT ENDP
+;CHK_ARCHIEVE_BIT ENDP
 ;
-CHK_DATE_FILE PROC NEAR
+CHK_DATE_FILE:
 ;
-	MOV	CX, FILE_DTA.DTA_FILE_DATE
-	CMP	CX, INPUT_DATE		;FILE_DATE < INPUT_DATE
-;	$IF	B
-	JNB $$IF75
+	MOV	CX, [FILE_DTA.DTA_File_Date]
+	CMP	CX, [INPUT_DATE] ;FILE_DATE < INPUT_DATE
+;	IF$	B
+	JNB IF75$$
 	    STC 			;not found
-;	$ELSE
-	JMP SHORT $$EN75
-$$IF75:
+;	ELSE$
+	JMP SHORT EN75$$
+IF75$$:
 	    CLC 			;found desired file
-;	$ENDIF
-$$EN75:
+;	ENDIF$
+EN75$$:
 	RET
-CHK_DATE_FILE ENDP
+;CHK_DATE_FILE ENDP
 ;
 
 
-PROMPT_PATH_FILE PROC NEAR
+PROMPT_PATH_FILE:
 
 ;show the current source path, filename found, and get the user input.
 ;if it is yes, then reset carry, no, set carry otherwise show
@@ -1548,30 +1570,30 @@ PROMPT_PATH_FILE PROC NEAR
 ;DS, ES - data seg
 
 	MOV	CX, 13			;13 max
-	LEA	SI, FILE_DTA.DTA_FILENAME
-	MOV	DI, OFFSET DISP_S_FILE
+	LEA	SI,[FILE_DTA.DTA_Filename]
+	MOV	DI, DISP_S_FILE
 	REP	MOVSB			;filename => disp_s_file
 PPF_AGAIN:
-	LEA	SI,SUBLIST1		;AN000; get addressability to sublist
-	LEA	DX,DISP_S_PATH		;AN000; offset to PATH NAME
-	MOV	[SI].DATA_OFF,DX	;AN000; save offset
-	MOV	[SI].DATA_SEG,DS	;AN000; save data segment
-	MOV	[SI].MSG_ID,1		;AN000; message ID
-	MOV	[SI].FLAGS,010H 	;AN000; ASCIIZ string, left align
-	MOV	[SI].MAX_WIDTH,0	;AN000; MAXIMUM FIELD WITH
-	MOV	[SI].MIN_WIDTH,0	;AN000; MINIMUM FIELD WITH
+	LEA	SI,[SUBLIST1];AN000; get addressability to sublist
+	LEA	DX,[DISP_S_PATH];AN000; offset to PATH NAME
+	MOV	[SI+SUB_LIST+SUB_LIST.DATA_OFF],DX ;AN000; save offset
+	MOV	[SI+SUB_LIST+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
+	MOV	[SI+SUB_LIST+SUB_LIST.MSG_ID],1 ;AN000; message ID
+	MOV	[SI+SUB_LIST+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
+	MOV	[SI+SUB_LIST+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
+	MOV	[SI+SUB_LIST+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
 
-	LEA	SI,SUBLIST2		;AN000; get addressability to sublist
-	LEA	DX,DISP_S_FILE		;AN000; offset to FILE NAME
-	MOV	[SI].DATA_OFF,DX	;AN000; save offset
-	MOV	[SI].DATA_SEG,DS	;AN000; save data segment
-	MOV	[SI].MSG_ID,2		;AN000; message ID
-	MOV	[SI].FLAGS,010H 	;AN000; ASCIIZ string, left align
-	MOV	[SI].MAX_WIDTH,0	;AN000; MAXIMUM FIELD WITH
-	MOV	[SI].MIN_WIDTH,0	;AN000; MINIMUM FIELD WITH
-	LEA	SI,SUBLIST1		;AN000;
+	LEA	SI,[SUBLIST2];AN000; get addressability to sublist
+	LEA	DX,[DISP_S_FILE];AN000; offset to FILE NAME
+	MOV	[SI+SUB_LIST+SUB_LIST.DATA_OFF],DX ;AN000; save offset
+	MOV	[SI+SUB_LIST+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
+	MOV	[SI+SUB_LIST+SUB_LIST.MSG_ID],2 ;AN000; message ID
+	MOV	[SI+SUB_LIST+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
+	MOV	[SI+SUB_LIST+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
+	MOV	[SI+SUB_LIST+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
+	LEA	SI,[SUBLIST1];AN000;
 
-	CMP	S_DEPTH,0		;now dealing with starting dir?
+	CMP	byte [S_DEPTH],0 ;now dealing with starting dir?
 	JE	PATH_FILE_QUERY 	;ask (Y/N)
 	JMP	PPF_1
 
@@ -1585,18 +1607,18 @@ PPF_1:
 	MOV	AX,P_S_PATH_FILE1	; Path and file name with
 					; back slash delemeter
 PPF_PRT:
-	MOV	MSG_NUM,AX		;AN000; set message number
-	MOV	SUBST_COUNT,PARM_SUBST_TWO ;AN000; substitution count
-	MOV	MSG_CLASS,UTILITY_MSG_CLASS ;AN000; message class
-	MOV	INPUT_FLAG,DOS_KEYB_INP ;AN000; Y or N INPUT
+	MOV	[MSG_NUM],AX ;AN000; set message number
+	MOV	word [SUBST_COUNT],PARM_SUBST_TWO ;AN000; substitution count
+	MOV	byte [MSG_CLASS],UTILITY_MSG_CLASS ;AN000; message class
+	MOV	byte [INPUT_FLAG],DOS_KEYB_INP ;AN000; Y or N INPUT
 	CALL	PRINT_STDOUT		;AN000; Display message
 	PUSH	AX			;AN000; SAVE IT
 
 	MOV	AX,MSG_CR_LF_STR	;AN000; JUST CR,LF
-	MOV	MSG_NUM,AX		;AN000; set message number
-	MOV	SUBST_COUNT,NO_SUBST	;AN000; substitution count = 0
-	MOV	MSG_CLASS,UTILITY_MSG_CLASS ;AN000; message class
-	MOV	INPUT_FLAG,NO_INPUT	;AN000; NO INPUT
+	MOV	[MSG_NUM],AX ;AN000; set message number
+	MOV	word [SUBST_COUNT],NO_SUBST ;AN000; substitution count = 0
+	MOV	byte [MSG_CLASS],UTILITY_MSG_CLASS ;AN000; message class
+	MOV	byte [INPUT_FLAG],NO_INPUT ;AN000; NO INPUT
 	CALL	PRINT_STDOUT		;AN000; Display message
 
 	POP	AX			;AN000; GET IT BACK
@@ -1621,82 +1643,82 @@ PPF_NO:
 	STC				;AN000;set carry
 PPF_EXIT:
 	RET
-PROMPT_PATH_FILE ENDP
+;PROMPT_PATH_FILE ENDP
 ;
 
 
 
-SET_MY_DTA PROC NEAR
+SET_MY_DTA:
 ;set DS:DX for find_first(next). If MY_FLAG is set to FINDFILE_FLAG then
 ;set it to the offset FILE_DTA, otherwise to BP.
 ;DS should be set to the area whre FILE_DTA, DTAS are.
 	PUSH	DX			;save current DX
-	TEST	MY_FLAG, FINDFILE_FLAG	;handling file?
-;	$IF	NZ
-	JZ $$IF78
-	    MOV     DX, OFFSET FILE_DTA
-;	$ELSE
-	JMP SHORT $$EN78
-$$IF78:
+	TEST	byte [MY_FLAG], findfile_flag ;handling file?
+;	IF$	NZ
+	JZ IF78$$
+	    MOV     DX, FILE_DTA
+;	ELSE$
+	JMP SHORT EN78$$
+IF78$$:
 	    MOV     DX, BP
-;	$ENDIF
-$$EN78:
+;	ENDIF$
+EN78$$:
 	MOV	AH, Set_DTA
 	INT	21H
 	POP	DX
 	RET
-SET_MY_DTA ENDP
+;SET_MY_DTA ENDP
 ;
 
-CHANGE_S_DIR PROC NEAR
+CHANGE_S_DIR:
 ;change source directory
 ;DS points to program data seg.
 
-	CMP	S_DRV[2], 0		;LAST_DIR_OUT have took '\' out?
-;	$IF	E
-	JNE $$IF81
-	    MOV     S_DRV[2], '\'	;then restore '\' for root dir
-	    MOV     S_DRV[3], 0
-;	$ENDIF
-$$IF81:
+	CMP	[S_DRV+2], 0 ;LAST_DIR_OUT have took '\' out?
+;	IF$	E
+	JNE IF81$$
+	    MOV     [S_DRV+2], '\' ;then restore '\' for root dir
+	    MOV     [S_DRV+3], 0
+;	ENDIF$
+IF81$$:
 
-	TEST	SYS_FLAG, ONE_DISK_COPY_FLAG ;one drive letter copy?
-;	$IF	NZ,OR			;yes
-	JNZ $$LL83
-	TEST	OPTION_FLAG, SLASH_M	;hard archive option? (should use full path
-;	$IF	NZ			; since hard archieve operation will corrupt the current directory)
-	JZ $$IF83
-$$LL83:
-	    MOV     DX, OFFSET S_DRV_PATH ;always use full path
-;	$ELSE
-	JMP SHORT $$EN83
-$$IF83:
-	    TEST    MY_FLAG, VISIT_PARENT_FLAG ;now going toward the root?
-;	    $IF     NZ			;yes
-	    JZ $$IF85
-		MOV	DX, OFFSET S_PARENT ;just '..',0
-;	    $ELSE
-	    JMP SHORT $$EN85
-$$IF85:
-		LEA	DX, [BP].DTA_FILENAME ;use the subdir name just found
-;	    $ENDIF
-$$EN85:
-;	$ENDIF
-$$EN83:
+	TEST	byte [SYS_FLAG], one_disk_copy_flag ;one drive letter copy?
+;	IF$	NZ,OR			;yes
+	JNZ LL83$$
+	TEST	byte [OPTION_FLAG], slash_m ;hard archive option? (should use full path
+;	IF$	NZ			; since hard archieve operation will corrupt the current directory)
+	JZ IF83$$
+LL83$$:
+	    MOV     DX, S_DRV_PATH        ;always use full path
+;	ELSE$
+	JMP SHORT EN83$$
+IF83$$:
+	    TEST    byte [MY_FLAG], visit_parent_flag ;now going toward the root?
+;	    IF$     NZ			;yes
+	    JZ IF85$$
+		MOV	DX, S_PARENT        ;just '..',0
+;	    ELSE$
+	    JMP SHORT EN85$$
+IF85$$:
+		LEA	DX, [BP+Find_DTA+Find_DTA.DTA_Filename] ;use the subdir name just found
+;	    ENDIF$
+EN85$$:
+;	ENDIF$
+EN83$$:
 	MOV	AH, Chdir		; = 3Bh
 	INT	21H
-;	$IF	C
-	JNC $$IF89
-	    OR	    COPY_STATUS, CHDIR_ERROR_FLAG ;chdir error in source. critical
+;	IF$	C
+	JNC IF89$$
+	    OR	    byte [COPY_STATUS], chdir_error_flag ;chdir error in source. critical
 	    CALL    EXTENDED_ERROR_HANDLER
-;	$ENDIF
-$$IF89:
+;	ENDIF$
+IF89$$:
 
 	RET
-CHANGE_S_DIR ENDP
+;CHANGE_S_DIR ENDP
 ;
 
-CHANGE_T_DIR PROC NEAR
+CHANGE_T_DIR:
 ;change target dir according to t_drv_path.
 ;Since this routine is called by WRITE_FROM_BUFFER and DS now points
 ;to buffer area while ES points to the program data area, we set DS
@@ -1705,24 +1727,24 @@ CHANGE_T_DIR PROC NEAR
 	PUSH	ES			;currentpy es is a data seg
 	POP	DS			;restore DS value as program data seg
 
-	CMP	T_DRV[2], 0		;LAST_DIR_OUT took '\' out?
-;	$IF	E
-	JNE $$IF91
-	    MOV     T_DRV[2], '\'	;then put it back for root dir
-	    MOV     T_DRV[3], 0
-;	$ENDIF
-$$IF91:
+	CMP	[T_DRV+2], 0 ;LAST_DIR_OUT took '\' out?
+;	IF$	E
+	JNE IF91$$
+	    MOV     [T_DRV+2], '\' ;then put it back for root dir
+	    MOV     [T_DRV+3], 0
+;	ENDIF$
+IF91$$:
 
-	MOV	DX, OFFSET T_DRV_PATH
-	MOV	AH, CHDIR
+	MOV	DX, T_DRV_PATH
+	MOV	AH, Chdir
 	INT	21H
 
 	POP	DS			;restore caller's DS value
 	RET
-CHANGE_T_DIR ENDP
+;CHANGE_T_DIR ENDP
 ;
 
-CMP_FILESIZE_TO_BUFFER_LEFT PROC NEAR
+CMP_FILESIZE_TO_BUFFER_LEFT:
 ;Compare buffer_left (paragraph) with filesize (high_file_size, low_file_size.)
 ;if filesize is bigger than buffer_left, then set FILE_BIGGER_FLAG
 ;indicating filesize > buffer_left.
@@ -1730,14 +1752,14 @@ CMP_FILESIZE_TO_BUFFER_LEFT PROC NEAR
 	PUSH	DX
 	PUSH	AX
 
-	CMP	OPEN_FILE_COUNT,NUL	;AN005;ARE THERE ANY OPEN FILES
-;	$IF	Z			;AN005;NO, THEN GO AHEAD AND OPEN
-	JNZ $$IF93
+	CMP	word [OPEN_FILE_COUNT],NUL ;AN005;ARE THERE ANY OPEN FILES
+;	IF$	Z			;AN005;NO, THEN GO AHEAD AND OPEN
+	JNZ IF93$$
 	    CALL    OPEN_A_FILE 	;AN005;OPEN A FILE USING FILE_DTA
 
 ; Get extended Attribute list size.
 
-	    MOV     BX,S_HANDLE 	;AN005; BX = handle
+	    MOV     BX,[S_HANDLE] ;AN005; BX = handle
 	    MOV     AX, GET_ATTRIB	;AN005; extended attribute code 5702H
 	    MOV     SI,ALL_ATTR 	;AN005; SELECT ALL ATTRIBUTES SIZE
 	    XOR     CX,CX		;AN005; JUST QUERY SIZE NEEDED
@@ -1747,56 +1769,56 @@ CMP_FILESIZE_TO_BUFFER_LEFT PROC NEAR
 	    MOV     AX,CX		;AN005;
 	    MOV     CL,PARAGRAPH	;AN005; GET PARAGRAPHS (DIV BY 16)
 	    SHR     AX,CL		;AN005;
-	    MOV     SIZ_OF_BUFF,AX	;AN005;SAVE BUFF SIZE FOR THE HEADER
+	    MOV     [SIZ_OF_BUFF],AX ;AN005;SAVE BUFF SIZE FOR THE HEADER
 	    ADD     AX,FIXD_HD_SIZ	;AN005;GET THE TOTAL HEADER SIZE
-	    MOV     PARA_OF_HDR,AX	;AN005;SAVE FOR LATER
+	    MOV     [PARA_OF_HDR],AX ;AN005;SAVE FOR LATER
 	    SHL     AX, CL		;AN005;CONVERT BACK TO TOTAL BYTES
-	    MOV     BYTS_OF_HDR,AX	;AN005;SAVE FOR LATER
-;	$ENDIF				;AN005;
-$$IF93:
+	    MOV     [BYTS_OF_HDR],AX ;AN005;SAVE FOR LATER
+;	ENDIF$				;AN005;
+IF93$$:
 
-	AND	FILE_FLAG, RESET_FILE_BIGGER
-	MOV	AX,PARA_OF_HDR		;AN005;GET THE HEADER SIZE (para.)
-	CMP	BUFFER_LEFT,AX		;AC005;buffer_left >= HEADER SIZE
-;	$IF	AE
-	JNAE $$IF95
-	    MOV     AX, BUFFER_LEFT	;buffer_left in para
-	    SUB     AX,PARA_OF_HDR	;AC005;consider header size in advance
+	AND	byte [FILE_FLAG], reset_file_bigger
+	MOV	AX,[PARA_OF_HDR] ;AN005;GET THE HEADER SIZE (para.)
+	CMP	[BUFFER_LEFT],AX ;AC005;buffer_left >= HEADER SIZE
+;	IF$	AE
+	JNAE IF95$$
+	    MOV     AX, [BUFFER_LEFT] ;buffer_left in para
+	    SUB     AX,[PARA_OF_HDR] ;AC005;consider header size in advance
 	    MOV     CX, 16
 	    MUL     CX			;* 16. result in DX;AX
-	    CMP     HIGH_FILE_SIZE, DX
-;	    $IF     A			;if high_filesize > dx
-	    JNA $$IF96
-		OR	FILE_FLAG, FILE_BIGGER_FLAG
-;	    $ELSE
-	    JMP SHORT $$EN96
-$$IF96:
-;		$IF	E
-		JNE $$IF98
-		    CMP     LOW_FILE_SIZE, AX
-;		    $IF     A
-		    JNA $$IF99
-			OR	FILE_FLAG, FILE_BIGGER_FLAG
-;		    $ENDIF
-$$IF99:
-;		$ENDIF
-$$IF98:
-;	    $ENDIF
-$$EN96:
-;	$ELSE
-	JMP SHORT $$EN95
-$$IF95:
-	    OR	    FILE_FLAG, FILE_BIGGER_FLAG ;buffer_left < HEADER SIZE
-;	$ENDIF
-$$EN95:
+	    CMP     [HIGH_FILE_SIZE], DX
+;	    IF$     A			;if high_filesize > dx
+	    JNA IF96$$
+		OR	byte [FILE_FLAG], file_bigger_flag
+;	    ELSE$
+	    JMP SHORT EN96$$
+IF96$$:
+;		IF$	E
+		JNE IF98$$
+		    CMP     [LOW_FILE_SIZE], AX
+;		    IF$     A
+		    JNA IF99$$
+			OR	byte [FILE_FLAG], file_bigger_flag
+;		    ENDIF$
+IF99$$:
+;		ENDIF$
+IF98$$:
+;	    ENDIF$
+EN96$$:
+;	ELSE$
+	JMP SHORT EN95$$
+IF95$$:
+	    OR	    byte [FILE_FLAG], file_bigger_flag ;buffer_left < HEADER SIZE
+;	ENDIF$
+EN95$$:
 
 	POP	AX
 	POP	DX
 	RET
-CMP_FILESIZE_TO_BUFFER_LEFT ENDP
+;CMP_FILESIZE_TO_BUFFER_LEFT ENDP
 ;
 
-SET_BUFFER_PTR PROC NEAR
+SET_BUFFER_PTR:
 ;set BUFFER_PTR, BUFFER_LEFT, OLD_BUFFER_PTR in paragraph boundary
 ;to be used when reading a file into buffer.
 ;this routine uses current BUFFER_PTR to figure out the next BUFFER_PTR.
@@ -1823,33 +1845,33 @@ SET_BUFFER_PTR PROC NEAR
 ;   not to exceed FFFF.
 
 	PUSH	CX
-	MOV	CX, BUFFER_PTR
-	MOV	OLD_BUFFER_PTR, CX	;set old_buffer_ptr
+	MOV	CX, [BUFFER_PTR]
+	MOV	[OLD_BUFFER_PTR], CX ;set old_buffer_ptr
 	MOV	CL, 4
 	SHR	AX, CL			;get paragraphs
 	INC	AX			;get next paragraph
-	ADD	AX,PARA_OF_HDR		;AC005;consider header size
-	ADD	BUFFER_PTR, AX		;add this to the current buffer_ptr
+	ADD	AX,[PARA_OF_HDR] ;AC005;consider header size
+	ADD	[BUFFER_PTR], AX ;add this to the current buffer_ptr
 
-;	$IF	NC,AND			;not exceed 16 bit.
-	JC $$IF105
-	MOV	AX, Top_of_memory
-	SUB	AX, BUFFER_PTR		;AX = Top_of_memory - Buffer_ptr
-;	$IF	A			;if buffer_left > 0
-	JNA $$IF105
-	    MOV     BUFFER_LEFT, AX
-;	$ELSE
-	JMP SHORT $$EN105
-$$IF105:
-	    MOV     BUFFER_LEFT, 0	;indication of buffer full
-;	$ENDIF
-$$EN105:
+;	IF$	NC,AND			;not exceed 16 bit.
+	JC IF105$$
+	MOV	AX, [TOP_OF_MEMORY]
+	SUB	AX, [BUFFER_PTR] ;AX = Top_of_memory - Buffer_ptr
+;	IF$	A			;if buffer_left > 0
+	JNA IF105$$
+	    MOV     [BUFFER_LEFT], AX
+;	ELSE$
+	JMP SHORT EN105$$
+IF105$$:
+	    MOV     word [BUFFER_LEFT], 0 ;indication of buffer full
+;	ENDIF$
+EN105$$:
 	POP	CX
 	RET
-SET_BUFFER_PTR ENDP
+;SET_BUFFER_PTR ENDP
 ;
 
-WRITE_FROM_BUFFER PROC NEAR
+WRITE_FROM_BUFFER:
 ;Write from the first header starting at buffer_base until finishes
 ;the last header which, actually, happens to be the old_buffer_ptr
 ;at the time of the call.  After the writing, reset the buffer_ptr
@@ -1867,79 +1889,79 @@ WRITE_FROM_BUFFER PROC NEAR
 	PUSH	DS
 	POP	ES			;set ES to program data seg
 
-	OR	ACTION_FLAG, READING_FLAG ;show reading message next time
+	OR	byte [ACTION_FLAG], reading_flag ;show reading message next time
 ;	AND	ES:MY_FLAG, RESET_IS_SOURCE	;now, deals with target
 					;set this for change_dir
-	MOV	AX, ES:BUFFER_BASE
+	MOV	AX, [es:BUFFER_BASE]
 	MOV	DS, AX
 	PUSH	CS
 	POP	AX
-	CMP	ES:OLD_BUFFER_PTR, AX	;if old_buffer_ptr = CS then
+	CMP	[es:OLD_BUFFER_PTR], AX ;if old_buffer_ptr = CS then
 					;buffer is empty. Just exit
 	JE	WFB_EXIT_BRIDGE
 WFB_CD:
 	CALL	CHANGE_T_DIR
 	JC	WFB_ERROR_BRIDGE	;error?
 WFB_CHATT:
-	CMP	DS:ATTR_FOUND, Is_subdirectory ;a subdirectory? = 10H
+	CMP	[ds:HEADER.ATTR_FOUND], is_subdirectory ;a subdirectory? = 10H
 	JNE	WFB_FILE		;no. a file
 WFB_CMP_DEPTH:
-	MOV	AH, ES:T_DEPTH		;yes. a subdir.
-	CMP	DS:DIR_DEPTH, AH	;DIR_DEPTH > T_DEPTH ?
+	MOV	AH, [es:T_DEPTH] ;yes. a subdir.
+	CMP	[ds:HEADER.DIR_DEPTH], AH ;DIR_DEPTH > T_DEPTH ?
 	JBE	WFB_DEC_DEPTH		;if not, go to parent node
-	LEA	DI, ES:T_DRV_PATH	;else goto child node
-	LEA	SI, DS:FILENAME_FOUND
-	CMP	ES:T_PATH, 0		;root directory?
-;	$IF	E
-	JNE $$IF108
+	LEA	DI, [es:T_DRV_PATH] ;else goto child node
+	LEA	SI, [ds:HEADER.FILENAME_FOUND]
+	CMP	byte [es:T_PATH], 0 ;root directory?
+;	IF$	E
+	JNE IF108$$
 	    MOV     AL, 0FFh		;then don't need to put delim since it is already there
-;	$ELSE
-	JMP SHORT $$EN108
-$$IF108:
-	    MOV     AL, Path_delim	;path_delim '\'
-;	$ENDIF
-$$EN108:
+;	ELSE$
+	JMP SHORT EN108$$
+IF108$$:
+	    MOV     AL, path_delim	;path_delim '\'
+;	ENDIF$
+EN108$$:
 	CALL	CONCAT_ASCIIZ
-	call	concat_display_path	;modify the path for display
-	INC	ES:T_DEPTH
+	call	CONCAT_DISPLAY_PATH	;modify the path for display
+	INC	byte [es:T_DEPTH]
 	CALL	MAKE_DIR		;try to make a new sub directory
 	JC	WFB_EXIT_A_BRIDGE	;there exists a file with same name.
 	MOV	AX, DS			;current buffer seg = old_buffer_ptr?
-	CMP	ES:OLD_BUFFER_PTR, AX
+	CMP	[es:OLD_BUFFER_PTR], AX
 	JNE	WFB_NEXT		;not finished yet. jmp to next
-	OR	ES:MY_FLAG, MISSING_LINK_FLAG ;Finished. Missing link condition occurred regarding empty sub dir
+	OR	byte [es:MY_FLAG], missing_link_flag ;Finished. Missing link condition occurred regarding empty sub dir
 	JMP	WFB_EXIT_A		;check archieve options.
 WFB_NEXT:
-	MOV	DS, DS:NEXT_PTR 	;let's handles next header.
+	MOV	DS, [ds:HEADER.NEXT_PTR] ;let's handles next header.
 	JMP	WFB_CD			;change directory first.
 WFB_EXIT_BRIDGE: JMP WFB_EXIT
 WFB_ERROR_BRIDGE: JMP WFB_ERROR
 WFB_EXIT_A_BRIDGE: JMP WFB_EXIT_A
 WFB_DEC_DEPTH:
-	LEA	DI, ES:T_DRV_PATH
+	LEA	DI, [es:T_DRV_PATH]
 	CALL	RM_EMPTY_DIR		;check flags and remove empty dir
 	CALL	LAST_DIR_OUT		;take off the last dir from path
-	call	cut_display_path	;modify path for display purpose
-	DEC	ES:T_DEPTH		;and decrease depth
+	call	CUT_DISPLAY_PATH	;modify path for display purpose
+	DEC	byte [es:T_DEPTH] ;and decrease depth
 	JMP	WFB_CD			;CHANGE DIR AND compare the depth again.
 
 WFB_FILE:				;Handling a file
-	AND	ES:MY_FLAG, RESET_MISSING_LINK ;if found a file, then current dir is not empty.
-	TEST	ES:FILE_FLAG, CREATED_FLAG ; A file handle is created ?
+	AND	byte [es:MY_FLAG], reset_missing_link ;if found a file, then current dir is not empty.
+	TEST	byte [es:FILE_FLAG], created_flag ; A file handle is created ?
 	JNZ	WFB_WRITE		;yes, skip create again.
 	CALL	CREATE_A_FILE		;create a file in the cur dir
 	JC	WFB_ERROR		;file creation error?
 WFB_WRITE:
 	CALL	WRITE_A_FILE
 	JC	WFB_EXIT_A		;target file has been already deleted.
-	CMP	DS:CONTINUE_INFO, 0
-;	$IF	E,OR			;if continue_info = 0 or 3
-	JE $$LL111
-	CMP	DS:CONTINUE_INFO, 3
-;	$IF	E
-	JNE $$IF111
-$$LL111:
-	    MOV     BX, ES:T_HANDLE
+	CMP	[ds:HEADER.CONTINUE_INFO], 0
+;	IF$	E,OR			;if continue_info = 0 or 3
+	JE LL111$$
+	CMP	[ds:HEADER.CONTINUE_INFO], 3
+;	IF$	E
+	JNE IF111$$
+LL111$$:
+	    MOV     BX, [es:T_HANDLE]
 	    CALL    SET_FILE_DATE_TIME	;then set file's date, time
 	    PUSH    DS			;AN005;SAVE THE BUFFER PTR
 	    PUSH    ES			;AN005;WE NEED THE DATA PTR
@@ -1947,71 +1969,71 @@ $$LL111:
 	    CALL    CLOSE_A_FILE	;and close the handle
 	    POP     DS			;AN005;DS = THE BUFFER PTR AGAIN
 	    CALL    RESTORE_FILENAME_FOUND ;if filename_found has been changed, restore it for reset_s_archieve.
-	    AND     ES:FILE_FLAG, RESET_CREATED ;and reset created_flag
+	    AND     byte [es:FILE_FLAG], reset_created ;and reset created_flag
 	    CALL    INC_FILE_COUNT	;increase file count
-;	$ENDIF
-$$IF111:
+;	ENDIF$
+IF111$$:
 	MOV	AX, DS
-	CMP	ES:OLD_BUFFER_PTR, AX	;current header is the last one?
+	CMP	[es:OLD_BUFFER_PTR], AX ;current header is the last one?
 	JE	WFB_EXIT_A		;then exit
-	MOV	DS, DS:NEXT_PTR 	;else set ds to the next ptr
+	MOV	DS, [ds:HEADER.NEXT_PTR] ;else set ds to the next ptr
 	JMP	WFB_CHATT		;handle the next header
 WFB_ERROR:
-	jmp	main_exit		;meaningful when MKDIR failed because
+	jmp	MAIN_EXIT		;meaningful when MKDIR failed because
 					;of there already exist same named file,
 					;or disk_full case.
 WFB_EXIT_A:
-	test	ES:option_flag, slash_m ;hard archieve ? - turn off source archieve bit.
-	jz	wfb_exit_B		;no, chk error flag and exit
-	call	reset_s_archieve	;reset source file(s) archieve bit using header info(s).
+	test	byte [es:OPTION_FLAG], slash_m ;hard archieve ? - turn off source archieve bit.
+	jz	WFB_EXIT_B		;no, chk error flag and exit
+	call	RESET_S_ARCHIEVE	;reset source file(s) archieve bit using header info(s).
 WFB_EXIT_B:
-	test	ES:copy_status, mkdir_error_flag ;mkdir error happened?
+	test	byte [es:COPY_STATUS], mkdir_error_flag ;mkdir error happened?
 	JNZ	WFB_ERROR		;yes, exit
-	test	ES:copy_status, disk_full_flag ;disk full happened?
+	test	byte [es:COPY_STATUS], disk_full_flag ;disk full happened?
 	JNZ	WFB_ERROR		;yes, exit
 WFB_EXIT:
-	MOV	ES:OLD_BUFFER_PTR, CS	;set old_buffer_ptr to CS
-	MOV	AX, ES:BUFFER_BASE
-	MOV	ES:BUFFER_PTR, AX	;set buffer_ptr to base
-	MOV	AX, ES:MAX_BUFFER_SIZE
-	MOV	ES:BUFFER_LEFT, AX	;set buffer_left
+	MOV	[es:OLD_BUFFER_PTR], CS ;set old_buffer_ptr to CS
+	MOV	AX, [es:BUFFER_BASE]
+	MOV	[es:BUFFER_PTR], AX ;set buffer_ptr to base
+	MOV	AX, [es:MAX_BUFFER_SIZE]
+	MOV	[es:BUFFER_LEFT], AX ;set buffer_left
 	POP	ES
 	POP	DS
-	TEST	SYS_FLAG, ONE_DISK_COPY_FLAG ;one drive letter copy?
-;	$IF	NZ			;yes
-	JZ $$IF113
+	TEST	byte [SYS_FLAG], one_disk_copy_flag ;one drive letter copy?
+;	IF$	NZ			;yes
+	JZ IF113$$
 	    CALL    CHANGE_S_DIR	;then change current dir to s dir
-;	$ENDIF
-$$IF113:
+;	ENDIF$
+IF113$$:
 	RET
-WRITE_FROM_BUFFER ENDP
+;WRITE_FROM_BUFFER ENDP
 ;
-INC_FILE_COUNT PROC NEAR
+INC_FILE_COUNT:
 ;increase the file count by one.
 ;increase file_cnt_low, file_cnt_high.
 ;input: DS - buffer
 ;	ES - data seg
-	INC	ES:FILE_CNT_LOW
+	INC	word [es:FILE_CNT_LOW]
 	JNZ	IFC_EXIT
-	INC	ES:FILE_CNT_HIGH	;if carry over, then inc file_cnt_high
+	INC	word [es:FILE_CNT_HIGH] ;if carry over, then inc file_cnt_high
 IFC_EXIT:
 	RET
-INC_FILE_COUNT ENDP
+;INC_FILE_COUNT ENDP
 ;
-RM_EMPTY_DIR PROC NEAR
+RM_EMPTY_DIR:
 ;check the slash_E option, missing_link_flag.  Remove the empty directory
 ;from the target disk.
 ;INPUT: DS - buffer
 ;	ES - data seg
 ;	DI - points to the current target drv, path
 
-	TEST	ES:OPTION_FLAG, SLASH_E ;user want to copy empty subdir?
+	TEST	byte [es:OPTION_FLAG], slash_e ;user want to copy empty subdir?
 	JNZ	RED_EXIT		;then exit
-	TEST	ES:MY_FLAG, MISSING_LINK_FLAG ;missing informations for not to copying empty dir
+	TEST	byte [es:MY_FLAG], missing_link_flag ;missing informations for not to copying empty dir
 					;at the tree travesal phase?
 	JZ	RED_EXIT		;no.
 	CALL	SWITCH_DS_ES		;ds - data, es - buffer
-	MOV	DX, OFFSET T_PARENT	;chdir to parent dir
+	MOV	DX, T_PARENT        ;chdir to parent dir
 	MOV	AH, 3Bh 		;Chdir
 	INT	21h
 	PUSH	DI
@@ -2021,9 +2043,9 @@ RM_EMPTY_DIR PROC NEAR
 	CALL	SWITCH_DS_ES		;restore ds, es
 RED_EXIT:
 	RET
-RM_EMPTY_DIR ENDP
+;RM_EMPTY_DIR ENDP
 ;
-RESTORE_FILENAME_FOUND PROC NEAR
+RESTORE_FILENAME_FOUND:
 ;when the filename_found has been Revised according to the user's specified
 ;input parm, then restore the original source filename in filename_found.
 ;This will be used when reset_s_archieve routine reset the source file's
@@ -2031,102 +2053,102 @@ RESTORE_FILENAME_FOUND PROC NEAR
 ;input: DS - buffer
 ;	ES - data seg
 
-	CMP	ES:T_FILENAME, 0	;if t_filename ot t_template is not blank,
-;	$IF	NE,OR			;then filename_found has been Revised.
-	JNE $$LL115
-	CMP	ES:T_TEMPLATE, 0
-;	$IF	NE
-	JE $$IF115
-$$LL115:
+	CMP	byte [es:T_FILENAME], 0 ;if t_filename ot t_template is not blank,
+;	IF$	NE,OR			;then filename_found has been Revised.
+	JNE LL115$$
+	CMP	byte [es:T_TEMPLATE], 0
+;	IF$	NE
+	JE IF115$$
+LL115$$:
 	    CALL    SWITCH_DS_ES	;DS - data seg, ES - buffer
 	    MOV     CX, 13
-	    LEA     SI, DS:DISP_S_FILE	;we know filename_found has been save into DISP_S_FILE when create the file.
-	    LEA     DI, ES:FILENAME_FOUND ;use this to restore source filename this time.
+	    LEA     SI, [ds:DISP_S_FILE] ;we know filename_found has been save into DISP_S_FILE when create the file.
+	    LEA     DI, [es:HEADER.FILENAME_FOUND] ;use this to restore source filename this time.
 	    REP     MOVSB		;disp_s_file => filename_found
 	    CALL    SWITCH_DS_ES	;restore ds, es
-;	$ENDIF
-$$IF115:
+;	ENDIF$
+IF115$$:
 	RET
-RESTORE_FILENAME_FOUND ENDP
+;RESTORE_FILENAME_FOUND ENDP
 ;
-RESET_S_ARCHIEVE PROC NEAR
+RESET_S_ARCHIEVE:
 ;INPUT: DS - buffer
 ;	ES - data seg
 
-	TEST	ES:COPY_STATUS, DISK_FULL_FLAG ;called when disk full?
+	TEST	byte [es:COPY_STATUS], disk_full_flag ;called when disk full?
 	JZ	RSA_START		;no, just goto start
 					;else disk_full.
 	MOV	AX, DS			;current DS when called
-	CMP	ES:BUFFER_BASE, AX	;current DS(BUFFER) is the first one?
+	CMP	[es:BUFFER_BASE], AX ;current DS(BUFFER) is the first one?
 	JE	RSA_EXIT_BRIDGE 	;yes, just exit
-	MOV	AX, DS:BEFORE_PTR	;set old_buffer_ptr to the header
-	MOV	ES:OLD_BUFFER_PTR, AX	;that is just before the troubled one.
+	MOV	AX, [ds:HEADER.BEFORE_PTR] ;set old_buffer_ptr to the header
+	MOV	[es:OLD_BUFFER_PTR], AX ;that is just before the troubled one.
 RSA_START:
-	MOV	AX, ES:BUFFER_BASE
+	MOV	AX, [es:BUFFER_BASE]
 	MOV	DS, AX			;set DS to buffer base again to start traveling
 RSA_CD:
 	CALL	CHANGE_ARC_S_DIR	;change souce dir
 RSA_CHATT:
-	CMP	DS:ATTR_FOUND, Is_subdirectory ; = 10h
+	CMP	[ds:HEADER.ATTR_FOUND], is_subdirectory ; = 10h
 	JNE	RSA_FILE		;no a file
 RSA_CMP_DEPTH:
-	MOV	AH, ES:S_ARC_DEPTH	;yes, a subdir
-	CMP	DS:DIR_DEPTH, AH	;dir_depth > s_arc_depth?
+	MOV	AH, [es:S_ARC_DEPTH] ;yes, a subdir
+	CMP	[ds:HEADER.DIR_DEPTH], AH ;dir_depth > s_arc_depth?
 	JBE	RSA_DEC_DEPTH		;if not, goto parent node
-	LEA	DI, ES:S_ARC_DRV_PATH
-	LEA	SI, DS:FILENAME_FOUND
-	CMP	ES:S_ARC_PATH, 0	;root dir?
-;	$IF	E
-	JNE $$IF117
+	LEA	DI, [es:S_ARC_DRV_PATH]
+	LEA	SI, [ds:HEADER.FILENAME_FOUND]
+	CMP	byte [es:S_ARC_PATH], 0 ;root dir?
+;	IF$	E
+	JNE IF117$$
 	    MOV     AL, 0FFh
-;	$ELSE
-	JMP SHORT $$EN117
-$$IF117:
-	    MOV     AL, Path_delim	;path_delim '\'
-;	$ENDIF
-$$EN117:
+;	ELSE$
+	JMP SHORT EN117$$
+IF117$$:
+	    MOV     AL, path_delim	;path_delim '\'
+;	ENDIF$
+EN117$$:
 	CALL	CONCAT_ASCIIZ
-	INC	ES:S_ARC_DEPTH
+	INC	byte [es:S_ARC_DEPTH]
 	MOV	AX, DS
-	CMP	ES:OLD_BUFFER_PTR, AX
+	CMP	[es:OLD_BUFFER_PTR], AX
 	JE	RSA_EXIT_A		;finished. Set the source current dir and return to caller
-	MOV	DS, DS:NEXT_PTR 	;else let's handles next header
+	MOV	DS, [ds:HEADER.NEXT_PTR] ;else let's handles next header
 	JMP	RSA_CD			;chdir first.
 RSA_EXIT_A:
 	CALL	CHANGE_ARC_S_DIR	;to restore the same current source dir
 					;as that of the READ_INTO_BUFFER proc.
 RSA_EXIT_BRIDGE:JMP RSA_EXIT
 RSA_DEC_DEPTH:
-	LEA	DI, ES:S_ARC_DRV_PATH
+	LEA	DI, [es:S_ARC_DRV_PATH]
 	CALL	LAST_DIR_OUT
-	DEC	ES:S_ARC_DEPTH
+	DEC	byte [es:S_ARC_DEPTH]
 	JMP	RSA_CD
 RSA_FILE:
-	CMP	DS:CONTINUE_INFO, 0
-;	$IF	E,OR
-	JE $$LL120
-	CMP	DS:CONTINUE_INFO, 3
-;	$IF	E
-	JNE $$IF120
-$$LL120:
+	CMP	[ds:HEADER.CONTINUE_INFO], 0
+;	IF$	E,OR
+	JE LL120$$
+	CMP	[ds:HEADER.CONTINUE_INFO], 3
+;	IF$	E
+	JNE IF120$$
+LL120$$:
 	    CALL    CHANGE_S_FILEMODE	;change source file mode
-;	$ENDIF
-$$IF120:
+;	ENDIF$
+IF120$$:
 	MOV	AX, DS
-	CMP	ES:OLD_BUFFER_PTR, AX	;current header is the last one?
+	CMP	[es:OLD_BUFFER_PTR], AX ;current header is the last one?
 	JE	RSA_EXIT
-	MOV	DS, DS:NEXT_PTR
+	MOV	DS, [ds:HEADER.NEXT_PTR]
 	JMP	RSA_CHATT
 RSA_EXIT:
-	OR	ES:SYS_FLAG, DEFAULT_S_DIR_fLAG ;this is for restoring default source dir before exit to DOS.
+	OR	byte [es:SYS_FLAG], default_s_dir_flag ;this is for restoring default source dir before exit to DOS.
 	RET				;return to caller
-RESET_S_ARCHIEVE ENDP
+;RESET_S_ARCHIEVE ENDP
 ;
-CHANGE_S_FILEMODE PROC NEAR
+CHANGE_S_FILEMODE:
 ;input: DS - buffer
 ;	ES - data seg
 
-	LEA	DX, DS:FILENAME_FOUND
+	LEA	DX, [ds:HEADER.FILENAME_FOUND]
 	MOV	AH, 43h 		;chmod
 	MOV	AL, 0			;get attribute in CX
 	INT	21h
@@ -2135,115 +2157,115 @@ CHANGE_S_FILEMODE PROC NEAR
 	AND	CX, 0FFDFh		;turn off the archieve bit
 	INT	21h
 	RET
-CHANGE_S_FILEMODE ENDP
+;CHANGE_S_FILEMODE ENDP
 ;
-CHANGE_ARC_S_DIR PROC NEAR
+CHANGE_ARC_S_DIR:
 ;change the source directory according to S_ARC_DRV_PATH
 ;INPUT: DS - buffer
 ;	ES - data seg
-	call	switch_ds_es
-	CMP	S_ARC_DRV[2], 0
-;	$IF	E
-	JNE $$IF122
-	    MOV     S_ARC_DRV[2], '\'	;LAST_DIR_OUT have took '\' out?
-	    MOV     S_ARC_DRV[3],0	;then restore it
-;	$ENDIF
-$$IF122:
-	MOV	DX, OFFSET S_ARC_DRV_PATH ;use full drv, path
-	MOV	AH, CHDIR		; = 3Bh
+	call	SWITCH_DS_ES
+	CMP	[S_ARC_DRV+2], 0
+;	IF$	E
+	JNE IF122$$
+	    MOV     [S_ARC_DRV+2], '\' ;LAST_DIR_OUT have took '\' out?
+	    MOV     [S_ARC_DRV+3],0 ;then restore it
+;	ENDIF$
+IF122$$:
+	MOV	DX, S_ARC_DRV_PATH        ;use full drv, path
+	MOV	AH, Chdir		; = 3Bh
 	INT	21h
-;	$IF	C
-	JNC $$IF124
-	    OR	    COPY_STATUS, CHDIR_ERROR_FLAG
+;	IF$	C
+	JNC IF124$$
+	    OR	    byte [COPY_STATUS], chdir_error_flag
 	    CALL    EXTENDED_ERROR_HANDLER
-;	$ENDIF
-$$IF124:
-	call	switch_ds_es
+;	ENDIF$
+IF124$$:
+	call	SWITCH_DS_ES
 	RET
-CHANGE_ARC_S_DIR ENDP
+;CHANGE_ARC_S_DIR ENDP
 
 ;
-CONCAT_DISPLAY_PATH PROC NEAR
+CONCAT_DISPLAY_PATH:
 ;concatenate subdirectory name found from the header to DISP_S_PATH which
 ;will be used for display copying file messages.
 ;if slash_p option has been set, then just return.
 ;DS: buffer header
 ;ES: data seg
 ;
-	TEST	ES:OPTION_FLAG, SLASH_P ;prompt option?
-;	$IF	Z			;no
-	JNZ $$IF126
-	    LEA     DI, ES:DISP_S_PATH
-	    LEA     SI, DS:FILENAME_FOUND
-	    CMP     ES:T_DEPTH, 0	;this will be the first child directory?
-;	    $IF     E			;yes
-	    JNE $$IF127
+	TEST	byte [es:OPTION_FLAG], slash_p ;prompt option?
+;	IF$	Z			;no
+	JNZ IF126$$
+	    LEA     DI, [es:DISP_S_PATH]
+	    LEA     SI, [ds:HEADER.FILENAME_FOUND]
+	    CMP     byte [es:T_DEPTH], 0 ;this will be the first child directory?
+;	    IF$     E			;yes
+	    JNE IF127$$
 		MOV	AL, 0FFh	;then do not put '\' between them
-;	    $ELSE
-	    JMP SHORT $$EN127
-$$IF127:
-		MOV	AL, Path_delim	;else put '\'
-;	    $ENDIF
-$$EN127:
+;	    ELSE$
+	    JMP SHORT EN127$$
+IF127$$:
+		MOV	AL, path_delim	;else put '\'
+;	    ENDIF$
+EN127$$:
 	    CALL    CONCAT_ASCIIZ
-;	$ENDIF				;else just return
-$$IF126:
+;	ENDIF$				;else just return
+IF126$$:
 	RET
-CONCAT_DISPLAY_PATH ENDP
+;CONCAT_DISPLAY_PATH ENDP
 ;
-CUT_DISPLAY_PATH PROC NEAR
+CUT_DISPLAY_PATH:
 ;take the last dir out from the DISP_S_PATH for display copy messages.
 ;if prompt option has been set, just return.
 ;INPUT: DS - buffer header
 ;	ES - data seg
 ;
 
-	TEST	ES:OPTION_FLAG, SLASH_P ;prompt?
-;	$IF	Z			;no.
-	JNZ $$IF131
+	TEST	byte [es:OPTION_FLAG], slash_p ;prompt?
+;	IF$	Z			;no.
+	JNZ IF131$$
 	    PUSH    DS			;save DS
 	    PUSH    ES
 	    POP     DS			;ds = es = data seg
-	    MOV     SI, OFFSET DISP_S_PATH ;for CHK_DRV_LETTER
-	    MOV     DI, OFFSET DISP_S_PATH ;for LASR_DIR_OUT
+	    MOV     SI, DISP_S_PATH        ;for CHK_DRV_LETTER
+	    MOV     DI, DISP_S_PATH        ;for LASR_DIR_OUT
 
 	    CALL    LAST_DIR_OUT
-;	    $IF     C			;failure? no '\' found
-	    JNC $$IF132
+;	    IF$     C			;failure? no '\' found
+	    JNC IF132$$
 		CALL	CHK_DRV_LETTER	;drive letter?
-;		$IF	NC		;yes. "D:filename",0 case
-		JC $$IF133
-		    MOV     BYTE PTR DS:[SI], 0 ;make it "D:",0 since SI now points to the next chr
-;		$ELSE			;no. "filename",0 case
-		JMP SHORT $$EN133
-$$IF133:
-		    MOV     BYTE PTR [DI], 0 ;set DISP_S_PATH to 0
-;		$ENDIF
-$$EN133:
-;	    $ELSE			;found '\' and last '\' became 0
-	    JMP SHORT $$EN132
-$$IF132:
-		CMP	T_DEPTH, 1	;now going to the starting path?
-;		$IF	E		;yes. restore it for concat_display_path routine.
-		JNE $$IF137
+;		IF$	NC		;yes. "D:filename",0 case
+		JC IF133$$
+		    MOV     byte [ds:SI], 0     ;make it "D:",0 since SI now points to the next chr
+;		ELSE$			;no. "filename",0 case
+		JMP SHORT EN133$$
+IF133$$:
+		    MOV     byte [DI], 0     ;set DISP_S_PATH to 0
+;		ENDIF$
+EN133$$:
+;	    ELSE$			;found '\' and last '\' became 0
+	    JMP SHORT EN132$$
+IF132$$:
+		CMP	byte [T_DEPTH], 1 ;now going to the starting path?
+;		IF$	E		;yes. restore it for concat_display_path routine.
+		JNE IF137$$
 		    MOV     DI, AX	;we want to restore '\' and put 0 just after that.
 		    DEC     DI		;for ex, "D:\DIR1"=>"D:"=>"D:\" -- original starting path
-		    MOV     BYTE PTR [DI], '\' ; "D:dir1\dir2"=>"D:dir1"(starting path) => "D:dir1\"
-		    MOV     BYTE PTR [DI+1], 0
-;		$ENDIF
-$$IF137:
-;	    $ENDIF
-$$EN132:
+		    MOV     byte [DI], '\'     ; "D:dir1\dir2"=>"D:dir1"(starting path) => "D:dir1\"
+		    MOV     byte [DI+1], 0
+;		ENDIF$
+IF137$$:
+;	    ENDIF$
+EN132$$:
 	    POP     DS			;restore ds to buffer header
-;	$ENDIF
-$$IF131:
+;	ENDIF$
+IF131$$:
 	RET
-CUT_DISPLAY_PATH ENDP
+;CUT_DISPLAY_PATH ENDP
 ;
 
 
 ;***************************************************************************
-CHK_DRV_LETTER PROC NEAR
+CHK_DRV_LETTER:
 ; ** CHECK CURRENT CHR IS ALPHA CHR FOLLOWED BY COLON.			   *
 ; INPUT: DS:SI POINTS TO THE CURRENT CHR TO BE CHECKED. 		   *
 ; OUTPUT: FOUND - SI POINTS TO THE NEXT CHR.				   *
@@ -2253,23 +2275,23 @@ CHK_DRV_LETTER PROC NEAR
 
 	PUSH	AX
 	PUSH	SI			;AN010;IN CASE DRIVE LETTER NOT FOUND
-;	$DO				;AN010;
-$$DO141:
+;	DO$				;AN010;
+DO141$$:
 	    CLC 			;AN010;INITIALIZE TO NOT DBCS
-	    MOV     AL,DS:BYTE PTR [SI] ;AN010;GET THE 1st CHAR TO TEST
-	    CALL    CHK_DBCS		;AN010;SEE IF WE ARE IN DBCS
-;	$LEAVE	NC			;AN010;THIS IS NOT DBCS
-	JNC $$EN141
+	    MOV     AL,byte [ds:SI]     ;AN010;GET THE 1st CHAR TO TEST
+	    CALL    Chk_DBCS		;AN010;SEE IF WE ARE IN DBCS
+;	LEAVE$	NC			;AN010;THIS IS NOT DBCS
+	JNC EN141$$
 	    INC     SI			;AN010;GO TO THE NEXT CHAR TO CHECK
 	    INC     SI			;AN010;DITO
-;	$ENDDO				;AN010;
-	JMP SHORT $$DO141
-$$EN141:
+;	ENDDO$				;AN010;
+	JMP SHORT DO141$$
+EN141$$:
 	CMP	AL, 'A'
 	JB	CK_DR_1 		;LESS THAN 'A', THEN NOT FOUND.
 	CMP	AL, 'Z'
 	JA	CK_DR_1 		;ABOVE 'Z', THEN NOT FOUND.
-	MOV	AL, DS:BYTE PTR [SI+1]	;LOOK AHEAD THE FOLLOWING CHR.
+	MOV	AL, byte [ds:SI+1]     ;LOOK AHEAD THE FOLLOWING CHR.
 	CMP	AL, ':' 		;SHOULD BE A COLON.
 	JNZ	CK_DR_1 		;NOT FOUND.
 	POP	AX			;AN010;THROW AWAY SAVED SI
@@ -2282,11 +2304,11 @@ CK_DR_1:
 CK_DR_2:
 	POP	AX
 	RET
-CHK_DRV_LETTER ENDP
+;CHK_DRV_LETTER ENDP
 ;
 
 
-CREATE_A_FILE PROC NEAR
+CREATE_A_FILE:
 ;create a file in the header and return the file handle in T_HANDLE.
 ;Set CREATED_FLAG.  This will be reset by WRITE_FROM_BUFFER when it
 ;close the handle.
@@ -2306,126 +2328,126 @@ CREATE_A_FILE PROC NEAR
 
 					;save the original filename from the header
 	MOV	CX, 13			;max 13 chr
-	LEA	SI, DS:FILENAME_FOUND	;original source file name
-	LEA	DI, ES:DISP_S_FILE	;filename to be displayed
+	LEA	SI, [ds:HEADER.FILENAME_FOUND] ;original source file name
+	LEA	DI, [es:DISP_S_FILE] ;filename to be displayed
 	REP	MOVSB			;filename_found => disp_s_file
-	test	es:option_flag, slash_p
-;	$IF	Z
-	JNZ $$IF144
+	test	byte [es:OPTION_FLAG], slash_p
+;	IF$	Z
+	JNZ IF144$$
 	    CALL    SHOW_COPY_MESSAGE	;show the source path, file
-;	$ENDIF
-$$IF144:
+;	ENDIF$
+IF144$$:
 
-	CMP	ES:T_FILENAME, 0
-;	$IF	NE			;non_global target filename entered.
-	JE $$IF146
-	    TEST    ES:COPY_STATUS, MAYBE_ITSELF_FLAG
-;	    $IF     NZ
-	    JZ $$IF147
-		LEA	SI, DS:FILENAME_FOUND
-		LEA	DI, ES:T_FILENAME
+	CMP	byte [es:T_FILENAME], 0
+;	IF$	NE			;non_global target filename entered.
+	JE IF146$$
+	    TEST    byte [es:COPY_STATUS], maybe_itself_flag
+;	    IF$     NZ
+	    JZ IF147$$
+		LEA	SI, [ds:HEADER.FILENAME_FOUND]
+		LEA	DI, [es:T_FILENAME]
 		CALL	COMP_FILENAME	;compare it. if same then show
 					;file cannot be copied onto itself and
 					;abort
-;	    $ENDIF
-$$IF147:
+;	    ENDIF$
+IF147$$:
 
 	    CALL    SWITCH_DS_ES	;now ds - data, es - buffer
 	    MOV     CX, 13
-	    LEA     SI, DS:T_FILENAME
-	    LEA     DI, ES:FILENAME_FOUND
+	    LEA     SI, [ds:T_FILENAME]
+	    LEA     DI, [es:HEADER.FILENAME_FOUND]
 	    REP     MOVSB		; t_filename => filename_found
 	    MOV     AL, NUL		;AN014;DOS NEEDS A NUL TO TERM.
-	    MOV     ES:TERMINATE_STRING,AL ;AN014;PUT IT IN THE HEADER
+	    MOV     [es:HEADER.TERMINATE_STRING],AL ;AN014;PUT IT IN THE HEADER
 	    CALL    SWITCH_DS_ES	;now ds - buffer, es - data seg
 
-;	$ELSE
-	JMP SHORT $$EN146
-$$IF146:
-	    CMP     ES:T_TEMPLATE, 0	;global chr target filename entered?
-;	    $IF     NE			;yes, entered. modify the filename found
-	    JE $$IF150
+;	ELSE$
+	JMP SHORT EN146$$
+IF146$$:
+	    CMP     byte [es:T_TEMPLATE], 0 ;global chr target filename entered?
+;	    IF$     NE			;yes, entered. modify the filename found
+	    JE IF150$$
 		CALL	MODIFY_FILENAME
-		TEST	ES:COPY_STATUS, MAYBE_ITSELF_FLAG
-;		$IF	NZ
-		JZ $$IF151
-		    LEA     SI, DS:FILENAME_FOUND ;compare the Revised filename
-		    LEA     DI, ES:DISP_S_FILE ;with original name
+		TEST	byte [es:COPY_STATUS], maybe_itself_flag
+;		IF$	NZ
+		JZ IF151$$
+		    LEA     SI, [ds:HEADER.FILENAME_FOUND] ;compare the Revised filename
+		    LEA     DI, [es:DISP_S_FILE] ;with original name
 		    CALL    COMP_FILENAME ;if same, then issue error message and exit
-;		$ENDIF
-$$IF151:
-;	    $ELSE
-	    JMP SHORT $$EN150
-$$IF150:
-		TEST	ES:COPY_STATUS, MAYBE_ITSELF_FLAG ;*.* CASE
-;		$IF	NZ
-		JZ $$IF154
+;		ENDIF$
+IF151$$:
+;	    ELSE$
+	    JMP SHORT EN150$$
+IF150$$:
+		TEST	byte [es:COPY_STATUS], maybe_itself_flag ;*.* CASE
+;		IF$	NZ
+		JZ IF154$$
 		    PUSH    ES
 		    POP     DS		;ds - data seg
 
 					; Set message parameters
 		    MOV     AX,MSG_COPY_ITSELF ;AN000;
-		    MOV     MSG_NUM,AX	;AN000; set message number
-		    MOV     SUBST_COUNT,NO_SUBST ;AN000; no message subst.
-		    MOV     MSG_CLASS,UTILITY_MSG_CLASS ;AN000; message class
-		    MOV     INPUT_FLAG,NO_INPUT ;AN000; no user input
+		    MOV     [MSG_NUM],AX ;AN000; set message number
+		    MOV     word [SUBST_COUNT],NO_SUBST ;AN000; no message subst.
+		    MOV     byte [MSG_CLASS],UTILITY_MSG_CLASS ;AN000; message class
+		    MOV     byte [INPUT_FLAG],NO_INPUT ;AN000; no user input
 		    CALL    PRINT_STDERR ;AN000; display error
 		    JMP     MAIN_EXIT
-;		$ENDIF
-$$IF154:
-;	    $ENDIF
-$$EN150:
-;	$ENDIF
-$$EN146:
+;		ENDIF$
+IF154$$:
+;	    ENDIF$
+EN150$$:
+;	ENDIF$
+EN146$$:
 ;-------------------------------------------------------------------------
 ; Use extended open DOS call to create the target file, use attribute list
 ; obtained from the previous Get Extended attribute DOS call
 ;-------------------------------------------------------------------------
-	MOV	AX, Ext_Open		;AN000; = 6Ch
+	MOV	AX, EXT_OPEN		;AN000; = 6Ch
 	MOV	BX,CREATE_MODE		;AN000;CREATE MODE = 0002H
 	MOV	CX,CREATE_ATTR		;AN000; attribute = 0
 	MOV	DX,CREATE_FLAG		;AN000; flag = 0112H
-	MOV	SI,OFFSET TARGET_DRV_LET ;AN005; DS:SI-->NAME TO CREATE
+	MOV	SI,HEADER.TARGET_DRV_LET        ;AN005; DS:SI-->NAME TO CREATE
 	MOV	DI,NUL_LIST		;AN012; ES:DI = -1
 	INT	21H			;AN000; create file
 
 	JC	CAF_ERROR		;AN000;
-	MOV	ES:T_HANDLE, AX 	;AN000;save handle
+	MOV	[es:T_HANDLE], AX ;AN000;save handle
 
-	CALL	CHK_T_RES_DEVICE	;check target handle is a reserved dev
+	CALL	chk_t_res_device	;check target handle is a reserved dev
 
 	MOV	AX,SET_ATTRIB		;AN012;5704H
 	CALL	SWITCH_DS_ES		;AN013;now ds - data, es - buffer
-	MOV	BX,T_HANDLE		;AC013;THE FILE HANDLE
-	LEA	DI,ES:ATTRIB_LIST	;AN013;PARAMETER LIST (ES:DI)
+	MOV	BX,[T_HANDLE] ;AC013;THE FILE HANDLE
+	LEA	DI,[es:HEADER.ATTRIB_LIST] ;AN013;PARAMETER LIST (ES:DI)
 	INT	21H			;AN012;SET EXTENDED ATTRIBUTES
 	CALL	SWITCH_DS_ES		;AN013;now es - data, ds - buffer
 	JC	CAF_ERROR		;AN012;
 
-	OR	ES:FILE_FLAG, CREATED_FLAG ;set created_flag
+	OR	byte [es:FILE_FLAG], created_flag ;set created_flag
 	JMP	CAF_EXIT
 CAF_ERROR:
 	PUSH	DS
 	PUSH	ES
 	POP	DS
-	OR	COPY_STATUS, CREATE_ERROR_FLAG
+	OR	byte [COPY_STATUS], create_error_flag
 	CALL	EXTENDED_ERROR_HANDLER
 	POP	DS
 CAF_EXIT:
 	POP	ES
 	POP	DS
 	RET
-CREATE_A_FILE ENDP
+;CREATE_A_FILE ENDP
 ;
-chk_t_res_device proc near
+chk_t_res_device:
 ;check the target handle if it is for reserved device
 ;input: ES - data seg
 ;	DS - buffer
 ;	AX - filehandle created
 
-	cmp	es:t_filename,0 	;if no user specified filename
+	cmp	byte [es:T_FILENAME],0 ;if no user specified filename
 	jne	ctrd_ioctl		;then should not be a reserved device name
-	cmp	es:t_template,0
+	cmp	byte [es:T_TEMPLATE],0
 	je	ctrd_exit
 ctrd_ioctl:
 	mov	bx, ax			;file handle
@@ -2438,17 +2460,17 @@ ctrd_ioctl:
 
 ; Set message parameters
 	MOV	AX,MSG_RES_T_NAME	;AN000; message number
-	MOV	MSG_NUM,AX		;AN000; set message number
-	MOV	SUBST_COUNT,NO_SUBST	;AN000; no message substitution
-	MOV	MSG_CLASS,UTILITY_MSG_CLASS ;AN000; message class
-	MOV	INPUT_FLAG,NO_INPUT	;AN000; no input
+	MOV	[MSG_NUM],AX ;AN000; set message number
+	MOV	word [SUBST_COUNT],NO_SUBST ;AN000; no message substitution
+	MOV	byte [MSG_CLASS],UTILITY_MSG_CLASS ;AN000; message class
+	MOV	byte [INPUT_FLAG],NO_INPUT ;AN000; no input
 	CALL	PRINT_STDOUT		;AN000; display message
-	jmp	main_exit
+	jmp	MAIN_EXIT
 ctrd_exit:
 	ret
-chk_t_res_device endp
+;chk_t_res_device endp
 ;
-MODIFY_FILENAME PROC NEAR
+MODIFY_FILENAME:
 ;modify the filename in the header using T_TEMPLATE.
 ;INPUT:
 ;DS: BUFFER
@@ -2459,43 +2481,43 @@ MODIFY_FILENAME PROC NEAR
 
 	PUSH	DS
 	PUSH	ES
-	MOV	ES, ES:PSP_SEG		;ES points to PSP
+	MOV	ES, [es:PSP_SEG] ;ES points to PSP
 	MOV	DI, PSPFCB2_DRV 	;DI points to FCB2, 6c
-	MOV	SI, OFFSET DS:TARGET_DRV_LET ;filename found, DS = buffer header
+	MOV	SI, HEADER.TARGET_DRV_LET        ;filename found, DS = buffer header
 	MOV	AH, 29H 		;parse a filename
 	MOV	AL, 0			;control bits
 	INT	21h			;unfold the filename found into PSP FCB2 area
 
 	POP	DS			;now DS=data seg, ES=PSP seg
-	MOV	SI, OFFSET T_TEMPLATE	;SI points to template
+	MOV	SI, T_TEMPLATE        ;SI points to template
 	MOV	DI, PSPFCB2_DRV
 	INC	DI			;DI points to the formatted filename
 	MOV	CX, 11
 	CLD
-;	$DO
-$$DO158:
+;	DO$
+DO158$$:
 	    CMP     CX, 0		;done?
-;	$LEAVE	E			;yes. exit
-	JE $$EN158
+;	LEAVE$	E			;yes. exit
+	JE EN158$$
 	    LODSB			;[SI] => AL, SI = SI + 1
 	    CMP     AL, '?'		;global chr?
-;	    $IF     E			;yes
-	    JNE $$IF160
+;	    IF$     E			;yes
+	    JNE IF160$$
 		INC	DI		;just skip the corresponding target chr
-;	    $ELSE			;no
-	    JMP SHORT $$EN160
-$$IF160:
+;	    ELSE$			;no
+	    JMP SHORT EN160$$
+IF160$$:
 		STOSB			;change the target chr to this. DI = DI + 1
-;	    $ENDIF
-$$EN160:
+;	    ENDIF$
+EN160$$:
 	    DEC     CX
-;	$ENDDO
-	JMP SHORT $$DO158
-$$EN158:
+;	ENDDO$
+	JMP SHORT DO158$$
+EN158$$:
 
 	POP	ES			;now ES = Buffer
-	MOV	DI, OFFSET ES:FILENAME_FOUND ; di points to filename in the header
-	MOV	DS, PSP_SEG		;DS = PSP seg
+	MOV	DI, HEADER.FILENAME_FOUND        ; di points to filename in the header
+	MOV	DS, [PSP_SEG] ;DS = PSP seg
 	MOV	SI, PSPFCB2_DRV
 	INC	SI			;di points to Revised filename
 	CALL	COMPRESS_FILENAME	;fold it
@@ -2503,10 +2525,10 @@ $$EN158:
 	POP	ES
 	POP	DS
 	RET
-MODIFY_FILENAME ENDP
+;MODIFY_FILENAME ENDP
 ;
 
-COMP_FILENAME PROC NEAR
+COMP_FILENAME:
 ;this routine is called when MAYBE_COPY_ITSELF flag in on.
 ;SI, DI asciiz string will be compared and if they are identical
 ;the show "Cannot copy onto itself" msg and jmp to main_exit.
@@ -2546,18 +2568,18 @@ CF_SAME:
 
 ; Set message parameters
 	MOV	AX,MSG_COPY_ITSELF	;AN000; message number
-	MOV	MSG_NUM,AX		;AN000; set message number
-	MOV	SUBST_COUNT,NO_SUBST	;AN000; no message substitution
-	MOV	MSG_CLASS,UTILITY_MSG_CLASS ;AN000; message class
-	MOV	INPUT_FLAG,NO_INPUT	;AN000; no input
+	MOV	[MSG_NUM],AX ;AN000; set message number
+	MOV	word [SUBST_COUNT],NO_SUBST ;AN000; no message substitution
+	MOV	byte [MSG_CLASS],UTILITY_MSG_CLASS ;AN000; message class
+	MOV	byte [INPUT_FLAG],NO_INPUT ;AN000; no input
 	CALL	PRINT_STDERR		;AN000; display error message
 	JMP	MAIN_EXIT
 CF_EXIT:
 	RET
-COMP_FILENAME ENDP
+;COMP_FILENAME ENDP
 
 ;
-SHOW_COPY_MESSAGE PROC NEAR
+SHOW_COPY_MESSAGE:
 ;show the source path, filename that is ready for creation in the target disk.
 ;INPUT: ES - data seg
 ;	DS - buffer header seg
@@ -2566,68 +2588,68 @@ SHOW_COPY_MESSAGE PROC NEAR
 	PUSH	ES
 	POP	DS			;DS = data seg
 
-	LEA	SI,SUBLIST1		;AN000; get addressability to list
-	LEA	DX,DISP_S_PATH		;AN000; offset to path name
-	MOV	[SI].DATA_OFF,DX	;AN000; save offset
-	MOV	[SI].DATA_SEG,DS	;AN000; save data segment
-	MOV	[SI].MSG_ID,1		;AN000; message ID
-	MOV	[SI].FLAGS,010H 	;AN000; ASCIIZ string, left align
-	MOV	[SI].MAX_WIDTH,0	;AN000; MAXIMUM FIELD WITH
-	MOV	[SI].MIN_WIDTH,0	;AN000; MINIMUM FIELD WITH
+	LEA	SI,[SUBLIST1];AN000; get addressability to list
+	LEA	DX,[DISP_S_PATH];AN000; offset to path name
+	MOV	[SI+SUB_LIST+SUB_LIST.DATA_OFF],DX ;AN000; save offset
+	MOV	[SI+SUB_LIST+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
+	MOV	[SI+SUB_LIST+SUB_LIST.MSG_ID],1 ;AN000; message ID
+	MOV	[SI+SUB_LIST+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
+	MOV	[SI+SUB_LIST+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
+	MOV	[SI+SUB_LIST+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
 
-	LEA	SI,SUBLIST2		;AN000; get addressability to list
-	LEA	DX,DISP_S_FILE		;AN000; offset to file name
-	MOV	[SI].DATA_OFF,DX	;AN000; save offset
-	MOV	[SI].DATA_SEG,DS	;AN000; save data segment
-	MOV	[SI].MSG_ID,2		;AN000; message ID
-	MOV	[SI].FLAGS,010H 	;AN000; ASCIIZ string, left align
-	MOV	[SI].MAX_WIDTH,0	;AN000; MAXIMUM FIELD WITH
-	MOV	[SI].MIN_WIDTH,0	;AN000; MINIMUM FIELD WITH
+	LEA	SI,[SUBLIST2];AN000; get addressability to list
+	LEA	DX,[DISP_S_FILE];AN000; offset to file name
+	MOV	[SI+SUB_LIST+SUB_LIST.DATA_OFF],DX ;AN000; save offset
+	MOV	[SI+SUB_LIST+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
+	MOV	[SI+SUB_LIST+SUB_LIST.MSG_ID],2 ;AN000; message ID
+	MOV	[SI+SUB_LIST+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
+	MOV	[SI+SUB_LIST+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
+	MOV	[SI+SUB_LIST+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
 
-	LEA	SI,SUBLIST1		;AN000;
-	CMP	ES:T_DEPTH, 0		;starting directory?
-;	$IF	E			;yes
-	JNE $$IF164
+	LEA	SI,[SUBLIST1];AN000;
+	CMP	byte [es:T_DEPTH], 0 ;starting directory?
+;	IF$	E			;yes
+	JNE IF164$$
 	    MOV     AX,S_PATH_FILE0	;AN000;NO BACK SLASH BETWEEN PATH,FNAME
 
-;	$ELSE
-	JMP SHORT $$EN164
-$$IF164:
+;	ELSE$
+	JMP SHORT EN164$$
+IF164$$:
 	    MOV     AX,S_PATH_FILE1	;AN000;BACK SLASH IS BETWEEN PATH,FNAME
 
-;	$ENDIF
-$$EN164:
-	MOV	MSG_NUM,AX		;AN000; set message number
-	MOV	SUBST_COUNT,PARM_SUBST_TWO ;AN000; substitution count = 2
-	MOV	MSG_CLASS,UTILITY_MSG_CLASS ;AN000; message class
-	MOV	INPUT_FLAG,NO_INPUT	;AN000; no input
+;	ENDIF$
+EN164$$:
+	MOV	[MSG_NUM],AX ;AN000; set message number
+	MOV	word [SUBST_COUNT],PARM_SUBST_TWO ;AN000; substitution count = 2
+	MOV	byte [MSG_CLASS],UTILITY_MSG_CLASS ;AN000; message class
+	MOV	byte [INPUT_FLAG],NO_INPUT ;AN000; no input
 	CALL	PRINT_STDOUT		;show message "Reading source
 	POP	DS			;restore DS
 	RET
-SHOW_COPY_MESSAGE ENDP
+;SHOW_COPY_MESSAGE ENDP
 ;
-WRITE_A_FILE PROC NEAR
+WRITE_A_FILE:
 ;write a file from the data area in the buffer.
 ;Remember the caller is WRITE_FROM_BUFFER which use ES for
 ;the program data area and DS for the header in the buffer.
 
 	MOV	AH, Write		; = 40h
-	MOV	BX, ES:T_HANDLE 	;handle saved in the program data area
-	MOV	DX, ES:BYTS_OF_HDR	;AC005;skip header
-	MOV	CX, DS:CX_BYTES 	;get the # from the header
+	MOV	BX, [es:T_HANDLE] ;handle saved in the program data area
+	MOV	DX, [es:BYTS_OF_HDR] ;AC005;skip header
+	MOV	CX, [ds:HEADER.CX_BYTES] ;get the # from the header
 	INT	21h
 	JC	WAF_ERROR		;write error
-	CMP	AX, DS:CX_BYTES
+	CMP	AX, [ds:HEADER.CX_BYTES]
 	JNE	WAF_DISKFULL
 	JMP	WAF_EXIT
 WAF_ERROR:
 	CALL	CLOSE_DELETE_FILE	;close delete troubled file
-	OR	COPY_STATUS, WRITE_ERROR_FLAG
+	OR	byte [COPY_STATUS], write_error_flag
 	CALL	SWITCH_DS_ES		;AN000;DS = DATA SEG, ES = BUFFER
 	CALL	EXTENDED_ERROR_HANDLER
 	CALL	SWITCH_DS_ES		;AN000;ES = DATA SEG, DS = BUFFER
 WAF_DISKFULL:
-	MOV	ERRORLEVEL, 4		;set errorlevel
+	MOV	byte [ERRORLEVEL], 4 ;set errorlevel
 
 ; Set message parameters
 ; Target disk full, critical error
@@ -2636,56 +2658,56 @@ WAF_DISKFULL:
 	PUSH	ES			;AN000;ES = DATA SEG
 	POP	DS			;AN000;ES => DS = DATA SEG
 	MOV	AX,MSG_DISK_FULL	;AN000; message number
-	MOV	MSG_NUM,AX		;AN000; set message number
-	MOV	SUBST_COUNT,NO_SUBST	;AN000; no message substitution
-	MOV	MSG_CLASS,UTILITY_MSG_CLASS ;AN000; message class
-	MOV	INPUT_FLAG,NO_INPUT	;AN000; no input
+	MOV	[MSG_NUM],AX ;AN000; set message number
+	MOV	word [SUBST_COUNT],NO_SUBST ;AN000; no message substitution
+	MOV	byte [MSG_CLASS],UTILITY_MSG_CLASS ;AN000; message class
+	MOV	byte [INPUT_FLAG],NO_INPUT ;AN000; no input
 	CALL	PRINT_STDERR		;AN000; display error message
-	OR	COPY_STATUS, DISK_FULL_FLAG ;set disk_full_flag
+	OR	byte [COPY_STATUS], disk_full_flag ;set disk_full_flag
 	POP	DS			;AN000;RESTORE DS = BUFFER
 	CALL	CLOSE_DELETE_FILE
 	STC				;set carry and return to caller
 WAF_EXIT:
 	RET
-WRITE_A_FILE ENDP
+;WRITE_A_FILE ENDP
 ;
-SET_FILE_DATE_TIME PROC NEAR
+SET_FILE_DATE_TIME:
 ;input: BX - target file handle
 ;
-	MOV	AH, File_date_time	; = 57h
-	MOV	AL, Set_file_time	; = 1
-	MOV	CX, DS:FILE_TIME_FOUND
-	MOV	DX, DS:FILE_DATE_FOUND
+	MOV	AH, File_Date_Time	; = 57h
+	MOV	AL, Set_File_Time	; = 1
+	MOV	CX, [ds:HEADER.FILE_TIME_FOUND]
+	MOV	DX, [ds:HEADER.FILE_DATE_FOUND]
 	INT	21h
 	RET
-SET_FILE_DATE_TIME ENDP
+;SET_FILE_DATE_TIME ENDP
 ;
-CLOSE_A_FILE PROC NEAR
+CLOSE_A_FILE:
 ;
 ;CLOSE A FILE AND UPDATE COUNT OF OPEN FILES
 ;
 ;INPUT: BX - file handle to be closed
 ;
-	CMP	OPEN_FILE_COUNT,NUL	;AN005;ARE THERE ANY OPEN FILES?
-;	$IF	A			;AN005;
-	JNA $$IF167
-	    DEC     OPEN_FILE_COUNT	;AN005;IF SO, REDUCE THE COUNT BY 1.
-;	$ENDIF				;AN005;
-$$IF167:
+	CMP	word [OPEN_FILE_COUNT],NUL ;AN005;ARE THERE ANY OPEN FILES?
+;	IF$	A			;AN005;
+	JNA IF167$$
+	    DEC     word [OPEN_FILE_COUNT] ;AN005;IF SO, REDUCE THE COUNT BY 1.
+;	ENDIF$				;AN005;
+IF167$$:
 	MOV	AH, Close		; = 3Eh
 	INT	21H
 	RET
-CLOSE_A_FILE ENDP
+;CLOSE_A_FILE ENDP
 ;
-DELETE_A_FILE PROC NEAR
+DELETE_A_FILE:
 ;input: DS:DX - points to ASCIIZ string
 
 	MOV	AH, 41h 		; = 41h
 	INT	21H
 	RET
-DELETE_A_FILE ENDP
+;DELETE_A_FILE ENDP
 ;
-MAKE_DIR PROC	NEAR
+MAKE_DIR:
 ;make a subdirectory in the current target directory.
 ;The directory name is in the header part Target_drv_Let
 ;with the drive letter.
@@ -2693,7 +2715,7 @@ MAKE_DIR PROC	NEAR
 ;      ES - data seg
 
 	MOV	AH, Mkdir		; = 39h
-	MOV	DX, OFFSET DS:TARGET_DRV_LET ;target drv and filename
+	MOV	DX, HEADER.TARGET_DRV_LET        ;target drv and filename
 	INT	21h
 	JC	MD_ERROR
 	JMP	MD_EXIT
@@ -2704,14 +2726,14 @@ MD_ERROR:
 ; Case 1, should ignore and just exit this routine
 ; Case 2, critical error.
 ; Case 3, critical error.
-	call	chk_disk_full		;check disk full condition first
+	call	CHK_DISK_FULL		;check disk full condition first
 	jc	MD_EXIST		;AC026;yes, disk full, check if exist
 	push	es			;else check a file with the same name.
 	push	ds
 	push	dx
 	mov	ah, 2fH 		;get current DTA addr in ES:BX
 	int	21h
-	mov	ds, es:psp_seg
+	mov	ds, [es:PSP_SEG]
 	mov	dx, 80h
 	mov	ah, 1ah
 	int	21h			;set dta to psp default dta area
@@ -2720,7 +2742,7 @@ MD_ERROR:
 	mov	cx, 6			;HIDDEN + SYSTEM inclusive search
 	mov	ah, 4Eh 		;FIND FIRST MATCHING FILE
 	int	21h
-	jc	md_ok			;not found. There exists subdir. ignore
+	jc	MD_OK			;not found. There exists subdir. ignore
 	stc				;else found a file with same name.
 	jmp	short MD_RESTORE
 
@@ -2737,8 +2759,8 @@ MD_RESTORE:
 	pop	ds			;restore ds
 	popf
 	pop	es			;restore ES
-	jnc	md_exit 		;if no error, then exit
-	jmp	md_err			;AN026;
+	jnc	MD_EXIT 		;if no error, then exit
+	jmp	MD_ERR			;AN026;
 
 ;else check a file with the same name.
 
@@ -2748,7 +2770,7 @@ MD_EXIST:
 	push	dx			;AN026;
 	mov	ah, 2fH 		;AN026;get current DTA addr in ES:BX
 	int	21h			;AN026;
-	mov	ds, es:psp_seg		;AN026;
+	mov	ds, [es:PSP_SEG] ;AN026;
 	mov	dx, 80h 		;AN026;
 	mov	ah, 1ah 		;AN026;
 	int	21h			;AN026;set dta to psp default dta area
@@ -2768,38 +2790,38 @@ MD_EXIST:
 	pop	ds			;AN026;restore ds
 	popf				;AN026;get carry state from find
 	pop	es			;AN026;restore ES
-	jnc	md_exit 		;AN026;if no error, then dir. exits
+	jnc	MD_EXIT 		;AN026;if no error, then dir. exits
 
 MD_ERR:
-	call	switch_ds_es		;switch ds, es
-	mov	errorlevel, 4		;set the errorlevel to 4
-	test	copy_status, disk_full_flag ;disk full?
+	call	SWITCH_DS_ES		;switch ds, es
+	mov	byte [ERRORLEVEL], 4 ;set the errorlevel to 4
+	test	byte [COPY_STATUS], disk_full_flag ;disk full?
 	jnz	MD_FULL 		;yes, full.
-	mov	ax,msg_unable_create	; else make dir fails because of
+	mov	ax,MSG_UNABLE_CREATE	; else make dir fails because of
 					; the same file name
-	or	copy_status, mkdir_error_flag ;set make dir error flag
+	or	byte [COPY_STATUS], mkdir_error_flag ;set make dir error flag
 	jmp	short MD_PRT
 MD_FULL:
-	mov	ax,msg_disk_full
+	mov	ax,MSG_DISK_FULL
 MD_PRT:
 ; Set message parameters
 	PUSH	ES			;AN017;ES = BUFFER
 	PUSH	DS			;AN017;DS = DATA SEG
 	POP	ES			;AN017;DS => ES = DATA SEG
-	MOV	MSG_NUM,AX		;AN000; set message number
-	MOV	SUBST_COUNT,NO_SUBST	;AN000; no  message substitution
-	MOV	MSG_CLASS,UTILITY_MSG_CLASS ;AN000; message class
-	MOV	INPUT_FLAG,NO_INPUT	;AN000; no input
+	MOV	[MSG_NUM],AX ;AN000; set message number
+	MOV	word [SUBST_COUNT],NO_SUBST ;AN000; no  message substitution
+	MOV	byte [MSG_CLASS],UTILITY_MSG_CLASS ;AN000; message class
+	MOV	byte [INPUT_FLAG],NO_INPUT ;AN000; no input
 	CALL	PRINT_STDERR		;AN000; display message
 	POP	ES			;AN017;RESTORE ES = BUFFER
 
-	call	switch_ds_es		;restore ds, es
+	call	SWITCH_DS_ES		;restore ds, es
 	stc				;error - set carry
 MD_EXIT:
 	RET
-MAKE_DIR ENDP
+;MAKE_DIR ENDP
 ;
-CHK_DISK_FULL PROC NEAR
+CHK_DISK_FULL:
 ;check target disk space, and if no more clusters then set carry, disk_full_flag.
 ;this routine is called by MAKE_DIR routine.
 ;INPUT: DS - buffer
@@ -2809,14 +2831,14 @@ CHK_DISK_FULL PROC NEAR
 	PUSH	CX
 	PUSH	DX
 	MOV	AH, 36h 		;GET DISK FREE SPACE
-	MOV	DL, ES:T_DRV_NUMBER	;OF TARGET
+	MOV	DL, [es:T_DRV_NUMBER] ;OF TARGET
 	INT	21h
 	CMP	BX, 0			;NO MORE CLUSTER?
 	JE	CDF_FULL
 	CLC
 	JMP	SHORT CDF_EXIT
 CDF_FULL:
-	OR	ES:COPY_STATUS, DISK_FULL_FLAG ;SET DISK FULL FLAG
+	OR	byte [es:COPY_STATUS], disk_full_flag ;SET DISK FULL FLAG
 	STC				;SET CARRY
 CDF_EXIT:
 	POP	DX
@@ -2825,62 +2847,62 @@ CDF_EXIT:
 	POP	AX
 	RET
 
-CHK_DISK_FULL ENDP
+;CHK_DISK_FULL ENDP
 ;
 
-CHK_FILE_NOT_FOUND PROC NEAR
+CHK_FILE_NOT_FOUND:
 ;if FILE_CNT_LOW=FILE_CNT_HIGH=FOUND_FILE_FLAG=0 AND NO INIT ERROR,
 ; then show "File not found" msg
 ;INPUT: ES, DS = data seg
 
-	TEST	PARM_FLAG, INIT_ERROR_FLAG
-;	$IF	Z,AND			;no init error
-	JNZ $$IF169
-	CMP	FILE_CNT_LOW, 0
-;	$IF	E,AND
-	JNE $$IF169
-	CMP	FILE_CNT_HIGH, 0
-;	$IF	E,AND
-	JNE $$IF169
-	CMP	FOUND_FILE_FLAG, 0
-;	$IF	E
-	JNE $$IF169
-	    MOV     ES, PSP_SEG 	;use PSP area for parsing
+	TEST	byte [PARM_FLAG], INIT_ERROR_FLAG
+;	IF$	Z,AND			;no init error
+	JNZ IF169$$
+	CMP	word [FILE_CNT_LOW], 0
+;	IF$	E,AND
+	JNE IF169$$
+	CMP	word [FILE_CNT_HIGH], 0
+;	IF$	E,AND
+	JNE IF169$$
+	CMP	byte [FOUND_FILE_FLAG], 0
+;	IF$	E
+	JNE IF169$$
+	    MOV     ES, [PSP_SEG] ;use PSP area for parsing
 	    MOV     DI, PSPFCB1_DRV
-	    MOV     SI, OFFSET S_FILE
+	    MOV     SI, S_FILE
 	    MOV     AH, 29h
 	    MOV     AL, 0		;control byte
 	    INT     21h
 	    CALL    SWITCH_DS_ES	;now, ds - psp seg, es - data seg
-	    MOV     DI,OFFSET DISP_S_FILE
+	    MOV     DI,DISP_S_FILE
 	    MOV     SI,PSPFCB1_DRV
 	    INC     SI			;now SI points to the formatted filename area
 	    CALL    COMPRESS_FILENAME	;[pspfcb1_drv+1] => disp_s_file
 	    PUSH    ES
 	    POP     DS			;now DS=ES=data seg
-	    LEA     SI,SUBLIST1 	;AN000;
-	    MOV     DI,OFFSET DISP_S_FILE ;AN000;
-	    MOV     [SI].DATA_OFF,DI	;AN000; SI-->File name
-	    MOV     [SI].DATA_SEG,DS	;AN000; DS-->Segment
-	    MOV     [SI].MSG_ID,0	;AN018; message ID
-	    MOV     [SI].FLAGS,010H	;AN000; ASCIIZ string, left align
-	    MOV     [SI].MAX_WIDTH,0	;AN000; MAXIMUM FIELD WITH
-	    MOV     [SI].MIN_WIDTH,0	;AN000; MINIMUM FIELD WITH
+	    LEA     SI,[SUBLIST1];AN000;
+	    MOV     DI,DISP_S_FILE        ;AN000;
+	    MOV     [SI+SUB_LIST+SUB_LIST.DATA_OFF],DI ;AN000; SI-->File name
+	    MOV     [SI+SUB_LIST+SUB_LIST.DATA_SEG],DS ;AN000; DS-->Segment
+	    MOV     [SI+SUB_LIST+SUB_LIST.MSG_ID],0 ;AN018; message ID
+	    MOV     [SI+SUB_LIST+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
+	    MOV     [SI+SUB_LIST+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
+	    MOV     [SI+SUB_LIST+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
 	    MOV     AX,MSG_FILE_NOT_ERR ;AN018;
-	    MOV     MSG_NUM,AX		;AN000; set message number
-	    MOV     SUBST_COUNT,PARM_SUBST_ONE ;AN000; substitution count
-	    MOV     MSG_CLASS,UTILITY_MSG_CLASS ;AN000; message class
-	    MOV     INPUT_FLAG,NO_INPUT ;AN000; no input
+	    MOV     [MSG_NUM],AX ;AN000; set message number
+	    MOV     word [SUBST_COUNT],PARM_SUBST_ONE ;AN000; substitution count
+	    MOV     byte [MSG_CLASS],UTILITY_MSG_CLASS ;AN000; message class
+	    MOV     byte [INPUT_FLAG],NO_INPUT ;AN000; no input
 	    CALL    PRINT_STDOUT	;AN000; display message
-;	$ENDIF
-$$IF169:
+;	ENDIF$
+IF169$$:
 
 	RET
 
-CHK_FILE_NOT_FOUND ENDP
+;CHK_FILE_NOT_FOUND ENDP
 
 ;
-subttl	string_length
+subttl	STRING_LENGTH
 page
 ;******************************************************************************
 ;PURPOSE: Get the length of a string pointed by ES:DI until it encounters
@@ -2908,8 +2930,8 @@ page
 ;	       ZERO FLAG - RESET
 ;******************************************************************************
 ;
-STRING_LENGTH PROC NEAR
-PUBLIC	STRING_LENGTH
+STRING_LENGTH:
+;PUBLIC	STRING_LENGTH
 	CLD				;CLEAR DIRECTION
 	MOV	BX,DI			;SAVE ORIGINAL DI VALUE
 	MOV	CX,80H			;TRY MAX 128 BYTES
@@ -2919,9 +2941,9 @@ PUBLIC	STRING_LENGTH
 	MOV	CX,DI			;MOV THE LENGTH TO CX
 	POP	DI
 	RET
-STRING_LENGTH ENDP
+;STRING_LENGTH ENDP
 ;
-subttl	concat_asciiz
+subttl	CONCAT_ASCIIZ
 page
 ;******************************************************************************
 ;PURPOSE: Concatenate two ASCIIZ string into one ASCIIZ string.
@@ -2949,9 +2971,9 @@ page
 ;	      CX - RESULT ASCIIZ STRING LENGTH INCLUDE 0
 ;	      DIRECTION FLAG - CLEARED
 ;******************************************************************************
-CONCAT_ASCIIZ PROC NEAR
+CONCAT_ASCIIZ:
 
-PUBLIC	CONCAT_ASCIIZ
+;PUBLIC	CONCAT_ASCIIZ
 	PUSH	DI			;SAVE POINTER VALUE WHICH WILL BE RETRUNED TO CALLER.
 	PUSH	AX			;SAVE VALUE IN AL.
 	MOV	AL, 0			;DEALING WITH ASCIIZ STRING
@@ -2960,29 +2982,29 @@ PUBLIC	CONCAT_ASCIIZ
 	DEC	DI			;MAKE DI POINT TO THE LAST CHARACTER 0
 	POP	AX			;RESTORE AL.
 	CMP	AL, 0FFh
-;	$IF	NE			;IF THE USER WANTS TO PUT DIMIMETER,
-	JE $$IF171
+;	IF$	NE			;IF THE USER WANTS TO PUT DIMIMETER,
+	JE IF171$$
 	    STOSB			;  REPLACE 0 WITH IT.
-;	$ELSE
-	JMP SHORT $$EN171
-$$IF171:
+;	ELSE$
+	JMP SHORT EN171$$
+IF171$$:
 	    DEC     CX			;ELSE DECREASE LENGTH BY 1
-;	$ENDIF
-$$EN171:
-;	$DO
-$$DO174:
+;	ENDIF$
+EN171$$:
+;	DO$
+DO174$$:
 	    LODSB			;MOV [SI] TO AL
 	    STOSB			;STORE AL TO [DI]
 	    INC     CX			;INCREASE LENGTH
 	    CMP     AL, 0		;WAS IT A LAST CHARACTER?
-;	$ENDDO	E			;THEN EXIT THIS LOOP
-	JNE $$DO174
+;	ENDDO$	E			;THEN EXIT THIS LOOP
+	JNE DO174$$
 	POP	DI
 	RET
-CONCAT_ASCIIZ ENDP
+;CONCAT_ASCIIZ ENDP
 ;
 
-subttl	last_dir_out
+subttl	LAST_DIR_OUT
 page
 ;******************************************************************************
 ;PURPOSE: Take off the last directory name from the path pointed by DI.
@@ -3006,63 +3028,63 @@ page
 ; CARRY FLAG WILL SET IF NOT FOUND.
 ;******************************************************************************
 
-LAST_DIR_OUT PROC NEAR
-PUBLIC	LAST_DIR_OUT
+LAST_DIR_OUT:
+;PUBLIC	LAST_DIR_OUT
 
 	PUSH	DI
 	PUSH	SI			;save current DI, SI
 	CLD				;clear direction
 	MOV	SI, 0FFFFh		;used as a not_found flag if unchanged.
-;	$DO
-$$DO176:
-;	    $DO 			;AN010;
-$$DO177:
+;	DO$
+DO176$$:
+;	    DO$ 			;AN010;
+DO177$$:
 		CLC			;AN010;INITIALIZE TO NOT DBCS
-		MOV	AL,BYTE PTR [DI] ;AN010;GET THE 1st CHAR TO TEST
-		CALL	CHK_DBCS	;AN010;SEE IF WE ARE IN DBCS
-;	    $LEAVE  NC			;AN010;THIS IS NOT DBCS
-	    JNC $$EN177
+		MOV	AL,byte [DI]     ;AN010;GET THE 1st CHAR TO TEST
+		CALL	Chk_DBCS	;AN010;SEE IF WE ARE IN DBCS
+;	    LEAVE$  NC			;AN010;THIS IS NOT DBCS
+	    JNC EN177$$
 		INC	DI		;AN010;GO TO THE NEXT CHAR TO CHECK
 		INC	DI		;AN010;DITO
-;	    $ENDDO			;AN010;
-	    JMP SHORT $$DO177
-$$EN177:
+;	    ENDDO$			;AN010;
+	    JMP SHORT DO177$$
+EN177$$:
 	    MOV     AL, 0
 	    SCASB
-;	$LEAVE	Z			;if [DI] = 0, then end of string. Ends this loop.
-	JZ $$EN176
+;	LEAVE$	Z			;if [DI] = 0, then end of string. Ends this loop.
+	JZ EN176$$
 	    DEC     DI			;if [DI] <> 0, then go back and scan char again
 	    MOV     AL, "\"		;to see it was a back slash.
 	    SCASB
-;	    $IF     Z			;if it was, then save the addr to SI.
-	    JNZ $$IF181
+;	    IF$     Z			;if it was, then save the addr to SI.
+	    JNZ IF181$$
 		PUSH	DI
 		POP	SI
 
 		DEC	SI
-;	    $ENDIF			;else do loop again.
-$$IF181:
-;	$ENDDO
-	JMP SHORT $$DO176
-$$EN176:
+;	    ENDIF$			;else do loop again.
+IF181$$:
+;	ENDDO$
+	JMP SHORT DO176$$
+EN176$$:
 	CLC				;clear carry flag.
 	CMP	SI, 0FFFFh		;Had SI been changed?
-;	$IF	E
-	JNE $$IF184
+;	IF$	E
+	JNE IF184$$
 	    STC 			;No, set the carry. Not found.
-;	$ELSE
-	JMP SHORT $$EN184
-$$IF184:
-	    MOV     BYTE PTR ES:[SI], 0 ;Yes, replace "\" with 0. Seg override to get default DI seg.
+;	ELSE$
+	JMP SHORT EN184$$
+IF184$$:
+	    MOV     byte [es:SI], 0     ;Yes, replace "\" with 0. Seg override to get default DI seg.
 	    MOV     AX, SI
 	    INC     AX			;let AX have the last dir offset value.
 	    CLC 			;clear carry
-;	$ENDIF
-$$EN184:
+;	ENDIF$
+EN184$$:
 	POP	SI			;restore original value
 	POP	DI			;original string offset
 	RET
-LAST_DIR_OUT ENDP
+;LAST_DIR_OUT ENDP
 ;
 ;	HEADER	<CHK_DBCS -SEE IF SPECIFIED BYTE IS A DBCS LEAD BYTE>
 ;*****************************************************************************
@@ -3074,58 +3096,58 @@ LAST_DIR_OUT ENDP
 ; Output:   If CF is on then a lead byte of DBCS
 ; Register: FL is used for the output, others are unchanged.
 
-	PUBLIC	CHK_DBCS
-Chk_DBCS PROC				;AN010;
+;	PUBLIC	CHK_DBCS
+Chk_DBCS:        ;AN010;
 	PUSH	DS			;AN010; save these regs, about to be clobbered
 	PUSH	SI			;AN010;
-	CMP	DBCSEV_SEG,0		;AN010; ALREADY SET ?
-;	$IF	E			;AN010; if the vector not yet found
-	JNE $$IF187
+	CMP	word [DBCSEV_SEG],0 ;AN010; ALREADY SET ?
+;	IF$	E			;AN010; if the vector not yet found
+	JNE IF187$$
 	    PUSH    AX			;AN010;
 	    MOV     AX,6300H		;AN010; GET DBCS EV CALL
 	    INT     21H 		;AN010; ds:si points to the dbcs vector
 
-	    ASSUME  DS:NOTHING		;AN010; that function clobbered old DS
+;	    ASSUME  DS:NOTHING		;AN010; that function clobbered old DS
 
-	    MOV     DBCSEV_OFF,SI	;AN010; remember where the dbcs vector is
-	    MOV     DBCSEV_SEG,DS	;AN010;  so next time I don't have to look for it
+	    MOV     [es:DBCSEV_OFF],SI ;AN010; remember where the dbcs vector is
+	    MOV     [es:DBCSEV_SEG],DS ;AN010;  so next time I don't have to look for it
 	    POP     AX			;AN010;
-;	$ENDIF				;AN010;
-$$IF187:
-	LDS	SI,DWORD PTR DBCSEV_OFF ;AN010;SET DS:SI TO POINT TO THE DBCS VECTOR
-;	$SEARCH 			;AN010;
-$$DO189:
-	    CMP     WORD PTR [SI],0	;AN010; vector ends with a nul terminator entry
-;	$LEAVE	E			;AN010; if that was the terminator entry, quit
-	JE $$EN189
+;	ENDIF$				;AN010;
+IF187$$:
+	LDS	SI,dword [es:DBCSEV_OFF] ;AN010;SET DS:SI TO POINT TO THE DBCS VECTOR
+;	SEARCH$ 			;AN010;
+DO189$$:
+	    CMP     word [SI],0     ;AN010; vector ends with a nul terminator entry
+;	LEAVE$	E			;AN010; if that was the terminator entry, quit
+	JE EN189$$
 	    CMP     AL,[SI]		;AN010; look at LOW value of vector
-;	$EXITIF NB,AND			;AN010; if this byte is in range with respect to LOW
-	JB $$IF189
+;	EXITIF$ NB,AND			;AN010; if this byte is in range with respect to LOW
+	JB IF189$$
 	    CMP     AL,[SI+1]		;AN010; look at HIGH value of vector
-;	$EXITIF NA			;AN010; if this byte is still in range
-	JA $$IF189
+;	EXITIF$ NA			;AN010; if this byte is still in range
+	JA IF189$$
 	    STC 			;AN010; set flag to say, found a DBCS char.
-;	$ORELSE 			;AN010; since char not in this vector
-	JMP SHORT $$SR189
-$$IF189:
+;	ORELSE$ 			;AN010; since char not in this vector
+	JMP SHORT SR189$$
+IF189$$:
 	    ADD     SI,2		;AN010; go look at next vector in dbcs table
-;	$ENDLOOP			;AN010; go back and check out new vector entry
-	JMP SHORT $$DO189
-$$EN189:
+;	ENDLOOP$			;AN010; go back and check out new vector entry
+	JMP SHORT DO189$$
+EN189$$:
 	    CLC 			;AN010; set flag to say, this is not a DBCS character
-;	$ENDSRCH			;AN010;
-$$SR189:
+;	ENDSRCH$			;AN010;
+SR189$$:
 	POP	SI			;AN010; restore the regs
 	POP	DS			;AN010;
 
 ;	ASSUME	DS:DSEG 		;AN010; tell masm, DS back to normal
 
 	RET				;AN010;
-chk_DBCS ENDP				;AN010;
+;chk_DBCS ENDP				;AN010;
 ;
 ;
 
-subttl	Compress_Filename
+subttl	COMPRESS_FILENAME
 page
 
 ;
@@ -3185,71 +3207,71 @@ page
 ; -----------
 ;******************************************************************************
 
-COMPRESS_FILENAME PROC NEAR
-PUBLIC	COMPRESS_FILENAME
+COMPRESS_FILENAME:
+;PUBLIC	COMPRESS_FILENAME
 	PUSH	DI
 	XOR	CX, CX			;CX = 0
-;	$DO
-$$DO195:
+;	DO$
+DO195$$:
 	    LODSB			;[SI] => AL, SI = SI + 1
 	    CMP     CX, 10		;CX > 10 then exit
-;	$LEAVE	A
-	JA $$EN195
+;	LEAVE$	A
+	JA EN195$$
 	    CMP     CX,  8		;filename extention position
-;	    $IF     B			;CX < 8. handling filename
-	    JNB $$IF197
+;	    IF$     B			;CX < 8. handling filename
+	    JNB IF197$$
 		CMP	AL, ' ' 	;AL = blank ?
-;		$IF	E
-		JNE $$IF198
+;		IF$	E
+		JNE IF198$$
 		    MOV     AX, 7
 		    SUB     AX, CX
 		    ADD     SI, AX	;SI = SI + (7 - CX)
 		    MOV     CX, 8	;then skip to handles extention
-;		$ELSE
-		JMP SHORT $$EN198
-$$IF198:
+;		ELSE$
+		JMP SHORT EN198$$
+IF198$$:
 		    STOSB		;AL => [DI], DI = DI + 1
 		    INC     CX		;CX = CX + 1
-;		$ENDIF
-$$EN198:
-;	    $ELSE			;extention part
-	    JMP SHORT $$EN197
-$$IF197:
+;		ENDIF$
+EN198$$:
+;	    ELSE$			;extention part
+	    JMP SHORT EN197$$
+IF197$$:
 		CMP	AL, ' '
-;		$IF	E
-		JNE $$IF202
+;		IF$	E
+		JNE IF202$$
 		    MOV     CX, 11	;exit this loop
-;		$ELSE
-		JMP SHORT $$EN202
-$$IF202:
+;		ELSE$
+		JMP SHORT EN202$$
+IF202$$:
 		    CMP     CX, 8	;the first chr of extention?
-;		    $IF     E		;yes
-		    JNE $$IF204
+;		    IF$     E		;yes
+		    JNE IF204$$
 			PUSH	AX	;save cur chr
 			MOV	AL, '.' ;and put a dot
 			STOSB		; . => [DI], DI = DI + 1
 			POP	AX	;restore AX
-;		    $ENDIF
-$$IF204:
+;		    ENDIF$
+IF204$$:
 		    STOSB		;AL => [DI], DI = DI + 1
 		    INC     CX		;CX = CX + 1
-;		$ENDIF
-$$EN202:
-;	    $ENDIF
-$$EN197:
-;	$ENDDO
-	JMP SHORT $$DO195
-$$EN195:
+;		ENDIF$
+EN202$$:
+;	    ENDIF$
+EN197$$:
+;	ENDDO$
+	JMP SHORT DO195$$
+EN195$$:
 	MOV	AL, 0
 	STOSB				;put 0 at the current [DI]
 
 	POP	DI			;restore DI
 	RET
-COMPRESS_FILENAME ENDP
+;COMPRESS_FILENAME ENDP
 ;
 
 
-SET_DEFAULT_DRV PROC NEAR
+SET_DEFAULT_DRV:
 ;change source drv as a default drv for conveniece of find, read operation
 ;of source. (handling target should be more specific as for as drive letter
 ;goes.)
@@ -3257,14 +3279,14 @@ SET_DEFAULT_DRV PROC NEAR
 
 	MOV	AH, Select_Disk 	; = 0Eh
 	INT	21H
-	OR	SYS_FLAG, DEFAULT_DRV_SET_FLAG ;indicates default drv has been changed
+	OR	byte [es:SYS_FLAG], default_drv_set_flag ;indicates default drv has been changed
 					;Used for exit the program to restore default drv
 	RET
-SET_DEFAULT_DRV ENDP
+;SET_DEFAULT_DRV ENDP
 ;
 
 
-ORG_S_DEF PROC	NEAR
+ORG_S_DEF:
 ;restore the original source directory.
 	PUSH	ES
 	PUSH	DS
@@ -3272,111 +3294,111 @@ ORG_S_DEF PROC	NEAR
 	PUSH	DS
 	POP	ES			;DS=ES=data seg
 
-	TEST	SYS_FLAG, DEFAULT_S_DIR_FLAG ;source default direcotry saved?
-;	$IF	NZ
-	JZ $$IF209
-	    MOV     DX, OFFSET SAV_S_DRV ;saved source drive letter & directory
+	TEST	byte [es:SYS_FLAG], default_s_dir_flag ;source default direcotry saved?
+;	IF$	NZ
+	JZ IF209$$
+	    MOV     DX, SAV_S_DRV        ;saved source drive letter & directory
 	    MOV     AH, 3Bh
 	    INT     21h 		;restore source
-	    AND     SYS_FLAG, RESET_DEFAULT_S_DIR ;reset the flag
-;	$ENDIF
-$$IF209:
+	    AND     byte [es:SYS_FLAG], reset_default_s_dir ;reset the flag
+;	ENDIF$
+IF209$$:
 
 	POP	DS
 	POP	ES
 
 	RET
-ORG_S_DEF ENDP
+;ORG_S_DEF ENDP
 ;
-ORG_S_T_DEF PROC NEAR
+ORG_S_T_DEF:
 ;retore original target, source and default drv and directory
 ;check default_s(t)_dir_flag, default_drv_set_flag to restore source,
 ;or target directory and default drive.
 
-	TEST	SYS_FLAG, TURN_VERIFY_OFF_FLAG ;turn off verify?
-;	$IF	NZ			;yes
-	JZ $$IF211
+	TEST	byte [es:SYS_FLAG], turn_verify_off_flag ;turn off verify?
+;	IF$	NZ			;yes
+	JZ IF211$$
 	    MOV     AX, 2E00h		;turn it off
 	    INT     21H
-;	$ENDIF
-$$IF211:
-	TEST	SYS_FLAG, DEFAULT_DRV_SET_FLAG ;default drive has been changed?
-;	$IF	NZ			;yes
-	JZ $$IF213
-	    MOV     DL, SAV_DEFAULT_DRV
+;	ENDIF$
+IF211$$:
+	TEST	byte [es:SYS_FLAG], default_drv_set_flag ;default drive has been changed?
+;	IF$	NZ			;yes
+	JZ IF213$$
+	    MOV     DL, [es:SAV_DEFAULT_DRV]
 	    DEC     DL
 	    CALL    SET_DEFAULT_DRV	;restore default drv.
 
 ; Following is a fix for PTR 0000012 . The fix is to skip changing default
 ; drive directory if source drive is not the default drive.
 
-	    MOV     AL, S_DRV_NUMBER	;AN002; get source drive number
-	    CMP     AL, SAV_DEFAULT_DRV ;AN002; src drive is the default drv ?
-;	    $IF     NE			;AC022;NO, SO SEE IF DEF. DRV. IS CHGD.
-	    JE $$IF214
-		TEST	SYS_FLAG, DEFAULT_DRV_SET_FLAG ;AN022;DEF DRV CHGD?
-;		$IF	NZ		;AN022;YES, RESET IT
-		JZ $$IF215
-		    MOV     DX, OFFSET SAV_DEF_DIR_ROOT ;AN022;GET THE SETTING
+	    MOV     AL, [es:S_DRV_NUMBER] ;AN002; get source drive number
+	    CMP     AL, [es:SAV_DEFAULT_DRV] ;AN002; src drive is the default drv ?
+;	    IF$     NE			;AC022;NO, SO SEE IF DEF. DRV. IS CHGD.
+	    JE IF214$$
+		TEST	byte [es:SYS_FLAG], default_drv_set_flag ;AN022;DEF DRV CHGD?
+;		IF$	NZ		;AN022;YES, RESET IT
+		JZ IF215$$
+		    MOV     DX, SAV_DEF_DIR_ROOT        ;AN022;GET THE SETTING
 		    MOV     AH, Chdir	;AN022;MAKE THE CALL
 		    INT     21H 	;AN022;
-;		$ENDIF			;AN022;
-$$IF215:
-;	    $ELSE			;AN022;SRC IS DEF DRIVE!
-	    JMP SHORT $$EN214
-$$IF214:
-		MOV	DX, OFFSET SAV_DEF_DIR_ROOT
+;		ENDIF$			;AN022;
+IF215$$:
+;	    ELSE$			;AN022;SRC IS DEF DRIVE!
+	    JMP SHORT EN214$$
+IF214$$:
+		MOV	DX, SAV_DEF_DIR_ROOT
 		MOV	AH, Chdir
 		INT	21H		    ;restore current dir of default dir
-;	    $ENDIF			;AN022;
-$$EN214:
-;	$ENDIF
-$$IF213:
+;	    ENDIF$			;AN022;
+EN214$$:
+;	ENDIF$
+IF213$$:
 
 
-	TEST	SYS_FLAG, DEFAULT_S_DIR_FLAG ;source default direcotry saved?
-;	$IF	NZ
-	JZ $$IF220
-	    MOV     DX, OFFSET SAV_S_DRV ;saved source drive letter & directory
+	TEST	byte [es:SYS_FLAG], default_s_dir_flag ;source default direcotry saved?
+;	IF$	NZ
+	JZ IF220$$
+	    MOV     DX, SAV_S_DRV        ;saved source drive letter & directory
 	    MOV     AH, 3Bh
 	    INT     21h 		;restore source. This is for the case of ERROR exit.
-;	$ENDIF
-$$IF220:
+;	ENDIF$
+IF220$$:
 
-	TEST	SYS_FLAG, DEFAULT_T_DIR_FLAG ;target default directory saved?
-;	$IF	NZ			;then assume both source, target default saved
-	JZ $$IF222
-	    MOV     DX, OFFSET SAV_T_DRV ;saved target drive letter & directory
+	TEST	byte [es:SYS_FLAG], default_t_dir_flag ;target default directory saved?
+;	IF$	NZ			;then assume both source, target default saved
+	JZ IF222$$
+	    MOV     DX, SAV_T_DRV        ;saved target drive letter & directory
 	    MOV     AH, 3Bh
 	    INT     21h 		;restore target
-;	$ENDIF
-$$IF222:
+;	ENDIF$
+IF222$$:
 
 	RET
-ORG_S_T_DEF ENDP
+;ORG_S_T_DEF ENDP
 ;
 
-CHK_MKDIR_LVL PROC NEAR
+CHK_MKDIR_LVL:
 ;if starting target directories has been created, and no files has been found to copy,
 ;and /E option is not specified, then remove the directories created.
 ;
-	CMP	T_MKDIR_LVL, 0		;target starting directory created?
-;	$IF	A,AND			;yes.
-	JNA $$IF224
-	TEST	OPTION_FLAG, SLASH_E	;/E option taken?
-;	$IF	Z,AND			;no.
-	JNZ $$IF224
-	CMP	FOUND_FILE_FLAG, 0	;found any file?
-;	$IF	E
-	JNE $$IF224
+	CMP	byte [es:T_MKDIR_LVL], 0 ;target starting directory created?
+;	IF$	A,AND			;yes.
+	JNA IF224$$
+	TEST	byte [es:OPTION_FLAG], slash_e ;/E option taken?
+;	IF$	Z,AND			;no.
+	JNZ IF224$$
+	CMP	byte [es:FOUND_FILE_FLAG], 0 ;found any file?
+;	IF$	E
+	JNE IF224$$
 	    CALL    T_RM_STARTING_DIR	;then, remove created directories.
-;	$ENDIF
-$$IF224:
+;	ENDIF$
+IF224$$:
 	RET
-CHK_MKDIR_LVL ENDP
+;CHK_MKDIR_LVL ENDP
 ;
 
-T_RM_STARTING_DIR PROC NEAR
+T_RM_STARTING_DIR:
 ;based on the current target directory, remove directories T_MKDIR_LVL times
 ;INPUT: T_MKDIR_LVL
 ;	T_DRV_NUMBER
@@ -3384,26 +3406,26 @@ T_RM_STARTING_DIR PROC NEAR
 ;	T_PATH
 
 
-	MOV	DL, T_DRV_NUMBER
-	LEA	SI, T_PATH
+	MOV	DL, [es:T_DRV_NUMBER]
+	LEA	SI,[T_PATH]
 	MOV	AH, Get_Current_Directory
 	INT	21h
 
 TRSD_AGAIN:
-	MOV	DX, OFFSET T_PARENT	;chdir to the parent directory
+	MOV	DX, T_PARENT        ;chdir to the parent directory
 	MOV	AH, 3Bh 		;Chdir
 	INT	21h
-	MOV	DX, OFFSET T_DRV_PATH
+	MOV	DX, T_DRV_PATH
 	MOV	AH, 3Ah 		;Rmdir
 	INT	21h
-	MOV	DI, OFFSET T_DRV_PATH
+	MOV	DI, T_DRV_PATH
 	CALL	LAST_DIR_OUT		;take out the last removed dir name
-	DEC	T_MKDIR_LVL		;decrease the number
-	CMP	T_MKDIR_LVL, 0		;no more?
+	DEC	byte [es:T_MKDIR_LVL] ;decrease the number
+	CMP	byte [es:T_MKDIR_LVL], 0 ;no more?
 	JA	TRSD_AGAIN
 
 	RET
-T_RM_STARTING_DIR ENDP
+;T_RM_STARTING_DIR ENDP
 ;
 
 
@@ -3441,17 +3463,17 @@ T_RM_STARTING_DIR ENDP
 ;*	None
 ;*
 ;************************************************************
-PRINT_STDOUT PROC NEAR			;AN000:
+PRINT_STDOUT:            ;AN000:
 
 	PUSH	BX			;AN000;
 	PUSH	CX			;AN000;
 	PUSH	DX
 
-	MOV	AX,MSG_NUM		;AN000; Message ID
+	MOV	AX,[es:MSG_NUM] ;AN000; Message ID
 	MOV	BX,STDOUT		;AN000; standard input message handle
-	MOV	CX,SUBST_COUNT		;AN000; message substitution count
-	MOV	DH,MSG_CLASS		;AN000; message class
-	MOV	DL,INPUT_FLAG		;AN000; Type of INT 10 for KBD input
+	MOV	CX,[es:SUBST_COUNT] ;AN000; message substitution count
+	MOV	DH,[es:MSG_CLASS] ;AN000; message class
+	MOV	DL,[es:INPUT_FLAG] ;AN000; Type of INT 10 for KBD input
 
 	CALL	SYSDISPMSG		;AN000:  AX=Extended key value if wait
 					;for key
@@ -3466,7 +3488,7 @@ DISP_DONE:				;AN000: CH - Locus
 	POP	BX			;AN000;
 
 	RET				;AN000:
-PRINT_STDOUT ENDP			;AN000:
+;PRINT_STDOUT ENDP			;AN000:
 
 
 
@@ -3503,18 +3525,18 @@ PRINT_STDOUT ENDP			;AN000:
 ;*   EXTERNAL REFERENCES:    None
 ;*
 ;************************************************************
-PRINT_STDERR PROC NEAR			;AN000:
+PRINT_STDERR:            ;AN000:
 
 	PUSH	AX			;AN000;
 	PUSH	BX			;AN000;
 	PUSH	CX			;AN000;
 	PUSH	DX
 
-	MOV	AX,MSG_NUM		;AN000;  Message ID
+	MOV	AX,[es:MSG_NUM] ;AN000;  Message ID
 	MOV	BX,STDERR		;AN000;  Handle
-	MOV	CX,SUBST_COUNT		;AN000;  message substitution count
-	MOV	DH,MSG_CLASS		;AN000;  message class
-	MOV	DL,INPUT_FLAG		;AN000;  INT 10 KBD input type
+	MOV	CX,[es:SUBST_COUNT] ;AN000;  message substitution count
+	MOV	DH,[es:MSG_CLASS] ;AN000;  message class
+	MOV	DL,[es:INPUT_FLAG] ;AN000;  INT 10 KBD input type
 
 	CALL	SYSDISPMSG		;AN000:  AX=Extended key value if wait
 					;for key
@@ -3530,14 +3552,14 @@ DISP_EXIT:				;AN000: CH - Locus
 	POP	AX			;AN000;
 	RET				;AN000:
 
-PRINT_STDERR ENDP			;AN000:
+;PRINT_STDERR ENDP			;AN000:
 
 
 
 
 
 ;
-EXTENDED_ERROR_HANDLER PROC NEAR
+EXTENDED_ERROR_HANDLER:
 ;This routine calls fun 59(Get extended error) and
 ;check the actions returned.  If it is Immediate exit, then jmp to JUST_EXIT
 ;If it is abort, then jmp to MAIN_EXIT.
@@ -3572,16 +3594,16 @@ EXTENDED_ERROR_HANDLER PROC NEAR
 	INT	21h
 	POP	ES
 
-	MOV	ERRORLEVEL, 4		;error in operation
-	TEST	COPY_STATUS, OPEN_ERROR_FLAG ;open error?
+	MOV	byte [es:ERRORLEVEL], 4 ;error in operation
+	TEST	byte [es:COPY_STATUS], open_error_flag ;open error?
 	JNZ	OPEN_ERROR_RTN		;yes
-	TEST	COPY_STATUS, READ_ERROR_FLAG ;read error?
+	TEST	byte [es:COPY_STATUS], read_error_flag ;read error?
 	JNZ	READ_ERROR_RTN
-	TEST	COPY_STATUS, CREATE_ERROR_FLAG ;create error?
+	TEST	byte [es:COPY_STATUS], create_error_flag ;create error?
 	JNZ	CREATE_ERROR_RTN
-	TEST	COPY_STATUS, WRITE_ERROR_FLAG ;write error?
+	TEST	byte [es:COPY_STATUS], write_error_flag ;write error?
 	JNZ	WRITE_ERROR_RTN
-	TEST	COPY_STATUS, CHDIR_ERROR_FLAG ;chdir error?
+	TEST	byte [es:COPY_STATUS], chdir_error_flag ;chdir error?
 	JNZ	CHDIR_ERROR_RTN
 	JMP	SHORT GOTO_MAIN_EXIT
 
@@ -3600,10 +3622,10 @@ CREATE_ERROR_RTN:
 	JNE	CER_1
 ; Set message parameters
 	MOV	AX,MSG_FILE_CREATE_ERR	;AN000; message number
-	MOV	MSG_NUM,AX		;AN000; set message number
-	MOV	SUBST_COUNT,NO_SUBST	;AN000; no  message substitution
-	MOV	MSG_CLASS,UTILITY_MSG_CLASS ;AN000; message class
-	MOV	INPUT_FLAG,NO_INPUT	;AN000; no input
+	MOV	[es:MSG_NUM],AX ;AN000; set message number
+	MOV	word [es:SUBST_COUNT],NO_SUBST ;AN000; no  message substitution
+	MOV	byte [es:MSG_CLASS],UTILITY_MSG_CLASS ;AN000; message class
+	MOV	byte [es:INPUT_FLAG],NO_INPUT ;AN000; no input
 	CALL	PRINT_STDERR		;show "File creation error" message
 					;instead of "File not found"
 	JMP	SHORT GOTO_MAIN_EXIT
@@ -3617,21 +3639,21 @@ CHDIR_ERROR_RTN:
 
 	PUSH	AX			;AN000;
 ; Set substitution list
-	LEA	SI,SUBLIST1		;AN000; get addressability to sublist
-	LEA	DX,S_DRV_PATH		;AN000; offset to PATH NAME
-	MOV	[SI].DATA_OFF,DX	;AN000; save offset
-	MOV	[SI].DATA_SEG,DS	;AN000; save data segment
-	MOV	[SI].MSG_ID,1		;AN000; message ID
-	MOV	[SI].FLAGS,010H 	;AN000; ASCIIZ string, left align
-	MOV	[SI].MAX_WIDTH,0	;AN000; MAXIMUM FIELD WITH
-	MOV	[SI].MIN_WIDTH,0	;AN000; MINIMUM FIELD WITH
+	LEA	SI,[SUBLIST1];AN000; get addressability to sublist
+	LEA	DX,[S_DRV_PATH];AN000; offset to PATH NAME
+	MOV	[SI+SUB_LIST+SUB_LIST.DATA_OFF],DX ;AN000; save offset
+	MOV	[SI+SUB_LIST+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
+	MOV	[SI+SUB_LIST+SUB_LIST.MSG_ID],1 ;AN000; message ID
+	MOV	[SI+SUB_LIST+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
+	MOV	[SI+SUB_LIST+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
+	MOV	[SI+SUB_LIST+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
 
 ; Set message parameters
 	MOV	AX,DISPLAY_S_PATH	;AN000; message number
-	MOV	MSG_NUM,AX		;AN000; set message number
-	MOV	SUBST_COUNT,PARM_SUBST_ONE ;AN000; one message substitution
-	MOV	MSG_CLASS,UTILITY_MSG_CLASS ;AN000; message class
-	MOV	INPUT_FLAG,NO_INPUT	;AN000; no input
+	MOV	[es:MSG_NUM],AX ;AN000; set message number
+	MOV	word [es:SUBST_COUNT],PARM_SUBST_ONE ;AN000; one message substitution
+	MOV	byte [es:MSG_CLASS],UTILITY_MSG_CLASS ;AN000; message class
+	MOV	byte [es:INPUT_FLAG],NO_INPUT ;AN000; no input
 	CALL	PRINT_STDERR		;show source drv,path
 	POP	AX			;AN000;
 	CALL	SHOW_ERROR_MESSAGE	;display error message
@@ -3643,7 +3665,7 @@ QUICK_EXIT:
 	JMP	JUST_EXIT		;immediate exit
 
 EEH_EXIT:
-	MOV	ERRORLEVEL, 0		;reset errorlevel
+	MOV	byte [es:ERRORLEVEL], 0 ;reset errorlevel
 	POPF
 	POP	CX
 	POP	BX
@@ -3651,11 +3673,11 @@ EEH_EXIT:
 	POP	ES
 	RET
 
-EXTENDED_ERROR_HANDLER ENDP
+;EXTENDED_ERROR_HANDLER ENDP
 ;
 
 
-SHOW_ERROR_MESSAGE PROC NEAR
+SHOW_ERROR_MESSAGE:
 ;called immediately after Get_extended error
 ;This will show simple error message according to error_code in AX
 ;If the message is not what it wanted, just exit without message- Set carry.
@@ -3715,18 +3737,18 @@ FILE_CREATE_ERR_MESSAGE:
 
 SHOW_MESSAGE:				; Display error message
 ; Set message parameters
-	MOV	MSG_NUM,AX		;AN000; set message number
-	MOV	SUBST_COUNT,NO_SUBST	;AN000; NO message substitution
-	MOV	MSG_CLASS,UTILITY_MSG_CLASS ;AN000; message class
-	MOV	INPUT_FLAG,NO_INPUT	;AN000; no input
+	MOV	[es:MSG_NUM],AX ;AN000; set message number
+	MOV	word [es:SUBST_COUNT],NO_SUBST ;AN000; NO message substitution
+	MOV	byte [es:MSG_CLASS],UTILITY_MSG_CLASS ;AN000; message class
+	MOV	byte [es:INPUT_FLAG],NO_INPUT ;AN000; no input
 	CALL	PRINT_STDERR		;AN000; print it
 	RET
 
-SHOW_ERROR_MESSAGE ENDP
+;SHOW_ERROR_MESSAGE ENDP
 ;
 
 
-SHOW_S_PATH_FILE_ERR PROC NEAR
+SHOW_S_PATH_FILE_ERR:
 ;show current source path(drv, full path), and filename to the
 ;standard error display device.
 ;input: ds: data seg
@@ -3734,101 +3756,101 @@ SHOW_S_PATH_FILE_ERR PROC NEAR
 	PUSH	AX			;save ERROR_CODE
 	push	ds
 	pop	es			;es = ds
-	MOV	DI,OFFSET S_DRV_PATH
+	MOV	DI,S_DRV_PATH
 	CALL	STRING_LENGTH		;cx got the length
-	MOV	SI,OFFSET S_DRV_PATH	;full path of source
-	MOV	DI,OFFSET DISP_S_PATH
+	MOV	SI,S_DRV_PATH        ;full path of source
+	MOV	DI,DISP_S_PATH
 	REP	MOVSB			;S_DRV_PATH => DISP_S_PATH
 	MOV	CX, 13			;max 13 chr
-	MOV	SI,OFFSET FILE_DTA.DTA_FILENAME
-	MOV	DI,OFFSET DISP_S_FILE
+	MOV	SI,FILE_DTA.DTA_Filename
+	MOV	DI,DISP_S_FILE
 	REP	MOVSB			;dta_filename => disp_s_file
 
-	LEA	SI,SUBLIST1		;AN000; get addressability to list
-	LEA	DX,DISP_S_PATH		;AN000; offset to path name
-	MOV	[SI].DATA_OFF,DX	;AN000; save offset
-	MOV	[SI].DATA_SEG,DS	;AN000; save data segment
-	MOV	[SI].MSG_ID,1		;AN000; message ID
-	MOV	[SI].FLAGS,010H 	;AN000; ASCIIZ string, left align
-	MOV	[SI].MAX_WIDTH,0	;AN000; MAXIMUM FIELD WITH
-	MOV	[SI].MIN_WIDTH,0	;AN000; MINIMUM FIELD WITH
+	LEA	SI,[SUBLIST1];AN000; get addressability to list
+	LEA	DX,[DISP_S_PATH];AN000; offset to path name
+	MOV	[SI+SUB_LIST+SUB_LIST.DATA_OFF],DX ;AN000; save offset
+	MOV	[SI+SUB_LIST+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
+	MOV	[SI+SUB_LIST+SUB_LIST.MSG_ID],1 ;AN000; message ID
+	MOV	[SI+SUB_LIST+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
+	MOV	[SI+SUB_LIST+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
+	MOV	[SI+SUB_LIST+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
 
-	LEA	SI,SUBLIST2		;AN000; get addressability to list
-	LEA	DX,DISP_S_FILE		;AN000; offset to file name
-	MOV	[SI].DATA_OFF,DX	;AN000; save offset
-	MOV	[SI].DATA_SEG,DS	;AN000; save data segment
-	MOV	[SI].MSG_ID,2		;AN000; message ID
-	MOV	[SI].FLAGS,010H 	;AN000; ASCIIZ string, left align
-	MOV	[SI].MAX_WIDTH,0	;AN000; MAXIMUM FIELD WITH
-	MOV	[SI].MIN_WIDTH,0	;AN000; MINIMUM FIELD WITH
+	LEA	SI,[SUBLIST2];AN000; get addressability to list
+	LEA	DX,[DISP_S_FILE];AN000; offset to file name
+	MOV	[SI+SUB_LIST+SUB_LIST.DATA_OFF],DX ;AN000; save offset
+	MOV	[SI+SUB_LIST+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
+	MOV	[SI+SUB_LIST+SUB_LIST.MSG_ID],2 ;AN000; message ID
+	MOV	[SI+SUB_LIST+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
+	MOV	[SI+SUB_LIST+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
+	MOV	[SI+SUB_LIST+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
 
 
-	CMP	S_DEPTH,0		;AN000;it happened, when dealing with the starting dir?
-;	$IF	E
-	JNE $$IF226
-	    LEA     SI,SUBLIST2 	;AN007;PIONT TO THE FIRST LIST
-	    MOV     [SI].MSG_ID,1	;AN007; message ID
+	CMP	byte [es:S_DEPTH],0 ;AN000;it happened, when dealing with the starting dir?
+;	IF$	E
+	JNE IF226$$
+	    LEA     SI,[SUBLIST2];AN007;PIONT TO THE FIRST LIST
+	    MOV     [SI+SUB_LIST+SUB_LIST.MSG_ID],1 ;AN007; message ID
 	    MOV     AX,DISPLAY_S_PATH	;AC007;ITS ONLY A FILE NAME
-	    MOV     SUBST_COUNT,PARM_SUBST_ONE ;AN007; ONE message sub
-;	$ELSE
-	JMP SHORT $$EN226
-$$IF226:
-	    LEA     SI,SUBLIST1 	;AN007;PIONT TO THE FIRST LIST
+	    MOV     word [es:SUBST_COUNT],PARM_SUBST_ONE ;AN007; ONE message sub
+;	ELSE$
+	JMP SHORT EN226$$
+IF226$$:
+	    LEA     SI,[SUBLIST1];AN007;PIONT TO THE FIRST LIST
 	    MOV     AX,S_PATH_FILE1	;AN000;put '\'
-	    MOV     SUBST_COUNT,PARM_SUBST_TWO ;AN007;TWO message subs
-;	$ENDIF
-$$EN226:
+	    MOV     word [es:SUBST_COUNT],PARM_SUBST_TWO ;AN007;TWO message subs
+;	ENDIF$
+EN226$$:
 
 ; Set message parameters
 
-	MOV	MSG_NUM,AX		;AN000; set message number
-	MOV	MSG_CLASS,UTILITY_MSG_CLASS ;AN000; message class
-	MOV	INPUT_FLAG,NO_INPUT	;AN000; no input
+	MOV	[es:MSG_NUM],AX ;AN000; set message number
+	MOV	byte [es:MSG_CLASS],UTILITY_MSG_CLASS ;AN000; message class
+	MOV	byte [es:INPUT_FLAG],NO_INPUT ;AN000; no input
 	CALL	PRINT_STDERR		;display error message
 
 	POP	AX			;restore ERROR_CODE
 	POP	ES
 	RET
 
-SHOW_S_PATH_FILE_ERR ENDP
+;SHOW_S_PATH_FILE_ERR ENDP
 ;
 
 
-CLOSE_DELETE_FILE PROC NEAR
+CLOSE_DELETE_FILE:
 ;when writing error occurs, then this routine is called to
 ;clean up the troubled target file.
 ;INPUT: DS - buffer seg
 ;	ES - data seg
 
-	MOV	BX, ES:T_HANDLE 	;close target file
+	MOV	BX, [es:T_HANDLE] ;close target file
 	PUSH	DS			;AN005;SAVE THE BUFFER PTR
 	PUSH	ES			;AN005;WE NEED THE DATA PTR
 	POP	DS			;AN005;DS = THE DATA PTR
 	CALL	CLOSE_A_FILE		;and close the handle
 	POP	DS			;AN005;DS = THE BUFFER PTR AGAIN
-	LEA	DX, DS:target_drv_let	;target drv, filename
+	LEA	DX, [ds:HEADER.TARGET_DRV_LET] ;target drv, filename
 	CALL	DELETE_A_FILE		;delete it
 	RET
-CLOSE_DELETE_FILE ENDP
+;CLOSE_DELETE_FILE ENDP
 ;
 ;
 
-SWITCH_DS_ES PROC NEAR
+SWITCH_DS_ES:
 ; switch DS, ES
 	PUSH	DS
 	PUSH	ES
 	POP	DS
 	POP	ES
 	RET
-SWITCH_DS_ES ENDP
+;SWITCH_DS_ES ENDP
 
 
 
 MY_INT24:
-	CMP	CS:INT24_ABORT_CNT, 0	;if aborted more than once, then just exit.
+	CMP	byte [cs:INT24_ABORT_CNT], 0 ;if aborted more than once, then just exit.
 	JNE	MI_JUST_EXIT
 	PUSHF				;we are calling interrupt handler
-	CALL	DWORD PTR CS:SAV_INT24	;call original int 24 handler
+	CALL	dword [cs:SAV_INT24]   ;call original int 24 handler
 	CMP	AL, 1			;retry?
 	JE	MI_RETRY
 	CMP	AL, 0			;ignore? Cannot ignore. Try again
@@ -3843,7 +3865,7 @@ MY_INT24:
 	JMP	MAIN_EXIT		;show files copied message
 					;restore default value and exit
 MI_ABORT:
-	INC	CS:INT24_ABORT_CNT	;increase the count of int24_abort
+	INC	byte [cs:INT24_ABORT_CNT] ;increase the count of int24_abort
 	JMP	MAIN_EXIT_A		;restore default value and exit
 MI_JUST_EXIT:
 	POP	CX
@@ -3856,11 +3878,11 @@ MI_RETRY:
 ;
 INT24_ABORT_CNT DB 0
 ;
-include msgdcl.inc
+include 'MSGDCL.INC'
 
-CSEG	ENDS
-DSEG_INIT SEGMENT PARA PUBLIC		;AN000;
-DSEG_INIT ENDS				;AN000;
-	END	MAIN
+end if
+if SEGSEL = S_DSEG_INIT;AN000;
+end if ;AN000;
+;	END	MAIN
 
 

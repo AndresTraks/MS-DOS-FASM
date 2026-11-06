@@ -168,3 +168,10 @@ utility SYS SYSLNK SYS.COM
 # ends its build by running TOOLS/CONVERT over the linked .EXE, as EDLIN's
 # does, so what comes out here is the MZ image under the release's name.
 utility CHKDSK CHKLNK CHKDSK.COM
+
+# XCOPY, three modules in four segments, two of them in a group -- SSEG is
+# the stack, DSEG and DSEG_INIT are DGROUP, and CSEG is the code, outside it
+# -- which XCPYLNK.ASM lays down as two address spaces, the group and the
+# code.  The release links the three and stops: this is an .EXE in its own
+# right, with no CONVERT over it.
+utility XCOPY XCPYLNK XCOPY.EXE

@@ -96,7 +96,7 @@
 	cyclic_flag equ     10h 	;cyclic copy flag
 	inv_time_flag equ     20h	;invalid time
 	inv_date_flag equ     40h	;invalid date
-	init_error_flag equ    80h	;critical initialization error. Should abort.
+	INIT_ERROR_FLAG equ    80h	;critical initialization error. Should abort.
 
 ;*** PARM1_FLAG ***
 

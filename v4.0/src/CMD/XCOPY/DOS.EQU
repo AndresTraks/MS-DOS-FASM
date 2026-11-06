@@ -1,3 +1,44 @@
+STRUC FCB Drive_Number_=0, Current_Block_=0, Record_Size_=0, File_Size_Low_FCB_=0, File_Size_High_FCB_=0, File_Date_Time_FCB_=0, Current_Record_=0, Relative_Record_Low_=0, Relative_Record_High_=0
+{
+.Drive_Number		db	Drive_Number_
+.Filename_FCB		db	8 dup(0)
+.Extension		db	3 dup(0)
+.Current_Block		dw	Current_Block_
+.Record_Size		dw	Record_Size_
+.File_Size_Low_FCB	dw	File_Size_Low_FCB_
+.File_Size_High_FCB	dw	File_Size_High_FCB_
+.File_Date_Time_FCB	dw	File_Date_Time_FCB_
+.Reserved_FCB		db	10 dup(0)
+.Current_Record		db	Current_Record_
+.Relative_Record_Low	dw	Relative_Record_Low_
+.Relative_Record_High	dw	Relative_Record_High_
+}
+match =FCB_LAID_OUT, FCB_LAID_OUT
+{
+    FCB_LAID_OUT equ 1
+    virtual at 0
+      FCB FCB
+      sizeof.FCB = $ - FCB
+    end virtual
+}
+STRUC Find_DTA DTA_Attribute_=0, DTA_File_Time_=0, DTA_File_Date_=0, DTA_File_Size_Low_=0, DTA_File_Size_High_=0
+{
+.DTA_Reserved		    db	    21 dup(0)
+.DTA_Attribute		    db	    DTA_Attribute_
+.DTA_File_Time		    dw	    DTA_File_Time_
+.DTA_File_Date		    dw	    DTA_File_Date_
+.DTA_File_Size_Low	    dw	    DTA_File_Size_Low_
+.DTA_File_Size_High	    dw	    DTA_File_Size_High_
+.DTA_Filename		    db	    13 dup(0)
+}
+match =Find_DTA_LAID_OUT, Find_DTA_LAID_OUT
+{
+    Find_DTA_LAID_OUT equ 1
+    virtual at 0
+      Find_DTA Find_DTA
+      sizeof.Find_DTA = $ - Find_DTA
+    end virtual
+}
 
 ;
 ;******************************************************************************
@@ -329,20 +370,6 @@ Init_Err_Inv_Filename	equ	12	;Invalid filename
 ;******************************************************************************
 ;
 
-FCB		STRUC
-Drive_Number		db	0
-Filename_FCB		db	8 dup(0)
-Extension		db	3 dup(0)
-Current_Block		dw	0
-Record_Size		dw	0
-File_Size_Low_FCB	dw	0
-File_Size_High_FCB	dw	0
-File_Date_Time_FCB	dw	0
-Reserved_FCB		db	10 dup(0)
-Current_Record		db	0
-Relative_Record_Low	dw	0
-Relative_Record_High	dw	0
-FCB		ENDS
 
 
 ;
@@ -351,15 +378,6 @@ FCB		ENDS
 ;******************************************************************************
 ;
 
-Find_DTA	STRUC
-DTA_Reserved		    db	    21 dup(0)
-DTA_Attribute		    db	    0
-DTA_File_Time		    dw	    0
-DTA_File_Date		    dw	    0
-DTA_File_Size_Low	    dw	    0
-DTA_File_Size_High	    dw	    0
-DTA_Filename		    db	    13 dup(0)
-Find_DTA	ENDS
 
 
 
