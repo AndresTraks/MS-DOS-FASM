@@ -1,58 +1,76 @@
+STRUC INTERRUPT_FRAME OLDBP_=0, OLDIP_=0, OLDCS_=0, OLDF_=0, OLDERIP_=0, OLDERCS_=0, OLDERF_=0
+{
+.OLDBP	DW	OLDBP_
+.OLDIP	DW	OLDIP_
+.OLDCS	DW	OLDCS_
+.OLDF	DW	OLDF_
+.OLDERIP DW	OLDERIP_
+.OLDERCS DW	OLDERCS_
+.OLDERF	DW	OLDERF_
+}
+match =INTERRUPT_FRAME_LAID_OUT, INTERRUPT_FRAME_LAID_OUT
+{
+    INTERRUPT_FRAME_LAID_OUT equ 1
+    virtual at 0
+      INTERRUPT_FRAME INTERRUPT_FRAME
+      sizeof.INTERRUPT_FRAME = $ - INTERRUPT_FRAME
+    end virtual
+}
 	PAGE	80,132 ;
 	TITLE	DEBCOM3.ASM - PART3 DEBUGGER COMMANDS
 ; ROUTINES TO PERFORM DEBUGGER COMMANDS
 
-	IF1
-	    %OUT COMPONENT=DEBUG, MODULE=DEBCOM3
-	ENDIF
+;	IF1
+;	    %OUT COMPONENT=DEBUG, MODULE=DEBCOM3
+;	ENDIF
 .XLIST
 .XCREF
-	INCLUDE DOSSYM.INC
-	INCLUDE DEBEQU.ASM
-	INCLUDE DPL.ASM
+	include 'DOSSYM.INC'
+	include 'DEBEQU.ASM'
+	include 'DPL.ASM'
 .CREF
 .LIST
-CODE	SEGMENT PUBLIC BYTE
-CODE	ENDS
+if SEGSEL = S_CODE
+end if
 
-CONST	SEGMENT PUBLIC BYTE
-	EXTRN	USER_PROC_PDB:WORD,RSTACK:WORD,STACK:BYTE
-	EXTRN	DSSAVE:WORD,CSSAVE:WORD,IPSAVE:WORD,axSAVE:WORD,dxSAVE:WORD
-	EXTRN	SSSAVE:WORD,SPSAVE:WORD,FLSAVE:WORD
-	EXTRN	NEXTCS:WORD,NEXTIP:WORD, RSETFLAG:BYTE
-CONST	ENDS
+if SEGSEL = S_CONST
+;	EXTRN	USER_PROC_PDB:WORD,RSTACK:WORD,STACK_:BYTE
+;	EXTRN	DSSAVE:WORD,CSSAVE:WORD,IPSAVE:WORD,axSAVE:WORD,dxSAVE:WORD
+;	EXTRN	SSSAVE:WORD,SPSAVE:WORD,FLSAVE:WORD
+;	EXTRN	NEXTCS:WORD,NEXTIP:WORD, RSETFLAG:BYTE
+end if
 
-CSTACK	SEGMENT STACK
-CSTACK	ENDS
+if SEGSEL = S_CSTACK
+end if
 
-DATA	SEGMENT PUBLIC BYTE
-	EXTRN	BRKCNT:WORD,TCOUNT:WORD,SWITCHAR:BYTE,BPTAB:BYTE
-	EXTRN	BP_ERROR:BYTE,COMP_ARG1:WORD,COMP_ARG2:WORD,COMP_ARG3:WORD
-	EXTRN	COMP_ARG4:WORD,COMP_ARG5:WORD,COMP_ARG6:WORD,COMP_PTR:BYTE
-	EXTRN	ARG_BUF:BYTE,ARG_BUF_PTR:BYTE
-	EXTRN	FZTRACE:BYTE, SYNERR_PTR:BYTE
-	EXTRN	BEGSEG:WORD
+if SEGSEL = S_DATA
+;	EXTRN	BRKCNT:WORD,TCOUNT:WORD,SWITCHAR:BYTE,BPTAB:BYTE
+;	EXTRN	BP_ERROR:BYTE,COMP_ARG1:WORD,COMP_ARG2:WORD,COMP_ARG3:WORD
+;	EXTRN	COMP_ARG4:WORD,COMP_ARG5:WORD,COMP_ARG6:WORD,COMP_PTR:BYTE
+;	EXTRN	ARG_BUF:BYTE,ARG_BUF_PTR:BYTE
+;	EXTRN	FZTRACE:BYTE, SYNERR_PTR:BYTE
+;	EXTRN	BEGSEG:WORD
 	IF	IBMVER
-	    EXTRN   OLD_MASK:BYTE
-	ENDIF
-	EXTRN	SAVESTATE:BYTE
-DATA	ENDS
+;	    EXTRN   OLD_MASK:BYTE
+	end if
+;	EXTRN	SAVESTATE:BYTE
+end if
 
-DG	GROUP	CODE,CONST,CSTACK,DATA
+;DG	GROUP	CODE,CONST,CSTACK,DATA
 
-CODE	SEGMENT PUBLIC BYTE
-ASSUME	CS:DG,DS:DG,ES:DG,SS:DG
-	PUBLIC	COMPARE,INPUT,OUTPUT,GO
-	PUBLIC	TRACE,ZTRACE,SKIP_FILE
-	EXTRN	GETHEX:NEAR,GETEOL:NEAR,CRLF:NEAR,ERR:NEAR, PERR:NEAR
-	EXTRN	HEX:NEAR,DIGIT:NEAR,SCANP:NEAR,DISPREG:NEAR
-	EXTRN	COMMAND:NEAR,DABORT:NEAR,DELIM1:NEAR,DELIM2:NEAR
-	EXTRN	NMIINT:NEAR,NMIINTEND:NEAR,PRINTF_CRLF:NEAR
-	EXTRN	ADDRESS:NEAR,HEXIN:NEAR,DSRANGE:NEAR
+if SEGSEL = S_CODE
+;ASSUME	CS:DG,DS:DG,ES:DG,SS:DG
+;	PUBLIC	COMPARE,INPUT,OUTPUT,GO
+;	PUBLIC	TRACE,ZTRACE,SKIP_FILE
+;	EXTRN	GETHEX:NEAR,GETEOL:NEAR,CRLF:NEAR,ERR_:NEAR, PERR:NEAR
+;	EXTRN	HEX:NEAR,DIGIT:NEAR,SCANP:NEAR,DISPREG:NEAR
+;	EXTRN	COMMAND:NEAR,DABORT:NEAR,DELIM1:NEAR,DELIM2:NEAR
+;	EXTRN	NMIINT:NEAR,NMIINTEND:NEAR,PRINTF_CRLF:NEAR
+;	EXTRN	ADDRESS:NEAR,HEXIN:NEAR,DSRANGE:NEAR
 ; just like trace except skips OVER next INT or CALL.
 DEBCOM3:
 ZTRACE:
-	MOV	FZTRACE,-1
+	MOV	byte [FZTRACE],-1
 	CALL	SETADD
 	CALL	SCANP
 	CALL	HEXIN
@@ -64,26 +82,26 @@ ZTRACE:
 ZSTOCNT:
 	MOV	[TCOUNT],DX
 	CALL	GETEOL
-	MOV	DX,NEXTCS
-	MOV	CSSAVE,DX
-	MOV	DX,NEXTIP
-	MOV	IPSAVE,DX
+	MOV	DX,[NextCS]
+	MOV	[CSSAVE],DX
+	MOV	DX,[NextIP]
+	MOV	[IPSAVE],DX
 ZSTEP:
 	MOV	ES,[CSSAVE]		; point to instruction to execute
 	MOV	DI,[IPSAVE]		; include offset in segment
 	XOR	DX,DX			; where to place breakpoint
 get_opcode:
-	MOV	AL,ES:[DI]		; get the opcode
+	MOV	AL,[es:DI]		; get the opcode
 	cmp	al,0f0h 		; lock
-	je	is_override
+	je	Is_override
 	cmp	al,26h			; es:
-	je	is_override
+	je	Is_override
 	cmp	al,2eh			; cs:
-	je	is_override
+	je	Is_override
 	cmp	al,36h			; ss:
-	je	is_override
+	je	Is_override
 	cmp	al,3eh			; ds:
-	jne	not_override
+	jne	Not_override
 Is_override:
 ;	inc	dx			; this seemed to put us in an endless
 	inc	di			; loop, try this.
@@ -110,7 +128,7 @@ Not_override:
 	JZ	FOO1
 	JMP	STEP			; can't do anything special, step
 FOO1:
-	MOV	AL,ES:[DI+1]		; next instruction
+	MOV	AL,[es:DI+1]		; next instruction
 	AND	AL,11111110B		; ignore w bit
 	CMP	AL,10100100B		; MOVS
 	JZ	ZTRACE2 		; two byte
@@ -125,7 +143,7 @@ FOO1:
 	JMP	STEP			; bogus, do single step
 
 ZTRACEMODRM:
-	MOV	AL,ES:[DI+1]		; get next byte
+	MOV	AL,[es:DI+1]		; get next byte
 	AND	AL,11111000B		; get mod and type
 	CMP	AL,01010000B		; indirect intra 8 bit offset?
 	JZ	ZTRACE3 		; yes, three byte whammy
@@ -149,19 +167,19 @@ ZTRACE2:
 ZTRACE1:
 	INC	DX
 	ADD	DI,DX			; offset to breakpoint instruction
-	MOV	WORD PTR [BPTAB],DI	; save offset
-	MOV	WORD PTR [BPTAB+2],ES	; save segment
-	MOV	AL,ES:[DI]		; get next opcode byte
-	MOV	BYTE PTR [BPTAB+4],AL	; save it
-	MOV	BYTE PTR ES:[DI],0CCH	; break point it
-	MOV	[BRKCNT],1		; only this breakpoint
+	MOV	word [BPTAB],DI     ; save offset
+	MOV	word [BPTAB+2],ES     ; save segment
+	MOV	AL,[es:DI]		; get next opcode byte
+	MOV	byte [BPTAB+4],AL     ; save it
+	MOV	byte [es:DI],0CCH     ; break point it
+	MOV	word [BRKCNT],1 ; only this breakpoint
 	JMP	DEXIT			; start the operation!
 
 ; Trace 1 instruction or the number of instruction specified
 ; by the parameter using 8086 trace mode. Registers are all
 ; set according to values in save area
 TRACE:
-	MOV	FZTRACE,0
+	MOV	byte [FZTRACE],0
 	CALL	SETADD
 	CALL	SCANP
 	CALL	HEXIN
@@ -173,34 +191,34 @@ TRACE:
 STOCNT:
 	MOV	[TCOUNT],DX
 	CALL	GETEOL
-	MOV	DX,NEXTCS
-	MOV	CSSAVE,DX
-	MOV	DX,NEXTIP
-	MOV	IPSAVE,DX
+	MOV	DX,[NextCS]
+	MOV	[CSSAVE],DX
+	MOV	DX,[NextIP]
+	MOV	[IPSAVE],DX
 STEP:
-	MOV	[BRKCNT],0
+	MOV	word [BRKCNT],0
 ; The 286 has a problem with trace mode and software interrupt instructions;
 ; it treats them as atomic operations.	We simulate the operation in software.
 	MOV	ES,[CSSAVE]		; Get next instruction pointer
 	MOV	DI,[IPSAVE]
-	MOV	AL,ES:[DI]		; get next opcode
+	MOV	AL,[es:DI]		; get next opcode
 	cmp	al,0e4h 		; check for 'IN' opcode
 	jne	not_inal_op
-	cmp	es:byte ptr[di+1],21h
+	cmp	byte [es:di+1],21h
 	jne	not_mask_op
-	add	[ipsave],2
+	add	word [IPSAVE],2
 	JMP	SETalmask
 
 not_inal_op:
 	cmp	al,0ech 		; in al,DX ?
 	jne	not_mask_op
-	cmp	dxsave,21h
+	cmp	word [DXSAVE],21h
 	jne	not_mask_op
-	add	[ipsave],1
+	add	word [IPSAVE],1
 SETalmask:
-	mov	ax,[axsave]
+	mov	ax,[AXSAVE]
 	in	al,21h
-	mov	[axsave],ax
+	mov	[AXSAVE],ax
 	JMP	SETENVIRON
 
 not_mask_op:
@@ -208,67 +226,67 @@ not_mask_op:
 	JZ	DOINT			; no, check for other special cases
 	CMP	AL,0CEH 		; how about int overflow
 	JNZ	CHECKCC
-	TEST	FLSAVE,F_OVERFLOW	 ; see it overflow is present
+	TEST	word [FLSAVE],f_Overflow ; see it overflow is present
 	JZ	CHECKOP
 	MOV	BX,4			; INTO = INT 4
-	DEC	IPSAVE			; INTO is a singel byte
+	DEC	word [IPSAVE] ; INTO is a singel byte
 	JMP	SHORT DOVAL
 CHECKCC:
 	CMP	AL,0CCH
 	JNZ	CHECKOP
 	MOV	BX,3			; INT 3 = CC
-	DEC	IPSAVE
+	DEC	word [IPSAVE]
 	JMP	SHORT DOVAL
 DOINT:
 ; We have a software interrupt.  Get destination vector
-	MOV	BL,BYTE PTR ES:[DI+1]	; get vector number
+	MOV	BL,byte [es:DI+1]     ; get vector number
 	XOR	BH,BH			; clear out upper
 DOVAL:
 	SHL	BX,1			; word index
 	SHL	BX,1			; dword index
 	XOR	DI,DI			; interrupt table
 	MOV	ES,DI
-	MOV	AX,ES:[BX]		; point to vector
-	MOV	BX,ES:[BX+2]		; point to vector
+	MOV	AX,[es:BX]		; point to vector
+	MOV	BX,[es:BX+2]		; point to vector
 ; AX:BX is the vector.	Swap it with currect CS:IP
-	XCHG	AX,IPSAVE		; new CS:IP
-	XCHG	BX,CSSAVE
+	XCHG	AX,[IPSAVE] ; new CS:IP
+	XCHG	BX,[CSSAVE]
 ; AX:BX is old CS:IP.  We 'PUSH' flags, oldCS and oldIP, reset flags (ifl) and
 ; set CS:IP to point to interrupt instruction.
-	MOV	ES,SSSAVE		; point to user stack
-	MOV	DI,SPSAVE
+	MOV	ES,[SSSAVE] ; point to user stack
+	MOV	DI,[SPSAVE]
 ; Take old flags and PUSH the flags.
-	MOV	CX,FLSAVE		 ; get flags
+	MOV	CX,[FLSAVE] ; get flags
 	SUB	DI,2			; PUSHF
-	MOV	ES:[DI],CX		; rest of push
+	MOV	[es:DI],CX		; rest of push
 ; Push the old CS
 	SUB	DI,2			; PUSH CS
-	MOV	ES:[DI],BX		; rest of push
+	MOV	[es:DI],BX		; rest of push
 ; Push the old IP
 	SUB	DI,2			; PUSH IP
 	ADD	AX,2			; increment IP
-	MOV	ES:[DI],AX		; rest of push
+	MOV	[es:DI],AX		; rest of push
 ; Update stack
-	MOV	SPSAVE,DI		; store
+	MOV	[SPSAVE],DI ; store
 ; Take flags and turn interrupts off and trace mode off
-	AND	CX,NOT F_INTERRUPT	; CLI
-	AND	CX,NOT F_TRACE		; no trace
-	MOV	FLSAVE,CX		 ; rest of CLI
+	AND	CX,NOT f_Interrupt	; CLI
+	AND	CX,NOT f_Trace		; no trace
+	MOV	[FLSAVE],CX ; rest of CLI
 ; Set up correct process and go to normal reentry code.
 	IF	NOT SYSVER
 	    MOV     BX,[USER_PROC_PDB]
-	    MOV     AH,SET_CURRENT_PDB
+	    MOV     AH,Set_Current_PDB
 	    INT     21H
-	ENDIF
+	end if
 	JMP	SETENVIRON
 ; We need to special case the following instructions that may push a TRACE bit
 ; on the stack:  PUSHF (9C)
 
 ; Save the opcode in A Special place
 CHECKOP:
-	MOV	RSETFLAG,AL		; no bits to turn off
+	MOV	[RSETFLAG],AL ; no bits to turn off
 SETTRACE:
-	OR	FLSAVE,F_TRACE		 ; Turn on trace bit
+	OR	word [FLSAVE],f_Trace ; Turn on trace bit
 	IF	IBMVER
 	    CLI
 	    IN	    AL,MASK_PORT	; Get current mask
@@ -278,33 +296,33 @@ FOO:
 	    MOV     AL,INT_MASK 	; New mask
 	    OUT     MASK_PORT,AL	; Set it
 	    STI
-	ENDIF
+	end if
 DEXIT:
 	IF	NOT SYSVER
 	    MOV     BX,[USER_PROC_PDB]
-	    MOV     AH,SET_CURRENT_PDB
+	    MOV     AH,Set_Current_PDB
 	    INT     21H
-	ENDIF
+	end if
 ; Unfortunately, any system call we issue will muck with the current extended
 ; errors.  Here we must restore the extended error state so that if the user
 ; program gets it, we do not interfere.
-	MOV	AX,(SERVERCALL SHL 8) + 10
-	MOV	DX,OFFSET DG:SAVESTATE
+	MOV	AX,(ServerCall SHL 8) + 10
+	MOV	DX,SAVESTATE
 	INT	21H
 	PUSH	DS
 	XOR	AX,AX
 	MOV	DS,AX
-	MOV	WORD PTR DS:[12],OFFSET DG:BREAKFIX ; Set vector 3--breakpoint instruction
-	MOV	WORD PTR DS:[14],CS
-	MOV	WORD PTR DS:[4],OFFSET DG:REENTER ; Set vector 1--Single step
-	MOV	WORD PTR DS:[6],CS
+	MOV	word [ds:12],BREAKFIX            ; Set vector 3--breakpoint instruction
+	MOV	word [ds:14],CS
+	MOV	word [ds:4],REENTER            ; Set vector 1--Single step
+	MOV	word [ds:6],CS
 	CLI
 	IF	SETCNTC
-	    MOV     WORD PTR DS:[8CH],OFFSET DG:CONTC ; Set vector 23H (CTRL-C)
-	    MOV     WORD PTR DS:[8EH],CS
-	ENDIF
+	    MOV     word [ds:8CH],CONTC            ; Set vector 23H (CTRL-C)
+	    MOV     word [ds:8EH],CS
+	end if
 	POP	DS
-	MOV	SP,OFFSET DG:STACK
+	MOV	SP,STACK_
 	POP	AX
 	POP	BX
 	POP	CX
@@ -317,15 +335,15 @@ DEXIT:
 	POP	ES
 	POP	SS
 	MOV	SP,[SPSAVE]
-	PUSH	[FLSAVE]
-	PUSH	[CSSAVE]
-	PUSH	[IPSAVE]
+	PUSH	word [FLSAVE]
+	PUSH	word [CSSAVE]
+	PUSH	word [IPSAVE]
 	MOV	DS,[DSSAVE]
 	IRET
 STEP1:
 	CALL	CRLF
 	CALL	DISPREG
-	TEST	FZTRACE,-1
+	TEST	byte [FZTRACE],-1
 	JNZ	STEPZ
 	JMP	STEP
 STEPZ:	JMP	ZSTEP
@@ -342,23 +360,14 @@ CONTC:
 BREAKFIX:
 	PUSH	BP
 	MOV	BP,SP
-	DEC	WORD PTR [BP].OLDIP
+	DEC	word [BP+INTERRUPT_FRAME.OLDIP]
 	POP	BP
 	JMP	REENTERREAL
 
 ; Re-entry point from trace mode or interrupt during execution.  All registers
 ; are saved so they can be displayed or modified.
-INTERRUPT_FRAME STRUC
-OLDBP	DW	?
-OLDIP	DW	?
-OLDCS	DW	?
-OLDF	DW	?
-OLDERIP DW	?
-OLDERCS DW	?
-OLDERF	DW	?
-INTERRUPT_FRAME ENDS
 
-ASSUME	CS:DG,DS:NOTHING,ES:NOTHING,SS:NOTHING
+;ASSUME	CS:DG,DS:NOTHING,ES:NOTHING,SS:NOTHING
 ; ReEnter is the main entry point for breakpoint interrupts and for trace mode
 ; interrupts.  We treat both of these cases identically:  save state, display
 ; registers and go for another command.  If we get NMI's, we skip them or if
@@ -376,10 +385,10 @@ REENTER:
 ;	CMP	AX,[BP].OLDCS		; Did we interrupt ourselves?
 ;	JNZ	GOREENTER		; no, go reenter
 	IF	IBMJAPAN
-	    MOV     AX,[BP].OLDIP
-	    CMP     AX,OFFSET DG:NMIINT ; interrupt below NMI interrupt?
+	    MOV     AX,[BP+INTERRUPT_FRAME.OLDIP]
+	    CMP     AX,NMIInt        ; interrupt below NMI interrupt?
 	    JB	    GOREENTER		; yes, go reenter
-	    CMP     [BP].OLDIP,OFFSET DG:NMIINTEND
+	    CMP     [BP+INTERRUPT_FRAME.OLDIP],NMIINTEND
 	    JAE     GOREENTER		; interrupt above NMI interrupt?
 	    POP     AX			; restore state
 	    POP     BP
@@ -387,42 +396,42 @@ REENTER:
 	    PUSH    BP
 	    MOV     BP,SP		; set up frame
 	    PUSH    AX			; get temp variable
-	    MOV     AX,[BP].OLDERIP	; get NMI Vector
-	    MOV     [BP].OLDIP,AX	; stuff in new NMI vector
-	    MOV     AX,[BP].OLDERCS	; get NMI Vector
-	    MOV     [BP].OLDCS,AX	; stuff in new NMI vector
-	    MOV     AX,[BP].OLDERF	; get NMI Vector
+	    MOV     AX,[BP+INTERRUPT_FRAME.OLDERIP] ; get NMI Vector
+	    MOV     [BP+INTERRUPT_FRAME.OLDIP],AX ; stuff in new NMI vector
+	    MOV     AX,[BP+INTERRUPT_FRAME.OLDERCS] ; get NMI Vector
+	    MOV     [BP+INTERRUPT_FRAME.OLDCS],AX ; stuff in new NMI vector
+	    MOV     AX,[BP+INTERRUPT_FRAME.OLDERF] ; get NMI Vector
 	    AND     AH,0FEH		; turn off Trace if present
-	    MOV     [BP].OLDF,AX	; stuff in new NMI vector
-	    MOV     [BP].OLDERF,AX
-	    MOV     [BP].OLDERIP,OFFSET DG:REENTER ; offset of routine
-	    MOV     [BP].OLDERCS,CS	; and CS
+	    MOV     [BP+INTERRUPT_FRAME.OLDF],AX ; stuff in new NMI vector
+	    MOV     [BP+INTERRUPT_FRAME.OLDERF],AX
+	    MOV     [BP+INTERRUPT_FRAME.OLDERIP],REENTER ; offset of routine
+	    MOV     [BP+INTERRUPT_FRAME.OLDERCS],CS ; and CS
 	    POP     AX
 	    POP     BP
 	    IRET			; go try again
-	ENDIF
+	end if
 GOREENTER:
 	IF	IBMVER
-	    MOV     AL,CS:[OLD_MASK]	; Recover Old mask
+	    MOV     AL,[cs:OLD_MASK]	; Recover Old mask
 	    OUT     MASK_PORT,AL	; Restore it
-	ENDIF
-	MOV	AL,CS:[RSETFLAG]
+	end if
+	MOV	AL,[cs:RSETFLAG]
 ; Determine, based on the previous instruction, what we are supposed to do
 ; to flags on the users stack.
 	CMP	AL,09CH 		; PUSHF
 	JNZ	NOFIX
 ; OlderIP = flags.  Turn off trace bit
-	AND	[BP].OLDERIP,NOT F_TRACE
+	AND	[BP+INTERRUPT_FRAME.OLDERIP],NOT f_Trace
 NOFIX:
 	POP	AX
 	POP	BP
 REENTERREAL:
-	MOV	CS:[SPSAVE+SEGDIF],SP
-	MOV	CS:[SSSAVE+SEGDIF],SS
-	MOV	CS:[FLSAVE],CS
-	MOV	SS,CS:[FLSAVE]
-	MOV	SP,OFFSET DG:RSTACK
-	ASSUME	SS:DG
+	MOV	[cs:SPSAVE+SEGDIF],SP
+	MOV	[cs:SSSAVE+SEGDIF],SS
+	MOV	[cs:FLSAVE],CS
+	MOV	SS,[cs:FLSAVE]
+	MOV	SP,RSTACK
+;	ASSUME	SS:DG
 
 	PUSH	ES
 	PUSH	DS
@@ -437,81 +446,81 @@ REENTERREAL:
 	PUSH	AX
 	PUSH	SS
 	POP	DS
-	ASSUME	DS:DG
+;	ASSUME	DS:DG
 
 	MOV	SS,[SSSAVE]
 	MOV	SP,[SPSAVE]
-	ASSUME	SS:NOTHING
+;	ASSUME	SS:NOTHING
 
-	POP	[IPSAVE]
-	POP	[CSSAVE]
+	POP	word [IPSAVE]
+	POP	word [CSSAVE]
 	POP	AX
-	AND	AX,NOT F_TRACE		; TURN OFf trace mode bit
+	AND	AX,NOT f_Trace		; TURN OFf trace mode bit
 	MOV	[FLSAVE],AX
 	MOV	[SPSAVE],SP
 SETENVIRON:
 	PUSH	DS
 	POP	ES
-	ASSUME	ES:DG
+;	ASSUME	ES:DG
 
 	PUSH	DS
 	POP	SS
-	ASSUME	SS:DG
+;	ASSUME	SS:DG
 
-	MOV	SP,OFFSET DG:STACK
+	MOV	SP,STACK_
 	PUSH	DS
 	XOR	AX,AX
 	MOV	DS,AX
-	ASSUME	DS:NOTHING
+;	ASSUME	DS:NOTHING
 
 	IF	SETCNTC
-	    MOV     WORD PTR DS:[8CH],OFFSET DG:DABORT ; Set Ctrl-C vector
-	    MOV     WORD PTR DS:[8EH],CS
-	ENDIF
+	    MOV     word [ds:8CH],DABORT            ; Set Ctrl-C vector
+	    MOV     word [ds:8EH],CS
+	end if
 	POP	DS
-	ASSUME	DS:DG
+;	ASSUME	DS:DG
 
 	STI
 	CLD
 ; Since we are about to issue system calls, let's grab the current user's
 ; extended error info.
-	MOV	AH,GETEXTENDEDERROR
+	MOV	AH,GetExtendedError
 	INT	21H
-	ASSUME	DS:NOTHING,ES:NOTHING
+;	ASSUME	DS:NOTHING,ES:NOTHING
 
-	MOV	SAVESTATE.DPL_AX,AX
-	MOV	SAVESTATE.DPL_BX,BX
-	MOV	SAVESTATE.DPL_CX,CX
-	MOV	SAVESTATE.DPL_DX,DX
-	MOV	SAVESTATE.DPL_SI,SI
-	MOV	SAVESTATE.DPL_DI,DI
-	MOV	SAVESTATE.DPL_DS,DS
-	MOV	SAVESTATE.DPL_ES,ES
+	MOV	[ss:SAVESTATE.DPL_AX],AX
+	MOV	[ss:SAVESTATE.DPL_BX],BX
+	MOV	[ss:SAVESTATE.DPL_CX],CX
+	MOV	[ss:SAVESTATE.DPL_DX],DX
+	MOV	[ss:SAVESTATE.DPL_SI],SI
+	MOV	[ss:SAVESTATE.DPL_DI],DI
+	MOV	[ss:SAVESTATE.DPL_DS],DS
+	MOV	[ss:SAVESTATE.DPL_ES],ES
 	MOV	AX,CS
 	MOV	DS,AX
 	MOV	ES,AX
-	ASSUME	DS:DG,ES:DG
+;	ASSUME	DS:DG,ES:DG
 
 	IF	NOT SYSVER
-	    MOV     AH,GET_CURRENT_PDB
+	    MOV     AH,Get_Current_PDB
 	    INT     21H
 	    MOV     [USER_PROC_PDB],BX
-	    MOV     BX,BEGSEG
-	    MOV     AH,SET_CURRENT_PDB
+	    MOV     BX,[BEGSEG]
+	    MOV     AH,Set_Current_PDB
 	    INT     21H
-	ENDIF
-	MOV	SI,OFFSET DG:BPTAB
+	end if
+	MOV	SI,BPTAB
 	MOV	CX,[BRKCNT]
 	JCXZ	SHOREG
 	PUSH	ES
 CLEARBP:
-	LES	DI,DWORD PTR [SI]
+	LES	DI,dword [SI]
 	ADD	SI,4
 	MOVSB
 	LOOP	CLEARBP
 	POP	ES
 SHOREG:
-	DEC	[TCOUNT]
+	DEC	word [TCOUNT]
 	JZ	CHECKDISP
 	JMP	STEP1
 CHECKDISP:
@@ -529,12 +538,12 @@ INPUT:
 
 	PUSH	CS
 	POP	ES
-	MOV	DI,OFFSET DG:ARG_BUF
+	MOV	DI,arg_buf
 	CALL	HEX			; And display
 
 	XOR	AL,AL
 	STOSB
-	MOV	DX,OFFSET DG:ARG_BUF_PTR
+	MOV	DX,arg_buf_ptr
 	JMP	PRINTF_CRLF
 
 ; Output a value to specified port.
@@ -550,30 +559,30 @@ OUTPUT:
 
 	OUT	DX,AL			; Variable port output
 
-	RETURN
+	return
 
 SETADD:
-	MOV	DX,CSSAVE		; set up start addresses
-	MOV	NEXTCS,DX
-	MOV	DX,IPSAVE
-	MOV	NEXTIP,DX
+	MOV	DX,[CSSAVE] ; set up start addresses
+	MOV	[NextCS],DX
+	MOV	DX,[IPSAVE]
+	MOV	[NextIP],DX
 	MOV	BP,[CSSAVE]
 	CALL	SCANP
-	CMP	BYTE PTR [SI],"="
-	RETNZ
+	CMP	byte [SI],"="
+	retnz
 	INC	SI
 	CALL	ADDRESS
-	MOV	NEXTCS,AX
-	MOV	NEXTIP,DX
-	RETURN
+	MOV	[NextCS],AX
+	MOV	[NextIP],DX
+	return
 
 ; Jump to program, setting up registers according to the
 ; save area. up to 10 breakpoint addresses may be specified.
 GO:
-	MOV	RSETFLAG,0
+	MOV	byte [RSETFLAG],0
 	CALL	SETADD
 	XOR	BX,BX
-	MOV	DI,OFFSET DG:BPTAB
+	MOV	DI,BPTAB
 GO1:
 	CALL	SCANP
 	JZ	DEXEC
@@ -589,33 +598,33 @@ GO1:
 	INC	BX
 	CMP	BX,1+BPMAX
 	JNZ	GO1
-	MOV	DX,OFFSET DG:BP_ERROR	; BP ERROR
-	JMP	ERR
+	MOV	DX,bp_error        ; BP ERROR
+	JMP	ERR_
 DEXEC:
 	MOV	[BRKCNT],BX
 	MOV	CX,BX
 	JCXZ	NOBP
-	MOV	DI,OFFSET DG:BPTAB
+	MOV	DI,BPTAB
 	PUSH	DS
 SETBP:
-	LDS	SI,ES:DWORD PTR [DI]
+	LDS	SI,dword [es:DI]
 	ADD	DI,4
 	MOVSB
-	MOV	BYTE PTR [SI-1],0CCH
+	MOV	byte [SI-1],0CCH
 	LOOP	SETBP
 	POP	DS
 NOBP:
-	MOV	DX,NEXTCS
-	MOV	CSSAVE,DX
-	MOV	DX,NEXTIP
-	MOV	IPSAVE,DX
-	MOV	[TCOUNT],1
+	MOV	DX,[NextCS]
+	MOV	[CSSAVE],DX
+	MOV	DX,[NextIP]
+	MOV	[IPSAVE],DX
+	MOV	word [TCOUNT],1
 	JMP	DEXIT
 
 SKIP_FILE:
-	MOV	AH,CHAR_OPER
+	MOV	AH,Char_Oper
 	INT	21H
-	MOV	CS:[SWITCHAR],DL	; GET THE CURRENT SWITCH CHARACTER
+	MOV	[cs:SWITCHAR],DL	; GET THE CURRENT SWITCH CHARACTER
 FIND_DELIM:
 	LODSB
 	CALL	DELIM1
@@ -624,7 +633,7 @@ FIND_DELIM:
 	JNZ	FIND_DELIM
 GOTDELIM:
 	DEC	SI
-	RETURN
+	return
 
 COMPARE:
 	CALL	DSRANGE
@@ -643,36 +652,36 @@ COMPARE:
 	INC	CX			; CX=1 (do last one)
 COMP:
 	REPE	CMPSB
-	RETZ
+	retz
 ; Compare error. Print address, value; value, address.
 	DEC	SI
-	MOV	CS:COMP_ARG1,DS
-	MOV	CS:COMP_ARG2,SI
+	MOV	[cs:comp_arg1],DS
+	MOV	[cs:comp_arg2],SI
 	XOR	AH,AH
 	LODSB
-	MOV	CS:COMP_ARG3,AX
+	MOV	[cs:comp_arg3],AX
 	DEC	DI
-	MOV	AL,ES:[DI]
-	MOV	CS:COMP_ARG4,AX
-	MOV	CS:COMP_ARG5,ES
-	MOV	CS:COMP_ARG6,DI
+	MOV	AL,[es:DI]
+	MOV	[cs:comp_arg4],AX
+	MOV	[cs:comp_arg5],ES
+	MOV	[cs:comp_arg6],DI
 	INC	DI
 	PUSH	DS
 	PUSH	CS
 	POP	DS
-	MOV	DX,OFFSET DG:COMP_PTR
+	MOV	DX,comp_ptr
 	CALL	PRINTF_CRLF
 	POP	DS
 	XOR	AL,AL
 	JMP	SHORT COMP
 
-	PROCEDURE CHECKNONE,NEAR
+	procedure CHECKNONE,NEAR
 	OR	DX,DX
-	RETNZ
-	MOV	DX,OFFSET DG:SYNERR_PTR ; ERROR MESSAGE
+	retnz
+	MOV	DX,synerr_ptr        ; ERROR MESSAGE
 	JMP	PERR
-	ENDPROC CHECKNONE
+	EndProc CHECKNONE
 
-CODE	ENDS
-	END	DEBCOM3
+end if
+;	END	DEBCOM3
 

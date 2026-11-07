@@ -187,3 +187,13 @@ utility XCOPY XCPYLNK XCOPY.EXE
 # directory goes on the include path here.  The release ends by running
 # TOOLS/CONVERT over the linked .EXE, as CHKDSK's does.
 utility FORMAT FORLNK FORMAT.COM FORMAT src/BOOT
+
+# DEBUG, eleven modules in four segments in one group -- code, const, cstack
+# and data, in the order DEBUG.ASM declares them -- which DEBLNK.ASM lays
+# down as one address space, the way CHKDSK's group is.  All four ask for
+# BYTE, so nothing is padded between them.  A_CREATE_BLOCK is the fifth
+# segment and the one outside the group: it holds the far routine that issues
+# the 1.0 call to make a program prefix, which takes the prefix from CS, and
+# DEBUG.ASM says not to move it.  The release ends by running TOOLS/CONVERT
+# over the linked .EXE, as CHKDSK's does.
+utility DEBUG DEBLNK DEBUG.COM

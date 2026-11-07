@@ -114,6 +114,54 @@ UTILITIES = {
         # wanted, so it starts at nothing.
         START={'cs': 'CODE', 'ds': 'DATA', 'es': None, 'ss': 'STACK'},
     ),
+    # DEBUG's eleven modules in the order DEBUG.LNK names them, and the two
+    # headers they read: DEBEQU.ASM is the numbers and the structures, and
+    # SYSVER.INC is the copy of SYSVER.FAL the release shipped, which says
+    # which of the two versions of the version check to assemble.
+    'DEBUG': dict(
+        MODULES=('DEBUG.ASM', 'DEBCOM1.ASM', 'DEBCOM2.ASM', 'DEBCOM3.ASM',
+                 'DEBASM.ASM', 'DEBUASM.ASM', 'DEBERR.ASM', 'DEBCONST.ASM',
+                 'DEBMES.ASM', 'DEBEMS.ASM', 'DEBDATA.ASM',
+                 'DEBEQU.ASM', 'SYSVER.INC'),
+        TAG={'DEBCOM1.ASM': '1', 'DEBCOM2.ASM': '2', 'DEBERR.ASM': 'E',
+             'DEBEMS.ASM': 'M', 'DEBMES.ASM': 'S'},
+        # Five of DEBUG's own names are fasm's: STACK says where the stack
+        # of an MZ image is, LOAD and STORE read and write bytes already
+        # assembled, ERR stops the assembly, and INT3 is the one-byte
+        # breakpoint -- which is what DEBUG is about, so it names the place
+        # it handles one after the instruction itself.
+        RESERVED=('STACK', 'LOAD', 'STORE', 'ERR', 'INT3'),
+        # DEBUG calls the routine that moves the cursor to the next column
+        # TAB, and INC/SYSMSG.INC gives the same name to the number 9.  Only
+        # DEBMES reads that header, so MASM met the two in no one module;
+        # one assembly meets them both, and the routine is the one that gives
+        # way, the header's name being shared with every other utility.
+        #
+        # Two more are a name two modules each kept for a loop of its own,
+        # which MASM let them have because it assembled them apart: DEBASM
+        # has TEST1 where DEBUG.ASM has the test1 the release left in by
+        # hand, and DEBUASM has GET_OPCODE where DEBCOM3 has get_opcode.
+        # Each is read in its own module and nowhere else, so the one the
+        # link order reaches second gives way.
+        PRIVATE={'DEBUG.ASM': (('TAB', 'TAB_'),),
+                 'DEBCOM1.ASM': (('TAB', 'TAB_'),),
+                 'DEBUASM.ASM': (('TAB', 'TAB_'),
+                                 ('GET_OPCODE', 'GET_OPCODE_')),
+                 'DEBASM.ASM': (('TEST1', 'TEST1_'),)},
+        # DPL.ASM is the server call parameter list, which DEBEMS reads for
+        # the expanded memory calls.
+        SHARED=('SYSCALL.INC', 'DOSSYM.INC', 'SYSMSG.INC', 'PSDATA.INC',
+                'MSGHAN.INC', 'DOSMAC.INC', 'MSGDCL.INC', 'MSGSERV.ASM',
+                'VERSIONA.INC', 'BPB.INC', 'BUFFER.INC', 'SYSVAR.INC',
+                'VECTOR.INC', 'MULT.INC', 'DIRENT.INC', 'DPB.INC',
+                'CURDIR.INC', 'CPMFCB.INC', 'FIND.INC', 'PDB.INC', 'EXE.INC',
+                'SF.INC', 'ARENA.INC', 'INTNAT.INC', 'MI.INC',
+                'FILEMODE.INC', 'ERROR.INC', 'VERSION.INC', 'PARSE.ASM',
+                'DPL.ASM'),
+        # every module's code begins ASSUME CS:DG,DS:DG,ES:DG,SS:DG: one
+        # group is one address space and all four registers hold it
+        START={'cs': 'DG', 'ds': 'DG', 'es': 'DG', 'ss': 'DG'},
+    ),
     # XCOPY's three modules and the four headers they read.  XCOPY.EQU and
     # DOS.EQU are read by two modules apiece and hold nothing but equates;
     # XMAINMSG.EQU and XINITMSG.EQU are read by one each and lay their
@@ -225,13 +273,11 @@ def parser_names(text):
                   lambda m: m.group(1), text)
 
 
-# Names fasm keeps for itself, which COMP uses for its own: getsec is an
-# instruction of a later processor.  Each takes a trailing underscore, the
-# way TCMD1A's Display_ and TREE's RESTORE_ did.
-# Names fasm keeps for itself which EXE2BIN uses for its own: LOAD and STORE
-# are directives of its own, and so is match.  Each takes a trailing
-# underscore, the way COMP's getsec_ and TREE's RESTORE_ did.
-# Words fasm keeps for itself which XCOPY uses for its own.
+# Words fasm keeps for itself which the utility uses for its own -- COMP's
+# getsec is an instruction of a later processor, EXE2BIN's LOAD and STORE are
+# directives.  Each takes a trailing underscore, the way TCMD1A's Display_
+# and TREE's RESTORE_ did.  fasm reads a directive's name whatever case it is
+# written in, so a name that collides collides in every spelling.
 RESERVED = U.get('RESERVED', ())
 
 source = {m: parser_names(dollars(read(m), TAG[m]))
@@ -1171,14 +1217,19 @@ def indexed(code):
 
 
 def parenthesised(code):
-    """One line of RECOVER.ASM writes a place as DS:(BYTE PTR 4), which is
-    the byte at that offset of the segment: fasm asks for the size in front
-    and the segment inside the brackets."""
+    """A place written with the size in brackets of its own: RECOVER.ASM
+    says DS:(BYTE PTR 4) for the byte at that offset of the segment, and
+    DEBCOM2 says ES:(BYTE PTR [80H]) for the same thing with the offset in
+    brackets as well.  fasm asks for the size in front and the segment inside
+    the one pair of brackets."""
+    def one(m):
+        seg, size, place = m.group(1), m.group(2), m.group(3)
+        if place.startswith('[') and place.endswith(']'):
+            place = place[1:-1]
+        return '%s [%s:%s]' % (size.lower(), seg.lower(), place)
+
     return re.sub(r"(?i)\b(cs|ds|es|ss):\(\s*(byte|word|dword)\s+ptr\s+"
-                  r"([^)]+?)\s*\)",
-                  lambda m: '%s [%s:%s]' % (m.group(2).lower(),
-                                            m.group(1).lower(), m.group(3)),
-                  code)
+                  r"([^)]+?)\s*\)", one, code)
 
 
 def joined(code):

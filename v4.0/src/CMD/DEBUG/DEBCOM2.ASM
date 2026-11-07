@@ -47,115 +47,115 @@
 
 ; Routines to perform debugger commands except ASSEMble and UASSEMble
 
-	IF1
-	    %OUT COMPONENT=DEBUG, MODULE=DEBCOM2
-	ENDIF
+;	IF1
+;	    %OUT COMPONENT=DEBUG, MODULE=DEBCOM2
+;	ENDIF
 .XLIST
 .XCREF
-	INCLUDE DOSSYM.INC
-	INCLUDE DEBEQU.ASM
+	include 'DOSSYM.INC'
+	include 'DEBEQU.ASM'
 .CREF
 .LIST
-CODE	SEGMENT PUBLIC BYTE
-CODE	ENDS
+if SEGSEL = S_CODE
+end if
 
-CONST	SEGMENT PUBLIC BYTE
-	EXTRN	NOTFND_PTR:BYTE,NOROOM_PTR:BYTE,DRVLET:BYTE,ERRMES_PTR:BYTE
-	EXTRN	NAMBAD_PTR:BYTE,NOSPACE_PTR:BYTE,TOOBIG_PTR:BYTE
-	EXTRN	HEXERR_PTR:BYTE,HEXWRT_PTR:BYTE,ACCMES_PTR:BYTE
-	EXTRN	EXEBAD_PTR:BYTE,EXEWRT_PTR:BYTE
-	EXTRN	EXECEMES_PTR:BYTE,NONAMESPEC_PTR:BYTE
+if SEGSEL = S_CONST
+;	EXTRN	NOTFND_PTR:BYTE,NOROOM_PTR:BYTE,DRVLET:BYTE,ERRMES_PTR:BYTE
+;	EXTRN	NAMBAD_PTR:BYTE,NOSPACE_PTR:BYTE,TOOBIG_PTR:BYTE
+;	EXTRN	HEXERR_PTR:BYTE,HEXWRT_PTR:BYTE,ACCMES_PTR:BYTE
+;	EXTRN	EXEBAD_PTR:BYTE,EXEWRT_PTR:BYTE
+;	EXTRN	EXECEMES_PTR:BYTE,NONAMESPEC_PTR:BYTE
 
-	EXTRN	FLAGTAB:WORD,EXEC_BLOCK:BYTE,COM_LINE:DWORD,COM_FCB1:DWORD
-	EXTRN	COM_FCB2:DWORD,COM_SSSP:DWORD,COM_CSIP:DWORD,RETSAVE:WORD
-	EXTRN	NEWEXEC:BYTE,HEADSAVE:WORD
-	EXTRN	REGTAB:BYTE,TOTREG:BYTE,NOREGL:BYTE
-	EXTRN	USER_PROC_PDB:WORD,STACK:BYTE,RSTACK:WORD,AXSAVE:WORD
-	EXTRN	BXSAVE:WORD,DSSAVE:WORD,ESSAVE:WORD,CSSAVE:WORD,IPSAVE:WORD
-	EXTRN	SSSAVE:WORD,CXSAVE:WORD,SPSAVE:WORD,FLSAVE:WORD
-	EXTRN	SREG:BYTE,SEGTAB:WORD,REGDIF:ABS,RDFLG:BYTE
-	EXTRN	REGTABEND:WORD
-	EXTRN	NAMESPEC:BYTE
-CONST	ENDS
+;	EXTRN	FLAGTAB:WORD,EXEC_BLOCK:BYTE,COM_LINE:DWORD,COM_FCB1:DWORD
+;	EXTRN	COM_FCB2:DWORD,COM_SSSP:DWORD,COM_CSIP:DWORD,RETSAVE:WORD
+;	EXTRN	NEWEXEC:BYTE,HEADSAVE:WORD
+;	EXTRN	REGTAB:BYTE,TOTREG:BYTE,NOREGL:BYTE
+;	EXTRN	USER_PROC_PDB:WORD,STACK_:BYTE,RSTACK:WORD,AXSAVE:WORD
+;	EXTRN	BXSAVE:WORD,DSSAVE:WORD,ESSAVE:WORD,CSSAVE:WORD,IPSAVE:WORD
+;	EXTRN	SSSAVE:WORD,CXSAVE:WORD,SPSAVE:WORD,FLSAVE:WORD
+;	EXTRN	SREG:BYTE,SEGTAB:WORD,REGDIF:ABS,RDFLG:BYTE
+;	EXTRN	REGTABEND:WORD
+;	EXTRN	NAMESPEC:BYTE
+end if
 
-CSTACK	SEGMENT STACK
-CSTACK	ENDS
+if SEGSEL = S_CSTACK
+end if
 
-DATA	SEGMENT PUBLIC BYTE
-	EXTRN	DEFDUMP:BYTE,TRANSADD:DWORD,INDEX:WORD,BUFFER:BYTE
-	EXTRN	ASMADD:BYTE,DISADD:BYTE,NSEG:WORD
-	EXTRN	SWITCHAR:BYTE,XNXCMD:BYTE,XNXOPT:BYTE
-	EXTRN	AWORD:BYTE,EXTPTR:WORD,HANDLE:WORD,PARSERR:BYTE
-	EXTRN	REG_NAME:WORD,REG_CONTENTS:WORD,REGISTER_PTR:BYTE
-	EXTRN	ARG_BUF:BYTE,ARG_BUF_PTR:BYTE,LOC_ADD:WORD,LOC_PTR:BYTE
-	EXTRN	BIG_CONTENTS:WORD,BIG_PTR:BYTE,LITTLE_CONTENTS:WORD,LITTLE_PTR:BYTE
-	EXTRN	SINGLE_REG_ARG:WORD,CHANGE_FLAG_PTR:BYTE,DF_ERROR:BYTE
-	EXTRN	BR_ERROR:BYTE,BF_ERROR:BYTE,SINGLE_REG_PTR:WORD
-	EXTRN	WRT_ARG1:WORD,WRT_ARG2:WORD,WRTMES_PTR:BYTE,BEGSEG:WORD
-	EXTRN	FILESTRT:WORD,FILEEND:WORD
-	EXTRN	ERR_TYPE:BYTE			;ac000;converted to buffer
+if SEGSEL = S_DATA
+;	EXTRN	DEFDUMP:BYTE,TRANSADD:DWORD,INDEX:WORD,BUFFER:BYTE
+;	EXTRN	ASMADD:BYTE,DISADD:BYTE,NSEG:WORD
+;	EXTRN	SWITCHAR:BYTE,XNXCMD:BYTE,XNXOPT:BYTE
+;	EXTRN	AWORD:BYTE,EXTPTR:WORD,HANDLE:WORD,PARSERR:BYTE
+;	EXTRN	REG_NAME:WORD,REG_CONTENTS:WORD,REGISTER_PTR:BYTE
+;	EXTRN	ARG_BUF:BYTE,ARG_BUF_PTR:BYTE,LOC_ADD:WORD,LOC_PTR:BYTE
+;	EXTRN	BIG_CONTENTS:WORD,BIG_PTR:BYTE,LITTLE_CONTENTS:WORD,LITTLE_PTR:BYTE
+;	EXTRN	SINGLE_REG_ARG:WORD,CHANGE_FLAG_PTR:BYTE,DF_ERROR:BYTE
+;	EXTRN	BR_ERROR:BYTE,BF_ERROR:BYTE,SINGLE_REG_PTR:WORD
+;	EXTRN	WRT_ARG1:WORD,WRT_ARG2:WORD,WRTMES_PTR:BYTE,BEGSEG:WORD
+;	EXTRN	FILESTRT:WORD,FILEEND:WORD
+;	EXTRN	ERR_TYPE:BYTE			;ac000;converted to buffer
 
-	extrn	rel_read_write_tab:dword		;an000;primitive I/O
-	extrn	rel_rw_add:dword			;an000;transfer address
-	extrn	rel_low_sec:word			;an000;low sector word
-	extrn	rel_high_sec:word			;an000;high sector word
-	extrn	rel_sec_num:word			;an000;# of sectors
+;	extrn	rel_read_write_tab:dword		;an000;primitive I/O
+;	extrn	rel_rw_add:dword			;an000;transfer address
+;	extrn	rel_low_sec:word			;an000;low sector word
+;	extrn	rel_high_sec:word			;an000;high sector word
+;	extrn	rel_sec_num:word			;an000;# of sectors
 
 fnd_dbcs db    0
-DATA	ENDS
+end if
 
-DG	GROUP	CODE,CONST,CSTACK,DATA
+;DG	GROUP	CODE,CONST,CSTACK,DATA
 
-CODE	SEGMENT PUBLIC BYTE
-ASSUME	CS:DG,DS:DG,ES:DG,SS:DG
-	PUBLIC	DEFIO,PREPNAME,DEBUG_FOUND
-	PUBLIC	REG,LOAD
-	PUBLIC	NAMED,DWRITE
-	PUBLIC	DISPREG,ERR,DELIM1,DELIM2,delim0
-	public	getchrup,open1,open2,open3,open4,oc_file,opnret 		;an001;bgb
-	public	delete_a_file, parse_a_file, exec_a_file, open_a_file, create_a_file ;an001;bgb
-	public	gcur,ifhex							;an001;bgb
-	public	comtail 							;an001;bgb
-	extrn	test_lead:near							;an001;bgb
-	EXTRN	OUTSI:NEAR,OUTDI:NEAR,INBUF:NEAR,SCANB:NEAR,SCANP:NEAR
-	EXTRN	COMMAND:NEAR,DISASLN:NEAR,SET_TERMINATE_VECTOR:NEAR
-	EXTRN	RESTART:NEAR,TERMINATE:NEAR,DRVERR:NEAR
-	EXTRN	GETHEX:NEAR,GETEOL:NEAR,SKIP_FILE:NEAR
-	EXTRN	HEXCHK:NEAR,GETHEX1:NEAR,PRINT:NEAR
-	EXTRN	CRLF:NEAR,BLANK:NEAR
-	EXTRN	HEX:NEAR,DIGIT:NEAR
-	EXTRN	FIND_DEBUG:NEAR
-	EXTRN	ADDRESS:NEAR,PERROR:NEAR
-	EXTRN	STD_PRINTF:NEAR,PRINTF_CRLF:NEAR
+if SEGSEL = S_CODE
+;ASSUME	CS:DG,DS:DG,ES:DG,SS:DG
+;	PUBLIC	DEFIO,PREPNAME,DEBUG_FOUND
+;	PUBLIC	REG,LOAD_
+;	PUBLIC	NAMED,DWRITE
+;	PUBLIC	DISPREG,ERR_,DELIM1,DELIM2,delim0
+;	public	getchrup,open1,open2,open3,open4,oc_file,opnret 		;an001;bgb
+;	public	delete_a_file, parse_a_file, exec_a_file, open_a_file, create_a_file ;an001;bgb
+;	public	gcur,ifhex							;an001;bgb
+;	public	comtail 							;an001;bgb
+;	extrn	test_lead:near							;an001;bgb
+;	EXTRN	OUTSI:NEAR,OUTDI:NEAR,INBUF:NEAR,SCANB:NEAR,SCANP:NEAR
+;	EXTRN	COMMAND:NEAR,DISASLN:NEAR,SET_TERMINATE_VECTOR:NEAR
+;	EXTRN	RESTART:NEAR,TERMINATE:NEAR,DRVERR:NEAR
+;	EXTRN	GETHEX:NEAR,GETEOL:NEAR,SKIP_FILE:NEAR
+;	EXTRN	HEXCHK:NEAR,GETHEX1:NEAR,PRINT:NEAR
+;	EXTRN	CRLF:NEAR,BLANK:NEAR
+;	EXTRN	HEX:NEAR,DIGIT:NEAR
+;	EXTRN	FIND_DEBUG:NEAR
+;	EXTRN	ADDRESS:NEAR,PERROR:NEAR
+;	EXTRN	STD_PRINTF:NEAR,PRINTF_CRLF:NEAR
 DEBCOM2:
 DISPLAY_LINE:
-	mov	ax,word ptr [si]		;an000;move reg name to ax
-	MOV	[REG_NAME],ax			;ac000;save it in reg_name
+	mov	ax,word [si]      ;an000;move reg name to ax
+	MOV	[reg_name],ax			;ac000;save it in reg_name
 	ADD	SI,3
 	MOV	AX,[BX]
 	ADD	BX,2
-	MOV	[REG_CONTENTS],AX
-	MOV	DX,OFFSET DG:REGISTER_PTR
+	MOV	[reg_contents],AX
+	MOV	DX,register_ptr
 	CALL	STD_PRINTF
 
 	LOOP	DISPLAY_LINE
 
-	RETURN
+	return
 
 DISPLAY_FLAGS:
-	MOV	DI,OFFSET DG:ARG_BUF
+	MOV	DI,arg_buf
 	MOV	AL,CHAR_BLANK
 	STOSB
 DISPLAY_FLAGS_2:
-	MOV	SI,OFFSET DG:FLAGTAB
+	MOV	SI,FLAGTAB
 	MOV	CX,16
 	MOV	DX,[FLSAVE]
 DFLAGS:
-	LODS	CS:WORD PTR [SI]
+	LODS	word [cs:SI]
 	SHL	DX,1
 	JC	FLAGSET
 
-	MOV	AX,CS:[SI+30]
+	MOV	AX,[cs:SI+30]
 FLAGSET:
 	OR	AX,AX
 	JZ	NEXT_FLAG
@@ -167,46 +167,48 @@ NEXT_FLAG:
 	LOOP	DFLAGS
 	XOR	AL,AL
 	STOSB
-	RETURN
+	return
 
 DISPREG:
-	MOV	SI,OFFSET DG:REGTAB
-	MOV	DI,OFFSET DG:ARG_BUF
-	MOV	BX,OFFSET DG:AXSAVE
-	MOV	BYTE PTR TOTREG,CR
+	MOV	SI,REGTAB
+	MOV	DI,arg_buf
+	MOV	BX,AXSAVE
+	MOV	byte [TOTREG],CR
 	MOV	CH,0
-	MOV	CL,NOREGL
+	MOV	CL,[NOREGL]
 SET_DISPLAY:
 REPEAT_DISPLAY:
-	SUB	TOTREG,CL
+	SUB	[TOTREG],CL
 	CALL	DISPLAY_LINE
 
 	CALL	CRLF
 
 	XOR	CH,CH
-	MOV	CL,NOREGL
-	CMP	CL,TOTREG
+	MOV	CL,[NOREGL]
+	CMP	CL,[TOTREG]
 	JB	REPEAT_DISPLAY
 
-	MOV	CL,TOTREG
+	MOV	CL,[TOTREG]
 	CALL	DISPLAY_LINE
 
 	CALL	DISPLAY_FLAGS
 
-	MOV	DX,OFFSET DG:ARG_BUF_PTR
+	MOV	DX,arg_buf_ptr
 	CALL	PRINTF_CRLF
 
 	MOV	AX,[IPSAVE]
-	MOV	WORD PTR [DISADD],AX
+	MOV	word [DISADD],AX
 	PUSH	AX
 	MOV	AX,[CSSAVE]
-	MOV	WORD PTR [DISADD+WORD],AX
+; MASM read a type name in an expression as the number of bytes it
+; takes up, so BYTE on its own is 1 and WORD is 2.
+	MOV	word [DISADD+2],AX
 	PUSH	AX
-	MOV	[NSEG],-1
+	MOV	word [NSEG],-1
 	CALL	DISASLN
 
-	POP	WORD PTR DISADD+WORD
-	POP	WORD PTR DISADD
+	POP	word [DISADD+2]
+	POP	word [DISADD]
 	MOV	AX,[NSEG]
 	CMP	AL,-1
 	JNZ	ASSEM_LIN_CONT
@@ -222,36 +224,36 @@ NOOVER:
 	CBW
 	MOV	BX,AX
 	SHL	BX,1
-	MOV	AX,WORD PTR [BX+SREG]
-	MOV	DI,OFFSET DG:ARG_BUF
+	MOV	AX,word [BX+SREG]
+	MOV	DI,arg_buf
 	STOSB
 	XCHG	AL,AH
 	STOSB
 	XOR	AL,AL
 	STOSB
 	MOV	DX,[INDEX]
-	MOV	LOC_ADD,DX
-	MOV	DX,OFFSET DG:LOC_PTR
+	MOV	[loc_add],DX
+	MOV	DX,loc_ptr
 	CALL	STD_PRINTF
 
 	MOV	BX,[BX+SEGTAB]
 	PUSH	DS
 	MOV	DS,[BX]
-	MOV	BX,CS:[INDEX]
+	MOV	BX,[cs:INDEX]
 	MOV	BX,[BX]
 	POP	DS
-	MOV	BIG_CONTENTS,BX
-	MOV	DX,OFFSET DG:BIG_PTR
-	TEST	BYTE PTR [AWORD],-1
+	MOV	[big_contents],BX
+	MOV	DX,big_ptr
+	TEST	byte [AWORD],-1
 	JNZ	SHOW_CHARS
 
 	XOR	BH,BH
-	MOV	LITTLE_CONTENTS,BX
-	MOV	DX,OFFSET DG:LITTLE_PTR
+	MOV	[little_contents],BX
+	MOV	DX,little_ptr
 SHOW_CHARS:
 	CALL	PRINTF_CRLF
 
-	RETURN
+	return
 
 DISPREGJ:
 	JMP	DISPREG
@@ -275,33 +277,33 @@ REG:
 	CMP	DH,CHAR_BLANK
 	JZ	FLAG
 
-	MOV	DI,OFFSET DG:REGTAB
+	MOV	DI,REGTAB
 	XCHG	AX,DX
 	PUSH	CS
 	POP	ES
 	XOR	CX,CX
 CHECK_NEXT_REG:
-	CMP	AX,WORD PTR[ DI]
+	CMP	AX,word [ DI]
 	JZ	REG_FOUND
 
 	ADD	DI,3
 	INC	CX
-	CMP	DI,OFFSET DG:REGTABEND
+	CMP	DI,REGTABEND
 	JB	CHECK_NEXT_REG
 
 	JMP	BADREG
 
 REG_FOUND:
-	CMP	DI,OFFSET DG:REGTABEND
+	CMP	DI,REGTABEND
 	JNZ	NOTPC
 
 	DEC	DI
 	DEC	DI
 	DEC	DI
-	MOV	AX,CS:[DI-WORD]
+	MOV	AX,[cs:DI-2]
 NOTPC:
 	PUSH	DI
-	MOV	DI,OFFSET DG:ARG_BUF
+	MOV	DI,arg_buf
 	STOSB
 	XCHG	AL,AH
 	STOSB
@@ -313,15 +315,15 @@ NOTPC:
 	LEA	BX,[DI+REGDIF]
 	SUB	BX,CX
 	MOV	DX,[BX]
-	MOV	SINGLE_REG_ARG,DX
-	MOV	DX,OFFSET DG:SINGLE_REG_PTR
+	MOV	[single_reg_arg],DX
+	MOV	DX,single_reg_ptr
 	CALL	STD_PRINTF
 
 	CALL	INBUF
 
 	CALL	SCANB
 
-	RETZ
+	retz
 
 	push	bx				;an000;save bx - we stomp it
 	MOV	CX,4
@@ -331,19 +333,19 @@ NOTPC:
 	CALL	GETEOL
 
 	MOV	[BX],DX
-	RETURN
+	return
 BADREG:
-	MOV	DX,OFFSET DG:BR_ERROR	; BR ERROR
-	JMP	ERR
+	MOV	DX,br_error        ; BR ERROR
+	JMP	ERR_
 
 FLAG:
 	CMP	DL,UPPER_F
 	JNZ	BADREG
 
-	MOV	DI,OFFSET DG:ARG_BUF
+	MOV	DI,arg_buf
 	CALL	DISPLAY_FLAGS_2
 
-	MOV	DX,OFFSET DG:CHANGE_FLAG_PTR
+	MOV	DX,change_flag_ptr
 	CALL	STD_PRINTF
 
 	CALL	INBUF
@@ -360,7 +362,7 @@ GETFLG:
 	CMP	AH,CR
 	JZ	FLGERR
 
-	MOV	DI,OFFSET DG:FLAGTAB
+	MOV	DI,FLAGTAB
 	MOV	CX,32
 	PUSH	CS
 	POP	ES
@@ -386,33 +388,33 @@ NEXFLG:
 	JMP	SHORT GETFLG
 
 REPFLG:
-	MOV	DX,OFFSET DG:DF_ERROR	; DF ERROR
+	MOV	DX,df_error        ; DF ERROR
 FERR:
 	CALL	SAVCHG
-ERR:
+ERR_:
 	push	si				;an000;save affected registers
 	push	di				;an000;
 	push	cx				;an000;
 	mov	cx,03h				;an000;move only three bytes
-	mov	di,offset dg:err_type		;an000;point to buffer
+	mov	di,err_type         ;an000;point to buffer
 	mov	si,dx				;an000;dx holds the string
 	rep	movsb				;an000;fill up the buffer
 	pop	cx				;an000;restore registers
 	pop	di				;an000;
 	pop	si				;an000;
-	MOV	DX,OFFSET DG:ERRMES_PTR
+	MOV	DX,errmes_ptr
 	JMP	PRINT
 
 SAVCHG:
 	MOV	[FLSAVE],DX
-	RETURN
+	return
 
 FLGERR:
-	MOV	DX,OFFSET DG:BF_ERROR	; BF ERROR
+	MOV	DX,bf_error        ; BF ERROR
 	JMP	SHORT FERR
 
 PREPNAME:
-	MOV	ES,DSSAVE
+	MOV	ES,[DSSAVE]
 	PUSH	SI
 	MOV	DI,81H
 COMTAIL:
@@ -423,21 +425,21 @@ COMTAIL:
 
 	SUB	DI,82H
 	XCHG	AX,DI
-	MOV	ES:(BYTE PTR [80H]),AL
+	MOV	byte [es:80H],AL
 	POP	SI
 	MOV	DI,FCB			;05cH
-	MOV	AX,(PARSE_FILE_DESCRIPTOR SHL 8) OR SET_DRIVEID_OPTION ;AL=01H
+	MOV	AX,(Parse_File_Descriptor SHL 8) OR SET_DRIVEID_OPTION ;AL=01H
 	INT	21H
 
-	MOV	BYTE PTR [AXSAVE],AL	; Indicate analysis of first parm
+	MOV	byte [AXSAVE],AL     ; Indicate analysis of first parm
 	CALL	SKIP_FILE
 
 	MOV	DI,6CH
-	MOV	AX,(PARSE_FILE_DESCRIPTOR SHL 8) OR SET_DRIVEID_OPTION ;AL=01H
+	MOV	AX,(Parse_File_Descriptor SHL 8) OR SET_DRIVEID_OPTION ;AL=01H
 	INT	21H
 
-	MOV	BYTE PTR [AXSAVE+1],AL	; Indicate analysis of second parm
-	RETURN
+	MOV	byte [AXSAVE+1],AL     ; Indicate analysis of second parm
+	return
 
 ;  OPENS A XENIX PATHNAME SPECIFIED IN THE UNFORMATTED PARAMETERS
 ;  VARIABLE [XNXCMD] SPECIFIES WHICH COMMAND TO OPEN IT WITH
@@ -445,30 +447,30 @@ COMTAIL:
 ;  VARIABLE [HANDLE] CONTAINS THE HANDLE
 ;  VARIABLE [EXTPTR] POINTS TO THE FILES EXTENSION
 DELETE_A_FILE:
-	MOV	BYTE PTR [XNXCMD],UNLINK
+	MOV	byte [XNXCMD],Unlink
 	JMP	SHORT OC_FILE
 
 PARSE_A_FILE:
-	MOV	BYTE PTR [XNXCMD],0
+	MOV	byte [XNXCMD],0
 	JMP	SHORT OC_FILE
 
 EXEC_A_FILE:
-	MOV	BYTE PTR CS:[XNXCMD],EXEC
-	MOV	BYTE PTR CS:[XNXOPT],1
+	MOV	byte [cs:XNXCMD],Exec
+	MOV	byte [cs:XNXOPT],1
 	JMP	SHORT OC_FILE
 
 OPEN_A_FILE:
-	MOV	BYTE PTR [XNXCMD],OPEN
-	MOV	BYTE PTR [XNXOPT],2	; Try read write
+	MOV	byte [XNXCMD],Open
+	MOV	byte [XNXOPT],2     ; Try read write
 	CALL	OC_FILE
 
-	RETNC
-	MOV	BYTE PTR [XNXCMD],OPEN
-	MOV	BYTE PTR [XNXOPT],0	; Try read only
+	retnc
+	MOV	byte [XNXCMD],Open
+	MOV	byte [XNXOPT],0     ; Try read only
 	JMP	SHORT OC_FILE
 
 CREATE_A_FILE:
-	MOV	BYTE PTR [XNXCMD],CREAT
+	MOV	byte [XNXCMD],Creat
 OC_FILE:
 	PUSH	DS
 	PUSH	ES
@@ -478,11 +480,11 @@ OC_FILE:
 	PUSH	DX
 	PUSH	SI
 	XOR	AX,AX
-	MOV	CS:[EXTPTR],AX		; INITIALIZE POINTER TO EXTENSIONS
-	MOV	AH,CHAR_OPER
+	MOV	[cs:EXTPTR],AX		; INITIALIZE POINTER TO EXTENSIONS
+	MOV	AH,Char_Oper
 	INT	21H
 
-	MOV	CS:[SWITCHAR],DL	; GET THE CURRENT SWITCH CHARACTER
+	MOV	[cs:SWITCHAR],DL	; GET THE CURRENT SWITCH CHARACTER
 	MOV	SI,81H
 
 open1:	CALL	GETCHRUP		;convert 1 byte to uppercase
@@ -490,20 +492,20 @@ open1:	CALL	GETCHRUP		;convert 1 byte to uppercase
 	JZ	OPEN4
 
 	CALL	DELIM1			; SKIP LEADING DELIMITERS
-	JZ	OPEN1
+	JZ	open1
 
 	MOV	DX,SI			; SAVE POINTER TO BEGINNING
-	cmp	fnd_dbcs,1
-;	$if	z
-	JNZ $$IF1
+	cmp	byte [fnd_dbcs],1
+;	if$	z
+	JNZ IF1$$2
 	    dec   dx			;dec it twice if dbcs
-;	$endif
-$$IF1:
+;	endif$
+IF1$$2:
 	DEC	DX
 open2:	CMP	AL,CHAR_PERIOD		; LAST CHAR A "."?
 	JNZ	OPEN3
 
-	MOV	CS:[EXTPTR],SI		; SAVE POINTER TO THE EXTENSION
+	MOV	[cs:EXTPTR],SI		; SAVE POINTER TO THE EXTENSION
 OPEN3:
 	CALL	GETCHRUP
 
@@ -513,27 +515,27 @@ OPEN3:
 
 	CALL	DELIM2
 
-	JNZ	OPEN2
+	JNZ	open2
 
 OPEN4:	DEC	SI			; POINT BACK TO LAST CHAR
-	PUSH	[SI]			; SAVE TERMINATION CHAR
-	MOV	BYTE PTR [SI],0 	; NULL TERMINATE THE STRING
-	MOV	AL,CS:[XNXOPT]
-	MOV	AH,CS:[XNXCMD]		; OPEN OR CREATE FILE
+	PUSH	word [SI] ; SAVE TERMINATION CHAR
+	MOV	byte [SI],0      ; NULL TERMINATE THE STRING
+	MOV	AL,[cs:XNXOPT]
+	MOV	AH,[cs:XNXCMD]		; OPEN OR CREATE FILE
 	OR	AH,AH
 	JZ	OPNRET
 
-	MOV	CS:[FILESTRT],DX	; Set values for later call on this file
-	MOV	CS:[FILEEND],SI
+	MOV	[cs:FILESTRT],DX	; Set values for later call on this file
+	MOV	[cs:FILEEND],SI
 	PUSH	CS
 	POP	ES			; Set ES seg for EXEC_BLOCK
-	MOV	BX,OFFSET DG:EXEC_BLOCK
+	MOV	BX,EXEC_BLOCK
 	XOR	CX,CX
 	INT	21H
 
-	MOV	CS:[HANDLE],AX		; SAVE ERROR CODE OR HANDLE
+	MOV	[cs:HANDLE],AX		; SAVE ERROR CODE OR HANDLE
 OPNRET:
-	POP	[SI]
+	POP	word [SI]
 	POP	SI
 	POP	DX
 	POP	CX
@@ -541,24 +543,24 @@ OPNRET:
 	POP	AX			; blow away error code...
 	POP	ES
 	POP	DS
-	RETURN
+	return
 
 GETCHRUP:									;an001;bgb
 	lodsb				;get the character from [si]		;an001;bgb
-	call	test_lead		;is it a dbcs lead byte?		;an001;bgb
-;	$IF	C			;yes					;an001;bgb
-	JNC $$IF3
+	call	TEST_LEAD		;is it a dbcs lead byte?		;an001;bgb
+;	IF$	C			;yes					;an001;bgb
+	JNC IF3$$2
 	    inc     si			;bump ptr to past 2nd dbcs byte 	;an001;bgb
-	    mov     fnd_dbcs,1		;found a dbcs char
+	    mov     byte [fnd_dbcs],1 ;found a dbcs char
 	    jmp     gcur		;dont capitalize it			;an001;bgb
-;	$ENDIF									;an001;bgb
-$$IF3:
+;	ENDIF$									;an001;bgb
+IF3$$2:
 					;					;an001;bgb
-	mov	fnd_dbcs,0		;did not find a dbcs char
-	cmp	al,lower_a		;is it >= "a" ? 			;an001;bgb
+	mov	byte [fnd_dbcs],0 ;did not find a dbcs char
+	cmp	al,LOWER_A		;is it >= "a" ? 			;an001;bgb
 	jb	gcur			;no - exit				;an001;bgb
 										;an001;bgb
-	cmp	al,lower_z		;is it =< "z" ? 			;an001;bgb
+	cmp	al,LOWER_Z		;is it =< "z" ? 			;an001;bgb
 	ja	gcur			;no - exit				;an001;bgb
 										;an001;bgb
 ;if we get here, the char is lowercase, so change it				;an001;bgb
@@ -568,36 +570,36 @@ gcur:	return									;an001;bgb
 
 DELIM0:
 	CMP	AL,CHAR_LEFT_BRACKET
-	RETZ
+	retz
 DELIM1:
 	CMP	AL,CHAR_BLANK		; SKIP THESE GUYS
-	RETZ
+	retz
 
 	CMP	AL,CHAR_SEMICOLON
-	RETZ
+	retz
 
 	CMP	AL,CHAR_EQUAL
-	RETZ
+	retz
 
 	CMP	AL,CHAR_TAB
-	RETZ
+	retz
 
 	CMP	AL,CHAR_COMMA
-	RETURN
+	return
 
 DELIM2:
-	CMP	AL,CS:[SWITCHAR]	; STOP ON THESE GUYS
-	RETZ
+	CMP	AL,[cs:SWITCHAR]	; STOP ON THESE GUYS
+	retz
 
 	CMP	AL,CR
-	RETURN
+	return
 
 NAMED:
-	OR	[NAMESPEC],1		; Flag a name command executed
+	OR	byte [NAMESPEC],1 ; Flag a name command executed
 	CALL	PREPNAME
 
-	MOV	AL,BYTE PTR AXSAVE
-	MOV	PARSERR,AL
+	MOV	AL,byte [AXSAVE]
+	MOV	[PARSERR],AL
 	PUSH	ES
 	POP	DS
 	PUSH	CS
@@ -606,42 +608,42 @@ NAMED:
 	MOV	DI,SI			; ES:DI points to DEBUG FCB
 	MOV	CX,82
 	REP	MOVSW
-	RETURN
+	return
 
 BADNAM:
-	MOV	DX,OFFSET DG:NAMBAD_PTR
+	MOV	DX,nambad_ptr
 	JMP	RESTART
 
 IFHEX:
-	CMP	BYTE PTR [PARSERR],-1	; Invalid drive specification?
+	CMP	byte [PARSERR],-1     ; Invalid drive specification?
 	JZ	BADNAM
 
 	CALL	PARSE_A_FILE
 
 	MOV	BX,[EXTPTR]
-	CMP	WORD PTR DS:[BX],"EH"	; "HE"
-	RETNZ
+	CMP	word [ds:BX],"EH"     ; "HE"
+	retnz
 
-	CMP	BYTE PTR DS:[BX+WORD],UPPER_X
-	RETURN
+	CMP	byte [ds:BX+2],UPPER_X
+	return
 
 IFEXE:
 	PUSH	BX
 	MOV	BX,[EXTPTR]
-	CMP	WORD PTR DS:[BX],"XE"	; "EX"
+	CMP	word [ds:BX],"XE"     ; "EX"
 	JNZ	RETIF
 
-	CMP	BYTE PTR DS:[BX+WORD],UPPER_E
+	CMP	byte [ds:BX+2],UPPER_E
 RETIF:
 	POP	BX
-	RETURN
+	return
 
-LOAD:
-	MOV	BYTE PTR [RDFLG],READ
+LOAD_:
+	MOV	byte [RDFLG],Read
 	JMP	SHORT DSKIO
 
 DWRITE:
-	MOV	BYTE PTR [RDFLG],WRITE
+	MOV	byte [RDFLG],Write
 DSKIO:
 	MOV	BP,[CSSAVE]
 	CALL	SCANB
@@ -672,9 +674,9 @@ PRIMIO:
 ;=========================================================================
 
 PRMIO:
-	mov	word ptr dg:[rel_rw_add],dx	;ac000;save transfer address
+	mov	word [rel_rw_add],dx     ;ac000;save transfer address
 						;      in table
-	mov	word ptr dg:[rel_rw_add+2],ax	;ac000;save segment of transfer
+	mov	word [rel_rw_add+2],ax     ;ac000;save segment of transfer
 						;      address
 	MOV	CX,2
 	CALL	GETHEX			; Drive number must be 2 digits or less
@@ -682,30 +684,30 @@ PRMIO:
 	PUSH	DX			;save drive number
 	MOV	CX,8			;ac000;allow 32 bit addressibilty
 	CALL	GETHEX			; Logical record number
-	mov	word ptr dg:[rel_low_sec],dx	;ac000;save low word of logical
+	mov	word [rel_low_sec],dx     ;ac000;save low word of logical
 						;      sector address
-	mov	word ptr dg:[rel_high_sec],bx	;ac000;save high word of
+	mov	word [rel_high_sec],bx     ;ac000;save high word of
 						;      logical sector address
 
 	MOV	CX,3
 	CALL	GETHEX			; Number of records
-	mov	word ptr dg:[rel_sec_num],dx	;ac000;save number of sectors
+	mov	word [rel_sec_num],dx     ;ac000;save number of sectors
 						;      to read/write
 
 	CALL	GETEOL
 
 	POP	BX			;ac000;drive number
 	CBW				; Turn off verify after write
-	MOV	BYTE PTR DRVLET,bl	;ac000;save drive in case of error
+	MOV	byte [drvlet],bl   ;ac000;save drive in case of error
 	PUSH	BX
 	MOV	DL,bL			;ac000;move drive to dl
 ; Clean off the buffer cache for physical I/O
 	push	ds
-	MOV	AH,DISK_RESET
+	MOV	AH,Disk_Reset
 	INT	21H
 
 	INC	DL
-	MOV	AH,GET_DPB
+	MOV	AH,Get_DPB
 	INT	21H
 	pop	ds
 
@@ -714,16 +716,16 @@ PRMIO:
 
 	JNZ	DRVERRJ
 
-	CMP	CS:BYTE PTR [RDFLG],WRITE
-;	$if	z			;an000;we will write to sector(s)
-	JNZ $$IF5
+	CMP	byte [cs:RDFLG],Write
+;	if$	z			;an000;we will write to sector(s)
+	JNZ IF5$$2
 		call ABSWRT		;an000;logical sector write
-;	$else				;an000;
-	JMP SHORT $$EN5
-$$IF5:
+;	else$				;an000;
+	JMP SHORT EN5$$2
+IF5$$2:
 		call ABSREAD		;an000;we will read sector(s)
-;	$endif				;an000;
-$$EN5:
+;	endif$				;an000;
+EN5$$2:
 
 
 ENDABS:
@@ -734,10 +736,10 @@ DRVERRJ:
 
 RET0:
 ; Clean cache again...
-	MOV	AH,DISK_RESET
+	MOV	AH,Disk_Reset
 	INT	21H
 
-	RETURN
+	return
 
 
 ;called from debug.sal
@@ -758,17 +760,17 @@ FILEIO:
 EXECHK:
 	CALL	IFEXE
 	JNZ	BINFIL
-	CMP	BYTE PTR [RDFLG],READ
+	CMP	byte [RDFLG],Read
 	JZ	EXELJ
-	MOV	DX,OFFSET DG:EXEWRT_PTR
+	MOV	DX,exewrt_ptr
 	JMP	RESTART 		; Can't write .EXE files
 
 BINFIL:
-	CMP	BYTE PTR [RDFLG],WRITE
+	CMP	byte [RDFLG],Write
 	JZ	BINLOAD
-	CMP	WORD PTR DS:[BX],4F00H + UPPER_C ;"CO"
+	CMP	word [ds:BX],4F00H + UPPER_C     ;"CO"
 	JNZ	BINLOAD
-	CMP	BYTE PTR DS:[BX+WORD],UPPER_M
+	CMP	byte [ds:BX+2],UPPER_M
 	JNZ	BINLOAD
 
 EXELJ:
@@ -787,7 +789,7 @@ OAF:
 
 	JNC	GDOPEN
 
-	MOV	AX,ERROR_FILE_NOT_FOUND
+	MOV	AX,error_file_not_found
 	JMP	EXECERR
 
 GDOPEN:
@@ -795,7 +797,7 @@ GDOPEN:
 	XOR	CX,CX
 	MOV	BX,[HANDLE]
 	MOV	AL,2
-	MOV	AH,LSEEK
+	MOV	AH,LSeek
 	INT	21H
 
 	CALL	IFEXE			; SUBTRACT 512 BYTES FOR EXE
@@ -806,13 +808,13 @@ GDOPEN:
 BIN2:
 	MOV	[BXSAVE],DX		; SET UP FILE SIZE IN DX:AX
 	MOV	[CXSAVE],AX
-	MOV	AH,CLOSE
+	MOV	AH,Close
 	INT	21H
 
 	JMP	EXELOAD
 
 NO_MEM_ERR:
-	MOV	DX,OFFSET DG:TOOBIG_PTR
+	MOV	DX,toobig_ptr
 	CALL	PRINTF_CRLF
 
 	JMP	COMMAND
@@ -825,7 +827,7 @@ NOFILEJ:
 BINLOAD:
 	PUSH	AX
 	PUSH	DX
-	CMP	BYTE PTR [RDFLG],WRITE
+	CMP	byte [RDFLG],Write
 	JZ	WRTFILEJ
 
 	CALL	OPEN_A_FILE
@@ -833,14 +835,14 @@ BINLOAD:
 	JC	NOFILEJ
 
 	MOV	BX,[HANDLE]
-	MOV	AX,(LSEEK SHL 8) OR LSEEK_EOF_OPTION
+	MOV	AX,(LSeek SHL 8) OR LSEEK_EOF_OPTION
 	XOR	DX,DX			;CX:DX=DISTANCE (OFFSET) TO MOVE IN BYTES
 	MOV	CX,DX
 	INT	21H			; GET SIZE OF FILE
 
 	MOV	SI,DX
 	MOV	DI,AX			; SIZE TO SI:DI
-	MOV	AX,(LSEEK SHL 8) OR LSEEK_FROM_START
+	MOV	AX,(LSeek SHL 8) OR LSEEK_FROM_START
 	XOR	DX,DX
 	MOV	CX,DX
 	INT	21H			; RESET POINTER BACK TO BEGINNING
@@ -858,7 +860,7 @@ BINLOAD:
 	MOV	DX,SI
 	MOV	AX,DI			; DX:AX is size
 	cmp	dx,10h
-	jnc	no_mem_err
+	jnc	NO_MEM_ERR
 	MOV	CX,16
 	DIV	CX
 	OR	DX,DX
@@ -867,12 +869,12 @@ BINLOAD:
 	INC	AX
 NOREM:					; AX is number of paras in transfer
 	ADD	AX,BX			; AX is first seg that need not exist
-	jc	no_mem_err
-	CMP	AX,CS:[PDB_BLOCK_LEN]
+	jc	NO_MEM_ERR
+	CMP	AX,[cs:Process_data_block.PDB_block_len]
 	JA	NO_MEM_ERR
 
-	MOV	CXSAVE,DI
-	MOV	BXSAVE,SI
+	MOV	[CXSAVE],DI
+	MOV	[BXSAVE],SI
 	POP	DX
 	POP	AX
 ; AX:DX is disk transfer address (segment:offset)
@@ -886,8 +888,8 @@ RDWRLOOP:
 	ADD	AX,BX			; Add to segment register to get new Seg:offset
 	PUSH	AX
 	PUSH	DX			; Save AX,DX register pair
-	MOV	WORD PTR [TRANSADD],DX
-	MOV	WORD PTR [TRANSADD+WORD],AX
+	MOV	word [TRANSADD],DX
+	MOV	word [TRANSADD+2],AX
 	MOV	CX,0FFF0H		; Keep request in segment
 	OR	SI,SI			; Need > 64K?
 	JNZ	BIGRDWR
@@ -905,7 +907,7 @@ BIGRDWR:
 	POP	DS
 	JC	BADWR
 
-	CMP	BYTE PTR [RDFLG],WRITE
+	CMP	byte [RDFLG],Write
 	JNZ	GOODR
 
 	CMP	CX,AX
@@ -916,7 +918,7 @@ BADWR:
 	STC
 	POP	DX			; READ OR WRITE BOMBED OUT
 	POP	AX
-	RETURN
+	return
 
 GOODR:
 	MOV	CX,AX
@@ -933,41 +935,41 @@ GOODR:
 	JNZ	RDWRLOOP
 
 DOCLOSE:
-	SAVEREG <AX,BX>
-	MOV	BX,HANDLE
-	MOV	AH,CLOSE
+	SaveReg <AX,BX>
+	MOV	BX,[HANDLE]
+	MOV	AH,Close
 	INT	21H
 
-	RESTOREREG <BX,AX>
-	RETURN
+	RestoreReg <BX,AX>
+	return
 
 NOFILE:
-	MOV	DX,OFFSET DG:NOTFND_PTR
+	MOV	DX,notfnd_ptr
 	JMP	RESTART
 
 NO_NAME_GIVEN:
-	MOV	DX,OFFSET DG:NONAMESPEC_PTR
+	MOV	DX,nonamespec_ptr
 RESTARTJMP:
 	JMP	RESTART
 
 WRTFILE:
-	CMP	[NAMESPEC],0
+	CMP	byte [NAMESPEC],0
 	JZ	NO_NAME_GIVEN		; Hey User, you forgot to specify a name
 
 	CALL	CREATE_A_FILE		; Create file we want to write to
 
 	JC	CHECKREADONLY		; ARR 2.4
 
-	MOV	SI,BXSAVE		; Get high order number of bytes to transfer
+	MOV	SI,[BXSAVE] ; Get high order number of bytes to transfer
 	CMP	SI,000FH
 	JLE	WRTSIZE 		; Is bx less than or equal to FH
 
 	XOR	SI,SI			; Ignore BX if greater than FH - set to zero
 WRTSIZE:
-	MOV	WRT_ARG2,SI
-	MOV	DI,CXSAVE
-	MOV	WRT_ARG1,DI
-	MOV	DX,OFFSET DG:WRTMES_PTR
+	MOV	[wrt_arg2],SI
+	MOV	DI,[CXSAVE]
+	MOV	[wrt_arg1],DI
+	MOV	DX,wrtmes_ptr
 	CALL	PRINTF_CRLF
 
 	POP	DX
@@ -980,7 +982,7 @@ WRTSIZE:
 
 	CALL	DELETE_A_FILE
 
-	MOV	DX,OFFSET DG:NOSPACE_PTR
+	MOV	DX,nospace_ptr
 	JMP	RESTARTJMP
 
 	CALL	CLSFLE			;is this dead code? - edk
@@ -990,36 +992,36 @@ WRTSIZE:
 CHECKREADONLY:				; ARR 2.4
 	MOV	DX,[FILESTRT]
 	MOV	SI,[FILEEND]
-	PUSH	[SI]
-	MOV	BYTE PTR [SI],0
-	MOV	AX,CHMOD SHL 8		;AL=0,REQUEST FILE'S CURRENT
+	PUSH	word [SI]
+	MOV	byte [SI],0
+	MOV	AX,CHMod SHL 8		;AL=0,REQUEST FILE'S CURRENT
 					;  ATTRIBUTE BE RETURNED IN CX
 	INT	21H
 
-	POP	[SI]
-	MOV	DX,OFFSET DG:NOROOM_PTR ; Creation error - report error
+	POP	word [SI]
+	MOV	DX,noroom_ptr        ; Creation error - report error
 	JC	RESTARTJMP
 
-	TEST	CX,ATTR_READ_ONLY+ATTR_HIDDEN+ATTR_SYSTEM
+	TEST	CX,attr_read_only+attr_hidden+attr_system
 	JZ	RESTARTJMP
 
-	MOV	DX,OFFSET DG:ACCMES_PTR ; Write on read only file
+	MOV	DX,accmes_ptr        ; Write on read only file
 	JMP	RESTARTJMP
 
 CLSFLE:
-	MOV	AH,CLOSE
+	MOV	AH,Close
 	MOV	BX,[HANDLE]
 	INT	21H
 
-	RETURN
+	return
 
 EXELOAD:
-	POP	[RETSAVE]		; Suck up return addr
-	INC	BYTE PTR [NEWEXEC]
+	POP	word [RETSAVE] ; Suck up return addr
+	INC	byte [NEWEXEC]
 	MOV	BX,[USER_PROC_PDB]
-	MOV	AX,BEGSEG
+	MOV	AX,[BEGSEG]
 	MOV	DS,AX
-	ASSUME	DS:NOTHING
+;	ASSUME	DS:NOTHING
 
 	CMP	AX,BX
 	JZ	DEBUG_CURRENT
@@ -1027,102 +1029,102 @@ EXELOAD:
 	JMP	FIND_DEBUG
 
 DEBUG_CURRENT:
-	MOV	AX,CS:[DSSAVE]
+	MOV	AX,[cs:DSSAVE]
 DEBUG_FOUND:
-	MOV	CS:BYTE PTR [NEWEXEC],0
-	MOV	CS:[HEADSAVE],AX
-	PUSH	CS:[RETSAVE]		; Get the return address back
+	MOV	byte [cs:NEWEXEC],0
+	MOV	[cs:HEADSAVE],AX
+	PUSH	word [cs:RETSAVE] ; Get the return address back
 	PUSH	AX
 	MOV	BX,CS
 	SUB	AX,BX
 	PUSH	ES
-	MOV	ES,CS:BEGSEG
-	ASSUME	ES:NOTHING
+	MOV	ES,[cs:BEGSEG]
+;	ASSUME	ES:NOTHING
 
 	MOV	BX,AX			; size of debug in para.
 	ADD	BX,10H
 	MOV	AX,CS			; and the size of printf in para.
-	SUB	AX,CS:BEGSEG
+	SUB	AX,[cs:BEGSEG]
 	ADD	BX,AX
-	MOV	AH,SETBLOCK
+	MOV	AH,Setblock
 	INT	21H
 
 	POP	ES
 	POP	AX
-	MOV	CS:WORD PTR [COM_LINE+WORD],AX
-	MOV	CS:WORD PTR [COM_FCB1+WORD],AX
-	MOV	CS:WORD PTR [COM_FCB2+WORD],AX
+	MOV	word [cs:COM_LINE+2],AX
+	MOV	word [cs:COM_FCB1+2],AX
+	MOV	word [cs:COM_FCB2+2],AX
 	PUSH	DS
 	PUSH	CS
 	POP	DS
 	CALL	EXEC_A_FILE
 
 	POP	DS
-	MOV	AX,CS:[HANDLE]
+	MOV	AX,[cs:HANDLE]
 	JC	EXECERR
 
 	CALL	SET_TERMINATE_VECTOR	; Reset int 22
 
-	MOV	AH,GET_CURRENT_PDB
+	MOV	AH,Get_Current_PDB
 	INT	21H
 
-	MOV	CS:[USER_PROC_PDB],BX
-	MOV	CS:[DSSAVE],BX
-	MOV	CS:[ESSAVE],BX
+	MOV	[cs:USER_PROC_PDB],BX
+	MOV	[cs:DSSAVE],BX
+	MOV	[cs:ESSAVE],BX
 	MOV	ES,BX
-	MOV	WORD PTR ES:[PDB_EXIT],OFFSET DG:TERMINATE
-	MOV	WORD PTR ES:[PDB_EXIT+WORD],CS
-	LES	DI,CS:[COM_CSIP]
-	MOV	CS:[CSSAVE],ES
-	MOV	CS:[IPSAVE],DI
-	MOV	CS:WORD PTR [DISADD+WORD],ES
-	MOV	CS:WORD PTR [DISADD],DI
-	MOV	CS:WORD PTR [ASMADD+WORD],ES
-	MOV	CS:WORD PTR [ASMADD],DI
-	MOV	CS:WORD PTR [DEFDUMP+WORD],ES
-	MOV	CS:WORD PTR [DEFDUMP],DI
+	MOV	word [es:Process_data_block.PDB_Exit],TERMINATE
+	MOV	word [es:Process_data_block.PDB_Exit+2],CS
+	LES	DI,[cs:COM_CSIP]
+	MOV	[cs:CSSAVE],ES
+	MOV	[cs:IPSAVE],DI
+	MOV	word [cs:DISADD+2],ES
+	MOV	word [cs:DISADD],DI
+	MOV	word [cs:ASMADD+2],ES
+	MOV	word [cs:ASMADD],DI
+	MOV	word [cs:DEFDUMP+2],ES
+	MOV	word [cs:DEFDUMP],DI
 	MOV	BX,DS
-	MOV	AH,SET_CURRENT_PDB
+	MOV	AH,Set_Current_PDB
 	INT	21H
 
-	LES	DI,CS:[COM_SSSP]
-	MOV	AX,ES:[DI]
+	LES	DI,[cs:COM_SSSP]
+	MOV	AX,[es:DI]
 	INC	DI
 	INC	DI
-	MOV	CS:[AXSAVE],AX
-	MOV	CS:[SSSAVE],ES
-	MOV	CS:[SPSAVE],DI
-	RETURN
+	MOV	[cs:AXSAVE],AX
+	MOV	[cs:SSSAVE],ES
+	MOV	[cs:SPSAVE],DI
+	return
 
 EXECERR:
 	PUSH	CS
 	POP	DS
-	MOV	DX,OFFSET DG:NOTFND_PTR
-	CMP	AX,ERROR_FILE_NOT_FOUND
+	MOV	DX,notfnd_ptr
+	CMP	AX,error_file_not_found
 	JZ	GOTEXECEMES
 
-	MOV	DX,OFFSET DG:ACCMES_PTR
-	CMP	AX,ERROR_ACCESS_DENIED
+	MOV	DX,accmes_ptr
+	CMP	AX,error_access_denied
 	JZ	GOTEXECEMES
 
-	MOV	DX,OFFSET DG:TOOBIG_PTR
-	CMP	AX,ERROR_NOT_ENOUGH_MEMORY
+	MOV	DX,toobig_ptr
+	CMP	AX,error_not_enough_memory
 	JZ	GOTEXECEMES
 
-	MOV	DX,OFFSET DG:EXEBAD_PTR
-	CMP	AX,ERROR_BAD_FORMAT
+	MOV	DX,exebad_ptr
+	CMP	AX,error_bad_format
 	JZ	GOTEXECEMES
 
-	MOV	DX,OFFSET DG:EXECEMES_PTR
+	MOV	DX,execemes_ptr
 GOTEXECEMES:
 	CALL	PRINTF_CRLF
 
 	JMP	COMMAND
 
 HEX2BIN:
-	MOV	[INDEX],DX
-	MOV	DX,OFFSET DG:HEXWRT_PTR
-	CMP	BYTE PTR [RDFLG],WRITE
+	MOV	[ss:INDEX],DX
+	MOV	DX,hexwrt_ptr
+	CMP	byte [ss:RDFLG],Write
 	JNZ	RDHEX
 
 	JMP	RESTARTJ2
@@ -1131,14 +1133,14 @@ RDHEX:
 	MOV	ES,AX
 	CALL	OPEN_A_FILE
 
-	MOV	DX,OFFSET DG:NOTFND_PTR
+	MOV	DX,notfnd_ptr
 	JNC	HEXFND
 
 	JMP	RESTART
 
 HEXFND:
 	XOR	BP,BP
-	MOV	SI,OFFSET DG:(BUFFER+BUFSIZ) ; Flag input buffer as empty
+	MOV	SI,(BUFFER+BUFSIZ)        ; Flag input buffer as empty
 READHEX:
 	CALL	GETCH
 
@@ -1157,7 +1159,7 @@ READHEX:
 	CALL	GETBYT			; Get low byte of load address
 
 	MOV	BL,AL
-	ADD	BX,[INDEX]		; Add in offset
+	ADD	BX,[ss:INDEX] ; Add in offset
 	MOV	DI,BX
 	CALL	GETBYT			; Throw away type byte
 
@@ -1175,16 +1177,16 @@ HAVBIG:
 	JMP	SHORT READHEX
 
 GETCH:
-	CMP	SI,OFFSET DG:(BUFFER+BUFSIZ)
+	CMP	SI,(BUFFER+BUFSIZ)
 	JNZ	NOREAD
 
-	MOV	DX,OFFSET DG:BUFFER
+	MOV	DX,BUFFER
 	MOV	SI,DX
-	MOV	AH,READ
+	MOV	AH,Read
 	PUSH	BX
 	PUSH	CX
 	MOV	CX,BUFSIZ
-	MOV	BX,cs:[HANDLE]
+	MOV	BX,[cs:HANDLE]
 	INT	21H
 
 	POP	CX
@@ -1198,21 +1200,21 @@ NOREAD:
 	JZ	HEXDONE
 
 	OR	AL,AL
-	RETNZ
+	retnz
 
 HEXDONE:
-	MOV	[CXSAVE],BP
-	MOV	BXSAVE,0
-	RETURN
+	MOV	[ss:CXSAVE],BP
+	MOV	word [ss:BXSAVE],0
+	return
 
 HEXDIG:
 	CALL	GETCH
 
 	CALL	HEXCHK
 
-	RETNC
+	retnc
 
-	MOV	DX,OFFSET DG:HEXERR_PTR
+	MOV	DX,hexerr_ptr
 RESTARTJ2:
 	JMP	RESTART
 
@@ -1227,7 +1229,7 @@ GETBYT:
 	SHL	BL,1
 	SHL	BL,1
 	OR	AL,BL
-	RETURN
+	return
 
 ;=========================================================================
 ; ABSREAD:	This routine performs a primitive logical sector read of
@@ -1246,14 +1248,14 @@ GETBYT:
 ;	Date	  : 6/17/87
 ;=========================================================================
 
-ABSREAD 	proc	near		;an000;read logical sector(s)
+ABSREAD:            ;an000;read logical sector(s)
 
 	push	ds			;an000;save affected regs
 	push	cx			;an000;save affected regs
 	push	bx			;an000;
 
 	mov	cx,-1			;an000;extended format
-	mov	bx,offset dg:rel_read_write_tab  ;an000;point to read/write table
+	mov	bx,REL_READ_WRITE_TAB         ;an000;point to read/write table
 	int	25h			;an000;invoke relative sector read
 	pop	bx			;an000;discard stack word
 
@@ -1263,7 +1265,7 @@ ABSREAD 	proc	near		;an000;read logical sector(s)
 
 	ret				;an000;return to caller
 
-ABSREAD 	endp			;an000;end proc
+;ABSREAD 	endp			;an000;end proc
 
 
 ;=========================================================================
@@ -1283,14 +1285,14 @@ ABSREAD 	endp			;an000;end proc
 ;	Date	  : 6/17/87
 ;=========================================================================
 
-ABSWRT		proc	near		;an000;write logical sector(s)
+ABSWRT:            ;an000;write logical sector(s)
 
 	push	ds			;an000;save affected regs
 	push	cx			;an000;
 	push	bx			;an000;
 
 	mov	cx,-1			;an000;extended format
-	mov	bx,offset dg:rel_read_write_tab  ;an000;point to read/write table
+	mov	bx,REL_READ_WRITE_TAB         ;an000;point to read/write table
 	int	26h			;an000;invoke relative sector write
 	pop	bx			;an000;discard stack word
 
@@ -1300,9 +1302,9 @@ ABSWRT		proc	near		;an000;write logical sector(s)
 
 	ret				;an000;return to caller
 
-ABSWRT		endp			;an000;end proc
+;ABSWRT		endp			;an000;end proc
 
 
-CODE	ENDS
-	END	DEBCOM2
+end if
+;	END	DEBCOM2
 

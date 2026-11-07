@@ -36,14 +36,14 @@
 ;
 ;======================= END OF SPECIFICATIONS ===========================
 
-	IF1
-	    %OUT    Including DEBEQU.ASM...
-	ENDIF
+;	IF1
+;	    %OUT    Including DEBEQU.ASM...
+;	ENDIF
 
 ;IBMVER EQU	TRUE		    ; These switches get set in version.inc
 ;MSVER	EQU	FALSE		    ; NOT HERE !!!
 
-	INCLUDE SYSVER.INC
+	include 'SYSVER.INC'
 
 IBMJAPAN EQU	FALSE
 
@@ -70,7 +70,7 @@ OPBUFLEN EQU	35
 	IF	IBMVER
 MASK_PORT   EQU     21H 		; 8259 interrupt control register
 INT_MASK    EQU     11111111B		; Disable ALL interrupts
-	ENDIF
+	end if
 
 CR	EQU	13			;CARRIAGE RETURN
 LF	EQU	10			;LINE FEED

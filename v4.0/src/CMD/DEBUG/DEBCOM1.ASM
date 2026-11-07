@@ -46,52 +46,52 @@
 
 ; Routines to perform debugger commands except ASSEMble and UASSEMble
 
-	IF1
-	    %OUT COMPONENT=DEBUG, MODULE=DEBCOM1
-	ENDIF
+;	IF1
+;	    %OUT COMPONENT=DEBUG, MODULE=DEBCOM1
+;	ENDIF
 .XLIST
 .XCREF
-	INCLUDE DOSSYM.INC
-	INCLUDE DEBEQU.ASM
+	include 'DOSSYM.INC'
+	include 'DEBEQU.ASM'
 .CREF
 .LIST
 
-CODE	SEGMENT PUBLIC BYTE
-CODE	ENDS
+if SEGSEL = S_CODE
+end if
 
-CONST	SEGMENT PUBLIC BYTE
-	EXTRN	SYNERR_PTR:BYTE
-	EXTRN	DISPB:WORD,DSIZ:BYTE,DSSAVE:WORD
+if SEGSEL = S_CONST
+;	EXTRN	SYNERR_PTR:BYTE
+;	EXTRN	DISPB:WORD,DSIZ:BYTE,DSSAVE:WORD
 	IF	SYSVER
-	    EXTRN   CIN:DWORD,PFLAG:BYTE
-	ENDIF
-CONST	ENDS
+;	    EXTRN   CIN:DWORD,PFLAG:BYTE
+	end if
+end if
 
-CSTACK	SEGMENT STACK
-CSTACK	ENDS
+if SEGSEL = S_CSTACK
+end if
 
-DATA	SEGMENT PUBLIC BYTE
-	EXTRN	DEFLEN:WORD,BYTEBUF:BYTE,DEFDUMP:BYTE
-	EXTRN	ARG_BUF:BYTE,ARG_BUF_PTR:BYTE
-	EXTRN	ONE_CHAR_BUF:BYTE,ONE_CHAR_BUF_PTR:WORD
-DATA	ENDS
+if SEGSEL = S_DATA
+;	EXTRN	DEFLEN:WORD,BYTEBUF:BYTE,DEFDUMP:BYTE
+;	EXTRN	ARG_BUF:BYTE,ARG_BUF_PTR:BYTE
+;	EXTRN	ONE_CHAR_BUF:BYTE,ONE_CHAR_BUF_PTR:WORD
+end if
 
-DG	GROUP	CODE,CONST,CSTACK,DATA
+;DG	GROUP	CODE,CONST,CSTACK,DATA
 
-CODE	SEGMENT PUBLIC BYTE
-ASSUME	CS:DG,DS:DG,ES:DG,SS:DG
-	PUBLIC	HEXCHK,GETHEX1,PRINT,DSRANGE,ADDRESS,HEXIN,PERROR
-	PUBLIC	GETHEX,GET_ADDRESS,GETEOL,GETHX,PERR
-	PUBLIC	PERR,MOVE,DUMP,ENTERDATA,FILL,SEARCH,DEFAULT
+if SEGSEL = S_CODE
+;ASSUME	CS:DG,DS:DG,ES:DG,SS:DG
+;	PUBLIC	HEXCHK,GETHEX1,PRINT,DSRANGE,ADDRESS,HEXIN,PERROR
+;	PUBLIC	GETHEX,GET_ADDRESS,GETEOL,GETHX,PERR
+;	PUBLIC	PERR,MOVE,DUMP,ENTERDATA,FILL,SEARCH,DEFAULT
 	IF	SYSVER
-	    PUBLIC  IN
-	    EXTRN   DISPREG:NEAR,DEVIOCALL:NEAR
-	ENDIF
-	EXTRN	CRLF:NEAR,OUTDI:NEAR,OUTSI:NEAR,SCANP:NEAR
-	EXTRN	SCANB:NEAR,BLANK:NEAR,TAB:NEAR,COMMAND:NEAR
-	EXTRN	HEX:NEAR,BACKUP:NEAR
-	EXTRN	PRINTF_CRLF:NEAR,HEX_ADDRESS_ONLY:NEAR,HEX_ADDRESS_STR:NEAR
-	EXTRN	STD_PRINTF:NEAR
+;	    PUBLIC  IN
+;	    EXTRN   DISPREG:NEAR,DEVIOCALL:NEAR
+	end if
+;	EXTRN	CRLF:NEAR,OUTDI:NEAR,OUTSI:NEAR,SCANP:NEAR
+;	EXTRN	SCANB:NEAR,BLANK:NEAR,TAB_:NEAR,COMMAND:NEAR
+;	EXTRN	HEX:NEAR,BACKUP:NEAR
+;	EXTRN	PRINTF_CRLF:NEAR,HEX_ADDRESS_ONLY:NEAR,HEX_ADDRESS_STR:NEAR
+;	EXTRN	STD_PRINTF:NEAR
 DEBCOM1:
 ; RANGE - Looks for parameters defining an address range.
 ; The first parameter is the starting address. The second parameter
@@ -101,7 +101,7 @@ DEBCOM1:
 ; segment in AX, displacement in DX, and length in CX.
 DSRANGE:
 	MOV	BP,[DSSAVE]		; Set default segment to DS
-	MOV	[DEFLEN],128		; And default length to 128 bytes
+	MOV	word [DEFLEN],128 ; And default length to 128 bytes
 RANGE:
 	CALL	ADDRESS
 
@@ -185,34 +185,34 @@ USEDEF:
 ; Dump an area of memory in both hex and ASCII
 DUMP:
 	MOV	BP,[DSSAVE]
-	MOV	CX,DISPB
-	MOV	DI,OFFSET DG:DEFDUMP
+	MOV	CX,[DISPB]
+	MOV	DI,DEFDUMP
 	CALL	DEFAULT 		; Get range if specified
 
 	MOV	DS,AX			; Set segment
-	ASSUME	DS:NOTHING
+;	ASSUME	DS:NOTHING
 
 	MOV	SI,DX			; SI has displacement in segment
 	PUSH	SI			; save SI away
-	MOV	AL,DSIZ
+	MOV	AL,[ss:DSIZ]
 	XOR	AH,AH
 	XOR	AX,-1
 	AND	SI,AX			; convert to para number
-	MOV	DI,OFFSET DG:ARG_BUF	; Build the output str in arg_buf
+	MOV	DI,arg_buf        ; Build the output str in arg_buf
 	CALL	OUTSI			; display location
 
 	POP	SI			; get SI back
 ; Determine where the registers display should begin.
 	MOV	AX,SI			; move offset
 	MOV	AH,3			; spaces per byte
-	AND	AL,DSIZ 		; convert to real offset
+	AND	AL,[ss:DSIZ] ; convert to real offset
 	MUL	AH			; 3 char positions per byte of output
 	OR	AL,AL			; at beginning?
 	JZ	INROW			; if so, then no movement.
 
 	PUSH	CX
 	MOV	CX,AX
-	CALL	TAB
+	CALL	TAB_
 
 	POP	CX
 INROW:
@@ -228,7 +228,7 @@ BYTE1:
 	JZ	ASCII			; If through do ASCII dump
 
 	MOV	AX,SI
-	TEST	AL,DSIZ 		; On row boundary?
+	TEST	AL,[ss:DSIZ] ; On row boundary?
 	JZ	ENDROW
 
 	PUSH	DX			; Didn't need ASCII addr. yet
@@ -242,7 +242,7 @@ BYTE1:
 ENDROW:
 	CALL	ASCII			; Show it in ASCII
 
-	MOV	DI,OFFSET DG:ARG_BUF	; Build the output str in arg_buf
+	MOV	DI,arg_buf        ; Build the output str in arg_buf
 	CALL	OUTSI			; Get the address at start of line
 
 	JMP	INROW			; Loop until count is zero
@@ -256,7 +256,7 @@ ASCII:
 ; Determine how many spaces to go until the ASCII column.
 	MOV	AX,SI			; get offset of next byte
 	DEC	AL
-	AND	AL,DSIZ
+	AND	AL,[ss:DSIZ]
 	INC	AL
 ; AX now has the number of bytes that we have displayed:  1 to Dsiz+1.
 ; Compute characters remaining to be displayed.  We *always* put the ASCII
@@ -271,11 +271,11 @@ ASCII:
 	ADD	CX,AX
 ; Compute indent for ascii dump
 	MOV	AX,DX
-	AND	AL,DSIZ
+	AND	AL,[ss:DSIZ]
 	XOR	AH,AH
 	ADD	CX,AX
 ; Tab over
-	CALL	TAB
+	CALL	TAB_
 
 ; Set up for true dump
 	MOV	CX,SI
@@ -299,21 +299,23 @@ PRIN:
 	PUSH	DS
 	PUSH	CS
 	POP	DS
-	ASSUME	DS:DG
+;	ASSUME	DS:DG
 
 	CALL	HEX_ADDRESS_STR
 
 	CALL	CRLF
 
 	POP	DS
-	ASSUME	DS:NOTHING
+;	ASSUME	DS:NOTHING
 
 	POP	CX			; Restore overall dump len
-	MOV	WORD PTR [DEFDUMP],SI
-	MOV	WORD PTR [DEFDUMP+WORD],DS ; Save last address as def
+	MOV	word [ss:DEFDUMP],SI
+; MASM read a type name in an expression as the number of bytes it
+; takes up, so BYTE on its own is 1 and WORD is 2.
+	MOV	word [ss:DEFDUMP+2],DS     ; Save last address as def
 	RET
 
-	ASSUME	DS:DG
+;	ASSUME	DS:DG
 ; Block move one area of memory to another Overlapping moves are performed
 ; correctly, i.e., so that a source byte is not overwritten until after it has
 ; been moved.
@@ -366,7 +368,7 @@ FILL:
 	POP	ES			; Segment
 	POP	CX			; Length
 	CMP	BX,CX			; BX is length of fill list
-	MOV	SI,OFFSET DG:BYTEBUF	; List is in byte buffer
+	MOV	SI,BYTEBUF        ; List is in byte buffer
 	JCXZ	BIGRNG
 
 	JAE	COPYLIST		; If list is big, copy part of
@@ -405,7 +407,7 @@ SEARCH:
 	POP	CX			; Length to be searched
 	SUB	CX,BX			;  minus length of list
 SCAN:
-	MOV	SI,OFFSET DG:BYTEBUF	; List kept in byte buffer
+	MOV	SI,BYTEBUF        ; List kept in byte buffer
 	LODSB				; Bring first byte into AL
 DOSCAN:
 	SCASB				; Search for first byte
@@ -566,13 +568,13 @@ STOSTRG:
 ; of 2-digit hex values or character strings in either single
 ; (') or double (") quotes.
 LIST:
-	MOV	BX,OFFSET DG:BYTEBUF	; Put byte list in the byte buffer
+	MOV	BX,BYTEBUF        ; Put byte list in the byte buffer
 LISTLP:
 	CALL	LISTITEM		; Process a parameter
 
 	JNC	LISTLP			; If OK, try for more
 
-	SUB	BX,OFFSET DG:BYTEBUF	; BX now has no. of bytes in list
+	SUB	BX,BYTEBUF        ; BX now has no. of bytes in list
 	JZ	PERROR			; List must not be empty
 
 ; Make sure there is nothing more on the line except for
@@ -593,13 +595,13 @@ PERR:
 ; error.  By subtracting from start of buffer, we will know how far to tab
 ; over to appear directly below it on the terminal.  Then print "^ Error".
 PERROR:
-	SUB	SI,OFFSET DG:(BYTEBUF-1) ; How many char processed so far?
+	SUB	SI,(BYTEBUF-1)        ; How many char processed so far?
 	MOV	CX,SI			; Parameter for TAB in CX
-	MOV	DI,OFFSET DG:ARG_BUF	;
-	CALL	TAB			; Directly below bad char
+	MOV	DI,arg_buf        ;
+	CALL	TAB_			; Directly below bad char
 
-	MOV	BYTE PTR [DI],0 	; nul terminate the tab
-	MOV	DX,OFFSET DG:SYNERR_PTR ; Error message
+	MOV	byte [DI],0      ; nul terminate the tab
+	MOV	DX,synerr_ptr        ; Error message
 ; Print error message and abort to command level
 PRINT:
 	CALL	PRINTF_CRLF
@@ -631,7 +633,7 @@ GET_ADDRESS:
 	JC	ADRERR
 
 	MOV	AX,BP			; Get default segment
-	CMP	BYTE PTR [SI],CHAR_COLON
+	CMP	byte [SI],CHAR_COLON
 	JNZ	GETRET
 
 	PUSH	DX
@@ -649,7 +651,7 @@ GETRET:
 
 SEGREG:
 	MOV	AL,[SI]
-	MOV	DI,OFFSET DG:SEGLET	; SEGLET  DB  "CSED"
+	MOV	DI,SEGLET        ; SEGLET  DB  "CSED"
 	MOV	CX,4
 	REPNE	SCASB
 	JNZ	ADRERR
@@ -658,10 +660,10 @@ SEGREG:
 	INC	SI
 	SHL	CX,1
 	MOV	BX,CX
-	CMP	BYTE PTR [SI],CHAR_COLON
+	CMP	byte [SI],CHAR_COLON
 	JNZ	ADRERR
 
-	PUSH	[BX+DSSAVE]
+	PUSH	word [BX+DSSAVE]
 	JMP	SHORT GETDISP
 
 SEGLET	DB	"CSED"			; First letter of each of the segregs: CS,SS,ES,DS
@@ -674,7 +676,7 @@ GETLIST:
 
 	POP	DI			; Displacement within segment
 	POP	ES			; Segment to enter into
-	MOV	SI,OFFSET DG:BYTEBUF	; List of bytes is in byte buffer
+	MOV	SI,BYTEBUF        ; List of bytes is in byte buffer
 	MOV	CX,BX			; Count of bytes
 	REP	MOVSB			; Enter that byte list
 	RET
@@ -710,7 +712,7 @@ GETROW:
 	PUSH	ES
 	PUSH	DS
 	POP	ES
-	MOV	DI,OFFSET DG:ARG_BUF
+	MOV	DI,arg_buf
 	CALL	BLANK
 
 	XOR	AL,AL
@@ -720,19 +722,19 @@ GETROW:
 	POP	ES
 	POP	DI
 GETBYTE:
-	MOV	AL,ES:[DI]		; Get current value
+	MOV	AL,[es:DI]		; Get current value
 	PUSH	DI
 	PUSH	ES
 	PUSH	DS
 	POP	ES
-	MOV	DI,OFFSET DG:ARG_BUF
+	MOV	DI,arg_buf
 	CALL	HEX			; And display it
 
 	MOV	AL,CHAR_PERIOD
 	STOSB
 	XOR	AL,AL
 	STOSB
-	MOV	DX,OFFSET DG:ARG_BUF_PTR
+	MOV	DX,arg_buf_ptr
 	CALL	STD_PRINTF
 
 	POP	ES
@@ -783,7 +785,7 @@ NOHEX:
 
 RUB:
 	MOV	AL,CHAR_BACKSPACE
-	CALL	OUT_char
+	CALL	OUT_CHAR
 BS:
 	CMP	CL,2			; CX=2 means nothing typed yet
 	JZ	PUTDOT			; Put back the dot we backed up over
@@ -803,7 +805,7 @@ PUTDOT:
 
 ; If new value has been entered, convert it to binary and
 ; put into memory. Always bump pointer to next location
-STORE:
+STORE_:
 	CMP	CL,2			; CX=2 means nothing typed yet
 	JZ	NOSTO			; So no new value to store
 
@@ -813,26 +815,26 @@ STORE:
 	SHL	DH,CL
 	POP	CX
 	OR	DL,DH			; Hex is now converted to binary
-	MOV	ES:[DI],DL		; Store new value
+	MOV	[es:DI],DL		; Store new value
 NOSTO:
 	INC	DI			; Prepare for next location
 	RET
 
 NEXT:
-	CALL	STORE			; Enter new value
+	CALL	STORE_			; Enter new value
 
 	INC	CX			; Leave a space plus two for
 	INC	CX			;  each digit not entered
 	PUSH	DI
-	MOV	DI,OFFSET DG:ARG_BUF
+	MOV	DI,arg_buf
 	PUSH	ES
 	PUSH	DS
 	POP	ES
-	CALL	TAB
+	CALL	TAB_
 
 	XOR	AL,AL
 	STOSB
-	MOV	DX,OFFSET DG:ARG_BUF_PTR
+	MOV	DX,arg_buf_ptr
 	CALL	STD_PRINTF
 
 	POP	ES
@@ -849,7 +851,7 @@ NEWROW:
 	JMP	GETROW			; Print address on new line
 
 PREV:
-	CALL	STORE			; Enter the new value
+	CALL	STORE_			; Enter the new value
 
 ; DI has been bumped to next byte. Drop it 2 to go to previous addr
 	DEC	DI
@@ -857,7 +859,7 @@ PREV:
 	JMP	SHORT NEWROW		; Terminate line after backing	 CLD
 
 EOL:
-	CALL	STORE			; Enter the new value
+	CALL	STORE_			; Enter the new value
 
 	JMP	CRLF			; CR/LF and terminate
 
@@ -866,7 +868,7 @@ EOL:
 INPT:					  ;*** change for build - label to inpt
 	    PUSH    DS
 	    PUSH    SI
-	    LDS     SI,CS:[CIN]
+	    LDS     SI,[cs:CIN]
 	    MOV     AH,4
 	    CALL    DEVIOCALL
 
@@ -900,18 +902,18 @@ INPT:				; Change label for build
 
 	    RET
 
-	ENDIF
+	end if
 OUT_CHAR:
 	PUSH	DI
 	PUSH	DX
 	PUSH	ES
 	PUSH	DS
 	POP	ES
-	MOV	DI,OFFSET DG:ONE_CHAR_BUF
+	MOV	DI,one_char_buf
 	STOSB
 	MOV	AL,0
 	STOSB
-	MOV	DX,OFFSET DG:ONE_CHAR_BUF_PTR
+	MOV	DX,one_char_buf_ptr
 	CALL	STD_PRINTF
 
 	POP	ES
@@ -932,27 +934,27 @@ OUT_CHAR:
 ;	Date	  : 6/16/87
 ;=========================================================================
 
-ADDRESS_32_BIT	proc	near			;an000;perform 32 bit address
+ADDRESS_32_BIT:            ;an000;perform 32 bit address
 						;      creation
 	push	cx				;an000;save affected regs.
 	mov	cx,04h				;an000;initialize to
 						;      nibble shift
-;	$do					;an000;while cx not= 0
-$$DO1:
+;	do$					;an000;while cx not= 0
+DO1$$1:
 		cmp	cx,00h			;an000;are we done?
-;		$leave	e			;an000;yes, quit loop
-		JE $$EN1
+;		leave$	e			;an000;yes, quit loop
+		JE EN1$$1
 		shl	bx,1			;an000;shift bx 1 bit
 		shl	dx,1			;an000;shift dx 1 bit
-;		$if	c			;an000;did low word carry
-		JNC $$IF3
+;		if$	c			;an000;did low word carry
+		JNC IF3$$1
 			or	bx,01h		;an000;set bit 0 of high word
-;		$endif				;an000;
-$$IF3:
+;		endif$				;an000;
+IF3$$1:
 		dec	cx			;an000;decrease counter
-;	$enddo					;an000;end while loop
-	JMP SHORT $$DO1
-$$EN1:
+;	enddo$					;an000;end while loop
+	JMP SHORT DO1$$1
+EN1$$1:
 	or	dl,	al			;an000;overlay low word
 						;      bits 0-3 with next
 						;      portion of the address
@@ -960,10 +962,10 @@ $$EN1:
 
 	ret					;an000;return to caller
 
-ADDRESS_32_BIT	endp				;an000;end proc
+;ADDRESS_32_BIT	endp				;an000;end proc
 
 
 
-CODE	ENDS
-	END	DEBCOM1
+end if
+;	END	DEBCOM1
 

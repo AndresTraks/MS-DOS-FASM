@@ -40,70 +40,70 @@
 ;******************** END OF SPECIFICATIONS ******************************
 
 
-	IF1
-	    %OUT COMPONENT=DEBUG, MODULE=DEBERR
-	ENDIF
+;	IF1
+;	    %OUT COMPONENT=DEBUG, MODULE=DEBERR
+;	ENDIF
 .XLIST
 .XCREF
-	INCLUDE DOSSYM.INC
+	include 'DOSSYM.INC'
 .CREF
 .LIST
 
-	INCLUDE DEBEQU.ASM
+	include 'DEBEQU.ASM'
 
 FIRSTDRV EQU	"A"
 
-CODE	SEGMENT PUBLIC BYTE
-CODE	ENDS
+if SEGSEL = S_CODE
+end if
 
-CONST	SEGMENT PUBLIC BYTE
-	EXTRN	RDFLG:BYTE
-	EXTRN	DRVLET:BYTE
-	EXTRN	dr1_ptr:word,dr2_ptr:word,dr3_ptr:word,dr4_ptr:word ;ac000
-CONST	ENDS
+if SEGSEL = S_CONST
+;	EXTRN	RDFLG:BYTE
+;	EXTRN	DRVLET:BYTE
+;	EXTRN	dr1_ptr:word,dr2_ptr:word,dr3_ptr:word,dr4_ptr:word ;ac000
+end if
 
-CSTACK	SEGMENT STACK
-CSTACK	ENDS
+if SEGSEL = S_CSTACK
+end if
 
-DATA	SEGMENT PUBLIC BYTE
-	EXTRN	PARITYFLAG:BYTE
-DATA	ENDS
+if SEGSEL = S_DATA
+;	EXTRN	PARITYFLAG:BYTE
+end if
 
-DG	GROUP	CODE,CONST,CSTACK,DATA
+;DG	GROUP	CODE,CONST,CSTACK,DATA
 
-CODE	SEGMENT PUBLIC BYTE
-	ASSUME	CS:DG,DS:DG,ES:DG,SS:DG
+if SEGSEL = S_CODE
+;	ASSUME	CS:DG,DS:DG,ES:DG,SS:DG
 
-	EXTRN	RESTART:NEAR
-	PUBLIC	DRVERR, TRAPPARITY, RELEASEPARITY, NMIINT, NMIINTEND
+;	EXTRN	RESTART:NEAR
+;	PUBLIC	DRVERR, TRAPPARITY, RELEASEPARITY, NMIINT, NMIINTEND
 
 TRAPPARITY:
 	IF	IBMJAPAN
 	    PUSH    BX
 	    PUSH    ES
 	    PUSH    DX			; save location of new offset
-	    MOV     DX,OFFSET DG:NMIINT ; DS:DX has new interrupt vector
+	    MOV     DX,NMIInt        ; DS:DX has new interrupt vector
 	    CALL    SWAPINT		; diddle interrupts
-	    ASSUME  ES:NOTHING
+;	    ASSUME  ES:NOTHING
 
-	    MOV     WORD PTR [NMIPTR],BX ; save old offset
-	    MOV     WORD PTR [NMIPTR+2],ES ; save old segment
+	    MOV     word [NMIPTR],BX     ; save old offset
+	    MOV     word [NMIPTR+2],ES     ; save old segment
 	    POP     DX			; get old regs back
 	    POP     ES			; restore old values
-	    ASSUME  ES:DG
+;	    ASSUME  ES:DG
 
 	    POP     BX
-	    MOV     BYTE PTR [PARITYFLAG],0 ; no interrupts detected yet!
+	    MOV     byte [PARITYFLAG],0     ; no interrupts detected yet!
 	    RET
 
 SWAPINT:
 	    PUSH    AX
-	    MOV     AX,(GET_INTERRUPT_VECTOR SHL 8) + 2
+	    MOV     AX,(Get_Interrupt_Vector SHL 8) + 2
 	    INT     21H 		; Get old NMI Vector
-	    MOV     AX,(SET_INTERRUPT_VECTOR SHL 8) + 2
+	    MOV     AX,(Set_Interrupt_Vector SHL 8) + 2
 	    INT     21h 		; let OS set new vector
 	    POP     AX
-	ENDIF
+	end if
 	RET
 
 RELEASEPARITY:
@@ -112,14 +112,14 @@ RELEASEPARITY:
 	    PUSH    DS
 	    PUSH    BX
 	    PUSH    ES
-	    LDS     DX,DWORD PTR [NMIPtr] ; get old vector
-	    CALL    SwapInt		; diddle back to original
+	    LDS     DX,dword [NMIPTR]     ; get old vector
+	    CALL    SWAPINT		; diddle back to original
 	    POP     ES
 	    POP     BX
 	    POP     DS
 	    POP     DX
-	    MOV     [PARITYFLAG],0	; no interrupts possible!
-	ENDIF
+	    MOV     byte [PARITYFLAG],0 ; no interrupts possible!
+	end if
 	RET
 
 NMIInt:
@@ -130,54 +130,54 @@ NMIInt:
 	    POP     AX			; get old AX back
 	    JZ	    NMICHAIN		; no, go chain interrupt
 	    OUT     0A2H,AL		; reset NMI detector
-	    MOV     CS:[PARITYFLAG],1	; signal detection
+	    MOV     byte [cs:PARITYFLAG],1 ; signal detection
 	    IRET
 NMICHAIN:
-	    JMP     DWORD PTR CS:[NMIPTR] ; chain the vectors
-NMIPTR	    DD	    ?			; where old NMI gets stashed
-	ENDIF
+	    JMP     dword [cs:NMIPTR]     ; chain the vectors
+NMIPTR	    rd      1  ; where old NMI gets stashed
+	end if
 NMIINTEND:
 
 DRVERR:
 
 	or	al,al				;ac000;see if drive specified
-;	$if	nz				;an000;drive specified
-	JZ $$IF1
-		add	byte ptr drvlet,firstdrv;ac000;determine drive letter
-		cmp	byte ptr rdflg,write	;ac000;see if it is read/write
-;		$if	z			;an000;it is write
-		JNZ $$IF2
-			mov	dx,offset dg:dr2_ptr	;an000;message
-;		$else				;an000;it is read
-		JMP SHORT $$EN2
-$$IF2:
-			mov	dx,offset dg:dr1_ptr	;an000;message
-;		$endif				;an000;
-$$EN2:
-;	$else					;an000;write protect error
-	JMP SHORT $$EN1
-$$IF1:
-		add	byte ptr drvlet,firstdrv;ac000;determine drive letter
-		cmp	byte ptr rdflg,write	;ac000;see if it is read/write
-;		$if	z			;an000;it is write
-		JNZ $$IF6
-			mov	dx,offset dg:dr4_ptr	;an000;message
-;		$else				;an000;it is read
-		JMP SHORT $$EN6
-$$IF6:
-			mov	dx,offset dg:dr3_ptr	;an000;message
-;		$endif				;an000;
-$$EN6:
-;	$endif					;an000;
-$$EN1:
+;	if$	nz				;an000;drive specified
+	JZ IF1$$E
+		add	byte [drvlet],FIRSTDRV  ;ac000;determine drive letter
+		cmp	byte [RDFLG],Write   ;ac000;see if it is read/write
+;		if$	z			;an000;it is write
+		JNZ IF2$$E
+			mov	dx,dr2_ptr        ;an000;message
+;		else$				;an000;it is read
+		JMP SHORT EN2$$E
+IF2$$E:
+			mov	dx,dr1_ptr        ;an000;message
+;		endif$				;an000;
+EN2$$E:
+;	else$					;an000;write protect error
+	JMP SHORT EN1$$E
+IF1$$E:
+		add	byte [drvlet],FIRSTDRV  ;ac000;determine drive letter
+		cmp	byte [RDFLG],Write   ;ac000;see if it is read/write
+;		if$	z			;an000;it is write
+		JNZ IF6$$E
+			mov	dx,dr4_ptr        ;an000;message
+;		else$				;an000;it is read
+		JMP SHORT EN6$$E
+IF6$$E:
+			mov	dx,dr3_ptr        ;an000;message
+;		endif$				;an000;
+EN6$$E:
+;	endif$					;an000;
+EN1$$E:
 
 ; CLEAN OUT THE DISK...
-	MOV	AH,DISK_RESET
+	MOV	AH,Disk_Reset
 	INT	21H
 
 	JMP	RESTART
 CODEEND:
 
-CODE	ENDS
-	END
+end if
+;	END
 
