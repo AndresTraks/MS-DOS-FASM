@@ -1,37 +1,162 @@
+STRUC FON FONPTCT_=0, FONPT_=0
+{
+.FONTAG		    DB	 0FFH,"FONT   " ;FILE TAG
+		    Rb	 8
+.FONPTCT 	    DW	 FONPTCT_ ;COUNT OF POINTERS IN HEADER
+.FONPT		    DB	 FONPT_ ;START OF ARRAY OF POINTERS
+}
+match =FON_LAID_OUT, FON_LAID_OUT
+{
+    FON_LAID_OUT equ 1
+    virtual at 0
+      FON FON 0, 0
+      sizeof.FON = $ - FON
+    end virtual
+}
+STRUC PACKET PACKLEN_=2, PACKCPID_=0, PACKVECTOR1_=0, PACKVECTOR12_=0
+{
+.PACKLEN 	    DW	 PACKLEN_ ;LENGTH OF PACKET IN BYTES, FOR DBCS COUNTRIES, LENGTH OF DBCS TABLE (IF NON-ZERO) WILL be added
+.PACKCPID	    DW	 PACKCPID_ ;CODE PAGE ID
+.PACKVECTOR1	    DB	 PACKVECTOR1_ ;start of vector list if included							    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0     ; holders for maximum possible number of 						    ;AN000;
+		    DB	 0     ; DBCS vector pairs									    ;AN000;
+		    DB	 0     ;											    ;AN000;
+		    DB	 0     ;											    ;AN000;
+		    DB	 0     ;											    ;AN000;
+.PACKVECTOR12	    DB	 PACKVECTOR12_ ;											    ;AN000;
+		    DB	 0     ;											    ;AN000;
+}
+match =PACKET_LAID_OUT, PACKET_LAID_OUT
+{
+    PACKET_LAID_OUT equ 1
+    virtual at 0
+      PACKET PACKET 0, 0, 0, 0
+      sizeof.PACKET = $ - PACKET
+    end virtual
+}
+STRUC DBCS_head info_id_=7, table_ptr_=0
+{
+.info_id 	    DB	 info_id_ ;AN000;
+.table_ptr	    DD	 table_ptr_ ;used to address DBCS_tabl								    ;AN000;
+}
+match =DBCS_head_LAID_OUT, DBCS_head_LAID_OUT
+{
+    DBCS_head_LAID_OUT equ 1
+    virtual at 0
+      DBCS_head DBCS_head 0, 0
+      sizeof.DBCS_head = $ - DBCS_head
+    end virtual
+}
+STRUC DBCS_tabl table_len_=6, vector1_=0
+{
+.table_len	    DW	 table_len_ ;length in bytes of the list of vectors							    ;AN000;
+.vector1 	    DB	 vector1_ ;start of vector list									    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0     ;each vector is two bytes, a start value and an						    ;AN000;
+		    DB	 0     ;end value										    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+		    DB	 0												    ;AN000;
+}
+match =DBCS_tabl_LAID_OUT, DBCS_tabl_LAID_OUT
+{
+    DBCS_tabl_LAID_OUT equ 1
+    virtual at 0
+      DBCS_tabl DBCS_tabl 0, 0
+      sizeof.DBCS_tabl = $ - DBCS_tabl
+    end virtual
+}
+STRUC des_strt_packet DES_STRT_PKFL_=0, DES_STRT_PKLEN_=0, DES_STRT_PKNUM_=0, DES_STRT_PKCP1_=0, DES_STRT_PKCP2_=0, DES_STRT_PKCPN_=0
+{
+.DES_STRT_PKFL	    DW	 DES_STRT_PKFL_ ;FLAGS (DEFINED BELOW STRUC DEFINITION)
+.DES_STRT_PKLEN	    DW	 DES_STRT_PKLEN_ ;BYTE LENGTH OF REST OF THE PACKET,
+			       ; NOT INCLUDING THIS LENGTH FIELD
+.DES_STRT_PKNUM	    DW	 DES_STRT_PKNUM_ ;NUMBER OF CODEPAGES IN FOLLOWING LIST
+.DES_STRT_PKCP1	    DW	 DES_STRT_PKCP1_ ;CODE PAGE ONE
+.DES_STRT_PKCP2	    DW	 DES_STRT_PKCP2_ ;CODE PAGE TWO
+;   :		    :	 :	  :
+.DES_STRT_PKCPN	    DW	 DES_STRT_PKCPN_ ;CODE PAGE n
+;NOTE: THESE n CODEPAGES MAY HAVE A -1 VALUE, WHICH IS TREATED AS A PLACEHOLDER
+; TO ALLOW POSITION CONTROL FOR EACH CODEPAGE VALUE IN THE LIST.
+}
+match =des_strt_packet_LAID_OUT, des_strt_packet_LAID_OUT
+{
+    des_strt_packet_LAID_OUT equ 1
+    virtual at 0
+      des_strt_packet des_strt_packet 0, 0, 0, 0, 0, 0
+      sizeof.des_strt_packet = $ - des_strt_packet
+    end virtual
+}
 ; MODECPEQ.INC - INCLUDED IN MODECP.SAL 
-	IF1
-	    %OUT    INCLUDE MODECPEQ.INC ;MACROS,DOS EQUATES,STRUCS,OTHER EQUATES
-	ENDIF
+;	IF1
+;	    %OUT    INCLUDE MODECPEQ.INC ;MACROS,DOS EQUATES,STRUCS,OTHER EQUATES
+;	ENDIF
 
-;	$SALUT	CP(4,9,17,32)
-HEADER	MACRO	TEXT,EJECT
-;;example:  header <new subtitle goes here>
-;;the angle brackets are required
-.XLIST
-	SUBTTL	TEXT
-IFB	<EJECT>
-.LIST
-ENDIF
-	PAGE
-	ENDM
+;	SALUT$	CP(4,9,17,32)
+macro HEADER text
+{
+;;;example:  header <new subtitle goes here>
+;;;the angle brackets are required
+;.XLIST
+;	SUBTTL	TEXT
+;IFB	<EJECT>
+;.LIST
+;ENDIF
+;	PAGE
+}
 
 ; - - - - - - - - - - - - - - - - - - - -
-;			   $SALUT      CP(2,28,40,47)
+;			   SALUT$      CP(2,28,40,47)
 
-DOSCALL 		   MACRO       FUNC,SUBFUNC
+macro DOSCALL FUNC,SUBFUNC
+{
 ;;IF SUBFUNC IS USED, THEN FUNC MUST BE USED
-			   IFNB        <FUNC> ;IS THERE ANY PARMS AT ALL?
-			     IFNB	 <SUBFUNC>
+			   match any$, FUNC \{;IS THERE ANY PARMS AT ALL?
+			     match any$, SUBFUNC \\{
 			       MOV	   AX,(FUNC SHL 8) + SUBFUNC
-			     ELSE	      ;;SINCE THERE IS NO SUBFUNC
+			     \\};;SINCE THERE IS NO SUBFUNC
+			     match , SUBFUNC \\{
 			       MOV	   AH,FUNC
-			     ENDIF
-			   ENDIF
+			     \\}
+			   \}
 			   INT	       21H
-			   ENDM
+}
 
 ; - - - - - - - - - - - - - - - - - - - -
-;		    $SALUT CP(4,21,26,32)
+;		    SALUT$ CP(4,21,26,32)
 
 ;		DOS FUNCTION CALLS
 PRINTSTR	    EQU  09H   ;PRINT STRING ENDING WITH "$"
@@ -129,7 +254,7 @@ UNK_DEV_TYPE	    EQU  00H   ;USED IF TYPE NOT KNOWN
 COM_DEV_TYPE	    EQU  01H   ;COMx DEVICE TYPE
 CON_DEV_TYPE	    EQU  03H   ;CONSOLE DEVICE TYPE
 LPT_DEV_TYPE	    EQU  05H   ;LPTx DEVICE TYPE
-GLOBAL_CP	    EQU  -1    ;GLOBAL CODEPAGE, INDICATED BY DEVICE="*",
+GLOBAL_CP	    equ  (-1)	;GLOBAL CODEPAGE, INDICATED BY DEVICE="*",
 			       ; NOT USED WITH GENERIC IOCTL
 
 ;			MINOR CODES:
@@ -166,16 +291,16 @@ FILE_OPEN_MODE	    EQU  0     ;BIT FIELDS ARE ISSSRAAA WHERE:
 			       ; AAA=0 (READ ACCESS)
 DEV_OPEN_MODE	    EQU  2     ;SAME BITS AS ABOVE, EXCEPT AAA=010, READ/WRITE ACCESS
 
-FALSE		    EQU  0     ;INDICATES AN ERROR TO ERRORLEVEL
+false		    EQU  0     ;INDICATES AN ERROR TO ERRORLEVEL
 TRUE		    EQU  0FFH
 
 refresh_request     EQU  0     ;scaler to indicate that the current request is refresh for 'des_end'
 
 STDERR		    EQU  2     ;PRE-OPENED HANDLE FOR STANDARD ERROR
-STDOUT		    EQU  1     ;PRE-OPENED HANDLE FOR STANDARD OUTPUT
+StdOut		    EQU  1     ;PRE-OPENED HANDLE FOR STANDARD OUTPUT
 
 INT24		    EQU  24H   ;CRITICAL ERROR HANDLER VECTOR
-EMPTY		    EQU  -1    ;EMPTY SLOT IN LIST OF CODEPAGES
+EMPTY		    equ  (-1)	;EMPTY SLOT IN LIST OF CODEPAGES
 
 IOCTL_FUN_GET_INFO  EQU  0     ;GET DEVICE INFORMATION (RETURNED IN DX) FROM IOCTL
 IOCTL_FUN_SET_INFO  EQU  1     ;SET DEVICE INFORMATION (PASSED IN DX) TO IOCTL
@@ -254,18 +379,12 @@ SET_BREAK_STATE     EQU  1
 BREAK_OFF	    EQU  0
 BREAK_ON	    EQU  1
 
-DBCS_header	    EQU  ES:[DI]    ;used to address DBCS_head
-DBCS_table	    EQU  DS:[SI]    ;used to address the DBCS vector table
+DBCS_header	    equ  es:DI	;used to address DBCS_head
+DBCS_table	    equ  ds:SI	;used to address the DBCS vector table
 
 ; = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 ;	       DEFINITIONS OF CONTROL BLOCKS
 
-FON		    STRUC      ;CODEPAGE FONT FILE CONTENTS
-FONTAG		    DB	 0FFH,"FONT   " ;FILE TAG
-		    DB	 8 DUP(?) ;RESERVED
-FONPTCT 	    DW	 ?     ;COUNT OF POINTERS IN HEADER
-FONPT		    DB	 ?     ;START OF ARRAY OF POINTERS
-FON		    ENDS
 
 ;		THIS STRUC MAPS AN AREA POINTED TO BY "CP_CB", AN EXTRN
 ;AC001;CODEPAGE_PARMS	   STRUC
@@ -275,87 +394,16 @@ FON		    ENDS
 ;AC001;REQUEST_TYPE	   DW	?     ;TYPE OF FUNCTION TO BE PERFORMED
 ;AC001;CODEPAGE_PARMS	   ENDS
 ;		DEFINITIONS OF VALUES FOUND IN "REQUEST_TYPE" ABOVE:
-		    EXTRN SELECT:ABS
-		    EXTRN PREPARE:ABS
-		    EXTRN REFRESH:ABS
+;		    EXTRN SELECT:ABS
+;		    EXTRN PREPARE:ABS
+;		    EXTRN REFRESH:ABS
 
 ;		"PACKET" POINTED TO BY DS:DX
-PACKET		    STRUC      ;USED BY MINOR CODES: 6AH,4AH,4DH (SELECT, QUERY SELECTED, PREPARE END)
-PACKLEN 	    DW	 2     ;LENGTH OF PACKET IN BYTES, FOR DBCS COUNTRIES, LENGTH OF DBCS TABLE (IF NON-ZERO) WILL be added
-PACKCPID	    DW	 0     ;CODE PAGE ID
-PACKVECTOR1	    DB	 0     ;start of vector list if included							    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0     ; holders for maximum possible number of 						    ;AN000;
-		    DB	 0     ; DBCS vector pairs									    ;AN000;
-		    DB	 0     ;											    ;AN000;
-		    DB	 0     ;											    ;AN000;
-		    DB	 0     ;											    ;AN000;
-PACKVECTOR12	    DB	 0     ;											    ;AN000;
-		    DB	 0     ;											    ;AN000;
-PACKET		    ENDS												    ;AN000;
 															    ;AN000;
-DBCS_head	    STRUC      ;return from function 6507, pointed to by ES:DI, addressed via "DBCS_header"                 ;AN000;
-info_id 	    DB	 7												    ;AN000;
-table_ptr	    DD	 0     ;used to address DBCS_tabl								    ;AN000;
-DBCS_head	    ENDS
 															    ;AN000;
-DBCS_tabl	    STRUC      ;map of DBCS table, addressed via DBCS_table						    ;AN000;
-table_len	    DW	 6     ;length in bytes of the list of vectors							    ;AN000;
-vector1 	    DB	 0     ;start of vector list									    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0     ;each vector is two bytes, a start value and an						    ;AN000;
-		    DB	 0     ;end value										    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-DBCS_tabl	    ENDS
 
 
 ;		"DES_STRT_PACKET" POINTED TO BY DS:DX
-DES_STRT_PACKET     STRUC
-DES_STRT_PKFL	    DW	 ?     ;FLAGS (DEFINED BELOW STRUC DEFINITION)
-DES_STRT_PKLEN	    DW	 ?     ;BYTE LENGTH OF REST OF THE PACKET,
-			       ; NOT INCLUDING THIS LENGTH FIELD
-DES_STRT_PKNUM	    DW	 ?     ;NUMBER OF CODEPAGES IN FOLLOWING LIST
-DES_STRT_PKCP1	    DW	 ?     ;CODE PAGE ONE
-DES_STRT_PKCP2	    DW	 ?     ;CODE PAGE TWO
-;   :		    :	 :	  :
-DES_STRT_PKCPN	    DW	 ?     ;CODE PAGE n
-;NOTE: THESE n CODEPAGES MAY HAVE A -1 VALUE, WHICH IS TREATED AS A PLACEHOLDER
-; TO ALLOW POSITION CONTROL FOR EACH CODEPAGE VALUE IN THE LIST.
-DES_STRT_PACKET     ENDS
 
 ;			DEFINITIONS OF CONTENTS OF "DES_STRT_PKFL"
 DES_STRT_FL_SINGLE  EQU  8000H ; 8000H=SINGLE CP FIFO PREPARE

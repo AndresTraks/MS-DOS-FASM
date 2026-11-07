@@ -13,7 +13,7 @@ match =Exec_Block_Parms_LAID_OUT, Exec_Block_Parms_LAID_OUT
 {
     Exec_Block_Parms_LAID_OUT equ 1
     virtual at 0
-      Exec_Block_Parms Exec_Block_Parms
+      Exec_Block_Parms Exec_Block_Parms 0, 0, 0, 0, 0, 0, 0
       sizeof.Exec_Block_Parms = $ - Exec_Block_Parms
     end virtual
 }
@@ -544,7 +544,7 @@ DO29$$E:
 		 cmp	 byte [ds:si],0     ;End of Path?			;     ;
 ;	      LEAVE$  E 			;				;AC000;
 	      JE EN29$$E
-		 cmp	 byte [ds:si],'    ;'	;End of entry?		       ;     ;
+		 cmp	 byte [ds:si],';'     ;End of entry?		       ;     ;
 ;		 if$	 e			;yes				;an000; dms;
 		 JNE IF31$$E
 			 inc	si		;point to next character	;an000; dms;

@@ -7,7 +7,7 @@ match =VECTOR_LAID_OUT, VECTOR_LAID_OUT
 {
     VECTOR_LAID_OUT equ 1
     virtual at 0
-      VECTOR VECTOR
+      VECTOR VECTOR 0, 0
       sizeof.VECTOR = $ - VECTOR
     end virtual
 }
@@ -22,7 +22,7 @@ match =LANGUAGE_LAID_OUT, LANGUAGE_LAID_OUT
 {
     LANGUAGE_LAID_OUT equ 1
     virtual at 0
-      LANGUAGE LANGUAGE
+      LANGUAGE LANGUAGE 0
       sizeof.LANGUAGE = $ - LANGUAGE
     end virtual
 }
@@ -39,7 +39,7 @@ match =MSG_DESC_LAID_OUT, MSG_DESC_LAID_OUT
 {
     MSG_DESC_LAID_OUT equ 1
     virtual at 0
-      MSG_DESC MSG_DESC
+      MSG_DESC MSG_DESC 0, 0, 0, 0, 0
       sizeof.MSG_DESC = $ - MSG_DESC
     end virtual
 }
@@ -62,7 +62,7 @@ match =SUBLIST_LAID_OUT, SUBLIST_LAID_OUT
 {
     SUBLIST_LAID_OUT equ 1
     virtual at 0
-      SUBLIST SUBLIST
+      SUBLIST SUBLIST 0, 0, 0, 0, 0, 0, 0, 0, " "
       sizeof.SUBLIST = $ - SUBLIST
     end virtual
 }
@@ -81,7 +81,7 @@ match =DEFPSP_LAID_OUT, DEFPSP_LAID_OUT
 {
     DEFPSP_LAID_OUT equ 1
     virtual at 0
-      DEFPSP DEFPSP
+      DEFPSP DEFPSP 0, 0
       sizeof.DEFPSP = $ - DEFPSP
     end virtual
 }
@@ -260,13 +260,14 @@ LISTPARM =	1			;0=SUPPRESS LIST; 1=ALLOW LIST		;AN000;
 ;				   SALUT$ (0,36,41,52)
 macro DOSCALL FN,SF
 {
-				   IFNB <FN>	   ;;ARE THERE ANY PARMS AT ALL?;AN000;
-				   IFNB <SF>	   ;;				;AN000;
+				   match any$, FN \{;;ARE THERE ANY PARMS AT ALL?;AN000;
+				   match any$, SF \\{;;				;AN000;
 				   MOV	AX,(FN SHL 8)+SF ;;AH=FN;AH=SF		;AN000;
-				   ELSE 	   ;;SINCE THERE IS NO SUB FUNC ;AN000;
+				   \\};;SINCE THERE IS NO SUB FUNC ;AN000;
+				   match , SF \\{
 				   MOV	AH,FN	   ;;				;AN000;
-				   end if ;;				;AN000;
-				   end if ;;				;AN000;
+				   \\};;				;AN000;
+				   \};;				;AN000;
 				   INT	21H	   ;;				;AN000;
 } ;;				;AN000;
 ; =  =	=  =  =  =  =  =  =  =	=  =

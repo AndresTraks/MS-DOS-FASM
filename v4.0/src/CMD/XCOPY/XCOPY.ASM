@@ -61,7 +61,7 @@ match =HEADER_LAID_OUT, HEADER_LAID_OUT
 {
     HEADER_LAID_OUT equ 1
     virtual at 0
-      HEADER HEADER
+      HEADER HEADER 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, " :", 0
       sizeof.HEADER = $ - HEADER
     end virtual
 }
@@ -82,7 +82,7 @@ match =SUB_LIST_LAID_OUT, SUB_LIST_LAID_OUT
 {
     SUB_LIST_LAID_OUT equ 1
     virtual at 0
-      SUB_LIST SUB_LIST
+      SUB_LIST SUB_LIST 0, 0, 0, 0, 0, 0, 0
       sizeof.SUB_LIST = $ - SUB_LIST
     end virtual
 }

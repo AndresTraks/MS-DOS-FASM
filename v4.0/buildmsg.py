@@ -120,14 +120,18 @@ def read_messages(path):
 
 
 def plain_controls(text):
-    """CR and LF and the rest as numbers, leaving the quoted text alone."""
+    """CR and LF and the rest as numbers, leaving the quoted text alone.
+
+    In any case they are written: MASM read a name in either, and MODE.SKL
+    ends one message with CR,LF and the next with cr,lf.
+    """
     out = []
     for part in re.split(r'("[^"]*"|\'[^\']*\')', text):
         if part[:1] in "\"'":
             out.append(part)
         else:
-            out.append(re.sub(r"\b[A-Z]+\b",
-                              lambda m: str(CONTROLS.get(m.group(0),
+            out.append(re.sub(r"(?i)\b[A-Za-z]+\b",
+                              lambda m: str(CONTROLS.get(m.group(0).upper(),
                                                          m.group(0))),
                               part))
     return "".join(out)

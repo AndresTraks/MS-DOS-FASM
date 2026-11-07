@@ -1,7 +1,7 @@
 PAGE ,132 ;
 TITLE MODEPRIN.SAL - PRINTER SUPPORT FOR THE MODE COMMAND
 .XLIST
-INCLUDE STRUC.INC
+include 'STRUC.INC'
 .LIST
 .SALL
 
@@ -20,17 +20,20 @@ INCLUDE STRUC.INC
 
 
 
-DISPLAY 	MACRO	MSG
-	MOV	DX,OFFSET MSG
+macro DISPLAY MSG
+{
+	MOV	DX,MSG
 	CALL	PRINTF
-ENDM
+}
 
-PRINT	MACRO
-				MOV DX,WORD PTR PT17	;PASS PRINTER NUMBER
+macro PRINT 
+{
+				MOV DX,word [cs:PT17] ;PASS PRINTER NUMBER
 				INT 17H 	      ;OUTPUT TO PRINTER
-	ENDM
+}
 
-COMPARE MACRO	STRING, CHAR1, CHAR2, CHAR3
+macro COMPARE string, CHAR1, CHAR2, CHAR3
+{
 	LOCAL	END_COMPARE
 
 ;------------------------------------------------------------------------------------------------
@@ -41,55 +44,59 @@ COMPARE MACRO	STRING, CHAR1, CHAR2, CHAR3
 
   PUSH	SI
   MOV	SI,0				;INITIALIZE INDEX
-  CMP	STRING[SI],CHAR1		;IF first char is a match THEN
+  CMP	[SI+string],CHAR1 ;IF first char is a match THEN
   JNE	END_COMPARE
     INC   SI			;  GET TO NEXT CHAR OF STRING
-    CMP   STRING[SI],CHAR2		;  IF 2nd char is a match THEN
+    CMP   [SI+string],CHAR2 ;  IF 2nd char is a match THEN
     JNE   END_COMPARE
       INC   SI
-      CMP   STRING[SI],CHAR3		;    IF all three match then ZR is not set
+      CMP   [SI+string],CHAR3 ;    IF all three match then ZR is not set
 END_COMPARE:
   POP	SI
-ENDM
+}
 ;
-IF_NO_PRINTER_ERROR_THEN	MACRO
-	CMP	PRINTER_ERROR,TRUE
+macro IF_NO_PRINTER_ERROR_THEN 
+{
+	CMP	byte [cs:PRINTER_ERROR],TRUE
 	JE	CHK_FOR_P
-ENDM
+}
 ;
-JUMP_EQUAL_TO_CHK_FOR_P 	MACRO
+macro JUMP_EQUAL_TO_CHK_FOR_P 
+{
 LOCAL	SKIP_JUMP
 ;
 	JNE	SKIP_JUMP
 	  JMP	CHK_FOR_P
 	SKIP_JUMP:
-ENDM
+}
 
 
-SET	MACRO	REG,VALUE		;SET REG TO VALUE. DON'T SPECIFY AX FOR REG
+macro SET REG,VALUE
+{
 
 	PUSH	AX
 	MOV	AX,VALUE
 	MOV	REG,AX
 	POP	AX
 
-ENDM
+}
 
 
-set_submessage_ptr   MACRO submessage,message ;PUT pointer to "subMESSAGE" into submessage pointer field of "message".
+macro set_submessage_ptr submessage,message
+{
 
-MOV   AX,submessage			     ;AX=message number 		;AN001;
-MOV   DH,utility_msg_class		     ;DH=message class=utility class	;AN001;
+MOV   AX,[submessage]			     ;AX=message number 		;AN001;
+MOV   DH,Utility_Msg_Class		     ;DH=message class=utility class	;AN001;
 CALL  SYSGETMSG 			     ;DS:SI=>message piece				  ;AN001;
-MOV   BP,OFFSET sublist_&message	     ;address the sublist control block ;AN001;
-MOV   [BP].sublist_off,SI		     ;the sublist now points to the desired message piece ;AN001;
-ENDM												  ;AN001;
+MOV   BP,sublist_#message             ;address the sublist control block ;AN001;
+MOV   [BP+sublist_def.sublist_off],SI ;the sublist now points to the desired message piece ;AN001;
+} ;AN001;
 
 
 ;ษอออออออออออออออออออออออออออออ  S T R U C T U R E S  ออออออออออออออออออออออออออออออออออออป
 ;บ											  บ
 
-INCLUDE  common.stc	   ;contains the following structure
+include 'COMMON.STC'   ;contains the following structure
 
 
 ;parm_list_entry   STRUC		   ;used by parse_parameters and invoke
@@ -115,74 +122,76 @@ INCLUDE  common.stc	   ;contains the following structure
 
 
 ;
-ROM	SEGMENT AT 0
+if SEGSEL = S_ABSOLUTE
+virtual at 0
 	ORG	530H
-RESSEG	LABEL	DWORD		;VECTOR POINTING TO MODETO IF RESIDENT
-ROM	ENDS
+;RESSEG	LABEL	DWORD		;VECTOR POINTING TO MODETO IF RESIDENT
+end virtual
+end if
 
 ;**********************************************************************
-PRINTF_CODE   SEGMENT  PUBLIC
-	ASSUME	CS:PRINTF_CODE,DS:PRINTF_CODE
+if SEGSEL = S_PRINTF_CODE
+;	ASSUME	CS:PRINTF_CODE,DS:PRINTF_CODE
 ;
 
 ;ษอออออออออออออออออออออออออออออออ  E X T R N S	ออออออออออออออออออออออออออออออออออออออออออป
 ;บ											  บ
 
-EXTRN	B_item_tag:ABS		  ;see modepars
-EXTRN	COM1_or_COM2:WORD   ;=>"Must specify COM1 or COM2" message
-EXTRN	CTRL_ST:BYTE		;CONTROL STRING SET UP FROM CONFIGURATION PARAMETERS INPUT
-EXTRN	E_item_tag:ABS		  ;see modepars
-EXTRN	invalid_number_of_parameters:WORD   ;=>"Invalid number of parameters"
-EXTRN	noerror:BYTE		 ;AN000;
-EXTRN	OFFRETRY:ABS		;OFFSET TO TEST INSTR IN RETRY CODE
-EXTRN	not_supported:WORD  ;message telling user he specified "P" on a net printer
-EXTRN	PRINTR:WORD		;PRINTER BASE (40:8), HOLDS PORT ADDRESSES OF PRINTER CARDS
-EXTRN	ERR1:BYTE	    ;POINTER TO "Invalid parameters"
-EXTRN	Illegal_device_ptr:WORD  ;pointer to device name that does not exist
+;EXTRN	B_item_tag:ABS		  ;see modepars
+;EXTRN	COM1_or_COM2:WORD   ;=>"Must specify COM1 or COM2" message
+;EXTRN	CTRL_ST:BYTE		;CONTROL STRING SET UP FROM CONFIGURATION PARAMETERS INPUT
+;EXTRN	E_item_tag:ABS		  ;see modepars
+;EXTRN	invalid_number_of_parameters:WORD   ;=>"Invalid number of parameters"
+;EXTRN	noerror:BYTE		 ;AN000;
+;EXTRN	OFFRETRY:ABS		;OFFSET TO TEST INSTR IN RETRY CODE
+;EXTRN	not_supported:WORD  ;message telling user he specified "P" on a net printer
+;EXTRN	PRINTR:WORD		;PRINTER BASE (40:8), HOLDS PORT ADDRESSES OF PRINTER CARDS
+;EXTRN	ERR1:BYTE	    ;POINTER TO "Invalid parameters"
+;EXTRN	Illegal_device_ptr:WORD  ;pointer to device name that does not exist
 ;AC001; EXTRN	INF_OR_NO_PTR:WORD	;PART OF "... retry on parallel printer time-out" message
-EXTRN	INDEX:WORD		;INDEX OF REDIRECTED PRINTER IN NETWORK REDIRECTION LIST
-EXTRN	IS_LOCAL:BYTE		;BOOLEAN. INDICATES IF A PRINTER IS LOCAL. INITIALLY TRUE
-EXTRN	keyword:ABS
-EXTRN	LOCAL_NAME:BYTE 	;FILLED IN BY GET ASSIGN LIST ENTRY FUNCTION CALL
-EXTRN	lpt1_retry_type:BYTE	 ;byte in resident code for retry mask, see rescode
-EXTRN	LPTNO:BYTE		;see modeecho
-EXTRN	machine_type:BYTE	;see "rescode"
-EXTRN	MODEECHO:NEAR		;SET UP REDIRECTION OF PARALLEL TO SERIAL
-EXTRN	MODELENG:NEAR
-EXTRN	MODELOAD:NEAR		;MOVES THE CODE AT MODETO TO 60 AND MAKES IT RESIDENT					   ;AN000;
-EXTRN	NET_ERROR:WORD	    ;"NET 042: Unable to do requested comand"							   ;AN000;
-EXTRN	NONE_item_tag:ABS	    ;AN000;see modepars 								   ;AN000;
+;EXTRN	INDEX:WORD		;INDEX OF REDIRECTED PRINTER IN NETWORK REDIRECTION LIST
+;EXTRN	IS_LOCAL:BYTE		;BOOLEAN. INDICATES IF A PRINTER IS LOCAL. INITIALLY TRUE
+;EXTRN	keyword:ABS
+;EXTRN	LOCAL_NAME:BYTE 	;FILLED IN BY GET ASSIGN LIST ENTRY FUNCTION CALL
+;EXTRN	lpt1_retry_type:BYTE	 ;byte in resident code for retry mask, see rescode
+;EXTRN	LPTNO:BYTE		;see modeecho
+;EXTRN	machine_type:BYTE	;see "rescode"
+;EXTRN	MODEECHO:NEAR		;SET UP REDIRECTION OF PARALLEL TO SERIAL
+;EXTRN	MODELENG:NEAR
+;EXTRN	MODELOAD:NEAR		;MOVES THE CODE AT MODETO TO 60 AND MAKES IT RESIDENT					   ;AN000;
+;EXTRN	NET_ERROR:WORD	    ;"NET 042: Unable to do requested comand"							   ;AN000;
+;EXTRN	NONE_item_tag:ABS	    ;AN000;see modepars 								   ;AN000;
 ;EXTRN	 no_retry_active:ABS	   ;see invoke.asm									    ;AN000;
-EXTRN	parm_lst:BYTE		 ;see modepars.asm									   ;AN000;
-EXTRN	P_item_tag:ABS		  ;see modepars.asm									   ;AN000;
+;EXTRN	parm_lst:BYTE		 ;see modepars.asm									   ;AN000;
+;EXTRN	P_item_tag:ABS		  ;see modepars.asm									   ;AN000;
 ;EXTRN	 parallel_printer_settings:WORD 	 ;see "rescode" 							   ;AN000;
-EXTRN	P14_model_byte:ABS			;see "rescode"								   ;AN000;
-EXTRN	PRINTF:NEAR		;FORMATTED "C" LIKE SCREEN OUTPUT ROUTINE						   ;AN000;
-EXTRN	PARM1:BYTE,PARM2:BYTE,PARM3:BYTE,MODE:BYTE,FLAG:BYTE
-EXTRN	parm_list_holder:WORD	 ;address of parsed parameter list							   ;AN663;
-EXTRN	parms_form:BYTE 												   ;AN000;
-EXTRN	DEVICE:BYTE,PPARM:BYTE												   ;AN000;
-EXTRN	R_item_tag:ABS													   ;AN000;
+;EXTRN	P14_model_byte:ABS			;see "rescode"								   ;AN000;
+;EXTRN	PRINTF:NEAR		;FORMATTED "C" LIKE SCREEN OUTPUT ROUTINE						   ;AN000;
+;EXTRN	PARM1:BYTE,PARM2:BYTE,PARM3:BYTE,MODE:BYTE,FLAG:BYTE
+;EXTRN	parm_list_holder:WORD	 ;address of parsed parameter list							   ;AN663;
+;EXTRN	parms_form:BYTE 												   ;AN000;
+;EXTRN	DEVICE:BYTE,PPARM:BYTE												   ;AN000;
+;EXTRN	R_item_tag:ABS													   ;AN000;
 ;EXTRN	 res_lpt_retry_type:ABS    ;retry type flag, displacement from address pointed to by 50:30 when code is res, see rescode
-EXTRN	retry_index:WORD	  ;see modecom.asm									   ;AN000;
+;EXTRN	retry_index:WORD	  ;see modecom.asm									   ;AN000;
 
-EXTRN	ERR2:WORD	;CR,LF,"Printer error",BEEP,CR,LF,"$"
-EXTRN	PT80:WORD	;CR,LF,"LPT"
-EXTRN	PT80N:BYTE	;DB " "
+;EXTRN	ERR2:WORD	;CR,LF,"Printer error",BEEP,CR,LF,"$"
+;EXTRN	PT80:WORD	;CR,LF,"LPT"
+;EXTRN	PT80N:BYTE	;DB " "
 ;			": set for 80",CR,LF,"$"
-EXTRN	PT132:WORD	;CR,LF,"LPT"
-EXTRN	PT132N:BYTE	;" "
+;EXTRN	PT132:WORD	;CR,LF,"LPT"
+;EXTRN	PT132N:BYTE	;" "
 ;			": set for 132",CR,LF,"$"
-EXTRN	PTLINES:WORD	;CR,LF,"Printer lines per inch set",CR,LF,"$"
-EXTRN	NORETRY:WORD	    ;message number for CR,LF,'No','$' ;AC001;
-EXTRN	INFINITE:WORD	    ;message number for CR,LF,'Infinite' ;AC001;
-EXTRN	REMOTE_DEV:BYTE 	;FILLED IN BY GET ASSIGN LIST ENTRY FUNCTION CALL
-EXTRN	RETPARTO:WORD	;message number for '%1 retry on parallel printer timeout',CR,LF,'$'
+;EXTRN	PTLINES:WORD	;CR,LF,"Printer lines per inch set",CR,LF,"$"
+;EXTRN	NORETRY:WORD	    ;message number for CR,LF,'No','$' ;AC001;
+;EXTRN	INFINITE:WORD	    ;message number for CR,LF,'Infinite' ;AC001;
+;EXTRN	REMOTE_DEV:BYTE 	;FILLED IN BY GET ASSIGN LIST ENTRY FUNCTION CALL
+;EXTRN	RETPARTO:WORD	;message number for '%1 retry on parallel printer timeout',CR,LF,'$'
 ;EXTRN	 ROOM_FOR_COLON:WORD	 ;INITIALLY 0, CHANGED TO 1 IF COLON IS INCLUDED
-EXTRN	sublist_retparto:BYTE	 ; control block for "%1 retry on parallel printer timeout" ;AC001;
-EXTRN	SYSGETMSG:NEAR		 ;AC001;
-EXTRN	utility_msg_class:ABS	 ;used for input to sysgetmsg
-EXTRN	VERIFY:NEAR		;FINDS IF n OF LPTn IS LEGAL
+;EXTRN	sublist_retparto:BYTE	 ; control block for "%1 retry on parallel printer timeout" ;AC001;
+;EXTRN	SYSGETMSG:NEAR		 ;AC001;
+;EXTRN	utility_msg_class:ABS	 ;used for input to sysgetmsg
+;EXTRN	VERIFY:NEAR		;FINDS IF n OF LPTn IS LEGAL
 
 ;บ											  บ
 ;ศอออออออออออออออออออออออออออออออ  E X T R N S	ออออออออออออออออออออออออออออออออออออออออออผ
@@ -196,9 +205,9 @@ EXTRN	VERIFY:NEAR		;FINDS IF n OF LPTn IS LEGAL
 ;BEEP	 EQU	 7		 ;SOUND THE AUDIBLE ALARM
 ;EQUALSIGN EQU	 "="		 ;CHAR IN LPTn:=COMm
 busy_status EQU   080H		 ;flag telling resident code to not change anything
-COLON	EQU	":"		;CHAR IN "LPT1:"
+COLON_	EQU	":"		;CHAR IN "LPT1:"
 error_status   EQU   029H	    ;status byte indicating the printer is on fire(busy, no paper, I/O error, timeout)
-FALSE	EQU	00H
+false	EQU	00H
 SPACE	EQU	" "		;THE BLANK CHARACTER
 TO_SCREEN EQU	9		;REQUEST OUTPUT TO SCREEN
 INTCONV EQU	48		;CONVERTS ASCII TO NUMERIC
@@ -210,8 +219,8 @@ PRTSI	EQU	15		;PRINTER CONTROL CHAR FOR 132 CHAR
 PRTCANCEL EQU	24		;PRINTER CONTROL CHAR FOR CANCEL
 CHAR6	EQU	"6"		;REQUEST FOR 6 LINES PER INCH
 CHAR8	EQU	"8"		;REQUEST FOR 8 LINES PER INCH
-L	EQU	"L"
-P	EQU	"P"
+L_modeprin	EQU	"L"
+P_modeprin	EQU	"P"
 T	EQU	"T"
 R	EQU	"R"
 N	EQU	"N"
@@ -224,14 +233,14 @@ GET_LIST_ENTRY	EQU	5F02H	;FUNCTION CODE FOR GET ASSIGN LIST ENTRY FROM NETWORK R
 CHAR_DEVICE	EQU	3	;CHARACTER DEVICE "MACRO" TYPE (IN NETWORK LINGO).
 PRN_NO		EQU	3	;CHARACTER POSITION OF THE PRINTER NUMBER IN LPTn, (ZERO BASED)
 ready_status	 EQU	  90H	   ;flag telling resident code to set status indicating printer is ready for another character
-UNCHANGED	EQU	-1	;-1 INDICATES TO SERVER THAT PARAMTER IS UNCHANGED (NOT SPECIFIED)
+UNCHANGED	equ	(-1)	;-1 INDICATES TO SERVER THAT PARAMTER IS UNCHANGED (NOT SPECIFIED)
 unspecified    EQU	0FFH	 ;AN000;value of parm2 if no lines per inch was specified
 TRUE	EQU	0FFH
 ENDPARM EQU	MODE
 ;PARMNO  EQU	 PARM1+3	 ;LOCATION OF DEVICE NUMBER
 ;PARMCOL EQU	 PARM1+4	 ;LOCATION OF COLON IN LPTn:
 ;PARMEQ  EQU	 PARM1+4	 ;LOCATION OF = IN LPTn= ,(NO COLON SPECIFIED)
-parm_list  EQU	 [BP]
+parm_list  equ	 BP
 
 ;บ											  บ
 ;ศอออออออออออออออออออออออออออออออ  E Q U A T E S  ออออออออออออออออออออออออออออออออออออออออผ
@@ -276,118 +285,118 @@ REQ_132_CHARS_LINE	DB	00	;BOOLEAN, INDICATES IF 132 CHARS/LINE REQUESTED
 ;ษอออออออออออออออออออออออออออออออ  P U B L I C S  ออออออออออออออออออออออออออออออออออออออออป
 ;บ											  บ
 
-PUBLIC	 busy_status	      ;used by rescode in parallel retry code
-PUBLIC columns_holder													    ;AN000;
-PUBLIC	 error_status	      ;used by analyze_and_invoke and rescode
-PUBLIC modify_resident_code   ;used by invoke										    ;AN000;
-PUBLIC MODEPRIN
-PUBLIC	 no_retry_flag	      ;used by analyze_and_invoke
-PUBLIC printer_no	      ;needed by modepars
-PUBLIC	 ready_status	      ;used by analyze_and_invoke
+;PUBLIC	 busy_status	      ;used by rescode in parallel retry code
+;PUBLIC columns_holder													    ;AN000;
+;PUBLIC	 error_status	      ;used by analyze_and_invoke and rescode
+;PUBLIC modify_resident_code   ;used by invoke										    ;AN000;
+;PUBLIC MODEPRIN
+;PUBLIC	 no_retry_flag	      ;used by analyze_and_invoke
+;PUBLIC printer_no	      ;needed by modepars
+;PUBLIC	 ready_status	      ;used by analyze_and_invoke
 ;PUBLIC set_retry_flag	       ;used by invoke in turn_off_retry_case
-PUBLIC set_retry_type	      ;used by invoke in turn_off_retry_case
+;PUBLIC set_retry_type	      ;used by invoke in turn_off_retry_case
 
 ;บ											  บ
 ;ศอออออออออออออออออออออออออออออออ  P U B L I C S  ออออออออออออออออออออออออออออออออออออออออผ
 
 
 ;*******************************************************************
-MODEPRIN PROC NEAR
+MODEPRIN:
 
 
 ;On entry: "columns_holder" contains 132,80 or 88H.
 ;	   "parm2" contains "[6ณ8]" (FFH if not specified).
 ;	   "parm_list[retry_index]" contains "X_item_tag" where X is e, b, r, or p
 
-	   MOV AL,LPTNO 	;AN000;LPTNO set up by modepars in first_parm_case
-	   MOV PT80N,AL 	;PUT ASCII PRINTER NUMBER INTO BOTH
-	   MOV PT132N,AL	; MESSAGES
+	   MOV AL,[LPTNO] ;AN000;LPTNO set up by modepars in first_parm_case
+	   MOV [PT80N],AL ;PUT ASCII PRINTER NUMBER INTO BOTH
+	   MOV [PT132N],AL ; MESSAGES
 	   SUB AL,INTCONV+1	;CONVERT TO INTEGER, MINUS ONE
-	   MOV PRINTER_NO,AL	;SAVE ZERO BASED PRINTER NUMBER
+	   MOV [PRINTER_NO],AL ;SAVE ZERO BASED PRINTER NUMBER
 	   MOV AH,0		;CLEAR AH
-	   MOV WORD PTR PT17,AX ;SET UP PRINTER NUMBER FOR INTERRUPT 17H
+	   MOV word [PT17],AX   ;SET UP PRINTER NUMBER FOR INTERRUPT 17H
 
 
 	   MOV DI,0		;INITIALIZE LENGTH OF CONTROL STRING
-	   MOV BL,columns_holder    ;BL=binary form of requested chars per line
+	   MOV BL,[columns_holder]  ;BL=binary form of requested chars per line
 ;    : : : IF REQUEST IS FOR 80 COL
 	   CMP BL,EIGHTY
 	   JNE ELSEIF03
 ;
-	     MOV CHARS_LINE,BL	;SAVE CHARACTERS PER LINE
-	     MOV EIGHTY_CHARS_LINE_REQ,TRUE
+	     MOV [CHARS_LINE],BL ;SAVE CHARACTERS PER LINE
+	     MOV byte [EIGHTY_CHARS_LINE_REQ],TRUE
 	     MOV BL,PRTDC2	;SEND A DC2 CHAR TO SELECT 80 COL
 ;    : : : ELSEIF SINCE NOT 80, IS REQUEST FOR 132?
-	   JMP SHORT ENDIF03
+	   JMP SHORT ENDIF03_modeprin
 ELSEIF03:
 	   CMP BL,ONE_THIRTY_TWO	;132?
-	   JNE ENDIF03			  ;AC000;
+	   JNE ENDIF03_modeprin			  ;AC000;
 ;
-	     MOV CHARS_LINE,BL	;SAVE CHARACTERS PER LINE
-	     MOV REQ_132_CHARS_LINE,TRUE
+	     MOV [CHARS_LINE],BL ;SAVE CHARACTERS PER LINE
+	     MOV byte [REQ_132_CHARS_LINE],TRUE
 	     MOV BL,PRTSI	;SEND 'SI', CONDENSED PRINT
 ;    : : : ENDIF ,END IS REQUEST FOR 80 COL
-ENDIF03:
+ENDIF03_modeprin:
 
 ;    : : : IF ANYTHING TO PRINT,
 	   CMP BL,bogus 		  ;AC000;
-	   JE ENDIF04
+	   JE ENDIF04_modeprin
 
-	     MOV BYTE PTR CTRL_ST[DI],BL	;PUT CONTROL CHAR FOR COLS/LINE IN CONTROL STRING
+	     MOV byte [CTRL_ST+DI],BL    ;PUT CONTROL CHAR FOR COLS/LINE IN CONTROL STRING
 	     INC  DI		;GET TO NEXT CHAR POSITION IN CONTROL STRING
 
 
 ;    : : : ENDIF END IF ANYTHING TO PRINT? TEST
-ENDIF04:
+ENDIF04_modeprin:
 
-PUBLIC	 ENDIF04
+;PUBLIC	 ENDIF04_modeprin
 
 ;*****************************************************************
 ;  LOOK AT THE SECOND PARM, CHECKING FOR 6 OR 8 LINES PER INCH
 ;*****************************************************************
 	   MOV BL,NULL		;NULL CHAR, TO BE REPLACED MAYBE
 ;    : : : IF THERE IS A SECOND PARM,
-	   CMP DS:PARM2,unspecified			;AC000;
-	   JE ENDIF05
+	   CMP byte [ds:PARM2],unspecified ;AC000;
+	   JE ENDIF05_modeprin
 ;
 ;    : : : : IF THE REQUEST FOR 6 LINES PER INCH?
-	     CMP DS:PARM2,CHAR6
+	     CMP byte [ds:PARM2],CHAR6
 	     JNE ELSEIF06
 ;
 	       MOV BL,ASC2	;REQUEST 6 LPI
 ;    : : : : ELSEIF REQUEST IS FOR 8 LINES PER INCH
-	     JMP SHORT ENDIF06
+	     JMP SHORT ENDIF06_modeprin
 ELSEIF06:
-	     CMP DS:PARM2,CHAR8
-	     JNE ENDIF06
+	     CMP byte [ds:PARM2],CHAR8
+	     JNE ENDIF06_modeprin
 	       MOV BL,ASC0	;REQUEST 8 LINES PER INCH
 ;    : : : : ENDIF ,END IS REQUEST FOR 6 LPI? TEST
-ENDIF06:
+ENDIF06_modeprin:
 ;    : : : ENDIF END IS THERE A SECOND PARM? TEST
-ENDIF05:
+ENDIF05_modeprin:
 ;    : : : IF 6 OR 8 LINES PER INCH REQUESTED
 	   CMP BL,0
-	   JE ENDIF07
-	     MOV CTRL_ST[DI],escape	   ;PUT AN ESCAPE CHAR IN THE CONTROL STRING
+	   JE ENDIF07_modeprin
+	     MOV [DI+CTRL_ST],escape   ;PUT AN ESCAPE CHAR IN THE CONTROL STRING
 	     INC  DI			;GET TO NEXT CHAR POSITION IN THE CONTROL STRING
 ;
-	     MOV BYTE PTR CTRL_ST[DI],BL	;PUT CONTROL CHAR FOR LINES/INCH IN CONTROL STRING
+	     MOV byte [CTRL_ST+DI],BL    ;PUT CONTROL CHAR FOR LINES/INCH IN CONTROL STRING
 	     INC  DI			;GET TO NEXT CHAR POSITION IN THE CONTROL STRING
 ;
-	     MOV	PTLINES_REQ,TRUE	;INDICATE LINES PER INCH SET IF NO PRINTER ERROR
+	     MOV	byte [PTLINES_REQ],TRUE ;INDICATE LINES PER INCH SET IF NO PRINTER ERROR
 ;    : : : ENDIF END IS 6 OR 8 LPI REQUESTED? TEST
-ENDIF07:
+ENDIF07_modeprin:
 	   CALL VERIFY		;SEE IF n OF LPTn WAS LEGAL
-	   MOV	BYTE PTR LPTN,AH	;SAVE THE n OF LPTn
+	   MOV	byte [LPTN],AH   ;SAVE THE n OF LPTn
 ;
 	   MOV	BX,0
 	   PUSH BX
 	   POP	ES		;GET ADDRESSABILITY TO PRINTER BASE
-	   MOV	BL,PRINTER_NO	;PUT ZERO BASED PRINTER NUMBER INTO BL
+	   MOV	BL,[PRINTER_NO] ;PUT ZERO BASED PRINTER NUMBER INTO BL
 	   SAL	BL,1		;CHANGE TO WORD OFFSET FROM PRINTER BASE (40:8)
-	   CMP	ES:PRINTR[BX],0 ;SEE IF THERE IS NO PORT ADDRESS FOR THE SPECIFIED PRINTER THEN
+	   CMP	[es:PRINTR+BX],0 ;SEE IF THERE IS NO PORT ADDRESS FOR THE SPECIFIED PRINTER THEN
 	   JNE	PRINTER_EXISTS
-	     MOV  IS_LOCAL,FALSE		;NOT A LOCAL PRINTER
+	     MOV  byte [IS_LOCAL],false ;NOT A LOCAL PRINTER
 	   PRINTER_EXISTS:
 ;
 ;**************************************************************************************************
@@ -410,18 +419,18 @@ ENDIF07:
 ;
 SEE_IF_REDIRECTED:
 
-PUBLIC SEE_IF_REDIRECTED
+;PUBLIC SEE_IF_REDIRECTED
 
-	MOV	CTRL_ST_LEN,DI		;SAVE LENGTH OF CONTROL STRING
-	DEC	INDEX			;SET INDEX TO -1 SO IT WILL BEGIN AT ZERO
+	MOV	[CTRL_ST_LEN],DI ;SAVE LENGTH OF CONTROL STRING
+	DEC	word [INDEX] ;SET INDEX TO -1 SO IT WILL BEGIN AT ZERO
 SRCH_NRL:
 	MOV	AX,GET_LIST_ENTRY	;SET UP FOR GET ASSIGN LIST ENTRY FUNCTION CALL
-	INC	INDEX
-	MOV	BX,INDEX		;BX GETS THE INDEX OF THE ENTRY TO BE FECTHED
-	MOV	SI,OFFSET LOCAL_NAME	;DS:SI POINTS TO HOLDING AREA FOR LOCAL DEVICE NAME
+	INC	word [INDEX]
+	MOV	BX,[INDEX] ;BX GETS THE INDEX OF THE ENTRY TO BE FECTHED
+	MOV	SI,LOCAL_NAME        ;DS:SI POINTS TO HOLDING AREA FOR LOCAL DEVICE NAME
 	PUSH	DS
 	POP	ES			;ES GETS THE SEGMENT OF REMOTE DEVICE NAME HOLDING AREA
-	MOV	DI,OFFSET REMOTE_DEV	;ES:DI POINTS TO (USELESS) REMOTE DEVICE NAME HOLDING AREA
+	MOV	DI,REMOTE_DEV        ;ES:DI POINTS TO (USELESS) REMOTE DEVICE NAME HOLDING AREA
 	INT	21H
 	JNC	CHK_DEV_TYPE
 	JMP	NOT_RED 		;IF CARRY IS SET THEN THE PRINTER IS NOT REDIRECTED
@@ -432,34 +441,34 @@ CHK_DEV_TYPE:
 CHECK_NAME:			;SEE IF THE LOCAL NAME IS THE PRINTER TO BE CONFIGURED
 ;  Count the number of characters in the local name
   MOV	SI,00				;INITIALIZE THE CHARACTER COUNTER
-COUNT:
-  CMP	LOCAL_NAME[SI],NULL		;WHILE (char<>null) AND (char<>space) DO
+COUNT_:
+  CMP	[SI+LOCAL_NAME],NULL ;WHILE (char<>null) AND (char<>space) DO
   JE	CHECK_1st_3			;END OF NAME
-    CMP   LOCAL_NAME[SI],SPACE
+    CMP   [SI+LOCAL_NAME],SPACE
     JE	  CHECK_1st_3			;  END OF NAME
       INC   SI				;    INCREMENT NUMBER OF CHARS IN THE NAME
-  JMP	COUNT				;END WHILE non-termination char
+  JMP	COUNT_				;END WHILE non-termination char
 CHECK_1st_3:				;SEE IF 1st 3 CHARS ARE LPT OR PRN
   CMP	SI,4				;IF the name is 4 or less chars THEN
   JG	CONTINUE_SEARCH 		;NAME IS TOO LONG
-    COMPARE   LOCAL_NAME, L, P, T
+    COMPARE   LOCAL_NAME, L_modeprin, P_modeprin, T
     JNE       CHECK_FOR_PRN
-      MOV	AL,PT80N			;PUT PRINTER NUMBER IN AL
-      CMP	LOCAL_NAME[PRN_NO],AL		;CHECK PRINTER NUMBER
+      MOV	AL,[PT80N] ;PUT PRINTER NUMBER IN AL
+      CMP	[LOCAL_NAME+PRN_NO],AL ;CHECK PRINTER NUMBER
       JE	END_CHECK_NAME			;FOUND THE PRINTER IN THE LIST
     CHECK_FOR_PRN:
-      COMPARE	LOCAL_NAME, P, R, N
+      COMPARE	LOCAL_NAME, P_modeprin, R, N
       JNE	CONTINUE_SEARCH 		;NOT REDIRECTED AS PRN EITHER
-	CMP	  PT80N,1			  ;IF printer to be configured is lpt1 THEN
+	CMP	  byte [PT80N],1 ;IF printer to be configured is lpt1 THEN
 	JNE	  CONTINUE_SEARCH
       JMP SHORT END_CHECK_NAME			;FOUND THE PRINTER IN THE LIST
   CONTINUE_SEARCH:
     JMP   SRCH_NRL
 END_CHECK_NAME:
 
-PUBLIC END_CHECK_NAME
+;PUBLIC END_CHECK_NAME
 
-MOV	REDIRECTED,TRUE 			;REDIRECTED:=TRUE.  THE PRINTER WAS FOUND IN NRL
+MOV	byte [REDIRECTED],TRUE ;REDIRECTED:=TRUE.  THE PRINTER WAS FOUND IN NRL
 ;
 ;**************************************************************************************************
 ;  INDICATE TO SERVER THAT THE CONFIGURATION OF A NETWORK PRINTER HAS CHANGED.
@@ -468,19 +477,19 @@ MOV	REDIRECTED,TRUE 			;REDIRECTED:=TRUE.  THE PRINTER WAS FOUND IN NRL
 ;  LINES PER INCH IN CHARACTER FORM.
 ;**************************************************************************************************
 ;
-      CMP  CTRL_ST_LEN,0		;IF printer configuration has changed THEN
+      CMP  word [CTRL_ST_LEN],0 ;IF printer configuration has changed THEN
       JUMP_EQUAL_TO_CHK_FOR_P
-	MOV  SI,OFFSET LOCAL_NAME	;DS:SI POINTS TO PRINTER NAME
+	MOV  SI,LOCAL_NAME        ;DS:SI POINTS TO PRINTER NAME
 	MOV  AH,02
 	XOR  AL,AL		;AL=0
 	MOV  CL,8			;CL HOLDS SHIFT COUNT.	8 IS NUMBER OF BITS NEEDED FOR 132.
-	MOV  DL,CHARS_LINE		;MOV 80 or 132 or FF INTO ACCUMULATOR REGISTER
+	MOV  DL,[CHARS_LINE] ;MOV 80 or 132 or FF INTO ACCUMULATOR REGISTER
 	ROR  DL,1			;IF (DL=50H) OR (DL=84H) THEN DL[7]=0  ELSE DL=FFH
 	SAR  DL,CL			;IF (CHARS_LINE = 80) OR (CHARS_LINE = 132) THEN
 	MOV  BH,DL			  ;BH=0  ELSE  BH=BL=FFH
-	MOV  BL,CHARS_LINE		;BX= -1 or 80 or 132
-	MOV  CL,PARM2
-	CMP  PARM2,bogus		;IF THE LINES PER INCH WASN'T SPECIFIED THEN DON'T CONVERT
+	MOV  BL,[CHARS_LINE] ;BX= -1 or 80 or 132
+	MOV  CL,[PARM2]
+	CMP  byte [PARM2],bogus ;IF THE LINES PER INCH WASN'T SPECIFIED THEN DON'T CONVERT
 	JNE  CONVERT
 	  MOV  CH,UNCHANGED		  ;CX=-1 (FFFF)
 	  JMP  CALL_SERVER
@@ -497,43 +506,43 @@ MOV	REDIRECTED,TRUE 			;REDIRECTED:=TRUE.  THE PRINTER WAS FOUND IN NRL
 ;  BUFFER, PUT THE LENGTH IN CX, AND THE NETWORK REDIRECTION LIST INDEX FOR THE PRINTER IN BX.
 ;**************************************************************************************************
 ;
-      CMP	CTRL_ST_LEN,0	      ;IF there is something to send to a printer THEN
+      CMP	word [CTRL_ST_LEN],0 ;IF there is something to send to a printer THEN
       JUMP_EQUAL_TO_CHK_FOR_P
 	MOV	AX,PRINTERSETUP 	;SET UP FOR PRINTER SET UP FUNCTION CALL.
-	MOV	SI,OFFSET CTRL_ST	;DS HAS SEG OF CONTROL ST. BUFFER, DS:SI POINTS TO BUFFER
-	MOV	CX,CTRL_ST_LEN		;CX GETS LENGTH OF CONTROL STRING BUFFER.
-	MOV	BX,INDEX		;BX GETS NRL INDEX OF REDIRECTED PRINTER.
+	MOV	SI,CTRL_ST        ;DS HAS SEG OF CONTROL ST. BUFFER, DS:SI POINTS TO BUFFER
+	MOV	CX,[CTRL_ST_LEN] ;CX GETS LENGTH OF CONTROL STRING BUFFER.
+	MOV	BX,[INDEX] ;BX GETS NRL INDEX OF REDIRECTED PRINTER.
 	INT	21H			;PERFORM PRINTER SET UP.
-;	$IF	C				;IF CARRY THERE IS A DESCREPENCY BETWEEN
-	JNC $$IF1
-	   DISPLAY   NET_ERROR			;GET ASS LIST ENTRY AND PRINTER SET UP
-;	$ELSE					;REDIRECTOR IS RESIDENT AND PRINTER SETUP
-	JMP SHORT $$EN1
-$$IF1:
+;	IF$	C				;IF CARRY THERE IS A DESCREPENCY BETWEEN
+	JNC IF1$$P
+	   DISPLAY   net_error			;GET ASS LIST ENTRY AND PRINTER SET UP
+;	ELSE$					;REDIRECTOR IS RESIDENT AND PRINTER SETUP
+	JMP SHORT EN1$$P
+IF1$$P:
 						;CALL WAS SUCCESSFUL SO TELL USER WHAT
-	   CMP	   EIGHTY_CHARS_LINE_REQ,TRUE	   ;HAPPENED
-;	   $IF	   E				   ;IF 80 chars/line requested THEN
-	   JNE $$IF3
+	   CMP	   byte [EIGHTY_CHARS_LINE_REQ],TRUE ;HAPPENED
+;	   IF$	   E				   ;IF 80 chars/line requested THEN
+	   JNE IF3$$P
 	     DISPLAY	   PT80 		   ;  WRITELN("LPT? set for 80")
-;	   $ELSE				   ;ELSE
-	   JMP SHORT $$EN3
-$$IF3:
-	      CMP   REQ_132_CHARS_LINE,TRUE
-;	      $IF   E				   ;  IF 132 chars/line requested THEN
-	      JNE $$IF5
+;	   ELSE$				   ;ELSE
+	   JMP SHORT EN3$$P
+IF3$$P:
+	      CMP   byte [REQ_132_CHARS_LINE],TRUE
+;	      IF$   E				   ;  IF 132 chars/line requested THEN
+	      JNE IF5$$P
 		 DISPLAY     PT132		   ;	WRITELN("LPT? set for 132")
-;	      $ENDIF				   ;  ENDIF
-$$IF5:
-;	   $ENDIF				   ;ENDIF
-$$EN3:
-	   CMP	   PTLINES_REQ,TRUE		   ;IF lines/inch requested THEN
-;	   $IF	 E
-	   JNE $$IF8
+;	      ENDIF$				   ;  ENDIF
+IF5$$P:
+;	   ENDIF$				   ;ENDIF
+EN3$$P:
+	   CMP	   byte [PTLINES_REQ],TRUE ;IF lines/inch requested THEN
+;	   IF$	 E
+	   JNE IF8$$P
 	      DISPLAY	    PTLINES		   ;  WRITELN("Printer lines per inch set")
-;	   $ENDIF				   ;ENDIF
-$$IF8:
-;	$ENDIF					;ENDIF
-$$EN1:
+;	   ENDIF$				   ;ENDIF
+IF8$$P:
+;	ENDIF$					;ENDIF
+EN1$$P:
 	JMP	CHK_FOR_P
 ;******************************************************************************************
 ; SEND THE CONTROL STRING TO THE LOCAL PRINTER
@@ -544,33 +553,33 @@ $$EN1:
 ;******************************************************************************************
 ;
 NOT_RED:
-      CMP	IS_LOCAL,TRUE	;IF the device is local THEN
-      JE	ELSE02
-	JMP SHORT ELSE01	  ;or on the network
-ELSE02:
-      CMP	CTRL_ST_LEN,0	      ;IF there is something to send to a printer THEN
+      CMP	byte [IS_LOCAL],TRUE ;IF the device is local THEN
+      JE	ELSE02_modeprin
+	JMP SHORT ELSE01_modeprin	  ;or on the network
+ELSE02_modeprin:
+      CMP	word [CTRL_ST_LEN],0 ;IF there is something to send to a printer THEN
       JE	CHK_FOR_P
 	MOV	SI,0		;INITIALIZE CHARACTER POSITION INDEX FOR CONTROL STRING
 FOR:				;FOR each_char_in_control_string DO.  FOR DI=no_chars DOWN TO 0 DO
-	DEC	CTRL_ST_LEN	;DECREMENT LOOP COUNTER
+	DEC	word [CTRL_ST_LEN] ;DECREMENT LOOP COUNTER
 	MOV	AH,NULL 			;CLEAR ERROR CODE FROM AH
-	MOV	AL,BYTE PTR CTRL_ST[SI] 	;MOVE NEXT CONTROL CHAR TO AL
+	MOV	AL,byte [CTRL_ST+SI]     ;MOVE NEXT CONTROL CHAR TO AL
 	CALL	OUTCHR				;SEND THE CHARACTER TO THE PRINTER, HANDLING ERRORS
 	INC	SI			;GET TO NEXT CHAR POSITION IN CONTROL STRING
-	CMP	CTRL_ST_LEN,0		;CHECK IF ALL CHARACTERS HAVE BEEN SENT
+	CMP	word [CTRL_ST_LEN],0 ;CHECK IF ALL CHARACTERS HAVE BEEN SENT
 	JNE	FOR			;LOOP UNTIL ALL CONTROL CHARACTERS HAVE BEEN SENT
 ;
       IF_NO_PRINTER_ERROR_THEN
-	CMP	EIGHTY_CHARS_LINE_REQ,TRUE	;IF 80 chars/line requested THEN
+	CMP	byte [EIGHTY_CHARS_LINE_REQ],TRUE ;IF 80 chars/line requested THEN
 	JNE	WAS_132_CHARS_LINE_REQ
 	  DISPLAY	PT80			;  WRITELN("LPT? set for 80")
 	  JMP SHORT	WAS_LINES_INCH_SPEC
 	WAS_132_CHARS_LINE_REQ: 		;ELSE
-	  CMP	REQ_132_CHARS_LINE,TRUE 	;  IF 132 chars/line requested THEN
+	  CMP	byte [REQ_132_CHARS_LINE],TRUE ;  IF 132 chars/line requested THEN
 	  JNE	WAS_LINES_INCH_SPEC
 	    DISPLAY	PT132			;    WRITELN("LPT? set for 132")  ENDIF
 	WAS_LINES_INCH_SPEC:			;ENDIF
-	CMP	PTLINES_REQ,TRUE		;IF lines/inch requested THEN
+	CMP	byte [PTLINES_REQ],TRUE ;IF lines/inch requested THEN
 	JNE	LINES_NOT_REQ
 	  DISPLAY	PTLINES 		;  WRITELN("Printer lines per inch set")
 	LINES_NOT_REQ:				;ENDIF
@@ -581,113 +590,122 @@ FOR:				;FOR each_char_in_control_string DO.  FOR DI=no_chars DOWN TO 0 DO
 ;
 CHK_FOR_P:
 
-public CHK_FOR_P
+;public CHK_FOR_P
 
 	CALL set_retry_type
 	CALL modify_resident_code
 
 
-     JMP    SHORT ENDIF01
-ELSE01:
+     JMP    SHORT ENDIF01_modeprin
+ELSE01_modeprin:
 
-PUBLIC ELSE01
+;PUBLIC ELSE01_modeprin
 
        MOV   DI,0		       ;the device name is always the first parm					 ;AN000;
-       MOV   BP,OFFSET parm_lst   ;address the parm list via parm_list which is [BP]				      ;AN000;
-       MOV   BX,parm_list[DI].value1							 ;AN000;
-       MOV  illegal_device_ptr,BX
-       MOV  BYTE PTR [BX][4],0	     ;AN000;chop off the string at 4, so "LPT1132" will be displayed as "LPT1"
-       DISPLAY err1		      ;AN000;"Illegal device name - LPTX"
-       MOV  noerror,false	       ;AN000;
+       MOV   BP,parm_lst          ;address the parm list via parm_list which is [BP]				      ;AN000;
+       MOV   BX,[parm_list+DI+parm_list_entry.value1] ;AN000;
+       MOV  [illegal_device_ptr],BX
+       MOV  byte [BX+4],0           ;AN000;chop off the string at 4, so "LPT1132" will be displayed as "LPT1"
+       DISPLAY ERR1		      ;AN000;"Illegal device name - LPTX"
+       MOV  byte [NOERROR],false ;AN000;
 ;    ENDIF COLON IS MISSING
-ENDIF01:
-;     $ENDIF ;there was a chance that the parameters were valid
-;  $ENDIF ;there were enough paramters specified
+ENDIF01_modeprin:
+;     ENDIF$ ;there was a chance that the parameters were valid
+;  ENDIF$ ;there were enough paramters specified
 
    RET			      ;RETURN TO MODE MAIN ROUTINE
 
-MODEPRIN ENDP
+;MODEPRIN ENDP
 
 ;******************************************************************************
 
-modify_resident_code PROC  NEAR 											   ;AN000;
+modify_resident_code:                         ;AN000;
 
 
-	CALL LOADED_YET      ;on return ES:DI points to res copy of "modeto" if loaded
+	CALL LOADED_YET_      ;on return ES:DI points to res copy of "modeto" if loaded
 ;    : :IF RESIDENT CODE IS ALREADY LOADED
-	.IF Z THEN NEAR
+	.IF Z, NEAR
 ;		     MODIFY LOADED CODE TO REFLECT WHO GETS RETRIED NOW
-	   MOV	BX,OFFSET lpt1_retry_type    ;BX=> first of 3 retry mask bytes						   ;AC000;
+	   MOV	BX,lpt1_retry_type           ;BX=> first of 3 retry mask bytes						   ;AC000;
 	   XOR	SI,SI	 ;clear code modification index 						    ;AN000;
-	   .FOR DI = 0 TO 2    ;FOR LPT1 TO LPT3 check the retry mask byte						  ;AN000;
-	     .IF <<BYTE PTR ES:[BX][DI]> NE no_retry_flag> THEN    ;IF at least one type of retry on THEN	  ;AN000;
+	   ; .FOR DI = 0 TO 2;FOR LPT1 TO LPT3 check the retry mask byte						  ;AN000;
+	   mov	DI, 0
+	   jmp	for$modeprin1_test
+for$modeprin1_top:
+	   add	DI, 1
+for$modeprin1_test:
+	   cmp	DI, 2
+	   ja	for$modeprin1_out
+	     .IF <<byte [es:BX+DI]> NE no_retry_flag>      ;IF at least one type of retry on THEN	  ;AN000;
 		OR SI,8     ;OR in 00001000 which shifts into proper position						   ;AN000;
 	     .ENDIF													   ;AN000;
 	     SHR   SI,1 												   ;AN000;
-	   .NEXT DI	  ;DI=1 or 2, SI=0,1 ,2 ,3 ,4 ,5 ,6 or 7					     ;AN000;
+	   ; .NEXT;DI=1 or 2, SI=0,1 ,2 ,3 ,4 ,5 ,6 or 7					     ;AN000;
+	   jmp	for$modeprin1_top
+for$modeprin1_out:
 	   SHL	SI,1	;SI=0, 2, 4, ... , 14, INDEX TO SHOW WHICH LPTns to be retried					  ;AC000;
 	   MOV	BX,OFFRETRY	;OFFSET TO TEST INSTR IN RETRY CODE
 	   CLI		;DISABLE INTERRUPTS
-	   MOV	BYTE PTR ES:[BX]+4,5	;SET JMP TARGET TO +5
-	   JMP	CASE[SI]	;CALL BRANCH TABLE
+	   MOV	byte [es:BX+4],5     ;SET JMP TARGET TO +5
+	   JMP	[SI+CASE] ;CALL BRANCH TABLE
 ;
-CASE	DW	P0
-	DW	P1
-	DW	P2
-	DW	P3
-	DW	P4
-	DW	P5
-	DW	P6
-	DW	P7
+CASE	DW	P0_modeprin
+	DW	P1_modeprin
+	DW	P2_modeprin
+	DW	P3_modeprin
+	DW	P4_modeprin
+	DW	P5_modeprin
+	DW	P6_modeprin
+	DW	P7_modeprin
 ;
-P0:
+P0_modeprin:
 ;				SINCE NO PRINTER IS TO BE RETRIED
-	     MOV	WORD PTR ES:[BX]+3,00EBH	;MAKE JUMP INTO NOP
-;				TO CAUSE FALL THRU TO JMP PRINTER_IO INSTR
-	     JMP	SHORT ENDC
+	     MOV	word [es:BX+3],00EBH     ;MAKE JUMP INTO NOP
+;				TO CAUSE FALL THRU TO JMP 0F000H:PRINTER_IO INSTR
+	     JMP	SHORT ENDC_modeprin
 ;
-P1:
+P1_modeprin:
 ;	RETRY LPT1 ONLY
-	     MOV	WORD PTR ES:[BX]+2,7403H	;TEST 3 : JZ RT
-	     JMP	SHORT ENDC
+	     MOV	word [es:BX+2],7403H     ;TEST 3 : JZ RT
+	     JMP	SHORT ENDC_modeprin
 ;
-P2:
+P2_modeprin:
 ;	RETRY LPT2 ONLY
-	     MOV	WORD PTR ES:[BX]+2,7501H	;TEST 1 : JNZ RT
-	     JMP	SHORT ENDC
+	     MOV	word [es:BX+2],7501H     ;TEST 1 : JNZ RT
+	     JMP	SHORT ENDC_modeprin
 ;
-P3:
+P3_modeprin:
 ;	RETRY LPT1 AND LPT2 ONLY
-	     MOV	WORD PTR ES:[BX]+2,7402H	;TEST 2 : JZ RT
-	     JMP	SHORT ENDC
+	     MOV	word [es:BX+2],7402H     ;TEST 2 : JZ RT
+	     JMP	SHORT ENDC_modeprin
 ;
-P4:
+P4_modeprin:
 ;	REDIRECT LPT3 ONLY
-	     MOV	WORD PTR ES:[BX]+2,7502H	;TEST 2 : JNZ RT
-	     JMP	SHORT ENDC
+	     MOV	word [es:BX+2],7502H     ;TEST 2 : JNZ RT
+	     JMP	SHORT ENDC_modeprin
 ;
-P5:
+P5_modeprin:
 ;	REDIRECT LPT1 AND LPT3 ONLY
-	     MOV	WORD PTR ES:[BX]+2,7401H	;TEST 1 : JZ RT
-	     JMP	SHORT ENDC
+	     MOV	word [es:BX+2],7401H     ;TEST 1 : JZ RT
+	     JMP	SHORT ENDC_modeprin
 ;
-P6:
+P6_modeprin:
 ;	REDIRECT LPT2 AND LPT3 ONLY
-	     MOV	WORD PTR ES:[BX]+2,7503H	;TEST 3 : JNZ RT
-	     JMP	SHORT ENDC
+	     MOV	word [es:BX+2],7503H     ;TEST 3 : JNZ RT
+	     JMP	SHORT ENDC_modeprin
 ;
-P7:
+P7_modeprin:
 ;	REDIRECT ALL THREE: LPT1, LPT2, AND LPT3
-	     MOV	WORD PTR ES:[BX]+2,0EB00H	;TEST 0 : JMP SHORT RT
+	     MOV	word [es:BX+2],0EB00H     ;TEST 0 : JMP SHORT RT
 ;
-ENDC:
+ENDC_modeprin:
 	     STI		;REENABLE INTERRUPTS
 ;    : : : ENDIF RESIDENT CODE IS ALREADY LOADED
 	.ENDIF
 
 RET															    ;AN000;
 
-modify_resident_code ENDP												    ;AN000;
+;modify_resident_code ENDP												    ;AN000;
 
 
 ;**********************************************************
@@ -699,7 +717,7 @@ modify_resident_code ENDP												    ;AN000;
 ;				F6 C2 01
 
 
-LOADED_YET PROC NEAR
+LOADED_YET_:
 
 
 ;	ON EXIT, THE ZERO FLAG REFLECTS THE LOADED STATE
@@ -711,40 +729,40 @@ LOADED_YET PROC NEAR
 ;
 	SUB	AX,AX		;ZERO A REG
 	MOV	ES,AX		;SET SEGREG TO VECTORS AT 0
-	LES	DI,ES:RESSEG	;GET ADDR OF RESIDENT CODE, IF THERE, ES:DI points to 'modeto' or is 0
+	LES	DI,[es:RESSEG] ;GET ADDR OF RESIDENT CODE, IF THERE, ES:DI points to 'modeto' or is 0
 	CMP	DI,0		;see if something at 50:30
-;	$IF	NE		;IF code loaded THEN
-	JE $$IF11
+;	IF$	NE		;IF code loaded THEN
+	JE IF11$$P
 	   CMP	AX,AX		   ;SET THE ZERO FLAG TO RELFECT IT IS LOADED
-;	$ELSE
-	JMP SHORT $$EN11
-$$IF11:
+;	ELSE$
+	JMP SHORT EN11$$P
+IF11$$P:
 	   CMP	AX,0FFH 	   ;RESET THE ZERO FLAG TO REFLECT IT IS NOT LOADED
-;	$ENDIF
-$$EN11:
+;	ENDIF$
+EN11$$P:
 ;
 	POP	AX		;RESTORE CALLER'S REGS
 	RET
-LOADED_YET ENDP
+;LOADED_YET_ ENDP
 
 
 ;*******************************************************************
-OUTCHR PROC NEAR
+OUTCHR:
      PRINT			;OUTPUT CHARACTER TO PRINTER
      AND    AH,0A9H		;MASK OFF ERROR BITS
 ;    IF WE GOT AN ERROR RETURN CODE
      CMP    AH,NULL
-     JE    ENDIF02
+     JE    ENDIF02_modeprin
 ;
-       CMP	PRINTER_ERROR,TRUE
+       CMP	byte [PRINTER_ERROR],TRUE
        JE	ALREADY_YELLED
 	 DISPLAY ERR2		;DISPLAY ERROR MESSAGE
-	 MOV	PRINTER_ERROR,TRUE
+	 MOV	byte [PRINTER_ERROR],TRUE
        ALREADY_YELLED:
 ;    ENDIF    ,END GOT AN ERROR RETURN CODE? TEST
-ENDIF02:
+ENDIF02_modeprin:
      RET			;RETURN TO MAIN PROC
-OUTCHR	  ENDP
+;OUTCHR	  ENDP
 ;
 ;
 ;
@@ -984,7 +1002,7 @@ OUTCHR	  ENDP
 ;ณ									       ณ
 ;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
 ;
-set_retry_type PROC NEAR												    ;AN663;
+set_retry_type:                         ;AN663;
 															    ;AN663;
 
 PUSH ES 		  ;save registers									      ;AN663;
@@ -995,79 +1013,79 @@ PUSH DX 													      ;AN663;
 														      ;AN663;
 XOR  BX,BX		  ;clear a reg										      ;AN663;
 MOV  ES,BX		  ;set to segment at 0									      ;AN663;
-MOV  BL,device													      ;AN663;
+MOV  BL,[DEVICE]                 ;AN663;
 AND  BL,07H													      ;AN663;
 DEC  BL 		   ;BX=zero based binary printer number 					  ;AN663;
 														      ;AN663;
-.IF <retry_index NE 0> THEN NEAR    ;IF retry requested on this invokation THEN 				    ;AN663;
+.IF <<[retry_index]> NE 0>, NEAR	;IF retry requested on this invokation THEN 				    ;AN663;
 														      ;AN663;
-   .IF <redirected EQ true> THEN										      ;AN663;
+   .IF <<[REDIRECTED]> EQ TRUE> ;AN663;
 														      ;AN663;
-      display not_supported ;infinite retry not supported on network printer					      ;AN663;
+      DISPLAY not_supported ;infinite retry not supported on network printer					      ;AN663;
 														      ;AN663;
    .ELSE NEAR				  ;not a network printer						      ;AN663;
 														      ;AN663;
-      MOV  DI,retry_index											      ;AN663;
-      MOV  BP,parm_list_holder		  ;set up addressability to the list of parsed parms,set "parm_list"	      ;AN663;
+      MOV  DI,[retry_index]               ;AN663;
+      MOV  BP,[parm_list_holder]  ;set up addressability to the list of parsed parms,set "parm_list"	      ;AN663;
 
       .SELECT													      ;AN663;
 
-	 .WHEN <parm_list[DI].item_tag EQ E_item_tag>								      ;AN663;
+	 .WHEN <<[parm_list+DI+parm_list_entry.item_tag]> EQ E_item_tag> ;AN663;
 	    MOV  AL,error_status	 ;set mask byte to horrible status			     ;AN663;
 
-	 .WHEN <parm_list[DI].item_tag EQ P_item_tag> OR							      ;AN663;
-	 .WHEN <parm_list[DI].item_tag EQ B_item_tag>							      ;AN663;
+	 .WHEN <<[parm_list+DI+parm_list_entry.item_tag]> EQ P_item_tag>, OR ;AN663;
+	 .WHEN <<[parm_list+DI+parm_list_entry.item_tag]> EQ B_item_tag> ;AN663;
 	    MOV  AL,busy_status 	 ;set mask byte to actual status			      ;AN663;
 
-	 .WHEN <parm_list[DI].item_tag EQ R_item_tag>						  ;AN663;
+	 .WHEN <<[parm_list+DI+parm_list_entry.item_tag]> EQ R_item_tag> ;AN663;
 	    MOV  AL,ready_status	 ;set mask byte to rosy status	       ;AN663;
 
-	 .WHEN <parm_list[DI].item_tag EQ NONE_item_tag>					     ;AN663;;AN000;
+	 .WHEN <<[parm_list+DI+parm_list_entry.item_tag]> EQ none_item_tag> ;AN663;;AN000;
 	    MOV  AL,no_retry_flag      ;when there is no retry the mask will not be used, so this is just a flag
 
       .ENDSELECT
 
       PUSH  AX					  ;save the retry setting ;AN001;
-      .IF <AL EQ no_retry_flag> THEN
+      .IF <AL EQ no_retry_flag>
 ;AC001;  MOV	  INF_OR_NO_PTR,OFFSET NORETRY	  ;modify message to indicate no retry
-	 set_submessage_ptr   noretry,retparto	  ;modify message to indicate no retry	       ;AC001;
+	 set_submessage_ptr   noretry,RETPARTO	  ;modify message to indicate no retry	       ;AC001;
       .ELSE										       ;AN663;
 ;AC001;  MOV	INF_OR_NO_PTR,OFFSET INFINITE	;modify message to indicate retry	       ;AN663;
-	 set_submessage_ptr   infinite,retparto    ;modify message to indicate retry		;AC001;
+	 set_submessage_ptr   infinite,RETPARTO    ;modify message to indicate retry		;AC001;
       .ENDIF										       ;AN663;
       POP   AX					  ;restore the retry setting ;AN001;
 
-      .IF <<WORD PTR ES:resseg> EQ 0000H> THEN	  ;IF code not resident THEN			  ;AN663;
-	 .IF <AL NE no_retry_flag> THEN 	     ;need to turn on retry
-	    CALL modeload			     ;load resident code			  ;AN663;
-	    MOV  ES,ES:WORD PTR resseg[2]							     ;AN663;
-	    MOV  BYTE PTR ES:lpt1_retry_type[BX],AL	 ;store new setting		       ;AN663;
+      .IF <<word [es:RESSEG]> EQ 0000H>   ;IF code not resident THEN			  ;AN663;
+	 .IF <AL NE no_retry_flag> ;need to turn on retry
+	    CALL MODELOAD			     ;load resident code			  ;AN663;
+	    MOV  ES,word [es:RESSEG+2]               ;AN663;
+	    MOV  byte [es:lpt1_retry_type+BX],AL     ;store new setting		       ;AN663;
 	 .ENDIF
       .ELSE					  ;ELSE code is already resident
-	 MOV  ES,ES:WORD PTR resseg[2]								  ;AN663;
-	 MOV  BYTE PTR ES:lpt1_retry_type[BX],AL      ;store new setting		     ;AN663;
+	 MOV  ES,word [es:RESSEG+2]             ;AN663;
+	 MOV  byte [es:lpt1_retry_type+BX],AL         ;store new setting		     ;AN663;
       .ENDIF										       ;AN663;
 											       ;AN663;
    .ENDIF										       ;AN663;
 											       ;AN663;
-.ELSEIF <<WORD PTR ES:resseg> NE 0000H> THEN	  ;if code is loaded but no		       ;AN663;
+.ELSEIF <<word [es:RESSEG]> NE 0000H>   ;if code is loaded but no		       ;AN663;
 						  ;  retry is specified then		       ;AN663;
-   MOV	ES,ES:WORD PTR resseg[2]		;ES=segment of the resident code	     ;AN663;
+   MOV	ES,word [es:RESSEG+2]     ;ES=segment of the resident code	     ;AN663;
 											       ;AN663;
-   .IF <parms_form NE keyword>			  ;no retry specified with		       ;AN663;
+   .IF <<[parms_form]> NE keyword> ;no retry specified with		       ;AN663;
 						  ;positional parameters, so turn off retry	       ;AN663;
-      MOV  BYTE PTR ES:lpt1_retry_type[BX],no_retry_flag	 ;set flag for get retry routine;AN663;
+      MOV  byte [es:lpt1_retry_type+BX],no_retry_flag     ;set flag for get retry routine;AN663;
 ;AC001;      MOV   INF_OR_NO_PTR,OFFSET NORETRY 	 ;modify message to indicate no retry	      ;AN663;
-	 set_submessage_ptr   noretry,retparto	  ;modify message to indicate no retry	       ;AC001;
+	 set_submessage_ptr   noretry,RETPARTO	  ;modify message to indicate no retry	       ;AC001;
 											       ;AN663;
    .ELSE					  ;else, no retry specified with keywords
 						  ;  update pparm with current retry type      ;AN663;
-      .IF <<BYTE PTR ES:lpt1_retry_type[BX]> EQ no_retry_flag> THEN			;AN663;
+      .IF <<byte [es:lpt1_retry_type+BX]> EQ no_retry_flag>    ;AN663;
 ;AC001;  MOV	  INF_OR_NO_PTR,OFFSET NORETRY	     ;modify message to indicate no retry      ;AN663;
-	 set_submessage_ptr   noretry,retparto	  ;modify message to indicate no retry	       ;AC001;
+	 set_submessage_ptr   noretry,RETPARTO	  ;modify message to indicate no retry	       ;AC001;
       .ELSE										       ;AN663;
 ;AC001;  MOV	INF_OR_NO_PTR,OFFSET INFINITE	;modify message to indicate retry	       ;AN663;
-	 set_submessage_ptr   infinite,retparto    ;modify message to indicate retry		;AC001;
+	 set_submessage_ptr   infinite,RETPARTO    ;modify message to indicate retry		;AC001;
       .ENDIF										       ;AN663;
 											       ;AN663;
    .ENDIF										       ;AN663;
@@ -1075,7 +1093,7 @@ DEC  BL 		   ;BX=zero based binary printer number 					  ;AN663;
 .ELSE					       ;no retry, no code resident		    ;AN663;
 											       ;AN663;
 ;AC001;   MOV	   INF_OR_NO_PTR,OFFSET NORETRY       ;modify message to indicate no retry	      ;AN663;
-   set_submessage_ptr	noretry,retparto    ;modify message to indicate no retry	 ;AC001;
+   set_submessage_ptr	noretry,RETPARTO    ;modify message to indicate no retry	 ;AC001;
 											       ;AN663;
 .ENDIF											       ;AN663;
 			 ;'Infinite retry on parallel printer timeout' OR		       ;AN663;
@@ -1089,8 +1107,8 @@ POP  ES 										       ;AN663;
 											       ;AN663;
 RET											       ;AN663;
 												     ;AN663;
-set_retry_type ENDP										     ;AN663;
+;set_retry_type ENDP										     ;AN663;
 
-PRINTF_CODE   ENDS
-     END
+end if
+;     END
 

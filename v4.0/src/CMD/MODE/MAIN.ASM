@@ -2,7 +2,7 @@
 	PAGE	,132			;
 	TITLE	MODE COMMAND - MAIN PROCEDURE AND COMMAND PARSING
 .XLIST
-   INCLUDE STRUC.INC
+   include 'STRUC.INC'
 .LIST
 ;.SALL
 
@@ -23,7 +23,7 @@
 ;บ											  บ
 ;ศออออออออออออออออออออออออออออออออ  P R O L O G  อออออออออออออออออออออออออออออออออออออออออผ
 
-INCLUDE  SYSMSG.INC
+include 'SYSMSG.INC'
 
 MSG_UTILNAME <MODE>
 
@@ -51,16 +51,16 @@ truu	 EQU   0FFH
 
 
 	PAGE
-PRINTF_CODE SEGMENT PUBLIC
-	ASSUME	CS:PRINTF_CODE,DS:PRINTF_CODE,SS:PRINTF_CODE
+if SEGSEL = S_PRINTF_CODE
+;	ASSUME	CS:PRINTF_CODE,DS:PRINTF_CODE,SS:PRINTF_CODE
 
 
 ;ษอออออออออออออออออออออออออออออออ  P U B L I C S  ออออออออออออออออออออออออออออออออออออออออป
 ;บ											  บ
 
-PUBLIC	 main
-PUBLIC	 SYSDISPMSG
-PUBLIC	 SYSGETMSG
+;PUBLIC	 main
+;PUBLIC	 SYSDISPMSG
+;PUBLIC	 SYSGETMSG
 
 
 ;บ											  บ
@@ -70,15 +70,15 @@ PUBLIC	 SYSGETMSG
 ;ษอออออออออออออออออออออออออออออออ  E X T R N S	ออออออออออออออออออออออออออออออออออออออออออป
 ;บ											  บ
 
-EXTRN	analyze_and_invoke:NEAR
-EXTRN	get_machine_type:NEAR		      ;get model and sub-model bytes
-EXTRN	initialize_sublists:NEAR	  ;see display.asm
-EXTRN	move_destination:ABS		  ;location of res code after it has been moved
-EXTRN	noerror:BYTE
-EXTRN	parse_parameters:NEAR
-EXTRN	PRINTF:NEAR
-EXTRN	rescode_length:ABS	       ;length in paragraphs of the resident code
-EXTRN	stay_resident:BYTE	       ;boolean indicating just loaded resident code see 'rescode'
+;EXTRN	analyze_and_invoke:NEAR
+;EXTRN	get_machine_type:NEAR		      ;get model and sub-model bytes
+;EXTRN	initialize_sublists:NEAR	  ;see display.asm
+;EXTRN	move_destination:ABS		  ;location of res code after it has been moved
+;EXTRN	noerror:BYTE
+;EXTRN	parse_parameters:NEAR
+;EXTRN	PRINTF:NEAR
+;EXTRN	rescode_length:ABS	       ;length in paragraphs of the resident code
+;EXTRN	stay_resident:BYTE	       ;boolean indicating just loaded resident code see 'rescode'
 
 ;บ											  บ
 ;ศอออออออออออออออออออออออออออออออ  E X T R N S	ออออออออออออออออออออออออออออออออออออออออออผ
@@ -97,50 +97,59 @@ EXTRN	stay_resident:BYTE	       ;boolean indicating just loaded resident code se
 ;ษออออออออออออออออออออออออออออ	P R O C E D U R E S  อออออออออออออออออออออออออออออออออออออป
 ;บ											  บ
 
-close_handles  PROC  NEAR		  ;AN002;close all standard device handles
+close_handles:               ;AN002;close all standard device handles
 					  ;AN002;
 MOV   AH,3EH				  ;AN002;
 					  ;AN002;
-.FOR BX = STDIN TO STDPRN		  ;AN002;
+; .FOR BX = STDIN TO STDPRN;AN002;
+mov	BX, STDIN
+jmp	for$main1_test
+for$main1_top:
+add	BX, 1
+for$main1_test:
+cmp	BX, STDPRN
+ja	for$main1_out
    INT	 21H				  ;AN002;
-.NEXT BX				  ;AN002;
+; .NEXT;AN002;
+jmp	for$main1_top
+for$main1_out:
 					  ;AN002;
 RET					  ;AN002;
 					  ;AN002;
-close_handles  ENDP			  ;AN002;
+;close_handles  ENDP			  ;AN002;
 
 ;บ											  บ
 ;ศออออออออออออออออออออออออออออ	P R O C E D U R E S  อออออออออออออออออออออออออออออออออออออผ
 
 
-;
+; 
 ;-------------------------------------------------------------------------------
 
 MSG_SERVICES <MSGDATA>		    ;define message service data area
 
 MSG_SERVICES <LOADmsg,GETmsg,DISPLAYmsg,CHARmsg,NUMmsg,INPUTmsg>	;AC001;
-MSG_SERVICES <mode.cla,mode.clb,mode.cl1,mode.cl2>    ;class B is for messages > 30
+MSG_SERVICES <MODE.cla,MODE.clb,MODE.cl1,MODE.cl2>    ;class B is for messages > 30
 ;;RPS  MSG_SERVICES <mode.cl1,mode.cl2>
 
 
-main  PROC  NEAR
+main:
 
 CALL  SYSLOADMSG		    ;load the message text
-.IF NC THEN			    ;IF messages loaded successfully THEN
+.IF NC			    ;IF messages loaded successfully THEN
    CALL  get_machine_type
    CALL  initialize_sublists
    CALL  parse_parameters
-   .IF <noerror EQ truu> THEN	       ;no problems parsing so continue
+   .IF <<[NOERROR]> EQ truu> ;no problems parsing so continue
       CALL  analyze_and_invoke		  ;semantically analyze the parms and invoke appropriate routine
    .ENDIF
 
    MOV	AH,TERMINATE		       ;assume won't stay resident
-   .IF <noerror EQ false> THEN
+   .IF <<[NOERROR]> EQ false>
       MOV  AL,1 		       ;had a problem somewhere
    .ELSE
-      .IF   <stay_resident EQ truu> THEN
+      .IF <<[stay_resident]> EQ truu>
 	 CALL  close_handles		  ;close all standard devices;AN002;
-	 MOV  DX,move_destination
+	 MOV  DX,[move_destination]
 	 MOV  CL,4			  ;4 right shifts = divide by 16
 	 SAR  DX,CL			  ;DX=offset of start of resident code in paragraphs
 					  ;SET END OF RESIDENT CODE FOR "terminate and remain resident"
@@ -160,9 +169,9 @@ CALL  SYSLOADMSG		    ;load the message text
 INT	21H			 ;TERMINATE RETURNING ERRORLEVEL INDICATING success
 RET
 
-include msgdcl.inc
+include 'MSGDCL.INC'
 
-main  ENDP
+;main  ENDP
 
-PRINTF_CODE ENDS
-	END
+end if
+;	END

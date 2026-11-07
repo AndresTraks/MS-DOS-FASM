@@ -65,9 +65,9 @@
 ;	     the "MAIN.ASM" module of the MODE component of the DOS utility.
 
 ;****************** END OF SPECIFICATIONS *****************************
-	IF1
-	    %OUT INCLUDE MODECPRO.INC ;MODULE PROLOGUE
-	ENDIF
+;	IF1
+;	    %OUT INCLUDE MODECPRO.INC ;MODULE PROLOGUE
+;	ENDIF
 
 ;ษออออออออออออออออออออออออออออออออ  P R O L O G  อออออออออออออออออออออออออออออออออออออออออป
 ;บ											  บ

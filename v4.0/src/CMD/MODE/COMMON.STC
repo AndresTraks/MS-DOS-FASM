@@ -1,36 +1,63 @@
-;common structures
+STRUC codepage_parms cp_device_=0, des_pack_ptr_=0, font_filespec_=0, request_typ_=0
+{
+   .cp_device	  DW	cp_device_
+   .des_pack_ptr   DW	des_pack_ptr_
+   .font_filespec  DW	font_filespec_
+   .request_typ	  DW	request_typ_
+}
+match =codepage_parms_LAID_OUT, codepage_parms_LAID_OUT
+{
+    codepage_parms_LAID_OUT equ 1
+    virtual at 0
+      codepage_parms codepage_parms 0, 0, 0, 0
+      sizeof.codepage_parms = $ - codepage_parms
+    end virtual
+}
+STRUC parm_list_entry parm_type_=bogus, item_tag_=0FFH, value1_=bogus, value2_=bogus, keyword_switch_ptr_=0
+{
 
-bogus	 EQU   88H	;totally invalid value
+.parm_type	     DB       parm_type_
+.item_tag	     DB       item_tag_
+.value1		     DW       value1_ ;used only for filespecs and code page numbers
+.value2		     DW       value2_ ;used only for filespecs and code page numbers
+.keyword_switch_ptr   DW    keyword_switch_ptr_
 
-codepage_parms STRUC
-   cp_device	  DW	?
-   des_pack_ptr   DW	?
-   font_filespec  DW	?
-   request_typ	  DW	?
-codepage_parms ENDS
-
-
-parm_list_entry   STRUC 		  ;used by parse_parameters and invoke
-
-parm_type	     DB       bogus
-item_tag	     DB       0FFH
-value1		     DW       bogus	  ;used only for filespecs and code page numbers
-value2		     DW       bogus	  ;used only for filespecs and code page numbers
-keyword_switch_ptr   DW    0
-
-parm_list_entry   ENDS
-
-
-sublist_def  STRUC	   ;used by initialize_sublists
+}
+match =parm_list_entry_LAID_OUT, parm_list_entry_LAID_OUT
+{
+    parm_list_entry_LAID_OUT equ 1
+    virtual at 0
+      parm_list_entry parm_list_entry 0, 0, 0, 0, 0
+      sizeof.parm_list_entry = $ - parm_list_entry
+    end virtual
+}
+STRUC sublist_def sublist_off_=0, sublist_seg_=0
+{
 
 	     db  ?  ;Sublist Length, fixed
 	     db  ?  ;Reserved, not used yet		      ;AN000;
-sublist_off  dw  ?  ;offset
-sublist_seg  dw  ?  ;segment part of pointer to piece of message
+.sublist_off  dw  sublist_off_ ;offset
+.sublist_seg  dw  sublist_seg_ ;segment part of pointer to piece of message
 	     db  ?  ;ID, special end of message format ;AN000;
 	     db  ?  ;flags
 	     db  ?
 	     db  ?
 	     db  ?
 
-sublist_def  ENDS
+}
+match =sublist_def_LAID_OUT, sublist_def_LAID_OUT
+{
+    sublist_def_LAID_OUT equ 1
+    virtual at 0
+      sublist_def sublist_def 0, 0
+      sizeof.sublist_def = $ - sublist_def
+    end virtual
+}
+;common structures
+
+bogus	 EQU   88H	;totally invalid value
+
+
+
+
+

@@ -13,7 +13,7 @@ match =Control_LAID_OUT, Control_LAID_OUT
 {
     Control_LAID_OUT equ 1
     virtual at 0
-      Control Control
+      Control Control 0, 0, 0, 0, 0, 0
       sizeof.Control = $ - Control
     end virtual
 }
@@ -31,7 +31,7 @@ match =Drive_Letter_Return_LAID_OUT, Drive_Letter_Return_LAID_OUT
 {
     Drive_Letter_Return_LAID_OUT equ 1
     virtual at 0
-      Drive_Letter_Return Drive_Letter_Return
+      Drive_Letter_Return Drive_Letter_Return 0, 0, 0, 0
       sizeof.Drive_Letter_Return = $ - Drive_Letter_Return
     end virtual
 }
@@ -48,7 +48,7 @@ match =Switch_Return_LAID_OUT, Switch_Return_LAID_OUT
 {
     Switch_Return_LAID_OUT equ 1
     virtual at 0
-      Switch_Return Switch_Return
+      Switch_Return Switch_Return 0, 0, 0
       sizeof.Switch_Return = $ - Switch_Return
     end virtual
 }
@@ -66,7 +66,7 @@ match =Switch_Num_Return_LAID_OUT, Switch_Num_Return_LAID_OUT
 {
     Switch_Num_Return_LAID_OUT equ 1
     virtual at 0
-      Switch_Num_Return Switch_Num_Return
+      Switch_Num_Return Switch_Num_Return 0, 0, 0, 0, 0
       sizeof.Switch_Num_Return = $ - Switch_Num_Return
     end virtual
 }
@@ -84,7 +84,7 @@ match =Switch_String_Return_LAID_OUT, Switch_String_Return_LAID_OUT
 {
     Switch_String_Return_LAID_OUT equ 1
     virtual at 0
-      Switch_String_Return Switch_String_Return
+      Switch_String_Return Switch_String_Return 0, 0, 0, 0, 0
       sizeof.Switch_String_Return = $ - Switch_String_Return
     end virtual
 }

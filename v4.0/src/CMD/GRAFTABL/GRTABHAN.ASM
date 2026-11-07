@@ -7,7 +7,7 @@ match =VECTOR_LAID_OUT, VECTOR_LAID_OUT
 {
     VECTOR_LAID_OUT equ 1
     virtual at 0
-      VECTOR VECTOR
+      VECTOR VECTOR 0, 0
       sizeof.VECTOR = $ - VECTOR
     end virtual
 }

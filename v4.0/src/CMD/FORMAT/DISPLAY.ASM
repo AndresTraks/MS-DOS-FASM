@@ -14,7 +14,7 @@ match =Message_Table_LAID_OUT, Message_Table_LAID_OUT
 {
     Message_Table_LAID_OUT equ 1
     virtual at 0
-      Message_Table Message_Table
+      Message_Table Message_Table 0, 0, 0, 0, 0, 0, 0
       sizeof.Message_Table = $ - Message_Table
     end virtual
 }

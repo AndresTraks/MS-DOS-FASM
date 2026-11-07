@@ -2,10 +2,10 @@ PAGE ,132 ;
 TITLE MODESCRN.ASM - SCREEN SUPPORT FOR THE MODE COMMAND
 
 .XLIST
-INCLUDE STRUC.INC
+include 'STRUC.INC'
 .LIST
 
-INCLUDE  COMMON.STC	;definitions of message sublist blocks ;AC001;
+include 'COMMON.STC' ;definitions of message sublist blocks ;AC001;
 
 ;ษออออออออออออออออออออออออออออออออ  P R O L O G  อออออออออออออออออออออออออออออออออออออออออป				   ;AN000;
 ;บ											  บ				   ;AN000;
@@ -31,55 +31,60 @@ INCLUDE  COMMON.STC	;definitions of message sublist blocks ;AC001;
 ;ษออออออออออออออออออออออออออออออออ  M A C R O S  อออออออออออออออออออออออออออออออออออออออออป
 ;บ											  บ
 
-BREAK	MACRO	X
-   JMP	   endcase_&X
-ENDM
+macro BREAK X
+{
+   JMP	   ENDCASE_#X#_modescrn
+}
 
 
-SCRN	MACRO COMMAND,MOD
+macro SCRN COMMAND,MOD
+{
 		      MOV    AH,COMMAND ;REQUEST FUNCTION OF SCREEN BIOS
- IFNB <MOD>
+ match any$, MOD \{
 		      MOV    AL,MOD	;SET MODE TO SCREEN
- ENDIF
+ \}
 		      INT    10H	;CALL BIOS SCREEN HANDLER
 ;
-     ENDM
+}
 ;
-DISPLAY 	MACRO	MSG
-IFNB <MSG>
-	MOV	DX,OFFSET MSG
-ENDIF
+macro DISPLAY MSG
+{
+match any$, MSG \{
+	MOV	DX,MSG
+\}
 	CALL	PRINTF
-ENDM
+}
 
 
-SET_LEFT_SHIFT_LIMIT	MACRO
+macro SET_LEFT_SHIFT_LIMIT 
+{
 	LOCAL	LIMIT_SET
-	ASSUME	DS:ROM_BIOS
+;	ASSUME	DS:ROM_BIOS
 ;
 	PUSH	DS
 	PUSH	AX
 	MOV	AX,ROM_BIOS_SEG
 	MOV	DS,AX
-	CMP	DS:MACHINE_TYPE,JUNIOR		;IF this machine is a Junior THEN
+	CMP	byte [ds:MACHINE_TYPE_ROM],JUNIOR ;IF this machine is a Junior THEN
 	JNE	LIMIT_SET
-	  MOV	BYTE PTR CS:LEFT_LIMIT,JR_LEFT_LIMIT	;USE THE JUNIOR'S LEFT LIMIT
+	  MOV	byte [cs:LEFT_LIMIT],JR_LEFT_LIMIT   ;USE THE JUNIOR'S LEFT LIMIT
 	LIMIT_SET:
 	POP	AX
 	POP	DS
 ;
-	ASSUME	DS:PRINTF_CODE
+;	ASSUME	DS:PRINTF_CODE
 ;
-ENDM
+}
 
-set_submessage_ptr   MACRO submessage,message ;PUT pointer to "subMESSAGE" into submessage pointer field of "message".
+macro set_submessage_ptr submessage,message
+{
 
-MOV   AX,submessage			     ;AX=message number 		;AN001;
-MOV   DH,utility_msg_class		     ;DH=message class=utility class	;AN001;
+MOV   AX,[submessage]			     ;AX=message number 		;AN001;
+MOV   DH,Utility_Msg_Class		     ;DH=message class=utility class	;AN001;
 CALL  SYSGETMSG 			     ;DS:SI=>message piece				  ;AN001;
-MOV   BP,OFFSET sublist_&message	     ;address the sublist control block ;AN001;
-MOV   [BP].sublist_off,SI		     ;the sublist now points to the desired message piece ;AN001;
-ENDM												  ;AN001;
+MOV   BP,sublist_#message             ;address the sublist control block ;AN001;
+MOV   [BP+sublist_def.sublist_off],SI ;the sublist now points to the desired message piece ;AN001;
+} ;AN001;
 
 
 ;---------------------------------------------------------------------------
@@ -89,24 +94,26 @@ ENDM												  ;AN001;
 ;set to the message file segment.
 ;---------------------------------------------------------------------------
 ;
-SET_UP_FOR_PRINTF	MACRO
+macro SET_UP_FOR_PRINTF 
+{
 
 	PUSH	DS		;SAVE DS
 	PUSH	CS
 	POP	DS		;DS NOW HAS MESSAGE SEGMENT
 ;
-ENDM
+}
 
 ;----------------------------------------------------------------------------
 ;   REPLACE_DS
 ;Replace the contents DS had before the PRINTF call. Assume that DS was pushed.
 ;-----------------------------------------------------------------------------
 
-REPLACE_DS	MACRO
+macro REPLACE_DS 
+{
 
 	POP	DS
 ;
-ENDM
+}
 
 ;บ											  บ
 ;ศออออออออออออออออออออออออออออออออ  M A C R O S  อออออออออออออออออออออออออออออออออออออออออผ
@@ -145,30 +152,34 @@ JR_LEFT_LIMIT  EQU 031H 	  ;LEFT LIMIT FOR SCREEN SHIFT ON PC JUNIOR
 ;
 EGA_SIG 	EQU	0AA55H	  ;SIGNITURE FOR THE EGA CARD
 ;
-ROM_BIOS  SEGMENT AT 0F000H
+if SEGSEL = S_ABSOLUTE
+virtual at 0F000H
 	ORG	0FFFEH
 ;
-	MACHINE_TYPE	LABEL	BYTE		;MACHINE TYPE BURNED IN ROM
+label MACHINE_TYPE_ROM byte   ;MACHINE TYPE BURNED IN ROM
 ;
-ROM_BIOS  ENDS
+end virtual
+end if
 
 ROM_BIOS_SEG	EQU	0F000H
 ;
-SIGNITURE  SEGMENT AT 0C000H			;SEGMENT OF EGA AREA
+if SEGSEL = S_ABSOLUTE
+virtual at 0C000H;SEGMENT OF EGA AREA
 	ORG	0
-SIGWORD DW	?			;SIGNITURE OF THE EGA IS STORED HERE IF THE CARD IS PRESENT
-SIGNITURE	ENDS
+SIGWORD rw      1 ;SIGNITURE OF THE EGA IS STORED HERE IF THE CARD IS PRESENT
+end virtual
+end if
 ;
-PRINTF_CODE   SEGMENT PUBLIC
-     ASSUME CS:PRINTF_CODE,DS:PRINTF_CODE
+if SEGSEL = S_PRINTF_CODE
+;     ASSUME CS:PRINTF_CODE,DS:PRINTF_CODE
 ;
 
 
 ;ษอออออออออออออออออออออออออออออออ  P U B L I C S  ออออออออออออออออออออออออออออออออออออออออป
 ;บ											  บ
 
-PUBLIC	 HANDLE_40_OR_80	 ;make available to "ANALYZE_AND_INVOKE"
-PUBLIC	 SHIFT_SCREEN		 ;make available to "ANALYZE_AND_INVOKE"
+;PUBLIC	 HANDLE_40_OR_80	 ;make available to "ANALYZE_AND_INVOKE"
+;PUBLIC	 SHIFT_SCREEN		 ;make available to "ANALYZE_AND_INVOKE"
 
 
 ;บ											  บ
@@ -178,22 +189,22 @@ PUBLIC	 SHIFT_SCREEN		 ;make available to "ANALYZE_AND_INVOKE"
 ;ษอออออออออออออออออออออออออออออออ  E X T R N S	ออออออออออออออออออออออออออออออออออออออออออป
 ;บ											  บ
 
-EXTRN CANT_SHIFT:WORD	    ;CR,LF,"Unable to shift screen",BEEP,EOM
-EXTRN PRINTF:NEAR		;interface to message service ROUTINE
-EXTRN SCRNTAB:NEAR		;LOADS VIDEO INIT TABLE RETURNING POINTER TO IT
+;EXTRN CANT_SHIFT:WORD	    ;CR,LF,"Unable to shift screen",BEEP,EOM
+;EXTRN PRINTF:NEAR		;interface to message service ROUTINE
+;EXTRN SCRNTAB:NEAR		;LOADS VIDEO INIT TABLE RETURNING POINTER TO IT
 ;
-EXTRN PARM1:BYTE,PARM2:BYTE,PARM3:BYTE,MODE:BYTE,FLAG:BYTE
+;EXTRN PARM1:BYTE,PARM2:BYTE,PARM3:BYTE,MODE:BYTE,FLAG:BYTE
 ;PARM1	DB	10 DUP(0)
 ;PARM2	DB	0
 ;PARM3	DB	0
 ;MODE	DB	0
 ;FLAG	DB	0
-EXTRN NEW_VIDEO_PARMS_SEGMENT:WORD
-EXTRN	NOERROR:BYTE		  ;INDICATE IF AN ERROR OCCURED YET
+;EXTRN NEW_VIDEO_PARMS_SEGMENT:WORD
+;EXTRN	NOERROR:BYTE		  ;INDICATE IF AN ERROR OCCURED YET
 ENDPARM EQU	MODE
-EXTRN	ALT_SELECT:ABS		;INT 10 FUNCTION GET MONITOR TYPE
-EXTRN	EGA_INFO:ABS		;INT 10 FUNCTION GET INFO
-EXTRN	COLOR_ON_IT:ABS 	;INT 10 RETURN FOR COLOR MONITOR HOOKED TO EGA
+;EXTRN	ALT_SELECT:ABS		;INT 10 FUNCTION GET MONITOR TYPE
+;EXTRN	EGA_INFO:ABS		;INT 10 FUNCTION GET INFO
+;EXTRN	COLOR_ON_IT:ABS 	;INT 10 RETURN FOR COLOR MONITOR HOOKED TO EGA
 ;
 LEFT_LIMIT  DB	   02EH 	  ;SCREEN SHIFT LEFT LIMIT, MAY BE Revised
 ;
@@ -201,23 +212,23 @@ SWITCH	  DB	 0		  ;LOOP CONTROLLER
 ;AC000;OK	 DB	1		 ;INDICATOR OF VALID REQUEST:
 ;				     1=BAD, 0=GOOD
 ;
-EXTRN L_item_tag:ABS			  ;see MODEpars.asm	  ;AN000;
-EXTRN R_item_tag:ABS			  ;see MODEpars.asm	  ;AN000;
-EXTRN T_item_tag:ABS			  ;see MODEpars.asm	  ;AN000;
+;EXTRN L_item_tag:ABS			  ;see MODEpars.asm	  ;AN000;
+;EXTRN R_item_tag:ABS			  ;see MODEpars.asm	  ;AN000;
+;EXTRN T_item_tag:ABS			  ;see MODEpars.asm	  ;AN000;
 
-EXTRN RIGHTMOST:WORD	;message number for "rightmost 9",EOM	;AC001;
-EXTRN LEFTMOST:WORD    ;message number for "leftmost 0",EOM	;AC001;
+;EXTRN RIGHTMOST:WORD	;message number for "rightmost 9",EOM	;AC001;
+;EXTRN LEFTMOST:WORD    ;message number for "leftmost 0",EOM	;AC001;
 ;AC001;EXTRN LFTM_OR_RGHTM_PTR:WORD
-EXTRN SHIFT_MSG:WORD	    ;CR,LF,"Do you see the ...",CR,LF,EOM ;AX000;
+;EXTRN SHIFT_MSG:WORD	    ;CR,LF,"Do you see the ...",CR,LF,EOM ;AX000;
 ;AC000;EXTRN MSGI:WORD	  ;CR,LF,"Invalid parameters",BEEP,CR,LF,"$"	 ;AX000;
-EXTRN NUMBERS:WORD   ;"0123456789"				  ;AX000;
-EXTRN LEFT:WORD 		;message number for "left",EOM	  ;AC001;
-EXTRN RIGHT:WORD		;message number for "right",EOM   ;AC001;
+;EXTRN NUMBERS:WORD   ;"0123456789"				  ;AX000;
+;EXTRN LEFT:WORD 		;message number for "left",EOM	  ;AC001;
+;EXTRN RIGHT:WORD		;message number for "right",EOM   ;AC001;
 ;AC001;EXTRN LEFT_OR_RIGHT_PTR:WORD	      ;PART OF MESSAGE "Unable to shift screen ..."
-EXTRN sublist_cant_shift:BYTE	 ;definition of submessage ;AC001;
-EXTRN sublist_shift_msg:BYTE	 ;definition of submessage ;AC001;
-EXTRN SYSGETMSG:NEAR		 ;used to get the address of a message part ;AC001;
-EXTRN utility_msg_class:ABS	 ;input for sysgetmsg	;AC001;
+;EXTRN sublist_cant_shift:BYTE	 ;definition of submessage ;AC001;
+;EXTRN sublist_shift_msg:BYTE	 ;definition of submessage ;AC001;
+;EXTRN SYSGETMSG:NEAR		 ;used to get the address of a message part ;AC001;
+;EXTRN utility_msg_class:ABS	 ;input for sysgetmsg	;AC001;
 
 
 ;บ											  บ
@@ -228,15 +239,15 @@ EXTRN utility_msg_class:ABS	 ;input for sysgetmsg	;AC001;
 ;----------------------------------------------------------------------------
 
 
-HANDLE_40_OR_80   PROC	NEAR	    ;AN000;
+HANDLE_40_OR_80:                ;AN000;
 
 ;      SCREEN WIDTH IN BL
 ;
        SCRN   CURRENT_VIDEO_STATE,0 ;GET CURRENT SCREEN MODE
-       MOV    DS:MODE,AL	    ;STORE CURRENT MODE
+       MOV    [ds:MODE],AL   ;STORE CURRENT MODE
 ;      IF THE REQUEST WAS FOR 40 COL,
        CMP    BL,FORTY		  ;COMPARE WITH BL, OUTPUT FROM 'MODELENG'
-       JNE    ELSE01
+       JNE    ELSE01_modescrn
 ;
 ;AC000;  MOV	OK,0		    ;INDICATE A LEGAL FUNCTION DONE
 ;	 CASE	current mode =
@@ -248,13 +259,13 @@ HANDLE_40_OR_80   PROC	NEAR	    ;AN000;
 ;	    7,
 ;	    11:
 
-			   .IF <DS:mode EQ 0> OR
-			   .IF <DS:mode EQ 2> OR
-			   .IF <DS:mode EQ 5> OR
-			   .IF <DS:mode EQ 6> OR
-			   .IF <DS:mode EQ 7> OR
-			   .IF <DS:mode EQ 011H> THEN
-	       MOV   DS:MODE,0		 ;SWITCH TO 40 COL, BW
+			   .IF <<[ds:MODE]> EQ 0>, OR
+			   .IF <<[ds:MODE]> EQ 2>, OR
+			   .IF <<[ds:MODE]> EQ 5>, OR
+			   .IF <<[ds:MODE]> EQ 6>, OR
+			   .IF <<[ds:MODE]> EQ 7>, OR
+			   .IF <<[ds:MODE]> EQ 011H>
+	       MOV   byte [ds:MODE],0 ;SWITCH TO 40 COL, BW
 	       BREAK 0
 			   .ENDIF
 
@@ -264,26 +275,26 @@ HANDLE_40_OR_80   PROC	NEAR	    ;AN000;
 ;	    12,
 ;	    13:
 
-			   .IF <DS:mode EQ 1> OR
-			   .IF <DS:mode EQ 3> OR
-			   .IF <DS:mode EQ 4> OR
-			   .IF <DS:mode EQ 012H> OR
-			   .IF <DS:mode EQ 013H> THEN
-	       MOV   DS:MODE,1		 ;SWITCH TO 40 COL, COLOR
+			   .IF <<[ds:MODE]> EQ 1>, OR
+			   .IF <<[ds:MODE]> EQ 3>, OR
+			   .IF <<[ds:MODE]> EQ 4>, OR
+			   .IF <<[ds:MODE]> EQ 012H>, OR
+			   .IF <<[ds:MODE]> EQ 013H>
+	       MOV   byte [ds:MODE],1 ;SWITCH TO 40 COL, COLOR
 	       BREAK 0
 			   .ENDIF
 
 
-	 ENDCASE_0:
+	 ENDCASE_0_modescrn:
 
 
-	 SCRN	SET_SCREEN_MODE,DS:MODE ;SWITCH TO 40 COL
+	 SCRN	SET_SCREEN_MODE,[ds:MODE] ;SWITCH TO 40 COL
 ;      ELSE ,SINCE REQUEST NOT FOR 40 COL,
-       JMP    SHORT ENDIF01
-ELSE01:
+       JMP    SHORT ENDIF01_modescrn
+ELSE01_modescrn:
 ;    : : IF REQUEST FOR 80 COL
 	 CMP	BL,80
-	 JNE	ENDIF02
+	 JNE	ENDIF02_modescrn
 ;
 ;AC000;    MOV	  OK,0		    ;INDICATE A LEGAL FUNCTION DONE
   ;	   CASE   current mode =
@@ -295,13 +306,13 @@ ELSE01:
   ;	      7,
   ;	      11:
 
-			     .IF <DS:mode EQ 0> OR
-			     .IF <DS:mode EQ 2> OR
-			     .IF <DS:mode EQ 5> OR
-			     .IF <DS:mode EQ 6> OR
-			     .IF <DS:mode EQ 7> OR
-			     .IF <DS:mode EQ 011H> THEN
-		 MOV   DS:MODE,2	   ;SWITCH TO 80 COL, BW
+			     .IF <<[ds:MODE]> EQ 0>, OR
+			     .IF <<[ds:MODE]> EQ 2>, OR
+			     .IF <<[ds:MODE]> EQ 5>, OR
+			     .IF <<[ds:MODE]> EQ 6>, OR
+			     .IF <<[ds:MODE]> EQ 7>, OR
+			     .IF <<[ds:MODE]> EQ 011H>
+		 MOV   byte [ds:MODE],2 ;SWITCH TO 80 COL, BW
 		 BREAK 1
 			     .ENDIF
 
@@ -311,60 +322,60 @@ ELSE01:
   ;	      12,
   ;	      13:
 
-			     .IF <DS:mode EQ 1> OR
-			     .IF <DS:mode EQ 3> OR
-			     .IF <DS:mode EQ 4> OR
-			     .IF <DS:mode EQ 012H> OR
-			     .IF <DS:mode EQ 013H> THEN
-		 MOV   DS:MODE,3	   ;SWITCH TO 80 COL, COLOR
+			     .IF <<[ds:MODE]> EQ 1>, OR
+			     .IF <<[ds:MODE]> EQ 3>, OR
+			     .IF <<[ds:MODE]> EQ 4>, OR
+			     .IF <<[ds:MODE]> EQ 012H>, OR
+			     .IF <<[ds:MODE]> EQ 013H>
+		 MOV   byte [ds:MODE],3 ;SWITCH TO 80 COL, COLOR
 		 BREAK 1
 			     .ENDIF
 
 
-	   ENDCASE_1:
+	   ENDCASE_1_modescrn:
 
-	   SCRN   SET_SCREEN_MODE,DS:MODE
+	   SCRN   SET_SCREEN_MODE,[ds:MODE]
 ;    : : ENDIF ,END REQUEST FOR 80 COL
-ENDIF02:
+ENDIF02_modescrn:
 ;    : ENDIF ,END REQUEST FOR 40 COL
-ENDIF01:
+ENDIF01_modescrn:
 
 
 RET		     ;AN000;
 
-HANDLE_40_OR_80   ENDP			  ;AN000;
+;HANDLE_40_OR_80   ENDP			  ;AN000;
 
 
 ;------------------------------------------------------------------------------
 
 
-SHIFT_SCREEN	PROC  NEAR		      ;AN000;shift the screen
+SHIFT_SCREEN:                  ;AN000;shift the screen
 
 ;    DO SHIFT UNTIL HE CAN SEE END CHAR
-     MOV    SWITCH,NOEXIT	  ;SET TO REPEAT NEXT LOOP
+     MOV    byte [SWITCH],NOEXIT ;SET TO REPEAT NEXT LOOP
 DO01:
 ;    : IF second PARM (sd) IS AN "R"?
-       CMP   DS:PARM2,R_item_tag		;AC000;
+       CMP   byte [ds:PARM2],R_item_tag ;AC000;
        JE    SKIP03				;IT'S AN R SO TRY TO SHIFT RIGHT
-       JMP   ELSE03				;NOT AN R SO CHECK FOR L
+       JMP   ELSE03_modescrn				;NOT AN R SO CHECK FOR L
 ;
        SKIP03:
 ;AC000;  MOV	CS:OK,0 	  ;INDICATE A LEGAL FUNCTION DONE
 	 SCRN	CURRENT_VIDEO_STATE,0		;CHECK CURRENT VIDEO MODE
 	 CMP	AL,MONO_MODE			;IF mode >= mono THEN must be EGA mono so ...
-;	 $IF	GE
-	 JNGE $$IF1
+;	 IF$	GE
+	 JNGE IF1$$S
 ;AC001;    MOV	LEFT_OR_RIGHT_PTR,OFFSET RIGHT	  ;YELL BECAUSE CAN'T SHIFT AN EGA OR MONO
-	   set_submessage_ptr right,cant_shift	  ;set up message sublist with pointer to "right"
+	   set_submessage_ptr right,CANT_SHIFT	  ;set up message sublist with pointer to "right"
 	   DISPLAY	CANT_SHIFT		  ;YELL BECAUSE CAN'T SHIFT AN EGA OR MONO
-;	 $ELSE	LONG				  ;JUMP PAST SHIFT LOOP
-	 JMP $$EN1
-$$IF1:
+;	 ELSE$	LONG				  ;JUMP PAST SHIFT LOOP
+	 JMP EN1$$S
+IF1$$S:
 ;
 CHECK_FOR_EGA:					;SEE IF SCREEN IS HOOKED TO EGA
-	MOV	AX,SIGNITURE			;GET TO SEGMENT OF SIGNITURE WORD
+	MOV	AX,0C000H			;GET TO SEGMENT OF SIGNITURE WORD
 	MOV	ES,AX				;ADDRESS THROUGH ES
-	CMP	WORD PTR ES:SIGWORD,EGA_SIG	;IF EGA card being used THEN
+	CMP	word [es:SIGWORD],EGA_SIG   ;IF EGA card being used THEN
 	JNE	TRY_TO_SHIFT
 	  MOV	  AH,ALT_SELECT   ;AH GETS INT FUNCTION SPECIFIER
 	  MOV	  BL,EGA_INFO	  ;SPECIFY IN BL THE OPTION OF THE FUNCTION OF INT 10 WE
@@ -374,40 +385,40 @@ CHECK_FOR_EGA:					;SEE IF SCREEN IS HOOKED TO EGA
 	  CMP	  BH,COLOR_ON_IT   ;IF COLOR HOOKED TO EGA THEN
 	  JNE	  TRY_TO_SHIFT
 ;AC001;     MOV  LEFT_OR_RIGHT_PTR,OFFSET RIGHT  ;  YELL BECAUSE CAN'T SHIFT AN EGA
-	    set_submessage_ptr right,cant_shift    ;set up message sublist with pointer to "right"
+	    set_submessage_ptr right,CANT_SHIFT    ;set up message sublist with pointer to "right"
 	    DISPLAY	 CANT_SHIFT
-	    JMP  ELSE05 			 ;  JUMP PAST SHIFT LOOP
+	    JMP  ELSE05_modescrn 			 ;  JUMP PAST SHIFT LOOP
 ;
 TRY_TO_SHIFT:
 	 CALL	SCRNTAB 	  ;LOAD VIDEO TABLE IN WORK AREA
 ;	     DS NOW POINTS TO THE SEGMENT WHERE THE VIDEO TABLE WAS MOVED TO.
 ;	     BX HAS THE NEW OFFSET OF THE VIDEO TABLE
 
-	  CMP	  BYTE PTR DS:[BX][SHIFCT40],RIGHT_LIMIT	;IF haven't shifted max right THEN
+	  CMP	  byte [ds:BX+SHIFCT40],RIGHT_LIMIT      ;IF haven't shifted max right THEN
 	  JG	  SHIFT_RIGHT
 	    SET_UP_FOR_PRINTF
 ;AC001;     MOV 	LEFT_OR_RIGHT_PTR,OFFSET RIGHT
-	    set_submessage_ptr right,cant_shift    ;set up message sublist with pointer to "right"
+	    set_submessage_ptr right,CANT_SHIFT    ;set up message sublist with pointer to "right"
 	    DISPLAY	CANT_SHIFT		;"Unable to shift screen right"
 	    REPLACE_DS
-	    JMP 	ELSE05
+	    JMP 	ELSE05_modescrn
   SHIFT_RIGHT:
-	 MOV	AL,DS:[BX][SHIFCT40]	;GET SHIFT COUNT FOR 40COL
+	 MOV	AL,[ds:BX+SHIFCT40]  ;GET SHIFT COUNT FOR 40COL
 	 SUB	AL,1		      ;SHIFT IT LEFT 1
-	 MOV	DS:[BX][SHIFCT40],AL	;STORE IT BACK
-	 MOV	AL,DS:[BX][SHIFCT80]	;GET SHIFT COUNT FOR 80COL
+	 MOV	[ds:BX+SHIFCT40],AL  ;STORE IT BACK
+	 MOV	AL,[ds:BX+SHIFCT80]  ;GET SHIFT COUNT FOR 80COL
 	 SUB	AL,2		      ;SHIFT LEFT 2
-	 MOV	DS:[BX][SHIFCT80],AL	;STORE IT BACK
-	 MOV	AL,DS:[BX][SHIFCTGR]	;GET GRAPHICS SHIFT COUNT
+	 MOV	[ds:BX+SHIFCT80],AL  ;STORE IT BACK
+	 MOV	AL,[ds:BX+SHIFCTGR]  ;GET GRAPHICS SHIFT COUNT
 	 SUB	AL,1		      ;SHIFT LEFT 1
-	 MOV	DS:[BX][SHIFCTGR],AL	;STORE IT BACK
+	 MOV	[ds:BX+SHIFCTGR],AL  ;STORE IT BACK
 ;    : ELSE ,SINCE PARM2 IS NOT AN "R"
-       JMP ENDIF03
-ELSE03:
+       JMP ENDIF03_modescrn
+ELSE03_modescrn:
 ;    : : IF THIS CHAR IS AN "L"?
-	 CMP DS:PARM2,L_item_tag		;AC000;
+	 CMP byte [ds:PARM2],L_item_tag ;AC000;
 	 JE  SKIP05				;L WAS SPECIFIED SO TRY TO SHIFT LEFT
-	 JMP	ELSE05				;WASN'T "L" OR "R" SO DONT'T TRY TO SHIFT
+	 JMP	ELSE05_modescrn				;WASN'T "L" OR "R" SO DONT'T TRY TO SHIFT
 ;	     SINCE IT IS "L",
 ;
 	 SKIP05:
@@ -416,14 +427,14 @@ ELSE03:
 	   CMP	AL,MONO_MODE			;IF mode >= mono THEN must be EGA or mono so ...
 	   JB	CHK_FOR_EGA
 ;AC001;      MOV	LEFT_OR_RIGHT_PTR,OFFSET LEFT	  ;YELL BECAUSE CAN'T SHIFT AN EGA
-	     set_submessage_ptr left,cant_shift    ;set up message sublist with pointer to "left" ;AC001;
+	     set_submessage_ptr left,CANT_SHIFT    ;set up message sublist with pointer to "left" ;AC001;
 	     DISPLAY	CANT_SHIFT
-	     JMP	ELSE05				  ;JUMP PAST SHIFT LOOP
+	     JMP	ELSE05_modescrn				  ;JUMP PAST SHIFT LOOP
 ;
 	   CHK_FOR_EGA: 				;SEE IF SCREEN IS HOOKED TO EGA
-	     MOV	AX,SIGNITURE			;GET TO SEGMENT OF SIGNITURE WORD
+	     MOV	AX,0C000H			;GET TO SEGMENT OF SIGNITURE WORD
 	     MOV	ES,AX				;ADDRESS THROUGH ES
-	     CMP	WORD PTR ES:SIGWORD,EGA_SIG	;IF EGA card being used THEN
+	     CMP	word [es:SIGWORD],EGA_SIG   ;IF EGA card being used THEN
 	     JNE	TRY_TO_SHIFT_LEFT
 	       MOV	  AH,ALT_SELECT   ;AH GETS INT FUNCTION SPECIFIER
 	       MOV	  BL,EGA_INFO	  ;SPECIFY IN BL THE OPTION OF THE FUNCTION OF INT 10 WE
@@ -431,9 +442,9 @@ ELSE03:
 	       CMP	  BH,COLOR_ON_IT   ;IF COLOR HOOKED TO EGA THEN
 	       JNE	  TRY_TO_SHIFT_LEFT
 ;AC001; 	 MOV	LEFT_OR_RIGHT_PTR,OFFSET LEFT	;  YELL BECAUSE CAN'T SHIFT AN EGA
-		 set_submessage_ptr left,cant_shift    ;set up message sublist with pointer to "left"  ;AC001;
+		 set_submessage_ptr left,CANT_SHIFT    ;set up message sublist with pointer to "left"  ;AC001;
 		 DISPLAY	CANT_SHIFT
-		 JMP	ELSE05				;  JUMP PAST SHIFT LOOP
+		 JMP	ELSE05_modescrn				;  JUMP PAST SHIFT LOOP
 ;
 TRY_TO_SHIFT_LEFT:
 	   CALL   SCRNTAB	  ;LOAD VIDEO TABLE IN WORK AREA
@@ -442,81 +453,81 @@ TRY_TO_SHIFT_LEFT:
 ;
 	   SET_LEFT_SHIFT_LIMIT 	;SET LIMIT TO SUIT MACHINE TYPE
 ;
-	   MOV	  AL,BYTE PTR DS:[BX][SHIFCT40] ;AL=current horizontal sync position
-	   CMP	  AL,CS:LEFT_LIMIT		;IF haven't shifted max left THEN
+	   MOV	  AL,byte [ds:BX+SHIFCT40]      ;AL=current horizontal sync position
+	   CMP	  AL,[cs:LEFT_LIMIT] ;IF haven't shifted max left THEN
 	     JL 	  SHIFT_LEFT
 	     SET_UP_FOR_PRINTF
 ;AC001;      MOV	LEFT_OR_RIGHT_PTR,OFFSET LEFT
-	     set_submessage_ptr left,cant_shift    ;set up message sublist with pointer to "left"  ;AC001;
+	     set_submessage_ptr left,CANT_SHIFT    ;set up message sublist with pointer to "left"  ;AC001;
 	     DISPLAY	CANT_SHIFT
 	     REPLACE_DS
-	     JMP	ELSE05
+	     JMP	ELSE05_modescrn
   SHIFT_LEFT:
-	   MOV	  AL,DS:[BX][SHIFCT40]	;GET SHIFT COUNT 40COL
+	   MOV	  AL,[ds:BX+SHIFCT40]  ;GET SHIFT COUNT 40COL
 	   ADD	  AL,1		      ;SHIFT RIGHT ONE
-	   MOV	  DS:[BX][SHIFCT40],AL	;STORE IT BACK
-	   MOV	  AL,DS:[BX][SHIFCT80]	;GET SHIFT COUNT 80COL
+	   MOV	  [ds:BX+SHIFCT40],AL  ;STORE IT BACK
+	   MOV	  AL,[ds:BX+SHIFCT80]  ;GET SHIFT COUNT 80COL
 	   ADD	  AL,2		      ;SHIFT RIGHT 2
-	   MOV	  DS:[BX][SHIFCT80],AL	;STORE IT BACK
-	   MOV	  AL,DS:[BX][SHIFCTGR]	;GET GRAPHICS COUNT
+	   MOV	  [ds:BX+SHIFCT80],AL  ;STORE IT BACK
+	   MOV	  AL,[ds:BX+SHIFCTGR]  ;GET GRAPHICS COUNT
 	   ADD	  AL,1		      ;SHIFT RIGHT 8 PIXELS
-	   MOV	  DS:[BX][SHIFCTGR],AL	;STORE IT BACK
+	   MOV	  [ds:BX+SHIFCTGR],AL  ;STORE IT BACK
 ;    : : ELSE ,SINCE CHAR IS NEITHER "R" NOR "L", QUIT
-	 JMP	SHORT ENDIF05
-;	 $ENDIF ;EGA or MONO
-$$EN1:
-ELSE05:
-	   MOV	  CS:SWITCH,EXIT  ;REQUEST LOOP BE TERMINATED
+	 JMP	SHORT ENDIF05_modescrn
+;	 ENDIF$ ;EGA or MONO
+EN1$$S:
+ELSE05_modescrn:
+	   MOV	  byte [cs:SWITCH],EXIT ;REQUEST LOOP BE TERMINATED
 ;    : : ENDIF ,END IS THIS CHAR AN "L"? TEST
-ENDIF05:
+ENDIF05_modescrn:
 ;    : ENDIF END, IS PARM2 AN "R"? TEST
-ENDIF03:
+ENDIF03_modescrn:
 
-PUBLIC	 ENDIF03
+;PUBLIC	 ENDIF03_modescrn
 
        MOV    AX,CS		  ;RESTORE THIS SEG
        MOV    DS,AX		  ; TO DS
 ;    LEAVE IF THE EXIT SWITCH IS SET
 ;AC001;     CMP    SWITCH,EXIT
 ;AC001;     JE	   ENDDO01
-     .IF <switch NE exit> THEN NEAR
+     .IF <<[SWITCH]> NE EXIT>, NEAR
 ;
        SCRN CURRENT_VIDEO_STATE,0
-       MOV    DS:MODE,AL	  ;SAVE CURRENT MODE
+       MOV    [ds:MODE],AL ;SAVE CURRENT MODE
 ;	     LEAVING CURRENT MODE IN AL,
        SCRN   SET_SCREEN_MODE	  ;RESET IN CURRENT MODE
 ;    : IF THIS IS "T"
-       CMP    DS:PARM3,T_item_tag	  ;AC000;
-       JNE    ELSE06
+       CMP    byte [ds:PARM3],T_item_tag ;AC000;
+       JNE    ELSE06_modescrn
 ;
 ;	 DECIDE WHICH QUESTION TO DISPLAY...
 ;    : : IF REQUESTED FUNCTION IS "R"
-	 CMP	 DS:PARM2,R_item_tag	     ;AC000;
-	 JNE	 ELSE08
+	 CMP	 byte [ds:PARM2],R_item_tag ;AC000;
+	 JNE	 ELSE08_modescrn
 
 ;AC001;    MOV	   LFTM_OR_RGHTM_PTR,OFFSET LEFTMOST
-	   set_submessage_ptr leftmost,shift_msg   ;set up message sublist with pointer to "leftmost"  ;AC001;
+	   set_submessage_ptr leftmost,SHIFT_MSG   ;set up message sublist with pointer to "leftmost"  ;AC001;
 ;    : : ELSE ,SINCE WAS NOT "R"
-	 JMP	 SHORT ENDIF08
-ELSE08:
+	 JMP	 SHORT ENDIF08_modescrn
+ELSE08_modescrn:
 ;AC001;    MOV	   LFTM_OR_RGHTM_PTR,OFFSET RIGHTMOST
-	   set_submessage_ptr rightmost,shift_msg   ;set up message sublist with pointer to "rightmost"  ;AC001;
+	   set_submessage_ptr rightmost,SHIFT_MSG   ;set up message sublist with pointer to "rightmost"  ;AC001;
 ;    : : ENDIF END FUNCTION IS "R"? TEST
-ENDIF08:
+ENDIF08_modescrn:
 
 ;	 decide how many times to display "0123456789"
-	 OR	DS:MODE,01H	  ;SET UP TO TEST FOR COLOR OR B/W
+	 OR	byte [ds:MODE],01H ;SET UP TO TEST FOR COLOR OR B/W
 	 MOV	CX,CNT8 	  ;(GUESS IT IS 80COL) SET LOOP CTR TO 8
 ;    : : IF 40 COL?
-	 CMP	DS:MODE,COL40
-	 JNE	ENDIF07
+	 CMP	byte [ds:MODE],COL40
+	 JNE	ENDIF07_modescrn
 ;
 	   MOV	  CX,CNT4	  ;(FIX ABOVE GUESS) SET LOOP CTR TO 4
 ;    : : ENDIF ,END IS IT 40 COL? TEST
-ENDIF07:
+ENDIF07_modescrn:
 ;
 	 .REPEAT
-	    SCRN   SET_SCREEN_MODE,DS:MODE		;clear the screen
+	    SCRN   SET_SCREEN_MODE,[ds:MODE] ;clear the screen
 	    PUSH  CX		    ;save loop counter
 	    DO02:		      ;DO UNTIL LINE IS DISPLAYED across entire screen
 	       DISPLAY NUMBERS	      ;DISPLAY 0123456789
@@ -527,22 +538,22 @@ ENDIF07:
 	    MOV   AX,6523H	    ;AN002;yes no check get extended error
 	    INT   21H		    ;AN002;AX returned with indication of yes or no
 	    POP   CX		    ;restore loop counter
-	 .UNTIL <AX EQ yes> OR
+	 .UNTIL <AX EQ YES>, OR
 	 .UNTIL <AX EQ no>
 ;    : : IF RESPONSE IS "Y"
 	 CMP	AL,YES
-	 JNE	ENDIF09
-	   MOV	  SWITCH,EXIT	  ;TERMINATE THE LOOP
+	 JNE	ENDIF09_modescrn
+	   MOV	  byte [SWITCH],EXIT ;TERMINATE THE LOOP
 ;    : : ENDIF ,END IS RESPONSE "N"? TEST
-ENDIF09:
+ENDIF09_modescrn:
 ;    : ELSE ,SINCE "T" NOT SPECIFIED
-       JMP    SHORT ENDIF06
-ELSE06:
-	 MOV	SWITCH,EXIT	  ;TERMINATE THE LOOP
+       JMP    SHORT ENDIF06_modescrn
+ELSE06_modescrn:
+	 MOV	byte [SWITCH],EXIT ;TERMINATE THE LOOP
 ;    : ENDIF ,END IS THIS "T"? TEST
-ENDIF06:
+ENDIF06_modescrn:
 ;    LEAVE IF EXIT SWITCH IS SET
-     CMP    SWITCH,EXIT
+     CMP    byte [SWITCH],EXIT
      JE     ENDDO01
 ;
 ;    ENDDO GO BACK AND SHIFT MORE
@@ -558,7 +569,7 @@ ENDDO01:
 ;    ENDIF ,END ARE NO LEGAL FUNCTIONS DONE? TEST
 ;AC000;ENDIF10:
      RET			  ;RETURN TO MODE MAIN ROUTINE
-SHIFT_SCREEN	ENDP			;AN000;
-PRINTF_CODE    ENDS
-	 END
+;SHIFT_SCREEN	ENDP			;AN000;
+end if
+;	 END
 

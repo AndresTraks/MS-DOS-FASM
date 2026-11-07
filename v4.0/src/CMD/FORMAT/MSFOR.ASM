@@ -15,7 +15,7 @@ match =a_PartitionTableEntry_LAID_OUT, a_PartitionTableEntry_LAID_OUT
 {
     a_PartitionTableEntry_LAID_OUT equ 1
     virtual at 0
-      a_PartitionTableEntry a_PartitionTableEntry
+      a_PartitionTableEntry a_PartitionTableEntry 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
       sizeof.a_PartitionTableEntry = $ - a_PartitionTableEntry
     end virtual
 }
@@ -32,7 +32,7 @@ match =IBMBoot_LAID_OUT, IBMBoot_LAID_OUT
 {
     IBMBoot_LAID_OUT equ 1
     virtual at 0
-      IBMBoot IBMBoot
+      IBMBoot IBMBoot 0
       sizeof.IBMBoot = $ - IBMBoot
     end virtual
 }

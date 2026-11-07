@@ -114,6 +114,197 @@ UTILITIES = {
         # wanted, so it starts at nothing.
         START={'cs': 'CODE', 'ds': 'DATA', 'es': None, 'ss': 'STACK'},
     ),
+    # MODE's sixteen modules in the order MODE.LNK names them, and the
+    # seven headers they share.  RESCODE is first because it is the resident
+    # part: the serial and printer routines MODE leaves behind, which it
+    # moves into its own prefix at 60H as GRAFTABL moves its handler.
+    'MODE': dict(
+        MODULES=('RESCODE.ASM', 'MODEECHO.ASM', 'MODELENG.ASM', 'MODEMES.ASM',
+                 'MODESCRN.ASM', 'MAIN.ASM', 'MODEVID.ASM', 'MODEPRIN.ASM',
+                 'MODECOM.ASM', 'SCRNTAB.ASM', 'MODECP.ASM', 'DISPLAY.ASM',
+                 'TYPAMAT.ASM', 'INVOKE.ASM', 'PARSHELL.ASM', 'MODEPARS.ASM',
+                 'COMMON.STC', 'MODECPEQ.INC', 'MODECPMS.INC',
+                 'MODECPRO.INC', 'MODEDEFS.INC', 'MODEQUAT.INC',
+                 'MODESUBS.INC'),
+        TAG={'MODESCRN.ASM': 'S', 'MODECP.ASM': 'C', 'SCRNTAB.ASM': 'T',
+             'MODEPRIN.ASM': 'P'},
+        # The labels MODE writes by hand and five modules each have: the
+        # ENDIFnn and ELSEnn that stand where a structured statement would,
+        # ENDC, the ENDCASE_n of a hand-written case, and the P0 to P7 of
+        # MODEPRIN's and MODEECHO's port loops.
+        # And the one-letter equates: the structured statements read C and Z
+        # and the rest as the flags they are named for, and MODEVID's C is
+        # the position of a letter in a parameter while INVOKE's B is a
+        # retry setting -- two modules giving one name two values, which
+        # fasm's EQU lets by without a word.
+        LOCALS=(r"ENDIF\d+", r"ELSE\d+", r"ENDC", r"ENDCASE_\d+", r"P\d",
+                r"[ABCEOLPSZ]"),
+        # RESCODE describes the program prefix before its ORG 100H -- the
+        # environment's segment at 2CH, where the resident code goes at 60H,
+        # the command line at 80H -- and a reservation there is a name for a
+        # place and not a byte to lay down: the image begins at 100H, where
+        # DOS enters a .COM, and LINK's zeros before that went no further
+        # than EXE2BIN.
+        # Four of MODE's own names are fasm's: RT reserves a ten-byte real,
+        # REPEAT opens a block that assembles more than once, MATCH is how
+        # fasm takes text apart, and PTEST is an instruction of a later
+        # processor.  MODE means by them labels in its retry and printer
+        # code and two of the parser's keywords.
+        RESERVED=('RT', 'REPEAT', 'MATCH', 'PTEST'),
+        # INVOKE and MODECOM each name the far pointer at 0:530H, where the
+        # resident part of MODE leaves its own address: MASM assembled them
+        # apart and let both have the name.  One assembly can only have the
+        # one, and they are the same place, so the one the link order
+        # reaches second gives way.
+        # MACHINE_TYPE is three names in one.  RESCODE keeps a byte of its
+        # own by that name, which half the modules read; MODESCRN names the
+        # byte the ROM BIOS has at 0F000:0FFFE the same thing and reads it
+        # through DS; and SCRNTAB names that same ROM byte and never reads
+        # it.  So the program's byte keeps the name, MODESCRN's says what it
+        # is, and SCRNTAB's declaration goes -- two of them at one address
+        # is one too many whatever they are called.
+        # Two more are a module and one of MODE's own headers each
+        # declaring storage of the same name -- INVOKE's row_value against
+        # MODESUBS.INC's, and RESCODE's PARM1 against MODEDEFS.INC's.  MASM
+        # gave each module that read the header a copy of its own and the
+        # modules reach theirs by offset, so the module's gives way.
+        #
+        # Two more are names a shared header gives a number to and MODE
+        # gives storage: INC/VERSIONA.INC's MINOR_VERSION against MODECP's
+        # two bytes of that name, and INC/SYSMSG.INC's colon against
+        # MODEPARS's.  The header's is the one the retriever reads, so
+        # MODE's gives way.
+        #
+        # Two of the message table's names are MODEPARS's keyword strings
+        # as well -- the "RATE=%1" and "DELAY=%1" messages against the
+        # RATE= and DELAY= the parser looks for -- and the strings are what
+        # every module that names them reads.  Nothing reads the two
+        # messages, so theirs are the names that give way.
+        #
+        # COM_status is two numbers: MODEPARS's request type of 93H, which
+        # INVOKE reads, and the 3 RESCODE passes the ROM BIOS to ask a
+        # serial port for its status.  fasm takes an EQU's value where the
+        # EQU is written, and the modules are read once per segment, so
+        # RESCODE's 3 stood where INVOKE wanted the 93H -- which sent the
+        # status of every device through a jump table by the wrong index.
+        # The resident part's number gives way, being read in the one
+        # module.
+        #
+        # Five names mean one thing in one module and another in another,
+        # which MASM allowed because it assembled them apart.  The equate
+        # gives way to the storage or the procedure, and the label to the
+        # storage: MODEECHO's mask for an ASCII digit against MODELENG's
+        # routine of that name, its CASE against MODEPRIN's byte, MODEPRIN's
+        # COLON against MODEPARS's, MODEPRIN's label against the resident
+        # part's LOADED_YET, and INVOKE's REDIRECTED against MODEPRIN's.
+        PRIVATE={'MODESCRN.ASM': (('MACHINE_TYPE', 'MACHINE_TYPE_ROM'),),
+                 'MODEECHO.ASM': (('ascii_to_int', 'ascii_to_int_'),
+                                  ('CASE', 'CASE_')),
+                 'MODEPRIN.ASM': (('COLON', 'COLON_'),
+                                  ('LOADED_YET', 'LOADED_YET_'),
+                                  ('COUNT', 'COUNT_')),
+                 'INVOKE.ASM': (('redirected', 'redirected_'),
+                                ('row_value', 'row_value_'),
+                                ('i', 'i_')),
+                 'RESCODE.ASM': (('PARM1', 'PARM1_'),
+                                 ('COM_status', 'COM_status_bios')),
+                 'MODECP.ASM': (('MINOR_VERSION', 'MINOR_VERSION_'),),
+                 'MODEDEFS.INC': (('RATE_equal', 'RATE_equal_msg'),
+                                  ('DELAY_equal', 'DELAY_equal_msg')),
+                 'MODEPARS.ASM': (('colon', 'colon_byte'),
+                                  ('jump_table1', 'jump_table1_'),
+                                  ('code_page_numbers_encountered',
+                                   'code_page_numbers_encountered_'),
+                                  ('current_packet_cp_number',
+                                   'current_packet_cp_number_'))},
+        # Five modules name the far pointer at 0:530H where the resident
+        # part of MODE leaves its own address, three name the interrupt 14H
+        # vector at 0:50H, and two the EGA's signature word: MASM assembled
+        # them apart and let each have the name.  They are the same places,
+        # so the module the link order reaches first declares each of them
+        # and the others' declarations go; what the others wrote of them
+        # reads the one declaration, the name being the same.
+        PATCHES={'MODEECHO.ASM': [
+            ("RESSEG\t\tDD\t?", ";RESSEG\t\tDD\t?"),
+            ("VECT14H \tLABEL\tDWORD", ";VECT14H \tLABEL\tDWORD")],
+                 'MODEPRIN.ASM': [
+            ("RESSEG\tLABEL\tDWORD", ";RESSEG\tLABEL\tDWORD"),
+            ("MOV   AX,submessage", "MOV   AX,[submessage]")],
+                 'MODECOM.ASM': [
+            ("RESSEG\tLABEL\tDWORD", ";RESSEG\tLABEL\tDWORD"),
+            ("VECT14H    LABEL  DWORD", ";VECT14H    LABEL  DWORD")],
+                 'INVOKE.ASM': [
+            ("resseg\tLABEL\tDWORD", ";resseg\tLABEL\tDWORD"),
+            # MASM let blanks separate a macro's arguments and ignored the
+            # ones the macro had no parameter for, so the comment this line
+            # lost its semicolon from went in as a second argument to a
+            # macro of one and fell away.  fasm reads the line to the end.
+            ('long_underline\t\t\t\t      "Status for device LPTX?"',
+             'long_underline\t\t\t\t     ;"Status for device LPTX?"')],
+                 'MODEVID.ASM': [
+            ("SIGWORD DW\t?", ";SIGWORD DW\t?")],
+                 # set_submessage_ptr takes the message whose text is to go
+                 # into another message's sublist, and moves the number out
+                 # of the block that describes it: a bare name was the word
+                 # at the place to MASM, and the three modules that have the
+                 # macro all pass it one of the message blocks MODEDEFS.INC
+                 # lays down, whose first word is the number.  The brackets
+                 # say so where the name is a macro's argument and the rule
+                 # for storage cannot see it.
+                 'MODECP.ASM': [
+            ("MOV   AX,submessage", "MOV   AX,[submessage]")],
+                 'MODESCRN.ASM': [
+            ("MOV   AX,submessage", "MOV   AX,[submessage]")],
+                 # modify_parser_control_block moves its third argument
+                 # into AL, and the three kinds of argument the module
+                 # passes it were three different instructions to MASM: a
+                 # register for i_CL, a character for ".", and the byte at
+                 # the place for colon.  One macro body cannot be all three
+                 # here, so the two lines that name a place say so.  The
+                 # name is the one the rules above give MODEPARS's colon,
+                 # the patches going on after them.
+                 'MODEPARS.ASM': [
+            ("seperator_list,delete,colon_byte",
+             "seperator_list,delete,[colon_byte]"),
+            ("seperator_list,addd,colon_byte",
+             "seperator_list,addd,[colon_byte]")],
+                 'SCRNTAB.ASM': [
+            ("\tMACHINE_TYPE LABEL   BYTE",
+             ";\tMACHINE_TYPE LABEL   BYTE")],
+                 'RESCODE.ASM': [
+            ("environ_seg    DW    ?", "environ_seg    LABEL WORD"),
+            # The byte this one reserves is what puts the command line's
+            # first character at 81H, and the ORG says so where the
+            # reservation no longer can: it is the counter the byte moved
+            # and not the byte that matters, the image beginning at 100H.
+            ("command_line_length  DB    ?\t\t\t;not used, just place "
+             "holder to allign next field",
+             "command_line_length  LABEL BYTE\t\t;not used, just place "
+             "holder to allign next field\n\tORG\t81H")]},
+        SHARED=('SYSCALL.INC', 'DOSSYM.INC', 'SYSMSG.INC', 'PSDATA.INC',
+                'STRUC.INC', 'COPYRIGH.INC', 'PATHMAC.INC',
+                'MSGHAN.INC', 'DOSMAC.INC', 'MSGDCL.INC', 'MSGSERV.ASM',
+                'VERSIONA.INC', 'BPB.INC', 'BUFFER.INC', 'SYSVAR.INC',
+                'VECTOR.INC', 'MULT.INC', 'DIRENT.INC', 'DPB.INC',
+                'CURDIR.INC', 'CPMFCB.INC', 'FIND.INC', 'PDB.INC', 'EXE.INC',
+                'SF.INC', 'ARENA.INC', 'INTNAT.INC', 'MI.INC',
+                'FILEMODE.INC', 'ERROR.INC', 'VERSION.INC', 'PARSE.ASM'),
+        # MASM began each module with the registers assumed on nothing, and
+        # the modules say CS:PRINTF_CODE and DS:PRINTF_CODE for themselves.
+        START={'cs': 'DGROUP', 'ds': None, 'es': None, 'ss': None},
+        # The names a macro pastes together.  MASM read a name in any case
+        # and fasm pastes the letters as they stand, so a paste cannot be
+        # brought to the spelling of the declaration the way a reference
+        # can: the declaration takes the spelling of the paste instead.
+        # MODESCRN, MODEPRIN and MODECP reach a message's sublist as
+        # sublist_&message, each writing the message's name in its own case.
+        SPELLING={'sublist_cant_shift': 'sublist_CANT_SHIFT',
+                  'sublist_shift_msg': 'sublist_SHIFT_MSG',
+                  'sublist_retparto': 'sublist_RETPARTO',
+                  'sublist_cpmsg8': 'sublist_cpmsg8',
+                  'sublist_cpmsg10': 'sublist_cpmsg10',
+                  'sublist_cpmsg17': 'sublist_cpmsg17'},
+    ),
     # GRAFTABL's ten modules in the order GRAFTABL.LNK names them, and the
     # header they share.  GRTABHAN is first because it is the resident part:
     # the interrupt handler and the 1K table it answers from, which the
@@ -237,7 +428,10 @@ N = r"[A-Za-z_@?$][A-Za-z0-9_@?$]*"
 # which RECOVER writes often, so the operand rules look past one.
 LED = r"^(\s*(?:" + N + r":)?\s*(?:"
 MNEM = (r"mov|cmp|add|sub|inc|dec|and|or|xor|test|adc|sbb|xchg|lea|push|pop|"
-        r"mul|imul|div|idiv|neg|not|shl|shr|sar|rol|ror|call|jmp|les|lds|int")
+        r"mul|imul|div|idiv|neg|not|shl|shr|sar|rol|ror|call|jmp|les|lds|int|"
+        # A structured statement carries operands too, inside the condition
+        # INC/STRUC.INC takes apart, and the rules below have to reach them.
+        r"\.IF|\.ELSEIF|\.WHILE|\.UNTIL|\.REPEAT|\.WHEN|\.LEAVE|\.EXITIF")
 
 MODULES = U['MODULES']
 SUFFIX = U.get('SUFFIX', {})
@@ -273,6 +467,49 @@ def written(stem):
 # TREEPAR's carry the module's mark.
 TAG = dict.fromkeys(MODULES, '')
 TAG.update(U.get('TAG', {}))
+
+
+def comment_at(line):
+    """Where a line's comment starts, the semicolons inside quotes aside.
+
+    MODEPARS declares a field as DB ";" -- the extra delimiter its parser
+    takes -- and a comment that began at the first semicolon would take the
+    quote with it and leave the string open.
+    """
+    quote = None
+    for i, c in enumerate(line):
+        if quote:
+            if c == quote:
+                quote = None
+        elif c in '\'"':
+            quote = c
+        elif c == ';':
+            return i
+    return -1
+
+
+def code_of(line):
+    """A line with its comment taken off."""
+    j = comment_at(line)
+    return line if j < 0 else line[:j]
+
+
+STRING = re.compile(r"'[^']*'|\"[^\"]*\"")
+
+
+def outside_strings(pattern, now, code):
+    """A substitution made everywhere but inside a string.
+
+    MODEPRIN declares L EQU "L", the letter it looks for in LPT1: renaming
+    the one takes the other with it unless the quotes are left alone.
+    """
+    out, at = [], 0
+    for m in STRING.finditer(code):
+        out.append(re.sub(pattern, now, code[at:m.start()]))
+        out.append(m.group(0))
+        at = m.end()
+    out.append(re.sub(pattern, now, code[at:]))
+    return ''.join(out)
 
 
 def dollars(text, tag):
@@ -323,13 +560,68 @@ for stem, pairs in PRIVATE.items():
     out = []
     # the code only: a comment keeps the word the release wrote
     for line in source[stem].split('\n'):
-        j = line.find(';')
+        j = comment_at(line)
         code, comment = (line, '') if j < 0 else (line[:j], line[j:])
         for was, now in pairs:
-            code = re.sub(r"(?<![A-Za-z0-9_@?$.])" + was
-                          + r"(?![A-Za-z0-9_@?$])", now, code)
+            code = outside_strings(r"(?<![A-Za-z0-9_@?$.])" + was
+                                   + r"(?![A-Za-z0-9_@?$])", now, code)
         out.append(code + comment)
     source[stem] = '\n'.join(out)
+
+
+# Labels a module keeps to itself, which MASM let every module have because
+# it assembled them apart: MODE writes endif01 and p0 to p7 by hand in five
+# modules apiece.  Each takes the name of the module it is in.
+LOCALS = U.get('LOCALS', ())
+if LOCALS:
+    localpat = re.compile(r"(?i)^(?:" + "|".join(LOCALS) + r")$")
+    for stem in MODULES:
+        mark = stem.split('.')[0].lower()
+        mine = set()
+        for line in source[stem].split('\n'):
+            # MODE writes some of its labels against the margin and some
+            # of them indented, and the names it keeps to itself are
+            # equates as well: one-letter ones, which the structured
+            # statements want for the flags and two modules give different
+            # values to.
+            code = code_of(line)
+            m = re.match(r"^[ \t]*(" + N + r"):", code) \
+                or re.match(r"(?i)^(" + N + r")[ \t]+(?:equ|=)[ \t]", code)
+            if m and localpat.match(m.group(1)):
+                mine.add(m.group(1))
+        if not mine:
+            continue
+        out = []
+        for line in source[stem].split('\n'):
+            j = comment_at(line)
+            code, comment = (line, '') if j < 0 else (line[:j], line[j:])
+            for name in sorted(mine, key=len, reverse=True):
+                code = outside_strings(r"(?<![A-Za-z0-9_@?$.])"
+                                       + re.escape(name)
+                                       + r"(?![A-Za-z0-9_@?$])",
+                                       '%s_%s' % (name, mark), code)
+            # A name a macro pastes together is not the name until fasm has
+            # put it together, so the rule above passes over it: MODELENG's
+            # BREAK writes JMP ENDCASE_#destination for one of the ENDCASE_0
+            # and the rest it has of its own, and the module's mark goes on
+            # the end of the paste.
+            def paste(m2, mark=mark, mine=mine):
+                stem, arg = m2.group(1), m2.group(2)
+                if not localpat.match(stem + '0'):
+                    return m2.group(0)
+                # in the spelling the module's own labels have, MASM having
+                # read the two alike: MODESCRN writes endcase_&X in the
+                # macro and ENDCASE_0 where the label stands.
+                for name in mine:
+                    if name.lower().startswith(stem.lower()):
+                        stem = name[:len(stem)]
+                        break
+                return '%s&%s&_%s' % (stem, arg, mark)
+
+            code = re.sub(r"(?i)(?<![A-Za-z0-9_@?$.])(" + N + r")&(" + N
+                          + r")(?![A-Za-z0-9_@?$&])", paste, code)
+            out.append(code + comment)
+        source[stem] = '\n'.join(out)
 
 
 def renamed(text):
@@ -340,7 +632,7 @@ def renamed(text):
     """
     out = []
     for line in text.split('\n'):
-        j = line.find(';')
+        j = comment_at(line)
         code, comment = (line, '') if j < 0 else (line[:j], line[j:])
         for name in RESERVED:
             code = re.sub(r"(?i)(?<![A-Za-z0-9_@?$.])" + name
@@ -371,12 +663,28 @@ def struct_arrays(text):
     def one(m):
         name, strucname, count, comment = (m.group(1), m.group(2), m.group(3),
                                            m.group(4) or '')
-        assert STRUCZERO.get(strucname.lower()), strucname
-        return ('; %s declares a zero in every field, so what the %s of them\n'
-                '; take up is that many zero bytes; the name is what the\n'
-                '; program asks for and the fields are reached from it.\n'
-                'label %s byte\n\ttimes %s*sizeof.%s db 0%s'
-                % (strucname, count, name, count, strucname, comment))
+        if STRUCZERO.get(strucname.lower()):
+            return ('; %s declares a zero in every field, so what the %s of'
+                    ' them\n'
+                    '; take up is that many zero bytes; the name is what the\n'
+                    '; program asks for and the fields are reached from it.\n'
+                    'label %s byte\n\ttimes %s*sizeof.%s db 0%s'
+                    % (strucname, count, name, count, strucname, comment))
+        # Something other than a zero in a field, so the room cannot just be
+        # reserved: the instances are laid down as instances, each named
+        # after the array and its place in it, under the one label the
+        # program asks for.  MODEPARS writes its sixteen parm_list_entry
+        # that way, every one of them starting with an item tag of 0FFH.
+        return ('; %s declares something other than a zero, so the %s of them'
+                '\n'
+                '; are laid down as instances.  fasm names an instance, so'
+                ' each\n'
+                '; takes the array\'s name and its place in it; what the'
+                ' program\n'
+                '; asks for is the label.\n'
+                'label %s byte%s\n'
+                'rept %s each\n{\n\t%s_#each %s\n}'
+                % (strucname, count, name, comment, count, name, strucname))
 
     return re.sub(r"(?mi)^(" + N + r")[ \t]+(" + N + r")[ \t]+(\S+)[ \t]+"
                   r"dup[ \t]*\([ \t]*<[ \t]*>[ \t]*\)[ \t]*(;[^\n]*)?$",
@@ -440,11 +748,11 @@ def segment_values(text):
     """
     text = re.sub(r"(?mi)^([ \t]*dw[ \t]+)(" + SEGPAT
                   + r")([ \t]*)(;[^\n]*)?$",
-                  lambda m: '%s%s%s%s' % (m.group(1), SEGMAP[m.group(2).upper()],
+                  lambda m: '%s%s%s%s' % (m.group(1), segvalue(m.group(2)),
                                           m.group(3), m.group(4) or ''), text)
     text = re.sub(r"(?mi)^([ \t]*(?:" + N + r":)?[ \t]*mov[ \t]+" + N
                   + r"[ \t]*,[ \t]*)(" + SEGPAT + r")(?![\w:.])",
-                  lambda m: m.group(1) + SEGMAP[m.group(2).upper()], text)
+                  lambda m: m.group(1) + segvalue(m.group(2)), text)
 
     # MASM's SEG, the segment a name is in, which fasm has no operator for:
     # FORMAT asks for SEG DATA where it is about to load DS, and the name of
@@ -491,8 +799,11 @@ def declarations(text):
     # XCOPY.ASM indents the fields of HEADER where every other structure
     # here writes them against the margin, so the indentation is part of
     # what is matched and is kept.
+    # The value is whatever stands between the DB and the comment, the
+    # comment being found with the quotes respected: MODEPARS declares a
+    # field as DB ";".
     SCALAR = re.compile(r"(?i)^([ \t]*)(" + N + r")([ \t]+)(D[BWD])([ \t]+)"
-                        r"([^;\n]*?)[ \t]*(;.*)?$")
+                        r"(.*?)[ \t]*$")
     # The structures stand inside segments and the modules are read once
     # per segment, so the MATCH that asks whether the laying out has been
     # done -- the preprocessor's, answered on the first reading whatever the
@@ -500,8 +811,12 @@ def declarations(text):
     # are gathered at the head of the module, before the first segment opens.
     out, here, fields, body, top = [], None, [], [], []
     for line in text.split('\n'):
-        code = line.split(';')[0]
-        m = re.match(r"^(" + N + r")[ \t]+STRUC\b", code, re.I)
+        code = code_of(line)
+        # MASM's STRUC takes nothing after it, and nothing may follow it
+        # here either: MODEVID's INCLUDE STRUC.INC would otherwise open a
+        # structure called INCLUDE that never ends, and everything after it
+        # would be gathered into a body that is never written.
+        m = re.match(r"^(" + N + r")[ \t]+STRUC[ \t]*$", code, re.I)
         if m:
             here, fields, body = m.group(1), [], []
             continue
@@ -512,23 +827,44 @@ def declarations(text):
                 top.append('{')
                 top.extend(body)
                 top.append('}')
+                # The measuring instance takes a zero for every field
+                # whose value is a number or a name, because a name may
+                # stand for one the module declares further down and fasm
+                # takes an EQU's value where it is written: INVOKE declares
+                # IOCTL0C_def with a mode of text and says what text is a
+                # hundred and forty lines further on.  The width comes from
+                # the DB or the DW and not from the value, so the size is
+                # the same; a string is as wide as it is long, and stands.
+                measure = ', '.join(
+                    [value if value[:1] in ('\'', '"') else '0'
+                     for value in (f.split('=', 1)[1].strip()
+                                   for f in fields)])
                 for s in ('match =%s_LAID_OUT, %s_LAID_OUT' % (here, here),
                           '{', '    %s_LAID_OUT equ 1' % here,
-                          '    virtual at 0', '      %s %s' % (here, here),
+                          '    virtual at 0',
+                          '      %s %s%s' % (here, here,
+                                             ' ' + measure if measure else ''),
                           '      sizeof.%s = $ - %s' % (here, here),
                           '    end virtual', '}'):
                     top.append(s)
                 here = None
                 continue
-            m = SCALAR.match(line)
+            j = comment_at(line)
+            note = line[j:] if j >= 0 else ''
+            m = SCALAR.match(code)
+            # A field of more than one value cannot become a parameter
+            # with that value for its default, the parameters being told
+            # apart by commas: MODECPEQ declares a code page font's tag as
+            # DB 0FFH,"FONT   ".  It is written as it stands, as a field
+            # declared with DUP is.
             if m and ' dup' not in m.group(6).lower() \
-                    and 'dup ' not in m.group(6).lower():
+                    and 'dup ' not in m.group(6).lower() \
+                    and ',' not in m.group(6):
                 name, value = m.group(2), m.group(6).strip()
                 fields.append('%s_=%s' % (name, '0' if value == '?' else value))
                 body.append('%s.%s%s%s%s%s_%s'
                             % (m.group(1), name, m.group(3), m.group(4),
-                               m.group(5), name,
-                               ' ' + m.group(7) if m.group(7) else ''))
+                               m.group(5), name, ' ' + note if note else ''))
                 continue
             m = re.match(r"(?i)^([ \t]*)(" + N + r")([ \t]+)(D[BWD])\b", code)
             if m:                       # a field with DUP in it
@@ -563,10 +899,21 @@ for stem in MODULES:
 # What the whole program gives storage to, and how each name is spelled where
 # it is declared: one segment, so one set of each for all of it.
 DATA, SIZE, spelling = set(), {}, {}
+# The names an EQU gives to a place rather than to a number: the brackets
+# belong where such a name is used and not where it is declared, so the line
+# that declares it is left alone.
+PLACED = set()
+# What each module asked a name it does not declare to be.  MASM took a
+# module at a time and LINK never compared the two, so a program could
+# declare a place one width and read it another: MODESUBS gives pbaud_ptr a
+# BYTE label over a DW, and the two modules that store into it both ask for
+# it as a WORD and so stored a word.  One assembly has to settle on a width,
+# and the width the code was assembled with is the one that makes it run.
+ASKED = {}
 for text in (list(source.values())
              + [read(h + '.INC', converted=True) for h in HEADERS]):
     for line in text.split('\n'):
-        code = line.split(';')[0]
+        code = code_of(line)
         m = re.match(r"^[ \t]*(" + N + r")\s+(db|dw|dd)\b", code, re.I)
         if m:
             DATA.add(m.group(1).lower())
@@ -576,6 +923,13 @@ for text in (list(source.values())
         if m:
             DATA.add(m.group(1).lower())
             SIZE[m.group(1).lower()] = m.group(2).lower()
+        # An EQU that names a place rather than a number is storage as much
+        # as a DB is: MODELENG's BIOS_date EQU ES:[DI].
+        m = re.match(r"(?i)^[ \t]*(" + N + r")\s+equ\s+"
+                     r"(?:(?:cs|ds|es|ss):)?\s*\[[^\]]+\]\s*$", code)
+        if m:
+            DATA.add(m.group(1).lower())
+            PLACED.add(m.group(1).lower())
         # An EXTRN says what a name another module declares is, which is the
         # only word on it where that module names a place with an EQU:
         # GRTABHAN says PATCH_OFF EQU WORD PTR $-2 and GRTAB asks for it as
@@ -586,7 +940,41 @@ for text in (list(source.values())
                                          r"(byte|word|dword|qword)\b",
                                          m.group(1)):
                 DATA.add(name.lower())
-                SIZE.setdefault(name.lower(), kind.lower())
+                ASKED.setdefault(name.lower(), set()).add(kind.lower())
+
+
+# A LABEL the storage under it bears out, which is most of them: DEBMES
+# labels each of its message blocks WORD and lays words down there.  Such a
+# declaration says what the place is, whatever a module that reads it says.
+BORNEOUT = set()
+for text in (list(source.values())
+             + [read(h + '.INC', converted=True) for h in HEADERS]):
+    want = None
+    for line in text.split('\n'):
+        code = code_of(line)
+        m = re.match(r"(?i)^[ \t]*(" + N + r")\s+label\s+"
+                     r"(byte|word|dword)\b", code)
+        if m:
+            want = (m.group(1).lower(), m.group(2).lower())
+            continue
+        m = re.match(r"^[ \t]*(db|dw|dd)\b", code, re.I)
+        if m and want:
+            if want[1] == {'db': 'byte', 'dw': 'word',
+                           'dd': 'dword'}[m.group(1).lower()]:
+                BORNEOUT.add(want[0])
+            want = None
+        elif code.strip():
+            want = None
+
+# A name every module that asks for it agrees about takes the width they
+# asked for, where the declaration is not borne out by the storage under it:
+# MODESUBS labels four of the sublist pointers BYTE over a DW, and the two
+# modules that store into them both asked for a WORD and stored a word.
+# Where the modules disagree the declaration stands, there being nothing
+# better to go on.
+for name, kinds in ASKED.items():
+    if len(kinds) == 1 and name not in BORNEOUT:
+        SIZE[name] = next(iter(kinds))
 
 
 # MASM's LENGTH gave the number of elements a variable was declared with and
@@ -606,7 +994,7 @@ for text in source.values():
         # written with the dot the house gives it: GRAFTABL asks for
         # SIZE LANCHAR, which is a field of LANGUAGE.
         m = re.match(r"(?i)^[ \t]*\.?(" + N + r")\s+(db|dw|dd)\s+(\S+)"
-                     r"\s+dup\s*\(", line.split(';')[0])
+                     r"\s+dup\s*\(", code_of(line))
         if m:
             COUNT[m.group(1).lower()] = (m.group(3),
                                          UNIT[m.group(2).upper()])
@@ -624,7 +1012,7 @@ SHARED = U['SHARED']
 READS = SHARED
 for text in (list(source.values()) + [shared(h) for h in READS]):
     for line in text.split('\n'):
-        code = line.split(';')[0]
+        code = code_of(line)
         m = re.match(r"(?i)^[ \t]*\.?(" + N + r")[ \t]+(d[bwdq]|r[bwd])\b",
                      code)
         if m:
@@ -676,7 +1064,7 @@ STRUCZERO = U.get('STRUCZERO', {})
 for text in list(source.values()) + [shared(h) for h in READS]:
     here, zeros, defaults = None, True, {}
     for line in text.split('\n') + ['STRUC end_of_file$']:
-        code = line.split(';')[0]
+        code = code_of(line)
         m = re.match(r"(?i)^STRUC[ \t]+(" + N + r")(.*)$", code)
         if m:
             if here is not None:
@@ -735,8 +1123,10 @@ WRITTEN = set()
 WRITTENAS = {}
 for text in list(source.values()) + SEEN:
     for line in text.split('\n'):
+        # INVOKE writes the brackets against the structure's name --
+        # IOCTL0C_data_block IOCTL0C_def<> -- so they end it as a space does
         m = re.match(r"^[ \t]*(" + N + r")\s+(" + '|'.join(sorted(STRUCS))
-                     + r")(\s|$)", line.split(';')[0], re.I)
+                     + r")(\s|<|$)", code_of(line), re.I)
         # the one each layout writes inside its VIRTUAL block, to measure
         # the structure by, names the structure after itself and is no
         # instance of the program's: CHKEQU.INC's DIRENT DIRENT is that.
@@ -766,14 +1156,23 @@ for text in list(source.values()) + SEEN:
 # commas in a heading stay inside it.  The padding differs between the two,
 # so the block is matched rather than spelled out.
 HEADING = re.compile(r"(?mi)^(" + N + r")([ \t]+)MACRO([ \t]+)TEXT"
+                     r"((?:[ \t]*,[ \t]*" + N + r")*)"
                      r"([ \t]*;[^\n]*)?$"
                      r"(.*?)"
                      r"^[ \t]*ENDM([ \t]*;[^\n]*)?$", re.S)
 
 
 def heading(m):
-    return ('macro %s [TEXT]\n{' % m.group(1) + (m.group(4) or '') + m.group(5)
-            + '}' + (m.group(6) or ''))
+    body = m.group(6)
+    # The macro writes a page heading and nothing else, so its body is
+    # listing directives.  MODE's asks IFB whether it was given a second
+    # argument, which fasm has no answer for; a body with one of those in it
+    # is kept as the comment it may as well be.
+    if re.search(r"(?i)^[ \t]*IF(?:B|NB)\b", body, re.M):
+        body = '\n' + ''.join(';' + l + '\n'
+                              for l in body.strip('\n').split('\n'))
+    return ('macro %s [TEXT]\n{' % m.group(1) + (m.group(5) or '') + body
+            + '}' + (m.group(7) or ''))
 
 
 MACROS = U.get('MACROS', {})
@@ -870,6 +1269,251 @@ def offsets(text):
                   lambda m: m.group(1), text)
 
 
+# The structured statements INC/STRUC.INC takes a condition for.  A
+# conjunction or a jump distance after one needs a comma, and THEN or DO
+# after one is nothing at all.
+STATEMENTS = r"(?:IF|ELSEIF|WHILE|UNTIL|REPEAT|WHEN|LEAVE|EXITIF|SELECT)"
+# A statement, its condition taken apart into the two sides of a comparison
+# and the operator between them, with whatever follows the condition kept.
+CONDITION = re.compile(r"(?i)^([ \t]*)(\." + STATEMENTS + r")[ \t]+"
+                       r"<[ \t]*(.*?)[ \t]+"
+                       r"(EQ|NE|LT|GT|LE|GE|AE|BE|AB|BL)[ \t]+"
+                       # as far as the last bracket, because MASM put its own
+                       # round an operand of more than one word
+                       r"(.*)[ \t]*>[ \t]*(.*)$")
+
+
+def distances(text):
+    """A conjunction or a jump distance after a structured statement's
+    condition, which needs a comma in front of it.
+
+    fasm's angle brackets close the argument they enclose, as INC/STRUC.INC
+    says of itself, so .IF <AX EQ 0> AND has to be written .IF <AX EQ 0>,
+    AND.  MODE writes a hundred and seventy-two of them, which is what
+    MASM's own library took without one.
+    """
+    def one(m):
+        words = re.findall(r"(?i)\b(AND|OR|NEAR|FAR|SHORT|LONG)\b",
+                           m.group(2))
+        return '%s%s%s' % (m.group(1),
+                           ''.join(', ' + w.upper() for w in words),
+                           '\t' + m.group(3) if m.group(3) else '')
+
+    # MODE writes both at once -- .WHILE <cond> AND NEAR -- so a run of them
+    # is taken together.
+    return re.sub(r"(?mi)^([ \t]*\." + STATEMENTS + r"\b"
+                  r"[^;\n]*?[^;,\s])"
+                  r"((?:[ \t]+(?:AND|OR|NEAR|FAR|SHORT|LONG)\b)+)"
+                  r"[ \t]*(;[^\n]*)?$", one, text)
+
+
+def blankness(text):
+    """IFB and IFNB inside a macro, which asked whether an argument was
+    given at all.
+
+    fasm asks it with MATCH: against nothing for IFB, and against a name
+    that takes whatever there is for IFNB.  The braces are the macro's own,
+    so they are escaped, and the ENDIF that closes one of these is a brace
+    rather than an END IF.  MODE writes five of them, which is what lets
+    SCRN take a mode as well as a function.
+    """
+    out, inmacro, depth = [], False, []
+    for line in text.split('\n'):
+        code = code_of(line)
+        note = line[len(code):]
+        if MACRODEF.match(code):
+            inmacro, depth = True, []
+            out.append(line)
+            continue
+        if inmacro and MACROEND.match(code):
+            inmacro = False
+            out.append(line)
+            continue
+        m = re.match(r"(?i)^([ \t]*)IF(N?)B[ \t]+<(.*?)>[ \t]*$", code)
+        if inmacro and m:
+            # The braces are the macro's own, and one inside another wants
+            # a backslash for every level it is in: MODECPEQ's DOSCALL asks
+            # about its function and then about its subfunction.
+            depth.append((m.group(3), bool(m.group(2))))
+            out.append('%smatch %s, %s %s{%s'
+                       % (m.group(1), 'any$' if m.group(2) else '',
+                          m.group(3), '\\' * len(depth), note))
+            continue
+        # The other way round: what MASM wrote after an ELSE is what there
+        # is to do when the argument is the other thing, which is a MATCH of
+        # its own.  MODECPEQ writes one, for a call with no subfunction.
+        m = re.match(r"(?i)^([ \t]*)ELSE[ \t]*$", code)
+        if inmacro and m and depth:
+            name, given = depth[-1]
+            out.append('%s%s}%s' % (m.group(1), '\\' * len(depth), note))
+            out.append('%smatch %s, %s %s{'
+                       % (m.group(1), '' if given else 'any$', name,
+                          '\\' * len(depth)))
+            continue
+        m = re.match(r"(?i)^([ \t]*)ENDIF\b", code)
+        if inmacro and m and depth:
+            out.append('%s%s}%s' % (m.group(1), '\\' * len(depth), note))
+            depth.pop()
+            continue
+        out.append(line)
+    return '\n'.join(out)
+
+
+def pasted(text):
+    """MASM pasted a macro's argument on to a name with &, and fasm with #.
+
+    MODE builds the label a case jumps to out of the case's name --
+    JMP ENDCASE_&destination -- and the sublist a message addresses out of
+    the message's.  Both sides of the & are part of a name, which is what
+    tells it from an ampersand in a string.
+    """
+    out = []
+    for line in text.split('\n'):
+        j = comment_at(line)
+        code, note = (line, '') if j < 0 else (line[:j], line[j:])
+        out.append(re.sub(r"(?<=[\w?$@])&(?=[\w?$@])", '#', code) + note)
+    return '\n'.join(out)
+
+
+def counters(text):
+    """A counted loop's counter, in brackets of its own, and read from
+    memory where it is kept there.
+
+    INC/STRUC.INC takes the .FOR line apart with fasm's MATCH, which splits
+    it into its tokens, so the counter arrives as a group of its own: MODE
+    counts with SI in one loop and with a byte called i in another.
+    """
+    def one(m):
+        head, place, rest, note = (m.group(1), m.group(2).strip(),
+                                   m.group(3).strip(), m.group(4))
+        if place.lower() in DATA:
+            place = '[%s]' % place
+        return '%s<<%s> %s>%s' % (head, place, rest,
+                                  '\t' + note if note else '')
+
+    # The whole of it goes in brackets, because fasm's angle brackets close
+    # the argument they enclose: the counter in brackets on its own would be
+    # the argument and the rest would be left over.
+    return re.sub(r"(?mi)^([ \t]*\.FOR[ \t]+)(" + N + r")[ \t]*"
+                  r"(=[^;\n]*?)[ \t]*(;[^\n]*)?$", one, text)
+
+
+def for_loops(text, stem):
+    """MASM's counted loop, as the instructions it stood for.
+
+    INC/STRUC.INC writes the conditional statements but not .FOR and .NEXT,
+    nothing else in the release having used them; MODE's four are written out
+    here instead, with labels named after the module they are in.  The
+    counter is tested before the body, as MASM's library tested it, and the
+    step is one where none is given.  The increment stands at the top of the
+    loop and the loop is entered at the test, so that what .NEXT lays down
+    is the one jump back.  Nothing in MODE leaves a .FOR early, so the loop
+    wants no place on the stack the conditional statements keep.
+    """
+    mark = stem.split('.')[0].lower()
+    out, stack, n = [], [], 0
+    for line in text.split('\n'):
+        code = code_of(line)
+        note = line[len(code):]
+        m = re.match(r"(?i)^([ \t]*)\.FOR[ \t]+<<(.*?)>[ \t]*=[ \t]*(.*?)"
+                     r"[ \t]+TO[ \t]+(.*?)"
+                     r"(?:[ \t]+STEP[ \t]+(.*?))?[ \t]*>[ \t]*$", code)
+        if m:
+            n += 1
+            lead, place, frm, to = (m.group(1), m.group(2), m.group(3),
+                                    m.group(4))
+            step = m.group(5) or '1'
+            top = 'for$%s%d_top' % (mark, n)
+            test = 'for$%s%d_test' % (mark, n)
+            done = 'for$%s%d_out' % (mark, n)
+            stack.append((lead, top, done))
+            out.append('%s; .FOR %s = %s TO %s%s%s'
+                       % (lead, place, frm, to,
+                          '' if m.group(5) is None else ' STEP ' + step, note))
+            out.append('%smov\t%s, %s' % (lead, place, frm))
+            out.append('%sjmp\t%s' % (lead, test))
+            out.append('%s:' % top)
+            out.append('%sadd\t%s, %s' % (lead, place, step))
+            out.append('%s:' % test)
+            out.append('%scmp\t%s, %s' % (lead, place, to))
+            out.append('%sja\t%s' % (lead, done))
+            continue
+        m = re.match(r"(?i)^([ \t]*)\.NEXT\b", code)
+        if m and stack:
+            lead, top, done = stack.pop()
+            out.append('%s; .NEXT%s' % (m.group(1), note))
+            out.append('%sjmp\t%s' % (lead, top))
+            out.append('%s:' % done)
+            continue
+        out.append(line)
+    return '\n'.join(out)
+
+
+def conditions(text):
+    """A structured statement's left operand, in brackets of its own where
+    it is more than one word.
+
+    INC/STRUC.INC takes a condition apart with fasm's MATCH, which splits it
+    into tokens, so a left operand of more than one -- [cs:request], or the
+    word at a place -- has to arrive as a group of its own.  MASM's library
+    did its own splitting and took CS:request as it stood; where MASM needed
+    the brackets the sources have them already, as <<WORD PTR ES:[SI]> NE 0>.
+    """
+    OPS = r"(?:EQ|NE|LT|GT|LE|GE|AE|BE|AB|BL|ABOVE|BELOW)"
+
+    def place(word):
+        """A bare name of storage, in the brackets a condition needs.
+
+        The rules that bracket an instruction's operands do not reach inside
+        a condition, which is macro text until STRUC.INC takes it apart, so
+        a name there is bracketed here.
+        """
+        return ('[%s]' % word
+                if re.match(r"^" + N + r"$", word) and word.lower() in DATA
+                else word)
+
+    def one(m):
+        head, cond, tail = m.group(1), m.group(2), m.group(3)
+        inner = re.match(r"(?i)^[ \t]*(.*?)[ \t]+(" + OPS + r")[ \t]+(.*)$",
+                         cond)
+        if not inner:
+            return m.group(0)
+        left, right = place(inner.group(1).strip()), \
+            place(inner.group(3).strip())
+        if left.startswith('<') or not re.search(r"[\s\[\]:]", left):
+            if right == inner.group(3).strip():
+                return m.group(0)
+            return '%s<%s %s %s>%s' % (head, left, inner.group(2), right, tail)
+        return '%s<<%s> %s %s>%s' % (head, left, inner.group(2), right, tail)
+
+    return re.sub(r"(?mi)^([ \t]*\." + STATEMENTS + r"\b[ \t]+)"
+                  r"<([^<>]*)>(.*)$", one, text)
+
+
+def thens(text):
+    """THEN and DO after a structured statement's condition, which MASM's
+    library only looked for.
+
+    INC/STRUC.INC takes the condition in brackets of its own and has nothing
+    to put either word in; fasm reads one as a second argument with no comma
+    in front of it, and will not have it.  MODE writes twenty-two THENs and
+    a handful of DOs.
+    """
+    def one(m):
+        head, tail, comment = m.group(1), m.group(2), m.group(3)
+        tail = re.sub(r"\s+", ' ',
+                      re.sub(r"(?i)\b(?:THEN|DO)\b", ' ', tail)).strip()
+        return '%s%s%s' % (head, ' ' + tail if tail else '',
+                           '\t' + comment if comment else '')
+
+    # a condition in brackets, and whatever MASM allowed after it
+    text = re.sub(r"(?mi)^([ \t]*\." + STATEMENTS + r"\b"
+                  r"[^;\n]*>)([^;\n]*?)[ \t]*(;[^\n]*)?$", one, text)
+    # or a flag, which needs none
+    return re.sub(r"(?mi)^([ \t]*\." + STATEMENTS + r"\b"
+                  r"[^;\n<>]*?)[ \t]+(?:THEN|DO)\b", r"\1", text)
+
+
 def places(text):
     """An EQU that names a place rather than a number.
 
@@ -890,6 +1534,18 @@ def places(text):
                   lambda m: 'label %s %s at %s%s' % (
                       m.group(1), m.group(2).lower(), m.group(3).strip(),
                       '\t' + m.group(4) if m.group(4) else ''),
+                  text)
+    # An EQU whose body is a memory operand, which MODELENG uses to name
+    # the BIOS date it walks with ES:DI and then reads a field of: the
+    # brackets come off, so that the name can stand inside brackets of its
+    # own wherever it is read.
+    text = re.sub(r"(?mi)^(" + N + r")([ \t]+)EQU([ \t]+)"
+                  r"((?:cs|ds|es|ss):)?[ \t]*\[([^\]]+)\][ \t]*"
+                  r"(;[^\n]*)?$",
+                  lambda m: '%s%sequ%s%s%s%s' % (
+                      m.group(1), m.group(2), m.group(3),
+                      (m.group(4) or '').lower(), m.group(5),
+                      '\t' + m.group(6) if m.group(6) else ''),
                   text)
     return re.sub(r"(?mi)^(" + N + r")[ \t]+EQU[ \t]+THIS[ \t]+"
                   r"(byte|word|dword|qword)[ \t]*(;[^\n]*)?$",
@@ -963,6 +1619,50 @@ def records(text):
     return re.sub(r"SF_BITS\s*<([^>]*)>", one, text)
 
 
+def record_fields(text):
+    """MASM's RECORD, which fasm has nothing of its own for.
+
+    A RECORD packs its fields into a byte or a word from the top down, and
+    the name of a field is the number of bits to shift it by: MODEVID
+    declares FLAG RECORD PR:2,...,VIDEO:2,RAM:2,NA3:1,IPL:1 for the
+    equipment flag the ROM BIOS keeps at 40:10, and asks for MASK VIDEO to
+    clear the two bits that say which display is attached.  So each field is
+    written as the shift it stands for, and MASK as the bits it covers.
+    """
+    masks = {}
+
+    def one(m):
+        indent, name, body, note = (m.group(1), m.group(2), m.group(3),
+                                    m.group(4) or '')
+        fields = []
+        for part in body.split(','):
+            f, _, w = part.partition(':')
+            if not w.strip().isdigit():
+                return m.group(0)
+            fields.append((f.strip(), int(w.strip())))
+        total = sum(w for _, w in fields)
+        out = ['%s;%s\tRECORD\t%s%s' % (indent, name, body, note),
+               '%s; MASM packed those into %d bits from the top down; the name'
+               ' of a field is' % (indent, total),
+               '%s; the shift it stands for, and MASK of it the bits it'
+               ' covers.' % indent]
+        at = total
+        for f, w in fields:
+            at -= w
+            masks[f.lower()] = ((1 << w) - 1) << at
+            out.append('%s%s = %d' % (indent, f, at))
+        return '\n'.join(out)
+
+    text = re.sub(r"(?mi)^([ \t]*)(" + N + r")[ \t]+RECORD[ \t]+"
+                  r"([A-Za-z0-9_@?$:, \t]+?)[ \t]*(;[^\n]*)?$", one, text)
+    if masks:
+        text = re.sub(r"(?i)\bMASK[ \t]+(" + N + r")\b",
+                      lambda m: ('0%Xh' % masks[m.group(1).lower()]
+                                 if m.group(1).lower() in masks
+                                 else m.group(0)), text)
+    return text
+
+
 def tabled(text):
     return re.sub(r"(?mi)^([ \t]*" + N + r"[ \t]+=[ \t]+)(?:ds|es|cs|ss):",
                   lambda m: m.group(1), text)
@@ -1005,7 +1705,7 @@ for text in SEEN:
 DECLARED = set()
 for text in SEEN:
     for line in text.split('\n'):
-        code = line.split(';')[0]
+        code = code_of(line)
         for pat in (r"^[ \t]*(" + N + r"):",
                     r"^[ \t]*(" + N + r")[ \t]+(?:d[bwdq]|r[bwd]|equ|=)\b",
                     r"^[ \t]*label[ \t]+(" + N + r")\b",
@@ -1029,6 +1729,12 @@ def bare_fields(text):
         found = FIELD.get(name.upper())
         if found is None or name.lower() in DECLARED:
             return name
+        # A word the assembler keeps for itself is not a field, whatever a
+        # structure calls its own: one of MODE's is called ENDIF.
+        if name.upper() in ('ENDIF', 'ENDM', 'IFB', 'IFNB', 'IFE', 'IFDEF',
+                            'IFNDEF', 'ELSE', 'IF', 'IF1', 'IF2', 'ENDP',
+                            'ENDS', 'PROC', 'MACRO', 'STRUC', 'RECORD'):
+            return name
         # SIZE, LENGTH and TYPE take the field's own name, and the rules for
         # them work the number out from its declaration: GRTAB says
         # TABSIZE EQU SIZE LANCHAR + SIZE LANID + SIZE LANNAME.
@@ -1038,10 +1744,13 @@ def bare_fields(text):
 
     out = []
     for line in text.split('\n'):
-        j = line.find(';')
+        j = comment_at(line)
         code, comment = (line, '') if j < 0 else (line[:j], line[j:])
         if not re.match(r"[ \t]*\.", code):
-            code = re.sub(r"(?<![\w.$])(" + N + r")", one, code)
+            # the quotes are left alone: MODEPARS declares the parser's
+            # keyword as DB "COLS=",0, and cols is a field of the structure
+            # INVOKE describes an IOCTL 0CH call with
+            code = outside_strings(r"(?<![\w.$])(" + N + r")", one, code)
         out.append(code + comment)
     return '\n'.join(out)
 
@@ -1061,15 +1770,19 @@ for text in source.values():
 # direct far jump to it, whose address the loader patches with the previous
 # owner of the interrupt vector, and the jump has to be the five bytes of
 # one -- a near jump would leave the patch writing over the code after it.
+# Where each SEGMENT AT is: the name of such a segment stands for that
+# address, MODELENG loading the ROM BIOS's segment with MOV AX,ROM.
+SEGAT = {}
 FARAT = {}
 for text in source.values():
     at = None
     for line in text.split('\n'):
-        code = line.split(';')[0]
-        m = re.match(r"(?i)^[ \t]*" + N + r"\s+SEGMENT\b.*?\bAT[ \t]+"
+        code = code_of(line)
+        m = re.match(r"(?i)^[ \t]*(" + N + r")\s+SEGMENT\b.*?\bAT[ \t]+"
                      r"([^;]+?)[ \t]*$", code)
         if m:
-            at = m.group(1).strip()
+            at = m.group(2).strip()
+            SEGAT.setdefault(m.group(1).upper(), at)
             continue
         if re.match(r"(?i)^[ \t]*" + N + r"\s+ENDS\b", code):
             at = None
@@ -1090,7 +1803,15 @@ if GROUPNAME:
     SEGMAP[GROUPNAME] = GROUPNAME + '_'
 else:
     SEGMAP = {name: spelt + '_' for name, spelt in SEGNAME.items()}
-SEGPAT = "|".join(sorted(SEGMAP, key=len, reverse=True))
+SEGPAT = "|".join(sorted(set(SEGMAP) | set(SEGAT), key=len, reverse=True))
+
+
+def segvalue(name):
+    """What a segment's name stands for where it is read as a value: the
+    fasm segment of the address space it is in, or the address itself where
+    the segment is one of the places the program does not lay down."""
+    return SEGMAP[name.upper()] if name.upper() in SEGMAP \
+        else SEGAT[name.upper()]
 
 
 def space(name):
@@ -1112,7 +1833,7 @@ SEGOF = {}
 for text in source.values():
     here = None
     for line in text.split('\n'):
-        code = line.split(';')[0]
+        code = code_of(line)
         m = re.match(r"(?i)^[ \t]*(" + N + r")\s+SEGMENT\b", code)
         if m:
             here = m.group(1).upper()
@@ -1128,6 +1849,26 @@ for text in source.values():
         m = re.match(r"(?i)^[ \t]*(" + N + r")[ \t]+(" + N + r")", code)
         if m and here and m.group(2).lower() in STRUC_CASE:
             SEGOF.setdefault(m.group(1).lower(), here)
+
+
+# The names a module gives an index register.  MASM's EQU put the register
+# where the name stood, so the name is an index like the register itself:
+# MODEVID reads the video state as video_info_DI.active_display, and
+# MODEPARS the parsed parameters as parm_list[current_parm_DI].
+NAMEDREG = set()
+for text in source.values():
+    for m in re.finditer(r"(?im)^[ \t]*(" + N + r")[ \t]+equ[ \t]+"
+                         r"(?:bp|bx|si|di)[ \t]*(?:;[^\n]*)?$", text):
+        NAMEDREG.add(m.group(1).lower())
+# A name the program gives storage as well is left to the rules for storage,
+# which know the width a reference to it wants.
+BASEREG = NAMEDREG - DATA
+# And the names an EQU gives a place in brackets, which stand where an index
+# stands too: MODEVID's video_info_DI EQU [DI].
+NAMEDREG |= PLACED
+# the register's own name, and the names a module gives it
+BASEPAT = "|".join(['bp', 'bx', 'si', 'di']
+                   + sorted(map(re.escape, BASEREG), key=len, reverse=True))
 
 
 # What each segment register is assumed to hold, as the ASSUMEs say.  All
@@ -1180,7 +1921,7 @@ for text in SEEN:
     for line in text.split('\n'):
         m = re.match(r"(?i)^[ \t]*(" + N + r")[ \t]+(?:equ|=)[ \t]*"
                      r"(?:'[^']*'|\"[^\"]*\"|[0-9][0-9A-Fa-f]*[hH]?)[ \t]*$",
-                     line.split(';')[0])
+                     code_of(line))
         if m:
             ABSOLUTE.add(m.group(1).lower())
 ABSOLUTE -= DATA
@@ -1193,7 +1934,7 @@ NUMBERED = set()
 for text in SEEN:
     for line in text.split('\n'):
         m = re.match(r"(?i)^[ \t]*(" + N + r")[ \t]*(?:equ|=)[ \t]+[^ \t;]",
-                     line.split(';')[0])
+                     code_of(line))
         if m:
             NUMBERED.add(m.group(1).lower())
 NUMBERED -= DATA
@@ -1207,13 +1948,22 @@ def absolutes(code):
     CHKPROC's way of writing the colon it puts after the drive letter -- as
     the character itself.  fasm reads the brackets as DS:003Ah.
     """
-    return re.sub(r"\[[ \t]*(" + N + r")[ \t]*\]",
+    # Brackets straight after a name are an index and not an operand of
+    # their own: MODEPRIN reads LOCAL_NAME[PRN_NO], where PRN_NO is the
+    # position of a character in the name.
+    return re.sub(r"(?<![\w.$\]])\[[ \t]*(" + N + r")[ \t]*\]",
                   lambda m: (m.group(1) if m.group(1).lower() in ABSOLUTE
                              else m.group(0)), code)
 
 
 def structures(code):
-    """[BP].FRAM_CHAR, as the offset inside the structure it is a field of."""
+    """[BP].FRAM_CHAR, as the offset inside the structure it is a field of.
+
+    A displacement with a dot of its own is no part of this: MODEPARS reads
+    the parm_list entry after the one it is on as
+    parm_list[current_parm_DI+TYPE parm_list_entry].item_tag, and the room
+    an entry takes has become sizeof.parm_list_entry by now.
+    """
     def one(m):
         reg, field, tail = m.group(1), m.group(2), m.group(3)
         found = FIELD.get(field.upper())
@@ -1230,12 +1980,24 @@ def structures(code):
     # goes first because what the rule below writes -- the structure's name
     # as the displacement, with the field named after it -- is of that shape
     # itself, and would be read a second time.
-    code = re.sub(r"(?i)\[\s*((?:(?:cs|ds|es|ss):)?(?:bp|bx|si|di)"
-                  r"(?:\s*\+\s*(?:bp|bx|si|di))?(?:\s*[-+]\s*\w+)?)\s*\.(" + N + r")"
+    code = re.sub(r"(?i)\[\s*((?:(?:cs|ds|es|ss):)?(?:" + BASEPAT + r")"
+                  r"(?:\s*\+\s*(?:" + BASEPAT + r"))?"
+                  r"(?:\s*[-+]\s*\w+(?!\.))?)\s*\.(" + N + r")"
                   r"((?:\s*[-+]\s*\w+)?)\s*\]", one, code)
-    code = re.sub(r"(?i)\[\s*((?:(?:cs|ds|es|ss):)?(?:bp|bx|si|di)"
-                  r"(?:\s*\+\s*(?:bp|bx|si|di))?(?:\s*[-+]\s*\w+)?)\s*\]\s*\.(" + N + r")"
+    code = re.sub(r"(?i)\[\s*((?:(?:cs|ds|es|ss):)?(?:" + BASEPAT + r")"
+                  r"(?:\s*\+\s*(?:" + BASEPAT + r"))?"
+                  r"(?:\s*[-+]\s*\w+(?!\.))?)\s*\]\s*\.(" + N + r")"
                   r"((?:\s*[-+]\s*\w+)?)", one, code)
+    # The index with no brackets at all, which MASM read as a reference
+    # just the same: MODEVID passes video_info_DI.active_display to a macro
+    # that moves it into AL.  An instruction's own operands are left to the
+    # rules for storage below, which say the width where the name no longer
+    # tells it; a macro's argument is not one of those, and the rules that
+    # look for a mnemonic pass the line over.
+    if NAMEDREG and not re.match(LED + MNEM + r")\s+)", code, re.I):
+        code = re.sub(r"(?i)(?<![\w.$\]])((?:" + "|".join(
+            sorted(map(re.escape, NAMEDREG), key=len, reverse=True))
+            + r"))\s*\.(" + N + r")((?:\s*[-+]\s*\w+)?)", one, code)
     return code
 
 
@@ -1348,6 +2110,27 @@ def displaced(code):
                   lambda m: '%s+%s' % (m.group(1), m.group(2)), code)
 
 
+def fielded(code):
+    """A field of a structure left outside the brackets.
+
+    The structure rules read [BX].item_tag and [BX+DI].item_tag, where the
+    register is written as itself; MODEPARS names its registers and writes
+    parm_list[current_parm_DI].item_tag, which the index rule below moves
+    into brackets after those rules have been by.  The field is folded in
+    here, once the brackets hold what they will hold.
+    """
+    def one(m):
+        inside, field, tail = m.group(1), m.group(2), m.group(3)
+        found = FIELD.get(field.upper())
+        if found is None:
+            return '[%s+%s%s]' % (inside, field, tail.replace(' ', ''))
+        return '[%s+%s.%s%s]' % (inside, found[0], found[1],
+                                 tail.replace(' ', ''))
+
+    return re.sub(r"(?i)\[([^\]]*)\]\s*\.(" + N + r")"
+                  r"((?:\s*[-+]\s*\w+)?)", one, code)
+
+
 def indexed(code):
     """MASM wrote the index after the displacement: BUF-1[SI] is the one
     added to the other, which fasm asks for inside the brackets.  It runs
@@ -1358,6 +2141,23 @@ def indexed(code):
     if not m:
         return code
     head, rest = m.group(1), m.group(2)
+    # A place's name with an index after it, which MASM added the one to the
+    # other: MODE reads the parsed parameters as
+    # parm_list[DI+parm_list_entry.value1], parm_list being the name it
+    # gives [BP].
+    if PLACED:
+        rest = re.sub(r"(?i)(?<![\w.])(" + "|".join(sorted(PLACED))
+                      + r")\s*\[\s*([^\]]*?)\s*\]",
+                      lambda m2: '[%s+%s]' % (m2.group(1), m2.group(2)), rest)
+    # A name with a constant index after it, which MASM added the one to
+    # the other as well: MODEPRIN reads LOCAL_NAME[PRN_NO], the character
+    # at that position of the name.
+    rest = re.sub(r"(?i)(?<![\w.\]])(" + N + r")\s*\[\s*([^\]]*?)\s*\]",
+                  lambda m2: ('[%s+%s]' % (m2.group(1), m2.group(2))
+                              if m2.group(1).lower() in DATA
+                              and not re.match(r"(?i)^(?:bp|bx|si|di)$",
+                                               m2.group(2))
+                              else m2.group(0)), rest)
     rest = re.sub(r"(?i)(?<![\w.])(?!(?:byte|word|dword|qword|ptr)\b)"
                   r"(" + N + r"(?:\s*[-+]\s*[\w@?$]+)*)\s*"
                   r"\[\s*(bp|bx|si|di)\s*\]",
@@ -1386,8 +2186,14 @@ def parenthesised(code):
 def joined(code):
     """MASM wrote two index registers as two brackets: [BX][SI] is the one
     added to the other, which fasm asks for inside one pair.  A displacement
-    after the brackets -- [BX]+1 -- is added the same way, and inside them."""
-    code = re.sub(r"\]\s*\[", '+', code)
+    after the brackets -- [BX]+1 -- is added the same way, and inside them.
+    MODEECHO writes the plus as well -- ES:PRINTR-2+[SI] -- which comes to
+    the same thing."""
+    code = re.sub(r"\]\s*\+?\s*\[", '+', code)
+    # A displacement written straight after the brackets, with no sign and
+    # no space: MODEVID writes [BX]SHIFCT40 for the byte at that offset of
+    # the table BX points at.
+    code = re.sub(r"\[([^\]]*)\](" + N + r")", r"[\1+\2]", code)
     return re.sub(r"\[([^\]]*)\]\s*([-+])\s*(\w+)",
                   lambda m: '[%s%s%s]' % (m.group(1), m.group(2), m.group(3)),
                   code)
@@ -1403,6 +2209,12 @@ def refs(code):
     def ptr(m):
         size, seg, rest, tail = (m.group(1).lower(), m.group(2), m.group(3),
                                  m.group(4))
+        # A size in front of a number is the width of the number and not a
+        # place at all: MODEPARS writes MOV looking_for,BYTE PTR
+        # con_kwrd_status_or_cp, which is one of its states and an EQU of
+        # 6AH.  fasm reads a size in front of an immediate the same way.
+        if not seg and not tail and rest.lower() in ABSOLUTE:
+            return '%s %s' % (size, rest)
         inner = rest[1:-1] if rest.startswith('[') else rest
         return "%s [%s%s%s]" % (size, seg.lower() if seg else '', inner,
                                 tail.replace(' ', ''))
@@ -1420,8 +2232,11 @@ def refs(code):
                       m.group(3)[1:-1] if m.group(3).startswith('[')
                       else m.group(3)),
                   code)
+    # the place may be a number rather than a name: RESCODE writes
+    # MOV BYTE PTR CS:1,27H to put a RET into the prefix
     code = re.sub(r"\b(byte|word|dword)\s+ptr\s*((?:[A-Za-z]{2}:)?)\s*"
-                  r"(\[[^\]]*\]|" + PLACE + r")((?:\s*[-+]\s*[\w.$]+)*)",
+                  r"(\[[^\]]*\]|" + PLACE + r"|\d[0-9A-Fa-f]*[hH]?)"
+                  r"((?:\s*[-+]\s*[\w.$]+)*)",
                   ptr, code, flags=re.I)
     # a number after the override is an offset in that segment, which
     # XCPYINIT reads the PSP's top of memory from: MOV AX,ES:2
@@ -1587,11 +2402,19 @@ for stem in MODULES:
     text = segment_values(text)
     text = grouped(text)
     text = offsets(text)
+    text = blankness(text)
     text = bare_fields(text)
+    text = pasted(text)
+    text = counters(text)
+    text = for_loops(text, stem)
+    text = conditions(text)
+    text = thens(text)
+    text = distances(text)
     text = places(text)
     text = grouped_equ(text)
     text = dollar_equ(text)
     text = records(text)
+    text = record_fields(text)
     text = tabled(text)
     text = switched(text)
     for was, now in PATCHES.get(stem, ()):
@@ -1601,13 +2424,13 @@ for stem in MODULES:
     opened = []
     cover[0] = dict(START)
     for line in text.split('\n'):
-        assumed(line.split(';')[0])
+        assumed(code_of(line))
         # a name qualified with a segment, which grouped() marked: it is
         # reached through whichever register the ASSUME in force covers that
         # address space with
         line = re.sub('\x01(\\w+)\x02',
                       lambda m: through(space(m.group(1))), line)
-        j = line.find(';')
+        j = comment_at(line)
         code, comment = (line, '') if j < 0 else (line[:j], line[j:])
         bare, was_len = code.rstrip(), len(code)
 
@@ -1650,6 +2473,30 @@ for stem in MODULES:
         # boundary -- GRTABHAN pads its resident part to a paragraph -- and
         # fasm's org moves the address and not the place the output goes, so
         # that one has to be the zeros themselves.
+        # MASM's ORG backwards moved the counter back over what had just
+        # been assembled, and what came next was laid over it: RESCODE
+        # writes the three forms its redirection jump can take one on top of
+        # another, and the image holds the last of them for the resident
+        # code to patch where it stands.  fasm writes its output as it goes
+        # and cannot move back over it, so the forms that are written over
+        # are assembled in a VIRTUAL block at the same address, which reads
+        # them and lays down nothing.
+        m = re.match(r"(?i)^([ \t]*)ORG[ \t]+\$[ \t]*-[ \t]*(\d+)[ \t]*$",
+                     bare)
+        if m:
+            lead = m.group(1)
+            for i in range(len(out) - 1, -1, -1):
+                if not code_of(out[i]).strip():
+                    continue
+                # the only one of these is a two-byte jump, and a wider
+                # reach would have to know how long each line comes to
+                assert m.group(2) == '2' and re.match(r"(?i)^[ \t]*j\w+[ \t]",
+                                                     out[i]), (stem, out[i])
+                out[i:i + 1] = [lead + 'virtual at $', out[i],
+                                lead + 'end virtual']
+                break
+            continue
+
         m = re.match(r"(?i)^([ \t]*)ORG[ \t]+([^;]+?)[ \t]*$", bare)
         if m and '$' in m.group(2):
             out.append(pad('%stimes (%s) - $ db 0'
@@ -1667,9 +2514,22 @@ for stem in MODULES:
                 # MASM's SEGMENT AT names the places in a piece of memory the
                 # program does not lay down: GRTABHAN's DUMMY_SEG AT 0 holds
                 # one FAR label and no bytes, to make MASM write a far jump
-                # direct whose address the loader patches.  A VIRTUAL block
-                # says the same and writes nothing.
-                opened.append((m.group(1).upper(), 'virtual'))
+                # direct whose address the loader patches, and MODE's ROM and
+                # VECT name what the ROM BIOS and the vector table hold.  A
+                # VIRTUAL block says the same and writes nothing.
+                #
+                # Where the modules are read once per segment they would be
+                # read once per segment too, and the names in them declared
+                # as many times, so they are given a pass of their own: one
+                # for all of them, there being nothing to lay down in it.
+                if ONESEG:
+                    opened.append((m.group(1).upper(), 'virtual'))
+                    out.append('virtual at %s%s' % (at.group(1), comment))
+                    continue
+                if opened:
+                    out.append('end if')
+                opened.append((m.group(1).upper(), 'guardvirtual'))
+                out.append('if SEGSEL = S_ABSOLUTE')
                 out.append('virtual at %s%s' % (at.group(1), comment))
                 continue
             if ONESEG:
@@ -1691,7 +2551,12 @@ for stem in MODULES:
             continue
         if SEGEND.match(bare):
             how = opened.pop()[1] if opened else 'guard'
-            if how == 'virtual':
+            if how == 'guardvirtual':
+                out.append('end virtual' + (' ' + comment if comment else ''))
+                out.append('end if')
+                if opened and opened[-1][1] == 'guard':
+                    out.append('if SEGSEL = S_%s' % opened[-1][0])
+            elif how == 'virtual':
                 out.append('end virtual' + (' ' + comment if comment else ''))
             elif how == 'comment':
                 out.append(';' + line)
@@ -1730,7 +2595,14 @@ for stem in MODULES:
             continue
         m = LABELDEF.match(bare)
         if m:
-            out.append(pad('label %s %s' % (m.group(1), m.group(4).lower()),
+            # The width the modules that read it asked for, where they all
+            # asked the same and the storage under the label does not bear
+            # the declaration out: MODESUBS labels the four sublist pointers
+            # BYTE over a DW.
+            kinds = set() if m.group(1).lower() in BORNEOUT \
+                else ASKED.get(m.group(1).lower(), set())
+            kind = next(iter(kinds)) if len(kinds) == 1 else m.group(4).lower()
+            out.append(pad('label %s %s' % (m.group(1), kind),
                            was_len, comment))
             continue
         # LABEL NEAR names a place in the code, which is a label like any
@@ -1765,6 +2637,28 @@ for stem in MODULES:
                 measured = True
             code = said
 
+        # A structured statement's condition is text until STRUC.INC takes
+        # it apart, so the rules below would pass over the operands in it.
+        # It is turned into the comparison STRUC.INC will make of it, run
+        # through them with everything else, and put back.
+        held = CONDITION.match(code)
+        if held:
+            # MASM put its own brackets round an operand of more than one
+            # word, which the operators round it no longer need: MODE writes
+            # <AX EQ <07H+19>> for a message number.
+            right = held.group(5).strip()
+            if right.startswith('<') and right.endswith('>'):
+                right = '(%s)' % right[1:-1].strip()
+            code = '%scmp %s,%s' % (' ' * len(held.group(1)), held.group(3),
+                                    right)
+
+        # The line that gives a place its name is already what it should
+        # be: the brackets go where the name is used.
+        m = re.match(r"(?i)^[ \t]*(" + N + r")[ \t]+equ\b", bare)
+        if m and m.group(1).lower() in PLACED:
+            out.append(code + comment)
+            continue
+
         code = absolutes(code)
         code = structures(code)
         code = overlaid(code)
@@ -1772,6 +2666,7 @@ for stem in MODULES:
         code = refs(code)
         code = joined(code)
         code = indexed(code)
+        code = fielded(code)
         code = displaced(code)
         code = strung(code)
         # A type name in an expression was the number of bytes it takes up.
@@ -1793,6 +2688,18 @@ for stem in MODULES:
         code = re.sub(r"(?i)\boffset\s+", '', code)
         code = sized(code)
         code = pushed(code)
+
+        if held:
+            m2 = re.match(r"(?i)^\s*cmp\s+(.*?)\s*,\s*(.*?)\s*$", code)
+            left, right = (m2.group(1), m2.group(2)) if m2 \
+                else (held.group(3), held.group(5))
+            # a left side of more than one word goes in brackets of its own,
+            # because fasm's MATCH splits the condition into its tokens
+            if not left.startswith('<') and re.search(r"[\s\[\]:]", left):
+                left = '<%s>' % left
+            code = '%s%s <%s %s %s>%s' % (held.group(1), held.group(2), left,
+                                          held.group(4).upper(), right,
+                                          held.group(6) or '')
 
         if comment and len(code) != was_len:
             stripped = code.rstrip()
@@ -1823,7 +2730,7 @@ for lines in (list(done.values())
                  for h in HEADERS]
               + [shared(h).split('\n') for h in SHARED]):
     for line in lines:
-        m = DECL.match(line.split(';')[0])
+        m = DECL.match(code_of(line))
         if m:
             name = next(g for g in m.groups() if g)
             spelling.setdefault(name.lower(), name)
@@ -1832,7 +2739,7 @@ for lines in (list(done.values())
         # declares Procedure YES? where FORMAT.ASM calls Yes?, and MASM read
         # the two as one name.
         m = re.match(r"(?i)^[ \t]*Procedure[ \t]+(" + N + r")",
-                     line.split(';')[0])
+                     code_of(line))
         if m:
             spelling.setdefault(m.group(1).lower(), m.group(1))
 spelling.update({'sysdispmsg': 'SYSDISPMSG', 'sysloadmsg': 'SYSLOADMSG',

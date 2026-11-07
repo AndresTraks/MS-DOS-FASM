@@ -20,7 +20,7 @@ match =SYSINITVAR_LAID_OUT, SYSINITVAR_LAID_OUT
 {
     SYSINITVAR_LAID_OUT equ 1
     virtual at 0
-      SYSINITVAR SYSINITVAR
+      SYSINITVAR SYSINITVAR 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
       sizeof.SYSINITVAR = $ - SYSINITVAR
     end virtual
 }

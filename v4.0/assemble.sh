@@ -206,3 +206,18 @@ utility DEBUG DEBLNK DEBUG.COM
 # links the ten and runs EXE2BIN over the result, which is the flat image
 # fasm writes here.
 utility GRAFTABL GRTABLNK GRAFTABL.COM
+
+# MODE, sixteen modules in two segments in one group -- PRINTF_CODE, which
+# holds the program, and ZSEG, the 512-byte buffer MODECP works the code
+# pages through -- which MODELNK.ASM lays down as one address space, the way
+# the group was.  The buffer comes last because the program grows it into
+# whatever memory is past the end of itself.  Four more segments are ROM,
+# VECT, ROM_BIOS and SIGNITURE, which name what the ROM BIOS, the interrupt
+# vectors and the EGA hold rather than anything the program lays down: they
+# are read in a pass of their own.  PRINTF_CODE begins where the load module
+# does, which for a .COM is the program's own prefix: RESCODE describes what
+# DOS leaves in it and names the place at 60H the resident serial and printer
+# code is moved to, and the org 100H after that is where DOS enters.  The
+# release links the sixteen and runs EXE2BIN over the result, which is the
+# flat image fasm writes here.
+utility MODE MODELNK MODE.COM

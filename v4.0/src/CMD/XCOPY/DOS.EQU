@@ -17,7 +17,7 @@ match =FCB_LAID_OUT, FCB_LAID_OUT
 {
     FCB_LAID_OUT equ 1
     virtual at 0
-      FCB FCB
+      FCB FCB 0, 0, 0, 0, 0, 0, 0, 0, 0
       sizeof.FCB = $ - FCB
     end virtual
 }
@@ -35,7 +35,7 @@ match =Find_DTA_LAID_OUT, Find_DTA_LAID_OUT
 {
     Find_DTA_LAID_OUT equ 1
     virtual at 0
-      Find_DTA Find_DTA
+      Find_DTA Find_DTA 0, 0, 0, 0, 0
       sizeof.Find_DTA = $ - Find_DTA
     end virtual
 }

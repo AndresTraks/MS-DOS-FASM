@@ -11,7 +11,7 @@ match =MSG_DESC_LAID_OUT, MSG_DESC_LAID_OUT
 {
     MSG_DESC_LAID_OUT equ 1
     virtual at 0
-      MSG_DESC MSG_DESC
+      MSG_DESC MSG_DESC 0, 0, 0, 0, 0
       sizeof.MSG_DESC = $ - MSG_DESC
     end virtual
 }
@@ -37,7 +37,7 @@ match =SUBLIST_LAID_OUT, SUBLIST_LAID_OUT
 {
     SUBLIST_LAID_OUT equ 1
     virtual at 0
-      SUBLIST SUBLIST
+      SUBLIST SUBLIST 0, 0, 0, 0, 0, 0, 0, 0, 0
       sizeof.SUBLIST = $ - SUBLIST
     end virtual
 }
@@ -52,7 +52,7 @@ match =LANGUAGE_LAID_OUT, LANGUAGE_LAID_OUT
 {
     LANGUAGE_LAID_OUT equ 1
     virtual at 0
-      LANGUAGE LANGUAGE
+      LANGUAGE LANGUAGE 0
       sizeof.LANGUAGE = $ - LANGUAGE
     end virtual
 }
@@ -66,7 +66,7 @@ match =PSP_LAID_OUT, PSP_LAID_OUT
 {
     PSP_LAID_OUT equ 1
     virtual at 0
-      PSP PSP
+      PSP PSP 0
       sizeof.PSP = $ - PSP
     end virtual
 }

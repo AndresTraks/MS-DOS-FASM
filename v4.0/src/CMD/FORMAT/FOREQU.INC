@@ -9,7 +9,7 @@ match =Media_ID_LAID_OUT, Media_ID_LAID_OUT
 {
     Media_ID_LAID_OUT equ 1
     virtual at 0
-      Media_ID Media_ID
+      Media_ID Media_ID 0, 0
       sizeof.Media_ID = $ - Media_ID
     end virtual
 }
@@ -27,7 +27,7 @@ match =Relative_Sector_Buffer_LAID_OUT, Relative_Sector_Buffer_LAID_OUT
 {
     Relative_Sector_Buffer_LAID_OUT equ 1
     virtual at 0
-      Relative_Sector_Buffer Relative_Sector_Buffer
+      Relative_Sector_Buffer Relative_Sector_Buffer 0, 0, 0, 0, 0
       sizeof.Relative_Sector_Buffer = $ - Relative_Sector_Buffer
     end virtual
 }
@@ -45,7 +45,7 @@ match =a_FileStructure_LAID_OUT, a_FileStructure_LAID_OUT
 {
     a_FileStructure_LAID_OUT equ 1
     virtual at 0
-      a_FileStructure a_FileStructure
+      a_FileStructure a_FileStructure 0, 0, 0, 0, 0, 0, 0
       sizeof.a_FileStructure = $ - a_FileStructure
     end virtual
 }

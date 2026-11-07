@@ -25,7 +25,7 @@ COM2			      EQU   0C2H	;used by invoke
 COM3			      EQU   0C3H	;used by invoke
 COM4			      EQU   0C4H	;used by invoke
 false	EQU	00H
-true	EQU	0FFH
+TRUE	EQU	0FFH
 
 
 ;FLAGS field bit(s) values
@@ -36,7 +36,7 @@ Right_Align		equ	80h	;10xxxxxx
 Unsgn_Bin_Byte	  equ	  11h	  ;a0010001
 
 
-PUBLIC	 bogus
+;PUBLIC	 bogus
 
 ;ษออออออออออออออออออออออออออออออออ  P R O L O G  อออออออออออออออออออออออออออออออออออออออออป
 ;บ											  บ

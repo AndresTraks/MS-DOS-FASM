@@ -1,5 +1,5 @@
 .XLIST
-INCLUDE STRUC.INC
+include 'STRUC.INC'
 .LIST
 .SALL
 	PAGE	,132			;
@@ -77,19 +77,21 @@ INCLUDE STRUC.INC
 
 
 
-DISPLAY MACRO	MESSAGE
-	MOV	DX,OFFSET MESSAGE
+macro DISPLAY message
+{
+	MOV	DX,message
 	CALL	PRINTF
-ENDM
+}
 
-SET	MACRO	REG,VALUE		;SET REG TO VALUE. DON'T SPECIFY AX FOR REG
+macro SET REG,VALUE
+{
 
 	PUSH	AX
 	MOV	AX,VALUE
 	MOV	REG,AX
 	POP	AX
 
-ENDM
+}
 
 ;บ											  บ
 ;ศออออออออออออออออออออออออออออออออ  M A C R O S  อออออออออออออออออออออออออออออออออออออออออผ
@@ -111,27 +113,27 @@ set_typamatic_rate_and_delay  EQU   3
 typamatic_function   EQU   5
 ten_chars_per_second EQU   0CH	  ;value for BIOS INT 16H
 
-INCLUDE modequat.inc		 ;definitions of machine types
-include version.inc		; defines version of DOS to be built
+include 'MODEQUAT.INC' ;definitions of machine types
+include 'VERSION.INC' ; defines version of DOS to be built
 
 ;บ											  บ
 ;ศอออออออออออออออออออออออออออออออ  E Q U A T E S  ออออออออออออออออออออออออออออออออออออออออผ
 
 
-PRINTF_CODE SEGMENT PUBLIC
-	ASSUME	DS:NOTHING, CS:PRINTF_CODE
+if SEGSEL = S_PRINTF_CODE
+;	ASSUME	DS:NOTHING, CS:PRINTF_CODE
 
 
 ;ษอออออออออออออออออออออออออออออออ  E X T R N S	ออออออออออออออออออออออออออออออออออออออออออป
 ;บ											  บ
 
-EXTRN	 PRINTF:NEAR
-EXTRN	 MACHINE_TYPE:BYTE		     ;MACHINE TYPE as determined by "modeleng"
+;EXTRN	 PRINTF:NEAR
+;EXTRN	 MACHINE_TYPE:BYTE		     ;MACHINE TYPE as determined by "modeleng"
 ;EXTRN	  typamatic_rate_set_to:WORD
 ;EXTRN	  chars_per_second:WORD
-EXTRN	 noerror:BYTE
+;EXTRN	 noerror:BYTE
 ;EXTRN	  no_previous_typamatic_rate:WORD
-EXTRN	 Function_not_supported:BYTE		      ;see modedefs.inc
+;EXTRN	 Function_not_supported:BYTE		      ;see modedefs.inc
 ;EXTRN	  delay_set_to:WORD
 ;EXTRN	  second:WORD
 ;EXTRN	  no_previous_delay_setting:WORD
@@ -161,18 +163,18 @@ thirty_two  DB	  20H			    ;adjustment and work area for typamatic rate
 PAGE
 ;*********************************************************************************************
 
-TYPAMAT PROC	NEAR
-PUBLIC	TYPAMAT
+TYPAMAT:
+;PUBLIC	TYPAMAT
 
 if IBMCOPYRIGHT
-.IF <machine_type EQ AT4> OR
-.IF <machine_type EQ XT286> OR
+.IF <<[cs:machine_type]> EQ AT4>, OR
+.IF <<[cs:machine_type]> EQ XT286>, OR
 ;.IF <machine_type EQ AT> OR
-.IF <machine_type EQ PS2Model30> OR
-.IF <machine_type EQ PS2Model50> OR
-.IF <machine_type EQ PS2Model60> OR
-.IF <machine_type EQ PS2Model80> THEN
-endif
+.IF <<[cs:machine_type]> EQ PS2Model30>, OR
+.IF <<[cs:machine_type]> EQ PS2Model50>, OR
+.IF <<[cs:machine_type]> EQ PS2Model60>, OR
+.IF <<[cs:machine_type]> EQ PS2Model80>
+end if
 ;  MOV	   AH,resident_MODE
 ;  MOV	   AL,get_installed_state
 ;  INT	   2FH
@@ -182,8 +184,8 @@ endif
 ;  .ENDIF					    ;ENDIF
 ;  CMP	   BL,0 				    ;CASE typamatic_rate OF
 ;  .IF	   GT						greater than zero:
-      SUB     thirty_two,BL			    ;	   MOV	   BL,32-BL	      ;translate typamatic rate
-      MOV     BL,thirty_two
+      SUB     [cs:thirty_two],BL  ;	   MOV	   BL,32-BL	      ;translate typamatic rate
+      MOV     BL,[cs:thirty_two]
 
 ;     DISPLAY	typamatic_rate_set_to,BL
 ;     DISPLAY	chars_per_second
@@ -249,15 +251,15 @@ endif
 if IBMCOPYRIGHT
 .ELSE
    DISPLAY Function_not_supported
-   MOV	 noerror,false
+   MOV	 byte [cs:NOERROR],false
 .ENDIF
-endif
+end if
 
 RET
 
-TYPAMAT ENDP
+;TYPAMAT ENDP
 
 
-PRINTF_CODE ENDS
-	END
+end if
+;	END
 

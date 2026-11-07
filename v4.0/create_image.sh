@@ -51,3 +51,7 @@ mcopy -i "$IMAGE" bin/MSDOS.SYS ::
 
 # COMMAND.COM, which SYSINIT EXECs to finish starting the system.
 mcopy -i "$IMAGE" bin/COMMAND.COM ::
+
+# The ten bytes mtools writes after each entry's attribute, which DOS 4 left
+# zero -- see dosdir.py for what reads them.
+python3 dosdir.py "$IMAGE"

@@ -15,7 +15,7 @@ match =SUB_LIST_LAID_OUT, SUB_LIST_LAID_OUT
 {
     SUB_LIST_LAID_OUT equ 1
     virtual at 0
-      SUB_LIST SUB_LIST
+      SUB_LIST SUB_LIST 0, 0, 0, 0, 0, 0, 0
       sizeof.SUB_LIST = $ - SUB_LIST
     end virtual
 }
