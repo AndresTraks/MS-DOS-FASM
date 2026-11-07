@@ -81,7 +81,7 @@ pad_zero	equ	30h		;an000;zero pad
 
 
 FALSE	EQU	0
-TRUE	EQU	NOT FALSE
+TRUE	equ	(NOT FALSE)
 
 ;SYSVER 	 EQU FALSE		 ;if true, i/o direct to bios
 	include 'SYSVER.INC'

@@ -181,7 +181,7 @@ SS_Save 	rw      1 ;an000; dms;
 Path_String db	"PATH=" 			;				;AN000;
 ; = and not equ: fasm's equ is text put in where the name is used, so a $
 ; in it would be the address of the use and not of this line.
-Len_Path_String = $ - Path_String		;				;AN000;
+Len_Path_String = ($ - Path_String)	;				;AN000;
 						;
 ;----------------------------------------
 
@@ -192,7 +192,7 @@ Len_Path_String = $ - Path_String		;				;AN000;
 ; ---------------------------------------
 						;
 Search_FORMAT db "FORMAT"			;				;AC000;
-Len_Search_FORMAT = $ - Search_FORMAT 	;				;     ;
+Len_Search_FORMAT = ($ - Search_FORMAT)	;				;     ;
 Search_Format_End = $
 						;				;     ;
 ;----------------------------------------

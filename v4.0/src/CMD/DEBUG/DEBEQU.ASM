@@ -55,7 +55,7 @@ FCB	EQU	5CH
 EXEFCB	EQU	FCB
 BUFLEN	EQU	80			; Maximum length of line input buffer
 BPMAX	EQU	10			; Maximum number of breakpoints
-BPLEN	EQU	5*BPMAX 		; Length of breakpoint table
+BPLEN	equ	(5*BPMAX)	; Length of breakpoint table
 REGTABLEN EQU	14			; Number of registers
 SEGDIF	EQU	0
 BUFSIZ	EQU	512

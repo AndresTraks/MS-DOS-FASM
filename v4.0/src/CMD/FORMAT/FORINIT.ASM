@@ -57,17 +57,17 @@ FS_String_Buffer db 13 dup(" ") 		;				;AN000;
 FS_String_End db "FMT.EXE",0			;				;AN000;
 ; = and not equ: fasm's equ is text put in where the name is used, so a $
 ; in it would be the address of the use and not of this line.
-Len_FS_String_End = $ - FS_String_End 	;				;AN000;
+Len_FS_String_End = ($ - FS_String_End)	;				;AN000;
 						;				;AN000;
 ;----------------------------------------
 
 Vol_Label_Count  db 80h 			;an000; dms;max. string length
 Vol_Label_Len	 db 00h 			;an000; dms;len. entered
 Vol_Label_Buffer db 80h dup(0)			;				;AN000;
-Vol_Label_Buffer_Length = $ - Vol_Label_Buffer ;				 ;AN000;
+Vol_Label_Buffer_Length = ($ - Vol_Label_Buffer)	;				 ;AN000;
 
 Command_Line_Buffer db 80h dup(0)		;				;AN000;
-Command_Line_Length = $ - Command_Line_Buffer ;				;AN000;
+Command_Line_Length = ($ - Command_Line_Buffer)	;				;AN000;
 Fatal_Error db	0				;				;AN000;
 
 Command_Old_Ptr rw      1

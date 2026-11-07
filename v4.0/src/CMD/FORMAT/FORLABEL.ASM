@@ -763,7 +763,7 @@ label Bad_Char_Table byte   ;an000; dms;table of invalid vol ID chars
 	db	" "
 ; = and not equ: fasm's equ is text put in where the name is used, so a $
 ; in it would be the address of the use and not of this line.
-Bad_Char_Table_Len	=	$-Bad_Char_Table;an000; dms;length of table
+Bad_Char_Table_Len	=	($-Bad_Char_Table)	;an000; dms;length of table
 
 DBCS_Vector_Off dw 0				;
 DBCS_Vector_Seg dw 0				;

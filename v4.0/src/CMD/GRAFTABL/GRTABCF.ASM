@@ -6,14 +6,14 @@
 ;This module contains the binary description of the pixels that are used
 ;in graphics mode to define the Canadian French character set when loaded to
 ;interrupt 1FH by the GRAFTABL command in DOS 3.3.
-	IF1
-	    %OUT    GRTABCF.ASM...
-	ELSE
-;    $OUT GRTABCF.ASM...
-	ENDIF
-CSEG	SEGMENT PARA PUBLIC
-TABLECF EQU	THIS BYTE
-	PUBLIC	TABLECF
+;	IF1
+;	    %OUT    GRTABCF.ASM...
+;	ELSE
+;;    OUT$ GRTABCF.ASM...
+;	ENDIF
+;CSEG	SEGMENT PARA PUBLIC
+label TABLECF byte
+;	PUBLIC	TABLECF
 
 ;(note: the display of the character to the right of the decimal number
 ;value of this location is not necessarily the graphic that these pixels
@@ -1190,7 +1190,7 @@ TABLECF EQU	THIS BYTE
 ;(the above "DB" is an example of the ENGLISH version of the above include file)
 	IF	($-CSEG) MOD 16 	;IF NOT ALREADY ON 16 BYTE BOUNDARY
 	    DB	    (16-(($-CSEG) MOD 16)) DUP(0) ;ADD PADDING TO GET TO 16 BYTE BOUNDARY
-	ENDIF
-CSEG	ENDS
-	END
+	end if
+;CSEG	ENDS
+;	END
 

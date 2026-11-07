@@ -6,14 +6,14 @@
 ;This module contains the binary description of the pixels that are used
 ;in graphics mode to define the USA character set when loaded to
 ;interrupt 1FH by the GRAFTABL command in DOS 3.3.
-	IF1
-	    %OUT    GRTABUS.ASM...
-	ELSE
-;    %OUT GRTABUS.ASM...
-	ENDIF
-CSEG	SEGMENT PARA PUBLIC
-TABLEUS EQU	THIS BYTE
-	PUBLIC	TABLEUS
+;	IF1
+;	    %OUT    GRTABUS.ASM...
+;	ELSE
+;;    %OUT GRTABUS.ASM...
+;	ENDIF
+;CSEG	SEGMENT PARA PUBLIC
+label TABLEUS byte
+;	PUBLIC	TABLEUS
 
 ;			     128   €
 	DB	01111000B
@@ -1168,15 +1168,15 @@ TABLEUS EQU	THIS BYTE
 	DB	00000000B
 	DB	00000000B
 ;
-ENDTABL EQU	THIS BYTE
-	PUBLIC	ENDTABL
+label ENDTABL byte
+;	PUBLIC	ENDTABL
 	DW	437			;TABLE ID
 ;	include graftusm.inc
 	DB	"USA",0 		;LANGUAGE NAME, IN ASCIIZ FORMAT
 ;(the above "DB" is an example of the ENGLISH version of the above include file)
 	IF	($-CSEG) MOD 16 	;IF NOT ALREADY ON 16 BYTE BOUNDARY
 	    DB	    (16-(($-CSEG) MOD 16)) DUP(0) ;ADD PADDING TO GET TO 16 BYTE BOUNDARY
-	ENDIF
-CSEG	ENDS
-	END
+	end if
+;CSEG	ENDS
+;	END
 

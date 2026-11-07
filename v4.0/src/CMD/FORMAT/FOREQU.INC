@@ -52,7 +52,7 @@ match =a_FileStructure_LAID_OUT, a_FileStructure_LAID_OUT
 ;                                              ;                               ;     ;
 
 NO      equ     0
-YES     equ     not NO
+YES     equ     (not NO)
 FSExec  equ     NO                              ;an018; dms;conditional assembly
 ShipDisk equ    NO                              ;an000; dms;ship disk flag
 

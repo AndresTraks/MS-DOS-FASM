@@ -114,6 +114,39 @@ UTILITIES = {
         # wanted, so it starts at nothing.
         START={'cs': 'CODE', 'ds': 'DATA', 'es': None, 'ss': 'STACK'},
     ),
+    # GRAFTABL's ten modules in the order GRAFTABL.LNK names them, and the
+    # header they share.  GRTABHAN is first because it is the resident part:
+    # the interrupt handler and the 1K table it answers from, which the
+    # loader moves into the program's own prefix at 60H and leaves there.
+    # The eight modules between are the character sets -- US, Multilingual,
+    # Portuguese, Canadian French, Nordic -- and the parser.
+    'GRAFTABL': dict(
+        MODULES=('GRTABHAN.ASM', 'GRTABUS.ASM', 'GRTABML.ASM', 'GRTABPO.ASM',
+                 'GRTABCF.ASM', 'GRTABNO.ASM', 'GRTABSM.ASM', 'GRTABPAR.ASM',
+                 'GRTABP.ASM', 'GRTAB.ASM', 'GRTABMS.INC'),
+        TAG={'GRTABHAN.ASM': 'H', 'GRTABPAR.ASM': 'P'},
+        ONESEG=True,
+        # GRTABHAN declares INSTALLED EQU 0FFH, the answer its handler gives
+        # INT 2FH, and GRTAB gives the same name to the byte it keeps that
+        # answer in.  MASM assembled the two apart; one assembly can only
+        # have the one, and the byte is the one that is read, so the equate
+        # gives way.
+        PRIVATE={'GRTABHAN.ASM': (('INSTALLED', 'INSTALLED_'),)},
+        SHARED=('SYSCALL.INC', 'DOSSYM.INC', 'SYSMSG.INC', 'PSDATA.INC',
+                'COPYRIGH.INC', 'PATHMAC.INC',
+                'MSGHAN.INC', 'DOSMAC.INC', 'MSGDCL.INC', 'MSGSERV.ASM',
+                'VERSIONA.INC', 'BPB.INC', 'BUFFER.INC', 'SYSVAR.INC',
+                'VECTOR.INC', 'MULT.INC', 'DIRENT.INC', 'DPB.INC',
+                'CURDIR.INC', 'CPMFCB.INC', 'FIND.INC', 'PDB.INC', 'EXE.INC',
+                'SF.INC', 'ARENA.INC', 'INTNAT.INC', 'MI.INC',
+                'FILEMODE.INC', 'ERROR.INC', 'VERSION.INC', 'PARSE.ASM'),
+        # MASM began each module with every register assumed on nothing,
+        # and GRTABHAN says only ASSUME CS:CSEG -- its handler is entered on
+        # an interrupt, with the interrupted program's DS, so what it reads
+        # of its own it reads through CS.  The modules that have the segment
+        # in all four registers, GRTAB among them, say so themselves.
+        START={'cs': 'CSEG', 'ds': None, 'es': None, 'ss': None},
+    ),
     # DEBUG's eleven modules in the order DEBUG.LNK names them, and the two
     # headers they read: DEBEQU.ASM is the numbers and the structures, and
     # SYSVER.INC is the copy of SYSVER.FAL the release shipped, which says
@@ -366,6 +399,20 @@ def far_pointers(text):
                   + r")[ \t]*:[ \t]*(" + N + r")[ \t]*(;[^\n]*)?$", one, text)
 
 
+def at_far_jumps(text):
+    """A jump to a FAR label in a segment AT an address, which MASM wrote as
+    a direct far jump: the segment it is at and the offset in it."""
+    if not FARAT:
+        return text
+
+    def one(m):
+        return '%s%s%s:%s' % (m.group(1), m.group(2),
+                              FARAT[m.group(3).lower()], m.group(3))
+
+    return re.sub(r"(?i)\b(jmp|call)([ \t]+)(" + "|".join(sorted(FARAT))
+                  + r")\b", one, text)
+
+
 def far_jumps(text):
     """JMP or CALL FAR PTR, which MASM assembled as a far transfer.
 
@@ -529,6 +576,17 @@ for text in (list(source.values())
         if m:
             DATA.add(m.group(1).lower())
             SIZE[m.group(1).lower()] = m.group(2).lower()
+        # An EXTRN says what a name another module declares is, which is the
+        # only word on it where that module names a place with an EQU:
+        # GRTABHAN says PATCH_OFF EQU WORD PTR $-2 and GRTAB asks for it as
+        # EXTRN PATCH_OFF:WORD.
+        m = re.match(r"(?i)^[ \t]*EXTRN[ \t]+(.*)$", code)
+        if m:
+            for name, kind in re.findall(r"(?i)(" + N + r")[ \t]*:[ \t]*"
+                                         r"(byte|word|dword|qword)\b",
+                                         m.group(1)):
+                DATA.add(name.lower())
+                SIZE.setdefault(name.lower(), kind.lower())
 
 
 # MASM's LENGTH gave the number of elements a variable was declared with and
@@ -538,10 +596,17 @@ for text in (list(source.values())
 UNIT = {'DB': 1, 'DW': 2, 'DD': 4}
 COUNT = U.get('COUNT', {})
 ABSWIDTH = U.get('ABSWIDTH', {})
+# Whether the program has one segment, and so is read once rather than once
+# per segment: TREE, GRAFTABL and the other .COM files are, and the programs
+# with a group or two address spaces are not.
+ONESEG = U.get('ONESEG', False)
 for text in source.values():
     for line in text.split('\n'):
-        m = re.match(r"(?i)^[ \t]*(" + N + r")\s+(db|dw|dd)\s+(\S+)\s+dup\s*\(",
-                     line.split(';')[0])
+        # a field of a structure counts as well, and by this point it is
+        # written with the dot the house gives it: GRAFTABL asks for
+        # SIZE LANCHAR, which is a field of LANGUAGE.
+        m = re.match(r"(?i)^[ \t]*\.?(" + N + r")\s+(db|dw|dd)\s+(\S+)"
+                     r"\s+dup\s*\(", line.split(';')[0])
         if m:
             COUNT[m.group(1).lower()] = (m.group(3),
                                          UNIT[m.group(2).upper()])
@@ -592,6 +657,11 @@ def measures(code):
         if op == 'SIZE' and name.lower() in STRUC_CASE:
             return 'sizeof.' + STRUC_CASE[name.lower()]
         if name.lower() not in COUNT:
+            # one of something, not an array of it: MASM read LENGTH as one
+            # and SIZE as the width of the thing, which is what TYPE gives.
+            width = TYPESIZE.get(name.lower())
+            if width:
+                return '1' if op == 'LENGTH' else str(width)
             return m.group(0)
         count, unit = COUNT[name.lower()]
         return count if op == 'LENGTH' or unit == 1 else '(%s)*%d' % (count, unit)
@@ -800,6 +870,60 @@ def offsets(text):
                   lambda m: m.group(1), text)
 
 
+def places(text):
+    """An EQU that names a place rather than a number.
+
+    GRTABHAN says PATCH_OFF EQU WORD PTR $-2 for the immediate of the
+    instruction just assembled, which its loader patches, and PREV_OWN EQU
+    DWORD PTR JMPREV+1 for the address inside a far jump.  fasm's EQU is text
+    put in where the name is used, so a $ in it would be the address of the
+    use; LABEL names a place of a given size at an address taken where it is
+    written, which is what MASM's EQU did here.
+
+    MASM's THIS is the same thing at the address the line is on, which is
+    how each of GRAFTABL's character tables names its own beginning:
+    TABLEUS EQU THIS BYTE.
+    """
+    text = re.sub(r"(?mi)^(" + N + r")[ \t]+EQU[ \t]+"
+                  r"(byte|word|dword|qword)[ \t]+ptr[ \t]+"
+                  r"([^;\n]+?)[ \t]*(;[^\n]*)?$",
+                  lambda m: 'label %s %s at %s%s' % (
+                      m.group(1), m.group(2).lower(), m.group(3).strip(),
+                      '\t' + m.group(4) if m.group(4) else ''),
+                  text)
+    return re.sub(r"(?mi)^(" + N + r")[ \t]+EQU[ \t]+THIS[ \t]+"
+                  r"(byte|word|dword|qword)[ \t]*(;[^\n]*)?$",
+                  lambda m: 'label %s %s%s' % (
+                      m.group(1), m.group(2).lower(),
+                      '\t' + m.group(3) if m.group(3) else ''),
+                  text)
+
+
+def grouped_equ(text):
+    """An EQU whose value is an expression, in brackets of its own.
+
+    MASM worked an EQU out where it was written, so GRTAB's SHIFT_SIZE_SEG
+    EQU SHIFT_SIZE SHR NIBBLE_SIZE shifted the whole of SHIFT_SIZE.  fasm's
+    EQU is text put in where the name is used, and there the operators around
+    it bind as they will: SHIFT_SIZE is itself END_PSP-MOV_DEST, so what came
+    out was END_PSP minus MOV_DEST shifted -- 0FAh where MASM had 0Ah, and
+    a resident handler addressed through the wrong segment.  The brackets say
+    what MASM meant, and leave the EQU able to look forward, which = is not.
+    """
+    def one(m):
+        body = m.group(3).strip()
+        if ',' in body or "'" in body or '"' in body:
+            return m.group(0)
+        if not re.search(r"[-+*/]|\b(?:shl|shr|mod|and|or|xor|not)\b",
+                         body, re.I):
+            return m.group(0)
+        return '%sequ%s(%s)%s' % (m.group(1), m.group(2), body,
+                                  '\t' + m.group(4) if m.group(4) else '')
+
+    return re.sub(r"(?mi)^(" + N + r"[ \t]+)equ([ \t]+)([^;\n]+?)[ \t]*"
+                  r"(;[^\n]*)?$", one, text)
+
+
 def dollar_equ(text):
     """A length worked out from the address counter, which EQU cannot hold.
 
@@ -905,6 +1029,11 @@ def bare_fields(text):
         found = FIELD.get(name.upper())
         if found is None or name.lower() in DECLARED:
             return name
+        # SIZE, LENGTH and TYPE take the field's own name, and the rules for
+        # them work the number out from its declaration: GRTAB says
+        # TABSIZE EQU SIZE LANCHAR + SIZE LANID + SIZE LANNAME.
+        if re.search(r"(?i)\b(?:size|length|type)[ \t]+$", m.string[:m.start()]):
+            return name
         return '%s.%s' % (found[0], found[1])
 
     out = []
@@ -927,6 +1056,28 @@ SEGNAME = {}
 for text in source.values():
     for m in re.finditer(r"(?im)^[ \t]*(" + N + r")[ \t]+SEGMENT\b", text):
         SEGNAME.setdefault(m.group(1).upper(), m.group(1))
+# A FAR label inside a SEGMENT AT, and the address that segment is at.
+# GRTABHAN's DUMMY_SEG AT 0 holds one of these and no bytes: MASM wrote a
+# direct far jump to it, whose address the loader patches with the previous
+# owner of the interrupt vector, and the jump has to be the five bytes of
+# one -- a near jump would leave the patch writing over the code after it.
+FARAT = {}
+for text in source.values():
+    at = None
+    for line in text.split('\n'):
+        code = line.split(';')[0]
+        m = re.match(r"(?i)^[ \t]*" + N + r"\s+SEGMENT\b.*?\bAT[ \t]+"
+                     r"([^;]+?)[ \t]*$", code)
+        if m:
+            at = m.group(1).strip()
+            continue
+        if re.match(r"(?i)^[ \t]*" + N + r"\s+ENDS\b", code):
+            at = None
+            continue
+        m = re.match(r"(?i)^[ \t]*(" + N + r")\s+LABEL\s+FAR\b", code)
+        if m and at is not None:
+            FARAT[m.group(1).lower()] = at
+
 GROUPED, GROUPNAME = set(), None
 for text in source.values():
     for m in re.finditer(r"(?im)^[ \t]*(" + N + r")[ \t]+GROUP[ \t]+"
@@ -1411,7 +1562,6 @@ MACRODEF = re.compile(r"(?i)^(" + N + r")[ \t]+MACRO\b[ \t]*(.*)$")
 MACROEND = re.compile(r"(?i)^[ \t]*ENDM\b")
 SEGMENT = re.compile(r"(?i)^[ \t]*(" + N + r")\s+SEGMENT\b")
 GROUP = re.compile(r"(?i)^[ \t]*(" + N + r")\s+GROUP\b")
-GROUP = re.compile(r"(?i)^[ \t]*(" + N + r")\s+GROUP\b")
 SEGEND = re.compile(r"(?i)^[ \t]*(" + N + r")\s+ENDS\b")
 ENDALL = re.compile(r"(?i)^\s*END(?!\s+(?:if|virtual|struc|match|macro)\b)(\s+" + N + r")?\s*$")
 LABELDEF = re.compile(r"(?i)^[ \t]*(" + N + r")(\s+)label(\s+)(byte|word|dword)\s*$")
@@ -1432,11 +1582,14 @@ for stem in MODULES:
     text = struct_arrays(text)
     text = far_pointers(text)
     text = far_jumps(text)
+    text = at_far_jumps(text)
     text = split_dup(text)
     text = segment_values(text)
     text = grouped(text)
     text = offsets(text)
     text = bare_fields(text)
+    text = places(text)
+    text = grouped_equ(text)
     text = dollar_equ(text)
     text = records(text)
     text = tabled(text)
@@ -1491,11 +1644,40 @@ for stem in MODULES:
                                        ' ' + comment if comment else ''))
             continue
 
+        # MASM's ORG moved the location counter, and LINK filled what it
+        # moved over with zeros.  To a number it placed what followed, which
+        # is what fasm's own org does; over an expression in $ it padded to a
+        # boundary -- GRTABHAN pads its resident part to a paragraph -- and
+        # fasm's org moves the address and not the place the output goes, so
+        # that one has to be the zeros themselves.
+        m = re.match(r"(?i)^([ \t]*)ORG[ \t]+([^;]+?)[ \t]*$", bare)
+        if m and '$' in m.group(2):
+            out.append(pad('%stimes (%s) - $ db 0'
+                           % (m.group(1), m.group(2).strip()),
+                           was_len, comment))
+            continue
+
         if GROUP.match(bare):
             out.append(';' + line)
             continue
         m = SEGMENT.match(bare)
         if m:
+            at = re.search(r"(?i)\bAT[ \t]+([^;]+?)[ \t]*$", bare)
+            if at:
+                # MASM's SEGMENT AT names the places in a piece of memory the
+                # program does not lay down: GRTABHAN's DUMMY_SEG AT 0 holds
+                # one FAR label and no bytes, to make MASM write a far jump
+                # direct whose address the loader patches.  A VIRTUAL block
+                # says the same and writes nothing.
+                opened.append((m.group(1).upper(), 'virtual'))
+                out.append('virtual at %s%s' % (at.group(1), comment))
+                continue
+            if ONESEG:
+                # one segment, and the modules are read once, so there is no
+                # pass for the line to choose between
+                opened.append((m.group(1).upper(), 'comment'))
+                out.append(';' + line)
+                continue
             # MASM let a segment stand inside another, and the inner one's
             # ENDS went back to the one it stood in.  FORMAT writes its data
             # that way, each piece beside the code that reads it, so the
@@ -1504,15 +1686,19 @@ for stem in MODULES:
             # before the inner one opens and opened again after it ends.
             if opened:
                 out.append('end if')
-            opened.append(m.group(1).upper())
-            out.append('if SEGSEL = S_%s%s' % (opened[-1], comment))
+            opened.append((m.group(1).upper(), 'guard'))
+            out.append('if SEGSEL = S_%s%s' % (opened[-1][0], comment))
             continue
         if SEGEND.match(bare):
-            out.append('end if' + (' ' + comment if comment else ''))
-            if opened:
-                opened.pop()
-            if opened:
-                out.append('if SEGSEL = S_%s' % opened[-1])
+            how = opened.pop()[1] if opened else 'guard'
+            if how == 'virtual':
+                out.append('end virtual' + (' ' + comment if comment else ''))
+            elif how == 'comment':
+                out.append(';' + line)
+            else:
+                out.append('end if' + (' ' + comment if comment else ''))
+                if opened and opened[-1][1] == 'guard':
+                    out.append('if SEGSEL = S_%s' % opened[-1][0])
             continue
         if DIRECTIVE.match(code) or ENDALL.match(bare):
             out.append(';' + line)

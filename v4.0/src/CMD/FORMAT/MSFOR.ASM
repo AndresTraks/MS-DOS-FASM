@@ -1307,7 +1307,7 @@ end_sys_loop:
 end if
 
 	include 'BOOT.CL1'
-mesofs	equ	SYSMSG - BogusDos
+mesofs	equ	(SYSMSG - BogusDos)
 
 WriteBogusDos:
 

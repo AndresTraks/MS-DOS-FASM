@@ -386,10 +386,10 @@ Paras_Per_Fat	dw	0000h			;an000;holds fat para count
 Fat_Init_Value	dw	0000h			;an000;initializes the FAT
 
 bios	a_FileStructure 
-BiosAttributes EQU attr_hidden + attr_system + attr_read_only
+BiosAttributes equ (attr_hidden + attr_system + attr_read_only)
 
 dos	a_FileStructure 
-DosAttributes EQU attr_hidden + attr_system + attr_read_only
+DosAttributes equ (attr_hidden + attr_system + attr_read_only)
 
 command a_FileStructure 
 CommandAttributes EQU 0
@@ -506,11 +506,11 @@ if SEGSEL = S_DATA
 end if
 if SEGSEL = S_CODE
 
-DOSVER_LOW EQU	0300H+20
-DOSVER_HIGH EQU 0300H+20
+DOSVER_LOW equ	(0300H+20)
+DOSVER_HIGH equ (0300H+20)
 
-RECLEN	EQU	sys_fcb.fcb_RECSIZ+7
-RR	EQU	sys_fcb.fcb_RR+7
+RECLEN	equ	(sys_fcb.fcb_RECSIZ+7)
+RR	equ	(sys_fcb.fcb_RR+7)
 
 PSP_Environ	equ	2ch			;an011; dms;location of
 						;	    environ. segment

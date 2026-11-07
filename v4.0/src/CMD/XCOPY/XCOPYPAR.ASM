@@ -148,7 +148,7 @@ SYSPRM_EX_RANGE       EQU  6	   ;AN000; out of range specified
 SYSPRM_EX_VALUE       EQU  7	   ;AN000; not in value list provided
 SYSPRM_EX_STRING      EQU  8	   ;AN000; not in string list provided
 SYSPRM_EX_SYNTAX      EQU  9	   ;AN000; syntax error
-SYSPRM_EX_EOL	      EQU  -1	   ;AN000; end of command line
+SYSPRM_EX_EOL	      equ  (-1)	;AN000; end of command line
 ; =  =	=  =  =  =  =  =  =  =	=  =
 
 		      HEADING_ <STRUC - DEFINITIONS OF EXTERNAL CONTROL BLOCKS>

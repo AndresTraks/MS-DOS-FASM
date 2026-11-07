@@ -64,7 +64,7 @@ SAME = {
     "IFIDN": {"MATCH"},
     "IFNB": {"MATCH"},
     "IFB": {"MATCH"},
-    "ELSE": {"ELSE"},
+    "ELSE": {"ELSE", None},         # or the block spoke to the listing
     "ORG": {"ORG", "TIMES", "STORE", "VIRTUAL"},
     # storage with nothing in it -- DB ? and DB n DUP(?) -- is reserved
     "DB": {"DB", "TIMES", "RB"},
@@ -74,7 +74,8 @@ SAME = {
     "ENDP": {None},
     "LABEL": {"LABEL", None},       # NAME LABEL BYTE became NAME:
     "RECORD": {"STRUC", None},
-    "EQU": {"EQU", "="},
+    # an EQU that names a place and not a number is a LABEL here
+    "EQU": {"EQU", "=", "LABEL"},
     "=": {"=", "EQU"},
     "MACRO": {"MACRO"},
     "ENDM": {"}"},

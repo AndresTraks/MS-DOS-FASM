@@ -197,3 +197,12 @@ utility FORMAT FORLNK FORMAT.COM FORMAT src/BOOT
 # DEBUG.ASM says not to move it.  The release ends by running TOOLS/CONVERT
 # over the linked .EXE, as CHKDSK's does.
 utility DEBUG DEBLNK DEBUG.COM
+
+# GRAFTABL, ten modules in one segment, CSEG, and no group -- so the modules
+# are read once, the way TREE's and COMP's are.  CSEG begins where the load
+# module does, which for a .COM is the program's own prefix: GRTABHAN's
+# org 60H names the place in it the resident handler and its 1K table are
+# moved to, and the org 100H after that is where DOS enters.  The release
+# links the ten and runs EXE2BIN over the result, which is the flat image
+# fasm writes here.
+utility GRAFTABL GRTABLNK GRAFTABL.COM

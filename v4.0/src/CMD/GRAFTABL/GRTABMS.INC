@@ -42,21 +42,21 @@
 ;
 ;:end
 ; = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-	IF1				;AN000;
-	    %OUT    COMPONENT=GRAFTABL, MODULE=GRTABMS.INC...;AN000;
-	ENDIF				;AN000;
+;	IF1				;AN000;
+;	    %OUT    COMPONENT=GRAFTABL, MODULE=GRTABMS.INC...;AN000;
+;	ENDIF				;AN000;
 ;THIS MODULE IS INCLUDED IN GRTABSM.SAL.
 ; = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-SUBLIST_PARSE  SUBLIST <,,FILL_OFF,FILL_SEG,PC_ID_0,SF_BITS <SF_LEFT,,SF_ASCIIZ,SF_CHAR>,MAX_0,MIN_1,PAD_BLK> ;AN003;
-	PUBLIC SUBLIST_PARSE	   ;AN003;
+SUBLIST_PARSE  SUBLIST ,,FILL_OFF,FILL_SEG,PC_ID_0,(SF_LEFT shl 7) or (SF_ASCIIZ shl 4) or SF_CHAR,MAX_0,MIN_1,PAD_BLK   ;AN003;
+;	PUBLIC SUBLIST_PARSE	   ;AN003;
 
 ;		THE NEXT GROUP ARE ADDITIONAL CLASS "A" MESSAGES
 ;		SPECIFICALLY DEFINED FOR THE GRAFTABL UTILITY
-MSGNUM_ACTIVE  MSG_DESC <2,,SLIST_23,ONE_SUBS> ;AN000;"Active Code Page: %1",CR,LF
-	       PUBLIC MSGNUM_ACTIVE						;AN000;
+MSGNUM_ACTIVE  MSG_DESC 2,,SLIST_23,ONE_SUBS   ;AN000;"Active Code Page: %1",CR,LF
+;	       PUBLIC MSGNUM_ACTIVE						;AN000;
 
-MSGNUM_PREVIOUS MSG_DESC <3,,SLIST_23,ONE_SUBS> ;AN000;"Previous Code Page: %1",CR,LF
-	       PUBLIC MSGNUM_PREVIOUS						;AN000;
+MSGNUM_PREVIOUS MSG_DESC 3,,SLIST_23,ONE_SUBS   ;AN000;"Previous Code Page: %1",CR,LF
+;	       PUBLIC MSGNUM_PREVIOUS						;AN000;
 
 ;BEFORE USING THE NEXT SUBLIST, THE SEG ID OF CPID
 ;(OR OF "NONE" OR "NON-STANDARD") MUST BE FILLED IN
@@ -64,26 +64,28 @@ MSGNUM_PREVIOUS MSG_DESC <3,,SLIST_23,ONE_SUBS> ;AN000;"Previous Code Page: %1",
 
 ;THIS NEXT SUBLIST IS USED BOTH MY MESSAGE 2 AND MESSAGE 3.
 
-SLIST_23 SUBLIST <,,,,PC_ID_1,SF_BITS <SF_LEFT,,SF_ASCIIZ,SF_CHAR>,MAX_0,MIN_1,PAD_BLK> ;AN000;
-	       PUBLIC SLIST_23							;AN000;
+SLIST_23 SUBLIST ,,,,PC_ID_1,(SF_LEFT shl 7) or (SF_ASCIIZ shl 4) or SF_CHAR,MAX_0,MIN_1,PAD_BLK   ;AN000;
+;	       PUBLIC SLIST_23							;AN000;
 ;NOTE: IN THE ABOVE SUBLIST, ID=1, THE VECTOR POINTING TO THE MSG NO. 2-3.
 ;  WILL NEED TO BE PUT INTO THE SUBLIST DURING MESSAGES INITIALIZATION.
 ;  TO SELECT "None" OR "Non Standard", OR TO POINT TO ELEMENT OF "CPID".
 
-	       PUBLIC CPID,CPID_L						;AN000;
+;	       PUBLIC CPID,CPID_L						;AN000;
 CPID DB "437",NULL                                                              ;AN000;
-CPID_L EQU $-CPID ;AN000;NUMBER OF CHARS IN CPID
+; = and not equ: fasm's equ is text put in where the name is used, so a $
+; in it would be the address of the use and not of this line.
+CPID_L = ($-CPID)	;AN000;NUMBER OF CHARS IN CPID
      DB "850",NULL                                                              ;AN000;
      DB "860",NULL                                                              ;AN000;
      DB "863",NULL                                                              ;AN000;
      DB "865",NULL                                                              ;AN000;
 
 ; = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-MSGNUM_NONE MSG_DESC <4> ;AN000;"None",NULL
-		PUBLIC MSGNUM_NONE						;AN000;
+MSGNUM_NONE MSG_DESC 4   ;AN000;"None",NULL
+;		PUBLIC MSGNUM_NONE						;AN000;
 
-MSGNUM_NSTD MSG_DESC <5> ;AN000;"Non-Standard",NULL
-		PUBLIC MSGNUM_NSTD						;AN000;
+MSGNUM_NSTD MSG_DESC 5   ;AN000;"Non-Standard",NULL
+;		PUBLIC MSGNUM_NSTD						;AN000;
 ; = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 
 ;CR,LF,"DOS command line parameters supported:",CR,LF,LF                        ;AN000;
@@ -96,20 +98,20 @@ MSGNUM_NSTD MSG_DESC <5> ;AN000;"Non-Standard",NULL
 ;"    863  - Canadian French Graphic Character Set",CR,LF                       ;AN000;
 ;"    865  - Nordic Graphic Character Set",CR,LF                                ;AN000;
 
-MSGNUM_HELP_TITLE MSG_DESC <6> ;AN000;NO SUBSTITUTIONS
-		PUBLIC MSGNUM_HELP_TITLE					;AN000;
+MSGNUM_HELP_TITLE MSG_DESC 6   ;AN000;NO SUBSTITUTIONS
+;		PUBLIC MSGNUM_HELP_TITLE					;AN000;
 
-MSGNUM_HELP_TITLE7 MSG_DESC <7> ;AN007;NO SUBSTITUTIONS
-		PUBLIC MSGNUM_HELP_TITLE7					 ;AN007;
+MSGNUM_HELP_TITLE7 MSG_DESC 7   ;AN007;NO SUBSTITUTIONS
+;		PUBLIC MSGNUM_HELP_TITLE7					 ;AN007;
 
-MSGNUM_HELP_TITLE8 MSG_DESC <8> ;AN007;NO SUBSTITUTIONS
-		PUBLIC MSGNUM_HELP_TITLE8					 ;AN007;
+MSGNUM_HELP_TITLE8 MSG_DESC 8   ;AN007;NO SUBSTITUTIONS
+;		PUBLIC MSGNUM_HELP_TITLE8					 ;AN007;
 
-MSGNUM_HELP_TITLE9 MSG_DESC <9> ;AN007;NO SUBSTITUTIONS
-		PUBLIC MSGNUM_HELP_TITLE9					 ;AN007;
+MSGNUM_HELP_TITLE9 MSG_DESC 9   ;AN007;NO SUBSTITUTIONS
+;		PUBLIC MSGNUM_HELP_TITLE9					 ;AN007;
 
-MSGNUM_HELP_TITLE10 MSG_DESC <10> ;AN007;NO SUBSTITUTIONS
-		PUBLIC MSGNUM_HELP_TITLE10					  ;AN007;
+MSGNUM_HELP_TITLE10 MSG_DESC 10   ;AN007;NO SUBSTITUTIONS
+;		PUBLIC MSGNUM_HELP_TITLE10					  ;AN007;
 
 ; = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 ;end of GRTABMS.INC

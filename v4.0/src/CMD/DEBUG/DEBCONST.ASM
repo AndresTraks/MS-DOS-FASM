@@ -1057,7 +1057,7 @@ FLSAVE	    DW	 0F202H
 
 RSETFLAG   DB	0
 
-REGDIF	   EQU	AXSAVE-REGTAB
+REGDIF	   equ	(AXSAVE-REGTAB)
 
 ; This value is initially 0, it is set to non-zero if a file is specified
 ;  either at debug invokation, or via the (N)ame command. It is used to

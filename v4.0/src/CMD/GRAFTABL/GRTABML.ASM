@@ -6,14 +6,14 @@
 ;This module contains the binary description of the pixels that are used
 ;in graphics mode to define the multi-lingual character set when loaded to
 ;interrupt 1FH by the GRAFTABL command in DOS 3.3.
-	IF1				;AN000;
-	    %OUT    GRTABML.ASM...	;AN000;
-	ELSE				;AN000;
-;    %OUT GRTABML.ASM...
-	ENDIF				;AN000;
-CSEG	SEGMENT PARA PUBLIC		;AN000;
-TABLEML EQU	THIS BYTE		;AN000;
-	PUBLIC	TABLEML 		;AN000;
+;	IF1				;AN000;
+;	    %OUT    GRTABML.ASM...	;AN000;
+;	ELSE				;AN000;
+;;    %OUT GRTABML.ASM...
+;	ENDIF				;AN000;
+;CSEG	SEGMENT PARA PUBLIC		;AN000;
+label TABLEML byte	;AN000;
+;	PUBLIC	TABLEML 		;AN000;
 
 ;(note: the display of the character to the right of the decimal number
 ;value of this location is not necessarily the graphic that these pixels
@@ -1181,7 +1181,7 @@ TABLEML EQU	THIS BYTE		;AN000;
 	DB	"Multi-lingual",0	;AN000;LANGUAGE NAME, IN ASCIIZ FORMAT
 	IF	($-CSEG) MOD 16 	;AN000;IF NOT ALREADY ON 16 BYTE BOUNDARY
 	    DB	    (16-(($-CSEG) MOD 16)) DUP(0) ;AN000;ADD PADDING TO GET TO 16 BYTE BOUNDARY
-	ENDIF				;AN000;
-CSEG	ENDS				;AN000;
-	END				;AN000;
+	end if ;AN000;
+;CSEG	ENDS				;AN000;
+;	END				;AN000;
 

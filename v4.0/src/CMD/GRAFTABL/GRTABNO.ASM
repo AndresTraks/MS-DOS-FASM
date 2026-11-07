@@ -6,14 +6,14 @@
 ;This module contains the binary description of the pixels that are used
 ;in graphics mode to define the Nordic character set when loaded to
 ;interrupt 1FH by the GRAFTABL command in DOS 3.3.
-	IF1
-	    %OUT    GRTABNO.ASM...
-	ELSE
-;    %OUT GRTABNO.ASM...
-	ENDIF
-CSEG	SEGMENT PARA PUBLIC
-TABLENO EQU	THIS BYTE
-	PUBLIC	TABLENO
+;	IF1
+;	    %OUT    GRTABNO.ASM...
+;	ELSE
+;;    %OUT GRTABNO.ASM...
+;	ENDIF
+;CSEG	SEGMENT PARA PUBLIC
+label TABLENO byte
+;	PUBLIC	TABLENO
 
 ;(note: the display of the character to the right of the decimal number
 ;value of this location is not necessarily the graphic that these pixels
@@ -1182,7 +1182,7 @@ TABLENO EQU	THIS BYTE
 ;(the above "DB" is an example of the ENGLISH version of the above include file)
 	IF	($-CSEG) MOD 16 	;IF NOT ALREADY ON 16 BYTE BOUNDARY
 	    DB	    (16-(($-CSEG) MOD 16)) DUP(0) ;ADD PADDING TO GET TO 16 BYTE BOUNDARY
-	ENDIF
-CSEG	ENDS
-	END
+	end if
+;CSEG	ENDS
+;	END
 

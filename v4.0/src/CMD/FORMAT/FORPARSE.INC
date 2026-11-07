@@ -154,7 +154,7 @@ Out_Of_Range		equ	6		;				;AN000;
 Not_In_Value_List	equ	7		;				;AN000;
 Not_In_String_List	equ	8		;				;AN000;
 Syntax_Error		equ	9		;				;AN000;
-End_Of_Parse		equ	-1		;				;AN000;
+End_Of_Parse		equ	(-1)	;				;AN000;
 
 ;Return types
 
