@@ -17,8 +17,11 @@
 # test sources this after it has made $OUT.
 #
 # Giving up is not an error here: the test's own checks say what was missing,
-# and they say it better than a wait can.  AWAIT_TIMEOUT is how long to try.
-AWAIT_TIMEOUT=${AWAIT_TIMEOUT:-60}
+# and they say it better than a wait can.  AWAIT_TIMEOUT is how long to try,
+# and it is long because nothing is paid for it when the guest answers: two
+# minutes is for the machine that is busy with something else, not for the
+# machine that is working.
+AWAIT_TIMEOUT=${AWAIT_TIMEOUT:-120}
 SHOT=$OUT/await.bin
 SEEN=$OUT/await.txt
 : > "$SEEN"
