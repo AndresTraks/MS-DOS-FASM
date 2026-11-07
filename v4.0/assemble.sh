@@ -69,12 +69,14 @@ $FASM src/DOS/MSDOSLNK.ASM bin/MSDOS.SYS
 # utility <directory> <source> <output> [<skeleton>]
 utility() {
     python3 buildmsg.py "src/CMD/$1/${4:-$1}.SKL" >/dev/null
+    # A fifth argument is another directory to read includes from, which
+    # FORMAT wants for the boot sector's messages.
     if [ "$FASM" = fasm ]; then
-        INCLUDE="$PWD/src/INC:$PWD/src/CMD/$1"
+        INCLUDE="$PWD/src/INC:$PWD/src/CMD/$1${5:+:$PWD/$5}"
     else
         # fasm.exe reads the path the way Windows writes one.
         win() { printf 'Z:%s' "$(echo "$1" | sed 's|/|\\|g')"; }
-        INCLUDE="$(win "$PWD/src/INC");$(win "$PWD/src/CMD/$1")"
+        INCLUDE="$(win "$PWD/src/INC");$(win "$PWD/src/CMD/$1")${5:+;$(win "$PWD/$5")}"
     fi
     export INCLUDE
     $FASM "src/CMD/$1/$2.ASM" "bin/$3"
@@ -175,3 +177,13 @@ utility CHKDSK CHKLNK CHKDSK.COM
 # code.  The release links the three and stops: this is an .EXE in its own
 # right, with no CONVERT over it.
 utility XCOPY XCPYLNK XCOPY.EXE
+
+# FORMAT, seven modules in five segments and no group at all: PSP, data,
+# stack, code and End_Of_Memory, in the order DISPLAY.ASM declares them --
+# that module is nothing but .SEQ and the five empty declarations, which is
+# how MASM was told the order to lay them down in.  FORLNK.ASM makes an
+# address space of each.  MSFOR reads the boot sector's message out of
+# BOOT.CL1, which the makefile copied from the boot directory, so that
+# directory goes on the include path here.  The release ends by running
+# TOOLS/CONVERT over the linked .EXE, as CHKDSK's does.
+utility FORMAT FORLNK FORMAT.COM FORMAT src/BOOT

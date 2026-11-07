@@ -1,3 +1,54 @@
+STRUC Media_ID Media_ID_Info_Level_=0, Media_ID_Serial_Number_=0
+{
+.Media_ID_Info_Level dw Media_ID_Info_Level_
+.Media_ID_Serial_Number dd Media_ID_Serial_Number_
+.Media_ID_Volume_Label db 11 dup(" ")
+.Media_ID_File_System db 8  dup(" ")
+}
+match =Media_ID_LAID_OUT, Media_ID_LAID_OUT
+{
+    Media_ID_LAID_OUT equ 1
+    virtual at 0
+      Media_ID Media_ID
+      sizeof.Media_ID = $ - Media_ID
+    end virtual
+}
+STRUC Relative_Sector_Buffer Start_Sector_Low_=0, Start_Sector_High_=0, Number_Sectors_=0, Buffer_Offset_=0, Buffer_Segment_=0
+{
+
+.Start_Sector_Low        dw      Start_Sector_Low_ ;Low word of RBA sector         ;AN000;
+.Start_Sector_High       dw      Start_Sector_High_ ;High word of RBA sector        ;AN000;
+.Number_Sectors          dw      Number_Sectors_ ;Number of sectors              ;AN000;
+.Buffer_Offset           dw      Buffer_Offset_ ;Address of data buffer         ;AN000;
+.Buffer_Segment          dw      Buffer_Segment_ ;                               ;AN000;
+
+}
+match =Relative_Sector_Buffer_LAID_OUT, Relative_Sector_Buffer_LAID_OUT
+{
+    Relative_Sector_Buffer_LAID_OUT equ 1
+    virtual at 0
+      Relative_Sector_Buffer Relative_Sector_Buffer
+      sizeof.Relative_Sector_Buffer = $ - Relative_Sector_Buffer
+    end virtual
+}
+STRUC a_FileStructure fileHandle_=0, fileSizeInParagraphs_=0, fileSizeInBytes_=0, fileOffset_=0, fileStartSegment_=0, fileDate_=0, fileTime_=0
+{
+.fileHandle DW   fileHandle_
+.fileSizeInParagraphs DW fileSizeInParagraphs_
+.fileSizeInBytes DD fileSizeInBytes_
+.fileOffset DD   fileOffset_
+.fileStartSegment DW fileStartSegment_
+.fileDate DW     fileDate_
+.fileTime DW     fileTime_
+}
+match =a_FileStructure_LAID_OUT, a_FileStructure_LAID_OUT
+{
+    a_FileStructure_LAID_OUT equ 1
+    virtual at 0
+      a_FileStructure a_FileStructure
+      sizeof.a_FileStructure = $ - a_FileStructure
+    end virtual
+}
 ;                                              ;                               ;     ;
 
 NO      equ     0
@@ -66,36 +117,12 @@ ExitNo  equ     5
 ; These are the data structures which we will need
 
 
-Media_ID struc
-Media_ID_Info_Level dw 0
-Media_ID_Serial_Number dd 0
-Media_ID_Volume_Label db 11 dup(" ")
-Media_ID_File_System db 8  dup(" ")
-Media_ID ends
 
 
-Relative_Sector_Buffer  struc                   ;                               ;AN000;
-
-Start_Sector_Low        dw      ?               ;Low word of RBA sector         ;AN000;
-Start_Sector_High       dw      ?               ;High word of RBA sector        ;AN000;
-Number_Sectors          dw      ?               ;Number of sectors              ;AN000;
-Buffer_Offset           dw      ?               ;Address of data buffer         ;AN000;
-Buffer_Segment          dw      ?               ;                               ;AN000;
-
-Relative_Sector_Buffer ends                     ;                               ;AN000;
 
 
 ;Per system file data structure
 
-a_FileStructure struc
-fileHandle DW   ?
-fileSizeInParagraphs DW ?
-fileSizeInBytes DD ?
-fileOffset DD   ?
-fileStartSegment DW ?
-fileDate DW     ?
-fileTime DW     ?
-a_FileStructure ends
 
 ;-------------------------------------------------------------------------------
 

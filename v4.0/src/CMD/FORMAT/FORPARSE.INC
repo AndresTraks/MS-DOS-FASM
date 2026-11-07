@@ -1,8 +1,98 @@
+STRUC Control Match_Flags_=0, Function_Flags_=0, Result_=0, Values_=0, Num_Keywords_=0, Keyword_=0
+{
+
+.Match_Flags	dw	Match_Flags_
+.Function_Flags	dw	Function_Flags_
+.Result		dw	Result_
+.Values		dw	Values_
+.Num_Keywords	db	Num_Keywords_
+.Keyword 	db	Keyword_
+
+}
+match =Control_LAID_OUT, Control_LAID_OUT
+{
+    Control_LAID_OUT equ 1
+    virtual at 0
+      Control Control
+      sizeof.Control = $ - Control
+    end virtual
+}
+STRUC Drive_Letter_Return Drive_Type_=0, Drive_Item_Tag_=0, Drive_Pointer_=0, Drive_Number_=0
+{
+
+.Drive_Type	db	Drive_Type_ ;				;AN000;
+.Drive_Item_Tag	db	Drive_Item_Tag_ ;				;AN000;
+.Drive_Pointer	dw	Drive_Pointer_ ;				;AN000;
+.Drive_Number	db	Drive_Number_ ;A=1, B=2, C=3			;AN000;
+.Drive_debug	db	8 dup(0)
+
+}
+match =Drive_Letter_Return_LAID_OUT, Drive_Letter_Return_LAID_OUT
+{
+    Drive_Letter_Return_LAID_OUT equ 1
+    virtual at 0
+      Drive_Letter_Return Drive_Letter_Return
+      sizeof.Drive_Letter_Return = $ - Drive_Letter_Return
+    end virtual
+}
+STRUC Switch_Return Switch_Type_=0, Switch_Item_Tag_=0, Switch_Pointer_=0
+{
+
+.Switch_Type	db	Switch_Type_ ;				;AN000;
+.Switch_Item_Tag db	Switch_Item_Tag_ ;				;AN000;
+.Switch_Pointer	dw	Switch_Pointer_ ;				;AN000;
+.Switch_Debug	db	4 dup(0)
+
+}
+match =Switch_Return_LAID_OUT, Switch_Return_LAID_OUT
+{
+    Switch_Return_LAID_OUT equ 1
+    virtual at 0
+      Switch_Return Switch_Return
+      sizeof.Switch_Return = $ - Switch_Return
+    end virtual
+}
+STRUC Switch_Num_Return Switch_Num_Type_=0, Switch_Num_Item_Tag_=0, Switch_Num_Pointer_=0, Switch_Number_Low_=0, Switch_Number_High_=0
+{
+
+.Switch_Num_Type     db	    Switch_Num_Type_ ;				    ;AN000;
+.Switch_Num_Item_Tag db	    Switch_Num_Item_Tag_ ;				    ;AN000;
+.Switch_Num_Pointer  dw	    Switch_Num_Pointer_ ;				    ;AN000;
+.Switch_Number_Low   dw	    Switch_Number_Low_ ;				    ;AN000;
+.Switch_Number_High  dw	    Switch_Number_High_ ;				    ;AN000;
+
+}
+match =Switch_Num_Return_LAID_OUT, Switch_Num_Return_LAID_OUT
+{
+    Switch_Num_Return_LAID_OUT equ 1
+    virtual at 0
+      Switch_Num_Return Switch_Num_Return
+      sizeof.Switch_Num_Return = $ - Switch_Num_Return
+    end virtual
+}
+STRUC Switch_String_Return Switch_String_Type_=0, Switch_String_Item_Tag_=0, Switch_String_Pointer_=0, Switch_String_Off_=0, Switch_String_Seg_=0
+{
+
+.Switch_String_Type     db      Switch_String_Type_ ;			       ;AN000;
+.Switch_String_Item_Tag db      Switch_String_Item_Tag_ ;			       ;AN000;
+.Switch_String_Pointer  dw      Switch_String_Pointer_ ;			       ;AN000;
+.Switch_String_Off	dw	Switch_String_Off_ ;				;AN000;
+.Switch_String_Seg	dw	Switch_String_Seg_ ;				;AN000;
+
+}
+match =Switch_String_Return_LAID_OUT, Switch_String_Return_LAID_OUT
+{
+    Switch_String_Return_LAID_OUT equ 1
+    virtual at 0
+      Switch_String_Return Switch_String_Return
+      sizeof.Switch_String_Return = $ - Switch_String_Return
+    end virtual
+}
 ;
 
 
 
-data	segment public para 'DATA'
+if SEGSEL = S_DATA
 
 ;
 ;*****************************************************************************
@@ -10,10 +100,10 @@ data	segment public para 'DATA'
 ;*****************************************************************************
 ;
 
-	Public	Drive_Letter_Buffer
-	Public	Switch_Buffer
-	Public	Switch_Num_Buffer
-	Public	Switch_String_Buffer
+;	Public	Drive_Letter_Buffer
+;	Public	Switch_Buffer
+;	Public	Switch_Num_Buffer
+;	Public	Switch_String_Buffer
 
 
 ;
@@ -93,55 +183,10 @@ Command_Line_Parms	equ	81h		;				;AN000;
 ;*****************************************************************************
 ;
 
-Control 	 struc
 
-Match_Flags	dw	?
-Function_Flags	dw	?
-Result		dw	?
-Values		dw	?
-Num_Keywords	db	?
-Keyword 	db	?
 
-Control 	ends
 
-Drive_Letter_Return	struc			;				;AN000;
 
-Drive_Type	db	0			;				;AN000;
-Drive_Item_Tag	db	0			;				;AN000;
-Drive_Pointer	dw	0			;				;AN000;
-Drive_Number	db	0			;A=1, B=2, C=3			;AN000;
-Drive_debug	db	8 dup(0)
-
-Drive_Letter_Return	ends			;				;AN000;
-
-Switch_Return	 struc				;				;AN000;
-
-Switch_Type	db	0			;				;AN000;
-Switch_Item_Tag db	0			;				;AN000;
-Switch_Pointer	dw	0			;				;AN000;
-Switch_Debug	db	4 dup(0)
-
-Switch_Return	 ends				;				;AN000;
-
-Switch_Num_Return    struc			;				;AN000;
-
-Switch_Num_Type     db	    0			    ;				    ;AN000;
-Switch_Num_Item_Tag db	    0			    ;				    ;AN000;
-Switch_Num_Pointer  dw	    0			    ;				    ;AN000;
-Switch_Number_Low   dw	    0		    ;				    ;AN000;
-Switch_Number_High  dw	    0		    ;				    ;AN000;
-
-Switch_Num_Return    ends			;				;AN000;
-
-Switch_String_Return   struc			;				;AN000;
-
-Switch_String_Type     db      0		       ;			       ;AN000;
-Switch_String_Item_Tag db      0		       ;			       ;AN000;
-Switch_String_Pointer  dw      0		       ;			       ;AN000;
-Switch_String_Off	dw	0		;				;AN000;
-Switch_String_Seg	dw	0		;				;AN000;
-
-Switch_String_Return ends			;				;AN000;
 
 
 ;
@@ -152,14 +197,14 @@ Switch_String_Return ends			;				;AN000;
 
 IF FSExec					;conditionally assemble /FS:	;an018; dms;
 
-Switch_FS_Table       label byte		;				;AN000;
+label Switch_FS_Table byte        ;				;AN000;
 
 	dw	Drive_Control_Definition	;Point to next level		;AN000;
 	db	0				;				;AN000;
 
-ENDIF						;end conditional assembly /FS:	;an018; dms;
+end if ;end conditional assembly /FS:	;an018; dms;
 
-Command_Line_Table label byte			;				;AN000;
+label Command_Line_Table byte   ;				;AN000;
 
 	dw	Command_Control 		;Point to next level		;AN000;
 	db	0				;				;AN000;
@@ -173,7 +218,7 @@ Command_Line_Table label byte			;				;AN000;
 
 IF FSExec					;conditionally assemble /FS:	;an018; dms;
 
-Drive_Control_Definition label byte		;				;AN000;
+label Drive_Control_Definition byte  ;				;AN000;
 
 	db	1,1				;Only drive letter posistional	;AN000;
 	dw	Positional_Control		;Pointer to control table	;AN000;
@@ -181,9 +226,9 @@ Drive_Control_Definition label byte		;				;AN000;
 	dw	Switch_FS_Control		;				;AN000;
 	db	None				;No Keywords (maxk)		;AN000;
 
-ENDIF						;end conditional assembly /FS:	;an018; dms;
+end if ;end conditional assembly /FS:	;an018; dms;
 
-Command_Control label byte			;				;AN000;
+label Command_Control byte   ;				;AN000;
 
 	db	1,1				;Only drive letter posistional	;AN000;
 	dw	Positional_Control		;Pointer to control table	;AN000;
@@ -191,7 +236,7 @@ IF ShipDisk
 	db	13				;if /Z switch needed		;an000; dms;
 ELSE
 	db	12				;				;AC001;
-ENDIF
+end if
 	dw	Switch_V_Control		;Without quotes 		AN000;
 	dw	Switch_S_Control		;				;AN000;
 	dw	Switch_4_Control		;				;AN000;
@@ -206,7 +251,7 @@ ENDIF
 	dw	Switch_F_Control		;				;AC001;
 IF ShipDisk
 	dw	Switch_Z_Control		;1 sector/cluster switch	;an000; dms;
-ENDIF
+end if
 	db	None				;No Keywords (maxk)		;AN000;
 
 ;
@@ -215,7 +260,7 @@ ENDIF
 ;**************************************************************************
 ;
 
-Positional_Control label byte			;				;AN000;
+label Positional_Control byte   ;				;AN000;
 
 	dw	Drive_Only			;Match_Flag			;AN000;
 	dw	None				;No function flags		;AN000;
@@ -225,7 +270,7 @@ Positional_Control label byte			;				;AN000;
 
 IF FSExec					;conditionally assemble /FS:	;an018; dms;
 
-Switch_FS_Control label byte
+label Switch_FS_Control byte
 	dw	Simple_String			;/FS:xxxxx			;AN000;
 	dw	File_Table_Capitalize		;Make it uppercase		;AN000;
 	dw	Switch_String_Buffer		;				;AN000;
@@ -233,9 +278,9 @@ Switch_FS_Control label byte
 	db	1				;				;AN000;
 	db	"/FS",0                         ;                               ;AN000;
 
-ENDIF						;end conditional assembly /FS:	;an018; dms;
+end if ;end conditional assembly /FS:	;an018; dms;
 
-Switch_V_Control label byte			;				;AN000;
+label Switch_V_Control byte   ;				;AN000;
 
 	dw	Simple_String+Quoted_String+Optional ;/v:xxxxxxxx		;AN000;
 	dw	File_Table_Capitalize		;				;AN000;
@@ -244,7 +289,7 @@ Switch_V_Control label byte			;				;AN000;
 	db	1				;				;AN000;
 	db	"/V",0                          ;                               ;AN000;
 
-Switch_S_Control label byte			;				;AN000;
+label Switch_S_Control byte   ;				;AN000;
 
 	dw	None				;				;AN000;
 	dw	None				;				;AN000;
@@ -253,7 +298,7 @@ Switch_S_Control label byte			;				;AN000;
 	db	1				;				;AN000;
 	db	"/S",0                          ;                               ;AN000;
 
-Switch_4_Control label byte			;				;AN000;
+label Switch_4_Control byte   ;				;AN000;
 
 	dw	None				;				;AN000;
 	dw	None				;				;AN000;
@@ -262,7 +307,7 @@ Switch_4_Control label byte			;				;AN000;
 	db	1				;				;AN000;
 	db	"/4",0                          ;                               ;AN000;
 
-Switch_1_Control label byte			;				;AN000;
+label Switch_1_Control byte   ;				;AN000;
 
 	dw	None				;				;AN000;
 	dw	None				;				;AN000;
@@ -271,7 +316,7 @@ Switch_1_Control label byte			;				;AN000;
 	db	1				;				;AN000;
 	db	"/1",0                          ;                               ;AN000;
 
-Switch_8_Control label byte			;				;AN000;
+label Switch_8_Control byte   ;				;AN000;
 
 	dw	None				;				;AN000;
 	dw	None				;				;AN000;
@@ -280,7 +325,7 @@ Switch_8_Control label byte			;				;AN000;
 	db	1				;				;AN000;
 	db	"/8",0                          ;                               ;AN000;
 
-Switch_B_Control label byte			;				;AN000;
+label Switch_B_Control byte   ;				;AN000;
 
 	dw	None				;				;AN000;
 	dw	None				;				;AN000;
@@ -289,7 +334,7 @@ Switch_B_Control label byte			;				;AN000;
 	db	1				;				;AN000;
 	db	"/B",0                          ;                               ;AN000;
 
-Switch_T_Control label byte			;				;AN000;
+label Switch_T_Control byte   ;				;AN000;
 
 	dw	Numeric_Value			;				;AN000;
 	dw	None				;				;AN000;
@@ -298,7 +343,7 @@ Switch_T_Control label byte			;				;AN000;
 	db	1				;				;AN000;
 	db	"/T",0                          ;                               ;AN000;
 
-Switch_N_Control label byte			;				;AN000;
+label Switch_N_Control byte   ;				;AN000;
 
 	dw	Numeric_Value			;				;AN000;
 	dw	None				;				;AN000;
@@ -307,7 +352,7 @@ Switch_N_Control label byte			;				;AN000;
 	db	1				;				;AN000;
 	db	"/N",0                          ;                               ;AN000;
 
-Switch_Select_Control label byte		;				;AN000;
+label Switch_Select_Control byte  ;				;AN000;
 
 	dw	None				;				;AN000;
 	dw	None				;				;AN000;
@@ -316,7 +361,7 @@ Switch_Select_Control label byte		;				;AN000;
 	db	1				;				;AN000;
 	db	"/SELECT",0                     ;                               ;AN000;
 
-Switch_Backup_Control label byte		;				;AN000;
+label Switch_Backup_Control byte  ;				;AN000;
 
 	dw	None				;				;AN000;
 	dw	None				;				;AN000;
@@ -325,7 +370,7 @@ Switch_Backup_Control label byte		;				;AN000;
 	db	1				;				;AN000;
 	db	"/BACKUP",0                     ;                               ;AN000;
 
-Switch_Autotest_Control label byte		;				;AN000;
+label Switch_Autotest_Control byte  ;				;AN000;
 
 	dw	None				;				;AN000;
 	dw	None				;				;AN000;
@@ -334,7 +379,7 @@ Switch_Autotest_Control label byte		;				;AN000;
 	db	1				;				;AN000;
 	db	"/AUTOTEST",0                   ;                               ;AN000;
 
-Switch_F_Control label byte			;				;AN001;
+label Switch_F_Control byte   ;				;AN001;
 	dw	Simple_String			;/F:xxxxx			;AN001;
 	dw	File_Table_Capitalize		;Make it uppercase		;AN001;
 	dw	Switch_String_Buffer		;				;AN001;
@@ -344,7 +389,7 @@ Switch_F_Control label byte			;				;AN001;
 
 IF ShipDisk
 
-Switch_Z_Control label	byte			;control structure for /Z	;an000; dms;
+label Switch_Z_Control byte   ;control structure for /Z	;an000; dms;
 	dw	None				;				;an000; dms;
 	dw	None				;				;an000; dms;
 	dw	Switch_Buffer			;				;an000; dms;
@@ -352,7 +397,7 @@ Switch_Z_Control label	byte			;control structure for /Z	;an000; dms;
 	db	1				;				;an000; dms;
 	db	"/Z",0                          ;                               ;an000; dms;
 
-ENDIF
+end if
 
 ;
 ;************************************************************************
@@ -360,23 +405,23 @@ ENDIF
 ;************************************************************************
 ;
 
-Switch_T_Value label byte			;				;AN000;
+label Switch_T_Value byte   ;				;AN000;
 
 	db	1				;Range only			;ANOOO;
 	db	1				;1 range			;ANOOO;
-	db	Range_OK			;Item_Tag			;ANOOO;
+	db	Range_Ok			;Item_Tag			;ANOOO;
 	dd	1				;1 is low bound 		;ANOOO;
 	dd	1024				;2**10 is max			;AN000;
 
-Switch_N_Value label byte			;				;AN000;
+label Switch_N_Value byte   ;				;AN000;
 
 	db	1				;Range only			;ANOOO;
 	db	1				;1 range			;ANOOO;
-	db	Range_OK			;Item_Tag			;ANOOO;
+	db	Range_Ok			;Item_Tag			;ANOOO;
 	dd	1				;1 is low bound 		;ANOOO;
 	dd	64				;2**6  is max			;AN000;
 
-Switch_Size_Value	label	byte		;				;AN001;
+label Switch_Size_Value byte  ;				;AN001;
 
 	db	3				;Look for strings		;AN001;
 	db	0				;No ranges			;AN001;
@@ -438,7 +483,7 @@ Switch_Size_Value	label	byte		;				;AN001;
 	dw	String_1440k_6			;/F:1.44MB			;AN001;
 
 
-No_Value	label	byte			;				;AN000;
+label No_Value byte   ;				;AN000;
 	db	0				;				;AN000;
 
 ;
@@ -485,12 +530,12 @@ String_1440k_6	db	"1.44MB",Asciiz_End      ;                               ;AN00
 ;************************************************************************
 ;
 
-Drive_Letter_Buffer	Drive_Letter_Return	<> ;Example of structure	;AN000;
-Switch_Buffer		Switch_Return		<> ;				;AN000;
-Switch_Num_Buffer	Switch_Num_Return	<> ;				;AN000;
-Switch_String_Buffer	Switch_String_Return	<> ;				;AN000;
+Drive_Letter_Buffer	Drive_Letter_Return    ;Example of structure	;AN000;
+Switch_Buffer		Switch_Return     ;				;AN000;
+Switch_Num_Buffer	Switch_Num_Return    ;				;AN000;
+Switch_String_Buffer	Switch_String_Return    ;				;AN000;
 
-data	ends
+end if
 
 ;
 ;*****************************************************************************
@@ -499,8 +544,8 @@ data	ends
 ;
 
 
-code	segment public	para 'CODE'
-	assume cs:code,ds:Data
+if SEGSEL = S_CODE
+;	assume cs:code,ds:Data
 
 FarSW	equ	Not_Include							;AN000;
 DateSW	equ	Not_Include			;				;AN000;
@@ -511,13 +556,13 @@ CmpxSW	equ	Not_Include			;				;AN000;
 NumSW	equ	Do_Include			;				;AN000;
 KeySW	equ	Not_Include			;				;AN000;
 SwSW	equ	Do_Include			;				;AN000;
-Val1SW	equ	DO_Include			;				;AN000;
+Val1SW	equ	Do_Include			;				;AN000;
 Val2SW	equ	Not_Include			;				;AN000;
 Val3SW	equ	Do_Include			;				;AN001;
 DrvSW	equ	Do_Include			;				;AN000;
 QusSW	equ	Do_Include			;				;AN000;
 
-INCLUDE PARSE.ASM				;				;AN000;
+include 'PARSE.ASM'  ;				;AN000;
 
 
-code	ends
+end if

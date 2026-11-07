@@ -1,3 +1,41 @@
+STRUC a_PartitionTableEntry BootInd_=0, BegHead_=0, BegSector_=0, BegCylinder_=0, SysInd_=0, EndHead_=0, EndSector_=0, EndCylinder_=0, RelSec_=0, CSec_=0
+{
+.BootInd db	BootInd_
+.BegHead db	BegHead_
+.BegSector db	BegSector_
+.BegCylinder db	BegCylinder_
+.SysInd	db	SysInd_
+.EndHead db	EndHead_
+.EndSector db	EndSector_
+.EndCylinder db	EndCylinder_
+.RelSec	dd	RelSec_
+.CSec	dd	CSec_
+}
+match =a_PartitionTableEntry_LAID_OUT, a_PartitionTableEntry_LAID_OUT
+{
+    a_PartitionTableEntry_LAID_OUT equ 1
+    virtual at 0
+      a_PartitionTableEntry a_PartitionTableEntry
+      sizeof.a_PartitionTableEntry = $ - a_PartitionTableEntry
+    end virtual
+}
+STRUC IBMBoot Signature_=0
+{
+; MASM worked LENGTH out as the number of elements a variable was
+; declared with and SIZE as the bytes they take up.  The arrays these
+; ask about are all of bytes, so the two come to the same number.
+	rb      512 - (4*sizeof.a_PartitionTableEntry + 2)
+.PartitionTable rb      4*sizeof.a_PartitionTableEntry
+.Signature dw	Signature_
+}
+match =IBMBoot_LAID_OUT, IBMBoot_LAID_OUT
+{
+    IBMBoot_LAID_OUT equ 1
+    virtual at 0
+      IBMBoot IBMBoot
+      sizeof.IBMBoot = $ - IBMBoot
+    end virtual
+}
 ; e forproc.sal= @(#)ibmfor.asm 1.28 85/10/15
 	name	OemFormatRoutines
 ;
@@ -6,152 +44,155 @@
 ;AN002 - D304 Modify Boot record structure for OS2		  11/09/87 J.K.
 ;******************************************************************************
 
-INCLUDE FORCHNG.INC
+include 'FORCHNG.INC'
 debug	equ	0
 ;-------------------------------------------------------------------------------
 ; Public for debugging only
 
-	public	CheckSwitches
-	public	LastChanceToSaveIt
-	public	WriteBootSector
-	public	OemDone
-	public	WriteBogusDos
-	public	ConvertToOldDirectoryFormat
-	public	SetPartitionTable
-	public	ReadSector
-	public	WriteSector
-	public	SectorIO
-	public	GetVolumeId
+;	public	CheckSwitches
+;	public	LastChanceToSaveIt
+;	public	WriteBootSector
+;	public	OemDone
+;	public	WriteBogusDos
+;	public	ConvertToOldDirectoryFormat
+;	public	SetPartitionTable
+;	public	ReadSector
+;	public	WriteSector
+;	public	SectorIO
+;	public	GetVolumeId
 
-	public	customBPBs
-	public	NotSlashB
-	public	NotSingleSided
-	public	EndSwitchCheck
-	public	WeCanNotIgnoreThisError
-	public	HardDisk?
-	public	BogusDos
-	public	sys_mess_loop
-	public	end_sys_loop
-	public	DirectoryRead
-	public	wrtdir
-	public	DirectoryWritten
-	public	FCBforVolumeIdSearch
-	public	CopyVolumeId
-	public	CompareVolumeIds
-	public	BadVolumeId
+;	public	customBPBs
+;	public	NotSlashB
+;	public	NotSingleSided
+;	public	EndSwitchCheck
+;	public	WeCanNotIgnoreThisError
+;	public	HardDisk?
+;	public	BogusDos
+;	public	sys_mess_loop
+;	public	end_sys_loop
+;	public	DirectoryRead
+;	public	wrtdir
+;	public	DirectoryWritten
+;	public	FCBforVolumeIdSearch
+;	public	CopyVolumeId
+;	public	CompareVolumeIds
+;	public	BadVolumeId
 
-	public	boot2
-	public	boot
-	public	scratchBuffer
-	public	biosFilename
-	public	dosFilename
-	public	oldDrive
-	public	oldVolumeId
-	public	Read_Write_Relative
-	public	Serial_Num_Low
-	public	Serial_Num_High
-	public	SizeMap
+;	public	boot2
+;	public	boot
+;	public	scratchBuffer
+;	public	biosFilename
+;	public	dosFilename
+;	public	oldDrive
+;	public	oldVolumeId
+;	public	Read_Write_Relative
+;	public	Serial_Num_Low
+;	public	Serial_Num_High
+;	public	SizeMap
 
-	public	ptr_msgWhatIsVolumeId?
+;	public	ptr_msgWhatIsVolumeId?
 
-	public	trackReadWritePacket
+;	public	trackReadWritePacket
 
-	public	BPB81
-	public	BPB82
-	public	BPB91
-	public	BPB92
+;	public	BPB81
+;	public	BPB82
+;	public	BPB91
+;	public	BPB92
 
 ;-------------------------------------------------------------------------------
 
-data	segment public para 'DATA'
-data	ends
+if SEGSEL = S_DATA
+end if
 
-code	segment public para 'CODE'
-	assume	cs:code,ds:data
+if SEGSEL = S_CODE
+;	assume	cs:code,ds:data
 
-	Public	AccessDisk
-	public	CheckSwitches
-	public	LastChanceToSaveIt
-	public	OemDone
-	public	BiosFile
-	public	DosFile
+;	Public	AccessDisk
+;	public	CheckSwitches
+;	public	LastChanceToSaveIt
+;	public	OemDone
+;	public	BiosFile
+;	public	DosFile
 
-data	segment public	para	'DATA'
-	extrn	AddToSystemSize:near
-	extrn	currentCylinder:word
-	extrn	currentHead:word
-	extrn	deviceParameters:byte
-	extrn	drive:byte
-	extrn	driveLetter:byte
-	extrn	fBigFAT:byte
-	extrn	inbuff:byte
-	extrn	switchmap:word
-	extrn	Old_Dir:byte
-	extrn	fLastChance:byte
-	extrn	Fatal_Error:Byte
-	extrn	Bios:Byte
-	extrn	Dos:Byte
-	extrn	Command:Byte
+end if
+if SEGSEL = S_DATA
+;	extrn	AddToSystemSize:near
+;	extrn	currentCylinder:word
+;	extrn	currentHead:word
+;	extrn	deviceParameters:byte
+;	extrn	drive:byte
+;	extrn	driveLetter:byte
+;	extrn	fBigFAT:byte
+;	extrn	inbuff:byte
+;	extrn	switchmap:word
+;	extrn	Old_Dir:byte
+;	extrn	fLastChance:byte
+;	extrn	Fatal_Error:Byte
+;	extrn	Bios:Byte
+;	extrn	Dos:Byte
+;	extrn	Command:Byte
 
-	extrn	msgBad_T_N:byte
-	extrn	msgBadVolumeId:byte
-	extrn	msgBadPartitionTable:byte
-	extrn	msgBootWriteError:byte
-	extrn	msgDirectoryReadError:byte
-	extrn	msgDirectoryWriteError:byte
-	extrn	msgInvalidParameter:byte
-	extrn	msgIncompatibleParameters:byte
-	extrn	msgIncompatibleParametersForHardDisk:byte
-	extrn	msgParametersNotSupportedByDrive:byte
-	extrn	msgPartitionTableReadError:byte
-	extrn	msgPartitionTableWriteError:byte
-	extrn	msgWhatIsVolumeId?:byte
-	extrn	NumSectors:word, TrackCnt:word
+;	extrn	msgBad_T_N:byte
+;	extrn	msgBadVolumeId:byte
+;	extrn	msgBadPartitionTable:byte
+;	extrn	msgBootWriteError:byte
+;	extrn	msgDirectoryReadError:byte
+;	extrn	msgDirectoryWriteError:byte
+;	extrn	msgInvalidParameter:byte
+;	extrn	msgIncompatibleParameters:byte
+;	extrn	msgIncompatibleParametersForHardDisk:byte
+;	extrn	msgParametersNotSupportedByDrive:byte
+;	extrn	msgPartitionTableReadError:byte
+;	extrn	msgPartitionTableWriteError:byte
+;	extrn	msgWhatIsVolumeId?:byte
+;	extrn	NumSectors:word, TrackCnt:word
 
-IF	DEBUG
-	extrn	msgFormatBroken:byte
-ENDIF
+IF	debug
+;	extrn	msgFormatBroken:byte
+end if
 
-data	ends
+end if
+if SEGSEL = S_CODE
 
-	extrn	PrintString:near
-	extrn	std_printf:near
-	extrn	crlf:near
-	extrn	user_string:near
-	extrn	Read_Disk:near
-	extrn	Write_Disk:near
+;	extrn	PrintString:near
+;	extrn	std_printf:near
+;	extrn	crlf:near
+;	extrn	user_string:near
+;	extrn	Read_Disk:near
+;	extrn	Write_Disk:near
 
 
 ;-------------------------------------------------------------------------------
 ; Constants
 
 .xlist
-INCLUDE DOSMAC.INC
-INCLUDE FORMACRO.INC
-INCLUDE FOREQU.INC
-INCLUDE FORSWTCH.INC
+include 'DOSMAC.INC'
+include 'FORMACRO.INC'
+include 'FOREQU.INC'
+include 'FORSWTCH.INC'
 
 ; This defines all the int 21H system calls
-INCLUDE SYSCALL.INC
+include 'SYSCALL.INC'
 
 ; Limits
 
-INCLUDE filesize.inc
+include 'FILESIZE.INC'
 
 ;-------------------------------------------------------------------------------
 ; These are the data structures which we will need
 
-INCLUDE DIRENT.INC
-INCLUDE ioctl.INC
-INCLUDE version.inc
+include 'DIRENT.INC'
+include 'IOCTL.INC'
+include 'VERSION.INC'
 
 .list
 
 ;-------------------------------------------------------------------------------
 ; And this is the actual data
-data	segment public	para	'DATA'
+end if
+if SEGSEL = S_DATA
 
-Read_Write_Relative Relative_Sector_Buffer <>	;				;AN000;
+Read_Write_Relative Relative_Sector_Buffer    ;				;AN000;
 
 
 	IF IBMCOPYRIGHT
@@ -160,7 +201,7 @@ DosFile db	"x:\IBMDOS.COM", 0
 	ELSE
 BiosFile db	"x:\IO.SYS", 0
 DosFile db	"x:\MSDOS.SYS", 0
-	ENDIF
+	end if
 
 Dummy_Label db	"NO NAME    "
 Dummy_Label_Size dw  11 			;AN028
@@ -170,48 +211,45 @@ Serial_Num_High dw 0				;				;AN000;
 
 SizeMap db	0				;				;AN000;
 
-trackReadWritePacket a_TrackReadWritePacket <>
+trackReadWritePacket A_TRACKREADWRITEPACKET 
 
 
 ; BIOS parameter blocks for various media
-customBPBs label byte
-BPB92	a_BPB	<512, 2, 1, 2, 112, 2*9*40, 0fdH, 2, 9, 2, 0, 0, 0, 0>
-BPB91	a_BPB	<512, 1, 1, 2,	64, 1*9*40, 0fcH, 2, 9, 1, 0, 0, 0, 0>
-BPB82	a_BPB	<512, 2, 1, 2, 112, 2*8*40, 0ffH, 1, 8, 2, 0, 0, 0, 0>
-BPB81	a_BPB	<512, 1, 1, 2,	64, 1*8*40, 0feH, 1, 8, 1, 0, 0, 0, 0>
-BPB720	a_BPB	<512, 2, 1, 2, 112, 2*9*80, 0F9h, 3, 9, 2, 0, 0, 0, 0>
+label customBPBs byte
+BPB92	A_BPB 512, 2, 1, 2, 112, 2*9*40, 0fdH, 2, 9, 2, 0, 0, 0, 0
+BPB91	A_BPB 512, 1, 1, 2,	64, 1*9*40, 0fcH, 2, 9, 1, 0, 0, 0, 0
+BPB82	A_BPB 512, 2, 1, 2, 112, 2*8*40, 0ffH, 1, 8, 2, 0, 0, 0, 0
+BPB81	A_BPB 512, 1, 1, 2,	64, 1*8*40, 0feH, 1, 8, 1, 0, 0, 0, 0
+BPB720	A_BPB 512, 2, 1, 2, 112, 2*9*80, 0F9h, 3, 9, 2, 0, 0, 0, 0
 
 
 
-boot2	db	0,0,0, "Boot 1.x"
-	db	512 - 11 dup(?)
-
-REORG2	LABEL	BYTE
-	ORG	BOOT2
-	INCLUDE BOOT11.INC
-	ORG	REORG2
+label boot2 byte
+	include 'BOOT11.INC'
+label REORG2 byte
 
 
 
-INCLUDE BOOTFORM.INC
+include 'BOOTFORM.INC'
 
 
-BOOT	LABEL	BYTE
-	INCLUDE BOOT.INC
+label BOOT byte
+	include 'BOOT.INC'
 
-scratchBuffer db 512 dup(?)
+scratchBuffer rb      512
 
-ptr_msgWhatIsVolumeId? dw offset msgWhatIsVolumeId?
-	dw	offset driveLetter
+ptr_msgWhatIsVolumeId? dw msgWhatIsVolumeId?
+	dw	driveLetter
 
 
 FAT12_String db "FAT12   "
 FAT16_String db "FAT16   "
 
-Media_ID_Buffer Media_ID <>
+Media_ID_Buffer Media_ID 
 
 
-data	ends
+end if
+if SEGSEL = S_CODE
 ;-------------------------------------------------------------------------------
 ; AccessDisk:
 ;    Called whenever a different disk is about to be accessed
@@ -221,17 +259,17 @@ data	ends
 ;
 ;    Output:
 ;	none
-AccessDisk proc near
+AccessDisk:
 
 	push	ax				; save drive letter
 	mov	bl,al				; Set up GENERIC IOCTL REQUEST preamble
 	inc	bl
-	mov	ax,(IOCTL SHL 8) + Set_Drv_Owner ; IOCTL function
+	mov	ax,(IOCtl SHL 8) + Set_Drv_Owner ; IOCTL function
 	int	21h
 	pop	ax
 	return
 
-AccessDisk endp
+;AccessDisk endp
 
 ;-------------------------------------------------------------------------------
 ;    CheckSwitches:
@@ -252,13 +290,13 @@ AccessDisk endp
 ;
 
 
-Public	CHeckSwitches
-CheckSwitches proc near
+;Public	CHeckSwitches
+CheckSwitches:
 
 
 ; Disallow /C
 						;lea	 dx, msgInvalidParameter					 ;AC000;
-	test	switchmap, SWITCH_C
+	test	word [SWITCHMAP], SWITCH_C
 	jz	CheckExcl
 	Message msgInvalidParameter		;AC000;
 SwitchError:
@@ -268,30 +306,30 @@ SwitchError:
 
 CheckExcl:
 
-	test	SwitchMap,Switch_F		;Specify size?			;AN001;
-;	$IF	NZ				;Yes				;AN001;
-	JZ $$IF1
-	   test    SwitchMap,(Switch_1+Switch_8+Switch_4+Switch_N+Switch_T) ;AN001;
-;	   $IF	   NZ				;/F replaces above switches	;AN001;
-	   JZ $$IF2
+	test	word [SWITCHMAP],SWITCH_F ;Specify size?			;AN001;
+;	IF$	NZ				;Yes				;AN001;
+	JZ IF1$$M
+	   test    word [SWITCHMAP],(SWITCH_1+SWITCH_8+SWITCH_4+SWITCH_N+SWITCH_T) ;AN001;
+;	   IF$	   NZ				;/F replaces above switches	;AN001;
+	   JZ IF2$$M
 	      Message msgIncompatibleParameters ;Print error			;AN001;
-	      mov     Fatal_Error,Yes		;Force exit			;AN001;
-;	   $ELSE				;				;AN001;
-	   JMP SHORT $$EN2
-$$IF2:
+	      mov     byte [Fatal_Error],YES ;Force exit			;AN001;
+;	   ELSE$				;				;AN001;
+	   JMP SHORT EN2$$M
+IF2$$M:
 	      call    Size_To_Switch		;Go set switches based		;AN001;
-;	   $ENDIF				; on the size			;AN001;
-$$EN2:
-;	$ENDIF					;				;AN001;
-$$IF1:
-	cmp	Fatal_Error,NO			;				;AN007;
-;	$IF	E				;				;AN007;
-	JNE $$IF6
+;	   ENDIF$				; on the size			;AN001;
+EN2$$M:
+;	ENDIF$					;				;AN001;
+IF1$$M:
+	cmp	byte [Fatal_Error],NO ;				;AN007;
+;	IF$	E				;				;AN007;
+	JNE IF6$$M
 	   call    Check_Switch_8_B		;				;ac007
 	   call    Check_T_N
-;	$ENDIF					;				;AN009;
-$$IF6:
-	cmp	Fatal_Error,Yes 		;				;AN007;
+;	ENDIF$					;				;AN009;
+IF6$$M:
+	cmp	byte [Fatal_Error],YES ;				;AN007;
 	jne	ExclChkDone			;				;AN007;
 	stc					;				;AN007;
 	ret					;				;AN007;
@@ -300,15 +338,15 @@ ExclChkDone:
 ; Patch the boot sector so that the boot strap loader knows what disk to
 ; boot from
 ;	 mov	 Boot.Boot_PhyDrv, 00H		 ;AC000;
-	mov	Boot.EXT_PHYDRV, 00H		;AN00?;
+	mov	byte [BOOT+EXT_IBMBOOT_HEADER.EXT_PHYDRV], 00H ;AN00?;
 
-	cmp	deviceParameters.DP_DeviceType, DEV_HARDDISK
+	cmp	[deviceParameters.DP_DEVICETYPE], DEV_HARDDISK
 	jne	CheckFor5InchDrives
 
 ; Formatting a hard disk so we must repatch the boot sector
 ;	 mov	 Boot.Boot_PhyDrv, 80H		 ;AC000;
-	mov	Boot.EXT_PHYDRV, 80H		;AN00?;
-	test	switchmap, not (SWITCH_S or SWITCH_V or SWITCH_Select or SWITCH_AUTOTEST or Switch_B) ;AN007;
+	mov	byte [BOOT+EXT_IBMBOOT_HEADER.EXT_PHYDRV], 80H ;AN00?;
+	test	word [SWITCHMAP], not (SWITCH_S or SWITCH_V or SWITCH_SELECT or SWITCH_AUTOTEST or SWITCH_B) ;AN007;
 	jz	SwitchesOkForHardDisk
 
 	Message msgIncompatibleParametersForHardDisk ;			     ;AC000;
@@ -321,15 +359,15 @@ ExclChkDone:
 
 SwitchesOkForHardDisk:
 	SaveReg <ax,bx,cx,dx,ds>
-	mov	al,drive
-	mov	cx,LogBootSect
+	mov	al,[drive]
+	mov	cx,LOGBOOTSECT
 	xor	dx,dx
-	lea	bx,scratchBuffer		; ScratchBuffer := Absolute_Read_Disk(
+	lea	bx,[scratchBuffer]; ScratchBuffer := Absolute_Read_Disk(
 						;INT	 25h				 ;		      Logical_sec_1 )
 
 						;Assume Dir for vol ID exists in 1st 32mb of partition
 
-	mov	Read_Write_Relative.Start_Sector_High,0
+	mov	[Read_Write_Relative.Start_Sector_High],0
 	call	Read_Disk			;				;AC000;
 						;	on the stack. We throw them away
 
@@ -340,24 +378,24 @@ SwitchesOkForHardDisk:
 
 CheckSignature: 				; IF (Boot.Boot_Signature != aa55)
 
-	mov	ax, word ptr ScratchBuffer.Boot_Signature ;AC000;
+	mov	ax, word [scratchBuffer+BOOT_SIGNATURE]   ;AC000;
 	cmp	ax, 0aa55h			;Find a valid boot record?
 	RestoreReg <ds,dx,cx,bx,ax>
 	clc					;No, so no need to check label
-;	$IF	Z				;No further checking needed	;AC000;
-	JNZ $$IF8
-	   test    SwitchMap,(SWITCH_Select or SWITCH_AUTOTEST) ;Should we prompt for vol label?;AN000;
-;	   $IF	   Z				;Yes, if /Select not entered	;AN000;
-	   JNZ $$IF9
+;	IF$	Z				;No further checking needed	;AC000;
+	JNZ IF8$$M
+	   test    word [SWITCHMAP],(SWITCH_SELECT or SWITCH_AUTOTEST) ;Should we prompt for vol label?;AN000;
+;	   IF$	   Z				;Yes, if /Select not entered	;AN000;
+	   JNZ IF9$$M
 	      call    CheckVolumeId		;Go ask user for vol label	;     ;
-;	   $ELSE				;/Select entered		;AN000;
-	   JMP SHORT $$EN9
-$$IF9:
+;	   ELSE$				;/Select entered		;AN000;
+	   JMP SHORT EN9$$M
+IF9$$M:
 	      clc				;CLC indicates passed label test;AN000;
-;	   $ENDIF				; for the return		;AN000;
-$$EN9:
-;	$ENDIF
-$$IF8:
+;	   ENDIF$				; for the return		;AN000;
+EN9$$M:
+;	ENDIF$
+IF8$$M:
 	return
 
 Incomp_Message: 				;an000; fix PTM 809
@@ -375,20 +413,20 @@ Print_And_Return:
 CheckFor5InchDrives:
 
 						;If drive type is anything other than 48 or 96, then only /V/S/H/N/T allowed
-	cmp	byte ptr deviceParameters.DP_DeviceType,DEV_5INCH96TPI
+	cmp	byte [deviceParameters.DP_DEVICETYPE],DEV_5INCH96TPI
 	je	Got96
 
-	cmp	byte ptr deviceParameters.DP_DeviceType,DEV_5INCH
+	cmp	byte [deviceParameters.DP_DEVICETYPE],DEV_5INCH
 	je	Got48
 
 	xor	ax,ax								;an000; dms;clear reg
-	or	ax,(Switch_V or Switch_S or Switch_N or Switch_T or Switch_B)	;an000; dms;set up switch mask
-	or	ax,(Switch_Backup or Switch_Select or Switch_Autotest)		;an000; dms;
+	or	ax,(SWITCH_V or SWITCH_S or SWITCH_N or SWITCH_T or SWITCH_B)	;an000; dms;set up switch mask
+	or	ax,(SWITCH_BACKUP or SWITCH_SELECT or SWITCH_AUTOTEST)		;an000; dms;
 IF ShipDisk
-	or	ax,Switch_Z							;an000; dms;
-ENDIF
+	or	ax,SWITCH_Z							;an000; dms;
+end if
 	not	ax								;an000; dms;
-	test	switchmap,ax							;an000; dms;invalid switch?
+	test	[SWITCHMAP],ax     ;an000; dms;invalid switch?
 	jz	Goto_Got_BPB1							;an000;dms;continue format
 	Message msgParametersNotSupportedByDrive ;			 ;AC000;
 	jmp	short Print_And_Return
@@ -401,49 +439,49 @@ Got96:
 ;;;DMS;;test	switchmap, SWITCH_8		;an000; If /8 we have an error
 ;;;DMS;;jnz	Incomp_message			;an000; tell user error
 
-	test	switchmap, SWITCH_4
+	test	word [SWITCHMAP], SWITCH_4
 	jnz	CheckForInterestingSwitches	;If /4 check /N/T/V/S
 
-	test	switchmap, SWITCH_1		;If /1 and /4 check others
+	test	word [SWITCHMAP], SWITCH_1 ;If /1 and /4 check others
 	jz	Got48
 
 						;If only /1 with no /4, see if /N/T
-	test	SwitchMap,(Switch_N or Switch_T)
+	test	word [SWITCHMAP],(SWITCH_N or SWITCH_T)
 	jnz	CheckForInterestingSwitches
 
-	jmp	Incomp_message			;an000; tell user error occurred
+	jmp	Incomp_Message			;an000; tell user error occurred
 
 Got48:
 						;Ignore /4 for non-96tpi 5 1/4" drives
-	and	switchmap, not SWITCH_4
+	and	word [SWITCHMAP], not SWITCH_4
 
 						;Ignore /1 if drive has only one head and not /8
-	cmp	word ptr deviceParameters.DP_BPB.BPB_Heads, 1
+	cmp	word [deviceParameters.DP_BPB+A_BPB.BPB_HEADS], 1
 	ja	CheckForInterestingSwitches
-	test	switchmap, SWITCH_8
+	test	word [SWITCHMAP], SWITCH_8
 	jz	CheckForInterestingSwitches
-	and	switchmap, not SWITCH_1
+	and	word [SWITCHMAP], not SWITCH_1
 
 						;Are any interesting switches set?
 CheckForInterestingSwitches:
-	test	switchmap, not (SWITCH_V or SWITCH_S or Switch_Backup or SWITCH_SELECT or SWITCH_AUTOTEST or Switch_B)
+	test	word [SWITCHMAP], not (SWITCH_V or SWITCH_S or SWITCH_BACKUP or SWITCH_SELECT or SWITCH_AUTOTEST or SWITCH_B)
 	jz	Goto_EndSwitchCheck		;No, everything ok
 
 						;At this point there are switches other than /v/s/h
-	test	SwitchMap,(SWITCH_N or SWITCH_T)
+	test	word [SWITCHMAP],(SWITCH_N or SWITCH_T)
 	jz	Use_48tpi			;Not /n/t, so must be /b/1/8/4
 
 						;We've got /N/T, see if there are others
-	test	SwitchMap, not (SWITCH_N or SWITCH_T or SWITCH_V or SWITCH_S or Switch_Backup or SWITCH_SELECT or SWITCH_AUTOTEST)
+	test	word [SWITCHMAP], not (SWITCH_N or SWITCH_T or SWITCH_V or SWITCH_S or SWITCH_BACKUP or SWITCH_SELECT or SWITCH_AUTOTEST)
 	jz	NT_Compatible			;Nope, all is well
 
 						;If 96tpi drive and /1 exists with /N/T, then okay, otherwise error
-	cmp	byte ptr deviceParameters.DP_DeviceType,DEV_5INCH96TPI
+	cmp	byte [deviceParameters.DP_DEVICETYPE],DEV_5INCH96TPI
 	jne	Bad_NT_Combo
 
-	test	SwitchMap, not (SWITCH_1 or SWITCH_N or SWITCH_T or SWITCH_V)
+	test	word [SWITCHMAP], not (SWITCH_1 or SWITCH_N or SWITCH_T or SWITCH_V)
 	jnz	Bad_NT_Combo
-	test	SwitchMap, not (SWITCH_S or Switch_Backup or SWITCH_SELECT or Switch_Autotest)
+	test	word [SWITCHMAP], not (SWITCH_S or SWITCH_BACKUP or SWITCH_SELECT or SWITCH_AUTOTEST)
 	jz	Goto_Got_BPB
 
 Bad_NT_Combo:
@@ -451,7 +489,7 @@ Bad_NT_Combo:
 	jmp	Print_And_Return
 
 Goto_Got_BPB:
-	jmp	Got_BPB_Ok			;Sleazy, but je won't reach it
+	jmp	Got_BPB_OK			;Sleazy, but je won't reach it
 
 Goto_EndSwitchCheck:
 	jmp	EndSwitchCheck
@@ -470,37 +508,37 @@ Goto_EndSwitchCheck:
 						;			     1.44 drive  @ /T:80, /N:9
 
 NT_Compatible:
-	cmp	byte ptr deviceParameters.DP_DeviceType,DEV_5INCH96TPI
+	cmp	byte [deviceParameters.DP_DEVICETYPE],DEV_5INCH96TPI
 	jne	Goto_Got_BPB
 
-	cmp	TrackCnt,40			;Look for 40 tracks
-	jne	Got_BPB_Ok
+	cmp	word [TrackCnt],40 ;Look for 40 tracks
+	jne	Got_BPB_OK
 
-	cmp	NumSectors,9			;9 sectors?
+	cmp	word [NumSectors],9 ;9 sectors?
 	je	Found_48tpi_Type
 
-	cmp	NumSectors,8			;8 sectors?
+	cmp	word [NumSectors],8 ;8 sectors?
 	jne	Goto_Got_BPB			;Nope, different type, let it go thru
 
-	or	SwitchMap,SWITCH_8		;Yes, turn on /8 switch
+	or	word [SWITCHMAP],SWITCH_8 ;Yes, turn on /8 switch
 
 Found_48tpi_Type:
-	and	SwitchMap,not (SWITCH_N or SWITCH_T) ;Turn off /T/N
+	and	word [SWITCHMAP],not (SWITCH_N or SWITCH_T) ;Turn off /T/N
 
 ;******End PTR fix
 
 ; if we have a 96 tpi drive then we will be using it in 48 tpi mode
 Use_48tpi:
-	cmp	byte ptr deviceParameters.DP_DeviceType, DEV_5INCH96TPI
+	cmp	byte [deviceParameters.DP_DEVICETYPE], DEV_5INCH96TPI
 	jne	Not96tpi
 
-	mov	byte ptr deviceParameters.DP_MediaType, 1
-	mov	word ptr deviceParameters.DP_Cylinders, 40
+	mov	byte [deviceParameters.DP_MEDIATYPE], 1
+	mov	word [deviceParameters.DP_CYLINDERS], 40
 Not96tpi:
 
 ; Since we know we are formatting in 48 tpi mode turn on /4 switch
 ; (We use this info in LastChanceToSaveIt)
-	or	switchmap, SWITCH_4
+	or	word [SWITCHMAP], SWITCH_4
 
 ; At this point we know that we will require a special BPB
 ; It will be one of:
@@ -515,26 +553,26 @@ Get_BPBs:
 
 NotSlashB:
 
-	test	switchmap, SWITCH_1
+	test	word [SWITCHMAP], SWITCH_1
 	jz	NotSingleSided
 	add	ax, 1
 NotSingleSided:
 
-	test	switchmap, SWITCH_8
+	test	word [SWITCHMAP], SWITCH_8
 	jz	Not8SectorsPerTrack
 	add	ax, 2
 ; /8 implies Old_Dir = TRUE
-	mov	Old_Dir,TRUE
+	mov	byte [Old_Dir],TRUE
 Not8SectorsPerTrack:
 
 ; Ok now we know which BPB to use so lets move it to the device parameters
 
-	mov	bx, size a_BPB
+	mov	bx, sizeof.A_BPB
 	mul	bx
-	lea	si, CustomBPBs
+	lea	si,[customBPBs]
 	add	si, ax
-	lea	di, deviceParameters.DP_BPB
-	mov	cx, size a_BPB
+	lea	di,[deviceParameters.DP_BPB]
+	mov	cx, sizeof.A_BPB
 	push	ds
 	pop	es
 	repnz	movsb
@@ -547,30 +585,30 @@ Not8SectorsPerTrack:
 ;*  after setting up the custom BPB we fall through and do our
 ;*  Harddisk Check.
 Got_BPB_OK:
-	test	switchmap,SWITCH_N+SWITCH_T
+	test	word [SWITCHMAP],SWITCH_N+SWITCH_T
 	jnz	Setup_Stuff
 	jmp	EndSwitchCheck
 Setup_Stuff:
 ; Set up NumSectors and SectorsPerTrack entries correctly
-	test	switchmap,SWITCH_N
+	test	word [SWITCHMAP],SWITCH_N
 	jz	No_Custom_Seclim
-	mov	ax,word ptr NumSectors
-	mov	DeviceParameters.DP_BPB.BPB_SectorsPerTrack,ax
+	mov	ax,word [NumSectors]
+	mov	word [deviceParameters.DP_BPB+A_BPB.BPB_SECTORSPERTRACK],ax
 	jmp	short Handle_Cyln
 No_Custom_Seclim:
-	mov	ax,deviceParameters.DP_BPB.BPB_SectorsPerTrack
-	mov	NumSectors,ax
+	mov	ax,word [deviceParameters.DP_BPB+A_BPB.BPB_SECTORSPERTRACK]
+	mov	[NumSectors],ax
 
 Handle_Cyln:
-	test	switchmap,SWITCH_T
+	test	word [SWITCHMAP],SWITCH_T
 	jz	No_Custom_Cyln
 ; Set up TrackCnt and Cylinders entries correctly
-	mov	ax,TrackCnt
-	mov	DeviceParameters.DP_Cylinders,ax
+	mov	ax,[TrackCnt]
+	mov	[deviceParameters.DP_CYLINDERS],ax
 	jmp	short Check_720
 No_Custom_Cyln:
-	mov	ax,DeviceParameters.DP_Cylinders
-	mov	TrackCnt,ax
+	mov	ax,[deviceParameters.DP_CYLINDERS]
+	mov	[TrackCnt],ax
 
 ;****PTM P868  - Always making 3 1/2 media byte 0F0h. If 720, then set to
 ;		 0F9h and use the DOS 3.20 BPB. Should check all drives
@@ -583,16 +621,16 @@ No_Custom_Cyln:
 
 Check_720:
 
-	cmp	byte ptr deviceParameters.DP_DeviceType,DEV_5INCH96TPI
+	cmp	byte [deviceParameters.DP_DEVICETYPE],DEV_5INCH96TPI
 	je	Calc_Total
 
-	cmp	byte ptr deviceParameters.DP_DeviceType,DEV_5INCH
+	cmp	byte [deviceParameters.DP_DEVICETYPE],DEV_5INCH
 	je	Calc_Total
 
-	cmp	TrackCnt,80
+	cmp	word [TrackCnt],80
 	jne	Calc_Total
 
-	cmp	NumSectors,9
+	cmp	word [NumSectors],9
 	jne	Calc_Total
 
 ; At this point we know we have a 3 1/2 720kb diskette to format. Use the
@@ -605,13 +643,13 @@ Check_720:
 	SaveReg <ds,es,si,di,cx>
 
 
-	mov	cx,seg data			;Setup seg regs, just in case they ain't!
+	mov	cx,data_			;Setup seg regs, just in case they ain't!
 	mov	ds,cx
 	mov	es,cx
 
-	mov	si,offset BPB720		;Copy the BPB!
-	mov	di,offset deviceParameters.DP_BPB
-	mov	cx,size a_BPB
+	mov	si,BPB720         ;Copy the BPB!
+	mov	di,deviceParameters.DP_BPB
+	mov	cx,sizeof.A_BPB
 	rep	movsb
 	RestoreReg <cx,di,si,es,ds>
 	jmp	EndSwitchCheck
@@ -619,20 +657,20 @@ Check_720:
 ;End PTM P868 fix ****************************************
 
 Calc_Total:
-	mov	ax,NumSectors
-	mov	bx,DeviceParameters.DP_BPB.BPB_Heads
+	mov	ax,[NumSectors]
+	mov	bx,word [deviceParameters.DP_BPB+A_BPB.BPB_HEADS]
 	mul	bl				; AX = # of sectors * # of heads
-	mul	TrackCnt			; DX:AX = Total Sectors
+	mul	[TrackCnt] ; DX:AX = Total Sectors
 	or	dx,dx
 	jnz	Got_BigTotalSectors
-	mov	DeviceParameters.DP_BPB.BPB_TotalSectors,ax
+	mov	word [deviceParameters.DP_BPB+A_BPB.BPB_TOTALSECTORS],ax
 	jmp	short Set_BPB
 Got_BigTotalSectors:
-	mov	DeviceParameters.DP_BPB.BPB_BigTotalSectors,ax
-	mov	DeviceParameters.DP_BPB.BPB_BigTotalSectors+2,dx
+	mov	word [deviceParameters.DP_BPB+A_BPB.BPB_BIGTOTALSECTORS],ax
+	mov	word [deviceParameters.DP_BPB+A_BPB.BPB_BIGTOTALSECTORS+2],dx
 	push	dx				; preserve dx for further use
 	xor	dx,dx
-	mov	DeviceParameters.DP_BPB.BPB_TotalSectors,dx
+	mov	word [deviceParameters.DP_BPB+A_BPB.BPB_TOTALSECTORS],dx
 	pop	dx
 
 Set_BPB:
@@ -640,7 +678,7 @@ Set_BPB:
 ; # of FAT Sectors = TotalSectors / SectorsPerCluster * # of bytes in FAT to
 ; represent one cluster (i.e. 3/2) / BytesPerSector (i.e. 512)
 	xor	bx,bx
-	mov	bl,DeviceParameters.DP_BPB.BPB_SectorsPerCluster
+	mov	bl,byte [deviceParameters.DP_BPB+A_BPB.BPB_SECTORSPERCLUSTER]
 	div	bx				; DX:AX contains # of clusters
 ; now multiply by 3/2
 	mov	bx,3
@@ -653,16 +691,16 @@ Set_BPB:
 	div	bx
 ; dx:ax contains number of FAT sectors necessary
 	inc	ax				; Go one higher
-	mov	DeviceParameters.DP_BPB.BPB_SectorsPerFAT,ax
-	mov	DeviceParameters.DP_MediaType,0
-	mov	DeviceParameters.DP_BPB.BPB_MediaDescriptor,Custom_Media
+	mov	word [deviceParameters.DP_BPB+A_BPB.BPB_SECTORSPERFAT],ax
+	mov	[deviceParameters.DP_MEDIATYPE],0
+	mov	byte [deviceParameters.DP_BPB+A_BPB.BPB_MEDIADESCRIPTOR],Custom_Media
 
 
 EndSwitchCheck:
 	clc
 	return
 
-CheckSwitches endp
+;CheckSwitches endp
 
 ;*****************************************************************************
 ;Routine name: Size_To_Switch
@@ -696,76 +734,76 @@ CheckSwitches endp
 
 Procedure Size_To_Switch
 
-	cmp	SizeMap,0			;Are there sizes entered?	 ;AN001;
-;	$IF	NE				;Yes				;AN001;
-	JE $$IF13
-	   cmp	   deviceParameters.DP_DeviceType,DEV_HARDDISK ;AN000;		;AN001;
-;	   $IF	   E				;No size for fixed disk 	;AN001;
-	   JNE $$IF14
+	cmp	byte [SizeMap],0 ;Are there sizes entered?	 ;AN001;
+;	IF$	NE				;Yes				;AN001;
+	JE IF13$$M
+	   cmp	   [deviceParameters.DP_DEVICETYPE],DEV_HARDDISK ;AN000;		;AN001;
+;	   IF$	   E				;No size for fixed disk 	;AN001;
+	   JNE IF14$$M
 	      Message msgIncompatibleParametersForHardDisk ;			;AN001;
-;	   $ELSE				;Diskette, see what type	;AN001;
-	   JMP SHORT $$EN14
-$$IF14:
-	      cmp     byte ptr deviceParameters.DP_DeviceType,DEV_5INCH ;	;AN001;
-;	      $IF     E 			;Found 180/360k drive		;AN001;
-	      JNE $$IF16
+;	   ELSE$				;Diskette, see what type	;AN001;
+	   JMP SHORT EN14$$M
+IF14$$M:
+	      cmp     byte [deviceParameters.DP_DEVICETYPE],DEV_5INCH   ;	;AN001;
+;	      IF$     E 			;Found 180/360k drive		;AN001;
+	      JNE IF16$$M
 		 call	 Low_Density_Drive	;Go set switches		;AN001;
-;	      $ELSE				;Check for 96TPI		;AN001;
-	      JMP SHORT $$EN16
-$$IF16:
-		 cmp	 byte ptr deviceParameters.DP_DeviceType,DEV_5INCH96TPI ;AN001; ;
-;		 $IF	 E			;Found it			;AN001;
-		 JNE $$IF18
+;	      ELSE$				;Check for 96TPI		;AN001;
+	      JMP SHORT EN16$$M
+IF16$$M:
+		 cmp	 byte [deviceParameters.DP_DEVICETYPE],DEV_5INCH96TPI   ;AN001; ;
+;		 IF$	 E			;Found it			;AN001;
+		 JNE IF18$$M
 		    call    High_Capacity_Drive ;				;AN001;
-;		 $ELSE				;				;AN001;
-		 JMP SHORT $$EN18
-$$IF18:
-		    cmp     byte ptr deviceParameters.DP_DeviceType,DEV_3INCH720KB ;AN0001;
-;		    $IF     E			;Found 720k drive		;AN001;
-		    JNE $$IF20
+;		 ELSE$				;				;AN001;
+		 JMP SHORT EN18$$M
+IF18$$M:
+		    cmp     byte [deviceParameters.DP_DEVICETYPE],DEV_3INCH720KB   ;AN0001;
+;		    IF$     E			;Found 720k drive		;AN001;
+		    JNE IF20$$M
 		       call    Small_Drives	;				;AN001;
-;		    $ELSE			;				;AN001;
-		    JMP SHORT $$EN20
-$$IF20:
-		       cmp     byte ptr deviceParameters.DP_DeviceType,DEV_OTHER ;AN001;
-;		       $IF     E		;Must be 1.44mb 		;AN001;
-		       JNE $$IF22
+;		    ELSE$			;				;AN001;
+		    JMP SHORT EN20$$M
+IF20$$M:
+		       cmp     byte [deviceParameters.DP_DEVICETYPE],DEV_OTHER   ;AN001;
+;		       IF$     E		;Must be 1.44mb 		;AN001;
+		       JNE IF22$$M
 			  call	  Other_Drives	;				;AN001;
-;		       $ELSE			;				;AN001;
-		       JMP SHORT $$EN22
-$$IF22:
+;		       ELSE$			;				;AN001;
+		       JMP SHORT EN22$$M
+IF22$$M:
 			  Message msgParametersNotSupportedByDrive ;		;AN001;
-			  mov	  Fatal_Error,Yes ;				;AN001;
-;		       $ENDIF			;				;AN001;
-$$EN22:
-;		    $ENDIF			;				;AN001;
-$$EN20:
-;		 $ENDIF 			;				;AN001;
-$$EN18:
-;	      $ENDIF				;				;AN001;
-$$EN16:
-;	   $ENDIF				;				;AN001;
-$$EN14:
-;	$ENDIF					;				;AN001;
-$$IF13:
-	cmp	Fatal_Error,Yes 		;				;AN001;
-;	$IF	E				;				;AN001;
-	JNE $$IF30
+			  mov	  byte [Fatal_Error],YES ;				;AN001;
+;		       ENDIF$			;				;AN001;
+EN22$$M:
+;		    ENDIF$			;				;AN001;
+EN20$$M:
+;		 ENDIF$ 			;				;AN001;
+EN18$$M:
+;	      ENDIF$				;				;AN001;
+EN16$$M:
+;	   ENDIF$				;				;AN001;
+EN14$$M:
+;	ENDIF$					;				;AN001;
+IF13$$M:
+	cmp	byte [Fatal_Error],YES ;				;AN001;
+;	IF$	E				;				;AN001;
+	JNE IF30$$M
 	   Message msgIncompatibleParameters	;				;AN001;
-;	$ENDIF					;				;AN001;
-$$IF30:
+;	ENDIF$					;				;AN001;
+IF30$$M:
 
-	cmp	deviceParameters.DP_DeviceType,DEV_HARDDISK			;an001;
-;	$if	e								;an001;
-	JNE $$IF32
-		mov	Fatal_Error,Yes 					;an001;
-;	$endif									;an001;
-$$IF32:
+	cmp	[deviceParameters.DP_DEVICETYPE],DEV_HARDDISK ;an001;
+;	if$	e								;an001;
+	JNE IF32$$M
+		mov	byte [Fatal_Error],YES ;an001;
+;	endif$									;an001;
+IF32$$M:
 
-	and	SwitchMap,not Switch_F		;Turn off /F so doesn't effect  ;AN001;
+	and	word [SWITCHMAP],not SWITCH_F ;Turn off /F so doesn't effect  ;AN001;
 	ret					; following logic		;AN001;
 
-Size_To_Switch endp
+;Size_To_Switch endp
 
 ;*****************************************************************************
 ;Routine name: High_Capacity_Drive
@@ -787,25 +825,25 @@ Size_To_Switch endp
 
 Procedure High_Capacity_Drive			;
 
-	test	SizeMap,Size_1200		;1.2mb diskette?		 ;AN001;
-;	$IF	Z				;Nope				;AN001;
-	JNZ $$IF34
+	test	byte [SizeMap],Size_1200 ;1.2mb diskette?		 ;AN001;
+;	IF$	Z				;Nope				;AN001;
+	JNZ IF34$$M
 	   call    Low_Density_Drive		;Check for /4 valid types	;AN001;
-	   cmp	   Fatal_Error, No		;Find 160/180/320/360k? 	;AN001;
-;	   $IF	   E				;Yes				;AN001;
-	   JNE $$IF35
-	      or      SwitchMap,Switch_4	;Turn on /4 switch		;AN001;
-;	   $ELSE				;Did not find valid size	;AN001;
-	   JMP SHORT $$EN35
-$$IF35:
-	      mov     Fatal_Error,Yes		;Indicate invalid device	;AN001;
-;	   $ENDIF				;				;AN001;
-$$EN35:
-;	$ENDIF					;				;AN001;
-$$IF34:
+	   cmp	   byte [Fatal_Error], NO ;Find 160/180/320/360k? 	;AN001;
+;	   IF$	   E				;Yes				;AN001;
+	   JNE IF35$$M
+	      or      word [SWITCHMAP],SWITCH_4 ;Turn on /4 switch		;AN001;
+;	   ELSE$				;Did not find valid size	;AN001;
+	   JMP SHORT EN35$$M
+IF35$$M:
+	      mov     byte [Fatal_Error],YES ;Indicate invalid device	;AN001;
+;	   ENDIF$				;				;AN001;
+EN35$$M:
+;	ENDIF$					;				;AN001;
+IF34$$M:
 	ret					;				;AN001;
 
-High_Capacity_Drive endp
+;High_Capacity_Drive endp
 
 ;*****************************************************************************
 ;Routine name: Low_Density_Drive
@@ -833,42 +871,42 @@ High_Capacity_Drive endp
 
 Procedure Low_Density_Drive			;				;AN000;
 						;
-	test	SizeMap,Size_160		;				 ;AN001;
-;	$IF	NZ				;				;AN001;
-	JZ $$IF39
-	   or	   SwitchMap,Switch_1+Switch_8	;				;AN001;
-;	$ELSE					;				;AN001;
-	JMP SHORT $$EN39
-$$IF39:
-	   test    SizeMap,Size_180		;				 ;AN001;
-;	   $IF	   NZ				;				;AN001;
-	   JZ $$IF41
-	      or      SwitchMap,Switch_1	;				;AN001;
-;	   $ELSE				;				;AN001;
-	   JMP SHORT $$EN41
-$$IF41:
-	      test    SizeMap,Size_320		;				 ;AN001;
-;	      $IF     NZ			;				;AN001;
-	      JZ $$IF43
-		 or	 SwitchMap,Switch_8	;				;AN001;
-;	      $ELSE				;				;AN001;
-	      JMP SHORT $$EN43
-$$IF43:
-		 test	 SizeMap,Size_360	;				 ;AN001;
-;		 $IF	 Z			;None of the above, not valid	;AN001;
-		 JNZ $$IF45
-		    mov     Fatal_Error,Yes	;				;AN001;
-;		 $ENDIF 			;				;AN001;
-$$IF45:
-;	      $ENDIF				;				;AN001;
-$$EN43:
-;	   $ENDIF				;				;AN001;
-$$EN41:
-;	$ENDIF					;				;AN001;
-$$EN39:
+	test	byte [SizeMap],Size_160 ;				 ;AN001;
+;	IF$	NZ				;				;AN001;
+	JZ IF39$$M
+	   or	   word [SWITCHMAP],SWITCH_1+SWITCH_8 ;				;AN001;
+;	ELSE$					;				;AN001;
+	JMP SHORT EN39$$M
+IF39$$M:
+	   test    byte [SizeMap],Size_180 ;				 ;AN001;
+;	   IF$	   NZ				;				;AN001;
+	   JZ IF41$$M
+	      or      word [SWITCHMAP],SWITCH_1 ;				;AN001;
+;	   ELSE$				;				;AN001;
+	   JMP SHORT EN41$$M
+IF41$$M:
+	      test    byte [SizeMap],Size_320 ;				 ;AN001;
+;	      IF$     NZ			;				;AN001;
+	      JZ IF43$$M
+		 or	 word [SWITCHMAP],SWITCH_8 ;				;AN001;
+;	      ELSE$				;				;AN001;
+	      JMP SHORT EN43$$M
+IF43$$M:
+		 test	 byte [SizeMap],Size_360 ;				 ;AN001;
+;		 IF$	 Z			;None of the above, not valid	;AN001;
+		 JNZ IF45$$M
+		    mov     byte [Fatal_Error],YES ;				;AN001;
+;		 ENDIF$ 			;				;AN001;
+IF45$$M:
+;	      ENDIF$				;				;AN001;
+EN43$$M:
+;	   ENDIF$				;				;AN001;
+EN41$$M:
+;	ENDIF$					;				;AN001;
+EN39$$M:
 	ret					;				;AN001;
 
-Low_Density_Drive endp
+;Low_Density_Drive endp
 
 ;*****************************************************************************
 ;Routine name: Small_Drives
@@ -893,15 +931,15 @@ Low_Density_Drive endp
 
 Procedure Small_Drives				;				;AN000;
 
-	test	SizeMap,Size_720		;Ask for 720k?			 ;AN001;
-;	$IF	Z				;Nope, thats all drive can do	;AN001;
-	JNZ $$IF50
-	   mov	   Fatal_Error,Yes		;Indicate error 		;AN001;
-;	$ENDIF					;				;AN001;
-$$IF50:
+	test	byte [SizeMap],Size_720 ;Ask for 720k?			 ;AN001;
+;	IF$	Z				;Nope, thats all drive can do	;AN001;
+	JNZ IF50$$M
+	   mov	   byte [Fatal_Error],YES ;Indicate error 		;AN001;
+;	ENDIF$					;				;AN001;
+IF50$$M:
 	ret					;				;AN001;
 
-Small_Drives endp
+;Small_Drives endp
 
 
 ;*****************************************************************************
@@ -926,29 +964,29 @@ Small_Drives endp
 
 Procedure Other_Drives				;				;AN001;
 
-	test	SizeMap,Size_1440		;Ask for 1.44mb diskette?	 ;AN001;
-;	$IF	Z				;Nope				;AN001;
-	JNZ $$IF52
+	test	byte [SizeMap],Size_1440 ;Ask for 1.44mb diskette?	 ;AN001;
+;	IF$	Z				;Nope				;AN001;
+	JNZ IF52$$M
 	   call    Small_Drives 		;See if 720k		       ;AN001;
-	   cmp	   Fatal_Error,No		;Fatal_error=Yes if not 	;AN001;
-;	   $IF	   E				;Got 720k			;AN001;
-	   JNE $$IF53
-	      or      SwitchMap,Switch_T+Switch_N ;Turn on /T:80 /N:9		;AN001;
-	      mov     TrackCnt,80		;				;AN001;
-	      mov     NumSectors,9		;				;AN001;
-;	   $ENDIF				;				;AN001;
-$$IF53:
-;	$ELSE					;Asked for 1.44mb		;AN001;
-	JMP SHORT $$EN52
-$$IF52:
-	   or	   SwitchMap,Switch_T+Switch_N	;Turn on /T:80 /N:18;		;AN001;
-	   mov	   TrackCnt,80			;This will protect SIZE=1440	;AN001;
-	   mov	   NumSectors,18		; from non-standard drives with ;AN001;
-;	$ENDIF					; type of 'other'		;AN001;
-$$EN52:
+	   cmp	   byte [Fatal_Error],NO ;Fatal_error=Yes if not 	;AN001;
+;	   IF$	   E				;Got 720k			;AN001;
+	   JNE IF53$$M
+	      or      word [SWITCHMAP],SWITCH_T+SWITCH_N ;Turn on /T:80 /N:9		;AN001;
+	      mov     word [TrackCnt],80 ;				;AN001;
+	      mov     word [NumSectors],9 ;				;AN001;
+;	   ENDIF$				;				;AN001;
+IF53$$M:
+;	ELSE$					;Asked for 1.44mb		;AN001;
+	JMP SHORT EN52$$M
+IF52$$M:
+	   or	   word [SWITCHMAP],SWITCH_T+SWITCH_N ;Turn on /T:80 /N:18;		;AN001;
+	   mov	   word [TrackCnt],80 ;This will protect SIZE=1440	;AN001;
+	   mov	   word [NumSectors],18 ; from non-standard drives with ;AN001;
+;	ENDIF$					; type of 'other'		;AN001;
+EN52$$M:
 	ret					;				;AN001;
 
-Other_Drives endp
+;Other_Drives endp
 
 
 ;*****************************************************************************
@@ -969,32 +1007,32 @@ Other_Drives endp
 
 Procedure Check_T_N
 
-	test	SwitchMap,Switch_N		;Make sure /T entered if /N	;AN009;
-;	$IF	NZ,AND				;				;AN009;
-	JZ $$IF57
-	test	SwitchMap,Switch_T		;				;AN009;
-;	$IF	Z				;				;AN009;
-	JNZ $$IF57
+	test	word [SWITCHMAP],SWITCH_N ;Make sure /T entered if /N	;AN009;
+;	IF$	NZ,AND				;				;AN009;
+	JZ IF57$$M
+	test	word [SWITCHMAP],SWITCH_T ;				;AN009;
+;	IF$	Z				;				;AN009;
+	JNZ IF57$$M
 	   Message msgBad_T_N			;It wasn't, so barf             ;AN009;
-	   mov	   Fatal_Error,Yes		;Indicate error 		;AN009;
-;	$ELSE					;				;AN009;
-	JMP SHORT $$EN57
-$$IF57:
-	   test    SwitchMap,Switch_T		;Make sure /N entered if /T	;AN009;
-;	   $IF	   NZ,AND			;				;AN009;
-	   JZ $$IF59
-	   test    SwitchMap,Switch_N		;				;AN009;
-;	   $IF	   Z				;It wasn't, so also barf        ;AN009;
-	   JNZ $$IF59
+	   mov	   byte [Fatal_Error],YES ;Indicate error 		;AN009;
+;	ELSE$					;				;AN009;
+	JMP SHORT EN57$$M
+IF57$$M:
+	   test    word [SWITCHMAP],SWITCH_T ;Make sure /N entered if /T	;AN009;
+;	   IF$	   NZ,AND			;				;AN009;
+	   JZ IF59$$M
+	   test    word [SWITCHMAP],SWITCH_N ;				;AN009;
+;	   IF$	   Z				;It wasn't, so also barf        ;AN009;
+	   JNZ IF59$$M
 	      Message msgBad_T_N		;				;AN009;
-	      mov     Fatal_Error,Yes		;Indicate error 		;AN009;
-;	   $ENDIF				;				;AN009;
-$$IF59:
-;	$ENDIF					;				;AN009;
-$$EN57:
+	      mov     byte [Fatal_Error],YES ;Indicate error 		;AN009;
+;	   ENDIF$				;				;AN009;
+IF59$$M:
+;	ENDIF$					;				;AN009;
+EN57$$M:
 	ret
 
-Check_T_N endp
+;Check_T_N endp
 
 
 
@@ -1014,19 +1052,19 @@ Check_T_N endp
 ;			try formatting 48TPI_Single_Sided
 ;		   ELSE return ERROR
 ;
-LastChanceToSaveIt proc near
+LastChanceToSaveIt:
 
-	cmp	currentCylinder, 0
+	cmp	word [currentCylinder], 0
 	jne	WeCanNotIgnoreThisError
-	cmp	currentHead, 1
+	cmp	word [currentHead], 1
 	jne	WeCanNotIgnoreThisError
 
-	cmp	deviceParameters.DP_DeviceType, DEV_5INCH
+	cmp	[deviceParameters.DP_DEVICETYPE], DEV_5INCH
 	ja	WeCanNotIgnoreThisError
 
-	mov	fLastChance, TRUE
+	mov	byte [fLastChance], TRUE
 
-	or	switchmap, SWITCH_1
+	or	word [SWITCHMAP], SWITCH_1
 	call	CheckSwitches
 	clc
 	ret
@@ -1035,7 +1073,7 @@ WeCanNotIgnoreThisError:
 	stc
 	ret
 
-LastChanceToSaveIt endp
+;LastChanceToSaveIt endp
 
 ;-------------------------------------------------------------------------------
 
@@ -1087,66 +1125,66 @@ LastChanceToSaveIt endp
 
 Procedure WriteBootSector			;				;AN000;
 
-	lea	si, deviceParameters.DP_BPB	;Copy EBPB to the boot record	;
-	lea	di, Boot.EXT_BOOT_BPB		;  "  " 	"  "		;AC000:
-	mov	cx, size EXT_BPB_INFO		;  "  " 	"  "		;AC000:
+	lea	si,[deviceParameters.DP_BPB];Copy EBPB to the boot record	;
+	lea	di, [BOOT+EXT_IBMBOOT_HEADER.EXT_BOOT_BPB] ;  "  " 	"  "		;AC000:
+	mov	cx, sizeof.EXT_BPB_INFO ;  "  " 	"  "		;AC000:
 	push	ds				;Set ES=DS (data segment)	;     ;
 	pop	es				;  "  " 	"  "		;     ;
 	repnz	movsb				;Do the copy			;     ;
 						;Write out the boot record	;     ;
-	mov	al, drive			;Get drive letter		;     ;
+	mov	al, [drive] ;Get drive letter		;     ;
 	mov	cx, 1				;Specify 1 sector		;     ;
 	xor	dx, dx				;Logical sector 0		;     ;
-	lea	bx, boot			;Point at boot record		;     ;
+	lea	bx,[BOOT]  ;Point at boot record		;     ;
 ;Boot record in 1st 32mb of partition
-	mov	Read_Write_Relative.Start_Sector_High,0 ;			;AN000;
+	mov	[Read_Write_Relative.Start_Sector_High],0 ;			;AN000;
 	call	Write_Disk			;				;AC000;
-;	$IF	C				;Error on write 		;AC000;
-	JNC $$IF62
+;	IF$	C				;Error on write 		;AC000;
+	JNC IF62$$M
 	   Message msgBootWriteError		;Print error			;     ;
 	   stc					;CY=1 means error		;     ;
-;	$ELSE					;Good write of boot record!	;AN000;
-	JMP SHORT $$EN62
-$$IF62:
-	   mov	   cx,Dummy_Label_Size		;Put in dummy volume label size ;ac026;ac028;
-	   lea	   si,Dummy_Label		;  "  "       "  "		;AN000;
-	   lea	   di,Media_ID_Buffer.Media_ID_Volume_Label  ;	"  "	   "  " ;AN000;
+;	ELSE$					;Good write of boot record!	;AN000;
+	JMP SHORT EN62$$M
+IF62$$M:
+	   mov	   cx,[Dummy_Label_Size] ;Put in dummy volume label size ;ac026;ac028;
+	   lea	   si,[Dummy_Label];  "  "       "  "		;AN000;
+	   lea	   di,[Media_ID_Buffer.Media_ID_Volume_Label];	"  "	   "  " ;AN000;
 	   rep	   movsb			;  "  "       "  "		;AN000;
 	   call    Create_Serial_ID		;Go create unique ID number	;AN000;
-	   lea	   si,FAT12_String		;Assume 12 bit FAT		;AN000;
-	   cmp	   fBigFAT,TRUE 		;Is it? 			;AN000;
-;	   $IF	   E				;Not if fBigFat is set....	;AN000;
-	   JNE $$IF64
-	      lea     si,FAT16_String		;Got 16 bit FAT 		;AN000;
-;	   $ENDIF				;				;AN000;
-$$IF64:
+	   lea	   si,[FAT12_String];Assume 12 bit FAT		;AN000;
+	   cmp	   byte [fBigFat],TRUE ;Is it? 			;AN000;
+;	   IF$	   E				;Not if fBigFat is set....	;AN000;
+	   JNE IF64$$M
+	      lea     si,[FAT16_String];Got 16 bit FAT 		;AN000;
+;	   ENDIF$				;				;AN000;
+IF64$$M:
 						;Copy file system string	;     ;
 	   mov	   cx,8 			; to buffer			;AN000;
-	   lea	   di,Media_ID_Buffer.Media_ID_File_System ;	 "  "		;AN000;
+	   lea	   di,[Media_ID_Buffer.Media_ID_File_System] ;	 "  "		;AN000;
 	   repnz   movsb			;    "   "	  "  "		;AN000;
-	   mov	   al,Generic_IOCtl		;Generic IOCtl call		;AN000;
-	   mov	   bl,Drive			;Get drive			;AN000;
+	   mov	   al,GENERIC_IOCTL		;Generic IOCtl call		;AN000;
+	   mov	   bl,[drive] ;Get drive			;AN000;
 	   inc	   bl				;Make it 1 based		;AN000;
 	   xor	   bh,bh			;Set bh=0			;AN000;
-	   mov	   ch,RawIO			;Set Media ID call		;AN000;
-	   mov	   cl,Set_Media_ID
-	   mov	   dx,offset Media_ID_Buffer	;Point at buffer		;AN000;
+	   mov	   ch,RAWIO			;Set Media ID call		;AN000;
+	   mov	   cl,SET_MEDIA_ID
+	   mov	   dx,Media_ID_Buffer        ;Point at buffer		;AN000;
 	   DOS_Call IOCtl			;Do function call		;AN000;
-;	   $IF	   C				;Error ? (Write or old boot rec);AN000;
-	   JNC $$IF66
+;	   IF$	   C				;Error ? (Write or old boot rec);AN000;
+	   JNC IF66$$M
 	      Message msgBootWriteError 	;Indicate we couldn't write it  ;AN000;
 	      stc				;CY=1 for error return		;AN000;
-;	   $ELSE				;Set Media ID okay		;AN000;
-	   JMP SHORT $$EN66
-$$IF66:
+;	   ELSE$				;Set Media ID okay		;AN000;
+	   JMP SHORT EN66$$M
+IF66$$M:
 	      clc				;CY=0 for good return		;AN000;
-;	   $ENDIF				;				;AN000;
-$$EN66:
-;	$ENDIF					;				;AN000;
-$$EN62:
+;	   ENDIF$				;				;AN000;
+EN66$$M:
+;	ENDIF$					;				;AN000;
+EN62$$M:
 	ret					;				;AN000;
 
-WriteBootSector endp				;				;AN000;
+;WriteBootSector endp				;				;AN000;
 
 
 ;*****************************************************************************
@@ -1187,48 +1225,49 @@ Procedure Create_Serial_ID			;				;AN000;
 	mov	ax,dx				;Scramble it			;AN000;
 	pop	dx				;				;AN000;
 	add	ax,dx				;				;AN000;
-	mov	word ptr Media_ID_Buffer.Media_ID_Serial_Number+2,ax ;		;AC004;
-	mov	Serial_Num_Low,ax		;				;AN000;
+	mov	word [Media_ID_Buffer.Media_ID_Serial_Number+2],ax   ;		;AC004;
+	mov	[Serial_Num_Low],ax ;				;AN000;
 	mov	ax,cx				;				;AN000;
 	pop	cx				;				;AN000;
 	add	ax,cx				;				;AN000;
-	mov	word ptr Media_ID_Buffer.Media_ID_Serial_Number,ax ;		;AC004;
-	mov	Serial_Num_High,ax		;				;AN000;
+	mov	word [Media_ID_Buffer.Media_ID_Serial_Number],ax   ;		;AC004;
+	mov	[Serial_Num_High],ax ;				;AN000;
 	ret					;				;AN000;
 
-Create_Serial_ID endp				;				;AN000;
+;Create_Serial_ID endp				;				;AN000;
 
 ;-------------------------------------------------------------------------------
 
 ; OemDone:
 ;
-OemDone proc	near
+OemDone:
 
 ; if /b write out a fake dos & bios
-	test	switchmap, SWITCH_B
+	test	word [SWITCHMAP], SWITCH_B
 	jz	Switch8?
 	call	WriteBogusDos
 	retc
 
 Switch8?:
-	test	switchmap, SWITCH_8
+	test	word [SWITCHMAP], SWITCH_8
 	jz	HardDisk?
 	call	ConvertToOldDirectoryFormat
 	retc
 
 HardDisk?:
-	cmp	deviceParameters.DP_DeviceType, DEV_HARDDISK
+	cmp	[deviceParameters.DP_DEVICETYPE], DEV_HARDDISK
 	clc
 	retnz
 	call	SetPartitionTable
 
 	return
 
-OemDone endp
+;OemDone endp
 
 ;------------------------------------------------------------------------------
 
-data	segment public	para	'DATA'
+end if
+if SEGSEL = S_DATA
 
 	if IBMCOPYRIGHT
 biosFilename db "x:\ibmbio.com",0
@@ -1236,9 +1275,10 @@ dosFilename db	"x:\ibmdos.com",0
 	else
 biosFilename db "x:\io.sys",0
 dosFilename db	"x:\msdos.sys",0
-	endif
+	end if
 
-data	ends
+end if
+if SEGSEL = S_CODE
 
 ; simple code to stuff bogus dos in old-style diskette.
 
@@ -1250,68 +1290,68 @@ BogusDos:
 	mov	si,mesofs			; shuts off
 sys_mess_loop:
 	lodsb
-if ibmcopyright
+if IBMCOPYRIGHT
 end_sys_loop:
-endif
+end if
 	or	al,al
 	jz	end_sys_loop
 	mov	ah,14
 	mov	bx,7
 	int	16
 	jmp	sys_mess_loop
-if not ibmcopyright
+if not IBMCOPYRIGHT
 end_sys_loop:
 	xor	ah, ah				; get next char function
 	int	16h				; call keyboard services
 	int	19h				; reboot
-endif
+end if
 
-	include BOOT.CL1
-mesofs	equ	sysmsg - BogusDos
+	include 'BOOT.CL1'
+mesofs	equ	SYSMSG - BogusDos
 
-WriteBogusDos proc near
+WriteBogusDos:
 
-	mov	al,driveLetter
-	mov	biosFilename,al
-	mov	dosFilename,al
-	mov	cx, ATTR_HIDDEN or ATTR_SYSTEM
-	lea	dx, biosFilename
-	mov	ah,CREAT
+	mov	al,[driveLetter]
+	mov	[biosFilename],al
+	mov	[dosFilename],al
+	mov	cx, attr_hidden or attr_system
+	lea	dx,[biosFilename]
+	mov	ah,Creat
 	int	21h
 	mov	bx,ax
 	mov	cx, BIOS_SIZE
 	push	ds
 	push	cs
 	pop	ds
-	assume	ds:code
-	lea	dx, BogusDos
-	mov	ah,WRITE
+;	assume	ds:code
+	lea	dx,[BogusDos]
+	mov	ah,Write
 	int	21h
 	pop	ds
-	assume	ds:data
-	mov	ah,CLOSE
+;	assume	ds:data
+	mov	ah,Close
 	int	21h
-	mov	cx, ATTR_HIDDEN or ATTR_SYSTEM
-	lea	dx, dosFilename
-	mov	ah,CREAT
+	mov	cx, attr_hidden or attr_system
+	lea	dx,[dosFilename]
+	mov	ah,Creat
 	int	21h
 	mov	bx,ax
 	mov	cx, DOS_SIZE
-	lea	dx, BogusDos
-	mov	ah,WRITE
+	lea	dx,[BogusDos]
+	mov	ah,Write
 	int	21h
-	mov	ah,CLOSE
+	mov	ah,Close
 	int	21h
 ; Comunicate system size to the main format program
-	mov	word ptr DOS.FileSizeInBytes,DOS_SIZE				;an000; dms;get size of DOS
-	mov	word ptr DOS.FileSizeInBytes+2,00h				;an000; dms;
+	mov	word [dos.fileSizeInBytes],DOS_SIZE      ;an000; dms;get size of DOS
+	mov	word [dos.fileSizeInBytes+2],00h      ;an000; dms;
 
 	xor	dx,dx
 	mov	ax,DOS_SIZE
 	call	AddToSystemSize
 
-	mov	word ptr Bios.FileSizeInBytes,BIOS_SIZE 			;an000; dms;get size of BIOS
-	mov	word ptr Bios.FileSizeInBytes+2,00h				;an000; dms;
+	mov	word [bios.fileSizeInBytes],BIOS_SIZE      ;an000; dms;get size of BIOS
+	mov	word [bios.fileSizeInBytes+2],00h      ;an000; dms;
 
 	xor	dx,dx
 	mov	ax,BIOS_SIZE
@@ -1320,21 +1360,21 @@ WriteBogusDos proc near
 	clc
 	return
 
-WriteBogusDos endp
+;WriteBogusDos endp
 
 ;-------------------------------------------------------------------------------
 
-ConvertToOldDirectoryFormat proc near
+ConvertToOldDirectoryFormat:
 
 ;
 ; convert to 1.1 directory
 ;
-	mov	al,drive			; Get 1st sector of directory
+	mov	al,[drive] ; Get 1st sector of directory
 	mov	cx,1				; 1.1 directory always starts on
 	mov	dx,3				; sector 3
-	lea	bx,scratchBuffer
+	lea	bx,[scratchBuffer]
 ;Root Directory always in 1st 32mb of partition
-	mov	Read_Write_Relative.Start_Sector_High,0 ;		       ;AN000;
+	mov	[Read_Write_Relative.Start_Sector_High],0 ;		       ;AN000;
 	call	Read_Disk			;				;AC000;
 	jnc	DirectoryRead
 	Message msgDirectoryReadError		;				;AC000;
@@ -1343,19 +1383,19 @@ ConvertToOldDirectoryFormat proc near
 DirectoryRead:
 
 ; fix attribute of ibmbio and ibmdos
-	lea	bx,scratchBuffer
-	mov	byte ptr [bx].dir_attr, ATTR_HIDDEN or ATTR_SYSTEM
-	add	bx, size dir_entry
-	mov	byte ptr [bx].dir_attr, ATTR_HIDDEN or ATTR_SYSTEM
+	lea	bx,[scratchBuffer]
+	mov	byte [bx+dir_entry.dir_attr], attr_hidden or attr_system
+	add	bx, sizeof.dir_entry
+	mov	byte [bx+dir_entry.dir_attr], attr_hidden or attr_system
 
 wrtdir:
 	mov	al,[drive]			; write out the directory
 	cbw
 	mov	cx,1
 	mov	dx,3
-	lea	bx,scratchBuffer
+	lea	bx,[scratchBuffer]
 ;Root Directory always in 1st 32mb of partition
-	mov	Read_Write_Relative.Start_Sector_High,0 ;		       ;AN000;
+	mov	[Read_Write_Relative.Start_Sector_High],0 ;		       ;AN000;
 	call	Write_Disk			;				;AC000;
 	jnc	DirectoryWritten
 	Message msgDirectoryWriteError		;				;AC000;
@@ -1363,19 +1403,19 @@ wrtdir:
 	ret
 DirectoryWritten:
 
-	test	switchmap, SWITCH_S		; Was system requested?
+	test	word [SWITCHMAP], SWITCH_S ; Was system requested?
 	retnz					; yes, don't write old boot sector
-	mov	al,drive
+	mov	al,[drive]
 	cbw
-	mov	bx,offset boot2 		; no,  write old boot sector
-	cmp	deviceParameters.DP_BPB.BPB_Heads, 1
+	mov	bx,boot2          ; no,  write old boot sector
+	cmp	word [deviceParameters.DP_BPB+A_BPB.BPB_HEADS], 1
 	je	bootset8
-	mov	word ptr [bx+3],0103h		; start address for double sided drives
+	mov	word [bx+3],0103h      ; start address for double sided drives
 bootset8:
 	mov	cx,1
 	xor	dx,dx
 ;Boot record in 1st 32mb of partition
-	mov	Read_Write_Relative.Start_Sector_High,0 ;		       ;AN000;
+	mov	[Read_Write_Relative.Start_Sector_High],0 ;		       ;AN000;
 	call	Write_Disk			;				;AC000;
 	retnc
 
@@ -1383,29 +1423,12 @@ bootset8:
 	stc
 	ret
 
-ConvertToOldDirectoryFormat endp
+;ConvertToOldDirectoryFormat endp
 
 ;-------------------------------------------------------------------------------
 
-a_PartitionTableEntry struc
-BootInd db	?
-BegHead db	?
-BegSector db	?
-BegCylinder db	?
-SysInd	db	?
-EndHead db	?
-EndSector db	?
-EndCylinder db	?
-RelSec	dd	?
-CSec	dd	?
-a_PartitionTableEntry ends
 
 ; structure of the IBM hard disk boot sector:
-IBMBoot STRUC
-	db	512 - (4*size a_PartitionTableEntry + 2) dup(?)
-PartitionTable db 4*size a_PartitionTableEntry dup(?)
-Signature dw	?
-IBMBoot ENDS
 
 
 ;*****************************************************************************
@@ -1475,78 +1498,78 @@ Procedure SetPartitionTable			;				;AN000;
 	xor	ax, ax				;Head				;AC000;
 	xor	bx, bx				;Cylinder			;AC000;
 	xor	cx, cx				;Sector 			;AC000;
-	lea	dx, boot2			;Never use 1.x boot on hardfile,;     ;
+	lea	dx,[boot2]  ;Never use 1.x boot on hardfile,;     ;
 	call	ReadSector			;this will use space as buffer	;     ;
-;	$IF	NC				;If read okay			;AN000;
-	JC $$IF70
-	   cmp	   Boot2.Boot_Signature,Boot_ID ;				;AC000;
-;	   $IF	   E				;Does signature match?		;AN000;
-	   JNE $$IF71
-	      lea     bx, boot2.PartitionTable	;Yes, point at partition table	;AN000;
-;	      $SEARCH				;Look for DOS partition 	;AN000;
-$$DO72:
-		 cmp	 [bx].sysind,FAT12_File_System ;			;AC000;
-;		 $IF	 NE,AND 		;				;AN000;
-		 JE $$IF73
-		 cmp	 [bx].sysind,FAT16_File_System ;		     ;AC000;
-;		 $IF	 NE,AND 		;				;AN000;
-		 JE $$IF73
-		 cmp	 [bx].sysind,New_File_System ;			  ;AC000;
-;		 $IF	 NE			;				;AN000;
-		 JE $$IF73
+;	IF$	NC				;If read okay			;AN000;
+	JC IF70$$M
+	   cmp	   word [boot2+BOOT_SIGNATURE],Boot_ID ;				;AC000;
+;	   IF$	   E				;Does signature match?		;AN000;
+	   JNE IF71$$M
+	      lea     bx, [boot2+IBMBoot.PartitionTable] ;Yes, point at partition table	;AN000;
+;	      SEARCH$				;Look for DOS partition 	;AN000;
+DO72$$M:
+		 cmp	 [bx+a_PartitionTableEntry.SysInd],FAT12_File_System ;			;AC000;
+;		 IF$	 NE,AND 		;				;AN000;
+		 JE IF73$$M
+		 cmp	 [bx+a_PartitionTableEntry.SysInd],FAT16_File_System ;		     ;AC000;
+;		 IF$	 NE,AND 		;				;AN000;
+		 JE IF73$$M
+		 cmp	 [bx+a_PartitionTableEntry.SysInd],New_File_System ;			  ;AC000;
+;		 IF$	 NE			;				;AN000;
+		 JE IF73$$M
 		    stc 			;We didn't find partition       ;AN000;
-;		 $ELSE				;				;AN000;
-		 JMP SHORT $$EN73
-$$IF73:
+;		 ELSE$				;				;AN000;
+		 JMP SHORT EN73$$M
+IF73$$M:
 		    clc 			;Indicate found partition	;AN000;
-;		 $ENDIF 			;				;AN000;
-$$EN73:
-;	      $EXITIF NC			;Get correct id for it		;AN000;
-	      JC $$IF72
+;		 ENDIF$ 			;				;AN000;
+EN73$$M:
+;	      EXITIF$ NC			;Get correct id for it		;AN000;
+	      JC IF72$$M
 		 CALL	 Determine_Partition_Type ;				;AN000;
 		 mov	 ax, 0			;Head				;     ;
 		 mov	 bx, 0			;Cylinder			;     ;
 		 mov	 cx, 0			;Sector 			;     ;
-		 lea	 dx, boot2		;				;     ;
+		 lea	 dx,[boot2] ;				;     ;
 		 call	 WriteSector		;Write out partition table	;     ;
-;		 $IF	 C			;Error writing boot record	;AN000;
-		 JNC $$IF77
-		    MESSAGE msgPartitionTableWriteError ;			;AC000;
+;		 IF$	 C			;Error writing boot record	;AN000;
+		 JNC IF77$$M
+		    Message msgPartitionTableWriteError ;			;AC000;
 		    stc 			;Set CY to indicate error	;     ;
-;		 $ELSE				;				;AN000;
-		 JMP SHORT $$EN77
-$$IF77:
+;		 ELSE$				;				;AN000;
+		 JMP SHORT EN77$$M
+IF77$$M:
 		    clc 			;No error means no CY		;     ;
-;		 $ENDIF 			;				;AN000;
-$$EN77:
-;	      $ORELSE				;				;AN000;
-	      JMP SHORT $$SR72
-$$IF72:
-		 add	 bx,size a_PartitionTableEntry ;			;     ;
-		 cmp	 bx,(offset Boot2.PartitionTable)+4*size a_PartitionTableEntry ;     ;
-;	      $ENDLOOP				;Checked all 4 partition entries;AN000;
-	      JMP SHORT $$DO72
-		 MESSAGE msgBadPartitionTable	;Tell user bad table		;AC000;
+;		 ENDIF$ 			;				;AN000;
+EN77$$M:
+;	      ORELSE$				;				;AN000;
+	      JMP SHORT SR72$$M
+IF72$$M:
+		 add	 bx,sizeof.a_PartitionTableEntry ;			;     ;
+		 cmp	 bx,(boot2+IBMBoot.PartitionTable)+4*sizeof.a_PartitionTableEntry ;     ;
+;	      ENDLOOP$				;Checked all 4 partition entries;AN000;
+	      JMP SHORT DO72$$M
+		 Message msgbadpartitiontable	;Tell user bad table		;AC000;
 		 stc				;Set CY for exit		;     ;
-;	      $ENDSRCH				;				;AN000;
-$$SR72:
-;	   $ELSE				;Invalid boot record		;AN000;
-	   JMP SHORT $$EN71
-$$IF71:
-	      MESSAGE msgBadPartitionTable	;				;AC000;
+;	      ENDSRCH$				;				;AN000;
+SR72$$M:
+;	   ELSE$				;Invalid boot record		;AN000;
+	   JMP SHORT EN71$$M
+IF71$$M:
+	      Message msgbadpartitiontable	;				;AC000;
 	      stc				;Set CY for error return	;     ;
-;	   $ENDIF				;				;AN000;
-$$EN71:
-;	$ELSE					;Couldn't read boot record      ;AN000;
-	JMP SHORT $$EN70
-$$IF70:
-	   MESSAGE msgPartitionTableReadError	;				;AC000;
+;	   ENDIF$				;				;AN000;
+EN71$$M:
+;	ELSE$					;Couldn't read boot record      ;AN000;
+	JMP SHORT EN70$$M
+IF70$$M:
+	   Message msgPartitionTableReadError	;				;AC000;
 	   stc					;Set CY for error return	;     ;
-;	$ENDIF					;				;AN000;
-$$EN70:
+;	ENDIF$					;				;AN000;
+EN70$$M:
 	ret					;				;     ;
 
-SetPartitionTable endp				;				;AN000;
+;SetPartitionTable endp				;				;AN000;
 
 ;*****************************************************************************
 ;Routine name: Determine_Partition_Type
@@ -1586,48 +1609,48 @@ SetPartitionTable endp				;				;AN000;
 
 Procedure Determine_Partition_Type						;AN000;
 
-	mov	dx,word ptr [bx].Csec+2 					;an000; dms;Get high word of sector count
+	mov	dx,word [bx+a_PartitionTableEntry.CSec+2] ;an000; dms;Get high word of sector count
 	cmp	dx,0								;AN000;    ;> 32Mb?
-;	$IF	NE								;AN000;    ;yes
-	JE $$IF87
-		mov	[BX].SysInd,New_File_System				;AN000;    ;type 6
-;	$ELSE									;AN000;
-	JMP SHORT $$EN87
-$$IF87:
+;	IF$	NE								;AN000;    ;yes
+	JE IF87$$M
+		mov	[BX+a_PartitionTableEntry.SysInd],New_File_System ;AN000;    ;type 6
+;	ELSE$									;AN000;
+	JMP SHORT EN87$$M
+IF87$$M:
 		call	Calc_Total_Sectors_For_Partition			;an000; dms;returns DX:AX total sectors
-		cmp	DeviceParameters.DP_BPB.BPB_HiddenSectors[+2],0 	;an000; dms;> 32Mb?
-;		$if	ne							;an000; dms;yes
-		JE $$IF89
-			mov	[bx].SysInd,New_File_System			;an000; dms; type 6
-;		$else								;an000; dms;
-		JMP SHORT $$EN89
-$$IF89:
+		cmp	word [deviceParameters.DP_BPB+A_BPB.BPB_HIDDENSECTORS++2],0 ;an000; dms;> 32Mb?
+;		if$	ne							;an000; dms;yes
+		JE IF89$$M
+			mov	[bx+a_PartitionTableEntry.SysInd],New_File_System ;an000; dms; type 6
+;		else$								;an000; dms;
+		JMP SHORT EN89$$M
+IF89$$M:
 			cmp	dx,0						;an000; dms; partition > 32 Mb?
-;			$if	ne						;an000; dms; yes
-			JE $$IF91
-				mov  [bx].SysInd,New_File_System		;an000; dms; type 6
-;			$else							;an000; dms; < 32 Mb partition
-			JMP SHORT $$EN91
-$$IF91:
-				cmp	fBigFat,True				;an000;    ;16 bit FAT
-;				$IF	E					;AC000;    ;yes
-				JNE $$IF93
-					mov	[BX].SysInd,FAT16_File_System	;an000;    ;type 4
-;				$ELSE						;an000;    ;12 bit FAT
-				JMP SHORT $$EN93
-$$IF93:
-					mov	[bx].SysInd,FAT12_File_System	;an000;    ;type 1
-;				$ENDIF						;AN000;
-$$EN93:
-;			$ENDIF							;an000;
-$$EN91:
-;		$ENDIF								;an000;
-$$EN89:
-;	$endif									;an000;
-$$EN87:
+;			if$	ne						;an000; dms; yes
+			JE IF91$$M
+				mov  [bx+a_PartitionTableEntry.SysInd],New_File_System ;an000; dms; type 6
+;			else$							;an000; dms; < 32 Mb partition
+			JMP SHORT EN91$$M
+IF91$$M:
+				cmp	byte [fBigFat],TRUE ;an000;    ;16 bit FAT
+;				IF$	E					;AC000;    ;yes
+				JNE IF93$$M
+					mov	[BX+a_PartitionTableEntry.SysInd],FAT16_File_System ;an000;    ;type 4
+;				ELSE$						;an000;    ;12 bit FAT
+				JMP SHORT EN93$$M
+IF93$$M:
+					mov	[bx+a_PartitionTableEntry.SysInd],FAT12_File_System ;an000;    ;type 1
+;				ENDIF$						;AN000;
+EN93$$M:
+;			ENDIF$							;an000;
+EN91$$M:
+;		ENDIF$								;an000;
+EN89$$M:
+;	endif$									;an000;
+EN87$$M:
 	ret									;an000;
 
-Determine_Partition_Type endp			;				;AN000;
+;Determine_Partition_Type endp			;				;AN000;
 
 
 ;=========================================================================
@@ -1642,25 +1665,25 @@ Determine_Partition_Type endp			;				;AN000;
 
 Procedure Calc_Total_Sectors_For_Partition					;an000; dms;
 
-	mov	ax,word ptr DeviceParameters.DP_BPB.BPB_HiddenSectors[+0]	;an000; dms; low word
-	mov	dx,word ptr DeviceParameters.DP_BPB.BPB_HiddenSectors[+2]	;an000; dms; high word
-	cmp	DeviceParameters.DP_BPB.BPB_TotalSectors,0			;an000; dms; extended BPB?
-;	$if	e								;an000; dms; yes
-	JNE $$IF99
-		add	ax,word ptr DeviceParameters.DP_BPB.BPB_BigTotalSectors[+0]   ;an000; dms; add in low word
+	mov	ax,word [deviceParameters.DP_BPB+A_BPB.BPB_HIDDENSECTORS++0] ;an000; dms; low word
+	mov	dx,word [deviceParameters.DP_BPB+A_BPB.BPB_HIDDENSECTORS++2] ;an000; dms; high word
+	cmp	word [deviceParameters.DP_BPB+A_BPB.BPB_TOTALSECTORS],0 ;an000; dms; extended BPB?
+;	if$	e								;an000; dms; yes
+	JNE IF99$$M
+		add	ax,word [deviceParameters.DP_BPB+A_BPB.BPB_BIGTOTALSECTORS++0] ;an000; dms; add in low word
 		adc	dx,0							;an000; dms; pick up carry if any
-		add	dx,word ptr DeviceParameters.DP_BPB.BPB_BigTotalSectors[+2]   ;an000; dms; add in high word
-;	$else									;an000; dms; standard BPB
-	JMP SHORT $$EN99
-$$IF99:
-		add	ax,word ptr DeviceParameters.DP_BPB.BPB_TotalSectors	;an000; dms; add in total sector count
+		add	dx,word [deviceParameters.DP_BPB+A_BPB.BPB_BIGTOTALSECTORS++2] ;an000; dms; add in high word
+;	else$									;an000; dms; standard BPB
+	JMP SHORT EN99$$M
+IF99$$M:
+		add	ax,word [deviceParameters.DP_BPB+A_BPB.BPB_TOTALSECTORS] ;an000; dms; add in total sector count
 		adc	dx,0							;an000; dms; pick up carry if any
-;	$endif									;an000; dms;
-$$EN99:
+;	endif$									;an000; dms;
+EN99$$M:
 
 	ret
 
-Calc_Total_Sectors_For_Partition	endp
+;Calc_Total_Sectors_For_Partition	endp
 
 
 ;-------------------------------------------------------------------------------
@@ -1673,14 +1696,14 @@ Calc_Total_Sectors_For_Partition	endp
 ;	cx - sector
 ;	dx - transfer address
 
-ReadSector proc near
+ReadSector:
 
-	mov	TrackReadWritePacket.TRWP_FirstSector, cx
+	mov	[trackReadWritePacket.TRWP_FIRSTSECTOR], cx
 	mov	cx,(RAWIO shl 8) or READ_TRACK
 	call	SectorIO
 	return
 
-ReadSector endp
+;ReadSector endp
 
 ;-------------------------------------------------------------------------------
 ; WriteSector:
@@ -1692,14 +1715,14 @@ ReadSector endp
 ;	cx - sector
 ;	dx - transfer address
 
-WriteSector proc near
+WriteSector:
 
-	mov	TrackReadWritePacket.TRWP_FirstSector, cx
+	mov	[trackReadWritePacket.TRWP_FIRSTSECTOR], cx
 	mov	cx,(RAWIO shl 8) or WRITE_TRACK
 	call	SectorIO
 	return
 
-WriteSector endp
+;WriteSector endp
 
 ;-------------------------------------------------------------------------------
 ; SectorIO:
@@ -1712,28 +1735,29 @@ WriteSector endp
 ;	   - (RAWIO shl 8) or WRITE_TRACK
 ;	dx - transfer address
 
-SectorIO proc	near
+SectorIO:
 
-	mov	TrackReadWritePacket.TRWP_Head, ax
-	mov	TrackReadWritePacket.TRWP_Cylinder, bx
-	mov	WORD PTR TrackReadWritePacket.TRWP_TransferAddress, dx
-	mov	WORD PTR TrackReadWritePacket.TRWP_TransferAddress + 2, ds
-	mov	TrackReadWritePacket.TRWP_SectorsToReadWrite, 1
+	mov	[trackReadWritePacket.TRWP_HEAD], ax
+	mov	[trackReadWritePacket.TRWP_CYLINDER], bx
+	mov	word [trackReadWritePacket.TRWP_TRANSFERADDRESS], dx
+	mov	word [trackReadWritePacket.TRWP_TRANSFERADDRESS+2], ds
+	mov	[trackReadWritePacket.TRWP_SECTORSTOREADWRITE], 1
 
-	mov	bl, drive
+	mov	bl, [drive]
 	inc	bl
-	mov	ax, (IOCTL shl 8) or GENERIC_IOCTL
-	lea	dx, trackReadWritePacket
+	mov	ax, (IOCtl shl 8) or GENERIC_IOCTL
+	lea	dx,[trackReadWritePacket]
 	int	21H
 	return
 
-SectorIO endp
+;SectorIO endp
 
 ;-------------------------------------------------------------------------------
 
-data	segment public	para	'DATA'
+end if
+if SEGSEL = S_DATA
 
-oldDrive db	?
+oldDrive rb      1
 
 FCBforVolumeIdSearch db 0ffH
 	db	5 dup(0)
@@ -1742,9 +1766,10 @@ FCBforVolumeIdSearch db 0ffH
 	db	"???????????"
 	db	40 DUP(0)
 
-data	ends
+end if
+if SEGSEL = S_CODE
 
-GetVolumeId proc near
+GetVolumeId:
 ; Input:
 ;    dl = drive
 ;    di = name buffer
@@ -1752,7 +1777,7 @@ GetVolumeId proc near
 ; Save current drive
 	mov	ah,19H
 	int	21H
-	mov	oldDrive, al
+	mov	[oldDrive], al
 
 ; Change current drive to the drive that has the volume id we want
 	mov	ah, 0eH
@@ -1760,13 +1785,13 @@ GetVolumeId proc near
 
 ; Search for the volume id
 	mov	ah, 11H
-	lea	dx, FCBforVolumeIdSearch
+	lea	dx,[FCBforVolumeIdSearch]
 	int	21H
 	push	ax
 
 ; Restore current drive
 	mov	ah, 0eH
-	mov	dl,oldDrive
+	mov	dl,[oldDrive]
 	int	21H
 
 ; Did the search succeed?
@@ -1796,17 +1821,19 @@ CopyVolumeId:
 	clc
 	ret
 
-GetVolumeId endp
+;GetVolumeId endp
 
-data	segment public	para	'DATA'
+end if
+if SEGSEL = S_DATA
 oldVolumeId db	11 dup(0)
-data	ends
+end if
+if SEGSEL = S_CODE
 
-CheckVolumeId proc near
+CheckVolumeId:
 
 ; Get the volume id that's on the disk
-	lea	di, oldVolumeId
-	mov	dl, drive
+	lea	di,[oldVolumeId]
+	mov	dl, [drive]
 	call	GetVolumeId
 	jnc	Ask_User			;Did we find one?
 	clc					;No, return with no error
@@ -1819,13 +1846,13 @@ Ask_User:
 	Message msgWhatIsVolumeId?		;				;AC000;
 						;lea	 dx, ptr_msgWhatIsVolumeId?
 						;call	 std_printf
-	call	user_string
+	call	USER_STRING
 	call	crlf
 
 ; If the user just pressed ENTER, then there must be no label
-	cmp	inbuff+1, 0
+	cmp	[INBUFF+1], 0
 	jne	CompareVolumeIds
-	cmp	oldVolumeId, 0
+	cmp	byte [oldVolumeId], 0
 	jne	BadVolumeId
 	ret
 
@@ -1836,101 +1863,101 @@ CompareVolumeIds:
 	pop	es
 	mov	cx, Label_Length		;AC000;
 	xor	bx,bx
-	mov	bl, inbuff + 1
-	lea	di, inbuff + 2
+	mov	bl, [INBUFF + 1]
+	lea	di, [INBUFF + 2]
 	add	di, bx
 	mov	al, ' '
 	rep	stosb
 ; Make the reply all uppercase
-	mov	byte ptr Inbuff+2+Label_Length,ASCIIZ_End ;Make string ASCIIZ	 ;AN000;
-	mov	dx, offset inbuff + 2		;Start of buffer		;AC000;
+	mov	byte [INBUFF+2+Label_Length],Asciiz_End   ;Make string ASCIIZ	 ;AN000;
+	mov	dx, INBUFF + 2         ;Start of buffer		;AC000;
 	mov	al,22h				;Capitalize asciiz		;AC000;
 	DOS_Call GetExtCntry			;Do it				;AC000;
 
 ; Now compare what the user specified with what is really out there
 	mov	cx, Label_Length		;				;AC000;
-	lea	si, inbuff + 2
-	lea	di, oldVolumeId
+	lea	si, [INBUFF + 2]
+	lea	di,[oldVolumeId]
 	repe	cmpsb
 	jne	BadVolumeId
 	ret
 
 BadVolumeId:
-	Message msgBadVolumeID			;				;AC000;
+	Message msgBadVolumeId			;				;AC000;
 	stc
 	ret
 
-CheckVolumeId endp
+;CheckVolumeId endp
 
 
-Check_Switch_8_B	proc	near
+Check_Switch_8_B:
 
-	   test    SwitchMap, SWITCH_B		;/8/B <> /V because		;AC007;
-;	   $IF	   NZ,AND			; old directory type		;AC007;
-	   JZ $$IF102
-	   test    SwitchMap, Switch_8		; used which didn't support     ;AC007;
-;	   $IF	   NZ,AND			; volume labels.		;AC007;
-	   JZ $$IF102
-	   test    SwitchMap, SWITCH_V		;				;AC007;
-;	   $IF	   NZ				;				;AC007;
-	   JZ $$IF102
+	   test    word [SWITCHMAP], SWITCH_B ;/8/B <> /V because		;AC007;
+;	   IF$	   NZ,AND			; old directory type		;AC007;
+	   JZ IF102$$M
+	   test    word [SWITCHMAP], SWITCH_8 ; used which didn't support     ;AC007;
+;	   IF$	   NZ,AND			; volume labels.		;AC007;
+	   JZ IF102$$M
+	   test    word [SWITCHMAP], SWITCH_V ;				;AC007;
+;	   IF$	   NZ				;				;AC007;
+	   JZ IF102$$M
 	      Message msgIncompatibleParameters ;Tell user			;AC007;
-	      mov     Fatal_Error,Yes		;Bad stuff			;AC007;
-;	   $ELSE				;No problem so far		;AC007;
-	   JMP SHORT $$EN102
-$$IF102:
-	      test    SwitchMap, Switch_B	;Can't reserve space and        ;AC007;
-;	      $IF     NZ,AND			; install sys files at the	;AC007;
-	      JZ $$IF104
-	      test    SwitchMap, Switch_S	; same time.			;AC007;
-;	      $IF     NZ			; No /S/B			;AC007;
-	      JZ $$IF104
+	      mov     byte [Fatal_Error],YES ;Bad stuff			;AC007;
+;	   ELSE$				;No problem so far		;AC007;
+	   JMP SHORT EN102$$M
+IF102$$M:
+	      test    word [SWITCHMAP], SWITCH_B ;Can't reserve space and        ;AC007;
+;	      IF$     NZ,AND			; install sys files at the	;AC007;
+	      JZ IF104$$M
+	      test    word [SWITCHMAP], SWITCH_S ; same time.			;AC007;
+;	      IF$     NZ			; No /S/B			;AC007;
+	      JZ IF104$$M
 		 Message msgIncompatibleParameters ;Tell user			;AC007;
-		 mov	 Fatal_Error,Yes	;Bad stuff			;AC007;
-;	       $ELSE				 ;Still okay			 ;AC007;
-	       JMP SHORT $$EN104
-$$IF104:
-		  test	  SwitchMap,Switch_1	 ;/1/8/4 not okay with /N/T	 ;AC007;
-;		  $IF	  NZ,OR 		 ;				 ;AC007;
-		  JNZ $$LL106
-		  test	  SwitchMap,Switch_8	 ;				 ;AC007;
-;		  $IF	  NZ,OR 		 ;				 ;AC007;
-		  JNZ $$LL106
-		  test	  SwitchMap,Switch_4	 ;				 ;AC007;
-;		  $IF	  NZ			 ;				 ;AC007;
-		  JZ $$IF106
-$$LL106:
-		     test    SwitchMap,(Switch_T or Switch_N) ; 		 ;AC007;
-;		     $IF     NZ 		 ;Found /T/N <> /1/8		 ;AC007;
-		     JZ $$IF107
+		 mov	 byte [Fatal_Error],YES ;Bad stuff			;AC007;
+;	       ELSE$				 ;Still okay			 ;AC007;
+	       JMP SHORT EN104$$M
+IF104$$M:
+		  test	  word [SWITCHMAP],SWITCH_1 ;/1/8/4 not okay with /N/T	 ;AC007;
+;		  IF$	  NZ,OR 		 ;				 ;AC007;
+		  JNZ LL106$$M
+		  test	  word [SWITCHMAP],SWITCH_8 ;				 ;AC007;
+;		  IF$	  NZ,OR 		 ;				 ;AC007;
+		  JNZ LL106$$M
+		  test	  word [SWITCHMAP],SWITCH_4 ;				 ;AC007;
+;		  IF$	  NZ			 ;				 ;AC007;
+		  JZ IF106$$M
+LL106$$M:
+		     test    word [SWITCHMAP],(SWITCH_T or SWITCH_N) ; 		 ;AC007;
+;		     IF$     NZ 		 ;Found /T/N <> /1/8		 ;AC007;
+		     JZ IF107$$M
 			Message msgIncompatibleParameters ;Tell user		 ;AC007;
-			mov	Fatal_Error,Yes  ;Bad stuff			 ;AC007;
-;		     $ELSE			 ;				 ;ac007;
-		     JMP SHORT $$EN107
-$$IF107:
-			test	SwitchMap,Switch_V				 ;ac007;
-;			$IF	NZ,AND						 ;ac007;
-			JZ $$IF109
-			test	SwitchMap,Switch_8				 ;ac007;
-;			$IF	NZ						 ;ac007;
-			JZ $$IF109
+			mov	byte [Fatal_Error],YES ;Bad stuff			 ;AC007;
+;		     ELSE$			 ;				 ;ac007;
+		     JMP SHORT EN107$$M
+IF107$$M:
+			test	word [SWITCHMAP],SWITCH_V ;ac007;
+;			IF$	NZ,AND						 ;ac007;
+			JZ IF109$$M
+			test	word [SWITCHMAP],SWITCH_8 ;ac007;
+;			IF$	NZ						 ;ac007;
+			JZ IF109$$M
 				Message msgIncompatibleParameters		 ;ac007;
-				mov	Fatal_Error,Yes 			 ;ac007;
-;			$ENDIF							 ;ac007;
-$$IF109:
-;		     $ENDIF			 ;				 ;AC007;
-$$EN107:
-;		  $ENDIF			 ;				 ;AC007;
-$$IF106:
-;	       $ENDIF				 ;				 ;AC007;
-$$EN104:
-;	    $ENDIF				 ;				 ;AC007;
-$$EN102:
+				mov	byte [Fatal_Error],YES ;ac007;
+;			ENDIF$							 ;ac007;
+IF109$$M:
+;		     ENDIF$			 ;				 ;AC007;
+EN107$$M:
+;		  ENDIF$			 ;				 ;AC007;
+IF106$$M:
+;	       ENDIF$				 ;				 ;AC007;
+EN104$$M:
+;	    ENDIF$				 ;				 ;AC007;
+EN102$$M:
 	    ret
 
-Check_Switch_8_B	endp
+;Check_Switch_8_B	endp
 
 
-code	ends
-	end
+end if
+;	end
 

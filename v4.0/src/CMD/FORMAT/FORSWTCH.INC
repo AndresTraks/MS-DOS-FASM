@@ -19,7 +19,7 @@ IF ShipDisk
 
  SWITCH_Z	EQU	4000h							;an000; dms;1 sector/cluster switch
 
-ENDIF
+end if
 
 ;
 ; The following is a list of equates to define each IBM defined diskette size

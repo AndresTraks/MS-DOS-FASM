@@ -1,3 +1,23 @@
+STRUC Message_Table Entry1_=0, Entry2_=0, Entry3_=0, Entry4_=0, Entry5_=0, Entry6_=0, Entry7_=0
+{
+                                                ;
+.Entry1  dw      Entry1_ ;                               ;AN000;
+.Entry2  dw      Entry2_ ;                               ;AN000;
+.Entry3  dw      Entry3_ ;                               ;AN000;
+.Entry4  dw      Entry4_ ;                               ;AN000;
+.Entry5  db      Entry5_ ;                               ;AN000;
+.Entry6  db      Entry6_ ;                               ;AN000;
+.Entry7  dw      Entry7_ ;                               ;AN000;
+                                                ;
+}
+match =Message_Table_LAID_OUT, Message_Table_LAID_OUT
+{
+    Message_Table_LAID_OUT equ 1
+    virtual at 0
+      Message_Table Message_Table
+      sizeof.Message_Table = $ - Message_Table
+    end virtual
+}
 ;
 
 ;*****************************************************************************
@@ -22,28 +42,28 @@
 
 .SEQ                                            ;
 
-PSP     segment public  para    'DUMMY'
-PSP     ends
+if SEGSEL = S_PSP
+end if
 
-data    segment public para 'DATA'              ;
-Public Test_Data_Start
-Test_Data_Start label byte
-data    ends                                    ;
+if SEGSEL = S_DATA;
+;Public Test_Data_Start
+label Test_Data_Start byte
+end if ;
 
-stack   segment para stack
+if SEGSEL = S_STACK
         db      62 dup ("-Stack!-")      ; (362-80h) is the additionsal IBM ROM
-        assume ss:stack
-stack   ends
+;        assume ss:stack
+end if
 
 
-code    segment public para 'CODE'              ;
-        assume  cs:code,ds:data                 ;
-code    ends
+if SEGSEL = S_CODE;
+;        assume  cs:code,ds:data                 ;
+end if
 
-End_Of_Memory    segment public para 'BUFFERS'  ;
-Public  Test_End
-Test_End        label   byte
-End_Of_Memory    ends                           ;
+if SEGSEL = S_END_OF_MEMORY;
+;Public  Test_End
+label Test_End byte
+end if ;
 
 
 ;
@@ -53,10 +73,10 @@ End_Of_Memory    ends                           ;
 ;
 
 .xlist
-INCLUDE FORCHNG.INC
-INCLUDE FOREQU.INC
-INCLUDE FORMSG.INC
-INCLUDE SYSMSG.INC
+include 'FORCHNG.INC'
+include 'FOREQU.INC'
+include 'FORMSG.INC'
+include 'SYSMSG.INC'
 .list
 
 ;
@@ -69,16 +89,16 @@ INCLUDE SYSMSG.INC
 MSG_UTILNAME  <FORMAT>
 
 
-data    segment public  para    'DATA'
-Msg_Services    <MSGDATA>
-data    ends
+if SEGSEL = S_DATA
+MSG_SERVICES    <MSGDATA>
+end if
 
-code    segment public  para    'CODE'
-Msg_Services    <NEARmsg>
-Msg_Services    <LOADmsg>
-Msg_Services    <DISPLAYmsg,CHARmsg,NUMmsg>
-Msg_Services    <FORMAT.CLA,FORMAT.CLB,FORMAT.CLC,FORMAT.CL1,FORMAT.CL2,FORMAT.CTL>
-code    ends
+if SEGSEL = S_CODE
+MSG_SERVICES    <NEARmsg>
+MSG_SERVICES    <LOADmsg>
+MSG_SERVICES    <DISPLAYmsg,CHARmsg,NUMmsg>
+MSG_SERVICES    <FORMAT.CLA,FORMAT.CLB,FORMAT.CLC,FORMAT.CL1,FORMAT.CL2,FORMAT.CTL>
+end if
 
 ;
 ;*****************************************************************************
@@ -86,8 +106,8 @@ code    ends
 ;*****************************************************************************
 ;
 
-        Public  SysDispMsg
-        Public  SysLoadMsg
+;        Public  SysDispMsg
+;        Public  SysLoadMsg
 
 
 ;
@@ -97,21 +117,10 @@ code    ends
 ;
 
 
-Message_Table struc                             ;                               ;AN000;
-                                                ;
-Entry1  dw      0                               ;                               ;AN000;
-Entry2  dw      0                               ;                               ;AN000;
-Entry3  dw      0                               ;                               ;AN000;
-Entry4  dw      0                               ;                               ;AN000;
-Entry5  db      0                               ;                               ;AN000;
-Entry6  db      0                               ;                               ;AN000;
-Entry7  dw      0                               ;                               ;AN000;
-                                                ;
-Message_Table ends                              ;                               ;AN000;
 
 
 
-code    segment public  para    'CODE'
+if SEGSEL = S_CODE
 ;*****************************************************************************
 ;Routine name&gml Display_Interface
 ;*****************************************************************************
@@ -141,8 +150,8 @@ code    segment public  para    'CODE'
 ;       ret
 ;*****************************************************************************
 
-Public  Display_Interface
-Display_Interface   proc                        ;                               ;AN000;
+;Public  Display_Interface
+Display_Interface:                              ;                               ;AN000;
 
         push    ds                              ;                               ;AN000;
         push    ax                              ;Save registers                 ;AN000;
@@ -152,16 +161,16 @@ Display_Interface   proc                        ;                               
         push    si                              ; "  "    "  "                  ;AN000;
         push    di                              ; "  "    "  "                  ;AN000;
         mov     di,dx                           ;Change pointer to table        ;AN000;
-        mov     dx,data                         ;Point to data segment
+        mov     dx,data_                         ;Point to data segment
         mov     ds,dx                           ;
-        mov     ax,[di].Entry1                  ;Message number                 ;AN000;
-        mov     bx,[di].Entry2                  ;Handle                         ;AN000;
-        mov     si,[di].Entry3                  ;Sublist                        ;AN000;
-        mov     cx,[di].Entry4                  ;Count                          ;AN000;
-        mov     dh,[di].Entry5                  ;Class                          ;AN000;
-        mov     dl,[di].Entry6                  ;Function                       ;AN000;
-        mov     di,[di].Entry7                  ;Input                          ;AN000;
-        call    SysDispMsg                      ;Display the message            ;AN000;
+        mov     ax,[di+Message_Table.Entry1]    ;Message number                 ;AN000;
+        mov     bx,[di+Message_Table.Entry2]    ;Handle                         ;AN000;
+        mov     si,[di+Message_Table.Entry3]    ;Sublist                        ;AN000;
+        mov     cx,[di+Message_Table.Entry4]    ;Count                          ;AN000;
+        mov     dh,[di+Message_Table.Entry5]    ;Class                          ;AN000;
+        mov     dl,[di+Message_Table.Entry6]    ;Function                       ;AN000;
+        mov     di,[di+Message_Table.Entry7]    ;Input                          ;AN000;
+        call    SYSDISPMSG                      ;Display the message            ;AN000;
         pop     di                              ;Restore registers              ;AN000;
         pop     si                              ; "  "    "  "                  ;AN000;
         pop     dx                              ; "  "    "  "                  ;AN000;
@@ -171,7 +180,7 @@ Display_Interface   proc                        ;                               
         pop     ds                              ;                               ;AN000;
         ret                                     ;All done                       ;AN000;
 
-Display_Interface      endp                     ;                               ;AN000;
-code    ends
-        end
+;Display_Interface      endp                     ;                               ;AN000;
+end if
+;        end
 
