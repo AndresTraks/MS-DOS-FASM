@@ -183,6 +183,33 @@ def modules(*where):
     return names
 
 
+INCLUDED = re.compile(r"(?im)^[ \t]*INCLUDE[ \t]+([A-Za-z0-9_.$@?]+)")
+
+
+def headers(names):
+    """The files under src/INC those modules read, and the ones those read in
+    their turn.
+
+    Not everything under src/INC is a header: CONST2.ASM and MS_DATA.ASM are
+    COMMAND.COM's own data, and the variables they declare are COMMAND's and
+    no one else's.  A utility that never reads them must not have its CALL
+    INBUF read as a call through COMMAND's input buffer.
+    """
+    inc = {os.path.basename(p).upper(): p for p in modules("src/INC")}
+    want, seen, pending = set(), set(), list(names)
+    while pending:
+        rel = pending.pop()
+        if rel in seen:
+            continue
+        seen.add(rel)
+        for name in INCLUDED.findall(origin(os.path.join("v4.0", rel)) or ""):
+            here = inc.get(name.upper())
+            if here and here not in want:
+                want.add(here)
+                pending.append(here)
+    return sorted(want)
+
+
 def utilities():
     """The utilities assemble.sh builds, each its own program."""
     text = open(os.path.join(HERE, "assemble.sh")).read()
@@ -237,7 +264,8 @@ def main():
     # variables are its own, and two of them may well name one the same.
     groups = [modules("src/DOS", "src/BIOS", "src/BOOT", "src/INC")]
     for u in utilities():
-        groups.append(modules("src/CMD/%s" % u) + modules("src/INC"))
+        mine = modules("src/CMD/%s" % u)
+        groups.append(mine + headers(mine))
     total = lengths = 0
     for names in groups:
         t, l = check(names)

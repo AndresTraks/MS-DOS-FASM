@@ -53,20 +53,23 @@ SAME = {
     "XLAT": {"XLAT", "XLATB"},
     "RET": {"RET", "RETF", "RETN"},
     "EVEN": {"ALIGN"},
-    "ENDIF": {"END"},               # end if
-    "IFDEF": {"MATCH"},
-    "IFNDEF": {"MATCH"},
-    "IF1": {"MATCH", "IF"},
-    "IF2": {"MATCH", "IF"},
+    "ENDIF": {"END", None},         # end if, or the block was dropped
+    # IFDEF became either a MATCH on the name or fasm's own IF DEFINED
+    "IFDEF": {"MATCH", "IF"},
+    "IFNDEF": {"MATCH", "IF"},
+    # a block that spoke to the listing and to nothing else is dropped
+    "IF1": {"MATCH", "IF", None},
+    "IF2": {"MATCH", "IF", None},
     "IFE": {"IF"},
     "IFIDN": {"MATCH"},
     "IFNB": {"MATCH"},
     "IFB": {"MATCH"},
     "ELSE": {"ELSE"},
     "ORG": {"ORG", "TIMES", "STORE", "VIRTUAL"},
-    "DB": {"DB", "TIMES"},
-    "DW": {"DW", "TIMES"},
-    "DD": {"DD", "DW", "TIMES"},    # a far pointer becomes two words
+    # storage with nothing in it -- DB ? and DB n DUP(?) -- is reserved
+    "DB": {"DB", "TIMES", "RB"},
+    "DW": {"DW", "TIMES", "RW"},
+    "DD": {"DD", "DW", "TIMES", "RD"},   # a far pointer becomes two words
     "PROC": {"PROC", None},         # NAME PROC became NAME:
     "ENDP": {None},
     "LABEL": {"LABEL", None},       # NAME LABEL BYTE became NAME:
@@ -114,8 +117,9 @@ def mnemonic(code):
     # "NAME DB 0", "NAME PROC NEAR", "NAME EQU x": the second word is the one
     m2 = WORD.match(rest.lstrip()) if rest.strip() else None
     second = m2.group(0).upper() if m2 else None
-    if second in ("DB", "DW", "DD", "DQ", "DT", "PROC", "ENDP", "EQU", "LABEL",
-                  "STRUC", "ENDS", "SEGMENT", "GROUP", "MACRO", "RECORD"):
+    if second in ("DB", "DW", "DD", "DQ", "DT", "RB", "RW", "RD", "RQ",
+                  "PROC", "ENDP", "EQU", "LABEL", "STRUC", "ENDS", "SEGMENT",
+                  "GROUP", "MACRO", "RECORD"):
         return second
     if first in ("REP", "REPE", "REPNE", "REPZ", "REPNZ", "LOCK") and second:
         return second
