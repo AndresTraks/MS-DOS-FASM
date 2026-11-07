@@ -586,13 +586,13 @@ Chk_DBCS:          ;AC000;D
        mov  ax,GET_DBCS_ENV	   ;AC000;D GET DBCS EV call
        INT  21H 		   ;AC000;D ds:si points to the dbcs vector
 ;       ASSUME ds:NOTHING	   ;AN000;K that function clobbered old DS
-       mov  [DBCSev_Off],si  ;AC000;D remem where dbcs vector is so next
-       mov  [DBCSev_Seg],ds  ;AC000;D time don't have to look for it
+       mov  [ss:DBCSev_Off],si  ;AC000;D remem where dbcs vector is so next
+       mov  [ss:DBCSev_Seg],ds  ;AC000;D time don't have to look for it
        pop  ax			   ;AC000;D
 ;  $endif			   ;AN000;K
 IF25$$:
-   mov	si,[DBCSev_Off]   ;AC000;D set DS:SI to point to
-   mov	ds,[DBCSev_Seg]   ;AC000;D  the dbcs vector
+   mov	si,[ss:DBCSev_Off]   ;AC000;D set DS:SI to point to
+   mov	ds,[ss:DBCSev_Seg]   ;AC000;D  the dbcs vector
 ;  $search			   ;AN000;K
 DO27$$:
        cmp  word [si],ZERO        ;AC000;D vec ends with nul terminator entry
@@ -604,7 +604,7 @@ DO27$$:
        cmp  al,[si+1]		   ;AC000;D look at HIGH value of vector
 ;  $exitif na			   ;AN000;K if this byte is still in range
    JA IF27$$
-       or   byte [Program_Flag],FOUND_DBCS ;AN000;K remember we found one of a pair
+       or   byte [ss:Program_Flag],FOUND_DBCS ;AN000;K remember we found one of a pair
        stc			   ;AC000;D set flag to say, found a DBCS char
 ;  $orelse			   ;AN000;K since char not in this vector
    JMP SHORT SR27$$

@@ -447,6 +447,16 @@ def utility_program(where, source):
         # groups laid down as two address spaces, and COMSEG.ASM names them.
         return top, mods, None, groups or groups_of(mods)
     m = re.search(r"(?i);?\s*ASSUME[^\n]*\bCS\s*:\s*(\w+)", text)
+    if not m:
+        # A link file that says nothing about the registers: the modules do.
+        # TREE's, COMP's and GRAFTABL's ASSUME CS:CSEG stands in the module,
+        # and without it every label was counted as belonging to no segment,
+        # which is a pass that looks at nothing.
+        for q in included(top, set()):
+            m = re.search(r"(?i);?\s*ASSUME[^\n]*\bCS\s*:\s*(\w+)",
+                          read(q))
+            if m:
+                break
     return top, [top], m.group(1).upper() if m else None, {}
 
 
