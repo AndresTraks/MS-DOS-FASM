@@ -221,3 +221,13 @@ utility GRAFTABL GRTABLNK GRAFTABL.COM
 # release links the sixteen and runs EXE2BIN over the result, which is the
 # flat image fasm writes here.
 utility MODE MODELNK MODE.COM
+
+# ASSIGN, two modules in one segment, code, and no group -- so the modules
+# are read once, the way GRAFTABL's are.  code begins where the load module
+# does, which for a .COM is the program's own prefix: ASSGMAIN names that
+# start ASSIGN_BASE, to measure from it what to keep, and the org 100H after
+# it is where DOS enters.  It hooks interrupt 21H with a handler that maps a
+# drive letter in whatever call is being made and hands the call on, and
+# keeps the whole of itself resident.  The release links the two and runs
+# EXE2BIN over the result, which is the flat image fasm writes here.
+utility ASSIGN ASSGLNK ASSIGN.COM

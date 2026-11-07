@@ -98,8 +98,13 @@ STRUCT = re.compile(r"(?i)^\s*(" + N + r")\s+(" + N + r")\s*$")
 # either is not harmless: SYSINIT1 reads the second half of the CDS text the
 # first way, and DskRead reads the device driver's status the second, and both
 # of those references went unexamined.
-REFERENCE = re.compile(r"\[(?:(cs|ds|es|ss):)?\s*(" + N + r")(?:\." + N + r")*"
-                       r"(?:\s*[-+][^\]]*)?\]", re.I)
+# Brackets, and whichever segment they say to go through -- a register, or
+# one of the names the message retriever gives a register.  What they name
+# is looked for name by name, because the one that is storage is not always
+# the first: ASSIGN jumps through systab[bx], which closes as
+# [cs:bx+systab] with the index written first.
+REFERENCE = re.compile(r"\[(?:(" + N + r"):)?([^\[\]]*)\]", re.I)
+INSIDE = re.compile(r"(?<![\w.@?$])(" + N + r")")
 # A reference through a register says nothing about where a variable lives.
 REGISTERS = {"AX", "BX", "CX", "DX", "SI", "DI", "BP", "SP",
              "AL", "BL", "CL", "DL", "AH", "BH", "CH", "DH"}
@@ -200,7 +205,20 @@ def kernel_labels(paths, default=None):
     where = {}
     for path in paths:
         stack = []
+        virtual = 0
         for _, _, line in stream(path):
+            # A VIRTUAL block names places the program does not lay down:
+            # the instance of a structure in one is there to be measured,
+            # and the name it is given is the structure's own.
+            code = line.split(";")[0]
+            if re.match(r"(?i)^\s*virtual\b", code):
+                virtual += 1
+                continue
+            if re.match(r"(?i)^\s*end\s+virtual\b", code):
+                virtual = max(0, virtual - 1)
+                continue
+            if virtual:
+                continue
             if segment_of(line, stack):
                 continue
             seg = next((s for s in reversed(stack) if s), None) or default
@@ -241,8 +259,20 @@ def bios_labels(where):
     out = {}
     for path, seg in where.items():
         for sub in included(path, set()):
+            virtual = 0
             for line in lines_of(sub):
                 code = line.split(";")[0]
+                # as in kernel_labels: a VIRTUAL block names nothing the
+                # program lays down, the instance of a structure in one
+                # being there to be measured
+                if re.match(r"(?i)^\s*virtual\b", code):
+                    virtual += 1
+                    continue
+                if re.match(r"(?i)^\s*end\s+virtual\b", code):
+                    virtual = max(0, virtual - 1)
+                    continue
+                if virtual:
+                    continue
                 m = (DEFINES.match(code) or DEFFASM.match(code)
                      or DEFLABEL.match(line))
                 if not m:
@@ -360,35 +390,60 @@ def scan(path, labels, groups, macros=None):
             continue
         for ref in REFERENCE.finditer(code):
             prefix = ref.group(1).upper() if ref.group(1) else None
-            label = ref.group(2).upper()
-            if label in REGISTERS or label not in labels:
+            # a segment named by anything but a register is one of the
+            # retriever's, which stands for whichever register it was given
+            if prefix and prefix not in ("CS", "DS", "ES", "SS"):
                 continue
-            seg = labels[label]
-
-            def reaches(r):
-                """Whether a register points where the label lives.
-
-                A register assumed to a group reaches every segment in it;
-                where the group's segments are not named, as in the kernel,
-                the group is all there is and reaches everything.
-                """
-                a = assume[r]
-                if a is None:
-                    return False
-                if a == seg:
-                    return True
-                return a in groups and (not groups[a] or seg in groups[a])
-
-            if prefix:
-                if not reaches(prefix):
-                    notes.append((where, n, label, seg, "%s: is %s" %
-                                  (prefix, assume[prefix] or "NOTHING"), line))
-            elif not reaches("DS"):
-                reach = [r for r in ("DS", "SS", "ES", "CS") if reaches(r)]
-                findings.append((where, n, label, seg,
-                                 "MASM would use %s:" % reach[0] if reach
-                                 else "nothing reaches it", line))
+            # the first name in the brackets that is storage: the ones after
+            # it are the structure a field belongs to and the field itself
+            # A reference through BP or SP goes to the stack segment, which
+            # is the default there the way DS is everywhere else: the
+            # kernel's DOSMES jumps through ESCFUNC[BP] with SS on the
+            # segment the table is in and no override.
+            through = prefix or ("SS" if re.search(
+                r"(?i)(?<![\w.@?$])(?:bp|sp)(?![\w@?$])", ref.group(2))
+                else None)
+            for inside in INSIDE.finditer(ref.group(2)):
+                label = inside.group(1).upper()
+                if label in REGISTERS or label not in labels:
+                    continue
+                judge(findings, notes, assume, groups,
+                      where, n, line, prefix, through, label, labels[label])
+                break
     return findings, notes
+
+
+def judge(findings, notes, assume, groups,
+          where, n, line, prefix, through, label, seg):
+    """One reference, against the ASSUMEs in force where it stands.
+
+    PREFIX is the override the source wrote, if it wrote one, and THROUGH
+    the register the reference goes through without one -- SS where BP or SP
+    is the index and DS everywhere else.
+    """
+    def reaches(r):
+        """Whether a register points where the label lives.
+
+        A register assumed to a group reaches every segment in it; where the
+        group's segments are not named, as in the kernel, the group is all
+        there is and reaches everything.
+        """
+        a = assume[r]
+        if a is None:
+            return False
+        if a == seg:
+            return True
+        return a in groups and (not groups[a] or seg in groups[a])
+
+    if prefix:
+        if not reaches(prefix):
+            notes.append((where, n, label, seg, "%s: is %s" %
+                          (prefix, assume[prefix] or "NOTHING"), line))
+    elif not reaches(through or "DS"):
+        reach = [r for r in ("DS", "SS", "ES", "CS") if reaches(r)]
+        findings.append((where, n, label, seg,
+                         "MASM would use %s:" % reach[0] if reach
+                         else "nothing reaches it", line))
 
 
 def report(title, paths, labels, groups):

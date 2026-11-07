@@ -311,6 +311,27 @@ UTILITIES = {
     # loader moves into the program's own prefix at 60H and leaves there.
     # The eight modules between are the character sets -- US, Multilingual,
     # Portuguese, Canadian French, Nordic -- and the parser.
+    # ASSIGN's two modules in the order the makefile links them, and the
+    # headers they read.  One segment, code, and no group, so the two are
+    # read once rather than once per segment -- the shape TREE, COMP and
+    # GRAFTABL have.  code begins where the load module does, which for a
+    # .COM is the program's own prefix: ASSGMAIN names that start
+    # ASSIGN_BASE and the org 100H after it is where DOS enters.
+    'ASSIGN': dict(
+        MODULES=('ASSGMAIN.ASM', 'ASSGPARM.ASM', 'ASSGPARM.INC',
+                 'ASSGMSG.INC'),
+        TAG={},
+        ONESEG=True,
+        SHARED=('SYSMSG.INC', 'SYSVAR.INC', 'CURDIR.INC', 'MULT.INC',
+                'PDB.INC', 'DOSMAC.INC', 'SYSCALL.INC', 'MSGSERV.ASM',
+                'MSGDCL.INC', 'PSDATA.INC', 'PARSE.ASM', 'DOSSYM.INC',
+                'DEVSYM.INC', 'ERROR.INC', 'VERSIONA.INC'),
+        # ASSGMAIN assumes CS on the one segment and nothing else: the
+        # handler it leaves resident is entered on an interrupt, with the
+        # interrupted program's DS, so what it reads of its own it reads
+        # through CS until the initialisation says otherwise.
+        START={'cs': 'CODE', 'ds': None, 'es': None, 'ss': None},
+    ),
     'GRAFTABL': dict(
         MODULES=('GRTABHAN.ASM', 'GRTABUS.ASM', 'GRTABML.ASM', 'GRTABPO.ASM',
                  'GRTABCF.ASM', 'GRTABNO.ASM', 'GRTABSM.ASM', 'GRTABPAR.ASM',
@@ -2307,9 +2328,19 @@ def overridden(code):
 
     def one(m):
         inner = m.group(1)
-        base = re.match(r"^(" + N + r")", inner)
-        return m.group(0) if not base else '[%s%s]' % (reach(base.group(1)),
-                                                       inner)
+        # brackets that say which register already reach where they say
+        if re.match(r"(?i)^\s*(?:cs|ds|es|ss)\s*:", inner):
+            return m.group(0)
+        # the name in the brackets that is storage, which is not always the
+        # first thing in them: ASSGMAIN jumps through systab[bx], where the
+        # index is written first by the time the brackets are closed, and
+        # MASM reached the table through the register its ASSUME put on the
+        # segment the table is in.
+        for name in re.findall(r"(?<![\w.@?$])(" + N + r")", inner):
+            want = reach(name)
+            if want:
+                return '[%s%s]' % (want, inner)
+        return m.group(0)
 
     return re.sub(r"\[([^\[\]]*)\]", one, code)
 
@@ -2422,6 +2453,9 @@ for stem in MODULES:
         text = text.replace(was, now, 1)
     out, infar, noted, measured = [], False, False, False
     opened = []
+    # the macro and REPT blocks open inside a module, which close in the
+    # order they were opened and with the same word
+    blocks = []
     cover[0] = dict(START)
     for line in text.split('\n'):
         assumed(code_of(line))
@@ -2437,12 +2471,50 @@ for stem in MODULES:
         m = MACRODEF.match(bare)
         if m:
             inmacro[0] = True
+            blocks.append('macro')
             out.append('macro %s %s' % (m.group(1), m.group(2).strip()))
             out.append('{')
             continue
-        if inmacro[0] and MACROEND.match(bare):
-            inmacro[0] = False
-            out.append('}' + (' ' + comment if comment else ''))
+        # MASM's REPT assembled what follows a given number of times and
+        # closed with ENDM like a macro; fasm's REPEAT closes with two words
+        # of its own and needs no braces, so it can stand inside a macro
+        # body as it is: ASSGMAIN's CallOperRange writes one entry of its
+        # table of calls for each call in a range.
+        m = re.match(r"(?i)^([ \t]*)REPT[ \t]+([^;]+?)[ \t]*$", bare)
+        # fasm has a REPT of its own, which takes the name of the counter
+        # after the count and the body in braces -- the rules above write
+        # one for an array of structures -- so a REPT with two words after
+        # it is already fasm's and stands.
+        if m and not re.match(r"^\S+[ \t]+" + N + r"$", m.group(2)):
+            blocks.append('rept')
+            out.append(pad('%srepeat %s' % (m.group(1), m.group(2)),
+                           was_len, comment))
+            continue
+        # MASM's IRP assembled what follows once for each of a list of
+        # arguments, and closed with ENDM like a macro; fasm's IRP takes the
+        # list the same way and the body in braces, which inside a macro are
+        # escaped once for each macro the braces stand in.
+        m = re.match(r"(?i)^([ \t]*)IRP[ \t]+(" + N + r")[ \t]*,[ \t]*"
+                     r"<?([^;>]*)>?[ \t]*$", bare)
+        if m:
+            deep = '\\' * len([b for b in blocks if b != 'rept'])
+            blocks.append('irp')
+            out.append(pad('%sirp %s, %s %s{'
+                           % (m.group(1), m.group(2), m.group(3).strip(),
+                              deep), was_len, comment))
+            continue
+        if blocks and MACROEND.match(bare):
+            what = blocks.pop()
+            if what == 'irp':
+                deep = '\\' * len([b for b in blocks if b != 'rept'])
+                out.append(pad(re.match(r"^[ \t]*", bare).group(0)
+                               + deep + '}', was_len, comment))
+            elif what == 'rept':
+                out.append(pad(re.match(r"^[ \t]*", bare).group(0)
+                               + 'end repeat', was_len, comment))
+            else:
+                inmacro[0] = False
+                out.append('}' + (' ' + comment if comment else ''))
             continue
 
         # MASM's IFDEF asked whether a name had been given a value, which
@@ -2458,6 +2530,14 @@ for stem in MODULES:
         if m:
             out.append(pad('%sif ~ defined %s' % (m.group(1), m.group(2)),
                            was_len, comment))
+            continue
+
+        # MASM's EVEN put the location counter on the next even address,
+        # filling what it skipped: ASSGMAIN wants its table of calls on one,
+        # the handler indexing it by a word.  fasm's ALIGN is the same thing.
+        m = re.match(r"(?i)^([ \t]*)EVEN[ \t]*$", bare)
+        if m:
+            out.append(pad('%salign 2' % m.group(1), was_len, comment))
             continue
 
         # MASM closed a conditional with one word and fasm with two

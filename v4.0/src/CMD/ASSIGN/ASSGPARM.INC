@@ -1,11 +1,11 @@
 
- ASS_PARMS	label  dword
+label ASS_PARMS dword
       dw	ASS_PARMSX
       db	1   ;list of extra delimiters
       db	3   ;0 length
       db	";+="
 
- ASS_PARMSX	label  byte
+label ASS_PARMSX byte
       db	0,1
 
 ;Min 0 - no drive or switch specified
@@ -16,26 +16,26 @@
       db	1	  ;# of switches
       dw	ASS_SW1   ;switch ptr
 
-  ASS_POS1	 label	word
+label ASS_POS1 word
        dw	 2010h	  ;Simple string,
 			   ;ignore colon, &
 			   ;repeat
 			   ;allowed
        dw	 0002h	   ;Cap result by
 			   ; character table
-       dw	 Result_Val   ;tbl
+       dw	 RESULT_VAL   ;tbl
        dw	 Res_CTLVAL ;value list
        db	 0	   ;no switch or
 			   ;keyword synonyms
        db	 0	   ;alternative keyword
 
- ASS_SW1	label  word
+label ASS_SW1 word
 		dw	  0	    ;20010h    ;Simple string,
 				    ;ignore colon & repeat
 				    ;allowed
 		dw	  0002h     ;Cap result by
 				    ;character table
-		dw	  Result_Valsw ;tbl
+		dw	  RESULT_VALSW ;tbl
 		dw	  0	       ; ;value list
 		db	  2	       ;switch or
 				       ;keyword synonyms
@@ -43,7 +43,7 @@
  SW_Syn2	db	  "/STA",0     ;alternate keyword
 
 
- Res_CTLVAL	label  word
+label Res_CTLVAL word
       db	3	 ;List of simple strings
       db	0	 ;not in range defn.
       db	0	 ;not in numeric defn.
@@ -127,86 +127,86 @@
 			 ;value returned
       dw	DRVZ_PTR ;string ptr
 
- DRVA_PTR      LABEL	  word
+label DRVA_PTR word
       db       "A",0
 
- DRVB_PTR      LABEL	  word
+label DRVB_PTR word
       db       "B",0
 
- DRVC_PTR      LABEL	  word
+label DRVC_PTR word
       db       "C",0
 
- DRVD_PTR      LABEL	  word
+label DRVD_PTR word
       db       "D",0
 
- DRVE_PTR      LABEL	  word
+label DRVE_PTR word
       db       "E",0
 
- DRVF_PTR      LABEL	  word
+label DRVF_PTR word
       db       "F",0
 
- DRVG_PTR      LABEL	  word
+label DRVG_PTR word
       db       "G",0
 
- DRVH_PTR      LABEL	  word
+label DRVH_PTR word
       db       "H",0
 
- DRVI_PTR      LABEL	  word
+label DRVI_PTR word
       db       "I",0
 
- DRVJ_PTR      LABEL	  word
+label DRVJ_PTR word
       db       "J",0
 
- DRVK_PTR      LABEL	  word
+label DRVK_PTR word
       db       "K",0
 
- DRVL_PTR      LABEL	  word
+label DRVL_PTR word
       db       "L",0
 
- DRVM_PTR      LABEL	  word
+label DRVM_PTR word
       db       "M",0
 
- DRVN_PTR      LABEL	  word
+label DRVN_PTR word
       db       "N",0
 
- DRVO_PTR      LABEL	  word
+label DRVO_PTR word
       db       "O",0
 
- DRVP_PTR      LABEL	  word
+label DRVP_PTR word
       db       "P",0
 
- DRVQ_PTR      LABEL	  word
+label DRVQ_PTR word
       db       "Q",0
 
- DRVR_PTR      LABEL	  word
+label DRVR_PTR word
       db       "R",0
 
- DRVS_PTR      LABEL	  word
+label DRVS_PTR word
       db       "S",0
 
- DRVT_PTR      LABEL	  word
+label DRVT_PTR word
       db       "T",0
 
- DRVU_PTR      LABEL	  word
+label DRVU_PTR word
       db       "U",0
 
- DRVV_PTR      LABEL	  word
+label DRVV_PTR word
       db       "V",0
 
- DRVW_PTR      LABEL	  word
+label DRVW_PTR word
       db       "W",0
 
- DRVX_PTR      LABEL	  word
+label DRVX_PTR word
       db       "X",0
 
- DRVY_PTR      LABEL	  word
+label DRVY_PTR word
       db       "Y",0
 
- DRVZ_PTR      LABEL	  word
+label DRVZ_PTR word
       db       "Z",0
 
- RESULT_VAL	label	word
- RESULT_VALSW	label	word
+label RESULT_VAL word
+label RESULT_VALSW word
 
    RES_TYPE  db        0       ;Result_type
    RES_ITAG  db        0       ;Matched
@@ -225,12 +225,12 @@
 ;	Sublist Definition Area
 ;=========================================================================
 
-Parse_Sublist	label	word
+label Parse_Sublist word
 
 		db	Sublist_Length	;sublist length 			;an002; dms;
 		db	Reserved	;reserved for future growth		;an002; dms;
-Parse_Sub_Off	dw	?		;offset of replaceable parm		;an002; dms;
-Parse_Sub_Seg	dw	?		;segment of replaceable parm		;an002; dms;
+Parse_Sub_Off	rw      1 ;offset of replaceable parm		;an002; dms;
+Parse_Sub_Seg	rw      1 ;segment of replaceable parm		;an002; dms;
 		db	0		;replaceable parm 0			;an002; dms;
 		db	Left_Align+Char_Field_ASCIIZ ;				;an002; dms;
 		db	40		;max width				;an002; dms;
