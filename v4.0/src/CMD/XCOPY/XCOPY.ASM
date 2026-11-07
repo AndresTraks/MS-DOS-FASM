@@ -346,7 +346,7 @@ end if
 
 
 ;******************************************************************************
-;DGROUP_	GROUP	DSEG,DSEG_INIT		;FOR CONVENIENT ADDRESSIBLITY OF
+;DGROUP	GROUP	DSEG,DSEG_INIT		;FOR CONVENIENT ADDRESSIBLITY OF
 					;DSEG_INIT in INIT routine
 ;******************************************************************************
 if SEGSEL = S_DSEG; DATA Segment
@@ -637,7 +637,7 @@ end if
 ;******************************************************************************
 
 if SEGSEL = S_CSEG
-;	ASSUME	CS:CSEG, DS:DGROUP_, SS:SSEG
+;	ASSUME	CS:CSEG, DS:DGROUP, SS:SSEG
 
 	MSG_SERVICES <LOADmsg,GETmsg,DISPLAYmsg,INPUTmsg,CHARmsg,NUMmsg> ;AN000;
 	MSG_SERVICES <XCOPY.CLA,XCOPY.CL1,XCOPY.CL2> ;AN000;
@@ -682,14 +682,14 @@ MAIN:
 	PUSH	AX			;AN000;PRESERVE FOR INIT DRV VALIDITY
 	MOV	BX,DGROUP_
 	MOV	ES,BX			;AN000;SET UP ADDRESS OF DSEG IN ES
-;	ASSUME	ES:DGROUP_		;AN000;
+;	ASSUME	ES:DGROUP		;AN000;
 	MOV	SI,81H			;AN000;POINT TO THE INPUT STRING
 	LEA	DI,[COMMAND_LINE];AN000;POINT TO THE SAVE AREA IN PARSER
 	MOV	CX,127			;AN000;GET ALL THE DATA(LOOP COUNT)
 	REP	MOVSB			;AN000;MOVE IT
 	MOV	[es:PSP_SEG],DS ;AN000;REMEMBER WHERE THE PSP IS
 	MOV	DS,BX			;AN000;SET UP ADDRESS OF DSEG IN DS
-;	ASSUME	DS:DGROUP_		;AN000;
+;	ASSUME	DS:DGROUP		;AN000;
 
 	CALL	SYSLOADMSG		;AN000; preload all messages
 	jnc	XCOPY_INIT		;AN000; no error, do xcopy init
@@ -749,13 +749,13 @@ MAIN_EXIT:
 ; Set message substitution list
 	LEA	SI,[SUBLIST1];AN000; get addressability to sublist
 	LEA	DX,[FILE_COUNT];AN000; offset to file count
-	MOV	[SI+SUB_LIST+SUB_LIST.DATA_OFF],DX ;AN000; save data offset
-	MOV	[SI+SUB_LIST+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
-	MOV	[SI+SUB_LIST+SUB_LIST.MSG_ID],1 ;AN000; message ID
-	MOV	[SI+SUB_LIST+SUB_LIST.FLAGS],Right_Align+Unsgn_Bin_DWord ;AN018;
-	MOV	[SI+SUB_LIST+SUB_LIST.MAX_WIDTH],9 ;AN018; MAXIMUM FIELD WITH
-	MOV	[SI+SUB_LIST+SUB_LIST.MIN_WIDTH],9 ;AN018; MINIMUM FIELD WITH
-	MOV	[SI+SUB_LIST+SUB_LIST.PAD_CHAR],SPACE ;AN018; MINIMUM FIELD WITH
+	MOV	[SI+SUB_LIST.DATA_OFF],DX ;AN000; save data offset
+	MOV	[SI+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
+	MOV	[SI+SUB_LIST.MSG_ID],1 ;AN000; message ID
+	MOV	[SI+SUB_LIST.FLAGS],Right_Align+Unsgn_Bin_DWord ;AN018;
+	MOV	[SI+SUB_LIST.MAX_WIDTH],9 ;AN018; MAXIMUM FIELD WITH
+	MOV	[SI+SUB_LIST.MIN_WIDTH],9 ;AN018; MINIMUM FIELD WITH
+	MOV	[SI+SUB_LIST.PAD_CHAR],SPACE ;AN018; MINIMUM FIELD WITH
 
 ; Set message parameters
 	MOV	AX,MSG_FILES_COPIED	;AN000; message number
@@ -833,7 +833,7 @@ DO13$$:
 ;	    LEAVE$  NZ			;then leave this loop to return to caller
 	    JNZ EN13$$
 		LEA	DI,[S_DRV_PATH]
-		LEA	SI, [BP+Find_DTA+Find_DTA.DTA_Filename]
+		LEA	SI, [BP+Find_DTA.DTA_Filename]
 		CMP	byte [S_PATH], 0 ;root directory?
 ;		IF$	E
 		JNE IF15$$
@@ -931,7 +931,7 @@ P_concat_display_path:
 ;DISP_S_PATH which will be used for prompts
 ;DS - data seg
 	MOV	DI, DISP_S_PATH
-	LEA	SI, [BP+Find_DTA+Find_DTA.DTA_Filename]
+	LEA	SI, [BP+Find_DTA.DTA_Filename]
 	CMP	byte [S_DEPTH], 0 ;this will be the first subdir?
 ;	IF$	E
 	JNE IF28$$
@@ -1215,13 +1215,13 @@ MH_START:
 IF45$$:
 	MOV	AL, [S_DEPTH]
 	MOV	[es:HEADER.DIR_DEPTH], AL ;now save other info's
-	MOV	AL, [ds:BP+Find_DTA+Find_DTA.DTA_Attribute]
+	MOV	AL, [ds:BP+Find_DTA.DTA_Attribute]
 	MOV	[es:HEADER.ATTR_FOUND], AL ;in this case, DIR
 	MOV	AL, byte [T_DRV]
 	MOV	[es:HEADER.TARGET_DRV_LET], AL ;mov target drive letter
 	MOV	[es:HEADER.TARGET_DRV_LET+1], drv_delim ; ':'
 	MOV	CX, 13
-	LEA	SI, [BP+Find_DTA+Find_DTA.DTA_Filename] ;DS:SI
+	LEA	SI, [BP+Find_DTA.DTA_Filename] ;DS:SI
 	MOV	DI, HEADER.FILENAME_FOUND        ;ES:DI
 	REP	MOVSB			;mov sting until cx = 0
 	JMP	MH_EXIT
@@ -1470,10 +1470,10 @@ EN62$$:
 ;	ORELSE$ 			;otherwise found a file
 	JMP SHORT SR61$$
 IF61$$:
-	    CMP     [ds:BP+Find_DTA+Find_DTA.DTA_Attribute], is_subdirectory ; directory?
+	    CMP     [ds:BP+Find_DTA.DTA_Attribute], is_subdirectory ; directory?
 ;	    IF$     E,AND
 	    JNE IF67$$
-	    CMP     [ds:BP+Find_DTA+Find_DTA.DTA_Filename], A_dot ;starts with . ?
+	    CMP     [ds:BP+Find_DTA.DTA_Filename], A_dot ;starts with . ?
 ;	    IF$     NE			;if not, then desired subdir
 	    JE IF67$$
 		OR	byte [MY_FLAG], found_flag ;found
@@ -1576,21 +1576,21 @@ PROMPT_PATH_FILE:
 PPF_AGAIN:
 	LEA	SI,[SUBLIST1];AN000; get addressability to sublist
 	LEA	DX,[DISP_S_PATH];AN000; offset to PATH NAME
-	MOV	[SI+SUB_LIST+SUB_LIST.DATA_OFF],DX ;AN000; save offset
-	MOV	[SI+SUB_LIST+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
-	MOV	[SI+SUB_LIST+SUB_LIST.MSG_ID],1 ;AN000; message ID
-	MOV	[SI+SUB_LIST+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
-	MOV	[SI+SUB_LIST+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
-	MOV	[SI+SUB_LIST+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
+	MOV	[SI+SUB_LIST.DATA_OFF],DX ;AN000; save offset
+	MOV	[SI+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
+	MOV	[SI+SUB_LIST.MSG_ID],1 ;AN000; message ID
+	MOV	[SI+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
+	MOV	[SI+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
+	MOV	[SI+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
 
 	LEA	SI,[SUBLIST2];AN000; get addressability to sublist
 	LEA	DX,[DISP_S_FILE];AN000; offset to FILE NAME
-	MOV	[SI+SUB_LIST+SUB_LIST.DATA_OFF],DX ;AN000; save offset
-	MOV	[SI+SUB_LIST+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
-	MOV	[SI+SUB_LIST+SUB_LIST.MSG_ID],2 ;AN000; message ID
-	MOV	[SI+SUB_LIST+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
-	MOV	[SI+SUB_LIST+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
-	MOV	[SI+SUB_LIST+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
+	MOV	[SI+SUB_LIST.DATA_OFF],DX ;AN000; save offset
+	MOV	[SI+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
+	MOV	[SI+SUB_LIST.MSG_ID],2 ;AN000; message ID
+	MOV	[SI+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
+	MOV	[SI+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
+	MOV	[SI+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
 	LEA	SI,[SUBLIST1];AN000;
 
 	CMP	byte [S_DEPTH],0 ;now dealing with starting dir?
@@ -1700,7 +1700,7 @@ IF83$$:
 ;	    ELSE$
 	    JMP SHORT EN85$$
 IF85$$:
-		LEA	DX, [BP+Find_DTA+Find_DTA.DTA_Filename] ;use the subdir name just found
+		LEA	DX, [BP+Find_DTA.DTA_Filename] ;use the subdir name just found
 ;	    ENDIF$
 EN85$$:
 ;	ENDIF$
@@ -2590,21 +2590,21 @@ SHOW_COPY_MESSAGE:
 
 	LEA	SI,[SUBLIST1];AN000; get addressability to list
 	LEA	DX,[DISP_S_PATH];AN000; offset to path name
-	MOV	[SI+SUB_LIST+SUB_LIST.DATA_OFF],DX ;AN000; save offset
-	MOV	[SI+SUB_LIST+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
-	MOV	[SI+SUB_LIST+SUB_LIST.MSG_ID],1 ;AN000; message ID
-	MOV	[SI+SUB_LIST+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
-	MOV	[SI+SUB_LIST+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
-	MOV	[SI+SUB_LIST+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
+	MOV	[SI+SUB_LIST.DATA_OFF],DX ;AN000; save offset
+	MOV	[SI+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
+	MOV	[SI+SUB_LIST.MSG_ID],1 ;AN000; message ID
+	MOV	[SI+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
+	MOV	[SI+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
+	MOV	[SI+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
 
 	LEA	SI,[SUBLIST2];AN000; get addressability to list
 	LEA	DX,[DISP_S_FILE];AN000; offset to file name
-	MOV	[SI+SUB_LIST+SUB_LIST.DATA_OFF],DX ;AN000; save offset
-	MOV	[SI+SUB_LIST+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
-	MOV	[SI+SUB_LIST+SUB_LIST.MSG_ID],2 ;AN000; message ID
-	MOV	[SI+SUB_LIST+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
-	MOV	[SI+SUB_LIST+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
-	MOV	[SI+SUB_LIST+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
+	MOV	[SI+SUB_LIST.DATA_OFF],DX ;AN000; save offset
+	MOV	[SI+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
+	MOV	[SI+SUB_LIST.MSG_ID],2 ;AN000; message ID
+	MOV	[SI+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
+	MOV	[SI+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
+	MOV	[SI+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
 
 	LEA	SI,[SUBLIST1];AN000;
 	CMP	byte [es:T_DEPTH], 0 ;starting directory?
@@ -2882,12 +2882,12 @@ CHK_FILE_NOT_FOUND:
 	    POP     DS			;now DS=ES=data seg
 	    LEA     SI,[SUBLIST1];AN000;
 	    MOV     DI,DISP_S_FILE        ;AN000;
-	    MOV     [SI+SUB_LIST+SUB_LIST.DATA_OFF],DI ;AN000; SI-->File name
-	    MOV     [SI+SUB_LIST+SUB_LIST.DATA_SEG],DS ;AN000; DS-->Segment
-	    MOV     [SI+SUB_LIST+SUB_LIST.MSG_ID],0 ;AN018; message ID
-	    MOV     [SI+SUB_LIST+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
-	    MOV     [SI+SUB_LIST+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
-	    MOV     [SI+SUB_LIST+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
+	    MOV     [SI+SUB_LIST.DATA_OFF],DI ;AN000; SI-->File name
+	    MOV     [SI+SUB_LIST.DATA_SEG],DS ;AN000; DS-->Segment
+	    MOV     [SI+SUB_LIST.MSG_ID],0 ;AN018; message ID
+	    MOV     [SI+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
+	    MOV     [SI+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
+	    MOV     [SI+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
 	    MOV     AX,MSG_FILE_NOT_ERR ;AN018;
 	    MOV     [MSG_NUM],AX ;AN000; set message number
 	    MOV     word [SUBST_COUNT],PARM_SUBST_ONE ;AN000; substitution count
@@ -3641,12 +3641,12 @@ CHDIR_ERROR_RTN:
 ; Set substitution list
 	LEA	SI,[SUBLIST1];AN000; get addressability to sublist
 	LEA	DX,[S_DRV_PATH];AN000; offset to PATH NAME
-	MOV	[SI+SUB_LIST+SUB_LIST.DATA_OFF],DX ;AN000; save offset
-	MOV	[SI+SUB_LIST+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
-	MOV	[SI+SUB_LIST+SUB_LIST.MSG_ID],1 ;AN000; message ID
-	MOV	[SI+SUB_LIST+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
-	MOV	[SI+SUB_LIST+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
-	MOV	[SI+SUB_LIST+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
+	MOV	[SI+SUB_LIST.DATA_OFF],DX ;AN000; save offset
+	MOV	[SI+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
+	MOV	[SI+SUB_LIST.MSG_ID],1 ;AN000; message ID
+	MOV	[SI+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
+	MOV	[SI+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
+	MOV	[SI+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
 
 ; Set message parameters
 	MOV	AX,DISPLAY_S_PATH	;AN000; message number
@@ -3768,28 +3768,28 @@ SHOW_S_PATH_FILE_ERR:
 
 	LEA	SI,[SUBLIST1];AN000; get addressability to list
 	LEA	DX,[DISP_S_PATH];AN000; offset to path name
-	MOV	[SI+SUB_LIST+SUB_LIST.DATA_OFF],DX ;AN000; save offset
-	MOV	[SI+SUB_LIST+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
-	MOV	[SI+SUB_LIST+SUB_LIST.MSG_ID],1 ;AN000; message ID
-	MOV	[SI+SUB_LIST+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
-	MOV	[SI+SUB_LIST+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
-	MOV	[SI+SUB_LIST+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
+	MOV	[SI+SUB_LIST.DATA_OFF],DX ;AN000; save offset
+	MOV	[SI+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
+	MOV	[SI+SUB_LIST.MSG_ID],1 ;AN000; message ID
+	MOV	[SI+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
+	MOV	[SI+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
+	MOV	[SI+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
 
 	LEA	SI,[SUBLIST2];AN000; get addressability to list
 	LEA	DX,[DISP_S_FILE];AN000; offset to file name
-	MOV	[SI+SUB_LIST+SUB_LIST.DATA_OFF],DX ;AN000; save offset
-	MOV	[SI+SUB_LIST+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
-	MOV	[SI+SUB_LIST+SUB_LIST.MSG_ID],2 ;AN000; message ID
-	MOV	[SI+SUB_LIST+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
-	MOV	[SI+SUB_LIST+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
-	MOV	[SI+SUB_LIST+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
+	MOV	[SI+SUB_LIST.DATA_OFF],DX ;AN000; save offset
+	MOV	[SI+SUB_LIST.DATA_SEG],DS ;AN000; save data segment
+	MOV	[SI+SUB_LIST.MSG_ID],2 ;AN000; message ID
+	MOV	[SI+SUB_LIST.FLAGS],010H ;AN000; ASCIIZ string, left align
+	MOV	[SI+SUB_LIST.MAX_WIDTH],0 ;AN000; MAXIMUM FIELD WITH
+	MOV	[SI+SUB_LIST.MIN_WIDTH],0 ;AN000; MINIMUM FIELD WITH
 
 
 	CMP	byte [es:S_DEPTH],0 ;AN000;it happened, when dealing with the starting dir?
 ;	IF$	E
 	JNE IF226$$
 	    LEA     SI,[SUBLIST2];AN007;PIONT TO THE FIRST LIST
-	    MOV     [SI+SUB_LIST+SUB_LIST.MSG_ID],1 ;AN007; message ID
+	    MOV     [SI+SUB_LIST.MSG_ID],1 ;AN007; message ID
 	    MOV     AX,DISPLAY_S_PATH	;AC007;ITS ONLY A FILE NAME
 	    MOV     word [es:SUBST_COUNT],PARM_SUBST_ONE ;AN007; ONE message sub
 ;	ELSE$
