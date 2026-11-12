@@ -95,11 +95,16 @@ for needle, why in want:
         rc = 1
 
 # The copy should be the source byte for byte but for the serial number,
-# which lives in the boot record at 27H and is four bytes long.
+# which lives in the boot record at 27H and is four bytes long.  DISKCOPY
+# makes a new one out of the clock, so how many of the four come out
+# different is chance: all that is asked is that the serial is the only
+# thing that moved, and that it did move.
+serial = set(range(39, 43))
 differ = [i for i in range(len(src)) if src[i] != copy[i]]
-if differ == [39, 40, 41, 42]:
-    print("ok      the copy is the source byte for byte but for the four "
-          "bytes of the volume serial number")
+if differ and set(differ) <= serial:
+    print("ok      the copy is the source byte for byte but for %d of the "
+          "four bytes of the volume serial number, which DISKCOPY writes "
+          "afresh" % len(differ))
 else:
     print("WRONG   %d bytes differ: %s" % (len(differ), differ[:12]))
     rc = 1

@@ -311,6 +311,35 @@ UTILITIES = {
     # loader moves into the program's own prefix at 60H and leaves there.
     # The eight modules between are the character sets -- US, Multilingual,
     # Portuguese, Canadian French, Nordic -- and the parser.
+    # APPEND's one module -- the makefile links append.obj and nothing
+    # else -- with the parser switches and the macro library it reads.  Two
+    # segments and no group, cseg and sseg, so the module is read once per
+    # segment, and the stack is laid down in the image rather than reserved.
+    # The release links the one and stops: this is an .EXE in its own right.
+    #
+    # APPENDM.ASM is not among them.  It held the messages before the
+    # message retriever took them over -- @@11 in the module's own history
+    # -- the makefile does not name it, and the appendm.inc it reads is not
+    # in the release.
+    #
+    # Only three of SYSMAC.LIB's fourteen macros are ever called: MOVE,
+    # COMP and JUMP.  The rest are converted as far as the rules reach and
+    # never expanded, which is what MASM did with them too.
+    'APPEND': dict(
+        MODULES=('APPEND.ASM', 'APPENDP.INC', 'SYSMAC.LIB'),
+        TAG={},
+        SHARED=('SYSMSG.INC', 'VERSIONA.INC', 'PDB.INC', 'PARSE.ASM',
+                'MSGDCL.INC', 'MSGSERV.ASM', 'PSDATA.INC', 'COPYRIGH.INC'),
+        # cseg's own ASSUME, which says CS and nothing else: APPEND is
+        # entered as an .EXE, with DS and ES on the program prefix, and
+        # sets SS and SP itself on the stack segment.
+        START={'cs': 'cseg', 'ds': None, 'es': None, 'ss': 'sseg'},
+        # The three flags APPEND lays its mode word down with, nine lines
+        # before it declares them: MASM resolved them on its second pass,
+        # and fasm wants a number it can resolve wherever it stands rather
+        # than an EQU it has not read yet.
+        FORWARD=('Path_mode', 'Drive_mode', 'Enabled'),
+    ),
     # NLSFUNC's two modules in the order the makefile links them, and the
     # four headers of its own that they read.  Three segments and no group
     # -- NLS_DATA for the buffers and the message text, NLS_INIT_CODE for
@@ -587,7 +616,11 @@ def dollars(text, tag):
 # with a dollar on the front: $p_file_spc for P_File_Spc.  INC/PSDATA.INC,
 # which RECPARSE.INC reads, declares them without one -- it has not had the
 # dollars since before this release -- so the dollar comes off here and the
-# name is the one the parser gives it.
+# name is the one the parser gives it.  APPEND asks for the parameter block
+# the same way, $P_PARMS_Blk for the structure PSDATA.INC calls P_PARMS_Blk.
+#
+# This runs before the dollars are moved to the end, because afterwards
+# there is no leading dollar left to take off.
 def parser_names(text):
     return re.sub(r"(?i)(?<![\w$])\$(p_" + N + r")",
                   lambda m: m.group(1), text)
@@ -600,7 +633,7 @@ def parser_names(text):
 # written in, so a name that collides collides in every spelling.
 RESERVED = U.get('RESERVED', ())
 
-source = {m: parser_names(dollars(read(m), TAG[m]))
+source = {m: dollars(parser_names(read(m)), TAG[m])
           for m in MODULES}
 
 # MASM assembled the modules apart, so each could keep a name of its own
@@ -752,36 +785,109 @@ def literals(text):
     in the low byte, so the characters are turned round here to keep the
     number, and the release's spelling goes in the comment.
 
-    Only two characters, which is the width of a word and the only width
-    this can be certain of: a longer literal in an operand is MASM's error,
-    and a longer one anywhere else is bytes being laid down.  A literal a DB
-    lays down is laid down in order by both assemblers and is left alone,
-    and so is the class name on a SEGMENT, which names nothing the program
-    reads.
+    Only where a word is what is wanted: an operand, the value of an EQU or
+    an =, and a DW or a DD.  A DB lays its characters down in order in both
+    assemblers -- XCOPY writes the drive it is copying to over the first of
+    a DB " :" -- and so does a field of a structure, whose default value is
+    the DB the release declared it with.  Only two characters, which is the
+    width of a word and the only width this can be certain of.
     """
-    def one(m):
-        quote, pair = m.group(1), m.group(2)
-        return '%s%s%s' % (quote, pair[::-1], quote)
+    def turned(code):
+        pieces, at, seen = [], 0, []
+        for m in STRING.finditer(code):
+            pieces.append(code[at:m.start()])
+            s = m.group(0)
+            if len(s) == 4:
+                seen.append(s)
+                s = s[0] + s[2] + s[1] + s[3]
+            pieces.append(s)
+            at = m.end()
+        pieces.append(code[at:])
+        return ''.join(pieces), seen
 
     out = []
     for line in text.split('\n'):
-        code, sep, comment = line.partition(';')
-        if re.search(r"(?i)\bsegment\b", code) or \
-                re.match(r"(?i)^[ \t]*(?:" + N + r"[ \t]+)?d[bq]\b", code):
+        j = comment_at(line)
+        code, note = (line, '') if j < 0 else (line[:j], line[j:])
+        wanted = re.match(LED + MNEM + r")\s+)", code, re.I) \
+            or re.match(r"(?i)^[ \t]*" + N + r"[ \t]+(?:equ|=)[ \t]", code) \
+            or re.match(r"(?i)^[ \t]*(?:" + N + r"[ \t]+)?d[wd][ \t]", code)
+        if not wanted:
             out.append(line)
             continue
-        changed = re.sub(r"""(['"])([^'"\n]{2})\1""", one, code)
+        changed, seen = turned(code)
+        # a pair that reads the same either way round -- "11", "  ", "??" --
+        # is laid down the same by both, and says nothing worth a note
         if changed == code:
             out.append(line)
             continue
-        # the release's own spelling, so that what it wrote can still be read
-        # on the line
-        note = 'the release writes %s' % ', '.join(
-            m.group(0) for m
-            in re.finditer(r"""(['"])([^'"\n]{2})\1""", code))
-        out.append(changed + (sep + comment + '; ' + note
-                              if comment.strip() else '  ; ' + note))
+        # the release's own spelling, so that what it wrote can still be
+        # read on the line
+        said = 'the release writes %s' % ', '.join(seen)
+        out.append(changed + (note + '; ' + said if note.strip()
+                              else '  ; ' + said))
     return '\n'.join(out)
+
+
+def spaced_overrides(text):
+    """The white space MASM let stand after the colon of a segment override.
+
+    APPEND writes MOV CS: parse_flag,0FFH for the flag it keeps in its own
+    code segment.  MASM read the colon and the name as one reference; the
+    rules below look for the two together, so the gap is closed first.
+    """
+    out = []
+    for line in text.split('\n'):
+        j = comment_at(line)
+        code, note = (line, '') if j < 0 else (line[:j], line[j:])
+        out.append(outside_strings(r"(?i)\b(cs|ds|es|ss)[ \t]*:[ \t]+"
+                                   r"(?=[A-Za-z_@?$\[])",
+                                   lambda m: m.group(1) + ':', code) + note)
+    return '\n'.join(out)
+
+
+def strings(text):
+    """A string instruction written with the operands it implies.
+
+    MOVS BYTE PTR[DI],BYTE PTR[SI] is how MASM was told the width of what
+    MOVSB moves: the operands name the only places the instruction can go
+    to, ES:DI and DS:SI, so they say nothing but the width.  fasm takes the
+    width on the mnemonic, and for CMPS it wants the two the other way
+    round from MASM -- source first -- so the plainest conversion is the
+    one MASM assembled to, the mnemonic with the width on the end.  All of
+    these are one byte either way.
+
+    A segment that is not the one the instruction implies does say
+    something, and those are left as they stand: the kernel reads a table
+    through CS with LODS byte [cs:si], which fasm takes as it is.
+    """
+    DEFAULT = {'di': 'es', 'si': 'ds'}
+    SUFFIX = {'byte': 'b', 'word': 'w', 'dword': 'd'}
+    # one operand: a width, PTR, and a register in brackets, either of them
+    # carrying the segment MASM wrote it through
+    OP = (r"(?:(cs|ds|es|ss)[ \t]*:[ \t]*)?"
+          r"(byte|word|dword)[ \t]+ptr[ \t]*"
+          r"\[[ \t]*(?:(cs|ds|es|ss)[ \t]*:[ \t]*)?(si|di)[ \t]*\]")
+
+    def one(m):
+        mnemonic = m.group(2)
+        kinds, segs, regs = [], [], []
+        for seg1, kind, seg2, reg in re.findall(r"(?i)" + OP, m.group(3)):
+            kinds.append(kind.lower())
+            segs.append((seg1 or seg2).lower())
+            regs.append(reg.lower())
+        # every operand has to have been read, and all of one width
+        if not regs or len(set(kinds)) != 1:
+            return m.group(0)
+        if len(regs) != len(re.findall(r",", m.group(3))) + 1:
+            return m.group(0)
+        if any(seg and seg != DEFAULT[reg] for seg, reg in zip(segs, regs)):
+            return m.group(0)
+        return '%s%s%s' % (m.group(1), mnemonic, SUFFIX[kinds[0]])
+
+    return re.sub(r"(?i)^([ \t]*(?:rep|repe|repz|repne|repnz)?[ \t]*)"
+                  r"(movs|cmps|stos|lods|scas)[ \t]+([^;\n]*?)[ \t]*$",
+                  one, text, flags=re.M)
 
 
 def far_pointers(text):
@@ -1436,28 +1542,43 @@ def distances(text):
 
 
 def blankness(text):
-    """IFB and IFNB inside a macro, which asked whether an argument was
-    given at all.
+    """What a macro asked about its own arguments: IFB and IFNB, whether
+    one was given at all, and IFIDN, whether one is a particular word.
 
-    fasm asks it with MATCH: against nothing for IFB, and against a name
-    that takes whatever there is for IFNB.  The braces are the macro's own,
-    so they are escaped, and the ENDIF that closes one of these is a brace
-    rather than an END IF.  MODE writes five of them, which is what lets
-    SCRN take a mode as well as a function.
+    fasm asks both with MATCH: against nothing for IFB, against a name that
+    takes whatever there is for IFNB, and against the word itself, marked
+    with an =, for IFIDN.  The braces are the macro's own, so they are
+    escaped, and the ENDIF that closes one of these is a brace rather than
+    an END IF.  MODE writes five of the first kind, which is what lets SCRN
+    take a mode as well as a function, and APPEND's JUMP is twenty of the
+    third -- one per condition a long conditional jump can carry.
+
+    MASM's IFIDN reads the same either way round, where fasm's MATCH has a
+    pattern and a text to match it against, so the operand that is the
+    macro's own parameter is taken for the text.
+
+    IFDIF, the other way round, has no MATCH: fasm can say what a text is
+    and not what it is not.  It is left as it stands, and the only macros
+    that ask it -- SYSMAC.LIB's DISP, and DMSG through it -- are never
+    expanded, so nothing reads the answer.
     """
     # What is open: a macro, or one of the REPT and IRP blocks that close
     # with ENDM as a macro does.  NLSFUNC's DOESMAC.INC declares a macro
     # inside a macro and SaveReg closes an IRP and itself with two ENDMs in
     # a row, so counting the ENDMs is the only way to know which one ends
     # the macro the IFNBs are in.
-    out, nest, depth = [], [], []
+    out, nest, depth, params = [], [], [], set()
     for line in text.split('\n'):
         code = code_of(line)
         note = line[len(code):]
         inmacro = 'macro' in nest
-        if MACRODEF.match(code):
+        m = MACRODEF.match(code)
+        if m:
             nest.append('macro')
             depth = []
+            params = {w.strip().lower()
+                      for w in re.split(r"[ \t,]+", m.group(2))
+                      if w.strip()}
             out.append(line)
             continue
         if re.match(r"(?i)^[ \t]*(?:IRP|IRPC|REPT)\b", code):
@@ -1467,6 +1588,20 @@ def blankness(text):
         if nest and MACROEND.match(code):
             nest.pop()
             out.append(line)
+            continue
+        m = re.match(r"(?i)^([ \t]*)IFIDNI?[ \t]+<(.*?)>[ \t]*,"
+                     r"[ \t]*<(.*?)>[ \t]*$", code)
+        if inmacro and m:
+            left, right = m.group(2).strip(), m.group(3).strip()
+            text, word = left, right
+            if left.lower() not in params and right.lower() in params:
+                text, word = right, left
+            # None where IFNB keeps the name it took: an ELSE after this
+            # one has no MATCH to be written as, and is left to say so.
+            depth.append((text, None))
+            out.append('%smatch %s, %s %s{%s'
+                       % (m.group(1), ' '.join('=' + w for w in word.split()),
+                          text, '\\' * len(depth), note))
             continue
         m = re.match(r"(?i)^([ \t]*)IF(N?)B[ \t]+<(.*?)>[ \t]*$", code)
         if inmacro and m:
@@ -1482,7 +1617,7 @@ def blankness(text):
         # is to do when the argument is the other thing, which is a MATCH of
         # its own.  MODECPEQ writes one, for a call with no subfunction.
         m = re.match(r"(?i)^([ \t]*)ELSE[ \t]*$", code)
-        if inmacro and m and depth:
+        if inmacro and m and depth and depth[-1][1] is not None:
             name, given = depth[-1]
             out.append('%s%s}%s' % (m.group(1), '\\' * len(depth), note))
             out.append('%smatch %s, %s %s{'
@@ -2004,9 +2139,19 @@ def space(name):
 # reached through the register the ASSUME in force puts on that segment,
 # which is what MASM wrote the override from.
 SEGOF = {}
-for text in source.values():
-    here = None
-    for line in text.split('\n'):
+
+
+def segments_of(stem, here):
+    """The names one module declares, and the names of whatever it reads
+    while a segment of that module is open.
+
+    A header of the utility's own declares no segment: APPENDP.INC holds
+    the parser's switch and result blocks and APPEND.ASM reads it inside
+    cseg, so what it declares is in cseg.  Reading it with the segment the
+    INCLUDE stood in is what MASM did, and it is what the link file's walk
+    does here.
+    """
+    for line in source[stem].split('\n'):
         code = code_of(line)
         m = re.match(r"(?i)^[ \t]*(" + N + r")\s+SEGMENT\b", code)
         if m:
@@ -2019,10 +2164,28 @@ for text in source.values():
         m = re.match(r"(?i)^[ \t]*(" + N + r")\s+(?:d[bwdq]|label)\b", code)
         if m and here:
             SEGOF.setdefault(m.group(1).lower(), here)
+        # A name given a colon and the bytes laid down under it, which MASM
+        # read from memory like any other: APPEND writes version_loc: over
+        # the two bytes of its version and reads them as BYTE PTR
+        # version_loc.  The name is only reached through this where it
+        # stands in brackets already, so a label the program jumps to is
+        # none the worse for being known.
+        m = re.match(r"^[ \t]*(" + N + r"):", code)
+        if m and here:
+            SEGOF.setdefault(m.group(1).lower(), here)
         # an instance of a structure is storage like any other
         m = re.match(r"(?i)^[ \t]*(" + N + r")[ \t]+(" + N + r")", code)
         if m and here and m.group(2).lower() in STRUC_CASE:
             SEGOF.setdefault(m.group(1).lower(), here)
+        m = re.match(r"(?i)^[ \t]*include[ \t]+'?([A-Za-z0-9_.]+)'?", code)
+        if m:
+            name = m.group(1).upper()
+            if name in source and name != stem:
+                segments_of(name, here)
+
+
+for stem in MODULES:
+    segments_of(stem, None)
 
 
 # The names a module gives an index register.  MASM's EQU put the register
@@ -2441,11 +2604,13 @@ def bracket(code):
     head, rest = m.group(1), m.group(2)
     # LEA asks for the address of a place, so its second operand is a memory
     # reference whatever the name stands for -- RECINIT takes the address of
-    # its interrupt handlers that way.
+    # its interrupt handlers that way, and APPEND the paragraph after the
+    # end of what it keeps resident, which is a label and fifteen.
     if re.search(r"(?i)\blea\s*$", head):
         parts = rest.split(',')
         if len(parts) == 2 and re.match(r"^\s*" + N + r"(?:\." + N
-                                        + r")?\s*$", parts[1]):
+                                        + r")?(?:\s*[-+]\s*\S+)?\s*$",
+                                        parts[1]):
             return head + parts[0] + ',[' + parts[1].strip() + ']'
     out = []
     for part in rest.split(','):
@@ -2483,6 +2648,13 @@ def overridden(code):
         inner = m.group(1)
         # brackets that say which register already reach where they say
         if re.match(r"(?i)^\s*(?:cs|ds|es|ss)\s*:", inner):
+            return m.group(0)
+        # BP and SP reach through SS, which is the default there the way DS
+        # is everywhere else, so a name inside such brackets is a
+        # displacement and not the place: MODESUBS writes
+        # MOV [BP+sublist_def.sublist_off],SI, where the field is how far
+        # into the block the frame points at the pointer stands.
+        if re.search(r"(?i)(?<![\w.@?$])(?:bp|sp)(?![\w.@?$])", inner):
             return m.group(0)
         # the name in the brackets that is storage, which is not always the
         # first thing in them: ASSGMAIN jumps through systab[bx], where the
@@ -2580,6 +2752,8 @@ for stem in MODULES:
         text = PROCEDURE[0].sub(PROCEDURE[1], text)
     text = struct_arrays(text)
     text = literals(text)
+    text = strings(text)
+    text = spaced_overrides(text)
     text = far_pointers(text)
     text = far_jumps(text)
     text = at_far_jumps(text)
@@ -2700,6 +2874,17 @@ for stem in MODULES:
         m = re.match(r"(?i)^([ \t]*)EVEN[ \t]*$", bare)
         if m:
             out.append(pad('%salign 2' % m.group(1), was_len, comment))
+            continue
+
+        # MASM's LOCAL named the labels a macro wants one of per expansion,
+        # which is fasm's local and the same word in lower case: APPEND's
+        # JUMP writes a conditional jump over an unconditional one and wants
+        # a name for the place after it.
+        m = re.match(r"(?i)^([ \t]*)LOCAL([ \t]+" + N + r"(?:[ \t]*,[ \t]*"
+                     + N + r")*)[ \t]*$", bare)
+        if m:
+            out.append(pad('%slocal%s' % (m.group(1), m.group(2)),
+                           was_len, comment))
             continue
 
         # MASM closed a conditional with one word and fasm with two
@@ -2826,8 +3011,13 @@ for stem in MODULES:
             infar = False
         m = INSTANCE.match(bare)
         if m:
-            out.append(pad('%s%s %s' % (m.group(1), m.group(2),
-                                        sizes(m.group(3))),
+            # An address among the values is the name itself here, as it is
+            # in an operand: APPEND fills its parameter block in with
+            # OFFSET px_block1.  The line is written whole and does not
+            # reach the rules that read operands, so the OFFSET comes off
+            # here.
+            args = re.sub(r"(?i)\boffset\s+", '', sizes(m.group(3)))
+            out.append(pad('%s%s %s' % (m.group(1), m.group(2), args),
                            was_len, comment))
             continue
         m = re.match(r"(?i)^(\s*)INCLUDE\s+(\S+)\s*$", bare)

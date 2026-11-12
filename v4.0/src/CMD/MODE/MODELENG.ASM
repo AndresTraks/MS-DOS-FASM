@@ -280,7 +280,7 @@ INT   15H
 
 	       .IF <BL EQ 85>, AND	;AN001;
 	       .IF <<word [BIOS_date+BIOS_date_struc.month]> EQ "11">, AND ;AN001;
-	       .IF <<word [BIOS_date+BIOS_date_struc.day]> EQ "51"> ;"51" is the word form of "15"                    ;AN001;
+	       .IF <<word [BIOS_date+BIOS_date_struc.day]> EQ "15"> ;"51" is the word form of "15"                    ;AN001;; the release writes "51"
 
 	    MOV   AH,AT4										;AN001;
 	    BREAK 0											;AN001;

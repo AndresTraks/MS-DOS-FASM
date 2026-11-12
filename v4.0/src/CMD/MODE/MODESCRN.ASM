@@ -58,7 +58,7 @@ match any$, MSG \{
 
 macro SET_LEFT_SHIFT_LIMIT 
 {
-	LOCAL	LIMIT_SET
+	local	LIMIT_SET
 ;	ASSUME	DS:ROM_BIOS
 ;
 	PUSH	DS

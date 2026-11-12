@@ -34,7 +34,7 @@ macro PRINT
 
 macro COMPARE string, CHAR1, CHAR2, CHAR3
 {
-	LOCAL	END_COMPARE
+	local	END_COMPARE
 
 ;------------------------------------------------------------------------------------------------
 ;
@@ -63,7 +63,7 @@ macro IF_NO_PRINTER_ERROR_THEN
 ;
 macro JUMP_EQUAL_TO_CHK_FOR_P 
 {
-LOCAL	SKIP_JUMP
+local	SKIP_JUMP
 ;
 	JNE	SKIP_JUMP
 	  JMP	CHK_FOR_P

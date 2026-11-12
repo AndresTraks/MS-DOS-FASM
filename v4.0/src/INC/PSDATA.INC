@@ -139,11 +139,15 @@ end virtual
 ;---------------------------------------------------------------------------------------------------------
 
 ;-------------------------------- PARMS block structure
-STRUC P_PARMS_Blk
+; A field takes the value the instance gives it and nought where it gives
+; none, which is the house shape for a structure MASM let be written down
+; with values in angle brackets: APPEND fills in two of these, and everyone
+; else before it took the three noughts.
+STRUC P_PARMS_Blk P_PARMSX_Address_=0, P_Num_Extra_=0, P_Len_Extra_Delim_=0
 {
-.P_PARMSX_Address  dw	0		;AN000; Address of PARMSX
-.P_Num_Extra	   db	0		;AN000; Number of extra stuff
-.P_Len_Extra_Delim db	0		;AN000; Length of extra delimiter
+.P_PARMSX_Address  dw	P_PARMSX_Address_	;AN000; Address of PARMSX
+.P_Num_Extra	   db	P_Num_Extra_		;AN000; Number of extra stuff
+.P_Len_Extra_Delim db	P_Len_Extra_Delim_	;AN000; Length of extra delimiter
 }
 virtual at 0
   P_PARMS_Blk P_PARMS_Blk

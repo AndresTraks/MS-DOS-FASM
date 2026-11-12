@@ -1,9 +1,31 @@
+STRUC DPL DPL_AX_=0, DPL_BX_=0, DPL_CX_=0, DPL_DX_=0, DPL_SI_=0, DPL_DI_=0, DPL_DS_=0, DPL_ES_=0, DPL_XID_=0, DPL_UID_=0, DPL_PID_=0
+{
+.DPL_AX		DW	DPL_AX_ ;AX REG
+.DPL_BX		DW	DPL_BX_ ;BX REG
+.DPL_CX		DW	DPL_CX_ ;CX REG
+.DPL_DX		DW	DPL_DX_ ;DX REG
+.DPL_SI		DW	DPL_SI_ ;SI REG
+.DPL_DI		DW	DPL_DI_ ;DI REG
+.DPL_DS		DW	DPL_DS_ ;DS REG
+.DPL_ES		DW	DPL_ES_ ;ES REG
+.DPL_XID 	DW	DPL_XID_ ;RESERVED
+.DPL_UID 	DW	DPL_UID_ ;SERVER USER ID
+.DPL_PID 	DW	DPL_PID_ ;REDIRECTOR PROCESS ID
+}
+match =DPL_LAID_OUT, DPL_LAID_OUT
+{
+    DPL_LAID_OUT equ 1
+    virtual at 0
+      DPL DPL 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+      sizeof.DPL = $ - DPL
+    end virtual
+}
 page	60,120
 ;
 .sall
 title	APPEND
-include sysmsg.inc
-msg_utilname<APPEND>
+include 'SYSMSG.INC'
+MSG_UTILNAME<APPEND>
 ;-----------------------------------------------------------------------------
 ;
 ;      Title:	       APPEND
@@ -77,9 +99,9 @@ msg_utilname<APPEND>
 ;
 page
 
-cseg		segment public para 'CODE'
-		assume	cs:cseg
-		assume	ds:nothing,es:nothing
+if SEGSEL = S_CSEG
+;		assume	cs:cseg
+;		assume	ds:nothing,es:nothing
 
 ;-----------------------------------------------------------------------------
 ;	Equates
@@ -96,22 +118,9 @@ TCBR_APPEND	EQU	   001H 	; APPEND ACTIVE
 DOSSERVER    EQU  5DH			; SERVER OPERATION
 DOSSETERROR  EQU  0AH			; SET EXTENDED ERROR
 ;include server.lib
-DPL		STRUC
-DPL_AX		DW	0		;AX REG
-DPL_BX		DW	0		;BX REG
-DPL_CX		DW	0		;CX REG
-DPL_DX		DW	0		;DX REG
-DPL_SI		DW	0		;SI REG
-DPL_DI		DW	0		;DI REG
-DPL_DS		DW	0		;DS REG
-DPL_ES		DW	0		;ES REG
-DPL_XID 	DW	0		;RESERVED
-DPL_UID 	DW	0		;SERVER USER ID
-DPL_PID 	DW	0		;REDIRECTOR PROCESS ID
-DPL		ENDS
-include sysmac.lib
-include versiona.inc
-include appendp.inc			; parseing stuff for append			 ;AN004;
+include 'SYSMAC.LIB'
+include 'VERSIONA.INC'
+include 'APPENDP.INC' ; parseing stuff for append			 ;AN004;
 .list
 ;		extrn	end_address:near	; end of stay resident stuff
 
@@ -178,7 +187,7 @@ redir_flag	equ	0000000000001000B ; redir flag for net installation check
 
 append_2f	equ	0b7h		; int 2f function code for append
 applic_2f	equ	0aeh		; int 2f function code for applications
-COMMAND_2f	equ	-1		; int 2f subfunction code for COMMAND call
+COMMAND_2f	equ	(-1)	; int 2f subfunction code for COMMAND call
 append_inst	equ	0ffh		; flag means append is there
 
 ;	INT 2f sub-function codes						;AN000;
@@ -207,12 +216,13 @@ handle_fnd1	equ	4eh
 exec_proc	equ	4bh
 ext_handle_opn	equ	6ch								  ;AN003;
 
-break	macro			; this is a dummy break macro so PDB.INC
-	endm			; won't blow up in the build
+macro break 
+{
+} ; won't blow up in the build
 
 ;	define some things for PDB (PSP)						  ;AN002;
 											  ;AN002;
-include pdb.inc 									  ;AN002;
+include 'PDB.INC'          ;AN002;
 											  ;AN002;
 true_name_flag		equ	01h	; flag for true name function			  ;AN002;
 eo_create		equ	00f0h	; mask to check extended opens for create	  ;AN003;
@@ -227,7 +237,7 @@ FCB_no_more_files	equ	18	; no more matching files
 handle_no_more_files	equ	18	; no more matching files
 
 ;	Equates for TOPVIEW barrier
-TV_TRUE equ	-1			; this was changed from TRUE	 ;AN000;
+TV_TRUE equ	(-1)	; this was changed from TRUE	 ;AN000;
 					; because 3.30 parser uses TRUE  ;AN000;
 false	equ	0			;
 
@@ -248,10 +258,10 @@ page
 ;-----------------------------------------------------------------------------
 
 version_loc:				; version number
-	db	major_version,minor_version
+	db	MAJOR_VERSION,MINOR_VERSION
 ;	 dw	 message_list		 ; pointer to message table
 
-		even
+		align 2
 vector_offset	dw	0		; save pointer to old int 21 here
 vector_segment	dw	0
 crit_vector_offset  dw	0		; save pointer to old int 24 here
@@ -263,7 +273,8 @@ dirlst_segment	dw	0
 tv_vec_off	dw	0		; save TV vector here
 tv_vec_seg	dw	0
 
-pars_off	dd	cseg: SysParse	; save pointer to parser here
+pars_off	dw SysParse; save pointer to parser here
+	dw cseg_
 ;pars_off	 dw	 offset SysParse ; save pointer to parser here
 ;pars_seg	 dw	 0
 
@@ -359,11 +370,11 @@ net_config	dw	0		; flag word for what (if any) network
 					; as long as this word is zero, a clear determination
 					; has not been made about the configuration
 
-		even
-ext_err_dpl	DPL	<>		; reserve a DPL for get/set extended error code
+		align 2
+ext_err_dpl	DPL     ; reserve a DPL for get/set extended error code
 
 
-save_ext_err	DPL	<>		; reserve a DPL for first extended
+save_ext_err	DPL     ; reserve a DPL for first extended
 					; error code
 
 ;-------------------------------------------------------------------	 ;AN001;
@@ -381,32 +392,34 @@ mode_flags	dw	Path_mode + Drive_mode + Enabled		 ;AN001;
 
 X_mode		equ	8000h		; in /X mode
 E_mode		equ	4000h		; in /E mode
-Path_mode	equ	2000h		; PATH in string OK		 ;AN001;
-Drive_mode	equ	1000h		; DRIVE in string OK		 ;AN001;
-Enabled 	equ	0001h		; APPEND enabled		 ;AN001;
+Path_mode	=	2000h		; PATH in string OK		 ;AN001;
+Drive_mode	=	1000h		; DRIVE in string OK		 ;AN001;
+Enabled 	=	0001h		; APPEND enabled		 ;AN001;
 
 ;-------------------------------------------------------------------
 
-cmd_name@	dd	?		; internal name string
+cmd_name@	rd      1 ; internal name string
 
-expected_error	dw	?		; error to do append scan
-expected_ext_error dw	?		; error to do append scan
+expected_error	rw      1 ; error to do append scan
+expected_ext_error rw      1 ; error to do append scan
 
-cmd_env 	dw	?		; pointer to COMMANDs environment
-cmd_buf 	dw	?		; CMDBUF offset (in SS)
+cmd_env 	rw      1 ; pointer to COMMANDs environment
+cmd_buf 	rw      1 ; CMDBUF offset (in SS)
 
-incoming_DTA	dd	?		; user's DTA (on EXEC)
+incoming_DTA	rd      1 ; user's DTA (on EXEC)
 exec_DTA	db	21+1+2+2+2+2+13 dup(0)	; find DTA for exec emulation
 
 old_syntax	db	0		; using network syntax
 
 res_append	db	0		; resident append call		  ; @@05
 
-abort_sp	dw	?		; sp to restore on errors	  ; @@05
+abort_sp	rw      1 ; sp to restore on errors	  ; @@05
 
-crlf	label	byte
-	db	CR,LF
-crlf_len equ	 $ - crlf
+label crlf byte
+	db	cr,lf
+; = and not equ: fasm's equ is text put in where the name is used, so a $
+; in it would be the address of the use and not of this line.
+crlf_len =	 ($ - crlf)
 
 ;*******************************************************************		;an010;bgb
 ; parser message display area							;an010;bgb
@@ -438,7 +451,8 @@ MSG_SERVICES <APPEND.CLA,APPEND.CL1,APPEND.CTL>
 
 ;-----------------------------
 ;	save and restore register macros
-save_regs macro
+macro save_regs 
+{
 	push	bx
 	push	cx
 	push	dx
@@ -447,9 +461,10 @@ save_regs macro
 	push	si
 	push	ds
 	push	es
-	endm
+}
 
-restore_regs macro
+macro restore_regs 
+{
 	pop	es
 	pop	ds
 	pop	si
@@ -458,29 +473,31 @@ restore_regs macro
 	pop	dx
 	pop	cx
 	pop	bx
-	endm
+}
 
 ;-----------------------------
 ;	this macro is used instead of the normal POPF instruction to help
 ;	prevent a 286 bug from occurring
-popff	macro
+macro popff 
+{
 	local	myret
 	jmp	$+3
-myret	label	near
+myret:
 	iret
 	push	cs
 	call	myret
-	endm
+}
 
 ;-----------------------------						  ; @@12
 ;	check character 						  ; @@12
 ;									  ; @@12
-chkchar macro	char							  ; @@12
+macro chkchar char
+{
 	lodsb								  ; @@12
 	and	al,0dfh 						  ; @@12
 	cmp	al,char 						  ; @@12
 	jne	ccn_ret 						  ; @@12
-	endm								  ; @@12
+} ; @@12
 .list
 
 page
@@ -498,7 +515,7 @@ interrupt_hook:
 resident_routine:
 	pushf				; save the user's flags (old stack)
 
-	cmp	tv_flag,TV_TRUE 	; see if in TV			 ;AN000;
+	cmp	byte [cs:tv_flag],TV_TRUE ; see if in TV			 ;AN000;
 	je	use_old 		; yes, old_vect
 
 check_fcb_open: 							  ; @@01
@@ -507,38 +524,38 @@ check_fcb_open: 							  ; @@01
 ;	first, check to see if APPEND disabled, if so, skip everything	 ;AN001;
 ;	and go to real INT 21 handler					 ;AN001;
 ;-------------------------------------------------------------------	 ;AN001;
-	test	mode_flags,Enabled	; APPEND disabled?		 ;AN001;
+	test	word [cs:mode_flags],Enabled ; APPEND disabled?		 ;AN001;
 	jz	real_jump		; yes, skip all other checks	 ;AN001;
 
 	cmp	ah,FCB_opn		; FCB open?
-	jump	E,FCB_open		; yes, do the APPEND
+	JUMP	E,FCB_open		; yes, do the APPEND
 
 	cmp	ah,handle_opn		; handle open?
-	jump	E,handle_open		; yes, do the APPEND
+	JUMP	E,handle_open		; yes, do the APPEND
 
 	cmp	ah,ext_handle_opn	; extended handle open? 			  ;AN003;
-	jump	E,ext_handle_open	; yes, do the APPEND				  ;AN003;
+	JUMP	E,ext_handle_open	; yes, do the APPEND				  ;AN003;
 											  ;AN003;
 	cmp	ah,file_sz		; file size?
-	jump	E,FCB_open		; yes, do the APPEND
+	JUMP	E,FCB_open		; yes, do the APPEND
 
 
-	test	mode_flags,X_mode	; /X mode not selected
+	test	word [cs:mode_flags],X_mode ; /X mode not selected
 	jz	real_jump
 
 	cmp	ah,FCB_sch1		; search?
-	jump	E,FCB_search1		; yes, do the APPEND
+	JUMP	E,FCB_search1		; yes, do the APPEND
 
 	cmp	ah,handle_fnd1		; find?
-	jump	E,handle_find1		; yes, do the APPEND
+	JUMP	E,handle_find1		; yes, do the APPEND
 
-	cmp	tv_flag,TV_TRUE 	; cant do in TopView		 ;AN000;
+	cmp	byte [cs:tv_flag],TV_TRUE ; cant do in TopView		 ;AN000;
 	je	skip_exec
 	cmp	ax,exec_proc*256+0	; EXEC?
-	jump	E,exec_pgm		; yes, do the APPEND
+	JUMP	E,exec_pgm		; yes, do the APPEND
 skip_exec:
 	cmp	ax,exec_proc*256+3	; EXEC?
-	jump	E,exec_pgm		; yes, do the APPEND
+	JUMP	E,exec_pgm		; yes, do the APPEND
 
 	page
 ;-----------------------------------------------------------------------------
@@ -549,15 +566,15 @@ skip_exec:
 ;-----------------------------------------------------------------------------
 
 real_jump:
-	cmp	tv_flag,TV_TRUE 	; see if called by TV		 ;AN000;
+	cmp	byte [cs:tv_flag],TV_TRUE ; see if called by TV		 ;AN000;
 	jne	use_old 		; yes, use old vect
 
 	popff				; restore user's flags
-	jmp	dword ptr tv_vec_off	; pass through to TV
+	jmp	dword [cs:tv_vec_off] ; pass through to TV
 
 use_old:
 	popff				; restore user's flags (old stack)
-	jmp	dword ptr Vector_Offset ; jump to old INT 21
+	jmp	dword [cs:vector_offset] ; jump to old INT 21
 
 page
 ;-----------------------------------------------------------------------------
@@ -565,7 +582,7 @@ page
 ;-----------------------------------------------------------------------------
 
 FCB_search1:
-	mov	expected_ext_error,fcb_no_more_files
+	mov	word [cs:expected_ext_error],FCB_no_more_files
 	jmp	short FCB_openx1
 
 ;-----------------------------------------------------------------------------
@@ -573,22 +590,22 @@ FCB_search1:
 ;-----------------------------------------------------------------------------
 
 FCB_open:
-	mov	expected_ext_error,fcb_file_not_found
+	mov	word [cs:expected_ext_error],FCB_file_not_found
 FCB_openx1:
 	call	check_config		; check the config flags
 	call	crit_sect_set		; set critical section flag
 
 	call	tv_barrier
 
-	mov	incoming_AX,ax		; save user's AX
-	mov	word ptr FCB_ptr+0,dx	; save FCB pointer
-	mov	word ptr FCB_ptr+2,ds
+	mov	[cs:incoming_AX],ax ; save user's AX
+	mov	word [cs:FCB_ptr+0],dx ; save FCB pointer
+	mov	word [cs:FCB_ptr+2],ds
 
 	popff				; restore user's flags
 	call	int_21			; try the open
 
 	cli
-	mov	AX_after_21,ax		; save AX as it came back from INT
+	mov	[cs:ax_after_21],ax ; save AX as it came back from INT
 	pushf				; save flags from operation
 	cmp	al,FCB_failed		; open failed ?
 	je	check_error		; yes, lets check extended error
@@ -596,12 +613,12 @@ FCB_openx1:
 
 check_error:
 	call	get_ext_err_code	; get the extended error code
-	mov	FCB_ext_err,1		; set FCB ext error
+	mov	byte [cs:FCB_ext_err],1 ; set FCB ext error
 	call	save_first_ext_err	; save first extended error code
-	mov	ax,ext_err_dpl.DPL_AX	; get error in ax
-	cmp	ax,expected_ext_error	; file not found?
+	mov	ax,[cs:ext_err_dpl.DPL_AX] ; get error in ax
+	cmp	ax,[cs:expected_ext_error] ; file not found?
 	je	FCB_openx2		; yes, lets look around for file
-	lea	dx,save_ext_err 	;
+	lea	dx,[save_ext_err];
 	call	set_ext_err_code	; set the extended error code
 	jmp	set_return_flags	; no, fix the stack, then return
 
@@ -612,11 +629,11 @@ FCB_openx2:
 	popff				; get rid of the flags from the
 					; real operation
 ;	mov	temp_DS_save,ds 	; Save DS reg
-	mov	stack_segment,ss	; Save it
-	mov	stack_offset,sp 	; Save it
+	mov	[cs:stack_segment],ss ; Save it
+	mov	[cs:stack_offset],sp ; Save it
 	mov	ax,cs			; Get current segment
 	mov	ss,ax			; and point stack seg here
-	lea	sp,append_stack 	; set up new stack
+	lea	sp,[append_stack]; set up new stack
 
 	save_regs			; save registers
 
@@ -626,74 +643,74 @@ FCB_openx2:
 	call	ctrl_break_set		; set ctrl-break handler
 	call	crit_err_set		; set crit err handler
 
-	mov	ext_err_flag,1		; flag for setting critical error
+	mov	byte [cs:ext_err_flag],1 ; flag for setting critical error
 
 ;	fix FCB drive spec
 
-	les	bx,dword ptr FCB_ptr	; ES:BX points to FCB
-	mov	ah,ES:byte ptr [bx]	; get FCB drive spec
+	les	bx,dword [cs:FCB_ptr] ; ES:BX points to FCB
+	mov	ah,byte [es:bx]     ; get FCB drive spec
 	cmp	ah,-1			; extended FCB?
 	jne	not_ext_FCB1
 	add	bx,1+5+1		; point to real drive letter
-	mov	ah,ES:byte ptr [bx]	; get FCB drive spec
+	mov	ah,byte [es:bx]     ; get FCB drive spec
 
 not_ext_FCB1:
-	mov	FCB_drive_id,ah 	; save it for later
-	mov	ES:byte ptr [bx],0	; zero the drive field out to
+	mov	[cs:FCB_drive_id],ah ; save it for later
+	mov	byte [es:bx],0     ; zero the drive field out to
 					; use default drive
 
 	mov	ah,get_disk		; get disk
 	call	int_21			; call DOS INT 21 handler
 
 	add	al,"A"			; make it a character
-	mov	work_disk,al		; save it
+	mov	[cs:work_disk],al ; save it
 
 	mov	ah,get_dir		; get directory
 	xor	dx,dx			; default drive
-	lea	si,work_dir		; save area
+	lea	si,[work_dir]; save area
 	call	int_21			; call DOS INT 21 handler
 
 	call	address_path		; get address of path
-	cmp	es: byte ptr [di],";"	; is the append list null?
-	jump	E,null_list		; exit append
-	mov	app_dirs_seg,es 	; save app dirs segment
+	cmp	byte [es:di],";"     ; is the append list null?
+	JUMP	E,null_list		; exit append
+	mov	[cs:app_dirs_seg],es ; save app dirs segment
 	mov	si,di			; source
 
 try_another1:
-	lea	di,try_dir		; destination
+	lea	di,[try_dir]; destination
 	call	get_app_dir		; copy dir to try into try_dir
-	mov	app_dirs_ptr,si 	; save updated pointer
+	mov	[cs:app_dirs_ptr],si ; save updated pointer
 
 
 ;-----------------------------
 try_app_dir1:
-	mov	app_disk,0		; zero for current dir
-	cmp	try_dir+1,":"		; see if we have a drive
+	mov	byte [cs:app_disk],0 ; zero for current dir
+	cmp	[cs:try_dir+1],":" ; see if we have a drive
 	jne	no_drive		; char should be a colon
 
 ;	yes, there was a drive specified, must do the change disk function call
 
 	mov	ah,change_disk		; change disk
-	mov	dl,try_dir		; get the char representation of the drive
-	mov	app_disk,dl		; save it away for later use
+	mov	dl,[cs:try_dir] ; get the char representation of the drive
+	mov	[cs:app_disk],dl ; save it away for later use
 	call	cap_dl
 	sub	dl,"A"			; convert from char to drive spec
 	call	int_21			; call DOS INT 21 handler
 ;	jc	check_end_dir_list	; there was an error, see if there is
 					; another to try
 
-	cmp	crit_err_flag,0 	; did we experience a critical error
+	cmp	byte [cs:crit_err_flag],0 ; did we experience a critical error
 	jne	set_err_code		; yes, fake a file_not_found
 
 no_drive:
 	mov	ah,get_dir		; get directory
 	xor	dx,dx			; default drive
-	lea	si,app_dir		; save area
+	lea	si,[app_dir]; save area
 	call	int_21			; call DOS INT 21 handler
 
 ;	check to see if there was a critical error
 
-	cmp	crit_err_flag,0 	; did we experience a critical error
+	cmp	byte [cs:crit_err_flag],0 ; did we experience a critical error
 	je	cd_worked		; no, the cd worked
 	jmp	short set_err_code
 
@@ -706,23 +723,23 @@ save_regs_and_set:
 set_err_code:
 	xor	ah,ah			; make ax look like open failed
 	mov	al,FCB_failed
-	mov	ax_after_21,ax		; save it away so we can restore it below
+	mov	[cs:ax_after_21],ax ; save it away so we can restore it below
 
 	jmp	no_more_to_try
 
 cd_worked:
-	lea	dx,try_dir		; point dx to dir to try
+	lea	dx,[try_dir]; point dx to dir to try
 	mov	ah,change_dir		; change dir to appended directory
 	call	int_21			; call DOS INT 21 handler
 
 ;	try the open in this dir
 
 	restore_regs			; make regs look like when user
-	mov	ax,incoming_AX		; called us
+	mov	ax,[cs:incoming_AX] ; called us
 
 	call	int_21			; call DOS INT 21 handler
-	mov	ax_after_21,ax		; save AX
-	cmp	crit_err_flag,0 	; did we get critical error?
+	mov	[cs:ax_after_21],ax ; save AX
+	cmp	byte [cs:crit_err_flag],0 ; did we get critical error?
 	jne	save_regs_and_set	; yes, fake a file_not_found
 	cmp	al,FCB_failed	   ; did open work?
 	jne	open_ok
@@ -738,37 +755,37 @@ open_ok:
 ;	restore user's working disk and restore the dir on the appended drive
 
 	mov	ah,change_disk		; change disk back to our original
-	mov	dl,work_disk
+	mov	dl,[cs:work_disk]
 	call	cap_dl
 	sub	dl,"A"			; convert from char to drive spec
 	call	int_21			; call DOS INT 21 handler
 
 	mov	ah,change_dir		; change dir
-	lea	dx,app_disk		; save area (this time include drive)
+	lea	dx,[app_disk]; save area (this time include drive)
 	call	int_21			; call DOS INT 21 handler
 
 ;	this is for ..\dirname ptr
 
 	mov	ah,change_dir		; change dir
-	lea	dx,work_disk		; save area (this time include drive)
+	lea	dx,[work_disk]; save area (this time include drive)
 	call	int_21			; call DOS INT 21 handler
 
-	mov	ax,ax_after_21		; restore AX
+	mov	ax,[cs:ax_after_21] ; restore AX
 	cmp	al,FCB_failed		; did open work?
 	jne	FCB_open_worked
-	mov	ax,ext_err_dpl.DPL_AX
-	cmp	ax,expected_ext_error
+	mov	ax,[cs:ext_err_dpl.DPL_AX]
+	cmp	ax,[cs:expected_ext_error]
 	jne	no_more_to_try		; not file not found
 
 check_end_dir_list:
-	mov	es,app_dirs_seg 	; restore es
-	mov	si,app_dirs_ptr
+	mov	es,[cs:app_dirs_seg] ; restore es
+	mov	si,[cs:app_dirs_ptr]
 	cmp	si,null 		; should we try again?
 	je	no_more_to_try		; no
 	jmp	try_another1		; yes
 
 FCB_open_worked:
-	mov	byte ptr ext_err_flag,0 ; the open worked, no need to set ext err code
+	mov	byte [cs:ext_err_flag],0 ; the open worked, no need to set ext err code
 	jmp	short set_disk
 
 no_more_to_try:
@@ -779,35 +796,35 @@ no_more_to_try:
 ;	of the code to restore the drive spec in FCB.
 ;
 	mov	ah,change_disk		; change disk
-	mov	dl,work_disk
+	mov	dl,[cs:work_disk]
 	call	cap_dl
 	sub	dl,"A"			; convert from char to drive spec
 	call	int_21			; call DOS INT 21 handler
 
 	mov	ah,change_dir		; change dir
-	lea	dx,work_disk		; save area (this time include drive)
+	lea	dx,[work_disk]; save area (this time include drive)
 	call	int_21			; call DOS INT 21 handler
 
 null_list:
-	mov	ah,FCB_drive_id 	; get FCB drive spec
+	mov	ah,[cs:FCB_drive_id] ; get FCB drive spec
 ;	cmp	ah,0			; did they ask for default drive?
 ;	je	fix_drive_spec		; yes, leave it alone
 	jmp	short fix_drive_spec
 
 set_disk:				; set drive number in FCB
-	mov	ah,work_disk		; no, give them the found drive spec
+	mov	ah,[cs:work_disk] ; no, give them the found drive spec
 	sub	ah,"A"-1		; convert from char to drive spec
 
 ;	ah has proper drive spec to put into FCB, do it
 
 fix_drive_spec:
-	les	bx,dword ptr FCB_ptr	; ES:BX points to FCB
-	cmp	ES:byte ptr[bx],-1	; extended FCB
+	les	bx,dword [cs:FCB_ptr] ; ES:BX points to FCB
+	cmp	byte [es:bx],-1    ; extended FCB
 	jne	not_ext_FCB2		; put in the proper drive spec
 	add	bx,1+5+1		; point to real drive letter
 
 not_ext_FCB2:
-	mov	ES:byte ptr [bx],ah
+	mov	byte [es:bx],ah
 
 
 	call	ctrl_break_restore
@@ -815,12 +832,12 @@ not_ext_FCB2:
 
 ;	find out if there is a need to set the extended error code
 
-	cmp	ext_err_flag,0		; do we need to set the extended error code?
+	cmp	byte [cs:ext_err_flag],0 ; do we need to set the extended error code?
 	je	no_ext_err		; no, finish up
-	lea	dx,ext_err_dpl
-	cmp	FCB_ext_err,0
+	lea	dx,[ext_err_dpl]
+	cmp	byte [cs:FCB_ext_err],0
 	je	handle_ext_err
-	lea	dx,save_ext_err
+	lea	dx,[save_ext_err]
 
 handle_ext_err:
 	call	set_ext_err_code	; yes, go set the ext error info
@@ -838,8 +855,8 @@ page
 ;-----------------------------------------------------------------------------
 
 handle_find1:
-	mov	incoming_CX,cx		; save user's CX
-	mov	expected_error,handle_no_more_files
+	mov	[cs:incoming_CX],cx ; save user's CX
+	mov	word [cs:expected_error],handle_no_more_files
 ;	mov	expected_ext_error,handle_no_more_files
 	jmp	short handle_openx
 
@@ -848,9 +865,9 @@ handle_find1:
 ;-----------------------------------------------------------------------------
 
 exec_pgm:
-	mov	incoming_BX,bx		; save user's ES:BX
-	mov	incoming_ES,es
-	mov	expected_error,handle_file_not_found
+	mov	[cs:incoming_BX],bx ; save user's ES:BX
+	mov	[cs:incoming_ES],es
+	mov	word [cs:expected_error],handle_file_not_found
 ;	mov	expected_ext_error,handle_no_more_files
 	jmp	short handle_openx
 
@@ -868,15 +885,15 @@ ext_handle_open:									  ;AN003;
 											  ;AN003;
 no_eo_create:										  ;AN003;
 											  ;AN003;
-	mov	incoming_BX,bx		; save user's registers                           ;AN003;
-	mov	incoming_CX,cx		; extended open sure does use a lot		  ;AN003;
-	mov	incoming_DX,dx		; of registers					  ;AN003;
-	mov	incoming_SI,si								  ;AN003;
-	mov	incoming_DI,di								  ;AN003;
-	mov	incoming_ES,es								  ;AN003;
-	mov	incoming_DS,ds								  ;AN003;
+	mov	[cs:incoming_BX],bx ; save user's registers                           ;AN003;
+	mov	[cs:incoming_CX],cx ; extended open sure does use a lot		  ;AN003;
+	mov	[cs:incoming_DX],dx ; of registers					  ;AN003;
+	mov	[cs:incoming_SI],si     ;AN003;
+	mov	[cs:incoming_DI],di     ;AN003;
+	mov	[cs:incoming_ES],es     ;AN003;
+	mov	[cs:incoming_DS],ds     ;AN003;
 											  ;AN003;
-	mov	expected_error,handle_file_not_found					  ;AN003;
+	mov	word [cs:expected_error],handle_file_not_found ;AN003;
 	jmp	short handle_openx	; for now ...					  ;AN003;
 											  ;AN003;
 ;-----------------------------------------------------------------------------
@@ -884,7 +901,7 @@ no_eo_create:										  ;AN003;
 ;-----------------------------------------------------------------------------
 
 handle_open:
-	mov	expected_error,handle_file_not_found
+	mov	word [cs:expected_error],handle_file_not_found
 ;	mov	expected_ext_error,handle_file_not_found
 
 handle_openx:
@@ -893,22 +910,22 @@ handle_openx:
 
 	call	tv_barrier		; no op on exec
 
-	mov	incoming_AX,ax		; save user's AX
-	mov	word ptr handle_ptr+0,dx	 ; save path pointer
-	mov	word ptr handle_ptr+2,ds
+	mov	[cs:incoming_AX],ax ; save user's AX
+	mov	word [cs:handle_ptr+0],dx ; save path pointer
+	mov	word [cs:handle_ptr+2],ds
 
 	popff				; restore user's flags
 	call	int_21			; try the open
 
 	cli
-	mov	AX_after_21,ax		; save AX as it came back from INT
+	mov	[cs:ax_after_21],ax ; save AX as it came back from INT
 	pushf				; save flags from operation
 
 ;	find out if we had an error, and if so was it the one we were
 ;	looking for
 
 	jc	what_happened		; yes, lets find out what happened
-	mov	incoming_AX,-1		; insure no exec done later
+	mov	word [cs:incoming_AX],-1 ; insure no exec done later
 	jmp	set_return_flags	; no, fix the stack, then ret to caller
 					; this means that the real call worked,
 					; APPEND does not need to do anything
@@ -916,7 +933,7 @@ handle_openx:
 what_happened:
 ;	cmp	ax,handle_path_not_found  ; normal errors
 ;	je	handle_search		; yes, look for the file
-	cmp	ax,expected_error	; was the error file not found?
+	cmp	ax,[cs:expected_error] ; was the error file not found?
 	je	handle_search		; yes, look for the file
 	jmp	set_return_flags	; no, fix the stack, then ret to caller
 
@@ -928,11 +945,11 @@ handle_search:
 	popff				; get rid of the flags from the
 					; real operation
 ;	mov	temp_DS_save,ds 	; Save DS reg
-	mov	stack_segment,ss	; Save it
-	mov	stack_offset,sp 	; Save it
+	mov	[cs:stack_segment],ss ; Save it
+	mov	[cs:stack_offset],sp ; Save it
 	mov	ax,cs			; Get current segment
 	mov	ss,ax			; and point stack seg here
-	lea	sp,append_stack 	; set up new stack
+	lea	sp,[append_stack]; set up new stack
 
 	save_regs			; save registers
 	pushf				;
@@ -955,7 +972,7 @@ handle_search:
 	pushf				; save flags			 ;AN001;
 	push	ax			; save AX			 ;AN001;
 									 ;AN001;
-	cmp	incoming_AX,exec_proc*256 ; is this call an exec?
+	cmp	word [cs:incoming_AX],exec_proc*256 ; is this call an exec?
 	je	drive_and_path_ok
 
 
@@ -963,20 +980,20 @@ handle_search:
 ;	Set up ES:SI to point to incoming string
 ;-------------------------------------------------------------------
 
-	cmp	incoming_AX,ext_handle_opn*256+0 ;is this call an ext open?		  ;AN003;
+	cmp	word [cs:incoming_AX],ext_handle_opn*256+0 ;is this call an ext open?		  ;AN003;
 	jne	no_eo13 								  ;AN003;
-	mov	si,incoming_SI		; DS:SI points to original name for ex open	  ;AN003;
-	mov	es,incoming_DS		; but this code wants ES:SI to point to it	 ;AN003;
-	lea	di,fname		; DS:DI points to fname area			  ;AN003;
+	mov	si,[cs:incoming_SI] ; DS:SI points to original name for ex open	  ;AN003;
+	mov	es,[cs:incoming_DS] ; but this code wants ES:SI to point to it	 ;AN003;
+	lea	di,[fname]; DS:DI points to fname area			  ;AN003;
 	jmp	eo_skip3		; skip the old stuff				  ;AN003;
 											  ;AN003;
 no_eo13:										   ;AN003;
-	les	si,dword ptr handle_ptr ; ES:SI points to original handle
-	lea	di,fname		; DS:DI points to fname area
+	les	si,dword [cs:handle_ptr] ; ES:SI points to original handle
+	lea	di,[fname]; DS:DI points to fname area
 eo_skip3:
 ;-------------------------------------------------------------------
 
-	test	mode_flags,Drive_mode	; Drive_mode enabled?
+	test	word [cs:mode_flags],Drive_mode ; Drive_mode enabled?
 	jnz	check_path_mode 	; yes, go check path mode
 
 	call	check_for_drive 	; no, find out if there is a drive
@@ -992,7 +1009,7 @@ eo_skip3:
 
 
 check_path_mode:
-	test	mode_flags,Path_mode	; Path_mode enabled?
+	test	word [cs:mode_flags],Path_mode ; Path_mode enabled?
 	jnz	drive_and_path_ok	; yes, go do the APPEND function
 
 	call	check_for_path		; no, find out if there is a path
@@ -1020,9 +1037,9 @@ drive_or_path_conflict:
 ;	restore_regs			; restore some regs				  ;AN002;
 ;	pop	ax
 
-	mov	ext_err_flag,1		; we need to set extended error info
-	mov	ax,expected_error	; make ax look like we got file not found
-	mov	ax_after_21,ax		; save it away so we can restore it below
+	mov	byte [cs:ext_err_flag],1 ; we need to set extended error info
+	mov	ax,[cs:expected_error] ; make ax look like we got file not found
+	mov	[cs:ax_after_21],ax ; save it away so we can restore it below
 	popff				; get flags from stack
 	stc				; set the carry flag
 	pushf				; put 'em back
@@ -1038,22 +1055,22 @@ drive_and_path_ok:							 ;AN001;
 ;	end of code to check DRIVE and PATH modes			 ;AN001;
 ;-------------------------------------------------------------------	 ;AN001;
 
-	cmp	incoming_AX,ext_handle_opn*256+0 ;is this call an ext open?		  ;AN003;
+	cmp	word [cs:incoming_AX],ext_handle_opn*256+0 ;is this call an ext open?		  ;AN003;
 	jne	no_eo1									  ;AN003;
-	mov	si,incoming_SI		; DS:SI points to original name for ex open	  ;AN003;
-	mov	es,incoming_DS		; but this code wants ES:SI to point to it	 ;AN003;
-	lea	di,fname		; DS:DI points to fname area			  ;AN003;
+	mov	si,[cs:incoming_SI] ; DS:SI points to original name for ex open	  ;AN003;
+	mov	es,[cs:incoming_DS] ; but this code wants ES:SI to point to it	 ;AN003;
+	lea	di,[fname]; DS:DI points to fname area			  ;AN003;
 	jmp	eo_skip1		; skip the old stuff				  ;AN003;
 											  ;AN003;
 no_eo1: 										  ;AN003;
-	les	si,dword ptr handle_ptr ; ES:SI points to original handle
-	lea	di,fname		; DS:DI points to fname area
+	les	si,dword [cs:handle_ptr] ; ES:SI points to original handle
+	lea	di,[fname]; DS:DI points to fname area
 eo_skip1:										  ;AN003;
 	call	get_fname		; strip just the 8.3 filename from
 					; the original ASCIIZ string
 	call	address_path		; address the path
-	cmp	es: byte ptr [di],";"	; is append list null ?
-	jump	E,no_more_to_try2	; exit append
+	cmp	byte [es:di],";"     ; is append list null ?
+	JUMP	E,no_more_to_try2	; exit append
 	popff				;
 	mov	si,di			; pointer to list of appended directories
 	pushf				; push flags onto stack just for the
@@ -1061,14 +1078,14 @@ eo_skip1:										  ;AN003;
 
 try_another2:
 	popff
-	lea	di,try_dir		; buffer to be filled with dir name
+	lea	di,[try_dir]; buffer to be filled with dir name
 					; to try
 	push	cx			; save CX
 	call	get_app_dir		; this routine will return with a dir
 					; to try in try_dir
-	mov	true_name_count,cx	; save number of chars for later us		  ;AN003;
+	mov	[cs:true_name_count],cx ; save number of chars for later us		  ;AN003;
 	pop	cx
-	mov	app_dirs_ptr,si 	; save updated pointer
+	mov	[cs:app_dirs_ptr],si ; save updated pointer
 
 
 ;-----------------------------
@@ -1080,11 +1097,11 @@ try_app_dir2:
 ;	we now have an ASCIIZ string that includes the original 8.3 filename
 ;	and one of the appended dir paths
 
-	mov	ax,incoming_AX
-	mov	cx,incoming_CX
-	lea	dx,try_dir		; point to new ASCIIZ string
+	mov	ax,[cs:incoming_AX]
+	mov	cx,[cs:incoming_CX]
+	lea	dx,[try_dir]; point to new ASCIIZ string
 
-	cmp	incoming_AX,ext_handle_opn*256+0     ; extended open?			  ;AN003;
+	cmp	word [cs:incoming_AX],ext_handle_opn*256+0 ; extended open?			  ;AN003;
 	jne	not_eo1 								  ;AN003;
 											  ;AN003;
 ;	this is an extended open call							  ;AN003;
@@ -1095,12 +1112,12 @@ try_app_dir2:
 	push	cs									  ;AN003;
 	pop	ds									  ;AN003;
 											  ;AN003;
-	mov	ax,incoming_AX		; function code 				  ;AN003;
-	mov	bx,incoming_BX		; mode word					  ;AN003;
-	mov	cx,incoming_CX		; attributes					  ;AN003;
-	mov	dx,incoming_DX		; flags 					  ;AN003;
-	mov	es,incoming_ES		; ES:DI parm_list pointer			  ;AN003;
-	mov	di,incoming_DI								  ;AN003;
+	mov	ax,[cs:incoming_AX] ; function code 				  ;AN003;
+	mov	bx,[cs:incoming_BX] ; mode word					  ;AN003;
+	mov	cx,[cs:incoming_CX] ; attributes					  ;AN003;
+	mov	dx,[cs:incoming_DX] ; flags 					  ;AN003;
+	mov	es,[cs:incoming_ES] ; ES:DI parm_list pointer			  ;AN003;
+	mov	di,[cs:incoming_DI]     ;AN003;
 											  ;AN003;
 	call	int_21			; try the extended open 			  ;AN003;
 											  ;AN003;
@@ -1111,7 +1128,7 @@ try_app_dir2:
 											  ;AN003;
 											  ;AN003;
 not_eo1:										  ;AN003;
-	cmp	incoming_AX,exec_proc*256+0	; exec pgm call
+	cmp	word [cs:incoming_AX],exec_proc*256+0 ; exec pgm call
 	jne	not_exec1
 
 ;	this is an exec call								  ;AN003;
@@ -1120,42 +1137,42 @@ not_eo1:										  ;AN003;
 	push	bx
 	mov	ah,get_DTA
 	call	int_21
-	mov	word ptr incoming_DTA+0,bx	; save callers DTA
-	mov	word ptr incoming_DTA+2,es
+	mov	word [cs:incoming_DTA+0],bx ; save callers DTA
+	mov	word [cs:incoming_DTA+2],es
 	pop	bx
 	pop	es
 	push	ds
 	push	dx
 	mov	ah,set_DTA
-	lea	dx,exec_DTA		; set for fake exec search
+	lea	dx,[exec_DTA]; set for fake exec search
 	push	cs
 	pop	ds
 	call	int_21
 	pop	dx
 	pop	ds
 	mov	ah,handle_fnd1		; precess search by finds
-	mov	expected_error,handle_no_more_files
+	mov	word [cs:expected_error],handle_no_more_files
 
 not_exec1:
 
 	push	es			; save append's ES
 	push	bx			; save append's BX
-	mov	es,incoming_ES		; must restore ES before doing the call ; fix for P37, GGA 9/10/87
-	mov	bx,incoming_BX		; must resatore user's ES:BX
+	mov	es,[cs:incoming_ES] ; must restore ES before doing the call ; fix for P37, GGA 9/10/87
+	mov	bx,[cs:incoming_BX] ; must resatore user's ES:BX
 
 	call	int_21			; try the open
 
 	pop	bx			; restore append's BX
 	pop	es			; restore append's es
 	pushf				; save flags
-	cmp	incoming_AX,exec_proc*256+0	; exec pgm call
+	cmp	word [cs:incoming_AX],exec_proc*256+0 ; exec pgm call
 	jne	not_exec2
 	push	ds
 	push	dx
 	push	ax
 	mov	ah,set_DTA
-	mov	dx,word ptr incoming_DTA+0	; restore callers DTA
-	mov	ds,word ptr incoming_DTA+2
+	mov	dx,word [cs:incoming_DTA+0] ; restore callers DTA
+	mov	ds,word [cs:incoming_DTA+2]
 	call	int_21
 	pop	ax
 	pop	dx
@@ -1165,18 +1182,18 @@ not_exec2:
 	pushf
 	jnc	found_it_remote 	; all done
 
-	cmp	crit_err_flag,0 	; process critical errors
+	cmp	byte [cs:crit_err_flag],0 ; process critical errors
 	jne	check_crit_err
 
 	cmp	ax,handle_path_not_found  ; normal errors
 	je	should_we_look_more
 
-	cmp	ax,expected_error	; was the error we found file not found?
+	cmp	ax,[cs:expected_error] ; was the error we found file not found?
 	je	should_we_look_more	; yes, look some more
 	jmp	no_more_to_try2 	; no, any other error, we pack it in
 
 should_we_look_more:
-	mov	si,app_dirs_ptr 	; yes, see if we should look more
+	mov	si,[cs:app_dirs_ptr] ; yes, see if we should look more
 	cmp	si,null 		; should we try again?
 	je	no_more_to_tryx
 	jmp	try_another2		; yes
@@ -1184,9 +1201,9 @@ no_more_to_tryx:
 	jmp	no_more_to_try2
 
 check_crit_err:
-	mov	ext_err_flag,1		; we need to set extended error info
-	mov	ax,expected_error	; make ax look like we got file not found
-	mov	ax_after_21,ax		; save it away so we can restore it below
+	mov	byte [cs:ext_err_flag],1 ; we need to set extended error info
+	mov	ax,[cs:expected_error] ; make ax look like we got file not found
+	mov	[cs:ax_after_21],ax ; save it away so we can restore it below
 	popff				; get clags from stack
 	stc				; set the carry flag
 	pushf				; put 'em back
@@ -1195,7 +1212,7 @@ check_crit_err:
 
 found_it_remote:			; come here only if the file was found in
 					; an appended directory
-	mov	ax_after_21,ax		; save AX
+	mov	[cs:ax_after_21],ax ; save AX
 
 
 ;											  ;AN002;
@@ -1211,34 +1228,34 @@ found_it_remote:			; come here only if the file was found in
 	mov	es,bx			; need to use it as a segment			  ;AN002;
 	mov	di,PDB_Append		; get pointer to APPEND flag in PDB		  ;AN002;
 											  ;AN002;
-	mov	ax,es:[di]		; get APPEND flag into AX			  ;AN002;
+	mov	ax,[es:di]		; get APPEND flag into AX			  ;AN002;
 	test	ax,true_name_flag	; is true name flag armed?			  ;AN002;
 	jz	no_true_name		; no, don't copy true name                        ;AN002;
 											  ;AN002;
 	sub	ax,true_name_flag	; clear true name flag				  ;AN002;
-	mov	es:[di],ax		; save it in PSP				  ;AN002;
+	mov	[es:di],ax		; save it in PSP				  ;AN002;
 											  ;AN002;
-	mov	di,word ptr handle_ptr+0	; get user's buffer pointer ES:DI         ;AN002;
-	mov	es,word ptr handle_ptr+2						  ;AN002;
+	mov	di,word [cs:handle_ptr+0] ; get user's buffer pointer ES:DI         ;AN002;
+	mov	es,word [cs:handle_ptr+2]       ;AN002;
 
 ;	find out if this is a handle find or an open or an exec
 
-	cmp	incoming_AX,exec_proc*256+0   ; exec?
+	cmp	word [cs:incoming_AX],exec_proc*256+0 ; exec?
 	je	no_true_name		; yes, do nothing with true name
 											  ;AN002;
-	cmp	incoming_AX,handle_fnd1*256+0	; handle find?
+	cmp	word [cs:incoming_AX],handle_fnd1*256+0 ; handle find?
 	jne	not_hf			; no, go do the easy stuff
 											  ;AN002;
 ;	function we are doing is a handle find, must get part of true_name
 ;	string from append path, part from DTA.  Messy!
 
-	lea	si,try_dir		; buffer that has last APPEND path tried
+	lea	si,[try_dir]; buffer that has last APPEND path tried
 
-	mov	cx,true_name_count	; get number of chars in true_name dir		  ;AN002;
+	mov	cx,[cs:true_name_count] ; get number of chars in true_name dir		  ;AN002;
 
 copy_true_name_loop2:
-	mov	ah,ds:[si]		; get byte of append dir path			  ;AN002;
-	mov	es:[di],ah		; copy it to user's buffer                        ;AN002;
+	mov	ah,[ds:si]		; get byte of append dir path			  ;AN002;
+	mov	[es:di],ah		; copy it to user's buffer                        ;AN002;
 	inc	si			; in this loop, the null is not copied		  ;AN002;
 	inc	di									  ;AN002;
 	loop	copy_true_name_loop2							  ;AN002;
@@ -1246,7 +1263,7 @@ copy_true_name_loop2:
 ;	put in the "\"
 
 	mov	ah,"\"			; get a \
-	mov	es:[di],ah		; copy it
+	mov	[es:di],ah		; copy it
 	inc	di			; increment pointer
 
 ;	we have copied the first part of the string, now get the real filename
@@ -1265,8 +1282,8 @@ copy_true_name_loop2:
 	pop	es
 
 copy_true_name_loop3:
-	mov	ah,ds:[si+30]	     ; get byte of actual filename		       ;AN002;
-	mov	es:[di],ah		; copy it to user's buffer                        ;AN002;
+	mov	ah,[ds:si+30]	     ; get byte of actual filename		       ;AN002;
+	mov	[es:di],ah		; copy it to user's buffer                        ;AN002;
 	cmp	ah,null 		; is it a null? 				  ;AN002;
 	je	true_name_copied	; yes, all done 				  ;AN002;
 	inc	si			; in this loop the null is copied		  ;AN002;
@@ -1277,8 +1294,8 @@ not_hf:
 	mov	si,dx			; make DS:SI point to true name
 
 copy_true_name_loop:									  ;AN002;
-	mov	ah,ds:[si]		; get byte of true name 			  ;AN002;
-	mov	es:[di],ah		; copy it to user's buffer                        ;AN002;
+	mov	ah,[ds:si]		; get byte of true name 			  ;AN002;
+	mov	[es:di],ah		; copy it to user's buffer                        ;AN002;
 	cmp	ah,null 		; is it a null? 				  ;AN002;
 	je	true_name_copied	; yes, all done 				  ;AN002;
 	inc	si									  ;AN002;
@@ -1299,9 +1316,9 @@ no_more_to_try2:
 
 ;	find out if there is a need to set the extended error code
 
-	cmp	ext_err_flag,0		; do we need to set the extended error code?
+	cmp	byte [cs:ext_err_flag],0 ; do we need to set the extended error code?
 	je	no_ext_err2		; no, finish up
-	lea	dx,ext_err_dpl
+	lea	dx,[ext_err_dpl]
 	call	set_ext_err_code	; yes, go set the ext error info
 
 ;	reset flags, and pack it in
@@ -1328,7 +1345,7 @@ check_for_drive:			; input:  ES:SI -> original string
 
 	xor	ax,ax			; assume no drive letter present
 
-	cmp	es: byte ptr [si+1],':' ; is the second char a ":"?
+	cmp	byte [es:si+1],':'     ; is the second char a ":"?
 	jne	exit_check_for_drive	; no, skip setting the flag
 
 	mov	ax,-1			; yes, set the flag
@@ -1354,7 +1371,7 @@ check_for_path: 			; input:  ES:SI -> original string
 walk_handle_string:
 
 	push	ax									 ;AN006;
-	mov	al,es: byte ptr [si]	; is this a dbcs char?				 ;AN006;
+	mov	al,byte [es:si]     ; is this a dbcs char?				 ;AN006;
 	call	Chk_DBCS								 ;AN006;
 	pop	ax									 ;AN006;
 											 ;AN006;
@@ -1365,11 +1382,11 @@ walk_handle_string:
 					; would not mean a path was found		 ;AN006;
 											 ;AN006;
 no_dbcs1:										 ;AN006;
-	cmp	es: byte ptr [si],"\"	; is the char a "\"?
+	cmp	byte [es:si],"\"     ; is the char a "\"?
 	je	found_path		; yes, set flag and return
-	cmp	es: byte ptr [si],"/"	; is the char a "/"?
+	cmp	byte [es:si],"/"     ; is the char a "/"?
 	je	found_path		; yes, set flag and return
-	cmp	es: byte ptr [si],0	; is the char a null
+	cmp	byte [es:si],0     ; is the char a null
 	je	exit_check_for_path	; yes, got to the end of the
 					; handle string
 
@@ -1400,11 +1417,11 @@ ih_10:									  ; @@12
 
 do_applic:
 	cmp	dx,-1			; not COMMAND call
-	jump	NE,pass_it_on
+	JUMP	NE,pass_it_on
 	cmp	al,0			; match name request
 	jne	ck01
 
-	mov	cmd_buf,bx		; save CMDBUF offset
+	mov	[cs:cmd_buf],bx ; save CMDBUF offset
 	call	check_cmd_name
 	jne	no_internal1
 	mov	al,append_inst		; inidicate I want this command
@@ -1417,10 +1434,10 @@ ck01:
 
 ;	save pointer to parser
 
-	mov	word ptr pars_off+0,di	; ES:DI points to COMMAND.COM's parser
-	mov	word ptr pars_off+2,es	; save it for later
+	mov	word [cs:pars_off+0],di ; ES:DI points to COMMAND.COM's parser
+	mov	word [cs:pars_off+2],es ; save it for later
 
-	mov	cmd_env,bx		; save env pointer address
+	mov	[cs:cmd_env],bx ; save env pointer address
 	call	check_cmd_name
 	jne	no_internal2
 	call	COMMAND_begin		; process internal command
@@ -1466,7 +1483,7 @@ check_cmd_name: 			; See if APPEND 		    @@12
 	push	cx			;				    @@12
 	push	di			;				    @@12
 	push	es			;				    @@12
-	mov	si,cmd_buf		; DS:SI -> cmd buf ended with cr    @@12
+	mov	si,[cs:cmd_buf] ; DS:SI -> cmd buf ended with cr    @@12
 	add	si,2			; 1st 2 bytes garbage		    @@12
 					;				    @@12
 ccn_skip_leading:			;				    @@12
@@ -1592,7 +1609,7 @@ ck1:
 	cmp	al,dir_ptr		; is the function request for pointer?
 	jne	ck2
 
-	les	di,dword ptr dirlst_offset     ; return dirlist pointer to caller
+	les	di,dword [cs:dirlst_offset]    ; return dirlist pointer to caller
 	iret
 
 ck2:
@@ -1606,14 +1623,14 @@ ck3:
 	cmp	al,tv_vector		; is the function request for TV vector?
 	jne	ck4			; no, check for old dir ptr
 
-	mov	tv_vec_seg,es		; yes, save the TV vector
-	mov	tv_vec_off,di
+	mov	[cs:tv_vec_seg],es ; yes, save the TV vector
+	mov	[cs:tv_vec_off],di
 
 	push	cs			; set ES:DI to tv ent pnt
 	pop	es			;
-	lea	di,tv_entry
+	lea	di,[tv_entry]
 
-	xor	byte ptr tv_flag,TV_TRUE ; set flag			  ;AN000;
+	xor	byte [cs:tv_flag],TV_TRUE ; set flag			  ;AN000;
 	iret
 
 ck4:					;
@@ -1624,14 +1641,14 @@ ck4:					;
 	push	cs
 	pop	ds
 
-	call	sysloadmsg						 ;AN000;
+	call	SYSLOADMSG						 ;AN000;
 									 ;AN000;
 	mov	ax,1			; message number		 ;AN000;
 	mov	bx,STDERR		; handle			 ;AN000;
 	xor	cx,cx			; sub count			 ;AN000;
 	xor	dl,dl			; no input			 ;AN000;
 	mov	dh,-1			; message class 		 ;AN000;
-	call	sysdispmsg						 ;AN000;
+	call	SYSDISPMSG						 ;AN000;
 
 	pop	ds
 	mov	al,1
@@ -1641,25 +1658,25 @@ ck5:					;
 	cmp	al,DOS_version		; is it the new version check
 	jne	ck6			; no, pass it on
 
-	mov	ax,mode_flags		; set mode bits
+	mov	ax,[cs:mode_flags] ; set mode bits
 	xor	bx,bx			; destroy registers
 	xor	cx,cx
-	mov	dl,byte ptr version_loc   ; major version num
-	mov	dh,byte ptr version_loc+1 ; minor version num
+	mov	dl,byte [cs:version_loc]  ; major version num
+	mov	dh,byte [cs:version_loc+1] ; minor version num
 	iret
 
 ck6:									 ;AN000;
 	cmp	al,get_state		; is it get state call? 	 ;AN001;
 	jne	ck7			; no, look some more		 ;AN000;
 									 ;AN000;
-	mov	bx,mode_flags		; get mode bits 		 ;AN000;
+	mov	bx,[cs:mode_flags] ; get mode bits 		 ;AN000;
 	iret				; return to user		 ;AN000;
 									 ;AN000;
 ck7:									 ;AN000;
 	cmp	al,set_state		; is it set state  call?	 ;AN001;
 	jne	ck8			; no, look some more		 ;AN000;
 									 ;AN000;
-	mov	mode_flags,bx		; save the new state		 ;AN001;
+	mov	[cs:mode_flags],bx ; save the new state		 ;AN001;
 	iret								 ;AN000;
 									 ;AN000;
 ck8:									 ;AN000;
@@ -1682,7 +1699,7 @@ ck8:									 ;AN000;
 											  ;AN002;
 ;	is the flag already set?
 
-	mov	ax,es:[di]		; get APPEND flag into AX			  ;AN002;
+	mov	ax,[es:di]		; get APPEND flag into AX			  ;AN002;
 	test	ax,true_name_flag	; is it set?					  ;AN002;
 	jnz	no_set_true_name	; yes, do nothing				  ;AN002;
 											  ;AN002;
@@ -1690,7 +1707,7 @@ ck8:									 ;AN000;
 
 set_true_name:										  ;AN002;
 	add	ax,true_name_flag	; set true name flag				  ;AN002;
-	mov	es:[di],ax		; save in PSP					  ;AN002;
+	mov	[es:di],ax		; save in PSP					  ;AN002;
 											  ;AN002;
 no_set_true_name:
 	pop	di			; restore some regs				  ;AN002;
@@ -1707,7 +1724,7 @@ ck9:											  ;AN002;
 ;-------------------------------------------------------------------
 
 pass_it_on:				; the function call (ah) was not for append
-	jmp	dword ptr intfcn_Offset ; jump to old INT 2f
+	jmp	dword [cs:intfcn_offset] ; jump to old INT 2f
 
 page
 ;-----------------------------------------------------------------------------
@@ -1716,7 +1733,7 @@ page
 
 crit_err_handler:
 
-	mov	crit_err_flag,0ffh	; set critical error flag
+	mov	byte [cs:crit_err_flag],0ffh ; set critical error flag
 	mov	al,3			; fail int 21h
 	iret
 
@@ -1730,7 +1747,7 @@ page
 
 tv_barrier:
 
-	cmp	tv_flag,TV_TRUE 	; in Topview			 ;AN000;
+	cmp	byte [cs:tv_flag],TV_TRUE ; in Topview			 ;AN000;
 	jne	no_barrier
 
 	push	ax
@@ -1752,7 +1769,7 @@ check_config:
 
 ;	examine the config flag to see if we already know what config we have
 
-	cmp	net_config,0
+	cmp	word [cs:net_config],0
 	jne	do_not_look		; we know config already
 
 ;	the flag word has not been set before,	go find out what config we have
@@ -1760,7 +1777,7 @@ check_config:
 	mov	ax,0b800h		; installation code function code
 	int	2fh			; do the installation check
 
-	mov	net_config,bx		; save flag word for later
+	mov	[cs:net_config],bx ; save flag word for later
 
 do_not_look:
 	pop	bx			;restore regs and leave
@@ -1784,25 +1801,25 @@ do_not_look:
 ;*	   FL is used for the output, others are unchanged.		   *
 ;*									   *
 ;***************************************************************************
-Chk_DBCS	PROC
+Chk_DBCS:
 	PUSH	DS
 	PUSH	SI
 ;	CMP	CS:DBCSEV_SEG,0 	; ALREADY SET ? ;**
 ;	JNE	DBCS00					;**
-	MOV	SI,OFFSET EVEV		; SET DEFAULT OFFSET  ;**
+	MOV	SI,EVEV         ; SET DEFAULT OFFSET  ;**
 	PUSH	CS					      ;**
 	POP	DS			; SET DEFAULT SEGMENT ;**
      PUSH    AX
 	MOV	AX,6300H		; GET DBCS EV CALL
 	INT	21H
-	MOV	CS:DBCSEV_OFF,SI			      ;**
-	MOV	CS:DBCSEV_SEG,DS			      ;**
+	MOV	[cs:DBCSEV_OFF],SI       ;**
+	MOV	[cs:DBCSEV_SEG],DS       ;**
      POP     AX
 DBCS00:
-	MOV	SI,CS:DBCSEV_OFF			      ;**
-	MOV	DS,CS:DBCSEV_SEG			      ;**
+	MOV	SI,[cs:DBCSEV_OFF]       ;**
+	MOV	DS,[cs:DBCSEV_SEG]       ;**
 DBCS_LOOP:
-	CMP	WORD PTR [SI],0
+	CMP	word [SI],0
 	JE	NON_DBCS
 	CMP	AL,[SI]
 	JB	DBCS01
@@ -1819,7 +1836,7 @@ DBCS_EXIT:
 	POP	SI
 	POP	DS
 	RET
-Chk_DBCS	ENDP
+;Chk_DBCS	ENDP
 
 
 ;-----------------------------
@@ -1829,21 +1846,21 @@ append_fname:
 	push	es
 	push	ds
 	pop	es
-	lea	di,try_dir		; destination, sort of (dir name)
-	lea	si,fname		; source (filename)
+	lea	di,[try_dir]; destination, sort of (dir name)
+	lea	si,[fname]; source (filename)
 
 ;	find the end of the dir name
 
-	mov	dbcs_fb,-1		; set flag for no dbcs first byte chars 	 ;AN006;
+	mov	word [cs:dbcs_fb],-1 ; set flag for no dbcs first byte chars 	 ;AN006;
 
 walk_dir_name:
-	mov	al,byte ptr [di]	; get a char from dir name
+	mov	al,byte [di]     ; get a char from dir name
 	cmp	al,null 		; are we at the end?
 	je	end_of_dir		; yes, add on the fname
 
 	call	Chk_DBCS		; char is in al 				 ;AN006;
 	jnc	no_dbcs4		; no, keep looking				 ;AN006;
-	mov	dbcs_fb,di		; save offset					 ;AN006;
+	mov	[cs:dbcs_fb],di ; save offset					 ;AN006;
 	inc	di			; skip second byte
 
 no_dbcs4:
@@ -1853,13 +1870,13 @@ no_dbcs4:
 ;	now it is time to append the filename
 
 end_of_dir:
-	mov	al,byte ptr [di-1]	; get last char of dir name
+	mov	al,byte [di-1]     ; get last char of dir name
 	cmp	al,"\"			; is it a dir seperator?
 	jne	check_next_dir_sep	; no, check the next dir sep char		 ;AN006;
 											 ;AN006;
 	sub	di,2			; yes, must find out if real dir sep		 ;AN006;
 					; or DBCS second byte				 ;AN006;
-	cmp	dbcs_fb,di		; is the char before our dir sep a DBCS 	 ;AN006;
+	cmp	[cs:dbcs_fb],di ; is the char before our dir sep a DBCS 	 ;AN006;
 					; first byte?					 ;AN006;
 	jne	no_dbcs4a		; no, must check for the next dir sep		 ;AN006;
 					; yes, this means we must put in a dir sep	 ;AN006;
@@ -1903,16 +1920,16 @@ eo_name:
 get_fname:
 
 	mov	bx,si			; save the pointer
-	mov	dbcs_fb,-1		; set the dbcs flag off 			 ;AN006;
+	mov	word [cs:dbcs_fb],-1 ; set the dbcs flag off 			 ;AN006;
 
 gfn1:
-	mov	ah,ES:byte ptr [si]	; get a char from the source
+	mov	ah,byte [es:si]     ; get a char from the source
 	cmp	ah,null 		; is it a null?
 	je	got_the_end		; yes, we found the end
 
-	call	chk_dbcs		; is this char a DBCS first byte?		 ;AN006;
+	call	Chk_DBCS		; is this char a DBCS first byte?		 ;AN006;
 	jnc	no_dbcs5		; no, carry on
-	mov	dbcs_fb,si		; yes, save pointer
+	mov	[cs:dbcs_fb],si ; yes, save pointer
 	inc	si			; skip second byte
 
 no_dbcs5:
@@ -1920,7 +1937,7 @@ no_dbcs5:
 	jmp	gfn1			; loop till end found
 
 got_the_end:
-	mov	ah,ES:byte ptr [si]	; get a char
+	mov	ah,byte [es:si]     ; get a char
 	cmp	ah,"/"			; did we find a /
 	je	went_too_far		; yes, we found the start
 	cmp	ah,"\"			; did we find a \
@@ -1935,7 +1952,7 @@ got_the_end:
 found_bslash:				; found a backslash, must figure out if 	 ;AN006;
 					; is second byte of DBCS			 ;AN006;
 	dec	si			; point to next char				 ;AN006;
-	cmp	si,dbcs_fb		; do they match?
+	cmp	si,[cs:dbcs_fb] ; do they match?
 	jne	no_dbcs5a		; no, fix up si and carry on			 ;AN006;
 	dec	si			; skip dbcs byte and loop some more		 ;AN006;
 	jmp	got_the_end								 ;AN006;
@@ -1949,13 +1966,13 @@ went_too_far:
 ;	ES:SI now points to the beginning of the filename
 
 got_the_beg:
-	mov	ah,ES:byte ptr [si]	; get a char from the source
-	mov	byte ptr [di],ah	; copy to dest
+	mov	ah,byte [es:si]     ; get a char from the source
+	mov	byte [di],ah     ; copy to dest
 	cmp	ah,null 		; did we just copy the end?
 	je	done_with_fname 	; yes, all done
 	inc	si			; no, get the next char
 	inc	di
-	cmp	di,offset app_dirs_ptr	; make sure we dont try to copy past the
+	cmp	di,app_dirs_ptr        ; make sure we dont try to copy past the
 	je	done_with_fname 	; area
 	jmp	got_the_beg
 
@@ -1971,8 +1988,8 @@ reset_stack:
 ;	reset the stack 								  ;AN002;
 
 	popff				; restore flags from real open
-	mov	ss,Stack_Segment	; Get original stack segment
-	mov	sp,Stack_Offset 	; Get original stack pointer
+	mov	ss,[cs:stack_segment] ; Get original stack segment
+	mov	sp,[cs:stack_offset] ; Get original stack pointer
 	pushf				; put the flags on the old stack
 
 
@@ -1994,12 +2011,12 @@ set_return_flags:
 	mov	es,bx			; need to use it as a segment			  ;AN002;
 	mov	di,PDB_Append		; get pointer to APPEND flag in PDB		  ;AN002;
 											  ;AN002;
-	mov	ax,es:[di]		; get APPEND flag into AX			  ;AN002;
+	mov	ax,[es:di]		; get APPEND flag into AX			  ;AN002;
 	test	ax,true_name_flag	; is true name flag armed?			  ;AN002;
 	jz	reset_stack2		; no, don't copy true name                        ;AN002;
 											  ;AN002;
 	sub	ax,true_name_flag	; clear true name flag				  ;AN002;
-	mov	es:[di],ax		; save it in PSP				  ;AN002;
+	mov	[es:di],ax		; save it in PSP				  ;AN002;
 											  ;AN002;
 											  ;AN002;
 reset_stack2:										  ;AN002;
@@ -2009,7 +2026,7 @@ reset_stack2:										  ;AN002;
 	pop	bx									  ;AN002;
 	pop	ax									  ;AN002;
 											  ;AN002;
-	cmp	tv_flag,TV_TRUE 					 ;AN000;
+	cmp	byte [cs:tv_flag],TV_TRUE ;AN000;
 	jne	tv_flag_not_set
 
 	mov	ax,2003h		; clear open barrier
@@ -2020,19 +2037,19 @@ reset_stack2:										  ;AN002;
 
 tv_flag_not_set:
 
-	cmp	incoming_AX,exec_proc*256+0	; need to do exec
+	cmp	word [cs:incoming_AX],exec_proc*256+0 ; need to do exec
 	jne	not_exec3
 	popff				; discard bad flags
-	mov	ax,incoming_AX		; set exec parms
+	mov	ax,[cs:incoming_AX] ; set exec parms
 
 	push	ds			; save DS, this must be done					;an005;
 					; to pervent DS from being trashed on return to caller		;an005;
 
 	push	cs
 	pop	ds
-	lea	dx,try_dir
-	mov	bx,incoming_BX
-	mov	es,incoming_ES
+	lea	dx,[try_dir]
+	mov	bx,[cs:incoming_BX]
+	mov	es,[cs:incoming_ES]
 	call	int_21			; issue the exec
 
 	pop	ds			; restore DS							; an005;
@@ -2041,8 +2058,8 @@ tv_flag_not_set:
 
 not_exec3:
 	popff				; get flags from real int 21 (old stack)
-	pop	temp_IP_save		; save IP, CS
-	pop	temp_CS_save
+	pop	word [cs:temp_IP_save] ; save IP, CS
+	pop	word [cs:temp_CS_save]
 	lahf				; save flags in AH
 	popff				; pop old flags off stack
 	sahf				; replace old with new
@@ -2050,9 +2067,9 @@ not_exec3:
 ;	push the new flags onto the stack, then fix CS and IP on stack
 
 	pushf				; push new flags onto stack
-	push	temp_CS_save		; restore IP, CS
-	push	temp_IP_save
-	mov	ax,AX_after_21		; Set AX as it was after open
+	push	word [cs:temp_CS_save] ; restore IP, CS
+	push	word [cs:temp_IP_save]
+	mov	ax,[cs:ax_after_21] ; Set AX as it was after open
 
 	call	crit_sect_reset 	; clear the critical section flag
 	iret				; return to the calling routine
@@ -2067,14 +2084,14 @@ get_app_dir:
 
 	xor	cx,cx			; keep a count of chars in cx			  ;AN003;
 copy_dir:
-	mov	ah,es:byte ptr [si]	; get the char, and copy it into dest
+	mov	ah,byte [es:si]     ; get the char, and copy it into dest
 	cmp	ah,null 		; find a null?
 	je	no_more_dirs		; yes, inform caller that this is the last one
 
 	cmp	ah,";"			; check to see if we are at the end of a dir
 	je	update_pointer		; yes,
 
-	mov	byte ptr [di],ah	; if not null or semi-colon, then copy it
+	mov	byte [di],ah     ; if not null or semi-colon, then copy it
 	inc	si			; increment both pointers
 	inc	di
 	inc	cx			; count of chars				  ;AN003;
@@ -2082,7 +2099,7 @@ copy_dir:
 
 update_pointer:
 	inc	si			; point to next char
-	mov	ah,es:byte ptr [si]	; get char			  ; @@16
+	mov	ah,byte [es:si]     ; get char			  ; @@16
 	cmp	ah,null 		; did we reach the end of the dir list?
 	je	no_more_dirs		;
 
@@ -2095,7 +2112,7 @@ no_more_dirs:
 	xor	si,si			; set end search flag
 
 all_done:
-	mov	byte ptr [di],null	; null terminate destination
+	mov	byte [di],null     ; null terminate destination
 	ret				; return to caller
 
 ;-----------------------------
@@ -2109,7 +2126,7 @@ ctrl_break_set:
 	xor	al,al			; 0 = get current state
 	call	int_21			; call DOS INT 21 handler
 
-	mov	ctrl_break_state,dl	; save the old ctrl-break state
+	mov	[cs:ctrl_break_state],dl ; save the old ctrl-break state
 
 	mov	ah,ctrl_break		; function code for ctrl-break check
 	mov	al,01			; set current state
@@ -2123,7 +2140,7 @@ ctrl_break_set:
 ctrl_break_restore:
 	mov	ah,ctrl_break		; function code for ctrl-break check
 	mov	al,01			; set current state
-	mov	dl,ctrl_break_state	; get the way is was before we messed with it
+	mov	dl,[cs:ctrl_break_state] ; get the way is was before we messed with it
 	call	int_21			; call DOS INT 21 handler
 	ret
 
@@ -2132,23 +2149,23 @@ ctrl_break_restore:
 ctrl_break_rest:
 	mov	ah,ctrl_break		; function code for ctrl-break check
 	mov	al,01			; set current state
-	mov	dl,ctrl_break_state	; get the way is was before we messed with it
+	mov	dl,[cs:ctrl_break_state] ; get the way is was before we messed with it
 	call	int_21
 	ret
 
 ;-----------------------------
 ;
 crit_err_set:
-	mov	crit_err_flag,0 	; clear the critical error flag
+	mov	byte [cs:crit_err_flag],0 ; clear the critical error flag
 
 	mov	ax,get_crit_err 	; Get INT 24h vector
 	call	int_21			; call DOS INT 21 handler
 
-	mov	crit_vector_offset,bx	; Save it
+	mov	[cs:crit_vector_offset],bx ; Save it
 	mov	ax,es			; es hase segment for resident code
-	mov	crit_vector_segment,ax
+	mov	[cs:crit_vector_segment],ax
 
-	lea	dx,crit_err_handler	; DS:DX = New INT 21h vector
+	lea	dx,[crit_err_handler] ; DS:DX = New INT 21h vector
 	mov	ax,set_crit_err 	; function code for setting critical error vector
 	call	int_21			; call DOS INT 21 handler
 	ret				; go back to the caller
@@ -2159,8 +2176,8 @@ crit_err_set:
 crit_err_restore:
 	push	ds			; save ds for this function
 	mov	ax,set_crit_err 	; function code for setting critical error vector
-	mov	dx,crit_vector_offset	; get old int 24 offset
-	mov	ds,crit_vector_segment	; get old int 24 segment
+	mov	dx,[cs:crit_vector_offset] ; get old int 24 offset
+	mov	ds,[cs:crit_vector_segment] ; get old int 24 segment
 	call	int_21			; call INT 21
 	pop	ds
 	ret
@@ -2175,7 +2192,7 @@ crit_sect_set:
 	push	di
 	push	es
 
-	mov	ax,net_config		; check the server config flag
+	mov	ax,[cs:net_config] ; check the server config flag
 	cmp	ax,0			; is it zero?
 	je	dont_set_crit_sect	; yes, skip it
 
@@ -2203,7 +2220,7 @@ crit_sect_reset:
 	push	ax
 	push	bx
 
-	mov	ax,net_config		; check the server config flag
+	mov	ax,[cs:net_config] ; check the server config flag
 	cmp	ax,0			; is it zero?
 	je	not_set 		; yes, skip it
 
@@ -2228,22 +2245,22 @@ save_first_ext_err:
 
 	push	ax
 
-	mov	ax,ext_err_dpl.DPL_AX		; copy all registers
-	mov	save_ext_err.DPL_AX,ax
-	mov	ax,ext_err_dpl.DPL_BX
-	mov	save_ext_err.DPL_BX,ax
-	mov	ax,ext_err_dpl.DPL_CX
-	mov	save_ext_err.DPL_CX,ax
-	mov	ax,ext_err_dpl.DPL_DX
-	mov	save_ext_err.DPL_DX,ax
-	mov	ax,ext_err_dpl.DPL_SI
-	mov	save_ext_err.DPL_SI,ax
-	mov	ax,ext_err_dpl.DPL_DI
-	mov	save_ext_err.DPL_DI,ax
-	mov	ax,ext_err_dpl.DPL_DS
-	mov	save_ext_err.DPL_DS,ax
-	mov	ax,ext_err_dpl.DPL_ES
-	mov	save_ext_err.DPL_ES,ax
+	mov	ax,[cs:ext_err_dpl.DPL_AX] ; copy all registers
+	mov	[cs:save_ext_err.DPL_AX],ax
+	mov	ax,[cs:ext_err_dpl.DPL_BX]
+	mov	[cs:save_ext_err.DPL_BX],ax
+	mov	ax,[cs:ext_err_dpl.DPL_CX]
+	mov	[cs:save_ext_err.DPL_CX],ax
+	mov	ax,[cs:ext_err_dpl.DPL_DX]
+	mov	[cs:save_ext_err.DPL_DX],ax
+	mov	ax,[cs:ext_err_dpl.DPL_SI]
+	mov	[cs:save_ext_err.DPL_SI],ax
+	mov	ax,[cs:ext_err_dpl.DPL_DI]
+	mov	[cs:save_ext_err.DPL_DI],ax
+	mov	ax,[cs:ext_err_dpl.DPL_DS]
+	mov	[cs:save_ext_err.DPL_DS],ax
+	mov	ax,[cs:ext_err_dpl.DPL_ES]
+	mov	[cs:save_ext_err.DPL_ES],ax
 
 	pop	ax
 	ret
@@ -2271,14 +2288,14 @@ get_ext_err_code:
 ;	all fields in the DPL will be filled in except the last three,
 ;	which will be left at zero
 
-	mov	ext_err_dpl.DPL_AX,ax
-	mov	ext_err_dpl.DPL_BX,bx
-	mov	ext_err_dpl.DPL_CX,cx
-	mov	ext_err_dpl.DPL_DX,dx
-	mov	ext_err_dpl.DPL_SI,si
-	mov	ext_err_dpl.DPL_DI,di
-	mov	ext_err_dpl.DPL_DS,ds
-	mov	ext_err_dpl.DPL_ES,es
+	mov	[cs:ext_err_dpl.DPL_AX],ax
+	mov	[cs:ext_err_dpl.DPL_BX],bx
+	mov	[cs:ext_err_dpl.DPL_CX],cx
+	mov	[cs:ext_err_dpl.DPL_DX],dx
+	mov	[cs:ext_err_dpl.DPL_SI],si
+	mov	[cs:ext_err_dpl.DPL_DI],di
+	mov	[cs:ext_err_dpl.DPL_DS],ds
+	mov	[cs:ext_err_dpl.DPL_ES],es
 
 
 ;	restore regs and return
@@ -2321,19 +2338,19 @@ page
 ;
 ;	SS, SP saved incase call is EXEC which blows them away
 int_21: 				;
-	cmp	tv_flag,TV_TRUE 	; see if being re-entered	 ;AN000;
+	cmp	byte [cs:tv_flag],TV_TRUE ; see if being re-entered	 ;AN000;
 	jne	use_old_vec		; yes, pass through to DOS
 
 	pushf				; to comp for iret pops
-	call	dword ptr tv_vec_off	; Call INT 21h
+	call	dword [cs:tv_vec_off] ; Call INT 21h
 	ret				;
 
 use_old_vec:
-	cmp	vector_segment,0	; not installed yet
+	cmp	word [cs:vector_segment],0 ; not installed yet
 	je	use_int
 
 	pushf				;  to comp for iret pops
-	call	dword ptr vector_offset ; Call INT 21h
+	call	dword [cs:vector_offset] ; Call INT 21h
 	ret				;
 
 use_int:
@@ -2346,7 +2363,7 @@ page
 
 address_path:
 address_status: 							  ; @@13
-	test	mode_flags,E_mode
+	test	word [cs:mode_flags],E_mode
 	jnz	get_env_mode
 
 address_pathx:
@@ -2363,7 +2380,7 @@ get_env_mode:					; get from environment
 	call	int_21				; get the PSP
 	mov	es,bx
 	mov	bx,002ch			; address environment
-	mov	ax,es:word ptr[bx]
+	mov	ax,word [es:bx]
 	mov	es,ax
 	pop	bx
 	cmp	ax,0				; PSP pointer is set
@@ -2374,10 +2391,10 @@ use_cmd_env:								  ; @@13
 ;	mov	es,cmd_env						  ; @@13
 env_mode1:
 	mov	di,0				; start at start
-	cmp	es:byte ptr[di],0		; no environment
+	cmp	byte [es:di],0     ; no environment
 	je	no_appendeq
 find_append:
-	cmp	es:word ptr[di],0		; at environment end
+	cmp	word [es:di],0     ; at environment end
 	je	no_appendeq
 	push	di
 	push	si
@@ -2385,7 +2402,7 @@ find_append:
 	push	ds
 	push	cs
 	pop	ds
-	comp	,6+1,append_id			; string = "APPEND="
+	COMP	,6+1,append_id			; string = "APPEND="
 	pop	ds
 	pop	cx
 	pop	si
@@ -2397,7 +2414,7 @@ at_appendeq:					; must insure this is	    @@17
 	cmp	di,0				; genuine "APPEND=" string  @@17
 	je	at_appendeq_genuine		; if start of environ ok    @@17
 	dec	di				; else check that 0	    @@17
-	cmp	es:byte ptr[di],0		;      precedes string	    @@17
+	cmp	byte [es:di],0     ;      precedes string	    @@17
 	je	at_appendeq_10			; jmp if ok		    @@17
 	add	di,8				; else cont.search after    @@17
 	jmp	find_append			;      "="		    @@17
@@ -2405,17 +2422,17 @@ at_appendeq_10: 				;			    @@17
 	inc	di				;			    @@17
 at_appendeq_genuine:				;			    @@17
 	add	di,6+1				; skip APPEND=
-	cmp	es:byte ptr[di],0		; null value
+	cmp	byte [es:di],0     ; null value
 	je	no_appendeq			; treat as not found
-	cmp	es:byte ptr[di]," "
+	cmp	byte [es:di]," "
 	je	no_appendeq
-	cmp	es:byte ptr[di],";"
+	cmp	byte [es:di],";"
 	je	no_appendeq
 	clc					; set ok
 	ret
 
 no_appendeq:					; not found, use default
-	lea	di,semicolon			; null list
+	lea	di,[semicolon] ; null list
 	push	cs
 	pop	es
 	stc					; set error
@@ -2450,13 +2467,13 @@ page
 
 main_begin:				; DOS entry point
 
-	mov	ax,seg mystack		; set up stack
+	mov	ax,sseg_		; set up stack
 	mov	ss,ax
-	lea	sp,mystack
+	lea	sp,[mystack]
 
 	cld
 
-	mov	res_append,0		; set external copy		  ; @@05
+	mov	byte [cs:res_append],0 ; set external copy		  ; @@05
 
 	push	cs			; make DS point to CS
 	pop	ds
@@ -2479,18 +2496,18 @@ main_begin:				; DOS entry point
 	mov	ah,append_2f		; int 2F function code for append ; @@07
 	mov	al,DOS_version		; function code for get version   ; @@07
 	int	int_function						  ; @@07
-	cmp	dx,word ptr version_loc ; does the version match?	  ; @@07
+	cmp	dx,word [cs:version_loc] ; does the version match?	  ; @@07
 	jne	bad_append_ver		; no, cough up an error messsage  ; @@07
 
 
-	call	sysloadmsg						 ;AN000;
+	call	SYSLOADMSG						 ;AN000;
 									 ;AN000;
 	mov	ax,9			; message number		 ;AN000;
 	mov	bx,STDERR		; handle			 ;AN000;
 	xor	cx,cx			; sub count			 ;AN000;
 	xor	dl,dl			; no input			 ;AN000;
 	mov	dh,-1			; message class 		 ;AN000;
-	call	sysdispmsg						 ;AN000;
+	call	SYSDISPMSG						 ;AN000;
 ;	mov	cx,len_second_APPEND_msg; length of string		 ;AN000;   ; @@04
 ;	lea	dx,second_APPEND_msg	; second load message		 ;AN000;   ; @@04
 ;	call	print_STDERR		; display error message 	 ;AN000;   ; @@04
@@ -2502,14 +2519,14 @@ main_begin:				; DOS entry point
 	call	terminate		; exit to DOS			  ; @@05
 
 bad_append_ver: 			; append version mismatch	  ; @@07
-	call	sysloadmsg						 ;AN000;
+	call	SYSLOADMSG						 ;AN000;
 									 ;AN000;
 	mov	ax,1			; message number		 ;AN000;
 	mov	bx,STDERR		; handle			 ;AN000;
 	xor	cx,cx			; sub count			 ;AN000;
 	xor	dl,dl			; no input			 ;AN000;
 	mov	dh,-1			; message class 		 ;AN000;
-	call	sysdispmsg						 ;AN000;
+	call	SYSDISPMSG						 ;AN000;
 ;	mov	cx,len_bad_append_msg					 ;AN000;   ; @@07
 ;	lea	dx,bad_append_msg	; bad app message		 ;AN000;   ; @@07
 ;	call	print_STDERR						 ;AN000;   ; @@07
@@ -2521,7 +2538,7 @@ bad_append_ver: 			; append version mismatch	  ; @@07
 
 not_there_yet:								  ; @@04
 
-	mov	cs:initial_pass,-1	; set a flag for initial pass			 ;AN007;
+	mov	word [cs:initial_pass],-1 ; set a flag for initial pass			 ;AN007;
 	call	do_command		; do actual APPEND
 
 	mov	bx,4			; close all standard files
@@ -2535,7 +2552,7 @@ do_closes:
 
 	call	Release_Environment	; release the environmental vector space	;an007; dms;
 
-	lea	dx,end_address+15	; normal end
+	lea	dx,[end_address+15] ; normal end
 	mov	cl,4			; calc end address in paragraphs
 	shr	dx,cl
 	mov	ah,get_PSP		; calc space from PSP to my code  ; @@02
@@ -2551,26 +2568,26 @@ page
 
 COMMAND_begin:				; COMMAND entry point
 	save_regs
-	mov	word ptr cmd_name@+0,si  ; save internal command buffer @
-	mov	word ptr cmd_name@+2,ds
+	mov	word [cs:cmd_name@+0],si ; save internal command buffer @
+	mov	word [cs:cmd_name@+2],ds
 	cld
 
-	mov	abort_sp,sp		; save sp for aborts		  ; @@05
-	mov	res_append,1		; set resident copy		  ; @@05
+	mov	[cs:abort_sp],sp ; save sp for aborts		  ; @@05
+	mov	byte [cs:res_append],1 ; set resident copy		  ; @@05
 	call	do_command		; do actual APPEND
 abort_exit:				; exit to abort append		  ; @@05
-	mov	sp,abort_sp						  ; @@05
+	mov	sp,[cs:abort_sp]   ; @@05
 
 	push	es
 	push	di
-	les	di,cmd_name@
-	mov	es:byte ptr[di],0	; set no command now
+	les	di,[cs:cmd_name@]
+	mov	byte [es:di],0    ; set no command now
 	pop	di
 	pop	es
 
 	cmp	ax,0			; error
 	jne	no_E_mode
-	test	mode_flags,E_mode	; no /E processing
+	test	word [cs:mode_flags],E_mode ; no /E processing
 	jz	no_E_mode
 
 	mov	ax,append_2f*256+dir_ptr; int 2f function code for append
@@ -2583,40 +2600,40 @@ abort_exit:				; exit to abort append		  ; @@05
 ;	call	int_21
 	mov	bx,ss
 	mov	es,bx
-	mov	bx,cmd_buf		; command line iput buffer
+	mov	bx,[cs:cmd_buf] ; command line iput buffer
 	inc	bx			; skip max length
-	mov	es:byte ptr[bx],3+1+6+1
+	mov	byte [es:bx],3+1+6+1
 	mov	di,bx			; address command line buffer
 	inc	di			; skip current length
 	push	ds
 	push	si
 	push	cs
 	pop	ds
-	move	,3+1+6+1,setappend_name ; set in "SET APPEND="
+	MOVE	,3+1+6+1,setappend_name ; set in "SET APPEND="
 	pop	si
 	pop	ds
-	cmp	ds:byte ptr[si],";"	; null list is special case
+	cmp	byte [ds:si],";"    ; null list is special case
 	jne	copy_path
 	mov	al," "
 	stosb
-	inc	es:byte ptr[bx]
+	inc	byte [es:bx]
 	jmp	short copy_path_done
 copy_path:
 	lodsb
 	cmp	al,0
 	je	copy_path_done
 	stosb
-	inc	es:byte ptr[bx]
+	inc	byte [es:bx]
 	jmp	copy_path
 copy_path_done:
-	mov	es:byte ptr[di],cr	; set end delimiter
+	mov	byte [es:di],cr    ; set end delimiter
 
-	les	di,cmd_name@
+	les	di,[cs:cmd_name@]
 	mov	al,3			; SET length
 	stosb
 	push	cs							  ; @@06
 	pop	ds							  ; @@06
-	move	,8,set_name		; set up "SET" command
+	MOVE	,8,set_name		; set up "SET" command
 
 	mov	ax,0			; set to do SET
 no_E_mode:
@@ -2636,7 +2653,7 @@ do_command:				; APPEND process
 	xor	al,al			; 0 = get current state
 	call	int_21
 
-	mov	ctrl_break_state,dl	; save the old ctrl-break state
+	mov	[cs:ctrl_break_state],dl ; save the old ctrl-break state
 
 	mov	ah,ctrl_break		; function code for ctrl-break check
 	mov	al,01			; set current state
@@ -2661,7 +2678,7 @@ do_command:				; APPEND process
 not_already_there:
 	mov	ah,get_version		; lets find out if we should do it
 	call	int_21			; try the open
-	cmp	ax,expected_version	; compare with DOS version
+	cmp	ax,EXPECTED_VERSION	; compare with DOS version
 	jne	bad_DOS
 
 	jmp	check_assign		; valid range
@@ -2676,14 +2693,14 @@ bad_DOS:
 ;	lea	dx,bad_DOS_msg		; bad DOS message				  ;AN000;
 ;	mov	ah,print_string 							  ;AN000;
 ;	call	int_21									  ;AN000;
-	call	sysloadmsg						 ;AN000;
+	call	SYSLOADMSG						 ;AN000;
 									 ;AN000;
 	mov	ax,8			; message number		 ;AN000;
 	mov	bx,NO_HANDLE		; no handle			 ;AN000;
 	xor	cx,cx			; sub count			 ;AN000;
 	xor	dl,dl			; no input			 ;AN000;
 	mov	dh,-1			; message class 		 ;AN000;
-	call	sysdispmsg						 ;AN000;
+	call	SYSDISPMSG						 ;AN000;
 
 
 	call	ctrl_break_rest
@@ -2691,14 +2708,14 @@ bad_DOS:
 
 use_STDERR:
 									 ;AN000;
-	call	sysloadmsg						 ;AN000;
+	call	SYSLOADMSG						 ;AN000;
 									 ;AN000;
 	mov	ax,8			; message number		 ;AN000;
 	mov	bx,STDERR		; handle			 ;AN000;
 	xor	cx,cx			; sub count			 ;AN000;
 	xor	dl,dl			; no input			 ;AN000;
 	mov	dh,-1			; message class 		 ;AN000;
-	call	sysdispmsg						 ;AN000;
+	call	SYSDISPMSG						 ;AN000;
 
 ;	mov	cx,len_bad_DOS_msg	; length of string		 ;AN000;
 ;	lea	dx,bad_DOS_msg		; bad DOS message		 ;AN000;
@@ -2713,19 +2730,19 @@ check_assign:
 	int	2fh
 	or	al,al
 	jnz	assign_there
-	jmp	check_TopView		; ASSIGN has not been loaded,	  ; @@01
+	jmp	check_Topview		; ASSIGN has not been loaded,	  ; @@01
 
 ;	ASSIGN has been loaded before APPEND, bad news!
 
 assign_there:
-	call	sysloadmsg						 ;AN000;
+	call	SYSLOADMSG						 ;AN000;
 									 ;AN000;
 	mov	ax,6			; message number		 ;AN000;
 	mov	bx,STDERR		; handle			 ;AN000;
 	xor	cx,cx			; sub count			 ;AN000;
 	xor	dl,dl			; no input			 ;AN000;
 	mov	dh,-1			; message class 		 ;AN000;
-	call	sysdispmsg						 ;AN000;
+	call	SYSDISPMSG						 ;AN000;
 
 ;	mov	cx,len_append_assign_msg; length of string
 ;	lea	dx,append_assign_msg
@@ -2746,14 +2763,14 @@ TopView_there:								  ; @@01
 ;	mov	cx,len_append_TV_msg	; length of string		  ; @@01
 ;	lea	dx,append_TV_msg					  ; @@01
 ;	call	print_STDERR		; display error message 	  ; @@01
-	call	sysloadmsg						 ;AN000;
+	call	SYSLOADMSG						 ;AN000;
 									 ;AN000;
 	mov	ax,7			; message number		 ;AN000;
 	mov	bx,STDERR		; handle			 ;AN000;
 	xor	cx,cx			; sub count			 ;AN000;
 	xor	dl,dl			; no input			 ;AN000;
 	mov	dh,-1			; message class 		 ;AN000;
-	call	sysdispmsg						 ;AN000;
+	call	SYSDISPMSG						 ;AN000;
 
 									  ; @@01
 conflict_exit:								  ; @@01
@@ -2781,7 +2798,7 @@ process_args:				; process all arguments
 
 ;-------------------------------------------------------------------
 	mov	si,0081h		; DS:SI points to argument area
-	mov	cs:byte ptr e_switch+9,0	; turn /E switch off
+	mov	byte [cs:e_switch+9],0   ; turn /E switch off
 
 process_argsx:				; process all arguments
 ;
@@ -2791,18 +2808,18 @@ process_argsx:				; process all arguments
 ;	various flags are cleared
 
 	mov	ah,"/"
-	mov	cs:byte ptr x_switch+9,ah		; re-enable /X switch
-	mov	cs:byte ptr path_switch+9,ah		; re-enable /PATH switch
-	mov	cs:byte ptr x_result.$P_Type,0		; clear flag
-	mov	cs:byte ptr path_result.$P_Type,0	; clear flag
-	mov	cs:byte ptr dirs_result.$P_Type,0	; clear flag
-	mov	cs:parse_flag,0 			; clear parse flag
+	mov	byte [cs:x_switch+9],ah    ; re-enable /X switch
+	mov	byte [cs:path_switch+9],ah    ; re-enable /PATH switch
+	mov	byte [cs:x_result.P_Type],0    ; clear flag
+	mov	byte [cs:path_result.P_Type],0   ; clear flag
+	mov	byte [cs:dirs_result.P_Type],0   ; clear flag
+	mov	byte [cs:parse_flag],0 ; clear parse flag
 
 ;	set up things to call PARSER
 
 	push	cs			; make sure ES points to segment where
 	pop	es			; parm block info is
-	lea	di,cs:p_block2		; ES:DI points to parm block, for secondary parsing
+	lea	di,[cs:p_block2] ; ES:DI points to parm block, for secondary parsing
 
 
 	xor	cx,cx			; ordinal value, must start as 0
@@ -2812,7 +2829,7 @@ process_argsx:				; process all arguments
 					; parse past it if we do
 
 get_pars_info:
-	call	dword ptr pars_off	; call to COMMAND.COM's parser
+	call	dword [cs:pars_off] ; call to COMMAND.COM's parser
 
 	cmp	ax,-1			; end of line?
 	jne	not_end_of_line 	; no, carry on
@@ -2827,61 +2844,61 @@ not_end_of_line:
 ;	got here without any errors, set the proper bits in mode_flags
 
 not_parse_error:
-	mov	cs: parse_flag,0ffh	; set parse flag
+	mov	byte [cs:parse_flag],0ffh ; set parse flag
 
 
 check_e:
-	cmp	e_result.$P_Type,3	; was there a /E in this pass?
+	cmp	[cs:e_result.P_Type],3 ; was there a /E in this pass?
 	jne	check_x 		; no, look for an X
 
-	mov	byte ptr e_switch+9,0	; turn this off so we don't allow another
-	mov	e_result.$P_Type,0	; clear this so we don't get fooled later
+	mov	byte [cs:e_switch+9],0 ; turn this off so we don't allow another
+	mov	[cs:e_result.P_Type],0 ; clear this so we don't get fooled later
 
-	or	mode_flags,E_mode	; set E mode on
+	or	word [cs:mode_flags],E_mode ; set E mode on
 
 	jmp	get_pars_info		; go get another argument
 
 check_x:
-	cmp	x_result.$P_Type,3	; was there a /X on this pass? list index
+	cmp	[cs:x_result.P_Type],3 ; was there a /X on this pass? list index
 	je	set_x			; yes, and it was /X w/o ON or OFF
 
-	cmp	x_result.$P_Type,2	; was there a /X on this pass? list index
+	cmp	[cs:x_result.P_Type],2 ; was there a /X on this pass? list index
 	jne	check_path
 
-	mov	byte ptr x_switch+9,0	; turn this off so we don't allow  another
-	mov	x_result.$P_Type,0	; clear this so we don't get fooled later
+	mov	byte [cs:x_switch+9],0 ; turn this off so we don't allow  another
+	mov	[cs:x_result.P_Type],0 ; clear this so we don't get fooled later
 
-	cmp	x_result.$P_Item_Tag,1	; was /X or /X:ON specified?
+	cmp	[cs:x_result.P_Item_Tag],1 ; was /X or /X:ON specified?
 	je	set_x			; yes, set X mode on
-	and	mode_flags,NOT x_mode	; no, clear it
+	and	word [cs:mode_flags],NOT X_mode ; no, clear it
 	jmp	get_pars_info
 
 set_x:
-	or	mode_flags,x_mode
+	or	word [cs:mode_flags],X_mode
 	jmp	get_pars_info
 
 check_path:
-	cmp	path_result.$P_Type,2	; was there a /path on this pass? list index
+	cmp	[cs:path_result.P_Type],2 ; was there a /path on this pass? list index
 	jne	check_dirs
 
 	xor	ah,ah			; turn this off so we don't allow
-	mov	byte ptr path_switch+9,ah	 ; another
-	mov	path_result.$P_Type,0	; clear this so we don't get fooled later
+	mov	byte [cs:path_switch+9],ah ; another
+	mov	[cs:path_result.P_Type],0 ; clear this so we don't get fooled later
 
 
-	cmp	path_result.$P_Item_Tag,1	; was /PATH:ON specified?
+	cmp	[cs:path_result.P_Item_Tag],1 ; was /PATH:ON specified?
 	je	set_path			; yes, set PATH mode
-	and	mode_flags,NOT path_mode	; no, clear it
+	and	word [cs:mode_flags],NOT Path_mode ; no, clear it
 	jmp	get_pars_info
 
 set_path:
-	or	mode_flags,path_mode	; set PATH mode on
+	or	word [cs:mode_flags],Path_mode ; set PATH mode on
 	jmp	get_pars_info
 
 ;	find out if dirs specified
 
 check_dirs:
-	cmp	dirs_result.$P_Type,3	; was a simple string returned?
+	cmp	[cs:dirs_result.P_Type],3 ; was a simple string returned?
 	je	check_dirs2		; yes, carry on
 	jmp	get_pars_info		; no, all done for now
 
@@ -2893,8 +2910,8 @@ check_dirs2:
 	push	si
 	push	di
 
-	lds	si,dword ptr dirs_result.$P_Picked_Val	  ; get pointer to dirs string
-	mov	dirs_result.$P_Type,0	; clear this so we don't get fooled later
+	lds	si,dword [cs:dirs_result.P_Picked_Val]  ; get pointer to dirs string
+	mov	[cs:dirs_result.P_Type],0 ; clear this so we don't get fooled later
 
 	mov	di,0			; set incase int 2f not installed ; @@08
 	mov	es,di							  ; @@08
@@ -2905,12 +2922,12 @@ check_dirs2:
 	jnz	copy_dirs_loop		; ok, do the copy		  ; @@08
 	push	cs			; not active, set myself	  ; @@08
 	pop	es							  ; @@08
-	lea	di,app_dirs						  ; @@08
+	lea	di,[app_dirs]      ; @@08
 
 copy_dirs_loop:
-	movs	es: byte ptr[di],ds:[si]; copy char
+	movs	byte [es:di],[ds:si]   ; copy char
 
-	cmp	byte ptr ds:[si-1],0	; is char a null
+	cmp	byte [ds:si-1],0     ; is char a null
 	je	done_copy_dirs
 
 	jmp	copy_dirs_loop
@@ -2925,17 +2942,17 @@ done_copy_dirs:
 	jmp	get_pars_info		; no error yet, loop till done
 
 end_of_line_reached:
-	mov	old_syntax,0		; process old format operands
+	mov	byte [cs:old_syntax],0 ; process old format operands
 
-	cmp	cs:initial_pass,-1	; is this the first APPEND			 ;AN006;
+	cmp	word [cs:initial_pass],-1 ; is this the first APPEND			 ;AN006;
 	je	first_one		; yes, clear flag and exit			 ;AN006;
 
-	cmp	cs:parse_flag,0 	; if this flag is off, means null command line
+	cmp	byte [cs:parse_flag],0 ; if this flag is off, means null command line
 					; was nothing on the command line
 	je	display_dirs		; go display the dirs
 
 first_one:										 ;AN006;
-	mov	cs:initial_pass,0	; clear first pass flag 			 ;AN006;
+	mov	word [cs:initial_pass],0 ; clear first pass flag 			 ;AN006;
 
 done_for_now:
 normal_exit:
@@ -2946,7 +2963,7 @@ normal_exit:
 
 parse_error:
 	push	ax			;save parser error code 		;an010;bgb
-	call	sysloadmsg						 ;AN000;
+	call	SYSLOADMSG						 ;AN000;
 	pop	ax			;restore parser error coed		;an010;bgb
 	call	do_parse_err							;an010;bgb
 	jmp	bad_parmx		; display message and get out
@@ -3050,7 +3067,7 @@ parse_error:
 bad_path:				; bad paath operand
 ;	mov	cx,len_path_error_msg	; length of string
 ;	lea	dx,path_error_msg
-	call	sysloadmsg						 ;AN000;
+	call	SYSLOADMSG						 ;AN000;
 									 ;AN000;
 	mov	ax,3			; message number		 ;AN000;
 	mov	bx,STDERR		; handle			 ;AN000;
@@ -3064,7 +3081,7 @@ bad_path:				; bad paath operand
 bad_path_parm:				; bad parameter 		  ; @@05
 ;	mov	cx,len_path_parm_error_msg   ; length of string 	  ; @@05
 ;	lea	dx,path_parm_error_msg					  ; @@05
-	call	sysloadmsg						 ;AN000;
+	call	SYSLOADMSG						 ;AN000;
 	mov	ax,3			; message number		 ;AN000;
 	mov	bx,STDERR		; standard error		 ;AN000;
 	xor	cx,cx			; sub count			 ;AN000;
@@ -3074,7 +3091,7 @@ bad_path_parm:				; bad parameter 		  ; @@05
 bad_parm:				; bad parameter
 ;	mov	cx,len_parm_error_msg	; length of string
 ;	lea	dx,parm_error_msg
-	call	sysloadmsg						 ;AN000;
+	call	SYSLOADMSG						 ;AN000;
 									 ;AN000;
 	mov	ax,3			; message number		 ;AN000;
 	mov	bx,STDERR		; standard error		 ;AN000;
@@ -3087,8 +3104,8 @@ bad_parmx:				; bad parameter
 	push	cs
 	pop	ds
 ;	call	print_STDERR		; display error message
-	lea	si,inv_parm		; point to msg parm			;an010;bgb
-	call	sysdispmsg						 ;AN000;
+	lea	si,[inv_parm]; point to msg parm			;an010;bgb
+	call	SYSDISPMSG						 ;AN000;
 	pop	ds
 	call	ctrl_break_rest
 	mov	al,1							  ; @@05
@@ -3118,7 +3135,7 @@ display_dirs:
 	push	es
 	pop	ds
 
-	cmp	es:byte ptr[di],";"	; no append now
+	cmp	byte [es:di],";"    ; no append now
 	je	no_dirs_appended
 
 ;	count the chars in the dir list, cx will hold the count
@@ -3139,13 +3156,13 @@ print_it:
 	call	print_STDOUT		; display appended dirs
 	push	cs
 	pop	ds
-	lea	dx,crlf 		; carriage return, line feed
+	lea	dx,[crlf] ; carriage return, line feed
 	mov	cx,crlf_len		; length of string
 	call	print_STDOUT
 	pop	ds
 
 exit_append:
-	cmp	old_syntax,0		; process old format operands
+	cmp	byte [cs:old_syntax],0 ; process old format operands
 	je	exit_append2
 	mov	si,0081h		; set up rescan
 	mov	ah,get_PSP
@@ -3154,7 +3171,7 @@ exit_append:
 	jmp	process_argsx
 
 exit_append2:
-	mov	old_syntax,0		; after first time this must be off
+	mov	byte [cs:old_syntax],0 ; after first time this must be off
 	call	ctrl_break_rest 	; reset control break checking
 	mov	ax,-1			; no action
 	ret				; exit to COMMAND
@@ -3163,14 +3180,14 @@ no_dirs_appended:
 	push	cs
 	pop	ds
 
-	call	sysloadmsg						 ;AN000;
+	call	SYSLOADMSG						 ;AN000;
 									 ;AN000;
 	mov	ax,5			; message number		 ;AN000;
 	mov	bx,STDERR		; handle			 ;AN000;
 	xor	cx,cx			; sub count			 ;AN000;
 	xor	dl,dl			; no input			 ;AN000;
 	mov	dh,-1			; message class 		 ;AN000;
-	call	sysdispmsg						 ;AN000;
+	call	SYSDISPMSG						 ;AN000;
 
 ;	lea	dx,no_append_msg	; no dirs message		 ;AN000;
 ;	mov	cx,len_no_append_msg	; length of string		 ;AN000;
@@ -3237,7 +3254,7 @@ slashx:
 set_old_syntax:
 ;;	test	mode_flags,0		; no /? switches on old mode
 ;;	jne	bad_path_parmy
-	mov	old_syntax,1
+	mov	byte [cs:old_syntax],1
 parms_done:
 	pop	ds
 	jmp	exit_append
@@ -3250,37 +3267,37 @@ set_vectors:				; set append hooks		  ; @@05
 
 	mov	ax,get_intfcn		; Get INT 2fh vector
 	call	int_21
-	mov	intfcn_offset,bx	; Save it
-	mov	intfcn_segment,es
+	mov	[cs:intfcn_offset],bx ; Save it
+	mov	[cs:intfcn_segment],es
 
 ;	get int 21 vector
 
 	mov	ax,get_vector		; Get INT 21h vector
 	call	int_21
-	mov	vector_offset,bx	; Save it
-	mov	vector_segment,es
+	mov	[cs:vector_offset],bx ; Save it
+	mov	[cs:vector_segment],es
 	pop	es
 
 	push	ds							  ; @@08
 	push	cs							  ; @@08
 	pop	ds							  ; @@08
-	lea	dx,intfcn_hook		; DS:DX = New INT 2fh vector
+	lea	dx,[intfcn_hook]; DS:DX = New INT 2fh vector
 	mov	ax,set_intfcn		; Hook the interrupt
 	call	int_21
 
-	lea	dx,interrupt_hook	; DS:DX = New INT 21h vector
+	lea	dx,[interrupt_hook] ; DS:DX = New INT 21h vector
 	mov	ax,set_vector		; Hook the interrupt
 	call	int_21
 
-	mov	dirlst_segment,cs	; save the address of the dirlist
-	lea	dx,app_dirs
-	mov	dirlst_offset,dx
+	mov	[cs:dirlst_segment],cs ; save the address of the dirlist
+	lea	dx,[app_dirs]
+	mov	[cs:dirlst_offset],dx
 	pop	ds							  ; @@08
 
 	ret								  ; @@05
 
 terminate:				; terminate to dos or return	  ; @@05
-	cmp	res_append,0						  ; @@05
+	cmp	byte [cs:res_append],0 ; @@05
 	jne	is_res							  ; @@05
 	call	Release_Environment	; release environmental vector		;ac009; dms;
 	mov	ah,term_proc		; return to DOS on first time	  ; @@05
@@ -3307,10 +3324,10 @@ Release_Environment:								;an007; dms;
 	push	ax			;save regs				;an007; dms;
 	push	bx			;					;an007; dms;
 	push	es			;					;an007; dms;
-	mov	ah,Get_PSP		; get the PSP segment			;an007; dms;
+	mov	ah,get_PSP		; get the PSP segment			;an007; dms;
 	call	int_21			; invoke INT 21h			;an007; dms;
 	mov	es,bx			; BX contains PSP segment - put in ES	;an007; dms;
-	mov	bx,word ptr es:[PSP_Env]; get segment of environmental vector	;an007; dms;
+	mov	bx,word [es:PSP_Env]    ; get segment of environmental vector	;an007; dms;
 	mov	es,bx			; place segment in ES for Free Memory	;an007; dms;
 	mov	ah,Free_Alloc_Mem	; Free Allocated Memory 		;an007; dms;
 	int	21h			; invoke INT 21h			;an007; dms;
@@ -3346,18 +3363,18 @@ Scan_For_Equal:
 	push	cx				;				;an008; dms;
 
 	xor	cx,cx				; clear cx			;an008; dms;
-	mov	cl,byte ptr ds:[80h]		; get length of command line	;an008; dms;
+	mov	cl,byte [ds:80h]      ; get length of command line	;an008; dms;
 
 Scan_For_Equal_Loop:
 
 	cmp	cx,0				; at end?			;an008; dms;
 	jbe	Scan_For_Equal_Exit		; exit loop			;an008; dms;
-	mov	al,byte ptr ds:[si]		; get 1st. character		;an008; dms;
+	mov	al,byte [ds:si]      ; get 1st. character		;an008; dms;
 	call	Chk_DBCS			; DBCS lead byte?		;an008; dms;
 	jnc	Scan_For_Equal_No_DBCS		; no				;an008; dms;
-		cmp	byte ptr ds:[si],81h	; blank lead byte		;an008; dms;
+		cmp	byte [ds:si],81h     ; blank lead byte		;an008; dms;
 		jne	Scan_For_Equal_Exit	; exit with adjusted SI 	;an008; dms;
-		cmp	byte ptr ds:[si+1],40h	; DBCS blank			;an008; dms;
+		cmp	byte [ds:si+1],40h     ; DBCS blank			;an008; dms;
 		jne	Scan_For_Equal_Exit	; exit with adjusted SI 	;an008; dms;
 
 		add	si,2			; yes - DBCS lead byte		;an008; dms;
@@ -3402,7 +3419,7 @@ Scan_For_Equal_Exit:
 ;	Date	: 3/29/88							;an010;bgb
 ;	Version : DOS 4.0 (wow!)						;an010;bgb
 ;=========================================================================	;an010;bgb
-do_parse_err	PROC								;an010;bgb
+do_parse_err:            ;an010;bgb
 ;;;;;;;;mov	ax,3 ;removed- parser handles this				;an010;bgb
 	mov	bx,STDERR		; handle				;an010;bgb
 ;;;;;;;;xor	cx,cx			; sub count				;an010;bgb
@@ -3412,29 +3429,29 @@ do_parse_err	PROC								;an010;bgb
 ;;;;;;;;mov	cs:si_off,81h		   ;initialize pointer			;an010;bgb
 										;an010;bgb
 	   dec	  si			;point to last byte of invalid parm	;an010;bgb
-public decsi									;an010;bgb
-decsi:	   cmp	   byte ptr [si],' '	;are we pointing to a space?		;an010;bgb
-;	   $IF	   E,OR 		;if so, we dont want to do that 	;an010;bgb
-	   JE $$LL1
-	   cmp	   byte ptr [si],0dh	;are we pointing to CR? 		;an010;bgb
-;	   $IF	   E			;if so, we dont want to do that 	;an010;bgb
-	   JNE $$IF1
-$$LL1:
+;public decsi									;an010;bgb
+decsi:	   cmp	   byte [si],' '     ;are we pointing to a space?		;an010;bgb
+;	   IF$	   E,OR 		;if so, we dont want to do that 	;an010;bgb
+	   JE LL1$$
+	   cmp	   byte [si],0dh     ;are we pointing to CR? 		;an010;bgb
+;	   IF$	   E			;if so, we dont want to do that 	;an010;bgb
+	   JNE IF1$$
+LL1$$:
 	       dec   si 		;find the last byte of parm		;an010;bgb
 	       jmp   decsi							;an010;bgb
-;	   $ENDIF								;an010;bgb
-$$IF1:
-	   mov	   byte ptr [si+1],00	  ;zero terminate display string	;an010;bgb
+;	   ENDIF$								;an010;bgb
+IF1$$:
+	   mov	   byte [si+1],00       ;zero terminate display string	;an010;bgb
 nextsi: 									;an010;bgb
-public nextsi									;an010;bgb
+;public nextsi									;an010;bgb
 	   dec	   si			;look at previous char			;an010;bgb
-	   cmp	   byte ptr [si],' '	;find parm separator			;an010;bgb
+	   cmp	   byte [si],' '     ;find parm separator			;an010;bgb
 	   jnz	   nextsi		;loop until begin of parm found 	;an010;bgb
 										;an010;bgb
-	mov	cs:si_off,si		;mov si into display parms		;an010;bgb
-	mov	cs:si_seg,ds		   ;initialize pointer			;an010;bgb
+	mov	[cs:si_off],si ;mov si into display parms		;an010;bgb
+	mov	[cs:si_seg],ds   ;initialize pointer			;an010;bgb
 	ret					; return to caller		;an010;bgb
-do_parse_err	ENDP								;an010;bgb
+;do_parse_err	ENDP								;an010;bgb
 
 
 ;-------------------------------------------------------------------
@@ -3446,17 +3463,17 @@ MSG_SERVICES <APPEND.CLB,APPEND.CL2,APPEND.CTL>
 
 end_address:				; this is the end of the TSR stuff		 ;AN004;
 
-include parse.asm			; include the parser code
-include msgdcl.inc
+include 'PARSE.ASM' ; include the parser code
+include 'MSGDCL.INC'
 
-cseg	ends
-sseg	segment para stack 'STACK'
-	assume	ss:sseg
+end if
+if SEGSEL = S_SSEG
+;	assume	ss:sseg
 	dw	512 dup(0)
 mystack dw	0
-sseg	ends
+end if
 
 
 
-	end	main_begin
+;	end	main_begin
 

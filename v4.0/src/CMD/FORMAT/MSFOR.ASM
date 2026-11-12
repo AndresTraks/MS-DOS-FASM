@@ -1864,7 +1864,7 @@ CompareVolumeIds:
 	mov	cx, Label_Length		;AC000;
 	xor	bx,bx
 	mov	bl, [INBUFF + 1]
-	lea	di, [INBUFF + 2]
+	lea	di,[INBUFF + 2]
 	add	di, bx
 	mov	al, ' '
 	rep	stosb
@@ -1876,7 +1876,7 @@ CompareVolumeIds:
 
 ; Now compare what the user specified with what is really out there
 	mov	cx, Label_Length		;				;AC000;
-	lea	si, [INBUFF + 2]
+	lea	si,[INBUFF + 2]
 	lea	di,[oldVolumeId]
 	repe	cmpsb
 	jne	BadVolumeId

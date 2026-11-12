@@ -240,3 +240,11 @@ utility ASSIGN ASSGLNK ASSIGN.COM
 # keeping the resident part of itself behind.  The release links the two and
 # stops: this is an .EXE in its own right.
 utility NLSFUNC NLSLNK NLSFUNC.EXE
+
+# APPEND, one module in two segments and no group -- cseg for the program,
+# its data and the message tables, and sseg for the stack -- which
+# APPENDLNK.ASM lays down in turn.  It keeps the directories a program is to
+# look in after its own, and the whole of itself up to end_address stays
+# resident on interrupts 2FH and 21H.  The release links the one module and
+# stops: this is an .EXE in its own right.
+utility APPEND APPENDLNK APPEND.EXE

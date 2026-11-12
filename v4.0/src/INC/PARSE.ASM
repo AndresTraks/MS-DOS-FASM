@@ -525,7 +525,17 @@ P_Return_to_Caller:			;AN000;
 	mov	bl,[psdata_seg:P_Terminator] ;AC034; return delimiter code found
 P_Single_Exit: 			;AN000;
 	clc				;AN000;
+; SysParse is declared PROC FAR above when FarSW says the caller will reach
+; it with a far call, and PROC NEAR when it will not, so MASM made this one
+; return whichever the declaration said.  fasm has no PROC to take the
+; distance from, so the return says it itself.  APPEND is the first of these
+; to ask for the far one: it keeps a far pointer to the parser and calls
+; through it, so that COMMAND.COM's own can be put there instead.
+if FarSW				;AN000;
+	retf				;AN000;
+else					;AN000;
 	ret				;AN000;
+end if					;AN000;
 ;SysParse endp				;AN000;
 PAGE					;AN000;
 ;***********************************************************************
