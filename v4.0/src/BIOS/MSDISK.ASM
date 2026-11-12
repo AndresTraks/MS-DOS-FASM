@@ -213,7 +213,7 @@ MEDIA$CHK:
 	MESSAGE FTESTDISK,<CR,LF>
 	CALL	SETDRIVE
 
-	cmp	[cs:Secrete_Code], 'jk'   ;J.K.11/7/86 Secrete code for DOS 3.3 IBMBIO.
+	cmp	[cs:Secrete_Code], 'kj'   ;J.K.11/7/86 Secrete code for DOS 3.3 IBMBIO.
 	jne	MEDIA$DONE		;J.K.11/7/86
 
 ; FOR NON-REMOVABLE DISKS ONLY RETURN CHANGED IF CHANGED BY FORMAT, OTHERWISE

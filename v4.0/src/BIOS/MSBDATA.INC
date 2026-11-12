@@ -248,7 +248,11 @@ NEW_ROM 	DB	0		;SET TO 1 IF WE HAVE A ROM THAT CAN
 FSETOWNER	DB	?		;=1 IF WE ARE SETTING THE OWNER OF A
 					;DRIVE. (EXAMINED BY CHECKSINGLE).
 ;	public	Secrete_Code
-Secrete_Code	dw	'jk'            ;J.K. 11/7/86 Secrete code for DOS 3.30 IBMBIO.
+; The release writes this 'jk', and MSDISK's test of it the same way:
+; MASM put the first character of a literal in the high byte, so the
+; two it laid down here were k and then j.  The two have to go on
+; agreeing with each other, so neither is turned round on its own.
+Secrete_Code	dw	'kj'            ;J.K. 11/7/86 Secrete code for DOS 3.30 IBMBIO.
 
 	EVENB
 ;	PUBLIC COM1DEV

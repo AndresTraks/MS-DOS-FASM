@@ -545,7 +545,7 @@ ROTOP:
 	CALL	SCANP
 	CMP	byte [SI],'1'
 	JZ	ASMEXV1
-	CMP	word [SI],"LC"          ; CL
+	CMP	word [SI],"CL"          ; CL; the release writes "LC"
 	JZ	ROTOP1
 ROTERR:
 	JMP	ASMERR
@@ -1069,7 +1069,7 @@ GOGO:
 	RET
 
 GETINFO:
-	CMP	AX,'EN'                 ; NEAR
+	CMP	AX,'NE'                 ; NEAR; the release writes 'EN'
 	JNZ	GETREG3
 GETREG0:
 	MOV	DL,2
@@ -1078,7 +1078,7 @@ GETRG01:
 GETREG1:
 	CALL	SCANS
 	MOV	AX,word [SI]
-	CMP	AX,"TP"                 ; PTR
+	CMP	AX,"PT"                 ; PTR; the release writes "TP"
 	JZ	GETREG1
 	JMP	GETLOOP
 
@@ -1095,7 +1095,7 @@ GETREG41:
 	MOV	AX,[SI]
 	CMP	byte [F8087],0
 	JZ	GETREG5
-	CMP	AX,"TS"                 ; 8087 STACK OPERAND
+	CMP	AX,"ST"                 ; 8087 STACK OPERAND; the release writes "TS"
 	JNZ	GETREG5
 	CMP	byte [SI+2],','
 	JNZ	GETREG5
@@ -1104,10 +1104,10 @@ GETREG41:
 	JMP	GETLOOP
 
 GETREG5:
-	CMP	AX,"HS"                 ; SHORT
+	CMP	AX,"SH"                 ; SHORT; the release writes "HS"
 	JZ	GETREG1
 
-	CMP	AX,"AF"                 ; FAR
+	CMP	AX,"FA"                 ; FAR; the release writes "AF"
 	JNZ	GETRG51
 	CMP	byte [SI+2],'R'
 	JNZ	GETRG51
@@ -1140,7 +1140,7 @@ GETREG7:
 GETREG8:				; LOOK FOR A REGISTER
 	CMP	byte [F8087],0
 	JZ	GETREGREG
-	CMP	AX,"TS"
+	CMP	AX,"ST"  ; the release writes "TS"
 	JNZ	GETREGREG
 	CMP	byte [SI+2],'('
 	JNZ	GETREGREG
@@ -1154,7 +1154,7 @@ GETREG8:				; LOOK FOR A REGISTER
 	MOV	[REGMEM],AL
 	INC	byte [REGFLG]
 	ADD	SI,5
-	CMP	word [SI],"S,"
+	CMP	word [SI],",S"      ; the release writes "S,"
 	JNZ	ZLOOP
 	CMP	byte [SI+2],'T'
 	JNZ	ZLOOP

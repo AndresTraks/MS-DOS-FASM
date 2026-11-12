@@ -186,7 +186,12 @@ M_SPECIAL_CASE$ 	EQU	30H    ;; Special case for replacable parameters %0
 M_UNLIM_W$		EQU	0      ;; Unlimited width character
 M_COMMA$		EQU	","    ;; Default Thousand separate
 M_CR_LF$		EQU	0A0DH  ;; Default CR/LF
-M_SPACE_HYP$		EQU	"- "   ;; Default Space/Hyphan
+; The release writes this "- ": MASM put the first character of a literal
+; in the high byte, so the word it stored laid the two bytes down as
+; " -", which is what the code that stores it says it is moving in.
+; fasm puts the first character in the low byte, so the characters are
+; the other way round here to lay the same two bytes down.
+M_SPACE_HYP$		EQU	" -"   ;; Default Space/Hyphan
 M_SPACE$		EQU	" "    ;; Default Space
 M_NULL$ 		EQU	0      ;; Null
 M_FIRST_THOU$		EQU	3      ;; Location of first thousand separator

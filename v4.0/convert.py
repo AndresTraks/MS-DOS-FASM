@@ -712,6 +712,49 @@ def struct_arrays(text):
                   one, text)
 
 
+def literals(text):
+    """A literal of two characters read as a number, whose bytes MASM and
+    fasm lay down in opposite orders.
+
+    MASM put the first character of a literal in the high byte, so DEBUG's
+    CMP AX,"LC" matched the two characters "CL" -- which is what the
+    release's own comment beside it says it is looking for -- and
+    MOV AX,"DL" stored the letters of "LD".  fasm puts the first character
+    in the low byte, so the characters are turned round here to keep the
+    number, and the release's spelling goes in the comment.
+
+    Only two characters, which is the width of a word and the only width
+    this can be certain of: a longer literal in an operand is MASM's error,
+    and a longer one anywhere else is bytes being laid down.  A literal a DB
+    lays down is laid down in order by both assemblers and is left alone,
+    and so is the class name on a SEGMENT, which names nothing the program
+    reads.
+    """
+    def one(m):
+        quote, pair = m.group(1), m.group(2)
+        return '%s%s%s' % (quote, pair[::-1], quote)
+
+    out = []
+    for line in text.split('\n'):
+        code, sep, comment = line.partition(';')
+        if re.search(r"(?i)\bsegment\b", code) or \
+                re.match(r"(?i)^[ \t]*(?:" + N + r"[ \t]+)?d[bq]\b", code):
+            out.append(line)
+            continue
+        changed = re.sub(r"""(['"])([^'"\n]{2})\1""", one, code)
+        if changed == code:
+            out.append(line)
+            continue
+        # the release's own spelling, so that what it wrote can still be read
+        # on the line
+        note = 'the release writes %s' % ', '.join(
+            m.group(0) for m
+            in re.finditer(r"""(['"])([^'"\n]{2})\1""", code))
+        out.append(changed + (sep + comment + '; ' + note
+                              if comment.strip() else '  ; ' + note))
+    return '\n'.join(out)
+
+
 def far_pointers(text):
     """DD of a qualified name, which MASM wrote as a far pointer.
 
@@ -2426,6 +2469,7 @@ for stem in MODULES:
     if stem.endswith('.ASM'):
         text = PROCEDURE[0].sub(PROCEDURE[1], text)
     text = struct_arrays(text)
+    text = literals(text)
     text = far_pointers(text)
     text = far_jumps(text)
     text = at_far_jumps(text)

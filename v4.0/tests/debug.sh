@@ -15,6 +15,18 @@
 # D reads back, and U turns them into the mnemonics A was given.  Those three
 # agreeing is the assembler and the disassembler agreeing, each written from
 # its own table.
+#
+# Then three more instructions, for the operands DEBUG reads as a pair of
+# characters in a word -- CL, SHORT and PTR -- and two bytes typed in with E
+# and read back with U, for the 8087 mnemonics it writes the same way.  Those
+# are the places where MASM's literal, whose first character went in the high
+# byte, says the opposite of what fasm's does: "LC" is the text CL, and
+# MOV AX,"ON" is how FNOP's last three letters are stored.
+#
+# U prints a memory operand that carries its size as "byte [TBYTE[0200]" and
+# runs the 8087's memory form two bytes long -- both of them the conversion's
+# and neither looked into yet, so nothing below asserts them.  They are in
+# what the test prints.
 set -e
 cd "$(dirname "$0")/.."
 
@@ -33,9 +45,20 @@ mcopy -o -i "$IMG" bin/DEBUG.COM ::DEBUG.COM
 
 # R for the registers it starts the program with, A to assemble, the empty
 # line to end the assembly, U and D to read it back, three T's to run it an
-# instruction at a time, and Q to leave.
-printf 'R\r\nA 100\r\nMOV AX,1234\r\nMOV BX,AX\r\nINC BX\r\nINT 20\r\n\r\nU 100 L 8\r\nD 100 L 10\r\nT\r\nT\r\nT\r\nQ\r\n' \
-    > "$OUT/CMDS.TXT"
+# instruction at a time.  Then a second A for the three operands read as a
+# word of two characters, a U to read those back, an E to type two 8087
+# instructions and a size-carrying MOV in as bytes, a U to disassemble
+# them, and Q to leave.
+{
+    printf 'R\r\n'
+    printf 'A 100\r\nMOV AX,1234\r\nMOV BX,AX\r\nINC BX\r\nINT 20\r\n\r\n'
+    printf 'U 100 L 8\r\nD 100 L 10\r\nT\r\nT\r\nT\r\n'
+    printf 'A 120\r\nROR AX,CL\r\nJMP SHORT 130\r\nMOV BYTE PTR [200],5\r\n\r\n'
+    printf 'U 120 L 9\r\n'
+    printf 'E 140 D9 C9 D9 D0 C6 06 00 02 05\r\n'
+    printf 'U 140 L A\r\n'
+    printf 'Q\r\n'
+} > "$OUT/CMDS.TXT"
 mcopy -o -i "$IMG" "$OUT/CMDS.TXT" ::CMDS.TXT
 
 printf 'ECHO OFF\r\nDEBUG < CMDS.TXT > PRN\r\n' > "$OUT/AUTOEXEC.BAT"
@@ -85,7 +108,23 @@ want = [(r"AX=0000  BX=0000  CX=0000  DX=0000",
         (r"AX=1234  BX=1234.*\n.*IP=0105", "the second and BX took it too"),
         (r"AX=1234  BX=1235.*\n.*IP=0106", "and the third counted BX up"),
         (r"IP=0106   NV UP EI PL NZ NA PE NC",
-         "with the parity flag following the count")]
+         "with the parity flag following the count"),
+        # The operands read as a word of two characters.  Before these were
+        # turned round the assembler stopped at the first of them.
+        (r":0120 D3C8 +ROR\tAX,CL",
+         "A took ROR AX,CL, whose CL the assembler reads as a word, and U "
+         "read D3 C8 back as it"),
+        (r":0122 EB0C", "and JMP SHORT, whose SHORT it reads the same way"),
+        (r":0124 C606000205",
+         "and BYTE PTR, whose PTR it reads the same way, laying down the "
+         "five bytes of MOV BYTE PTR [200],5"),
+        # and the 8087 mnemonics the disassembler builds a word at a time
+        (r"D9C9 +\tFXCH\tST\(1\)",
+         "U reads D9 C9 as FXCH ST(1), three of whose letters are one such "
+         "word"),
+        (r"D9D0 +\tFNOP",
+         "and D9 D0 as FNOP, which came out FONP while the word was the "
+         "other way round")]
 for pattern, why in want:
     if re.search(pattern, said):
         print("ok      %s" % why)

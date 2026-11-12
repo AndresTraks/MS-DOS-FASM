@@ -1397,7 +1397,8 @@ OKLD_SYSINIT2:				; SYSINIT1 has an OKLD of its own
 	INT	21H
 	JC	LDCLS
 	MOV	SI,DX			;CHECK FOR EXE FILE
-	CMP	word [SI],"ZM"
+	CMP	word [SI],"MZ"  ; the release writes "ZM": MASM put the first
+				; character of a literal in the high byte
 	CLC				; Assume OK
 	JNZ	LDCLS			; Only know how to do .COM files
 	STC

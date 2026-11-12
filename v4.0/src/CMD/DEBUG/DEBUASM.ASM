@@ -558,14 +558,14 @@ ISD93:
 	   AND	AL,111B
 	   OR	AL,AL
 	   JNZ	NOTFLD
-	   MOV	AX,"DL"
+	   MOV	AX,"LD"  ; the release writes "DL"
 	   STOSW
 	   JMP	SHORT PUTRST
 
 NOTFLD:
 	   CMP	AL,1
 	   JNZ	NOTFXCH
-	   MOV	AX,"CX"
+	   MOV	AX,"XC"  ; the release writes "CX"
 	   STOSW
 	   MOV	AL,"H"
 	   JMP	SHORT PUTRST1
@@ -573,7 +573,7 @@ NOTFLD:
 NOTFXCH:
 	   CMP	AL,3
 	   JNZ	NOTFSTP
-	   MOV	AX,"TS"
+	   MOV	AX,"ST"  ; the release writes "TS"
 	   STOSW
 	   MOV	AL,"P"
 PUTRST1:
@@ -590,7 +590,7 @@ NOTFSTP:
 	   JMP	ESC0
 
 GOTFNOP:
-	   MOV	AX,"ON"
+	   MOV	AX,"NO"  ; the release writes "ON"
 	   STOSW
 	   MOV	AL,"P"
 	   STOSB
@@ -654,7 +654,7 @@ ISCOMP:
 	   STOSB
 
 PUTST:
-	   MOV	AX,"TS"
+	   MOV	AX,"ST"  ; the release writes "TS"
 	   STOSW
 	   RET
 
@@ -845,11 +845,11 @@ INFIX:
 	   RET
 
 OUTVARB:
-	   MOV	BX,"LA"
+	   MOV	BX,"AL"  ; the release writes "LA"
 	   JMP	SHORT OUTVAR
 
 OUTVARW:
-	   MOV	BX,"XA"
+	   MOV	BX,"AX"  ; the release writes "XA"
 OUTVAR:
 	   CALL PUTDX
 OUTFV:
@@ -860,11 +860,11 @@ OUTFV:
 	   RET
 
 OUTFIXB:
-	   MOV	BX,"LA"
+	   MOV	BX,"AL"  ; the release writes "LA"
 	   JMP	SHORT OUTFIX
 
 OUTFIXW:
-	   MOV	BX,"XA"
+	   MOV	BX,"AX"  ; the release writes "XA"
 OUTFIX:
 	   CALL SAV8
 	   JMP	OUTFV
@@ -909,7 +909,7 @@ SHIFTV:
 
 SHIFT:
 	   CALL SHFT
-	   MOV	AX,"1,"
+	   MOV	AX,",1"  ; the release writes "1,"
 	   STOSW
 	   RET
 
@@ -942,9 +942,9 @@ GRP2:
 	   JAE	INDIRECT
 	   TEST AL,1
 	   JZ	INDIRECT
-	   MOV	AX,"AF"                 ; "FAR"
+	   MOV	AX,"FA"                 ; "FAR"; the release writes "AF"
 	   STOSW
-	   MOV	AX," R"
+	   MOV	AX,"R "  ; the release writes " R"
 	   STOSW
 INDIRECT:
 	   JMP	ADDRMOD

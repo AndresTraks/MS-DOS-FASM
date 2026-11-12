@@ -621,7 +621,7 @@ IFHEX:
 	CALL	PARSE_A_FILE
 
 	MOV	BX,[EXTPTR]
-	CMP	word [ds:BX],"EH"     ; "HE"
+	CMP	word [ds:BX],"HE"     ; "HE"; the release writes "EH"
 	retnz
 
 	CMP	byte [ds:BX+2],UPPER_X
@@ -630,7 +630,7 @@ IFHEX:
 IFEXE:
 	PUSH	BX
 	MOV	BX,[EXTPTR]
-	CMP	word [ds:BX],"XE"     ; "EX"
+	CMP	word [ds:BX],"EX"     ; "EX"; the release writes "XE"
 	JNZ	RETIF
 
 	CMP	byte [ds:BX+2],UPPER_E

@@ -509,8 +509,12 @@ P_REG_BH_CG_SW    EQU	BH		;AN029;0="NO CHANGES MADE", FF=CHANGES MADE
 P_REG_BL_DQ_SW    EQU	BL		;AN029;0=NOT IN QUOTES,FF=IN QUOTES
 
 P_DOUBLE_QUOTE    EQU	""""            ;AN029;
-P_BL_EQ	   EQU	" ="            ;AN029;
-P_EQ_BL	   EQU	"= "            ;AN029;
+; The two below are the release's " =" and "= " turned round: MASM put
+; the first character of a literal in the high byte and fasm puts it in
+; the low one, and P_TB_EQ and P_EQ_TB under them are the same two
+; pairs written as the numbers MASM made of them.
+P_BL_EQ	   EQU	"= "            ;AN029;
+P_EQ_BL	   EQU	" ="            ;AN029;
 P_TB_EQ	   EQU	093DH		;AN029; ;"<TAB>="
 P_EQ_TB	   EQU	3D09H		;AN029; ;"=<TAB>"
 end if					;AN029; IF KeySW Supported

@@ -120,9 +120,10 @@ else:
     print("MISSING the line the converted program prints")
     rc = 1
 
-if "-  NOSUCH.EXE" in screen:
+if " - NOSUCH.EXE" in screen:
     print("ok      the second run named a file that is not there, and the "
-          "name came back in the error from the retriever's sublist")
+          "name came back in the error from the retriever's sublist, after "
+          "the \" - \" the retriever puts in front of a %0")
 else:
     print("MISSING the name of the file in the error message")
     rc = 1
