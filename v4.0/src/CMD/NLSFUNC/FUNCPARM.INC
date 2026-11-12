@@ -1,28 +1,28 @@
 ;Parser INPUT PARM LIST Structure
 
 
- NLS_PARMS	label  word
+label NLS_PARMS word
       dw	NLS_PARMSX
       db	0	  ;no extra delimiters
 
- NLS_PARMSX	label  word
+label NLS_PARMSX word
       db	0,1	  ;Min 0 - no path
 			  ;Max 1 - path
       dw	NLS_POS1
 
- NLS_POS1	label  word
+label NLS_POS1 word
       dw	0201h	 ;File spec (optional)
       dw	0001h	 ;Cap result by file
-      dw	Res_Valptr   ;tbl
-      dw	NoVal	     ;no value list
+      dw	RES_VALPTR   ;tbl
+      dw	NOVAL	     ;no value list
       db	0	     ;no switch or
 			     ;keyword synonyms
 
 
-NOVAL label word
+label NOVAL word
       db	0
 
-    RES_VALPTR	label word
+label RES_VALPTR word
 
       RES_TYPE	 db	?	;Result_type
       RES_ITAG	 db	0	;Matched item tag

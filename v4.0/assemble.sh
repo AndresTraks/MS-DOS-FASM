@@ -231,3 +231,12 @@ utility MODE MODELNK MODE.COM
 # keeps the whole of itself resident.  The release links the two and runs
 # EXE2BIN over the result, which is the flat image fasm writes here.
 utility ASSIGN ASSGLNK ASSIGN.COM
+
+# NLSFUNC, two modules in three segments and no group -- NLS_DATA for the
+# buffers and the message text, NLS_INIT_CODE for the code, and STACK -- so
+# the modules are read once per segment and each segment is an address space
+# of its own, which NLSLNK.ASM lays down in turn.  It reads the country
+# information COUNTRY.SYS holds and answers the multiplex interrupt with it,
+# keeping the resident part of itself behind.  The release links the two and
+# stops: this is an .EXE in its own right.
+utility NLSFUNC NLSLNK NLSFUNC.EXE

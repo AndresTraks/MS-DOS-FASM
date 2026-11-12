@@ -311,6 +311,35 @@ UTILITIES = {
     # loader moves into the program's own prefix at 60H and leaves there.
     # The eight modules between are the character sets -- US, Multilingual,
     # Portuguese, Canadian French, Nordic -- and the parser.
+    # NLSFUNC's two modules in the order the makefile links them, and the
+    # four headers of its own that they read.  Three segments and no group
+    # -- NLS_DATA for the buffers and the message text, NLS_INIT_CODE for
+    # the code, and STACK -- so the modules are read once per segment, the
+    # way the kernel's are, and each segment is an address space of its own.
+    # The release links the two and stops: this is an .EXE in its own right.
+    'NLSFUNC': dict(
+        MODULES=('NLSFUNC.ASM', 'NLSPARM.ASM', 'DOESMAC.INC',
+                 'FUNCDBCS.INC', 'FUNCPARM.INC', 'MSG2NLS.INC'),
+        TAG={},
+        SHARED=('COPYRIGH.INC', 'STRUC.INC', 'MULT.INC', 'SF.INC',
+                'DOSCNTRY.INC', 'DEVSYM.INC', 'SYSMSG.INC', 'PARSE.ASM',
+                'PSDATA.INC', 'MSGSERV.ASM', 'MSGDCL.INC', 'DOSSYM.INC',
+                'SYSCALL.INC', 'DOSMAC.INC', 'VERSIONA.INC', 'ERROR.INC',
+                'CPMFCB.INC', 'PDB.INC', 'CURDIR.INC', 'SYSVAR.INC',
+                'DIRENT.INC', 'DPB.INC', 'BUFFER.INC', 'VECTOR.INC',
+                'ARENA.INC', 'EXE.INC', 'FIND.INC', 'FILEMODE.INC',
+                'MI.INC', 'INTNAT.INC', 'VERSION.INC'),
+        # The code segment's own ASSUME, which says CS and nothing else:
+        # NLSFUNC is entered as an .EXE, with DS and ES on the program
+        # prefix, and sets DS itself where it wants its data.
+        START={'cs': 'NLS_INIT_CODE', 'ds': None, 'es': None, 'ss': None},
+        # The character the message table pads a country name out with,
+        # which MSG2NLS.INC lays down three of and NLSFUNC declares
+        # eighteen lines after it reads that header: MASM resolved the name
+        # on its second pass, and fasm wants a number it can resolve
+        # wherever it stands rather than an EQU it has not read yet.
+        FORWARD=('PAD_CHAR',),
+    ),
     # ASSIGN's two modules in the order the makefile links them, and the
     # headers they read.  One segment, code, and no group, so the two are
     # read once rather than once per segment -- the shape TREE, COMP and
@@ -756,19 +785,40 @@ def literals(text):
 
 
 def far_pointers(text):
-    """DD of a qualified name, which MASM wrote as a far pointer.
+    """DD of a name, which MASM wrote as a far pointer.
 
     MASM's DD of a name laid down an offset and a segment, the segment for
     the loader to fix up.  fasm's DD of a name is the offset and nothing
-    else, so the two halves are written as the two words they are.
+    else, so the two halves are written as the two words they are, the
+    second of which is the fasm segment and so is fixed up as the loader
+    fixed the other up.
+
+    The name can carry the segment it is in, which is how FORMAT's message
+    sublists name theirs, or stand on its own, which is how NLSFUNC's do:
+    then the segment is the one the name is declared in.  A DD of anything
+    else -- a number, an expression, the ? of a reservation -- is a DD
+    still, and so is a name declared somewhere this cannot see, which is
+    why the bare rule asks before it rewrites.
     """
     def one(m):
         head, seg, name = m.group(1), m.group(2), m.group(3)
         return '%sdw %s%s\n\tdw %s' % (head, name, m.group(4) or '',
                                        SEGMAP[seg.upper()])
 
-    return re.sub(r"(?mi)^([ \t]*(?:" + N + r"[ \t]+)?)dd[ \t]+(" + SEGPAT
+    text = re.sub(r"(?mi)^([ \t]*(?:" + N + r"[ \t]+)?)dd[ \t]+(" + SEGPAT
                   + r")[ \t]*:[ \t]*(" + N + r")[ \t]*(;[^\n]*)?$", one, text)
+
+    def bare(m):
+        head, name = m.group(1), m.group(2)
+        where = SEGOF.get(name.lower())
+        if where is None:
+            return m.group(0)
+        return '%sdw %s%s%s\n\tdw %s' % (head, name, m.group(3),
+                                         m.group(4) or '',
+                                         SEGMAP[space(where)])
+
+    return re.sub(r"(?mi)^([ \t]*(?:" + N + r"[ \t]+)?)dd[ \t]+(" + N
+                  + r")([ \t]*)(;[^\n]*)?$", bare, text)
 
 
 def at_far_jumps(text):
@@ -967,6 +1017,9 @@ DATA, SIZE, spelling = set(), {}, {}
 # belong where such a name is used and not where it is declared, so the line
 # that declares it is left alone.
 PLACED = set()
+# And the ones whose value is a place with a width in front of it, which is
+# more than one word wherever the name stands.
+WIDE = set()
 # What each module asked a name it does not declare to be.  MASM took a
 # module at a time and LINK never compared the two, so a program could
 # declare a place one width and read it another: MODESUBS gives pbaud_ptr a
@@ -994,6 +1047,17 @@ for text in (list(source.values())
         if m:
             DATA.add(m.group(1).lower())
             PLACED.add(m.group(1).lower())
+        # And an EQU that names a place with its width, which stands for the
+        # whole reference and not for an address: NLSFUNC's FILESPEC_PTR EQU
+        # BYTE PTR DS:[IN_DEX].  A name like that is more than one word
+        # where it is used, which the structured statements have to be told.
+        m = re.match(r"(?i)^[ \t]*(" + N + r")\s+equ\s+"
+                     r"(?:byte|word|dword|qword)\s+ptr\s+"
+                     r"(?:(?:cs|ds|es|ss):)?\s*\[[^\]]+\]\s*$", code)
+        if m:
+            # not storage to the rules that put brackets round a name: the
+            # brackets are in the value already
+            WIDE.add(m.group(1).lower())
         # An EXTRN says what a name another module declares is, which is the
         # only word on it where that module names a place with an EQU:
         # GRTABHAN says PATCH_OFF EQU WORD PTR $-2 and GRTAB asks for it as
@@ -1381,16 +1445,27 @@ def blankness(text):
     rather than an END IF.  MODE writes five of them, which is what lets
     SCRN take a mode as well as a function.
     """
-    out, inmacro, depth = [], False, []
+    # What is open: a macro, or one of the REPT and IRP blocks that close
+    # with ENDM as a macro does.  NLSFUNC's DOESMAC.INC declares a macro
+    # inside a macro and SaveReg closes an IRP and itself with two ENDMs in
+    # a row, so counting the ENDMs is the only way to know which one ends
+    # the macro the IFNBs are in.
+    out, nest, depth = [], [], []
     for line in text.split('\n'):
         code = code_of(line)
         note = line[len(code):]
+        inmacro = 'macro' in nest
         if MACRODEF.match(code):
-            inmacro, depth = True, []
+            nest.append('macro')
+            depth = []
             out.append(line)
             continue
-        if inmacro and MACROEND.match(code):
-            inmacro = False
+        if re.match(r"(?i)^[ \t]*(?:IRP|IRPC|REPT)\b", code):
+            nest.append('loop')
+            out.append(line)
+            continue
+        if nest and MACROEND.match(code):
+            nest.pop()
             out.append(line)
             continue
         m = re.match(r"(?i)^([ \t]*)IF(N?)B[ \t]+<(.*?)>[ \t]*$", code)
@@ -1532,6 +1607,8 @@ def conditions(text):
         a condition, which is macro text until STRUC.INC takes it apart, so
         a name there is bracketed here.
         """
+        if re.match(r"^" + N + r"$", word) and word.lower() in WIDE:
+            return '<%s>' % word
         return ('[%s]' % word
                 if re.match(r"^" + N + r"$", word) and word.lower() in DATA
                 else word)
@@ -1592,6 +1669,21 @@ def places(text):
     how each of GRAFTABL's character tables names its own beginning:
     TABLEUS EQU THIS BYTE.
     """
+    # A size in front of a place that is reached through a register is a
+    # name for the whole reference, and not for an address: NLSFUNC says
+    # FILESPEC_PTR EQU BYTE PTR DS:[IN_DEX] for the character its loop is
+    # on, where IN_DEX is BP, and reads it as a whole operand.  That one
+    # keeps its brackets and stays an EQU, fasm's being the text put in
+    # where the name is used, which is what MASM's was here.
+    text = re.sub(r"(?mi)^(" + N + r")([ \t]+)EQU([ \t]+)"
+                  r"(byte|word|dword|qword)[ \t]+ptr[ \t]+"
+                  r"((?:cs|ds|es|ss):)?[ \t]*\[([^\]]+)\][ \t]*"
+                  r"(;[^\n]*)?$",
+                  lambda m: '%s%sequ%s%s [%s%s]%s' % (
+                      m.group(1), m.group(2), m.group(3), m.group(4).lower(),
+                      (m.group(5) or '').lower(), m.group(6),
+                      '\t' + m.group(7) if m.group(7) else ''),
+                  text)
     text = re.sub(r"(?mi)^(" + N + r")[ \t]+EQU[ \t]+"
                   r"(byte|word|dword|qword)[ \t]+ptr[ \t]+"
                   r"([^;\n]+?)[ \t]*(;[^\n]*)?$",
@@ -1663,6 +1755,24 @@ def dollar_equ(text):
 
     return re.sub(r"(?mi)^([ \t]*" + N + r"[ \t]+)EQU([ \t]+)"
                   r"([^;'\"\n]*\$[^;'\"\n]*)", one, text)
+
+
+FORWARD = U.get('FORWARD', ())
+
+
+def forwards(text):
+    """An EQU a header read earlier in the module has already used.
+
+    MASM took two passes and resolved the name on the second; fasm's EQU is
+    text put in where the name is used, and a name used before its EQU means
+    nothing at all.  The = is a number fasm resolves wherever it stands, so
+    the ones the table names become that: NLSFUNC declares PAD_CHAR after
+    the eleven headers it reads, and MSG2NLS.INC lays three of them down.
+    """
+    if not FORWARD:
+        return text
+    return re.sub(r"(?mi)^([ \t]*(?:" + "|".join(FORWARD) + r")[ \t]+)"
+                  r"EQU([ \t]+)", r"\1=\2", text)
 
 
 def records(text):
@@ -2488,6 +2598,7 @@ for stem in MODULES:
     text = places(text)
     text = grouped_equ(text)
     text = dollar_equ(text)
+    text = forwards(text)
     text = records(text)
     text = record_fields(text)
     text = tabled(text)
@@ -2514,10 +2625,16 @@ for stem in MODULES:
 
         m = MACRODEF.match(bare)
         if m:
+            # A macro declared inside another, which MASM let stand and
+            # declared where the outer one was called: NLSFUNC's DOESMAC.INC
+            # declares the macro that writes a page heading inside the one
+            # that calls an installed function.  The braces of the inner one
+            # are escaped once for each macro they stand in.
+            deep = '\\' * len([b for b in blocks if b != 'rept'])
             inmacro[0] = True
             blocks.append('macro')
             out.append('macro %s %s' % (m.group(1), m.group(2).strip()))
-            out.append('{')
+            out.append(deep + '{')
             continue
         # MASM's REPT assembled what follows a given number of times and
         # closed with ENDM like a macro; fasm's REPEAT closes with two words
@@ -2558,7 +2675,8 @@ for stem in MODULES:
                                + 'end repeat', was_len, comment))
             else:
                 inmacro[0] = False
-                out.append('}' + (' ' + comment if comment else ''))
+                deep = '\\' * len([b for b in blocks if b != 'rept'])
+                out.append(deep + '}' + (' ' + comment if comment else ''))
             continue
 
         # MASM's IFDEF asked whether a name had been given a value, which
@@ -2819,7 +2937,9 @@ for stem in MODULES:
                 else (held.group(3), held.group(5))
             # a left side of more than one word goes in brackets of its own,
             # because fasm's MATCH splits the condition into its tokens
-            if not left.startswith('<') and re.search(r"[\s\[\]:]", left):
+            if not left.startswith('<') \
+                    and (re.search(r"[\s\[\]:]", left)
+                         or left.lower() in WIDE):
                 left = '<%s>' % left
             code = '%s%s <%s %s %s>%s' % (held.group(1), held.group(2), left,
                                           held.group(4).upper(), right,

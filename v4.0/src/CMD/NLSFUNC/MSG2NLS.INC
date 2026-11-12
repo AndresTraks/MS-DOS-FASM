@@ -1,7 +1,7 @@
 BADDOS equ 1
 ALLINS equ 2
 FNF    equ 3
-FLAG1  equ LEFT_ALIGN+CHAR_FIELD_ASCIIZ
+FLAG1  equ (Left_Align+Char_Field_ASCIIZ)
 
 ;*****************************************************************************
 ;******************************************************************************
@@ -35,35 +35,38 @@ MIN_1	       EQU   1		   ;MINIMUM WIDTH OF STRING FIELD
 ID_0	       EQU   0
 
 ;Message PARM LIST Structure
-  PARMLIST1 LABEL   BYTE  ;PARM LIST
+label PARMLIST1 byte      ;PARM LIST
        ;(File not found - 'PATH_SPEC')
        DB  11	      ;PARMLIST size
        DB  0	      ;reserved
-       DD  PATH_SPEC
-       DB  id_0       ;; n of %n
+       dw PATH_SPEC
+	dw NLS_DATA_
+       DB  ID_0       ;; n of %n
        DB  FLAG1      ;; data type
-       DB  max_0      ;;max width
-       DB  min_1      ;;min width
+       DB  MAX_0      ;;max width
+       DB  MIN_1      ;;min width
        DB  PAD_CHAR   ;;char defined to be space
 
 
-  PARMLIST2 LABEL   BYTE  ;PARM LIST
+label PARMLIST2 byte      ;PARM LIST
        ;(NLSFUNC already installed)
        DB  11	      ;PARMLIST size
        DB  0	      ;reserved
-       DD  UTILITY    ;; ptr to data
+       dw UTILITY    ;; ptr to data
+	dw NLS_DATA_
        DB  1	      ;; n of %n
        DB  FLAG1      ;; data type
        DB  0	      ;;max width
        DB  1	      ;;min width
        DB  PAD_CHAR   ;;char defined
 
-  PARMLIST3 LABEL   BYTE  ;PARM LIST
+label PARMLIST3 byte      ;PARM LIST
        ;(Invalid parameter 'PATH_SPEC')
        DB  11	      ;PARMLIST size
        DB  0	      ;reserved
-       DD  PATH_SPEC   ;; ptr to data
-       DB  id_0       ;; n of %n
+       dw PATH_SPEC   ;; ptr to data
+	dw NLS_DATA_
+       DB  ID_0       ;; n of %n
        DB  FLAG1      ;; data type
        DB  0	      ;;max width
        DB  1	      ;;min width
