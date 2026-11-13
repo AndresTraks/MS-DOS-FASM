@@ -345,7 +345,7 @@ std_printf:            ;ac000;convert to proc
 ;std_printf	endp				;ac000;end proc
 
 NONAME:
-	MOV	DX,[cs:ndname_ptr]
+	MOV	DX,ndname_ptr
 	JMP	xERROR
 
 SIMPED:
@@ -546,7 +546,7 @@ IF12$$:
 ;======================= end NOTBAK ======================================
 
 Badopt:
-	MOV	DX,[cs:opt_err_ptr]     ;Bad option specified
+	MOV	DX,opt_err_ptr     ;Bad option specified
 	JMP	xERROR
 
 ;=========================================================================
@@ -630,23 +630,23 @@ CreateCheck:
 	cmp	ax,error_access_denied
 	jnz	BadDriveError
 DiskFull:
-	MOV	DX,[cs:nodir_ptr]
+	MOV	DX,nodir_ptr
 	jmp	xERROR
 
 FileCreationError:
-	mov	dx,[cs:bcreat_ptr]
+	mov	dx,bcreat_ptr
 	jmp	xERROR
 
 ReadOnlyError:
-	MOV	DX,[cs:ro_err_ptr]
+	MOV	DX,ro_err_ptr
 	jmp	xERROR
 
 BadDriveError:
-	MOV	DX,[cs:baddrv_ptr]
+	MOV	DX,baddrv_ptr
 	jmp	xERROR
 
 TooManyError:
-	MOV	DX,[cs:too_many_ptr]
+	MOV	DX,too_many_ptr
 	jmp	xERROR
 
 
@@ -659,7 +659,7 @@ CREAT_ERR:
 	JMP	MAKFIL
 
 HAVBAK:
-	MOV	DX,[cs:nobak_ptr]
+	MOV	DX,nobak_ptr
 	JMP	xERROR
 
 HAVFIL:

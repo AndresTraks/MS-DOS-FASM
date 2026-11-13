@@ -969,7 +969,7 @@ DosError:								;AN000;
 	mov	ah,059h 						;AN000;
 	int	21h							;AN000;
 
-	mov	si,[ds:Sublist_msg_exterror]        ;AC001;
+	mov	si,Sublist_msg_exterror        ;AC001;
 	Extend_Message							;AN001;
 	pop	ds							;AN001;
 

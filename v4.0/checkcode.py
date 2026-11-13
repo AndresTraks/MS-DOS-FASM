@@ -32,7 +32,8 @@ reserves the transient's parameter area where MASM moved the origin over it;
 and TDATA.ASM's inner ENDM closed an IRP, which is a block in its own braces
 here.
 
-It also reads each far procedure's RET.  The mnemonic on the line is still
+It also reads each far procedure's RET, and every address the release asked
+for with OFFSET.  The mnemonic on the line is still
 RET, so the pass above lets it through -- RETF is one of the spellings the
 conversion is allowed to have made of it -- and a near return where a far one
 was wanted is the one kind of changed meaning that pass cannot see.
@@ -187,6 +188,52 @@ def far_returns(rel, was, now):
     return bad
 
 
+# An address MASM was asked for with OFFSET that came out as a read of the
+# word at it.  The mnemonic is the same on both lines, so the pass above
+# cannot see it either: what moved is the operand.  TIME.ASM's DODATE loaded
+# the days-in-month table with MOV BX,OFFSET DOSGROUP:MONTAB-1 and XLATed
+# through it, and the conversion wrote MOV BX,[ss:MONTAB-1].
+#
+# Lined up on the instruction rather than the line, so a file whose length
+# changed is read as well: what the release asked the address of, by
+# mnemonic, register and name, against what the converted file reads.  Two
+# lines of a file that both name the same thing with the same mnemonic and
+# register, one for its address and one for its contents, would be reported
+# and would be right; there are none in this tree.
+ADDRESSED = re.compile(r"(?i)^[ \t]*(mov|add|sub|cmp|lea|and|or|test)[ \t]+"
+                       r"(ax|bx|cx|dx|si|di|bp)[ \t]*,[ \t]*OFFSET[ \t]+"
+                       r"(?:[A-Za-z_@?$][A-Za-z0-9_@?$]*[ \t]*:[ \t]*)?"
+                       r"([A-Za-z_@?$][A-Za-z0-9_@?$]*)[-+\w ]*$")
+ISREAD = re.compile(r"(?i)^[ \t]*(mov|add|sub|cmp|lea|and|or|test)[ \t]+"
+                    r"(ax|bx|cx|dx|si|di|bp)[ \t]*,[ \t]*"
+                    r"\[(?:(?:cs|ds|es|ss):)?"
+                    r"([A-Za-z_@?$][A-Za-z0-9_@?$]*)[-+\w ]*\][ \t]*$")
+
+
+def addresses(rel, was, now):
+    """Every OFFSET the release wrote that the conversion reads instead."""
+    want = {}
+    for line in was:
+        m = ADDRESSED.match(line.split(";")[0].rstrip())
+        if m:
+            want[(m.group(1).lower(), m.group(2).lower(),
+                  m.group(3).lower())] = line.split(";")[0].strip()
+    if not want:
+        return 0
+    bad = 0
+    for n, line in enumerate(now, 1):
+        code = line.split(";")[0]
+        m = ISREAD.match(code.rstrip())
+        if not m:
+            continue
+        key = (m.group(1).lower(), m.group(2).lower(), m.group(3).lower())
+        if key in want:
+            print("%-26s %5d  %-10s -> %-10s %s"
+                  % (rel, n, "OFFSET", "reference", code.strip()[:40]))
+            bad += 1
+    return bad
+
+
 def origin(rel):
     adds = subprocess.run(["git", "-C", REPO, "log", "--diff-filter=A",
                            "--format=%H", "--", rel],
@@ -298,6 +345,16 @@ def main():
         # converted, and its RETs are the release's RETs.
         if was != now:
             total += far_returns(rel, was, now)
+    # The addresses are read whatever the file's length, the two streams
+    # being lined up on the instruction rather than the line.
+    for rel in names:
+        orig = origin(os.path.relpath(os.path.join(HERE, rel), REPO))
+        if orig is None:
+            continue
+        was = orig.replace("\r\n", "\n").split("\n")
+        now = open(os.path.join(HERE, rel), encoding="cp437").read().split("\n")
+        if was != now:
+            total += addresses(rel, was, now)
     print("\n%d lines carry a different instruction; %d files are a different "
           "length and were lined up by their instructions instead"
           % (total, lengths))

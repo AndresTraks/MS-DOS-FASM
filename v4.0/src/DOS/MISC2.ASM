@@ -365,7 +365,7 @@ Break	<FastInit - Initialize FastTable entries >
 Procedure   FastInit,NEAR				      ;AN000;
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:NOTHING  ;AN000;
 
-	MOV	DI,[cs:FastTable+2]   ;AN000;FO. points to fastxxx entry
+	MOV	DI,FastTable+2   ;AN000;FO. points to fastxxx entry
 	DEC	BX		  ;AN000;FO.;; decrement index
 	MOV	DX,BX		  ;AN000;FO.;; save bx
 	SHL	BX,1		  ;AN000;FO.;; times 4 , each entry is DWORD
@@ -387,7 +387,7 @@ ok_install:			      ;AN000;
 	MOV	CX,DS		      ;AN000;FO.;;  get FASTXXX entry segment
 	MOV	word [cs:DI+2],CX ;AN000;FO.;;  initialize routine entry
 	MOV	word [cs:DI],SI   ;AN000;FO.;;  initialize routine offset
-	MOV	DI,[cs:FastFlg] ;AN000;FO.; get addr of FASTXXX flags
+	MOV	DI,FastFlg ;AN000;FO.; get addr of FASTXXX flags
 	ADD	DI,DX			   ;AN000;FO.;	index to a FASTXXX flag
 	OR	byte [cs:DI],Fast_yes  ;AN000;FO.;	indicate installed
 
@@ -490,7 +490,7 @@ Break	<GetDevList - Get device Header list pointer>
 Procedure   GetDevList,NEAR
 ;	ASSUME	CS:DOSGroup,DS:NOTHING,ES:NOTHING,SS:DOSGROUP
 
-	MOV	SI,[ss:SysInitTable]
+	MOV	SI,SysInitTable
 	LDS	SI,[cs:SI+SysInitVars_Ext.SYSI_InitVars]
 
 	MOV	AX,word [SI+SysInitVars.SYSI_DEV]
@@ -561,7 +561,7 @@ Procedure   MSG_RETRIEVAL,NEAR					  ;AN000;
 	PUSH	AX		    ;AN000;;MS. save regs
 	PUSH	SI		    ;AN000;;MS. save regs
 	MOV	AX,DX		    ;AN000;;MS.
-	MOV	SI,[cs:MSG_EXTERROR] ;AN000;;MS.
+	MOV	SI,MSG_EXTERROR ;AN000;;MS.
 	TEST	AL,1		    ;AN000;;MS. get ?
 	JZ	toget		    ;AN000;;MS. yes
 	DEC	AL		    ;AN000;;MS.

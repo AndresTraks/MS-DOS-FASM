@@ -296,7 +296,7 @@ EndProc SETYEAR
 ;	ASSUME	ES:NOTHING
 	CALL	CHKYR			;Set Feb. up for new year
 	MOV	AL,DH
-	MOV	BX,[ss:MONTAB-1]
+	MOV	BX,MONTAB-1
 	XLATB				;Look up days in month
 	CMP	AL,DL
 	MOV	AL,-1			;Restore error flag, just in case
