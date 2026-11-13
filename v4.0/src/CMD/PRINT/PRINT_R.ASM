@@ -1,11 +1,11 @@
 	page	80,132
 	TITLE	DOS - PRINT - RESIDENT
-;			$SALUT (4,25,30,41)
-			INCLUDE pridefs.inc
+;			SALUT$ (4,25,30,41)
+			include 'PRIDEFS.INC'
 
 ; include Extended Atribute support
 
-			include EA.INC
+			include 'EA.INC'
 
 			BREAK <Resident Portion>
 ;
@@ -14,36 +14,36 @@
 ;	Resident Portion
 ;
 
-Code			Segment public para
-			extrn TransRet:WORD,TransSize:WORD,NameBuf:WORD
-			extrn GoDispMsg:FAR
-Code			EndS
+if SEGSEL = S_CODE
+;			extrn TransRet:WORD,TransSize:WORD,NameBuf:WORD
+;			extrn GoDispMsg:FAR
+end if
 
 			BREAK <Resident Data>
 
-CodeR			Segment public para
+if SEGSEL = S_CODER
 
-			public SliceCnt, BusyTick, MaxTick, TimeSlice
-			public EndRes, BlkSiz, QueueLen, PChar
-			public ListName, FileQueue, EndQueue, Buffer
-			public EndPtr, NxtChr, MoveTrans
-			public TO_DOS
+;			public SliceCnt, BusyTick, MaxTick, TimeSlice
+;			public EndRes, BlkSiz, QueueLen, PChar
+;			public ListName, FileQueue, EndQueue, Buffer
+;			public EndPtr, NxtChr, MoveTrans
+;			public TO_DOS
 
-			public MESBAS
+;			public MESBAS
 
 
-			ASSUME CS:CodeR
+;			ASSUME CS:CodeR
 
 			db   " - PRINT utility - "
 
-			include copyrigh.inc
+			include 'COPYRIGH.INC'
 
 			db   01Ah	; fake end of file for 'TYPE'
-			DB   (361 - 80h) + 310 DUP (?) ; (362 - 80h) is IBM's New
+			rb      (361 - 80h) + 310      ; (362 - 80h) is IBM's New
 					; recommended Stack Size -
 					; Old recommended Stack Size
 					; == New stack growth
-ISTACK			LABEL WORD	;Stack starts here and grows down the
+label ISTACK word   ;Stack starts here and grows down the
 
 ;Resident data
 
@@ -56,9 +56,11 @@ BUSY			DB   0		;Internal ME flag
 ; WARNING!!! The *&^%(*&^ 286 chip hangs if you access a word that will wrap
 ; at the segment boundary.  Make the initial INDOS point somewhere reasonable.
 ;
-INDOS			DD   TimeSlice	;DOS buisy flag
-NEXTINT 		DD   ?		;Chain for int
-NEXT_REBOOT		DD   ?		;Chain for ROM bootstrap
+label INDOS dword
+	dw TIMESLICE	;DOS buisy flag
+	dw CodeR_
+NEXTINT 		rd      1 ;Chain for int
+NEXT_REBOOT		rd      1 ;Chain for ROM bootstrap
 
 fFake			db   0		; TRUE => do not diddle I/O ports
 SOFINT			DB   0		;Internal ME flag
@@ -93,73 +95,75 @@ BUSYTICK		DB   DefBusyTick ;If PRINT sits in a wait loop waiting for
 ;	ticks go by without getting a character out.
 
 QueueLen		db   DefQueueLen ; Actual length of print queue
-			even
-EndQueue		dw   ?		; pointer to end of print queue
-QueueTail		dw   offset CodeR:FileQueue ; pointer to next free entry
+			align 2
+EndQueue		rw      1 ; pointer to end of print queue
+QueueTail		dw   FileQueue        ; pointer to next free entry
 					;  in the print queue
-buffer			dw   ?		; pointer to data buffer
+buffer			rw      1 ; pointer to data buffer
 
-I24_ERR 		DW   ?		;Save location for INT 24H error code
-Ctrlc			DB   ?		; saved ^C trapping state
-SPNEXT			DD   ?		;Chain location for INT 28
-COMNEXT 		DD   ?		;Chain location for INT 2F
-SSsave			DW   ?		;Stack save area for INT 24
-SPsave			DW   ?
-HERRINT 		DD   ?		;Place to save Hard error interrupt
-LISTDEV 		DD   ?		;Pointer to Device
+I24_ERR 		rw      1 ;Save location for INT 24H error code
+Ctrlc			rb      1 ; saved ^C trapping state
+SPNEXT			rd      1 ;Chain location for INT 28
+COMNEXT 		rd      1 ;Chain location for INT 2F
+SSsave			rw      1 ;Stack save area for INT 24
+SPsave			rw      1
+HERRINT 		rd      1 ;Place to save Hard error interrupt
+LISTDEV 		rd      1 ;Pointer to Device
 COLPOS			DB   0		;Column position for TAB processing
 CURRFIL 		DB   0
 CURRCP			DW   -1 	; Current file's CP in binary           ;AN000;
-NXTCHR			DW   ?
+NXTCHR			rw      1
 CURRHAND		DW   -1
 PrinterNum		DW   no_lptx	; index for printer
-no_lptx 		equ  -1 	; no valid LPTx
+no_lptx 		=  (-1)	; no valid LPTx
 QueueLock		db   0		; queue lock, 0=unlocked
 
 
-PChar			db   ?		; path character
-AmbCan			db   ?		; = 1 ambigous cancel
-CanFlg			db   ?		; = 1 Current was already canceled
-ACanOcrd		db   ?		; = 1 a file was found during an
+PChar			rb      1 ; path character
+AmbCan			rb      1 ; = 1 ambigous cancel
+CanFlg			rb      1 ; = 1 Current was already canceled
+ACanOcrd		rb      1 ; = 1 a file was found during an
 					;  ambigous cancel
 
 ;--- Warnning: this is a FCB!!
 
-ACBuf			db   ?
-ACName			db   8 dup(?)
-ACExt			db   3 dup(?)
-			db   4 dup(?)	; how big is an unopened fcb???
+ACBuf			rb      1
+ACName			rb      8
+ACExt			rb      3
+			rb      4     ; how big is an unopened fcb???
 
 
 CONTXTFLAG		DB   0		;0 means his context, NZ means me
-HISPDB			DW   ?
+HISPDB			rw      1
 PABORT			DB   0		;Abort flag
 BLKSIZ			DW   DefBufferLen ;Size of the PRINT I/O block in bytes
-ENDPTR			DW   ?
+ENDPTR			rw      1
 
-COMDISP 		LABEL WORD	; Communications dispatch table
+label COMDISP word   ; Communications dispatch table
 
-			DW   OFFSET CodeR:INST_REQ
-			DW   OFFSET CodeR:ADDFIL
-			DW   OFFSET CodeR:CANFIL
-			DW   OFFSET CodeR:CanAll
-			DW   OFFSET CodeR:QSTAT
-			DW   OFFSET CodeR:EndStat
-			DW   OFFSET CodeR:QSTATDEV
+			DW   INST_REQ
+			DW   ADDFIL
+			DW   CANFIL
+			DW   CanAll
+			DW   QSTAT
+			DW   EndStat
+			DW   QSTATDEV
 
-query_list		label word
+label query_list word
 
 			dw   1
-			qea  <EAISBINARY,EASYSTEM,2,"C">
+			qea$1 QEA EAISBINARY,EASYSTEM,2,"C"
 			db   "P"	; specify name as CP
 
-list			label word
+label list word
 			dw   1		; only one EA of interest
-			ea   <EAISBINARY,EASYSTEM,?,2,2,"C">
+			ea$1 EA EAISBINARY,EASYSTEM,?,2,2,"C"
 			db   "P"
 code_page		dw   0		; CP initialized to 0
 
-list_size		equ  $ - list
+; = and not equ: fasm's equ is text put in where the name is used, so a $
+; in it would be the address of the use and not of this line.
+list_size		=  ($ - list)
 					;--------------------------------------
 					; Resident Message Buffer - Data area
 					;--------------------------------------
@@ -176,40 +180,40 @@ CRLF			DB   13,10,0
 					; Resident Message Pointer Control Block
 					;--------------------------------------
 
-MESBAS			DW   ?		; OFFSET CodeR:ERR0	   This list is order sensitive
-			DW   ?		; OFFSET CodeR:ERR1	   and must not be changed without
-			DW   ?		; OFFSET CodeR:ERR2	   considering the logic in
-			DW   ?		; OFFSET CodeR:ERR3	   Load_R_Msg
-			DW   ?		; OFFSET CodeR:ERR4
-			DW   ?		; OFFSET CodeR:ERR5
-			DW   ?		; OFFSET CodeR:ERR6
-			DW   ?		; OFFSET CodeR:ERR7
-			DW   ?		; OFFSET CodeR:ERR8
-			DW   ?		; OFFSET CodeR:ERR9
-			DW   ?		; OFFSET CodeR:ERR10
-			DW   ?		; OFFSET CodeR:ERR11
-			DW   ?		; OFFSET CodeR:ERR12
-ERRMEST_PTR		DW   ?		; OFFSET CodeR:ERRMEST
-ErrMesT2_PTR		DW   ?		; OFFSET CodeR:ErrMesT2
-CANMES_PTR		DW   ?		; OFFSET CodeR:CANMES
-CanFilNam_PTR		DW   ?		; OFFSET CodeR:CanFilNam
-AllCan_PTR		DW   ?		; OFFSET CodeR:AllCan
-FATMES_PTR		DW   ?		; OFFSET CodeR:FATMES
-BADDRVM_PTR		DW   ?		; OFFSET CodeR:BADDRVM
+MESBAS			rw      1 ; offset ERR0	   This list is order sensitive
+			DW   ?		; offset ERR1	   and must not be changed without
+			DW   ?		; offset ERR2	   considering the logic in
+			DW   ?		; offset ERR3	   Load_R_Msg
+			DW   ?		; offset ERR4
+			DW   ?		; offset ERR5
+			DW   ?		; offset ERR6
+			DW   ?		; offset ERR7
+			DW   ?		; offset ERR8
+			DW   ?		; offset ERR9
+			DW   ?		; offset ERR10
+			DW   ?		; offset ERR11
+			DW   ?		; offset ERR12
+ERRMEST_PTR		rw      1 ; offset ERRMEST
+ErrMesT2_PTR		rw      1 ; offset ErrMesT2
+CANMES_PTR		rw      1 ; offset CANMES
+CanFilNam_PTR		rw      1 ; offset CanFilNam
+AllCan_PTR		rw      1 ; offset AllCan
+FATMES_PTR		rw      1 ; offset FATMES
+BADDRVM_PTR		rw      1 ; offset BADDRVM
 
-ENDRES			DW   ?		; filled in at initialization time
+ENDRES			rw      1 ; filled in at initialization time
 
-PRTDPL			DPL  <>
+PRTDPL			DPL 
 
-CodeR			EndS
+end if
 
 BREAK			<Resident Code>
 
-CodeR			Segment public para
+if SEGSEL = S_CODER
 
-Break			<Server critical section routines>
+BREAK			<Server critical section routines>
 
-;  $SALUT (4,4,9,41)
+;  SALUT$ (4,4,9,41)
 
 TestSetServer:
 
@@ -233,7 +237,7 @@ LeaveServer:
 					; Interrupt routines
 					;---------------------------------------
 
-ASSUME CS:CodeR,DS:nothing,ES:nothing,SS:nothing
+;ASSUME CS:CodeR,DS:nothing,ES:nothing,SS:nothing
 
 					;---------------------------------------
 					;
@@ -252,37 +256,37 @@ ASSUME CS:CodeR,DS:nothing,ES:nothing,SS:nothing
 					;---------------------------------------
 FakeINT1C:
 
-   mov	fFake,-1
+   mov	byte [cs:fFake],-1
    jmp	SHORT InnerHardInt
 
 HDSPINT:				;Hardware interrupt entry point
 
-   mov	fFake,0
+   mov	byte [cs:fFake],0
 
 InnerHardInt:
 
    call TestSetServer
 
-;  $if	nc				;				       ;AC000;
-   JC $$IF1
+;  if$	nc				;				       ;AC000;
+   JC IF1$$
 
-       inc  [TICKCNT]			;Tick
-       inc  [TICKSUB]			;Tick
-       cmp  [SLICECNT],0
+       inc  byte [cs:TICKCNT] ;Tick
+       inc  byte [cs:TICKSUB] ;Tick
+       cmp  byte [cs:SLICECNT],0
 
-;      $if  nz				;				       ;AC000;
-       JZ $$IF2
+;      if$  nz				;				       ;AC000;
+       JZ IF2$$
 
-	   dec	[SLICECNT]		;Count down
+	   dec	byte [cs:SLICECNT] ;Count down
 
-;      $else				;				       ;AC000;
-       JMP SHORT $$EN2
-$$IF2:
+;      else$				;				       ;AC000;
+       JMP SHORT EN2$$
+IF2$$:
 
-	   cmp	BUSY,0			; interrupting ourself ?
+	   cmp	byte [cs:BUSY],0 ; interrupting ourself ?
 
-;	   $if	z,and			; if NOT interupting ourselves and ... ;AC000;
-	   JNZ $$IF4
+;	   if$	z,and			; if NOT interupting ourselves and ... ;AC000;
+	   JNZ IF4$$
 
 	   push ax			; check for nested interrupts
 	   mov	al,00001011b		; select ISR in 8259
@@ -295,12 +299,12 @@ x:
 	   and	al,0FEH 		; mask timer int
 	   pop	ax
 
-;	   $if	z,and			; if there are no other ints to service;AC000;
-	   JNZ $$IF4
+;	   if$	z,and			; if there are no other ints to service;AC000;
+	   JNZ IF4$$
 
 	   push ds
 	   push si
-	   lds	si,[INDOS]		;Check for making DOS calls
+	   lds	si,[cs:INDOS] ;Check for making DOS calls
 
 					;---------------------------------------
 					;
@@ -311,58 +315,58 @@ x:
 					; These must be contiguous in MSDATA.
 					;
 					;---------------------------------------
-	   cmp	WORD PTR [SI-1],0
+	   cmp	word [SI-1],0
 	   pop	SI
 	   pop	DS
 
-;	   $if	z			; if no errors			       ;AC000;
-	   JNZ $$IF4
+;	   if$	z			; if no errors			       ;AC000;
+	   JNZ IF4$$
 
-	       inc  [BUSY]		;Exclude furthur interrupts
-	       mov  [TICKCNT],0 	;Reset tick counter
-	       mov  [TICKSUB],0 	;Reset tick counter
+	       inc  byte [cs:BUSY] ;Exclude furthur interrupts
+	       mov  byte [cs:TICKCNT],0 ;Reset tick counter
+	       mov  byte [cs:TICKSUB],0 ;Reset tick counter
 	       sti			;Keep things rolling
-	       test fFake,-1
+	       test byte [cs:fFake],-1
 
-;	       $if  z			;if needed			       ;AC000;
-	       JNZ $$IF5
+;	       if$  z			;if needed			       ;AC000;
+	       JNZ IF5$$
 
 		   push ax
 		   mov	al,EOI		;Acknowledge interrupt
 		   out	AKPORT,al
 		   pop	ax
 
-;	       $endif			; endif 			       ;AC000;
-$$IF5:
+;	       endif$			; endif 			       ;AC000;
+IF5$$:
 
 	       call DOINT
 	       cli
 	       push ax
-	       mov  al,[TIMESLICE]
-	       mov  [SLICECNT],al	;Either soft or hard int resets time slice
+	       mov  al,[cs:TIMESLICE]
+	       mov  [cs:SLICECNT],al ;Either soft or hard int resets time slice
 	       pop  ax
-	       dec  Busy		;Done, let others in
+	       dec  byte [cs:BUSY] ;Done, let others in
 
-;	   $endif			;				       ;AC000;
-$$IF4:
+;	   endif$			;				       ;AC000;
+IF4$$:
 
-;      $endif				;				       ;AC000;
-$$EN2:
+;      endif$				;				       ;AC000;
+EN2$$:
 
        Call LeaveServer
 
-;  $endif				;				       ;AC000;
-$$IF1:
+;  endif$				;				       ;AC000;
+IF1$$:
 
-   test fFake,-1
+   test byte [cs:fFake],-1
 
-;  $if	z				;				       ;AC000;
-   JNZ $$IF10
+;  if$	z				;				       ;AC000;
+   JNZ IF10$$
 
-       jmp  [NEXTINT]			; chain to next clock routine
+       jmp  [cs:NEXTINT] ; chain to next clock routine
 
-;  $endif				;				       ;AC000;
-$$IF10:
+;  endif$				;				       ;AC000;
+IF10$$:
 
    iret
 
@@ -375,35 +379,35 @@ SPINT:					; INT 28H entry point
 
    call TestSetServer
 
-;  $if	nc				; if no server			       ;AC000;
-   JC $$IF12
+;  if$	nc				; if no server			       ;AC000;
+   JC IF12$$
 
-       cmp  [BUSY],0
+       cmp  byte [cs:BUSY],0
 
-;      $if  z				; if not busy			       ;AC000;
-       JNZ $$IF13
+;      if$  z				; if not busy			       ;AC000;
+       JNZ IF13$$
 
-	   inc	[BUSY]			; exclude hardware interrupt
-	   inc	[SOFINT]		; indicate a software int in progress
+	   inc	byte [cs:BUSY] ; exclude hardware interrupt
+	   inc	byte [cs:SOFINT] ; indicate a software int in progress
 	   sti				; hardware interrupts ok on INT 28H entry
 	   call DOINT
 	   cli
-	   mov	[SOFINT],0		;Indicate INT done
+	   mov	byte [cs:SOFINT],0 ;Indicate INT done
 	   push ax
-	   mov	al,[TIMESLICE]
-	   mov	[SLICECNT],al		;Either soft or hard int resets time slice
+	   mov	al,[cs:TIMESLICE]
+	   mov	[cs:SLICECNT],al ;Either soft or hard int resets time slice
 	   pop	ax
-	   dec	Busy
+	   dec	byte [cs:BUSY]
 
-;      $endif				;				       ;AC000;
-$$IF13:
+;      endif$				;				       ;AC000;
+IF13$$:
 
        call LeaveServer
 
-;  $endif				;				       ;AC000;
-$$IF12:
+;  endif$				;				       ;AC000;
+IF12$$:
 
-   jmp	[SPNEXT]			;Chain to next INT 28
+   jmp	[cs:SPNEXT] ;Chain to next INT 28
 
 					;---------------------------------------
 					; Since we may be entering at arbitrary
@@ -412,60 +416,60 @@ $$IF12:
 					; We do not do this on spooler ints.
 					;---------------------------------------
 
-SaveState DPL <>			; empty DPL
+SaveState DPL      ; empty DPL
 
-   public enterprint
+;   public enterprint
 
 EnterPRINT:
 
-   test SofInt,-1
+   test byte [cs:SOFINT],-1
 
-;  $if	z				;if not soft int		       ;AC000;
-   JNZ $$IF16
+;  if$	z				;if not soft int		       ;AC000;
+   JNZ IF16$$
 
        mov  ah,GetExtendedError
        call DO_21
-       mov  SaveState.DPL_AX,AX
-       mov  SaveState.DPL_BX,BX
-       mov  SaveState.DPL_CX,CX
-       mov  SaveState.DPL_DX,DX
-       mov  SaveState.DPL_SI,SI
-       mov  SaveState.DPL_DI,DI
-       mov  SaveState.DPL_DS,DS
-       mov  SaveState.DPL_ES,ES
+       mov  [cs:SaveState.DPL_AX],AX
+       mov  [cs:SaveState.DPL_BX],BX
+       mov  [cs:SaveState.DPL_CX],CX
+       mov  [cs:SaveState.DPL_DX],DX
+       mov  [cs:SaveState.DPL_SI],SI
+       mov  [cs:SaveState.DPL_DI],DI
+       mov  [cs:SaveState.DPL_DS],DS
+       mov  [cs:SaveState.DPL_ES],ES
 
-;  $endif				;				       ;AC000;
-$$IF16:
+;  endif$				;				       ;AC000;
+IF16$$:
 
    ret
 
-   public leaveprint
+;   public leaveprint
 
 LeavePRINT:
 
-   test SofInt,-1
+   test byte [cs:SOFINT],-1
 
-;  $if	z				; if soft int			       ;AC000;
-   JNZ $$IF18
+;  if$	z				; if soft int			       ;AC000;
+   JNZ IF18$$
 
        mov  ax,(ServerCall SHL 8) + 10
        push cs
        pop  ds
-       mov  dx,OFFSET CodeR:SaveState
-       call Do_21
+       mov  dx,SaveState
+       call DO_21
 
-;  $endif				;				       ;AC000;
-$$IF18:
+;  endif$				;				       ;AC000;
+IF18$$:
 
    ret
 
-   public doint
+;   public doint
 
 DOINT:
 
-   ASSUME CS:CodeR,DS:nothing,ES:nothing,SS:nothing
+;   ASSUME CS:CodeR,DS:nothing,ES:nothing,SS:nothing
 
-   cmp	[CURRFIL],0
+   cmp	byte [cs:CURRFIL],0
    jnz	GOAHEAD
 
 SPRET:
@@ -474,11 +478,11 @@ SPRET:
 
 GOAHEAD:
 
-   cmp	[QueueLock],1
-   je	spret				; queue locked, do nothing...
+   cmp	byte [cs:QueueLock],1
+   je	SPRET				; queue locked, do nothing...
    push ax				;Need a working register
-   mov	[SSsave],ss
-   mov	[SPsave],sp
+   mov	[cs:SSsave],ss
+   mov	[cs:SPsave],sp
    mov	ax,cs
    cli
 					;---------------------------------------
@@ -486,7 +490,7 @@ GOAHEAD:
 					; INT 24 overflowing system stack
 					;---------------------------------------
    mov	ss,ax
-   mov	sp,OFFSET CodeR:ISTACK
+   mov	sp,ISTACK
    sti
    push es
    push ds
@@ -499,7 +503,7 @@ GOAHEAD:
    push cs
    pop	ds
 
-   ASSUME DS:CodeR
+;   ASSUME DS:CodeR
 
    call EnterPRINT
    mov	bx,[NXTCHR]
@@ -517,7 +521,7 @@ DONEJMPJ:
 
 FILEOFJ:
 
-   ASSUME DS:CodeR
+;   ASSUME DS:CodeR
 
    jmp	FILEOF
 
@@ -526,7 +530,7 @@ PLOOP:
    mov	bx,[NXTCHR]
    cmp	bx,[ENDPTR]
    jae	DONEJMPJ			;Buffer has become empty
-   cmp	[SOFINT],0
+   cmp	byte [SOFINT],0
    jnz	STATCHK
    push ax
    mov	al,[MAXTICK]
@@ -538,11 +542,11 @@ STATCHK:
 
    call PSTAT
    pushf
-   cmp	[CURRFIL],0
+   cmp	byte [CURRFIL],0
    jz	DONEJMPJP			;File got cancelled by error
    popf 				;				       ;AC000;
    jz	DOCHAR				;Printer ready
-   cmp	[SOFINT],0
+   cmp	byte [SOFINT],0
    jnz	DONEJMP 			;If soft int give up
    push ax
    mov	al,[BUSYTICK]
@@ -553,18 +557,18 @@ STATCHK:
 
 DOCHAR:
 
-   mov	al,BYTE PTR [BX]
+   mov	al,byte [BX]
    cmp	al,1Ah				;^Z?
    jz	FILEOFJ 			;CPM EOF
    cmp	al,0Dh				;CR?
 
-;  $if	z				; if CR 			       ;AC000;
-   JNZ $$IF20
+;  if$	z				; if CR 			       ;AC000;
+   JNZ IF20$$
 
-       mov  [COLPOS],0
+       mov  byte [COLPOS],0
 
-;  $endif				;				       ;AC000;
-$$IF20:
+;  endif$				;				       ;AC000;
+IF20$$:
 
    cmp	al,9				;TAB?
    jnz	NOTABDO
@@ -577,7 +581,7 @@ $$IF20:
 ;G	TABLP:
 
    mov	al," "
-   inc	[COLPOS]
+   inc	byte [COLPOS]
    push cx
    call POUT
    pop	cx
@@ -592,27 +596,27 @@ NOTABDO:
 
    cmp	al,8				;Back space?
    jnz	NOTBACK
-   dec	[COLPOS]
+   dec	byte [COLPOS]
 
 NOTBACK:
 
    cmp	al,20h				;Non Printing char?
 
-;  $if	ae				; if not printable
-   JNAE $$IF22
+;  if$	ae				; if not printable
+   JNAE IF22$$
 
-       inc  [COLPOS]			;Printing char
+       inc  byte [COLPOS] ;Printing char
 
-;  $endif				;
-$$IF22:
+;  endif$				;
+IF22$$:
 
    call POUT				;Print it
 
 TABDONE:
 
-   inc	[NXTCHR]			;Next char
-   mov	[TICKSUB],0			;Got a character out, Reset counter
-   cmp	[SOFINT],0			;Soft int does one char at a time
+   inc	word [NXTCHR] ;Next char
+   mov	byte [TICKSUB],0 ;Got a character out, Reset counter
+   cmp	byte [SOFINT],0 ;Soft int does one char at a time
    jnz	DONEJMP
    jmp	PLOOP
 
@@ -629,11 +633,11 @@ DONEJMP:
    pop	ds
    pop	es
 
-   ASSUME DS:nothing,ES:nothing
+;   ASSUME DS:nothing,ES:nothing
 
    cli
-   mov	ss,[SSsave]			;Restore Entry Stack
-   mov	sp,[SPsave]
+   mov	ss,[cs:SSsave] ;Restore Entry Stack
+   mov	sp,[cs:SPsave]
    sti
    pop	ax
 
@@ -641,47 +645,47 @@ DONEJMP:
 
 CONTEXT_BACK:
 
-   ASSUME DS:nothing,ES:nothing,SS:nothing
+;   ASSUME DS:nothing,ES:nothing,SS:nothing
 
-   cmp	[CONTXTFLAG],0
+   cmp	byte [cs:CONTXTFLAG],0
 
-;  $if	nz				; if not in context		       ;AC000;
-   JZ $$IF24
+;  if$	nz				; if not in context		       ;AC000;
+   JZ IF24$$
 
        SaveReg <AX,BX>
-       mov  bx,[HISPDB]
-       mov  ah,SET_CURRENT_PDB
-       call do_21
+       mov  bx,[cs:HISPDB]
+       mov  ah,Set_Current_PDB
+       call DO_21
        RestoreReg <BX,AX>
-       mov  [CONTXTFLAG],0
+       mov  byte [cs:CONTXTFLAG],0
 
-;  $endif				;				       ;AC000;
-$$IF24:
+;  endif$				;				       ;AC000;
+IF24$$:
 
    ret
 
 CONTEXT_SWITCH:
 
-   ASSUME DS:nothing,ES:nothing,SS:nothing
+;   ASSUME DS:nothing,ES:nothing,SS:nothing
 
-   cmp	[CONTXTFLAG],0
+   cmp	byte [cs:CONTXTFLAG],0
 
-;  $if	z				; if context off		       ;AC000;
-   JNZ $$IF26
+;  if$	z				; if context off		       ;AC000;
+   JNZ IF26$$
 
        SaveReg <BX,AX>
-       mov  ah,GET_CURRENT_PDB
-       call do_21
-       mov  [HISPDB],bx
+       mov  ah,Get_Current_PDB
+       call DO_21
+       mov  [cs:HISPDB],bx
        mov  bx,cs
        sub  bx,10h			; The 2.5 print is an exe program
-       mov  ah,SET_CURRENT_PDB
-       call do_21
+       mov  ah,Set_Current_PDB
+       call DO_21
        RestoreReg <AX,BX>
-       mov  [CONTXTFLAG],1
+       mov  byte [cs:CONTXTFLAG],1
 
-;  $endif				;				       ;AC000;
-$$IF26:
+;  endif$				;				       ;AC000;
+IF26$$:
 
    ret
 					;---------------------------------------
@@ -689,18 +693,18 @@ $$IF26:
 					;---------------------------------------
 READBUFF:
 
-   ASSUME DS:CodeR,ES:NOTHING,SS:NOTHING
+;   ASSUME DS:CodeR,ES:NOTHING,SS:NOTHING
 
    call Set24				; switch Int24 vector
-   mov	[PABORT],0			;No abort
+   mov	byte [PABORT],0 ;No abort
    mov	BX,[CURRHAND]
    mov	CX,[BLKSIZ]
-   mov	DX,[BUFFER]
-   mov	AH,READ
+   mov	DX,[buffer]
+   mov	AH,Read
    call My21
    pushf
    call Res24				; reset Int 24 vector
-   cmp	[PABORT],0
+   cmp	byte [PABORT],0
    jz	NOHERR
    pop	ax				;Flags from read
    jmp	FilClose			;Barf on this file, got INT 24
@@ -711,15 +715,15 @@ NOHERR:
    jc	FILEOF
    cmp	ax,0
    jz	FILEOF				;Read EOF?
-   mov	bx,[BUFFER]			;Buffer full
+   mov	bx,[buffer]			;Buffer full
    mov	di,bx
    add	di,ax
    mov	[NXTCHR],bx
    mov	cx,[BLKSIZ]
    sub	cx,ax
 
-;  $if	ncxz				; if buffer is not completely full     ;AC000;
-   JCXZ $$IF28
+;  if$	ncxz				; if buffer is not completely full     ;AC000;
+   JCXZ IF28$$
 
        push cs
        pop  es
@@ -727,8 +731,8 @@ NOHERR:
        cld
        rep  stosb			; pad the buffer
 
-;  $endif				; endif 			       ;AC000;
-$$IF28:
+;  endif$				; endif 			       ;AC000;
+IF28$$:
 
    jmp	DONEJMP
 
@@ -745,12 +749,12 @@ FILEOF:
 FilClose:
 
    call Set24
-   mov	pAbort,-1
+   mov	byte [PABORT],-1
    mov	bx,[CURRHAND]
    call CloseFile			;				       ;AC000;
    call Res24
-   mov	[CURRFIL],0			; No file
-   mov	[CURRHAND],-1			; Invalid handle
+   mov	byte [CURRFIL],0 ; No file
+   mov	word [CURRHAND],-1 ; Invalid handle
    mov	ax,[ENDPTR]
    mov	[NXTCHR],ax			; Buffer empty
 
@@ -771,16 +775,16 @@ CompQAgn:
 					;--- Check if there are any more
 					;	    files to print
 					;---------------------------------------
-   mov	si,OFFSET CodeR:FileQueue
-   cmp	byte ptr [si],0 		; no more left if name starts with nul
+   mov	si,FileQueue
+   cmp	byte [si],0       ; no more left if name starts with nul
    je	NoFilesLeft
    call Set24
-   mov	[PABORT],0			;No abort
+   mov	byte [PABORT],0 ;No abort
    mov	dx,si				; DS:DX points to file name
    call OpenFile			; try opening new file		       ;AC000;
    pushf
    call Res24
-   cmp	[PAbort],0
+   cmp	byte [PABORT],0
    je	NoI24a
    popf 				;				       ;AC000;
    jmp	short CompQAgn			; try next file
@@ -794,8 +798,8 @@ NoI24a:
 
 GotNewFile:				; buffer was already marked as empty
 
-   mov	[CurrHand],ax
-   mov	[CurrFil],1
+   mov	[CURRHAND],ax
+   mov	byte [CURRFIL],1
 
 					;---------------------------------------
 					;--- Send Open on output device
@@ -813,7 +817,7 @@ NoFilesLeft:
 
 PrtOpErr:
 
-   ASSUME DS:CodeR,ES:nothing
+;   ASSUME DS:CodeR,ES:nothing
 
 					;---------------------------------------
 					; This stuff constitutes a "file" so it
@@ -829,16 +833,16 @@ PrtOpErr:
    push cs
    pop	es
 
-   ASSUME ES:CodeR
+;   ASSUME ES:CodeR
 
-   mov	si,OFFSET CodeR:ErrMes
-   call ListMes
-   mov	si,ErrMesT2_ptr 		;				       ;AC000;
-   call ListMes
-   mov	si,OFFSET CodeR:FileQueue
+   mov	si,ERRMES
+   call LISTMES
+   mov	si,[ErrMesT2_PTR] ;				       ;AC000;
+   call LISTMES
+   mov	si,FileQueue
    call ListMes2
-   mov	si,OFFSET CodeR:BelMes
-   call ListMes
+   mov	si,BELMES
+   call LISTMES
 
 					;---------------------------------------
 					;--- Send close on output device
@@ -856,15 +860,15 @@ PrtOpErr:
 
 CompQ:
 
-   ASSUME DS:CodeR,ES:nothing,SS:nothing
+;   ASSUME DS:CodeR,ES:nothing,SS:nothing
 
    push cs
    pop	es
 
-   ASSUME ES:CodeR
+;   ASSUME ES:CodeR
 
-   mov	di,OFFSET CodeR:FileQueue	; ES:DI points to top of queue
-   mov	si,(OFFSET CodeR:FileQueue + MaxFileLen) ; DS:SI points to next entry
+   mov	di,FileQueue        ; ES:DI points to top of queue
+   mov	si,(FileQueue + MaxFileLen)        ; DS:SI points to next entry
    mov	cx,[EndQueue]
    sub	cx,si				; length in bytes of the queue
    cld
@@ -873,12 +877,12 @@ CompQ:
    sub	ax,MaxFileLen			;  know have a new "next empty slot"
    mov	[QueueTail],ax
    mov	si,ax
-   mov	byte ptr [si],0 		; nul first byte of last entry
+   mov	byte [si],0       ; nul first byte of last entry
 
    ret
 
 
-   BREAK <Resident Code: DSKERR>
+   BREAK <Resident DSKERR>
 
 					;---------------------------------------
 					;--- Set Local Int 24 vector ---
@@ -887,20 +891,20 @@ CompQ:
 
 Set24:
 
-   ASSUME DS:nothing,ES:nothing,SS:nothing
+;   ASSUME DS:nothing,ES:nothing,SS:nothing
 
    push es
    push bx
    push dx
    mov	al,24h
-   mov	ah,GET_INTERRUPT_VECTOR
-   call do_21
-   mov	WORD PTR [HERRINT+2],es 	; Save current vector
-   mov	WORD PTR [HERRINT],bx
-   mov	dx,OFFSET CodeR:DSKERR
+   mov	ah,Get_Interrupt_Vector
+   call DO_21
+   mov	word [cs:HERRINT+2],es   ; Save current vector
+   mov	word [cs:HERRINT],bx
+   mov	dx,DSKERR
    mov	al,24h
-   mov	ah,SET_INTERRUPT_VECTOR 	; Install our own
-   call do_21				; Spooler must catch its errors
+   mov	ah,Set_Interrupt_Vector 	; Install our own
+   call DO_21				; Spooler must catch its errors
    pop	dx
    pop	bx
    pop	es
@@ -912,18 +916,18 @@ Set24:
 					;---------------------------------------
 Res24:
 
-   ASSUME DS:nothing,ES:nothing,SS:nothing
+;   ASSUME DS:nothing,ES:nothing,SS:nothing
 
    push ds
    push ax
    push dx
-   lds	dx,[HERRINT]
+   lds	dx,[cs:HERRINT]
 
-   ASSUME DS:nothing
+;   ASSUME DS:nothing
 
    mov	al,24h
-   mov	ah,SET_INTERRUPT_VECTOR
-   call do_21				;Restore Error INT
+   mov	ah,Set_Interrupt_Vector
+   call DO_21				;Restore Error INT
    pop	dx
    pop	ax
    pop	ds
@@ -934,12 +938,12 @@ Res24:
 					;---------------------------------------
 DSKERR:
 
-   ASSUME DS:nothing,ES:nothing,SS:nothing
+;   ASSUME DS:nothing,ES:nothing,SS:nothing
 
-   cmp	[PABORT],0
+   cmp	byte [cs:PABORT],0
 
-;  $if	z				; if not to ignore		       ;AC000;
-   JNZ $$IF30
+;  if$	z				; if not to ignore		       ;AC000;
+   JNZ IF30$$
 
        sti
        push bx
@@ -955,52 +959,52 @@ DSKERR:
        push cs
        pop  es
 
-       ASSUME DS:CodeR,ES:CodeR
+;       ASSUME DS:CodeR,ES:CodeR
 
-       mov  si,BADDRVM_PTR		; Fix up Drive ID for FATMES	       ;AC000;
-       add  ds:[si],al			;				       ;AC000;
-       mov  si,OFFSET CodeR:ERRMES
+       mov  si,[BADDRVM_PTR] ; Fix up Drive ID for FATMES	       ;AC000;
+       add  [ds:si],al			;				       ;AC000;
+       mov  si,ERRMES
        call LISTMES
        test AH,080H
 
-;      $if  z				; if not fat error		       ;AC000;
-       JNZ $$IF31
+;      if$  z				; if not fat error		       ;AC000;
+       JNZ IF31$$
 
 	   and	di,0FFh
 	   cmp	di,12
 
-;	   $if	a			; if greater - force it to 12	       ;AC000;
-	   JNA $$IF32
+;	   if$	a			; if greater - force it to 12	       ;AC000;
+	   JNA IF32$$
 
 	       mov  di,12
 
-;	   $endif			;				       ;AC000;
-$$IF32:
+;	   endif$			;				       ;AC000;
+IF32$$:
 
 	   mov	[I24_ERR],di
 	   shl	di,1
-	   mov	di,WORD PTR [di+MESBAS] ; Get pointer to error message
+	   mov	di,word [di+MESBAS]     ; Get pointer to error message
 	   mov	si,di
 	   call LISTMES 		; Print error type
-	   mov	si,ERRMEST_PTR		;				       ;AC000;
+	   mov	si,[ERRMEST_PTR] ;				       ;AC000;
 	   call LISTMES
-	   mov	si,OFFSET CodeR:FileQueue ; print filename
+	   mov	si,FileQueue        ; print filename
 	   call ListMes2		; print name
-	   mov	si,OFFSET CodeR:BelMes
-	   call ListMes
-
-;      $else				;				       ;AC000;
-       JMP SHORT $$EN31
-$$IF31:
-
-	   mov	[I24_ERR],0FFh
-	   mov	si,FATMES_PTR		;				       ;AC000;
+	   mov	si,BELMES
 	   call LISTMES
 
-;      $endif				;				       ;AC000;
-$$EN31:
+;      else$				;				       ;AC000;
+       JMP SHORT EN31$$
+IF31$$:
 
-       inc  [PABORT]			;Indicate abort
+	   mov	word [I24_ERR],0FFh
+	   mov	si,[FATMES_PTR] ;				       ;AC000;
+	   call LISTMES
+
+;      endif$				;				       ;AC000;
+EN31$$:
+
+       inc  byte [PABORT] ;Indicate abort
        pop  ds
        pop  es
        pop  bp
@@ -1010,26 +1014,26 @@ $$EN31:
        pop  cx
        pop  bx
 
-;  $endif				;				       ;AC000;
-$$IF30:
+;  endif$				;				       ;AC000;
+IF30$$:
 
    xor	al,al				;Ignore
 
    iret
 
-   BREAK <Resident Code: SPCOMINT>
+   BREAK <Resident SPCOMINT>
 
 					;---------------------------------------
 					;--- Communications interrupt ---
 					;---------------------------------------
 
-   SPCOMINT proc far
+SPCOMINT:
 
-   ASSUME DS:nothing,ES:nothing,SS:nothing
+;   ASSUME DS:nothing,ES:nothing,SS:nothing
 
    cmp	ah,1
-   jbe	mine
-   jmp	[COMNEXT]
+   jbe	MINE
+   jmp	[cs:COMNEXT]
 
 MINE:
 
@@ -1062,7 +1066,7 @@ INST_REQ:
 
 PSPDISP:
 
-   cmp	[BUSY],0
+   cmp	byte [cs:BUSY],0
    jz	SETCBUSY
 
 ErrBusy:
@@ -1073,7 +1077,7 @@ setcret:
 
    push bp
    mov	bp,sp
-   or	word ptr [bp+6],f_Carry
+   or	word [bp+6],f_Carry
    pop	bp
 
    iret
@@ -1088,7 +1092,7 @@ SETCBUSY:
 
 GoForIt:
 
-   inc	[BUSY]				;Exclude
+   inc	byte [cs:BUSY] ;Exclude
    sti					;Turn ints back on
    push di				;G
    push es
@@ -1096,54 +1100,54 @@ GoForIt:
    push cs
    pop	ds
 
-   ASSUME DS:CodeR
+;   ASSUME DS:CodeR
 
-   mov	[QueueLock],0			; unlock the print queue
+   mov	byte [QueueLock],0 ; unlock the print queue
    shl	ax,1				;Turn into word index
    mov	di,ax
-   call ComDisp[DI]
+   call [DI+COMDISP]
 
-   ASSUME DS:nothing
+;   ASSUME DS:nothing
 
-;  $if	nc				; if no error			       ;AC000;
-   JC $$IF37
+;  if$	nc				; if no error			       ;AC000;
+   JC IF37$$
 
-       ASSUME DS:CodeR,ES:nothing
+;       ASSUME DS:CodeR,ES:nothing
 
        push ds
        push cs
        pop  ds
 
-       ASSUME DS:CodeR,ES:nothing
+;       ASSUME DS:CodeR,ES:nothing
 
        call PSTAT			; Tweek error counter
        pop  ds
 
-       ASSUME DS:nothing
+;       ASSUME DS:nothing
 
-;  $endif				;				       ;AC000;
-$$IF37:
+;  endif$				;				       ;AC000;
+IF37$$:
 
    pushf
-   call Context_Back
+   call CONTEXT_BACK
    popf 				;				       ;AC000;
    cli
-   dec	BUSY				; leaves carry alone!
+   dec	byte [cs:BUSY] ; leaves carry alone!
    pop	ds
 
-   ASSUME DS:nothing
+;   ASSUME DS:nothing
 
    pop	es
    pop	di				;G
    jc	setcret
    push bp
    mov	bp,sp
-   and	word ptr [bp+6],NOT f_Carry
+   and	word [bp+6],NOT f_Carry
    pop	bp
 
    iret
 
-SpComInt Endp
+;SpComInt Endp
 
    BREAK <Get queue status>
 
@@ -1153,16 +1157,16 @@ SpComInt Endp
 
 QSTAT:
 
-   ASSUME DS:CodeR,ES:nothing
+;   ASSUME DS:CodeR,ES:nothing
 
-   mov	[QueueLock],1			; lock the print queue
+   mov	byte [QueueLock],1 ; lock the print queue
    call PSTAT				; Tweek error counter
    push bp
    mov	bp,sp				;  0	2    4
    mov	[bp+ 2 + 2],cs			; <BP> <RET> <DS>
    pop	bp
-   mov	si,OFFSET CodeR:FileQueue
-   mov	dx,[ErrCnt]			; return error count
+   mov	si,FileQueue
+   mov	dx,[ERRCNT]			; return error count
    clc
 
    ret
@@ -1172,29 +1176,29 @@ QSTAT:
 					;---------------------------------------
 QSTATDEV:
 
-   ASSUME DS:CodeR,ES:nothing
+;   ASSUME DS:CodeR,ES:nothing
 
    xor	ax,ax				;g assume not busy
-   mov	[QueueLock],1			;g lock the print queue
+   mov	byte [QueueLock],1 ;g lock the print queue
    call PSTAT				;g Tweek error counter
-   cmp	byte ptr FileQueue,0		;g is there anything in the queue?
+   cmp	byte [FileQueue],0    ;g is there anything in the queue?
    clc					;g
    jz	qstatdev_end			;g no - just exit
    mov	ax,error_queue_full		;g yes - set error queue full
-   mov	si,word ptr [listdev+2] 	;g get segment of list device
+   mov	si,word [LISTDEV+2]      ;g get segment of list device
    push bp				;g
    mov	bp,sp				;g  0	 2   4
    mov	[bp+2+2],si			;g <BP><RET><DS> seg of device to DS
    pop	bp				;g
-   mov	si,word ptr [listdev]		;g offset of device to SI
+   mov	si,word [LISTDEV]      ;g offset of device to SI
    stc					;g
 
 qstatdev_end:				;g
 
-   mov	[QueueLock],0			;g unlock the print queue
+   mov	byte [QueueLock],0 ;g unlock the print queue
    ret					;g
 
-   BREAK <Resident Code: EndStat>
+   BREAK <Resident EndStat>
 
 					;---------------------------------------
 					;--- Unlock the print queue ---
@@ -1202,9 +1206,9 @@ qstatdev_end:				;g
 
 EndStat:
 
-   ASSUME DS:CodeR,ES:nothing
+;   ASSUME DS:CodeR,ES:nothing
 
-   mov	[QueueLock],0
+   mov	byte [QueueLock],0
    clc
 
    ret
@@ -1217,38 +1221,38 @@ EndStat:
 
 CanAll:
 
-   ASSUME DS:CodeR,ES:nothing
+;   ASSUME DS:CodeR,ES:nothing
 
-   cmp	[CurrFil],0			; are we currently printing?
+   cmp	byte [CURRFIL],0 ; are we currently printing?
 
-;  $if	nz				;
-   JZ $$IF39
+;  if$	nz				;
+   JZ IF39$$
 
 					;---------------------------------------
 					;--- Cancel active file
 					;---------------------------------------
 
-       mov  bx,[CurrHand]		; close the current file
+       mov  bx,[CURRHAND]		; close the current file
        call Set24
-       mov  [PAbort],1			; no Int24's
+       mov  byte [PABORT],1 ; no Int24's
        call CloseFile			; close the file		       ;AC000;
        call Res24
-       mov  [CurrFil],0 		; no files to print
-       mov  [CurrHand],-1		; invalidate handle
-       mov  ax,[EndPtr] 		; buffer empty
-       mov  [NxtChr],ax
+       mov  byte [CURRFIL],0 ; no files to print
+       mov  word [CURRHAND],-1 ; invalidate handle
+       mov  ax,[ENDPTR] 		; buffer empty
+       mov  [NXTCHR],ax
 
 					;---------------------------------------
 					;--- Cancel rest of files
 					;---------------------------------------
 
-       mov  si,OFFSET CodeR:FileQueue
+       mov  si,FileQueue
        mov  [QueueTail],si		; next free entry is the first
-       mov  byte ptr [si],0		; nul first byte of firts entry
-       mov  si,AllCan_PTR		;				       ;AC000;
-       call ListMes			; print cancelation message
-       mov  si,OFFSET CodeR:BelMes
-       call ListMes			; ring!!
+       mov  byte [si],0      ; nul first byte of firts entry
+       mov  si,[AllCan_PTR] ;				       ;AC000;
+       call LISTMES			; print cancelation message
+       mov  si,BELMES
+       call LISTMES			; ring!!
 
 					;---------------------------------------
 					;--- Send close on output device
@@ -1257,8 +1261,8 @@ CanAll:
        call Close_Dev
        clc
 
-;  $endif				;				       ;AC000;
-$$IF39:
+;  endif$				;				       ;AC000;
+IF39$$:
 
    ret
 
@@ -1266,9 +1270,9 @@ $$IF39:
 
 CANFIL:
 
-   ASSUME DS:CodeR,ES:nothing
+;   ASSUME DS:CodeR,ES:nothing
 
-   cmp	[CURRFIL],0
+   cmp	byte [CURRFIL],0
    jnz	DOCAN
 
    ret					;  carry is clear
@@ -1282,16 +1286,16 @@ DOCAN:
    mov	ds,[bp+ 2 + 2]			; <BP> <RET> <DS>
    pop	bp
 
-   ASSUME DS:nothing
+;   ASSUME DS:nothing
 
    push cs
    pop	es
 
-   ASSUME ES:CodeR
+;   ASSUME ES:CodeR
 
-   mov	[CanFlg],0			; reset message flag
-   mov	[ACanOcrd],0			; no cancelation has ocured yet
-   mov	bx,OFFSET CodeR:FileQueue	; ES:BX points to 1st entry in queue
+   mov	byte [es:CanFlg],0 ; reset message flag
+   mov	byte [es:ACanOcrd],0 ; no cancelation has ocured yet
+   mov	bx,FileQueue        ; ES:BX points to 1st entry in queue
    call AmbChk
 
 AnotherTry:
@@ -1302,26 +1306,26 @@ AnotherTry:
 MatchLoop:
 
    lodsb
-   cmp	al,byte ptr es:[di]		; names in queue are all in upper case
+   cmp	al,byte [es:di]      ; names in queue are all in upper case
    je	CharMatch
    jmp	AnotherName			; a mismatch, try another name
 
 CharMatch:
 
-   cmp	es:byte ptr es:[di],0		; was this the terminating nul?
+   cmp	byte [es:di],0         ; was this the terminating nul?
    je	NameFound			; yes we got our file...
    inc	di
    jmp	MatchLoop
 
 AnotherName:
 
-   cmp	[AmbCan],1			; ambigous file name specified?
+   cmp	byte [es:AmbCan],1 ; ambigous file name specified?
    jne	AnName				; if not then no more work to do
    cmp	al,"?"
    jne	AnName
-   cmp	byte ptr es:[di],"."
+   cmp	byte [es:di],"."
    je	FindPeriod
-   cmp	byte ptr es:[di],0		; if nul then file names match
+   cmp	byte [es:di],0      ; if nul then file names match
    jne	CharMatch			;  only if only ?'s are left...
 
 FindNul:
@@ -1347,20 +1351,20 @@ FindPeriod:				; ambigous files always have 8 chars
 AnName:
 
    add	bx,MaxFileLen
-   cmp	byte ptr es:[bx],0		; end of queue?
+   cmp	byte [es:bx],0      ; end of queue?
    jne	AnotherTry			; no, continue...
-   cmp	[ACanOcrd],1			; yes, was there a file found?
+   cmp	byte [es:ACanOcrd],1 ; yes, was there a file found?
    jne	sk2
    push cs
    pop	ds
 
-   ASSUME DS:CodeR			; StartAnFil likes it this way...
+;   ASSUME DS:CodeR			; StartAnFil likes it this way...
 
    jmp	StartAnFil			; restart printing
 
 sk2:
 
-   ASSUME DS:nothing
+;   ASSUME DS:nothing
 
    mov	ax,error_file_not_found
    stc
@@ -1374,92 +1378,92 @@ NameFound:
    push cs
    pop	ds
 
-   ASSUME DS:CodeR
+;   ASSUME DS:CodeR
 
-   mov	[ACanOcrd],1			; remember we found a file
-   cmp	bx,OFFSET CodeR:FileQueue	; is the file being printed?
+   mov	byte [ACanOcrd],1 ; remember we found a file
+   cmp	bx,FileQueue        ; is the file being printed?
 
-;  $if	e,and				; if it is and ..................      ;AC000;
-   JNE $$IF41
+;  if$	e,and				; if it is and ..................      ;AC000;
+   JNE IF41$$
 
-   cmp	[CanFlg],0			;				:
+   cmp	byte [CanFlg],0 ;				:
 
-;  $if	e				; if not in cancel mode ........:      ;AC000;
-   JNE $$IF41
+;  if$	e				; if not in cancel mode ........:      ;AC000;
+   JNE IF41$$
 
 					;---------------------------------------
 					;--- Cancel current file
 					;---------------------------------------
 
-       mov  [CanFlg],1			; remeber we already canceled current
+       mov  byte [CanFlg],1 ; remeber we already canceled current
        push bx
-       mov  bx,[CurrHand]		; close the current file
+       mov  bx,[CURRHAND]		; close the current file
        call Set24
-       mov  [PAbort],1			; no Int24's
+       mov  byte [PABORT],1 ; no Int24's
        call CloseFile			; close the file		       ;AC000;
        call Res24
-       mov  [CurrFil],0 		; no files to print
-       mov  [CurrHand],-1		; invalidate handle
-       mov  ax,[EndPtr] 		; buffer empty
-       mov  [NxtChr],ax
+       mov  byte [CURRFIL],0 ; no files to print
+       mov  word [CURRHAND],-1 ; invalidate handle
+       mov  ax,[ENDPTR] 		; buffer empty
+       mov  [NXTCHR],ax
        pop  bx
 					;---------------------------------------
 					;--- print cancelation message
 					;---------------------------------------
        push bx
-       mov  si,CanMes_PTR		;				       ;AC000;
-       call ListMes			; print cancelation message
+       mov  si,[CANMES_PTR] ;				       ;AC000;
+       call LISTMES			; print cancelation message
        mov  si,bx			; points to filename
        call ListMes2			; print filename
-       mov  si,CanFilNam_PTR		;				       ;AC000;
-       call ListMes
-       mov  si,OFFSET CodeR:BelMes
-       call ListMes			; ring!!
+       mov  si,[CanFilNam_PTR] ;				       ;AC000;
+       call LISTMES
+       mov  si,BELMES
+       call LISTMES			; ring!!
        pop  bx
 					;---------------------------------------
 					;--- Send close on output device
 					;---------------------------------------
        call Close_Dev
 
-;  $endif				;				       ;AC000;
-$$IF41:
+;  endif$				;				       ;AC000;
+IF41$$:
 
    mov	di,bx				; DI points to entry to cancel
    mov	si,bx
    add	si,MaxFileLen			; SI points to next entry
    cmp	si,[QueueTail]			; is the entry being canceled the last?
 
-;  $if	e				; if it is			       ;AC000;
-   JNE $$IF43
+;  if$	e				; if it is			       ;AC000;
+   JNE IF43$$
 
-       mov  byte ptr [di],0		; yes, just nul the first byte
+       mov  byte [di],0      ; yes, just nul the first byte
 
-;  $else				;				       ;AC000;
-   JMP SHORT $$EN43
-$$IF43:
+;  else$				;				       ;AC000;
+   JMP SHORT EN43$$
+IF43$$:
 
        mov  cx,[EndQueue]		; CX points to the end of the queue
        sub  cx,si			; length of the remainning of the queue
        cld
        rep  movsb			; compact the queue
 
-;  $endif				;				       ;AC000;
-$$EN43:
+;  endif$				;				       ;AC000;
+EN43$$:
 
    mov	ax,[QueueTail]			; remember new end of queue
    sub	ax,MaxFileLen
    mov	[QueueTail],ax
    mov	si,ax
-   mov	byte ptr [si],0 		; nul first byte of last entry
+   mov	byte [si],0       ; nul first byte of last entry
 
-   cmp	byte ptr [bx],0 		; is there another file to consider?
+   cmp	byte [bx],0       ; is there another file to consider?
    je	StartAnFil
    push bp
    mov	bp,sp				;  0	2    4
    mov	ds,[bp+ 2 + 2]			; <BP> <RET> <DS>
    pop	bp
 
-   ASSUME DS:nothing
+;   ASSUME DS:nothing
 
    jmp	AnotherTry			; yes do it again...
 
@@ -1468,23 +1472,23 @@ $$EN43:
 					;---------------------------------------
 StartAnFil:
 
-   ASSUME DS:CodeR
+;   ASSUME DS:CodeR
 
-   cmp	[CurrHand],-1			; was the canceled name the current?
+   cmp	word [CURRHAND],-1 ; was the canceled name the current?
    jne	NoneLeft			; no, just quit
 
 StartAnFil2:
 
-   mov	si,OFFSET CodeR:FileQueue	; points to new current file
-   cmp	byte ptr[si],0			; is there one there?
+   mov	si,FileQueue        ; points to new current file
+   cmp	byte [si],0      ; is there one there?
    je	NoneLeft			; no, we canceled current and are none left
    call Set24
-   mov	[PAbort],0
+   mov	byte [PABORT],0
    mov	dx,si
    call OpenFile			; try to open the file		       ;AC000;
    pushf
    call Res24
-   cmp	[PAbort],0
+   cmp	byte [PABORT],0
    je	NoI24b
    popf 				;				       ;AC000;
    call CompQ				; compact file queue
@@ -1500,8 +1504,8 @@ NoI24b:
 
 GoodNewCurr:
 
-   mov	[CurrHand],ax			; save handle
-   mov	[CurrFil],1			; signal active (buffer is already empty)
+   mov	[CURRHAND],ax			; save handle
+   mov	byte [CURRFIL],1 ; signal active (buffer is already empty)
 
 					;---------------------------------------
 					;--- Send Open on output device
@@ -1518,67 +1522,67 @@ NoneLeft:
 					;     entry:	 ds:dx points to filename
 					;    preserves ds:dx and es
 					;---------------------------------------
-   ASSUME DS:nothing,ES:CodeR
+;   ASSUME DS:nothing,ES:CodeR
 
 AmbChk:
 
-   mov	[AmbCan],0			; assume not ambigous
+   mov	byte [es:AmbCan],0 ; assume not ambigous
    mov	si,dx
    cld
 
-;  $do					;				       ;AC000;
-$$DO46:
+;  do$					;				       ;AC000;
+DO46$$:
 
        lodsb
        or   al,al			; the nul?
 
-;  $enddo e				;				       ;AC000;
-   JNE $$DO46
+;  enddo$ e				;				       ;AC000;
+   JNE DO46$$
 
    dec	si				; points to nul
    std					; scan backwards
 
-;  $do					;				       ;AC000;
-$$DO48:
+;  do$					;				       ;AC000;
+DO48$$:
 
        lodsb
        cmp  al,"*"
 
-;      $if  e				; if a *			       ;AC000;
-       JNE $$IF49
+;      if$  e				; if a *			       ;AC000;
+       JNE IF49$$
 
-	   mov	[AmbCan],1
+	   mov	byte [es:AmbCan],1
 
-;      $endif				;				       ;AC000;
-$$IF49:
+;      endif$				;				       ;AC000;
+IF49$$:
 
        cmp  al,"?"
 
-;      $if  e				; if a ?			       ;AC000;
-       JNE $$IF51
+;      if$  e				; if a ?			       ;AC000;
+       JNE IF51$$
 
-	   mov	[AmbCan],1
+	   mov	byte [es:AmbCan],1
 
-;      $endif				;				       ;AC000;
-$$IF51:
+;      endif$				;				       ;AC000;
+IF51$$:
 
-       cmp  al,[PChar]
+       cmp  al,[es:PChar]
 
-;  $enddo e				;				       ;AC000;
-   JNE $$DO48
+;  enddo$ e				;				       ;AC000;
+   JNE DO48$$
 
    cld					; be safe
-   cmp	[AmbCan],1			; an ambigous cancel?
+   cmp	byte [es:AmbCan],1 ; an ambigous cancel?
 
-;  $if	e				; if its an ambiguous cancel	       ;AC000;
-   JNE $$IF54
+;  if$	e				; if its an ambiguous cancel	       ;AC000;
+   JNE IF54$$
 
 					;---------------------------------------
 					;--- transform * to ?'s
 					;---------------------------------------
        inc  si
        inc  si				; points to actual name (past path char)
-       mov  di,OFFSET CodeR:ACBuf
+       mov  di,ACBuf
        push di
        mov  cx,12
        mov  al,20h
@@ -1586,7 +1590,7 @@ $$IF51:
        rep  stosb			; fill fcb with blanks
        pop  di
        push si
-       mov  ax,(Parse_file_descriptor shl 8) and 0FF00h
+       mov  ax,(Parse_File_Descriptor shl 8) and 0FF00h
        call My21
        pop  si
 
@@ -1597,73 +1601,73 @@ $$IF51:
        push ds
        pop  es
 
-       ASSUME DS:nothing
+;       ASSUME DS:nothing
 
        push cs
        pop  ds
 
-       ASSUME DS:CodeR
+;       ASSUME DS:CodeR
 
        push es
        mov  di,si
-       mov  si,OFFSET CodeR:ACName
+       mov  si,ACName
        mov  cx,8
 
-;      $do				;				       ;AC000;
-$$DO55:
+;      do$				;				       ;AC000;
+DO55$$:
 
 	   lodsb			; move name
 	   cmp	al,20h
 
-;      $leave e 			;				       ;AC000;
-       JE $$EN55
+;      leave$ e 			;				       ;AC000;
+       JE EN55$$
 
 	   stosb
 
-;      $enddo loop			;				       ;AC000;
-       LOOP $$DO55
-$$EN55:
+;      enddo$ loop			;				       ;AC000;
+       LOOP DO55$$
+EN55$$:
 
-       mov  si,OFFSET CodeR:ACExt
-       cmp  byte ptr [si],20h		; extension starts with blank ?
+       mov  si,ACExt
+       cmp  byte [si],20h      ; extension starts with blank ?
 
-;      $if  ne				; if it does not		       ;AC000;
-       JE $$IF58
+;      if$  ne				; if it does not		       ;AC000;
+       JE IF58$$
 
 	   mov	al,"."
 	   stosb
 	   mov	cx,3
 
-;	   $do				;				       ;AC000;
-$$DO59:
+;	   do$				;				       ;AC000;
+DO59$$:
 
 	       lodsb			; move name
 	       cmp  al,20h
 
-;	   $leave e			;				       ;AC000;
-	   JE $$EN59
+;	   leave$ e			;				       ;AC000;
+	   JE EN59$$
 
 	       stosb
 
-;	   $enddo loop			;				       ;AC000;
-	   LOOP $$DO59
-$$EN59:
+;	   enddo$ loop			;				       ;AC000;
+	   LOOP DO59$$
+EN59$$:
 
-;      $endif				;				       ;AC000;
-$$IF58:
+;      endif$				;				       ;AC000;
+IF58$$:
 
-       mov  byte ptr es:[di],0		; nul terminate
+       mov  byte [es:di],0      ; nul terminate
        pop  ds
 
-       ASSUME DS:nothing
+;       ASSUME DS:nothing
 
        push cs
        pop  es
 
-;  $endif				;				       ;AC000;
-$$IF54:
+;  endif$				;				       ;AC000;
+IF54$$:
 
-   ASSUME ES:CodeR
+;   ASSUME ES:CodeR
 
    ret
 
@@ -1671,7 +1675,7 @@ $$IF54:
 
 ADDFIL:
 
-   ASSUME DS:CodeR,ES:nothing
+;   ASSUME DS:CodeR,ES:nothing
 
 					;---------------------------------------
 					;--- Check that queue is not full
@@ -1697,17 +1701,17 @@ OkToQueue:
    mov	ds,[bp+ 2 + 2]			; <BP> <RET> <DS>
    pop	bp
 
-   ASSUME DS:nothing
+;   ASSUME DS:nothing
 
    push cs
    pop	es				; ES:DI points to empty slot
 
-   ASSUME ES:CodeR
+;   ASSUME ES:CodeR
 
    mov	si,dx				; DS:SI points to submit packet
-   cmp	byte ptr ds:[si],0
+   cmp	byte [ds:si],0
    jnz	IncorrectLevel
-   lds	si,dword ptr ds:[si+1]		; DS:SI points to filename
+   lds	si,dword [ds:si+1]      ; DS:SI points to filename
    mov	cx,MaxFileLen			; maximum length of file name
 
 CopyLop:
@@ -1720,7 +1724,7 @@ CopyLop:
    push cs
    pop	ds
 
-   ASSUME DS:CodeR
+;   ASSUME DS:CodeR
 
    mov	ax,error_name_too_long		; if normal exit from the loop then
    stc
@@ -1734,14 +1738,14 @@ IncorrectLevel:
 
    ret
 
-   ASSUME DS:nothing,ES:nothing 	; es:nothing = not true but lets
+;   ASSUME DS:nothing,ES:nothing 	; es:nothing = not true but lets
 
 CopyDone:				;   avoid possible problems...
 
    push cs
    pop	ds
 
-   ASSUME DS:CodeR
+;   ASSUME DS:CodeR
 
 					;---------------------------------------
 					;--- advance queue pointer
@@ -1751,14 +1755,14 @@ CopyDone:				;   avoid possible problems...
    push si				; save for test open later
    add	si,MaxFileLen
    mov	[QueueTail],si			; store for next round
-   mov	byte ptr [si],0 		; nul next entry (maybe the EndQueue)
+   mov	byte [si],0       ; nul next entry (maybe the EndQueue)
 
 					;---------------------------------------
 					;--- Check that file exists
 					;---------------------------------------
 
    call Set24
-   mov	[PAbort],0
+   mov	byte [PABORT],0
    pop	dx				; get pointer to filename
    call OpenFile			;				       ;AC000;
    pushf
@@ -1767,29 +1771,29 @@ CopyDone:				;   avoid possible problems...
    pop	dx
 ;;;popff				;; dcl removed for p1020	       ;AC000;
    popf 				;; dcl to fix p1020
-   jnc	GOTFIL
+   jnc	GotFil
 					;---------------------------------------
 					; See if brain damaged user entered
 					;    an invalid drive
 					;---------------------------------------
    push ax
    mov	si,dx
-   cmp	BYTE PTR CS:[SI+1],':'
+   cmp	byte [cs:SI+1],':'
    jz	GotDrive
    pop	ax
-   jmp	SHORT	i24bf
+   jmp	SHORT	I24BF
 
 GotDrive:
 
-   mov	ah,Get_default_drive		; get current
+   mov	ah,Get_Default_Drive		; get current
    call My21
    push ax
-   mov	dl,CS:[SI]			; get drive letter to test
+   mov	dl,[cs:SI]			; get drive letter to test
    or	dl,20h
    sub	dl,'a'
    mov	ah,Set_Default_Drive		; set it
    call My21
-   mov	ah,Get_default_drive		; get it back
+   mov	ah,Get_Default_Drive		; get it back
    call My21
    cmp	al,dl				; same? 		;; dcl change al,al to al,dl
    jnz	BadDrive			; no, bad drive
@@ -1798,7 +1802,7 @@ GotDrive:
    call My21
    pop	ax
    mov	dx,si
-   jmp	SHORT i24bf
+   jmp	SHORT I24BF
 
 BadDrive:
 
@@ -1814,7 +1818,7 @@ I24BF:
    mov	si,[QueueTail]			; take bad name out of queue
    sub	si,MaxFileLen			; SI points to the slot with bad name
    mov	[QueueTail],si
-   mov	byte ptr [si],0 		; nul the first byte
+   mov	byte [si],0       ; nul the first byte
    stc
 
    ret
@@ -1826,20 +1830,20 @@ I24BF:
 
 GotFil:
 
-   cmp	[CURRFIL],0			; currently printing?
+   cmp	byte [CURRFIL],0 ; currently printing?
 
-;  $if	nz				; if currently printing 	       ;AC000;
-   JZ $$IF64
+;  if$	nz				; if currently printing 	       ;AC000;
+   JZ IF64$$
 
        mov  bx,ax			; busy, close handle
        call Set24
-       mov  [PAbort],1			; no Int24's
+       mov  byte [PABORT],1 ; no Int24's
        call CloseFile			; close the file		       ;AC000;
        call Res24
 
-;  $else				;				       ;AC000;
-   JMP SHORT $$EN64
-$$IF64:
+;  else$				;				       ;AC000;
+   JMP SHORT EN64$$
+IF64$$:
 					;---------------------------------------
 					;--- Save file data
 					;---------------------------------------
@@ -1847,14 +1851,14 @@ $$IF64:
        mov  [CURRHAND],ax		; Valid handle
        mov  ax,[ENDPTR]
        mov  [NXTCHR],ax 		; Buffer empty
-       mov  [CURRFIL],1
+       mov  byte [CURRFIL],1
 					;---------------------------------------
 					;--- Send Open on output device
 					;---------------------------------------
        call Open_Dev
 
-;  $endif				;				       ;AC000;
-$$EN64:
+;  endif$				;				       ;AC000;
+EN64$$:
 
    clc
 
@@ -1868,26 +1872,26 @@ $$EN64:
 
 My21:
 
-   call Context_switch
-   call Do_21
+   call CONTEXT_SWITCH
+   call DO_21
 
    ret
 
-   Public do_21
+;   Public do_21
 
 DO_21:
 
-   ASSUME DS:nothing,ES:nothing
+;   ASSUME DS:nothing,ES:nothing
 
-   CMP	BYTE PTR CS:[INT15FLAG],0
+   CMP	byte [cs:INT15FLAG],0
 
-;  $if	nz				; if for PRINT			       ;AC000;
-   JZ $$IF67
+;  if$	nz				; if for PRINT			       ;AC000;
+   JZ IF67$$
 
        push ds
        push bx
-       lds  bx,cs:[INT15PTR]
-       inc  BYTE PTR [bx]
+       lds  bx,[cs:INT15PTR]
+       inc  byte [bx]
        pop  bx
        pop  ds
        call OffSave
@@ -1896,35 +1900,35 @@ DO_21:
        push ds
        push bx
        pushf				; Flags from system call
-       lds  bx,CS:[INT15PTR]
-       dec  BYTE PTR [BX]
+       lds  bx,[cs:INT15PTR]
+       dec  byte [BX]
        popf				;
        pop  bx				;AC000;
        pop  ds
 
-;  $else				;				       ;AC000;
-   JMP SHORT $$EN67
-$$IF67:
+;  else$				;				       ;AC000;
+   JMP SHORT EN67$$
+IF67$$:
 
        call OffSave
        int  21h
        call OnSave
 
-;  $endif				;				       ;AC000;
-$$EN67:
+;  endif$				;				       ;AC000;
+EN67$$:
 
    ret
 
 OffSave:
 
-   ASSUME DS:nothing,ES:nothing,SS:nothing
+;   ASSUME DS:nothing,ES:nothing,SS:nothing
 
    push ax
    push dx
    mov	ax,Set_CTRL_C_Trapping SHL 8 + 2
    xor	dl,dl
    int	21h
-   mov	CtrlC,dl
+   mov	[cs:Ctrlc],dl
    pop	dx
    pop	ax
 
@@ -1932,12 +1936,12 @@ OffSave:
 
 OnSave:
 
-   ASSUME DS:nothing,ES:nothing,SS:nothing
+;   ASSUME DS:nothing,ES:nothing,SS:nothing
 
    push ax
    push dx
    mov	ax,Set_CTRL_C_Trapping SHL 8 + 2
-   mov	dl,CtrlC
+   mov	dl,[cs:Ctrlc]
    int	21h
    pop	dx
    pop	ax
@@ -1948,18 +1952,18 @@ OnSave:
 
 ListMes2:
 
-   ASSUME DS:CodeR,ES:nothing
+;   ASSUME DS:CodeR,ES:nothing
 
    lodsb
    cmp	al,0
-   jz	LMesDone
+   jz	LMESDONE
    call LOUT
-   jmp	SHORT LISTMES2
+   jmp	SHORT ListMes2
 
 
 LISTMES:
 
-   ASSUME DS:CodeR,ES:nothing
+;   ASSUME DS:CodeR,ES:nothing
 
    lodsb
    cmp	al,"$"
@@ -1979,7 +1983,7 @@ LWAIT:
 
    call PSTAT
    jz	PREADY
-   cmp	[ERRCNT],ERRCNT2
+   cmp	word [ERRCNT],ERRCNT2
    ja	POPRET				;Don't get stuck
    jmp	SHORT LWAIT
 
@@ -2032,9 +2036,9 @@ POPRET:
 ;
 ;******************** END   - PSEUDOCODE ***************************************
 
-   TO_DOS PROC FAR
+TO_DOS:
 
-   ASSUME DS:NOTHING,ES:NOTHING
+;   ASSUME DS:NOTHING,ES:NOTHING
 
 ;  Call the dos via server dos call using a DPL.  The currentPDB *must* be
 ;  properly set before this call!
@@ -2043,88 +2047,88 @@ POPRET:
 
 
 
-   MOV	[PRTDPL.DPL_DS],DS		;				       ;AN010;
+   MOV	[cs:PRTDPL.DPL_DS],DS ;				       ;AN010;
    PUSH CS				;				       ;AN010;
    POP	DS				;				       ;AN010;
 
-   MOV	[PRTDPL.DPL_BX],BX		;				       ;AN010;
+   MOV	[cs:PRTDPL.DPL_BX],BX ;				       ;AN010;
    MOV	BL,AL				; set up DRIVE ID		       ;AN010;
    SUB	BL,40h				; convert to number		       ;AN010;
    XOR	AL,AL				; remove file ID		       ;AN010;
-   MOV	[PRTDPL.DPL_AX],AX		;				       ;AN010;
-   MOV	[PRTDPL.DPL_CX],CX		;				       ;AN010;
-   MOV	[PRTDPL.DPL_DX],DX		;				       ;AN010;
-   MOV	[PRTDPL.DPL_SI],SI		;				       ;AN010;
-   MOV	[PRTDPL.DPL_DI],DI		;				       ;AN010;
-   MOV	[PRTDPL.DPL_ES],ES		;				       ;AN010;
+   MOV	[cs:PRTDPL.DPL_AX],AX ;				       ;AN010;
+   MOV	[cs:PRTDPL.DPL_CX],CX ;				       ;AN010;
+   MOV	[cs:PRTDPL.DPL_DX],DX ;				       ;AN010;
+   MOV	[cs:PRTDPL.DPL_SI],SI ;				       ;AN010;
+   MOV	[cs:PRTDPL.DPL_DI],DI ;				       ;AN010;
+   MOV	[cs:PRTDPL.DPL_ES],ES ;				       ;AN010;
    XOR	AX,AX				;				       ;AN010;
-   MOV	[PRTDPL.DPL_reserved],AX	;				       ;AN010;
-   MOV	[PRTDPL.DPL_UID],AX		;				       ;AN010;
+   MOV	[cs:PRTDPL.DPL_reserved],AX ;				       ;AN010;
+   MOV	[cs:PRTDPL.DPL_UID],AX ;				       ;AN010;
    MOV	AX,CS				;				       ;AN010;
    SUB	AX,10h				;				       ;AN010;
-   MOV	[PRTDPL.DPL_PID],AX		;				       ;AN010; ;				      ;AN010;
+   MOV	[cs:PRTDPL.DPL_PID],AX ;				       ;AN010; ;				      ;AN010;
 					; IOCtl call to see if target drive is local
 					;   x = IOCTL (getdrive, Drive+1)      ;AN010;
-   mov	ax,(IOCTL SHL 8) + 9		;				       ;AN010;
+   mov	ax,(IOCtl SHL 8) + 9		;				       ;AN010;
    INT	21h				; IOCtl + dev_local  <4409>	       ;AN010;
 
-   MOV	BX,[PRTDPL.DPL_BX]		; restore register		       ;AN010;
+   MOV	BX,[cs:PRTDPL.DPL_BX] ; restore register		       ;AN010;
 
-;  $if	nc,and				; target drive local and	       ;AN010;
-   JC $$IF70
+;  if$	nc,and				; target drive local and	       ;AN010;
+   JC IF70$$
 
    test dx,1200H			; check if (x & 0x1000) 	       ;AN010;
 					;      (redirected or shared)
-;  $if	z				; if RC indicates NOT a network drive  ;AN010;
-   JNZ $$IF70
+;  if$	z				; if RC indicates NOT a network drive  ;AN010;
+   JNZ IF70$$
 
-       MOV  DX,OFFSET CODER:PRTDPL	;				       ;AN010;
+       MOV  DX,PRTDPL        ;				       ;AN010;
        MOV  AX,(ServerCall SHL 8)	; make a SERVER DOS call	       ;AN010;
 
-;  $else				;				       ;AN010;
-   JMP SHORT $$EN70
-$$IF70:
+;  else$				;				       ;AN010;
+   JMP SHORT EN70$$
+IF70$$:
 
-       MOV  DX,[PRTDPL.DPL_DX]		; fix up reg			       ;AN010;
-       MOV  AX,[PRTDPL.DPL_AX]		; make a normal DOS call	       ;AN010;
-       PUSH [PRTDPL.DPL_DS]		; fix up segment reg		       ;AN010;
+       MOV  DX,[cs:PRTDPL.DPL_DX] ; fix up reg			       ;AN010;
+       MOV  AX,[cs:PRTDPL.DPL_AX] ; make a normal DOS call	       ;AN010;
+       PUSH word [cs:PRTDPL.DPL_DS] ; fix up segment reg		       ;AN010;
        POP  DS				;				       ;AN010;
 
-;  $endif				;				       ;AN010;
-$$EN70:
+;  endif$				;				       ;AN010;
+EN70$$:
 
    CALL My21				;				       ;AN010;
 
-   RET					;				       ;AN010;
+   RETF    ;				       ;AN010;
 
-   TO_DOS ENDP
+;   TO_DOS ENDP
 
    BREAK <Open_Device>
 					;---------------------------------------
 					; Stuff for BIOS interface
 					;---------------------------------------
 
-;			$SALUT (4,25,30,41)
+;			SALUT$ (4,25,30,41)
 
 IOBUSY			EQU  0200H
 IOERROR 		EQU  8000H
 
-BYTEBUF 		DB   ?
+BYTEBUF 		rb      1
 
-CALLAD			DD   ?
+CALLAD			rd      1
 
 IOCALL			DB   22
 			DB   0
-IOREQ			DB   ?
+IOREQ			rb      1
 IOSTAT			DW   0
-			DB   8 DUP(?)
+			rb      8
 			DB   0
-			DW   OFFSET CodeR:BYTEBUF
-INTSEG			DW   ?
+			DW   BYTEBUF
+INTSEG			rw      1
 IOCNT			DW   1
 			DW   0
 
-;  $SALUT (4,4,9,41)
+;  SALUT$ (4,4,9,41)
 
 					;---------------------------------------
 					; Following two routines perform device
@@ -2133,11 +2137,11 @@ IOCNT			DW   1
 					;  Revised. No errors generated.
 					;---------------------------------------
 
-   public open_dev
+;   public open_dev
 
 Open_Dev:
 
-   ASSUME DS:nothing,ES:nothing
+;   ASSUME DS:nothing,ES:nothing
 
 					;---------------------------------------
 					; We are now going to use the printer...
@@ -2153,21 +2157,21 @@ Open_Dev:
    pushf
    push ax
    push dx
-   mov	dx,PrinterNum
+   mov	dx,[cs:PrinterNum]
    cmp	dx,-1
 
-;  $if	nz				;				       ;AC000;
-   JZ $$IF73
+;  if$	nz				;				       ;AC000;
+   JZ IF73$$
 
        mov  ax,0203h			; redirector lock
        int  2Fh
        mov  ax,0201H			; Redirector OPEN
        int  2Fh
 
-;  $endif				;
-$$IF73:
+;  endif$				;
+IF73$$:
 
-   mov	ax,(SET_PRINTER_FLAG SHL 8) + 01
+   mov	ax,(Set_Printer_Flag SHL 8) + 01
    int	21h
    pop	dx
    pop	ax
@@ -2182,38 +2186,38 @@ OP_CL_OP:
 
    push ds
    push si
-   lds	si,[LISTDEV]
+   lds	si,[cs:LISTDEV]
 
-   ASSUME DS:nothing
+;   ASSUME DS:nothing
 
-   test [SI.SDEVATT],DEVOPCL
+   test [SI+SYSDEV.SDEVATT],DEVOPCL
 
-;  $if	nz				;				       ;AC000;
-   JZ $$IF75
+;  if$	nz				;				       ;AC000;
+   JZ IF75$$
 
        push cs
        pop  ds
 
-       ASSUME DS:CodeR
+;       ASSUME DS:CodeR
 
-       mov  [IOCALL],DOPCLHL
+       mov  byte [IOCALL],DOPCLHL
        call DOCALL
 
-;  $endif				;				       ;AC000;
-$$IF75:
+;  endif$				;				       ;AC000;
+IF75$$:
 
    pop	si
    pop	ds
 
-   ASSUME DS:nothing
+;   ASSUME DS:nothing
 
    ret
 
-   public close_dev
+;   public close_dev
 
 Close_Dev:
 
-   ASSUME DS:nothing,ES:nothing
+;   ASSUME DS:nothing,ES:nothing
 
 					;---------------------------------------
 					; At this point, we release the ownership
@@ -2228,21 +2232,21 @@ Close_Dev:
    call OP_CL_OP			; Device CLOSE
    push ax
    push dx
-   mov	dx,PrinterNum
+   mov	dx,[cs:PrinterNum]
    cmp	dx,-1
 
-;  $if	nz				;				       ;AC000;
-   JZ $$IF77
+;  if$	nz				;				       ;AC000;
+   JZ IF77$$
 
        mov  ax,0202h			; redirector CLOSE
        int  2Fh
        mov  ax,0204h			; redirector clear
        int  2Fh
 
-;  $endif				;				       ;AC000;
-$$IF77:
+;  endif$				;				       ;AC000;
+IF77$$:
 
-   mov	ax,(SET_PRINTER_FLAG SHL 8) +00
+   mov	ax,(Set_Printer_Flag SHL 8) +00
    int	21h
    pop	dx
    pop	ax
@@ -2253,32 +2257,32 @@ $$IF77:
 
 PSTAT:
 
-   ASSUME DS:CodeR
+;   ASSUME DS:CodeR
 
    push bx
-   inc	[ERRCNT]
+   inc	word [ERRCNT]
    mov	BL,DEVOST
-   mov	[IOCALL],DSTATHL
+   mov	byte [IOCALL],DSTATHL
    call DOCALL
-   test [IOSTAT],IOERROR
+   test word [IOSTAT],IOERROR
 
-;  $if	nz				;				       ;AC000;
-   JZ $$IF79
+;  if$	nz				;				       ;AC000;
+   JZ IF79$$
 
-       or   [IOSTAT],IOBUSY		;If error, show buisy
+       or   word [IOSTAT],IOBUSY ;If error, show buisy
 
-;  $endif				;				       ;AC000;
-$$IF79:
+;  endif$				;				       ;AC000;
+IF79$$:
 
-   test [IOSTAT],IOBUSY
+   test word [IOSTAT],IOBUSY
 
-;  $if	z				; if				       ;AC000;
-   JNZ $$IF81
+;  if$	z				; if				       ;AC000;
+   JNZ IF81$$
 
-       mov  [ERRCNT],0
+       mov  word [ERRCNT],0
 
-;  $endif				;				       ;AC000;
-$$IF81:
+;  endif$				;				       ;AC000;
+IF81$$:
 
    pop	bx
 
@@ -2286,11 +2290,11 @@ $$IF81:
 
 POUT:
 
-   ASSUME DS:CodeR
+;   ASSUME DS:CodeR
 
    mov	[BYTEBUF],al
    mov	bx,DEVWRT
-   mov	[IOCALL],DRDWRHL
+   mov	byte [IOCALL],DRDWRHL
 
 DOCALL:
 
@@ -2298,121 +2302,121 @@ DOCALL:
    mov	[IOREQ],bl
    mov	bx,cs
    mov	es,bx
-   mov	[IOSTAT],0
-   mov	[IOCNT],1
+   mov	word [IOSTAT],0
+   mov	word [IOCNT],1
    push ds
    push si
    push ax
-   call Context_Switch
-   mov	bx,OFFSET CodeR:IOCALL
+   call CONTEXT_SWITCH
+   mov	bx,IOCALL
    lds	si,[LISTDEV]
 
-   ASSUME DS:nothing
+;   ASSUME DS:nothing
 
-   mov	ax,[SI+SDEVSTRAT]
-   mov	WORD PTR [CALLAD],ax
-   call [CALLAD]
-   mov	AX,[SI+SDEVINT]
-   mov	WORD PTR [CALLAD],ax
-   call [CALLAD]
+   mov	ax,[SI+SYSDEV.SDEVSTRAT]
+   mov	word [cs:CALLAD],ax
+   call [cs:CALLAD]
+   mov	AX,[SI+SYSDEV.SDEVINT]
+   mov	word [cs:CALLAD],ax
+   call [cs:CALLAD]
    pop	ax
    pop	si
    pop	ds
 
-   ASSUME DS:CodeR
+;   ASSUME DS:CodeR
 
    pop	es
 
    ret
 
-;			$SALUT (4,25,30,41)
+;			SALUT$ (4,25,30,41)
 
-REAL_INT_13		DD   ?
+REAL_INT_13		rd      1
 
-INT_13_RETADDR		DW   OFFSET CodeR:INT_13_BACK
+INT_13_RETADDR		DW   INT_13_BACK
 
-;  $SALUT (4,4,9,41)
+;  SALUT$ (4,4,9,41)
 
-   INT_13 PROC FAR
+INT_13:
 
-   ASSUME DS:nothing,ES:nothing,SS:nothing
+;   ASSUME DS:nothing,ES:nothing,SS:nothing
 
    pushf
-   inc	[BUSY]				;Exclude if dumb program call ROM
+   inc	byte [cs:BUSY] ;Exclude if dumb program call ROM
    push cs
-   push [INT_13_RETADDR]
-   push WORD PTR [REAL_INT_13+2]
-   push WORD PTR [REAL_INT_13]
+   push word [cs:INT_13_RETADDR]
+   push word [cs:REAL_INT_13+2]
+   push word [cs:REAL_INT_13]
 
-   ret
+   retf
 
-   INT_13 ENDP
+;   INT_13 ENDP
 
-   INT_13_BACK PROC FAR
+INT_13_BACK:
 
    pushf
-   dec	[BUSY]
+   dec	byte [cs:BUSY]
    popf 				;				       ;AC000;
 
-   ret	2				;Chuck saved flags
+   retf	2   ;Chuck saved flags
 
-   INT_13_BACK ENDP
+;   INT_13_BACK ENDP
 
-;			$SALUT (4,25,30,41)
+;			SALUT$ (4,25,30,41)
 
-REAL_INT_15		DD   ?
+REAL_INT_15		rd      1
 INT15FLAG		DB   0		; Init to off
-INT15PTR		DD   ?
+INT15PTR		rd      1
 
-;  $SALUT (4,4,9,41)
+;  SALUT$ (4,4,9,41)
 
-   INT_15 PROC FAR
+INT_15:
 
-   ASSUME DS:nothing,ES:nothing,SS:nothing
+;   ASSUME DS:nothing,ES:nothing,SS:nothing
 
    cmp	ah,20h
    jnz	REAL_15 			; Not my function
    cmp	AL,1
    ja	REAL_15 			; I only know 0 and 1
    je	FUNC1
-   inc	[INT15FLAG]			; Turn ON
-   mov	WORD PTR [INT15PTR],bx		; Save counter loc
-   mov	WORD PTR [INT15PTR+2],es
+   inc	byte [cs:INT15FLAG] ; Turn ON
+   mov	word [cs:INT15PTR],bx   ; Save counter loc
+   mov	word [cs:INT15PTR+2],es
 
    iret
 
 FUNC1:
 
-   mov	[INT15FLAG],0			; Turn OFF
+   mov	byte [cs:INT15FLAG],0 ; Turn OFF
 
    iret
 
 REAL_15:
 
-   jmp	[REAL_INT_15]
+   jmp	[cs:REAL_INT_15]
 
-   INT_15 ENDP
+;   INT_15 ENDP
 
-;			$SALUT (4,25,30,41)
+;			SALUT$ (4,25,30,41)
 
 FLAG17_14		DB   0		; Flags state of AUX/PRN redir
-REAL_INT_5		DD   ?
-REAL_INT_17		DD   ?
+REAL_INT_5		rd      1
+REAL_INT_17		rd      1
 INT_17_NUM		DW   0
 
-;  $SALUT (4,4,9,41)
+;  SALUT$ (4,4,9,41)
 
 INT_17:
 
-   ASSUME DS:nothing,ES:nothing,SS:nothing
+;   ASSUME DS:nothing,ES:nothing,SS:nothing
 
-   cmp	[FLAG17_14],1
+   cmp	byte [cs:FLAG17_14],1
    jnz	DO_INT_17			;The PRN device is not used
-   cmp	[CURRFIL],0
+   cmp	byte [cs:CURRFIL],0
    jz	DO_INT_17			;Nothing pending, so OK
-   cmp	dx,[INT_17_NUM]
+   cmp	dx,[cs:INT_17_NUM]
    jnz	DO_INT_17			;Not my unit
-   cmp	[BUSY],0
+   cmp	byte [cs:BUSY],0
    jnz	DO_INT_17			;You are me
    sti
    mov	ah,0A1h 			;You are bad, get time out
@@ -2421,26 +2425,26 @@ INT_17:
 
 DO_INT_17:
 
-   jmp	[REAL_INT_17]			;Do a 17
+   jmp	[cs:REAL_INT_17] ;Do a 17
 
-;			$SALUT (4,25,30,41)
+;			SALUT$ (4,25,30,41)
 
-REAL_INT_14		DD   ?
+REAL_INT_14		rd      1
 INT_14_NUM		DW   0
 
-;  $SALUT (4,4,9,41)
+;  SALUT$ (4,4,9,41)
 
 INT_14:
 
-   ASSUME DS:nothing,ES:nothing,SS:nothing
+;   ASSUME DS:nothing,ES:nothing,SS:nothing
 
-   cmp	[FLAG17_14],2
+   cmp	byte [cs:FLAG17_14],2
    jnz	DO_INT_14			;The AUX device is not used
-   cmp	[CURRFIL],0
+   cmp	byte [cs:CURRFIL],0
    jz	DO_INT_14			;Nothing pending, so OK
-   cmp	DX,[INT_14_NUM]
+   cmp	DX,[cs:INT_14_NUM]
    jnz	DO_INT_14			;Not my unit
-   cmp	[BUSY],0
+   cmp	byte [cs:BUSY],0
    jnz	DO_INT_14			;You are me
    sti
    or	ah,ah
@@ -2460,84 +2464,84 @@ SET14_AH:
 
 DO_INT_14:
 
-   jmp	[REAL_INT_14]			;Do a 14
+   jmp	[cs:REAL_INT_14] ;Do a 14
 
 INT_5:
 
-   ASSUME DS:nothing,ES:nothing,SS:nothing
+;   ASSUME DS:nothing,ES:nothing,SS:nothing
 
-   cmp	[FLAG17_14],1
+   cmp	byte [cs:FLAG17_14],1
    jnz	DO_INT_5			;The PRN device is not used
-   cmp	[CURRFIL],0
+   cmp	byte [cs:CURRFIL],0
    jz	DO_INT_5			;Nothing pending, so OK
-   cmp	[INT_17_NUM],0
+   cmp	word [cs:INT_17_NUM],0
    jnz	DO_INT_5			;Only care about unit 0
 
    iret 				;Pretend it worked
 
 DO_INT_5:
 
-   jmp	[REAL_INT_5]			;Do a 5
+   jmp	[cs:REAL_INT_5] ;Do a 5
 
-;			$SALUT (4,25,30,41)
+;			SALUT$ (4,25,30,41)
 
 ERRCNT			DW   0
 
-;  $SALUT (4,4,9,41)
+;  SALUT$ (4,4,9,41)
 
    BREAK <Bootstrap Cleanup Code>
 
 ReBtINT:
 
-   ASSUME CS:CodeR,DS:nothing,ES:nothing,SS:nothing
+;   ASSUME CS:CodeR,DS:nothing,ES:nothing,SS:nothing
 
    cli
    push cs
    pop	ds
 
-IntWhileBusy:
+IntWhileBusy_:
 
    int	ComInt
    jnc	NotBusy
-   jmp	IntWhileBusy
+   jmp	IntWhileBusy_
 
 NotBusy:
 
-   inc	[BUSY]				; Exclude hardware interrupts
-   inc	[SOFINT]			; Exclude software interrupts
+   inc	byte [cs:BUSY] ; Exclude hardware interrupts
+   inc	byte [cs:SOFINT] ; Exclude software interrupts
 
    call CanAll				; Purge the Queue
 
-   lds	dx,CodeR:COMNEXT
-   mov	ax,(set_interrupt_vector shl 8) or comint
+   lds	dx,[cs:COMNEXT]
+   mov	ax,(Set_Interrupt_Vector shl 8) or ComInt
    int	21h				;Set int 2f vector
 
-   lds	dx,CodeR:NEXTINT
-   mov	ax,(set_interrupt_vector shl 8) or intloc
+   lds	dx,[cs:NEXTINT]
+   mov	ax,(Set_Interrupt_Vector shl 8) or INTLOC
    int	21h				;Set hardware interrupt
 
-   mov	ax,(set_interrupt_vector shl 8) or 15h
-   lds	dx,CodeR:Real_Int_15		; Reset the wait on event on ATs
+   mov	ax,(Set_Interrupt_Vector shl 8) or 15h
+   lds	dx,[cs:REAL_INT_15] ; Reset the wait on event on ATs
    int	21h
 
-   mov	ax,(set_interrupt_vector shl 8) or 17h
-   lds	dx,CodeR:Real_Int_17
+   mov	ax,(Set_Interrupt_Vector shl 8) or 17h
+   lds	dx,[cs:REAL_INT_17]
    int	21h				;Set printer   interrupt
 
-   mov	ax,(set_interrupt_vector shl 8) or 5h
-   lds	dx,CodeR:Real_Int_5
+   mov	ax,(Set_Interrupt_Vector shl 8) or 5h
+   lds	dx,[cs:REAL_INT_5]
    int	21h				;Set print screen   interrupt
 
-   mov	ax,(set_interrupt_vector shl 8) or 14h
-   lds	dx,CodeR:Real_Int_14
+   mov	ax,(Set_Interrupt_Vector shl 8) or 14h
+   lds	dx,[cs:REAL_INT_14]
    int	21h				;Set printer   interrupt
 
-   mov	ax,(set_interrupt_vector shl 8) or 24h
-   lds	dx,CodeR:HERRINT
+   mov	ax,(Set_Interrupt_Vector shl 8) or 24h
+   lds	dx,[cs:HERRINT]
    int	21h				;Set printer   interrupt
 
-   mov	ax,(set_interrupt_vector shl 8) or reboot
-   lds	dx,CodeR:NEXT_REBOOT
+   mov	ax,(Set_Interrupt_Vector shl 8) or REBOOT
+   lds	dx,[cs:NEXT_REBOOT]
    int	21h				;Set bootstrap interrupt
 
    sti
@@ -2618,21 +2622,21 @@ NotBusy:
 ;
 ;******************** END   - PSEUDOCODE ***************************************
 
-   OpenFile PROC NEAR
+OpenFile:
 
 nop
 ;int 3
 nop
 
    mov	bx,dx				; save pointer for later	       ;AN000;
-   mov	ax,(Set_CTRL_C_Trapping shl 8) + get_CPSW ; set up for INT 21 - 33     ;AN000;
+   mov	ax,(Set_CTRL_C_Trapping shl 8) + GET_CPSW ; set up for INT 21 - 33     ;AN000;
 					;	      to see if CPSW is active
    call My21				; call MY_21			       ;AN000;
    xchg dx,bx				; recover pointer		       ;AN000;
    cmp	bl,CPSW_on			; is CPSW active ?		       ;AN000;			;AN000;
 
-;  $if	e				; if CPSW is active		       ;AC006;
-   JNE $$IF83
+;  if$	e				; if CPSW is active		       ;AC006;
+   JNE IF83$$
 
        mov  ax,(ExtOpen shl 8) + 0	; set for INT 21-6C		       ;AN000;
        xor  cx,cx			;		   Extended Open       ;AN000;
@@ -2641,65 +2645,65 @@ nop
        mov  dx,(ignore_cp shl 8) + (failopen shl 4) + openit ; open if exists  ;AC001;
        mov  di,cx			;				       ;AC001;
        dec  di				;				       ;AC001;
-       mov  al,ds:[si]			; recover drive - TO_DOS needs it
-       call TO_DOS			; call TO_DOS to open file (SERVER DOS);AC010;
+       mov  al,[ds:si]			; recover drive - TO_DOS needs it
+       call CodeR_:TO_DOS			; call TO_DOS to open file (SERVER DOS);AC010;
 
-;      $if  nc,and			; if no error and		       ;AN000;
-       JC $$IF84
+;      if$  nc,and			; if no error and		       ;AN000;
+       JC IF84$$
 
        mov  bx,ax			;				       ;AN001;
        mov  ax,(File_Times SHL 8) + get_ea_by_handle ; now find out what CP    ;AN001;
        mov  cx,list_size		;				       ;AN001;
-       lea  si,query_list		;				       ;AN001;
-       lea  di,list			;				       ;AN001;
+       lea  si,[query_list];				       ;AN001;
+       lea  di,[list] ;				       ;AN001;
        call My21			; to get the CP 		       ;AN001;
 
-;      $if  nc,and			; if no error and		       ;AN000;
-       JC $$IF84
+;      if$  nc,and			; if no error and		       ;AN000;
+       JC IF84$$
 
        mov  ax,bx			; move HANDLE back to where its needed ;AN001;
 
-       mov  bx,[code_page]		; is there a valid CP ? 	       ;AC006;
+       mov  bx,[cs:code_page] ; is there a valid CP ? 	       ;AC006;
 
        cmp  bx,0			; is there a valid CP ? 	       ;AC006;
 
-;      $if  g				; if valid CP ie: 0 < CP < -1	       ;AN000;
-       JNG $$IF84
+;      if$  g				; if valid CP ie: 0 < CP < -1	       ;AN000;
+       JNG IF84$$
 
-	   cmp	[PrinterNum],no_lptx	; is there a valid LPTx ?	       ;AN000;			;AN000;
+	   cmp	word [cs:PrinterNum],no_lptx ; is there a valid LPTx ?	       ;AN000;			;AN000;
 
-;	   $if	ne			; if valid LPTx available	       ;AN000;
-	   JE $$IF85
+;	   if$	ne			; if valid LPTx available	       ;AN000;
+	   JE IF85$$
 
 	       mov  cx,ax		; save file handle		       ;AN008;
-	       mov  [CURRCP],bx 	; update CURRCP 		       ;AN000;
-	       mov  dx,[PrinterNum]	;				       ;AN000;
+	       mov  [cs:CURRCP],bx ; update CURRCP 		       ;AN000;
+	       mov  dx,[cs:PrinterNum] ;				       ;AN000;
 	       mov  ax,(major_code shl 8) + minor_code ; semophore PRINTER.SYS ;AN000;
 	       int  2Fh 		; call INT 2F to lock and set	       ;AN000;
 					;     PRINTER.SYS to CURRCP
 	       mov  ax,cx		; restore file handle		       ;AN008;
-;	   $endif			; endif 			       ;AN000;
-$$IF85:
-;      $endif				; endif 			       ;AN006;
-$$IF84:
+;	   endif$			; endif 			       ;AN000;
+IF85$$:
+;      endif$				; endif 			       ;AN006;
+IF84$$:
 
-;  $else				; else				       ;AN000;
-   JMP SHORT $$EN83
-$$IF83:
+;  else$				; else				       ;AN000;
+   JMP SHORT EN83$$
+IF83$$:
 
        mov  si,dx
-       mov  al,ds:[si]			; recover drive - TO_DOS needs it
-       mov  ah,(open)			; set up for INT 21 - 3D Open	       ;AN000;
+       mov  al,[ds:si]			; recover drive - TO_DOS needs it
+       mov  ah,(Open)			; set up for INT 21 - 3D Open	       ;AN000;
        mov  cx,016h			; set up search attribute for Server   ;AN011;
 					;			    DOS Open
-       call TO_DOS			; call TO_DOS to open file (SERVER DOS);AC010;
+       call CodeR_:TO_DOS			; call TO_DOS to open file (SERVER DOS);AC010;
 
-;  $endif				; endif 			       ;AN000;
-$$EN83:
+;  endif$				; endif 			       ;AN000;
+EN83$$:
 
    ret					; return			       ;AN000;
 
-   OpenFile ENDP
+;   OpenFile ENDP
 
    BREAK <CloseFile>
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -2753,35 +2757,35 @@ $$EN83:
 ;
 ;******************** END   - PSEUDOCODE ***************************************
 
-   CloseFile PROC NEAR
+CloseFile:
 
-   cmp	[CURRCP],0			; is 0 < CHECKCP < -1 ? 	       ;AN000;
+   cmp	word [cs:CURRCP],0 ; is 0 < CHECKCP < -1 ? 	       ;AN000;
 
-;  $if	g				; if CHECKCP is valid		       ;AN000;
-   JNG $$IF90
+;  if$	g				; if CHECKCP is valid		       ;AN000;
+   JNG IF90$$
 
        push bx				; save file handle		       ;AN000;
        xor  bx,bx			; set CP to unlock		       ;AN000;
        dec  bx				;				       ;AN000;
-       mov  dx,[PrinterNum]		; set which LPTx		       ;AN000;
+       mov  dx,[cs:PrinterNum] ; set which LPTx		       ;AN000;
        mov  ax,(major_code shl 8) + minor_code ; semophore to PRINTER.SYS      ;AN000;
        int  2Fh 			; call INT 2F to unlock PRINTER.SYS    ;AN000;
-       mov  [CURRCP],0			; reset CHECKCP 		       ;AN000;
+       mov  word [cs:CURRCP],0 ; reset CHECKCP 		       ;AN000;
        pop  bx				; recover file handle		       ;AN000;
 
-;  $endif				; endif 			       ;AN000;
-$$IF90:
+;  endif$				; endif 			       ;AN000;
+IF90$$:
 
-   mov	ax,(close shl 8)		; set up for INT 21 - close	       ;AN000;
+   mov	ax,(Close shl 8)		; set up for INT 21 - close	       ;AN000;
    call My21				; call My21 to close file	       ;AC010;
 
    ret					; return			       ;AN000;
 
-   CloseFile ENDP
+;   CloseFile ENDP
 
-   BREAK <QUeue & Buffer Space>
+   BREAK <QUeue & buffer Space>
 
-;			$SALUT (4,25,30,41)
+;			SALUT$ (4,25,30,41)
 
 					;---------------------------------------
 					;
@@ -2796,7 +2800,7 @@ $$IF90:
 					;
 					;---------------------------------------
 
-FileQueue		Label byte
+label FileQueue byte
 
 			db   0		; the file queue starts empty
 
@@ -2842,7 +2846,7 @@ FileQueue		Label byte
 					;---------------------------------------
 					; Reserved names for parallel card
 					;---------------------------------------
-INT_17_HITLIST		LABEL BYTE
+label INT_17_HITLIST byte
 
 			DB   8,"PRN     ",0
 			DB   8,"LPT1    ",0
@@ -2853,7 +2857,7 @@ INT_17_HITLIST		LABEL BYTE
 					;---------------------------------------
 					; Reserved names for Async adaptor
 					;---------------------------------------
-INT_14_HITLIST		LABEL BYTE
+label INT_14_HITLIST byte
 
 			DB   8,"AUX     ",0
 			DB   8,"COM1    ",0
@@ -2865,101 +2869,101 @@ INT_14_HITLIST		LABEL BYTE
 
 LISTNAME		DB   "PRN     " ;Device name
 
-;  $SALUT (4,4,9,41)
+;  SALUT$ (4,4,9,41)
 
-   SETDEV PROC NEAR
+SETDEV:
 
-   ASSUME CS:CodeR,DS:CodeR,ES:nothing,SS:nothing
+;   ASSUME CS:CodeR,DS:CodeR,ES:nothing,SS:nothing
 
 
-   mov	ah,GET_IN_VARS
+   mov	ah,Get_In_Vars
    call My21
    push es
    pop	ds
-   lea	si,es:[bx.SYSI_DEV]
+   lea	si,[es:bx+SysInitVars.SYSI_DEV]
 
-   ASSUME DS:nothing
+;   ASSUME DS:nothing
 
    push cs
    pop	es
 
-   ASSUME ES:CodeR
+;   ASSUME ES:CodeR
 
-   mov	di,OFFSET CodeR:LISTNAME
+   mov	di,LISTNAME
 
-;  $search				;				       ;AN000;
-$$DO92:
+;  search$				;				       ;AN000;
+DO92$$:
 
-       test [si.SDEVATT],DEVTYP 	;
+       test [si+SYSDEV.SDEVATT],DEVTYP ;
 
-;      $if  nz,and			; if type is character		       ;AN000;
-       JZ $$IF93
+;      if$  nz,and			; if type is character		       ;AN000;
+       JZ IF93$$
 
        push si				;
        push di				;
-       add  si,SDEVNAME 		; Point at name
+       add  si,SYSDEV.SDEVNAME 		; Point at name
        mov  cx,8			;
        repe cmpsb			;
        pop  di				;
        pop  si				;
 
-;      $if  z				; if the end was reached with a match  ;AN000;
-       JNZ $$IF93
+;      if$  z				; if the end was reached with a match  ;AN000;
+       JNZ IF93$$
 
 	   stc				; signal end			       ;AN000;
 
-;      $else
-       JMP SHORT $$EN93
-$$IF93:
+;      else$
+       JMP SHORT EN93$$
+IF93$$:
 
 	   clc				; keep looking
 
-;      $endif				;				       ;AN000;
-$$EN93:
+;      endif$				;				       ;AN000;
+EN93$$:
 
-;  $exitif c				;				       ;AN000;
-   JNC $$IF92
+;  exitif$ c				;				       ;AN000;
+   JNC IF92$$
 
-       mov  WORD PTR [CALLAD+2],ds	;Get I/O routines
-       mov  WORD PTR [LISTDEV+2],ds	;Get I/O routines
-       mov  WORD PTR [LISTDEV],si
+       mov  word [es:CALLAD+2],ds  ;Get I/O routines
+       mov  word [es:LISTDEV+2],ds  ;Get I/O routines
+       mov  word [es:LISTDEV],si
        push cs
        pop  ds
 
-       ASSUME DS:CodeR
+;       ASSUME DS:CodeR
 
-       mov  PrinterNum,-1		; Assume not an INT 17 device
+       mov  word [PrinterNum],-1 ; Assume not an INT 17 device
        push cs
        pop  es
 
-       ASSUME ES:CodeR
+;       ASSUME ES:CodeR
 
-       mov  bp,OFFSET CodeR:LISTNAME
+       mov  bp,LISTNAME
        mov  si,bp
-       mov  di,OFFSET CodeR:INT_17_HITLIST
+       mov  di,INT_17_HITLIST
 
        call chk_int17_dev
 
-;  $orelse				;				       ;AN000;
-   JMP SHORT $$SR92
-$$IF92:
+;  orelse$				;				       ;AN000;
+   JMP SHORT SR92$$
+IF92$$:
 
-       lds  si,[si.SDEVNEXT]		;
+       lds  si,[si+SYSDEV.SDEVNEXT] ;
        cmp  si,-1			;
 
-;  $endloop z				;				       ;AN000;
-   JNZ $$DO92
+;  endloop$ z				;				       ;AN000;
+   JNZ DO92$$
 
        push cs
        pop  ds
        stc
 
-;  $endsrch				;				       ;AN000;
-$$SR92:
+;  endsrch$				;				       ;AN000;
+SR92$$:
 
    ret
 
-   SETDEV ENDP
+;   SETDEV ENDP
 
    BREAK <chk_int17_dev>
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -3000,38 +3004,38 @@ $$SR92:
 ;
 ;******************** END   - PSEUDOCODE ***************************************
 
-   chk_int17_dev PROC NEAR
+chk_int17_dev:
 
-;  $search				;				       ;AC000;
-$$DO100:
+;  search$				;				       ;AC000;
+DO100$$:
        mov  si,bp
        mov  cl,[di]
        inc  di
 
-;      $if  ncxz			;				       ;AC000;
-       JCXZ $$IF101
+;      if$  ncxz			;				       ;AC000;
+       JCXZ IF101$$
 
 	   clc				;				       ;AC000;
 
-;      $else				;				       ;AC000;
-       JMP SHORT $$EN101
-$$IF101:
+;      else$				;				       ;AC000;
+       JMP SHORT EN101$$
+IF101$$:
 
 	   stc				;				       ;AC000;
 
-;      $endif				;				       ;AC000;
-$$EN101:
+;      endif$				;				       ;AC000;
+EN101$$:
 
-;  $exitif c				;				       ;AC000;
-   JNC $$IF100
+;  exitif$ c				;				       ;AC000;
+   JNC IF100$$
 
-       mov  di,OFFSET CodeR:INT_14_HITLIST
+       mov  di,INT_14_HITLIST
 
        call chk_int14_dev		;				       ;AC000;
 
-;  $orelse				;				       ;AC000;
-   JMP SHORT $$SR100
-$$IF100:
+;  orelse$				;				       ;AC000;
+   JMP SHORT SR100$$
+IF100$$:
 
        repe cmpsb
        lahf
@@ -3040,21 +3044,21 @@ $$IF100:
        inc  di
        sahf
 
-;  $endloop z				;				       ;AC000;
-   JNZ $$DO100
+;  endloop$ z				;				       ;AC000;
+   JNZ DO100$$
 
        xor  bh,bh
        mov  [INT_17_NUM],bx
-       mov  PrinterNum,bx		; Set this as well to the INT 17 device
-       mov  [FLAG17_14],1
+       mov  [PrinterNum],bx ; Set this as well to the INT 17 device
+       mov  byte [FLAG17_14],1
        clc
 					;
-;  $endsrch				;				       ;AC000;
-$$SR100:
+;  endsrch$				;				       ;AC000;
+SR100$$:
 
    ret
 
-   chk_int17_dev ENDP
+;   chk_int17_dev ENDP
 
    BREAK <chk_int14_dev>
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -3095,37 +3099,37 @@ $$SR100:
 ;
 ;******************** END   - PSEUDOCODE ***************************************
 
-   chk_int14_dev PROC NEAR
+chk_int14_dev:
 
-;  $search				;				       ;AC000;
-$$DO108:
+;  search$				;				       ;AC000;
+DO108$$:
 
        mov  si,bp
        mov  cl,[di]
        inc  di
 
-;      $if  ncxz			;				       ;AC000;
-       JCXZ $$IF109
+;      if$  ncxz			;				       ;AC000;
+       JCXZ IF109$$
 
 	   clc				;				       ;AC000;
 
-;      $else				;				       ;AC000;
-       JMP SHORT $$EN109
-$$IF109:
+;      else$				;				       ;AC000;
+       JMP SHORT EN109$$
+IF109$$:
 
 	   stc				;				       ;AC000;
 
-;      $endif				;				       ;AC000;
-$$EN109:
+;      endif$				;				       ;AC000;
+EN109$$:
 
-;  $exitif c				;				       ;AC000;
-   JNC $$IF108
+;  exitif$ c				;				       ;AC000;
+   JNC IF108$$
 
-       mov  [FLAG17_14],0
+       mov  byte [FLAG17_14],0
 
-;  $orelse				;				       ;AC000;
-   JMP SHORT $$SR108
-$$IF108:
+;  orelse$				;				       ;AC000;
+   JMP SHORT SR108$$
+IF108$$:
 
        repe cmpsb
        lahf
@@ -3134,21 +3138,21 @@ $$IF108:
        inc  di
        sahf
 
-;  $endloop z				;				       ;AC000;
-   JNZ $$DO108
+;  endloop$ z				;				       ;AC000;
+   JNZ DO108$$
 
        xor  bh,bh
        mov  [INT_14_NUM],bx
-       mov  [FLAG17_14],2
+       mov  byte [FLAG17_14],2
 
-;  $endsrch				;				       ;AC000;
-$$SR108:
+;  endsrch$				;				       ;AC000;
+SR108$$:
 
    clc					;				       ;AC015;
 
    ret
 
-   chk_int14_dev ENDP
+;   chk_int14_dev ENDP
 
    BREAK <BADSPOOL>
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -3188,20 +3192,20 @@ $$SR108:
 ;
 ;******************** END   - PSEUDOCODE ***************************************
 
-   BADSPOOL PROC NEAR
+BADSPOOL:
 
-   ASSUME CS:CodeR,DS:CodeR,ES:nothing,SS:nothing
+;   ASSUME CS:CodeR,DS:CodeR,ES:nothing,SS:nothing
 
    mov	ax,(CLASS_B shl 8) + BADMES	;				       ;AC000;
-   call GoDispMsg			;				       ;AC002;
+   call DG_:GoDispMsg			;				       ;AC002;
 ;*********************************************************************
-   mov	ax,(SET_PRINTER_FLAG SHL 8)	; Set flag to Idle
+   mov	ax,(Set_Printer_Flag SHL 8)	; Set flag to Idle
    int	21h
 ;*********************************************************************
-   mov	ax,(EXIT SHL 8) OR 0FFH
+   mov	ax,(Exit SHL 8) OR 0FFH
    int	21h
 
-   BADSPOOL ENDP
+;   BADSPOOL ENDP
 
    BREAK <MoveTrans>
 ;******************* START OF SPECIFICATIONS ***********************************
@@ -3241,102 +3245,102 @@ $$SR108:
 ;
 ;******************** END   - PSEUDOCODE ***************************************
 
-ContTrans dd ?				; transient continuation address after move
+ContTrans rd      1 ; transient continuation address after move
 
-MoveTrans label far
+MoveTrans:
 
-   ASSUME CS:CodeR,DS:CodeR,ES:CodeR,SS:nothing
+;   ASSUME CS:CodeR,DS:CodeR,ES:CodeR,SS:nothing
 
    cli
    cld
    mov	[INTSEG],cs
    call SETDEV				;
 
-   ASSUME ES:nothing
+;   ASSUME ES:nothing
 
    jc	BADSPOOL
-   mov	dx,OFFSET CodeR:SPINT
+   mov	dx,SPINT
    mov	al,SOFTINT
-   mov	ah,GET_INTERRUPT_VECTOR
+   mov	ah,Get_Interrupt_Vector
    int	21h				;Get soft vector
-   mov	WORD PTR [SPNEXT+2],es
-   mov	WORD PTR [SPNEXT],bx
+   mov	word [SPNEXT+2],es
+   mov	word [SPNEXT],bx
    mov	al,SOFTINT
-   mov	ah,SET_INTERRUPT_VECTOR
+   mov	ah,Set_Interrupt_Vector
    int	21h				;Set soft vector
-   mov	dx,OFFSET CodeR:SPCOMINT
+   mov	dx,SPCOMINT
    mov	al,ComInt
-   mov	ah,GET_INTERRUPT_VECTOR
+   mov	ah,Get_Interrupt_Vector
    int	21h				;Get communication vector
-   mov	WORD PTR [COMNEXT+2],es
-   mov	WORD PTR [COMNEXT],bx
+   mov	word [COMNEXT+2],es
+   mov	word [COMNEXT],bx
    mov	al,ComInt
-   mov	ah,SET_INTERRUPT_VECTOR 	;Set communication vector
+   mov	ah,Set_Interrupt_Vector 	;Set communication vector
    int	21h
    mov	al,13h
-   mov	AH,GET_INTERRUPT_VECTOR
+   mov	AH,Get_Interrupt_Vector
    int	21h
-   mov	WORD PTR [REAL_INT_13+2],es
-   mov	WORD PTR [REAL_INT_13],bx
-   mov	DX,OFFSET CodeR:INT_13
+   mov	word [REAL_INT_13+2],es
+   mov	word [REAL_INT_13],bx
+   mov	DX,INT_13
    mov	al,13h
-   mov	ah,SET_INTERRUPT_VECTOR
+   mov	ah,Set_Interrupt_Vector
    int	21h				;Set diskI/O interrupt
 
    mov	al,15h
-   mov	ah,GET_INTERRUPT_VECTOR
+   mov	ah,Get_Interrupt_Vector
    int	21h
-   mov	WORD PTR [REAL_INT_15+2],es
-   mov	WORD PTR [REAL_INT_15],bx
-   mov	dx,OFFSET CodeR:INT_15
+   mov	word [REAL_INT_15+2],es
+   mov	word [REAL_INT_15],bx
+   mov	dx,INT_15
    mov	al,15h
-   mov	ah,SET_INTERRUPT_VECTOR
+   mov	ah,Set_Interrupt_Vector
    int	21h				;Set INT 15 vector
    mov	al,17h
-   mov	ah,GET_INTERRUPT_VECTOR
+   mov	ah,Get_Interrupt_Vector
    int	21h
-   mov	WORD PTR [REAL_INT_17+2],es
-   mov	WORD PTR [REAL_INT_17],bx
-   mov	dx,OFFSET CodeR:INT_17
+   mov	word [REAL_INT_17+2],es
+   mov	word [REAL_INT_17],bx
+   mov	dx,INT_17
    mov	al,17H
-   mov	ah,SET_INTERRUPT_VECTOR
+   mov	ah,Set_Interrupt_Vector
    int	21h				;Set printer interrupt
    mov	al,14h
-   mov	ah,GET_INTERRUPT_VECTOR
+   mov	ah,Get_Interrupt_Vector
    int	21h
-   mov	WORD PTR [REAL_INT_14+2],es
-   mov	WORD PTR [REAL_INT_14],bx
-   mov	dx,OFFSET CodeR:INT_14
+   mov	word [REAL_INT_14+2],es
+   mov	word [REAL_INT_14],bx
+   mov	dx,INT_14
    mov	al,14h
-   mov	ah,SET_INTERRUPT_VECTOR
+   mov	ah,Set_Interrupt_Vector
    int	21h				;Set RS232 port interrupt
    mov	al,5
-   mov	ah,GET_INTERRUPT_VECTOR
+   mov	ah,Get_Interrupt_Vector
    int	21h
-   mov	WORD PTR [REAL_INT_5+2],es
-   mov	WORD PTR [REAL_INT_5],bx
-   mov	DX,OFFSET CodeR:INT_5
+   mov	word [REAL_INT_5+2],es
+   mov	word [REAL_INT_5],bx
+   mov	DX,INT_5
    mov	al,5
-   mov	ah,SET_INTERRUPT_VECTOR
+   mov	ah,Set_Interrupt_Vector
    int	21h				;Set print screen interrupt
-   mov	ah,GET_INDOS_FLAG
+   mov	ah,Get_InDOS_Flag
    int	21h
 
-   ASSUME ES:nothing
+;   ASSUME ES:nothing
 
-   mov	WORD PTR [INDOS+2],es		;Get indos flag location
-   mov	WORD PTR [INDOS],bx
+   mov	word [INDOS+2],es      ;Get indos flag location
+   mov	word [INDOS],bx
    mov	al,INTLOC
-   mov	ah,GET_INTERRUPT_VECTOR
+   mov	ah,Get_Interrupt_Vector
    int	21h
-   mov	WORD PTR [NEXTINT+2],es
-   mov	WORD PTR [NEXTINT],bx
+   mov	word [NEXTINT+2],es
+   mov	word [NEXTINT],bx
 
    mov	al,REBOOT			; We also need to chain
-   mov	ah,GET_INTERRUPT_VECTOR 	; Into the INT 19 sequence
+   mov	ah,Get_Interrupt_Vector 	; Into the INT 19 sequence
    int	21h				; To properly "unhook"
-   mov	WORD PTR [NEXT_REBOOT+2],es	; ourselves from the TimerTick
-   mov	WORD PTR [NEXT_REBOOT],bx	; sequence
+   mov	word [NEXT_REBOOT+2],es     ; ourselves from the TimerTick
+   mov	word [NEXT_REBOOT],bx     ; sequence
    mov	ax,0B800h
    int	2Fh
    cmp	al,0
@@ -3346,20 +3350,20 @@ MoveTrans label far
 
 SET_HDSPINT:
 
-   mov	dx,OFFSET CodeR:HDSPINT
+   mov	dx,HDSPINT
    mov	al,INTLOC
-   mov	ah,SET_INTERRUPT_VECTOR
+   mov	ah,Set_Interrupt_Vector
    int	21h				;Set hardware interrupt
 
-   mov	dx,OFFSET CodeR:ReBtINT
+   mov	dx,ReBtINT
    mov	al,REBOOT
-   mov	ah,SET_INTERRUPT_VECTOR
+   mov	ah,Set_Interrupt_Vector
    int	21h				;Set bootstrap interrupt
 
 NO_HDSPINT:
 
    mov	ax,(CLASS_B shl 8) + GOODMES	;				       ;AC000;
-   call GoDispMsg			;				       ;AC002;
+   call DG_:GoDispMsg			;				       ;AC002;
 
 					;---------------------------------------
 					;--- Move transient
@@ -3367,20 +3371,20 @@ NO_HDSPINT:
 					;	     get trashed in move!
 					;---------------------------------------
 
-   public RealMove
+;   public RealMove
 
 RealMove:
 
-   mov	ax,OFFSET dg:TransRet
-   mov	WORD PTR [ContTrans],ax 	; store return offset
-   mov	cx,DG
-   mov	WORD PTR [ContTrans+2],cx	; return segment
-   mov	ax,CodeR
-   add	ax,[endres]			; get start of moved transient, actually
+   mov	ax,TransRet
+   mov	word [ContTrans],ax      ; store return offset
+   mov	cx,DG_
+   mov	word [ContTrans+2],cx     ; return segment
+   mov	ax,CodeR_
+   add	ax,[ENDRES]			; get start of moved transient, actually
 					;  this is 100 bytes more than need be
 					;  because of lack of pdb, but who cares?
 
-					; NOTE: The following $IF was added for
+					; NOTE: The following IF$ was added for
 					;	 DOS 4.0.  For earlier versions,
 					;	 the transient would even be moved
 					;	 IN if required < available
@@ -3389,20 +3393,20 @@ RealMove:
 
    cmp	ax,cx				; is required size > available size ?
 
-;  $if	a				; if it is - move transient out
-   JNA $$IF116
+;  if$	a				; if it is - move transient out
+   JNA IF116$$
 
-       mov  WORD PTR [ContTrans+2],ax	; return segment
+       mov  word [ContTrans+2],ax     ; return segment
        mov  es,ax			; new location for dg group
 
-       ASSUME ES:nothing
+;       ASSUME ES:nothing
 
-       mov  ax,dg
+       mov  ax,DG_
        mov  ds,ax
 
-       ASSUME DS:nothing
+;       ASSUME DS:nothing
 
-       mov  cx,OFFSET dg:TransSize
+       mov  cx,TransSize
        mov  si,cx			; start from the bottom and move up
        mov  di,cx
        std
@@ -3414,19 +3418,19 @@ RealMove:
 					;---------------------------------------
        mov  ax,es
        mov  ds,ax
-       sub  ax,dg			; displacement
+       sub  ax,DG_			; displacement
        mov  dx,ss
        add  dx,ax			; displace stack segemnt
        mov  ss,dx
 
-;  $endif
-$$IF116:
+;  endif$
+IF116$$:
 
-   ASSUME DS:nothing,ES:nothing,SS:nothing
+;   ASSUME DS:nothing,ES:nothing,SS:nothing
 
-   jmp	ContTrans			; back to the transient...
+   jmp	[cs:ContTrans] ; back to the transient...
 
-   CodeR EndS
+end if
 
-   End
+;   End
 

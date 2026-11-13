@@ -500,7 +500,13 @@ def utility_program(where, source):
         groups = {segs[0].upper(): None} if len(segs) == 1 else {}
         # COMMAND.COM declares no fasm segment at all: its twelve are two
         # groups laid down as two address spaces, and COMSEG.ASM names them.
-        return top, mods, None, groups or groups_of(mods)
+        # The group can stand in a header of the utility's own rather than
+        # in a module: PRINT declares DG in PRIDEFS.INC, which all four of
+        # its modules read, so what they include is looked at as well.
+        everything = []
+        for p in mods:
+            everything += included(p, set())
+        return top, mods, None, groups or groups_of(everything)
     m = re.search(r"(?i);?\s*ASSUME[^\n]*\bCS\s*:\s*(\w+)", text)
     if not m:
         # A link file that says nothing about the registers: the modules do.

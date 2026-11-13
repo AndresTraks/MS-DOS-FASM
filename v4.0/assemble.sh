@@ -248,3 +248,12 @@ utility NLSFUNC NLSLNK NLSFUNC.EXE
 # resident on interrupts 2FH and 21H.  The release links the one module and
 # stops: this is an .EXE in its own right.
 utility APPEND APPENDLNK APPEND.EXE
+
+# PRINT, four modules in four segments, three of them in one group -- Code,
+# Data and Stack are DG, and CodeR, the resident part, is outside it -- which
+# PRILNK.ASM lays down as two address spaces, the way COMMAND.COM's two
+# groups are.  CodeR goes first: PRINT keeps everything up to EndRes resident
+# and frees the transient part in DG above it.  The release links the four
+# and runs TOOLS/CONVERT over the result, which only renames the .EXE, so the
+# MZ image is what comes out here under the release's name.
+utility PRINT PRILNK PRINT.COM

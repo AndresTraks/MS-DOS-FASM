@@ -492,6 +492,53 @@ UTILITIES = {
         # all three modules begin their code with ASSUME CS:CSEG, DS:DGROUP
         START={'cs': 'CSEG', 'ds': None, 'es': None, 'ss': 'SSEG'},
     ),
+    # PRINT's four modules in the order PRINT.LNK names them, and the one
+    # header of its own they all read.  PRIDEFS.INC holds the numbers, the
+    # structures and the four segment declarations; PRIDEFS.ASM is a shorter
+    # copy of it that the makefile names and no module reads.
+    'PRINT': dict(
+        MODULES=('PRINT_RM.ASM', 'PRINT_R.ASM', 'PRINT_T.ASM',
+                 'PRINT_TM.ASM', 'PRIDEFS.INC'),
+        TAG={'PRINT_T.ASM': 'T'},
+        # Both halves of the program have a loop called IntWhileBusy that
+        # waits for the resident part to let go: PRINT_R's is the one in the
+        # bootstrap cleanup, jumped to from the line under it and read
+        # nowhere else, where PRINT_T's is a procedure it calls from eight
+        # places.  MASM assembled the two apart; one assembly can only have
+        # the one, and the local one is the one that gives way.
+        PRIVATE={'PRINT_R.ASM': (('IntWhileBusy', 'IntWhileBusy_'),)},
+        # PRIDEFS.INC, which every module reads, declares FALSE EQU 0, and
+        # PRINT_TM says "false = 0" again over it before it sets the
+        # parser's switches with it.  MASM minded neither the case nor the
+        # second declaration, the value being the one already given; fasm's
+        # EQU puts the text where the name stands, so the line is read as
+        # "0 = 0".  It says nothing the header has not said, and goes.
+        PATCHES={'PRINT_TM.ASM': [('false\t\t\t=    0',
+                                   ';false\t\t\t=    0')]},
+        # EA.INC is the extended attribute calls, which the resident part
+        # reads a file with; DPL.ASM is the server call parameter list and
+        # COPYRIGH.INC the notice PRINT_R lays down after its own name.
+        SHARED=('SYSCALL.INC', 'DOSSYM.INC', 'SYSMSG.INC', 'PSDATA.INC',
+                'MSGHAN.INC', 'DOSMAC.INC', 'MSGDCL.INC', 'MSGSERV.ASM',
+                'VERSIONA.INC', 'BPB.INC', 'BUFFER.INC', 'SYSVAR.INC',
+                'VECTOR.INC', 'MULT.INC', 'DIRENT.INC', 'DPB.INC',
+                'CURDIR.INC', 'CPMFCB.INC', 'FIND.INC', 'PDB.INC', 'EXE.INC',
+                'SF.INC', 'ARENA.INC', 'INTNAT.INC', 'MI.INC',
+                'FILEMODE.INC', 'ERROR.INC', 'VERSION.INC', 'PARSE.ASM',
+                'DEVSYM.INC', 'EA.INC', 'DPL.ASM', 'COPYRIGH.INC'),
+        # The resident part's own ASSUME, which says CS and nothing else:
+        # it is entered on an interrupt, with the interrupted program's DS,
+        # so what it reads of its own it reads through CS.  The transient
+        # part says ASSUME CS:DG,SS:Stack for itself at the head of each of
+        # its segments.
+        START={'cs': 'CODER', 'ds': None, 'es': None, 'ss': None},
+        # The word PRINT_R keeps the printer's number in is laid down with
+        # the value that says there is none, and the line that declares
+        # that value stands under it: MASM resolved the name on its second
+        # pass, and fasm wants a number it can resolve wherever it stands
+        # rather than an EQU it has not read yet.
+        FORWARD=('no_lptx',),
+    ),
 }
 
 NAME = sys.argv[1].upper() if len(sys.argv) > 1 else ''
@@ -860,6 +907,12 @@ def strings(text):
     A segment that is not the one the instruction implies does say
     something, and those are left as they stand: the kernel reads a table
     through CS with LODS byte [cs:si], which fasm takes as it is.
+
+    The operand can be the name of a variable instead, which says the same
+    thing and no more: PRINT_T scans the name it has just parsed with
+    REPNE SCAS NameBuf, and says in a comment beside it that the name is
+    there to tell the assembler it is a byte search.  The width is the one
+    the name was declared with.
     """
     DEFAULT = {'di': 'es', 'si': 'ds'}
     SUFFIX = {'byte': 'b', 'word': 'w', 'dword': 'd'}
@@ -885,9 +938,20 @@ def strings(text):
             return m.group(0)
         return '%s%s%s' % (m.group(1), mnemonic, SUFFIX[kinds[0]])
 
-    return re.sub(r"(?i)^([ \t]*(?:rep|repe|repz|repne|repnz)?[ \t]*)"
+    text = re.sub(r"(?i)^([ \t]*(?:rep|repe|repz|repne|repnz)?[ \t]*)"
                   r"(movs|cmps|stos|lods|scas)[ \t]+([^;\n]*?)[ \t]*$",
                   one, text, flags=re.M)
+
+    def named(m):
+        size = TYPESIZE.get(m.group(3).lower())
+        if size not in (1, 2, 4):
+            return m.group(0)
+        return '%s%s%s%s' % (m.group(1), m.group(2),
+                             {1: 'b', 2: 'w', 4: 'd'}[size], m.group(4) or '')
+
+    return re.sub(r"(?i)^([ \t]*(?:rep|repe|repz|repne|repnz)?[ \t]*)"
+                  r"(movs|cmps|stos|lods|scas)[ \t]+(" + N
+                  + r")([ \t]*;[^\n]*)?$", named, text, flags=re.M)
 
 
 def far_pointers(text):
@@ -906,10 +970,24 @@ def far_pointers(text):
     still, and so is a name declared somewhere this cannot see, which is
     why the bare rule asks before it rewrites.
     """
+    def split(head, value, comment, segment):
+        """The two words, under the name the DD was declared with.
+
+        A DD gave its name the width of one, which the program reads it by:
+        PRINT_R's INDOS is a far pointer to the kernel's busy flag and the
+        resident part loads DS and SI from it with one LDS.  Two DWs would
+        leave the name a word wide, so it is written over them with the
+        width it had.
+        """
+        m = re.match(r"^([ \t]*)(" + N + r")[ \t]+$", head)
+        under = '\tdw %s%s\n\tdw %s' % (value, comment, segment)
+        if not m:
+            return '%sdw %s%s\n\tdw %s' % (head, value, comment, segment)
+        return '%slabel %s dword\n%s' % (m.group(1), m.group(2), under)
+
     def one(m):
         head, seg, name = m.group(1), m.group(2), m.group(3)
-        return '%sdw %s%s\n\tdw %s' % (head, name, m.group(4) or '',
-                                       SEGMAP[seg.upper()])
+        return split(head, name, m.group(4) or '', SEGMAP[seg.upper()])
 
     text = re.sub(r"(?mi)^([ \t]*(?:" + N + r"[ \t]+)?)dd[ \t]+(" + SEGPAT
                   + r")[ \t]*:[ \t]*(" + N + r")[ \t]*(;[^\n]*)?$", one, text)
@@ -919,9 +997,8 @@ def far_pointers(text):
         where = SEGOF.get(name.lower())
         if where is None:
             return m.group(0)
-        return '%sdw %s%s%s\n\tdw %s' % (head, name, m.group(3),
-                                         m.group(4) or '',
-                                         SEGMAP[space(where)])
+        return split(head, name + m.group(3), m.group(4) or '',
+                     SEGMAP[space(where)])
 
     return re.sub(r"(?mi)^([ \t]*(?:" + N + r"[ \t]+)?)dd[ \t]+(" + N
                   + r")([ \t]*)(;[^\n]*)?$", bare, text)
@@ -939,6 +1016,37 @@ def at_far_jumps(text):
 
     return re.sub(r"(?i)\b(jmp|call)([ \t]+)(" + "|".join(sorted(FARAT))
                   + r")\b", one, text)
+
+
+def far_names(text):
+    """A CALL or JMP to a name the program declares FAR.
+
+    MASM knew the name's distance from the PROC FAR or LABEL FAR that
+    declares it -- the EXTRN in the module that calls it says the same --
+    and laid down a far transfer without being told twice.  fasm takes the
+    name at face value and assembles a near one, which from another address
+    space goes nowhere and from the same one leaves the far RET two words
+    to come back through where one was pushed.
+
+    PRINT is where this first showed.  Its transient part jumps into the
+    resident part at MoveTrans to have the print buffer set up and itself
+    moved up out of the way, and the resident part calls back into the
+    transient at GoDispMsg to put a message on the screen; TO_DOS, the
+    resident part's own way of making a DOS call, is FAR and called from
+    both.  The two are different address spaces, and all four transfers
+    came out near.
+    """
+    if not FARSEG:
+        return text
+
+    def one(m):
+        name = m.group(2)
+        return '%s%s:%s' % (m.group(1), SEGMAP[FARSEG[name.lower()]], name)
+
+    return re.sub(r"(?mi)^([ \t]*(?:jmp|call)[ \t]+)("
+                  + "|".join(sorted(map(re.escape, FARSEG),
+                                    key=len, reverse=True))
+                  + r")(?=[ \t]*(?:;|$))", one, text)
 
 
 def far_jumps(text):
@@ -966,11 +1074,15 @@ def segment_values(text):
     segment as the frame it is reached through, which is the group's where
     there is one and the segment's own where there is not.
     """
-    text = re.sub(r"(?mi)^([ \t]*dw[ \t]+)(" + SEGPAT
+    text = re.sub(r"(?mi)^([ \t]*(?:" + N + r"[ \t]+)?dw[ \t]+)(" + SEGPAT
                   + r")([ \t]*)(;[^\n]*)?$",
                   lambda m: '%s%s%s%s' % (m.group(1), segvalue(m.group(2)),
                                           m.group(3), m.group(4) or ''), text)
-    text = re.sub(r"(?mi)^([ \t]*(?:" + N + r":)?[ \t]*mov[ \t]+" + N
+    # The segment can be arithmetic as well as something moved: PRINT_R
+    # works out how far the transient part has been moved with SUB AX,DG,
+    # the group's own paragraph taken from where it now is.
+    text = re.sub(r"(?mi)^([ \t]*(?:" + N + r":)?[ \t]*"
+                  r"(?:mov|add|sub|cmp)[ \t]+" + N
                   + r"[ \t]*,[ \t]*)(" + SEGPAT + r")(?![\w:.])",
                   lambda m: m.group(1) + segvalue(m.group(2)), text)
 
@@ -1346,6 +1458,10 @@ for text in SEEN:
                              'rb': 'byte', 'rw': 'word',
                              'rd': 'dword'}[m.group(2).lower()]
 INSTANCE = re.compile(r"^(\S+\s+)(" + '|'.join(sorted(STRUCS))
+                      + r")\s*<(.*)>\s*$", re.I)
+# An instance with no name of its own, which MASM laid down where it stood.
+# fasm hangs an instance's fields on its name, so one has to be made up.
+NAMELESS = re.compile(r"^(\s+)(" + '|'.join(sorted(STRUCS))
                       + r")\s*<(.*)>\s*$", re.I)
 
 # Where one of them is written down.  fasm gives an instance's fields names of
@@ -2107,11 +2223,20 @@ for text in source.values():
         GROUPNAME = m.group(1).upper()
         GROUPED |= {n.strip().upper() for n in m.group(2).split(',')
                     if n.strip()}
+SEGMAP = {}
 if GROUPNAME:
     SEGMAP = {name: GROUPNAME + '_' for name in GROUPED}
     SEGMAP[GROUPNAME] = GROUPNAME + '_'
-else:
-    SEGMAP = {name: spelt + '_' for name, spelt in SEGNAME.items()}
+# A segment the group does not hold is an address space of its own, group or
+# no group: PRINT's CodeR is the resident part, which stays behind when the
+# transient part in DG is let go, and the program writes both "mov ax,CodeR"
+# and "offset CodeR:ListName".  Where there is no group at all this is every
+# segment the modules declare.  A SEGMENT AT is not one of them: it names a
+# place the program does not lay down -- MODE's ROM and SIGNITURE are the
+# ROM BIOS and the EGA -- and its name stands for that address.
+for name, spelt in SEGNAME.items():
+    if name not in SEGAT:
+        SEGMAP.setdefault(name, spelt + '_')
 SEGPAT = "|".join(sorted(set(SEGMAP) | set(SEGAT), key=len, reverse=True))
 
 
@@ -2139,6 +2264,11 @@ def space(name):
 # reached through the register the ASSUME in force puts on that segment,
 # which is what MASM wrote the override from.
 SEGOF = {}
+# And which address space each name the program declares FAR is in, for the
+# CALLs and JMPs that reach it: MASM knew a name's distance from its
+# declaration and laid down a far transfer, where fasm wants the segment
+# written on the line.
+FARSEG = {}
 
 
 def segments_of(stem, here):
@@ -2164,6 +2294,12 @@ def segments_of(stem, here):
         m = re.match(r"(?i)^[ \t]*(" + N + r")\s+(?:d[bwdq]|label)\b", code)
         if m and here:
             SEGOF.setdefault(m.group(1).lower(), here)
+        # A name declared FAR, by a PROC, by a LABEL, or by the procedure
+        # macro of INC/DOSMAC.INC.
+        m = re.match(r"(?i)^[ \t]*(?:(" + N + r")\s+(?:proc|label)|"
+                     r"procedure\s+(" + N + r")[ \t]*,)[ \t]*far\b", code)
+        if m and here:
+            FARSEG.setdefault((m.group(1) or m.group(2)).lower(), here)
         # A name given a colon and the bytes laid down under it, which MASM
         # read from memory like any other: APPEND writes version_loc: over
         # the two bytes of its version and reads them as BYTE PTR
@@ -2560,6 +2696,12 @@ def refs(code):
     # word here says nothing and goes.
     code = re.sub(r"(?i)\boffset\s+(?:byte|word|dword)\s+ptr\s+",
                   'offset ', code)
+    # The same override written twice, once before the size and once on the
+    # operand: PRINT_R has one, "CMP ES:BYTE PTR ES:[DI],0", and MASM laid
+    # down the one prefix either says.  The outer one goes, the operand
+    # carrying its own.
+    code = re.sub(r"(?i)\b(cs|ds|es|ss):(\s*(?:byte|word|dword)\s+ptr\s*"
+                  r"(?:cs|ds|es|ss):)", lambda m: m.group(2), code)
     # the override before the size, which two of RECOVER's lines write:
     # LDS DX,CS:DWORD PTR [int_24_old_off]
     code = re.sub(r"(?i)\b(cs|ds|es|ss):\s*(byte|word|dword)\s+ptr\s*"
@@ -2721,14 +2863,41 @@ DIRECTIVE = re.compile(r"(?i)^[ \t]*(%OUT|ASSUME|EXTRN|PUBLIC|GROUP|\\.LALL|\\.S
 # The IF1 blocks that only name the module go as comments, whole, so that no
 # ENDIF of a real conditional is taken for one of theirs.  Two of them write
 # the same line in each arm of an ELSE, and the comment lines between belong
-# to the block as well.
-IF1BLOCK = re.compile(r"(?mi)^([ \t]*IF1\b.*\n"
-                      r"(?:[ \t]*(?:%OUT\b|;).*\n|[ \t]*ELSE\b.*\n)+"
-                      r"[ \t]*ENDIF\b.*\n)")
+# to the block as well.  PRIDEFS.INC's asks IF IBM inside its IF1, so the
+# scan below follows the nesting rather than stopping at the first ENDIF,
+# and it comments the block out only where nothing in it lays anything down.
+IF1OPEN = re.compile(r"(?i)^[ \t]*IF1\b")
+IF1DEEPER = re.compile(r"(?i)^[ \t]*IF[A-Z0-9]*\b")
+IF1CLOSE = re.compile(r"(?i)^[ \t]*ENDIF\b")
+IF1QUIET = re.compile(r"(?i)^[ \t]*(?:%OUT\b|;|ELSE\b)|^[ \t]*$")
 
 
-def commented(block):
-    return ''.join(';' + l + '\n' for l in block.group(1).rstrip('\n').split('\n'))
+def quiet_if1(text):
+    """An IF1 block that says nothing but %OUT, commented out whole."""
+    lines = text.split('\n')
+    out, i = [], 0
+    while i < len(lines):
+        if not IF1OPEN.match(code_of(lines[i])):
+            out.append(lines[i])
+            i += 1
+            continue
+        depth, j, quiet = 1, i + 1, True
+        while j < len(lines) and depth:
+            code = code_of(lines[j])
+            if IF1DEEPER.match(code):
+                depth += 1
+            elif IF1CLOSE.match(code):
+                depth -= 1
+            elif not IF1QUIET.match(code):
+                quiet = False
+            j += 1
+        if depth or not quiet:
+            out.append(lines[i])
+            i += 1
+            continue
+        out.extend(';' + l for l in lines[i:j])
+        i = j
+    return '\n'.join(out)
 MACRODEF = re.compile(r"(?i)^(" + N + r")[ \t]+MACRO\b[ \t]*(.*)$")
 MACROEND = re.compile(r"(?i)^[ \t]*ENDM\b")
 SEGMENT = re.compile(r"(?i)^[ \t]*(" + N + r")\s+SEGMENT\b")
@@ -2744,7 +2913,7 @@ ENDPROC = re.compile(r"(?i)^[ \t]*endproc\b")
 done = {}
 for stem in MODULES:
     text = source[stem]
-    text = IF1BLOCK.sub(commented, text)
+    text = quiet_if1(text)
     text = HEADING.sub(heading, text)
     for was, now in MACROS.items():
         text = text.replace(was, now)
@@ -2757,6 +2926,7 @@ for stem in MODULES:
     text = far_pointers(text)
     text = far_jumps(text)
     text = at_far_jumps(text)
+    text = far_names(text)
     text = split_dup(text)
     text = segment_values(text)
     text = grouped(text)
@@ -2782,6 +2952,9 @@ for stem in MODULES:
         text = text.replace(was, now, 1)
     out, infar, noted, measured = [], False, False, False
     opened = []
+    # how many instances of each structure the module has written with no
+    # name, for naming the next one
+    nameless = {}
     # the macro and REPT blocks open inside a module, which close in the
     # order they were opened and with the same word
     blocks = []
@@ -2924,6 +3097,20 @@ for stem in MODULES:
                 break
             continue
 
+        # MASM counted an ORG from the start of the segment it stood in,
+        # and a segment read into a flat address space no longer begins
+        # where the address counter does: PRINT_T opens its data with
+        # ORG 0, which said only that the segment starts at nought and is
+        # where the walk has already put it.  fasm's org would move the
+        # counter back to the start of the whole address space and leave
+        # every name in the data at the wrong offset, so it goes.
+        m = re.match(r"(?i)^([ \t]*)ORG[ \t]+0[ \t]*$", bare)
+        if m and not ONESEG and opened and opened[-1][1] == 'guard' \
+                and not [l for l in out[opened[-1][2]:]
+                         if code_of(l).strip()]:
+            out.append(';' + line)
+            continue
+
         m = re.match(r"(?i)^([ \t]*)ORG[ \t]+([^;]+?)[ \t]*$", bare)
         if m and '$' in m.group(2):
             out.append(pad('%stimes (%s) - $ db 0'
@@ -2950,19 +3137,20 @@ for stem in MODULES:
                 # as many times, so they are given a pass of their own: one
                 # for all of them, there being nothing to lay down in it.
                 if ONESEG:
-                    opened.append((m.group(1).upper(), 'virtual'))
+                    opened.append((m.group(1).upper(), 'virtual', len(out)))
                     out.append('virtual at %s%s' % (at.group(1), comment))
                     continue
                 if opened:
                     out.append('end if')
-                opened.append((m.group(1).upper(), 'guardvirtual'))
+                opened.append((m.group(1).upper(), 'guardvirtual',
+                               len(out) + 2))
                 out.append('if SEGSEL = S_ABSOLUTE')
                 out.append('virtual at %s%s' % (at.group(1), comment))
                 continue
             if ONESEG:
                 # one segment, and the modules are read once, so there is no
                 # pass for the line to choose between
-                opened.append((m.group(1).upper(), 'comment'))
+                opened.append((m.group(1).upper(), 'comment', len(out)))
                 out.append(';' + line)
                 continue
             # MASM let a segment stand inside another, and the inner one's
@@ -2973,7 +3161,7 @@ for stem in MODULES:
             # before the inner one opens and opened again after it ends.
             if opened:
                 out.append('end if')
-            opened.append((m.group(1).upper(), 'guard'))
+            opened.append((m.group(1).upper(), 'guard', len(out) + 1))
             out.append('if SEGSEL = S_%s%s' % (opened[-1][0], comment))
             continue
         if SEGEND.match(bare):
@@ -2983,6 +3171,7 @@ for stem in MODULES:
                 out.append('end if')
                 if opened and opened[-1][1] == 'guard':
                     out.append('if SEGSEL = S_%s' % opened[-1][0])
+                    opened[-1] = opened[-1][:2] + (len(out),)
             elif how == 'virtual':
                 out.append('end virtual' + (' ' + comment if comment else ''))
             elif how == 'comment':
@@ -2991,6 +3180,7 @@ for stem in MODULES:
                 out.append('end if' + (' ' + comment if comment else ''))
                 if opened and opened[-1][1] == 'guard':
                     out.append('if SEGSEL = S_%s' % opened[-1][0])
+                    opened[-1] = opened[-1][:2] + (len(out),)
             continue
         if DIRECTIVE.match(code) or ENDALL.match(bare):
             out.append(';' + line)
@@ -3020,6 +3210,20 @@ for stem in MODULES:
             out.append(pad('%s%s %s' % (m.group(1), m.group(2), args),
                            was_len, comment))
             continue
+        # The same thing written with no name, which MASM wanted none for.
+        # PRINT_R lays a QEA and an EA down inside the two tables it asks
+        # the extended attribute calls with, each under a label the table
+        # itself carries, and nothing reads the instance by a name: the one
+        # given here is the structure's with a count after it.
+        m = NAMELESS.match(bare)
+        if m:
+            kind = m.group(2)
+            nameless[kind.upper()] = nameless.get(kind.upper(), 0) + 1
+            args = re.sub(r"(?i)\boffset\s+", '', sizes(m.group(3)))
+            out.append(pad('%s%s$%d %s %s'
+                           % (m.group(1), kind, nameless[kind.upper()],
+                              kind, args), was_len, comment))
+            continue
         m = re.match(r"(?i)^(\s*)INCLUDE\s+(\S+)\s*$", bare)
         if m:
             out.append(pad("%sinclude '%s'" % (m.group(1), m.group(2).upper()),
@@ -3044,10 +3248,19 @@ for stem in MODULES:
         if m:
             out.append(pad('%s:' % m.group(1), was_len, comment))
             continue
-        # MASM assembled a far procedure's RET as a far return.
-        if infar and re.match(r"(?i)^\s*ret\s*$", bare):
-            out.append(pad(code.rstrip().replace('RET', 'RETF')
-                           .replace('ret', 'retf'), was_len, comment))
+        # MASM assembled a far procedure's RET as a far return, with the
+        # count of bytes to throw away after it where it had one: PRINT_R
+        # chains interrupt 13H to the ROM by pushing the address of
+        # INT_13_BACK under the ROM's own, so what comes back there is a
+        # far call with the caller's flags under it, and the RET 2 that
+        # ends it is a far return over them.
+        m = infar and re.match(r"(?i)^(\s*)(ret)(\s+[0-9A-Fa-f]+h?)?\s*$",
+                               bare)
+        if m:
+            out.append(pad('%s%s%s' % (m.group(1),
+                                       m.group(2) + ('F' if m.group(2).isupper()
+                                                     else 'f'),
+                                       m.group(3) or ''), was_len, comment))
             continue
 
         code = re.sub(r"(?i)^(" + N + r"?\s*)\bdb\s+\?\s*$", r"\1rb      1", code)

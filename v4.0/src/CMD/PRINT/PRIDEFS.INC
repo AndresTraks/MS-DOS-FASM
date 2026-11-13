@@ -1,4 +1,4 @@
-;                       $SALUT (4,25,30,41)
+;                       SALUT$ (4,25,30,41)
 ;******************* START OF SPECIFICATIONS ***********************************
 ;
 ; MODULE NAME:          PRINT.COM
@@ -173,10 +173,10 @@
                         subttl PRINT - Data Space
                         page
 
-INCLUDE SYSVAR.INC
+include 'SYSVAR.INC'
 
 FALSE                   EQU  0
-TRUE                    EQU  NOT FALSE
+TRUE                    equ  (NOT FALSE)
 
 IBM                      EQU  IBMVER
 ;IBMVER                  EQU  IBM
@@ -185,7 +185,7 @@ IBM                      EQU  IBMVER
                         IF   MSVER
 HARDINT                     EQU  FALSE  ;No hardware ints
 AINT                        EQU  FALSE  ;No need to do interrupt acknowledge
-                        ENDIF
+                        end if
 
                         IF   IBM
 HARDINT                     EQU  TRUE
@@ -194,7 +194,7 @@ REBOOT                      EQU  19H    ;ROM BIOS "Bootstrap"
 AINT                        EQU  TRUE   ;Acknowledge interrupts
 EOI                         EQU  20H    ;End Of Interrupt "instruction"
 AKPORT                      EQU  20H    ;Interrupt Acknowledge port
-                        ENDIF
+                        end if
 
 ;  The following values have to do with the ERRCNT variable and the CNTMES
 ;  message.  The values define levels at wich it is assumed an off-line error
@@ -211,7 +211,7 @@ ERRCNT2                     EQU  20000
                         ELSE
 ERRCNT1                     EQU  1500
 ERRCNT2                     EQU  20000
-                        ENDIF
+                        end if
 
 
 ;WARNING DANGER WARNING:
@@ -235,7 +235,7 @@ DefQueueLen             equ  10         ; 10 files worth
 
 ;----- Default (and Maximal / Minimal) Print buffer length
 MinBufferLen            equ  512        ; set minimum to 512 bytes
-MaxBufferLen            equ  1024 * 16  ; maximum is 16 K bytes
+MaxBufferLen            equ  (1024 * 16)	; maximum is 16 K bytes
 DefBufferLen            equ  MinBufferLen ; set default to minimum
 
 ;----- Default (and Maximal / Minimal) Time Slice
@@ -322,7 +322,7 @@ minor_code              equ  040h       ; INT 2F PRINTER set and lock CP
                                         ;        in order to do a second open
                                         ;        of a file accross the network
 
-open_mode               equ  MODE_NO24+MODE_SH_COMP+MODE_AC_R                  ;AC013;
+open_mode               equ  (MODE_NO24+MODE_SH_COMP+MODE_AC_R)	;AC013;
 
 
 ignore_cp               equ  1          ; dont validate CP - it may be different
@@ -465,39 +465,42 @@ PROMPT                  equ  27         ; Name of list device [PRN]:
 DOLLAR                  equ  "$"
 Std_Out_Dev             equ  1
 
-;                                       $SALUT (0,41,46,52)
+;                                       SALUT$ (0,41,46,52)
 
 .xlist
 .xcref
-BREAK                                   MACRO subtitle
+macro BREAK subtitle
+{
                                         SUBTTL subtitle
                                         PAGE
-ENDM
+}
 
-SaveReg                                 MACRO reglist ;; push those registers
-IRP                                     reg,<reglist>
+macro SaveReg reglist
+{
+irp reg, reglist \{
                                         PUSH reg
-ENDM
-ENDM
+\}
+}
 .xcref                                  SaveReg
 
-RestoreReg                              MACRO reglist ;; pop those registers
-IRP                                     reg,<reglist>
+macro RestoreReg reglist
+{
+irp reg, reglist \{
                                         POP  reg
-ENDM
-ENDM
-;                       $SALUT (4,25,30,41)
+\}
+}
+;                       SALUT$ (4,25,30,41)
 
-                        INCLUDE DEVSYM.INC
-                        INCLUDE SYSCALL.INC
-                        INCLUDE ERROR.INC
-                        INCLUDE FIND.INC
-                        include dpl.asm
-                        INCLUDE PDB.INC
-                        INCLUDE SYSCALL.INC
-                        INCLUDE MI.INC
-                        INCLUDE SYSMSG.INC
-                        include versiona.inc
+                        include 'DEVSYM.INC'
+                        include 'SYSCALL.INC'
+                        include 'ERROR.INC'
+                        include 'FIND.INC'
+                        include 'DPL.ASM'
+                        include 'PDB.INC'
+                        include 'SYSCALL.INC'
+                        include 'MI.INC'
+                        include 'SYSMSG.INC'
+                        include 'VERSIONA.INC'
 .list
 .cref
 
@@ -510,28 +513,28 @@ error_queue_full        EQU  8
 error_name_too_long     EQU  12
 get_ea_by_handle equ 2
 
-IF1
-                        IF   IBM
-;                            %out IBM VERSION
-                        ELSE
-                            %out MS-DOS VERSION
-                        ENDIF
-ENDIF
+;IF1
+;                        IF   IBM
+;;                            %out IBM VERSION
+;                        ELSE
+;                            %out MS-DOS VERSION
+;                        ENDIF
+;ENDIF
 
 BREAK                   <Segment Definitions>
 
 
-CodeR                   Segment public para
-CodeR                   EndS
+if SEGSEL = S_CODER
+end if
 
-Code                    Segment public para
-Code                    EndS
+if SEGSEL = S_CODE
+end if
 
-Data                    Segment public byte
-Data                    EndS
+if SEGSEL = S_DATA
+end if
 
-Stack                   Segment Stack
-Stack                   Ends
+if SEGSEL = S_STACK
+end if
 
-DG                      group Code,Data,Stack
+;DG                      group Code,Data,Stack
 

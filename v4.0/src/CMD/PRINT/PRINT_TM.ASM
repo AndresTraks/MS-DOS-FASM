@@ -1,9 +1,9 @@
 	page	60,132
-;			$SALUT (4,25,30,41)
+;			SALUT$ (4,25,30,41)
 
-			INCLUDE pridefs.inc
+			include 'PRIDEFS.INC'
 
-BREAK			<Transient Messages>
+BREAK			<TRANSIENT Messages>
 
 ;
 ;	DOS PRINT
@@ -17,23 +17,24 @@ BREAK			<Transient Messages>
 ;
 
 
-addr			macro sym,name
-			public name
-			ifidn <name>,<>
+macro addr sym,name
+{
+;			public name
+			match , name \{
 
-			    dw	 offset dg:sym
+			    dw	 sym
 			else
 
-name			    dw	 offset dg:sym
-			endif
-			endm
+name			    dw	 sym
+			\}
+}
 
 
-			Code Segment public para
+if SEGSEL = S_CODE
 
-			PUBLIC SYSGETMSG, SYSLOADMSG, SYSDISPMSG
+;			PUBLIC SYSGETMSG, SYSLOADMSG, SYSDISPMSG
 
-			ASSUME CS:DG,DS:nothing,ES:nothing,SS:Stack
+;			ASSUME CS:DG,DS:nothing,ES:nothing,SS:Stack
 
 ; include msgserv.asm
 
@@ -52,33 +53,33 @@ name			    dw	 offset dg:sym
 			MSG_SERVICES <NEARmsg,PRINT.CLA,PRINT.CLB,PRINT.CLC,PRINT.CLD>
 			.cref
 			.list
-;  $SALUT (4,4,9,41)
+;  SALUT$ (4,4,9,41)
 
 
-;			$SALUT (4,25,30,41)
-false			=    0
+;			SALUT$ (4,25,30,41)
+;false			=    0
 
-DateSW			equ  false
-TimeSW			equ  false
-CmpxSW			equ  false
-KeySW			equ  false
-QusSW			equ  false
-Val2SW			equ  false
-Val3SW			equ  false
+DateSW			equ  FALSE
+TimeSW			equ  FALSE
+CmpxSW			equ  FALSE
+KeySW			equ  FALSE
+QusSW			equ  FALSE
+Val2SW			equ  FALSE
+Val3SW			equ  FALSE
 
-;  $SALUT (4,4,9,41)
+;  SALUT$ (4,4,9,41)
 
-   PUBLIC SYSPARSE
+;   PUBLIC SYSPARSE
 
 					; include parse.asm
 
 					;xlist
 					;xcref
-   include parse.asm
+   include 'PARSE.ASM'
 					;cref
 					;list
 
-   CODE ENDS
+end if
 
-   end
+;   end
 

@@ -50,14 +50,18 @@ BY_XA		      equ  0000100B	     ; set by Get/Set XA by Handle
 
 ;Extended Attribute Structure
 
-STRUC EA
+; Filled in where it stands -- PRINT_R asks the extended attribute
+; calls for the code page with one -- so the fields are the macro's
+; arguments, each defaulting to what the structure declares.
+STRUC EA EA_TYPE_=0, EA_FLAGS_=0, EA_RC_=0, EA_NAMELEN_=0, \
+	 EA_VALLEN_=0, EA_NAME_=0
 {
-.EA_TYPE     DB	      0 		      ; type
-.EA_FLAGS    DW	      0 		      ; flags
-.EA_RC	    DB	      0 		      ; reason code
-.EA_NAMELEN  DB	      0 		      ; name length
-.EA_VALLEN   DW	      0 		      ; value length
-.EA_NAME     DB	      0 		      ; name
+.EA_TYPE     DB	      EA_TYPE_		      ; type
+.EA_FLAGS    DW	      EA_FLAGS_		      ; flags
+.EA_RC	    DB	      EA_RC_		      ; reason code
+.EA_NAMELEN  DB	      EA_NAMELEN_		      ; name length
+.EA_VALLEN   DW	      EA_VALLEN_		      ; value length
+.EA_NAME     DB	      EA_NAME_		      ; name
 }
 match =EA_LAID_OUT, EA_LAID_OUT
 {
@@ -71,12 +75,13 @@ match =EA_LAID_OUT, EA_LAID_OUT
 
 ;Query Extended Attribute list
 
-STRUC QEA
+; and the same of the query list, which PRINT_R lays down beside it
+STRUC QEA QEA_TYPE_=0, QEA_FLAGS_=0, QEA_NAMELEN_=0, QEA_NAME_=0
 {
-.QEA_TYPE     DB        0		       ; type
-.QEA_FLAGS    DW        0		       ; flags
-.QEA_NAMELEN  DB        0		       ; name length
-.QEA_NAME     DB        0		       ; name
+.QEA_TYPE     DB        QEA_TYPE_		       ; type
+.QEA_FLAGS    DW        QEA_FLAGS_		       ; flags
+.QEA_NAMELEN  DB        QEA_NAMELEN_		       ; name length
+.QEA_NAME     DB        QEA_NAME_		       ; name
 }
 match =QEA_LAID_OUT, QEA_LAID_OUT
 {

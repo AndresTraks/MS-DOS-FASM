@@ -273,7 +273,8 @@ dirlst_segment	dw	0
 tv_vec_off	dw	0		; save TV vector here
 tv_vec_seg	dw	0
 
-pars_off	dw SysParse; save pointer to parser here
+label pars_off dword
+	dw SysParse; save pointer to parser here
 	dw cseg_
 ;pars_off	 dw	 offset SysParse ; save pointer to parser here
 ;pars_seg	 dw	 0
