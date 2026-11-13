@@ -137,22 +137,50 @@ end if
 ; If the modules are relocated, the offset and the segID in the jump vectors
 ; may be changed to the new segID of the new location.
 ;-----------------------------------------------------------------------------
-FOPEN_Insert	 DD   INSERT									 ;AN000;
-FOPEN_Update	 DD   UPDATE									 ;AN000;
-FOPEN_Delete	 DD   DELETE									 ;AN000;
-FOPEN_Lookup	 DD   LOOKUP									 ;AN000;
-FOPEN_Purge	 DD   FP_PURGE									 ;AN000;
+label FOPEN_Insert dword
+	dw INSERT									 ;AN000;
+	dw CSEG_OPEN_
+label FOPEN_Update dword
+	dw UPDATE									 ;AN000;
+	dw CSEG_OPEN_
+label FOPEN_Delete dword
+	dw DELETE									 ;AN000;
+	dw CSEG_OPEN_
+label FOPEN_Lookup dword
+	dw LOOKUP									 ;AN000;
+	dw CSEG_OPEN_
+label FOPEN_Purge dword
+	dw FP_PURGE									 ;AN000;
+	dw CSEG_OPEN_
 
-FSEEK_Open	 DD   FK_OPEN									 ;AN000;
-FSEEK_Close	 DD   FK_CLOSE									 ;AN000;
-FSEEK_Insert	 DD   FK_INSERT 								 ;AN000;
-FSEEK_Delete	 DD   FK_DELETE 								 ;AN000;
-FSEEK_Lookup	 DD   FK_LOOKUP 								 ;AN000;
-FSEEK_Truncate	 DD   Fk_TRUNCATE								 ;AN000;
-FSEEK_Purge	 DD   FK_PURGE									 ;AN000;
+label FSEEK_Open dword
+	dw FK_OPEN									 ;AN000;
+	dw CSEG_SEEK_
+label FSEEK_Close dword
+	dw FK_CLOSE									 ;AN000;
+	dw CSEG_SEEK_
+label FSEEK_Insert dword
+	dw FK_INSERT 								 ;AN000;
+	dw CSEG_SEEK_
+label FSEEK_Delete dword
+	dw FK_DELETE 								 ;AN000;
+	dw CSEG_SEEK_
+label FSEEK_Lookup dword
+	dw FK_LOOKUP 								 ;AN000;
+	dw CSEG_SEEK_
+label FSEEK_Truncate dword
+	dw Fk_TRUNCATE								 ;AN000;
+	dw CSEG_SEEK_
+label FSEEK_Purge dword
+	dw FK_PURGE									 ;AN000;
+	dw CSEG_SEEK_
 
-VECTOR_LookUp	 DD   LOOKUP	      ; jump vector to LookUp used by Insert call
-VECTOR_Delete	 DD   FK_DELETE       ; jump vector to Delete used by Free_buffer routine
+label VECTOR_LookUp dword
+	dw LOOKUP	      ; jump vector to LookUp used by Insert call
+	dw CSEG_OPEN_
+label VECTOR_Delete dword
+	dw FK_DELETE       ; jump vector to Delete used by Free_buffer routine
+	dw CSEG_SEEK_
  
 
 

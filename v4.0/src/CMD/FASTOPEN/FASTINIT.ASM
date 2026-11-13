@@ -637,7 +637,9 @@ rept Max_drives each
 label INIT_VECTOR dword
 	dw INIT_TREE	;jump vector to INIT_TREE			   ;AN000;
 	dw CSEG_MAIN_
-MAIN_VECTOR		DD     MAIN		;entry point to MAIN routine			   ;AN000;
+label MAIN_VECTOR dword
+	dw MAIN		;entry point to MAIN routine			   ;AN000;
+	dw CSEG_MAIN_
 source_xname		DB	" :\",0         ;used for xname translate                          ;AN000;
 target_xname		DB	65 DUP (0)	;used for xname translate			   ;AN000;
 user_drive		db	0		;current user drive				   ;AN000;

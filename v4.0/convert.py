@@ -2381,7 +2381,13 @@ def segments_of(stem, here):
         if re.match(r"(?i)^[ \t]*" + N + r"\s+ENDS\b", code):
             here = None
             continue
-        m = re.match(r"(?i)^[ \t]*(" + N + r")\s+(?:d[bwdq]|label)\b", code)
+        # A procedure is in the segment it stands in like anything else,
+        # and a DD of its name is a far pointer to it: FASTOPEN's fifteen
+        # jump vectors are DDs of procedures, and without this every one of
+        # them was laid down with an offset and a zero segment -- which is
+        # what the kernel then far-called through.
+        m = re.match(r"(?i)^[ \t]*(" + N + r")\s+(?:d[bwdq]|label|proc)\b",
+                     code)
         if m and here:
             SEGOF.setdefault(m.group(1).lower(), here)
         # A name declared FAR, by a PROC, by a LABEL, or by the procedure
