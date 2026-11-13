@@ -15,6 +15,23 @@ mount: 4 heads, 17 sectors, 61 cylinders, which is just over 2MB, with the
 partition starting on the second track so that the table has the first to
 itself.
 
+The file system has to be laid out the way the BIOS expects rather than the
+way it pleases, because this BIOS does not read the partition's own boot
+record for it.  Asked for drive C's parameter block with INT 21H AH=32H,
+DOS answers with eight sectors to a cluster, 512 directory entries, two
+sectors to a FAT and the root directory at logical sector 5 -- none of
+which is what mformat writes by default, and all of which comes from a
+table built into the BIOS.  A disk formatted any other way still mounts,
+and DOS reads and writes it quite happily, but it puts the root directory
+where the BIOS says rather than where the boot record says, so a file
+mtools wrote sits in a directory DOS never looks at.  Hence -c 8 and -r 32
+below: eight sectors to a cluster and 32 sectors of root directory, which
+is those 512 entries.  That puts the root directory at logical 5 and the
+first data sector at 37, which is what the parameter block asks for.
+
+What it prints is the image and the offset the volume begins at, which
+mtools takes with two at signs and dosdir.py as a number of its own.
+
     python3 tests/mkhd.py <image>
 """
 import struct
@@ -54,7 +71,8 @@ def main(out):
 
     subprocess.run(['mformat', '-i', '%s@@%d' % (out, start * 512),
                     '-t', str(CYLINDERS), '-h', str(HEADS),
-                    '-s', str(SECTORS), '-H', str(start), '::'], check=True)
+                    '-s', str(SECTORS), '-H', str(start),
+                    '-c', '8', '-r', '32', '::'], check=True)
     return '%s@@%d' % (out, start * 512)
 
 

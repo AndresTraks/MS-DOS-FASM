@@ -12,24 +12,21 @@
 #
 #   FASTOPEN C:=(50,25)   installs it: 50 directory entries, 25 extents
 #   DIR C:                read with the kernel calling into the cache
-#   DIR C:                and again, now that the path is in it
+#   TYPE C:\HELLO.TXT     and again, now that the path is in it
+#   DIR C:
 #   FASTOPEN C:=(50,25)   says it is there already
 #   FASTOPEN A:=(50,25)   and refuses a diskette, naming the drive
 #
-# What this does not reach is a directory with anything in it, and the
-# reason is not FASTOPEN.  DOS mounts the partition and reads its boot
-# record -- DIR answers with the serial mformat wrote -- and then reports
-# the root directory empty when there is a file in it that mtools lists
-# happily, and it does the same with nothing installed at all.  The
-# partition starts at sector 17 and its BPB says 17 hidden sectors, which
-# puts the root directory at absolute sector 32; sector 49, where it would
-# land if that offset were counted twice, is all zeros, which is the
-# directory DOS seems to be reading.  If that is it then every fixed disk
-# in this build is read seventeen sectors late and what wants looking at is
-# whatever builds the BPB for a partition.  Until that is settled the
-# checks below stop at what the kernel and the utility say to each other,
-# which is what the conversion is answerable for, and the disk is left
-# empty rather than carrying a file the test cannot yet see.
+# Two things about the disk are not FASTOPEN's doing and both had to be
+# seen to before any of this worked.  The BIOS does not read a partition's
+# boot record for its parameter block -- it has a table of its own, and
+# tests/mkhd.py says what that means for the way the disk is formatted --
+# and DOS 4 keeps a file's code page at 0CH of a directory entry and the
+# cluster its extended attributes begin at at 0EH, where mtools writes the
+# creation time.  Left alone, DOS read the file as having extended
+# attributes at cluster 8E83H, off the end of the disk, and DIR would not
+# list it; dosdir.py puts those ten bytes back to nought, as it does for
+# every diskette here.
 #
 # It wants a fixed disk, which nothing here needed before: tests/mkhd.py
 # lays one down with a partition table, and QEMU is told the geometry that
@@ -52,13 +49,19 @@ IMG="$OUT/a.img"
 ./create_image.sh "$IMG" >/dev/null
 mcopy -o -i "$IMG" bin/FASTOPEN.EXE ::FASTOPEN.EXE
 
-# The fixed disk FASTOPEN is to cache.
-python3 tests/mkhd.py "$OUT/hd.img" >/dev/null
+# The fixed disk FASTOPEN is to cache, with a file on it to look up.  What
+# mkhd.py says is the image and the offset the volume begins at, which
+# mtools takes with two at signs and dosdir.py as a number of its own.
+HD=$(python3 tests/mkhd.py "$OUT/hd.img")
+printf 'the file on the fixed disk\r\n' > "$OUT/HELLO.TXT"
+mcopy -o -i "$HD" "$OUT/HELLO.TXT" ::HELLO.TXT
+python3 dosdir.py "$OUT/hd.img" "${HD##*@@}"
 
 {
     printf 'ECHO OFF\r\n'
     printf 'FASTOPEN C:=(50,25)\r\n'
     printf 'DIR C:\r\n'
+    printf 'TYPE C:\\HELLO.TXT\r\n'
     printf 'DIR C:\r\n'
     printf 'FASTOPEN C:=(50,25)\r\n'
     printf 'FASTOPEN A:=(50,25)\r\n'
@@ -113,8 +116,10 @@ ok(screen.count("Directory of  C:\\") == 2,
    "DIR C: read the fixed disk twice with the kernel calling into them, "
    "which is a far call through the table FASTOPEN filled in",
    "the directory was read %d times" % screen.count("Directory of  C:\\"))
-ok(screen.count("Volume Serial Number") == 2,
-   "and the boot record came back both times")
+ok("HELLO    TXT" in screen,
+   "and listed the file that is on it")
+ok("the file on the fixed disk" in screen,
+   "TYPE read it through the path the cache had just been given")
 ok("FASTOPEN already installed" in screen,
    "a second run says the caches are there already, which is the kernel "
    "answering out of the table the first run filled in")
