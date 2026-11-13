@@ -1,3 +1,38 @@
+STRUC PAGE_FRAME_STRUC PAGE_SEG_=0, PAGE_NUM_=0
+{
+
+  .PAGE_SEG	DW	PAGE_SEG_ ;EMS page segment					     ;AN000;
+  .PAGE_NUM	DW	PAGE_NUM_ ;EMS page number (only one page is used)						 ;AN000;
+
+}
+match =PAGE_FRAME_STRUC_LAID_OUT, PAGE_FRAME_STRUC_LAID_OUT
+{
+    PAGE_FRAME_STRUC_LAID_OUT equ 1
+    virtual at 0
+      PAGE_FRAME_STRUC PAGE_FRAME_STRUC 0, 0
+      sizeof.PAGE_FRAME_STRUC = $ - PAGE_FRAME_STRUC
+    end virtual
+}
+STRUC SUB_LIST DATA_OFF_=0, DATA_SEG_=0, MSG_ID_=0, FLAGS_=0, MAX_WIDTH_=0, MIN_WIDTH_=0, PAD_CHAR_=0
+{
+	DB	11			;							   ;AN000;
+	DB	0			;							   ;AN000;
+.DATA_OFF DW	DATA_OFF_ ; offset of data to be inserted 			   ;AN000;
+.DATA_SEG DW	DATA_SEG_ ; offset of data to be inserted 			   ;AN000;
+.MSG_ID	DB	MSG_ID_ ; n of %n						   ;AN000;
+.FLAGS	DB	FLAGS_ ; Flags 						   ;AN000;
+.MAX_WIDTH DB	MAX_WIDTH_ ; Maximum field width					   ;AN000;
+.MIN_WIDTH DB	MIN_WIDTH_ ; Minimum field width					   ;AN000;
+.PAD_CHAR DB	PAD_CHAR_ ; character for pad field				   ;AN000;
+}
+match =SUB_LIST_LAID_OUT, SUB_LIST_LAID_OUT
+{
+    SUB_LIST_LAID_OUT equ 1
+    virtual at 0
+      SUB_LIST SUB_LIST 0, 0, 0, 0, 0, 0, 0
+      sizeof.SUB_LIST = $ - SUB_LIST
+    end virtual
+}
 	Page 84,132 ;
 
 TITLE	FASTINIT - initialization code for FASTOPEN  (May 13, 1988)
@@ -107,10 +142,10 @@ TITLE	FASTINIT - initialization code for FASTOPEN  (May 13, 1988)
 ;	of 16K is available for cache buffers.
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
 ;
-IF1
-    %OUT ASSEMBLING: FASTINIT - FASTOPEN initialization
-ENDIF
-NAME	FASTINIT
+;IF1
+;    %OUT ASSEMBLING: FASTINIT - FASTOPEN initialization
+;ENDIF
+name	FASTINIT
 
 .XCREF
 .XLIST
@@ -122,22 +157,22 @@ FALSE	   EQU	  0										   ;AN000;
 DBCS	    =	  FALSE 									   ;AN000;
 Installed   =	  TRUE										   ;AN000;
 
-IFNDEF	DEBUG
+if ~ defined DEBUG
     DEBUG	= FALSE
-ENDIF
+end if
 
-INCLUDE    dosmac.inc										   ;AN000;
-INCLUDE    vector.inc										   ;AN000;
-INCLUDE    filemode.inc 									   ;AN000;
-INCLUDE    mult.inc										   ;AN000;
-include	   version.inc
+include 'DOSMAC.INC'              ;AN000;
+include 'VECTOR.INC'              ;AN000;
+include 'FILEMODE.INC'              ;AN000;
+include 'MULT.INC'              ;AN000;
+include 'VERSION.INC'
 
 .LIST
 .CREF
 
-INCLUDE    fastsegs.inc 									   ;AN000;
-INCLUDE    fastopen.inc 									   ;AN000;
-INCLUDE    SYSCALL.INC ;									   ;AN000;
+include 'FASTSEGS.INC'              ;AN000;
+include 'FASTOPEN.INC'              ;AN000;
+include 'SYSCALL.INC'  ;									   ;AN000;
 
 ;-----------------------------------------------------------------------
 ;		       EQUATES
@@ -146,11 +181,11 @@ Top_mem 	       EQU    02h	      ;Top of memory index in PSP			  ;AN000;
 Min_entry_num	       EQU    10	      ;minimum name cache entries			   ;AN000;
 Max_entry_num	       EQU    999	      ;maximum name cache entries			   ;AN000;
 Default_names	       EQU    34	      ;default name cache entries			   ;AN000;
-Debug		       EQU    0 	      ;for callinstall					   ;AN000;
+DEBUG		       =    0 	      ;for callinstall					   ;AN000;
 Len_source_xname       EQU    4 	      ;used for xname translate 			   ;AN000;
-No_siblings	       EQU    -1	      ;indicate no siblings				   ;AN000;
-No_child	       EQU    -1	      ;indicate no children				   ;AN000;
-No_backward	       EQU    -1	      ;no backward pt yet				   ;AN000;
+No_siblings	       equ    (-1)	;indicate no siblings				   ;AN000;
+No_child	       equ    (-1)	;indicate no children				   ;AN000;
+No_backward	       equ    (-1)	;no backward pt yet				   ;AN000;
 Max_drives	       EQU    24	      ;maximum number of drives allowed 	     ;AN000;
 
 
@@ -165,7 +200,7 @@ Too_many_entries       EQU	7								   ;AN000;
 Dup_drive	       EQU	8								   ;AN000;
 Invalid_extent	       EQU	11								   ;AN000;
 Invalid_name	       EQU	12								   ;AN000;
-Ems_failed	       EQU	13								   ;AN000;
+Ems_failed_fastinit	       EQU	13								   ;AN000;
 Ems_not_install        EQU	14								   ;AN000;
 Invalid_drive	       EQU	15								   ;AN000;
 No_page_space	       EQU	16								   ;AN000;
@@ -194,7 +229,7 @@ ELSE
 
 EMS_GET_COUNT	       EQU	5800H								   ;AN000;
 
-ENDIF
+end if
 
 EMS_GET_FRAME_ADDR     EQU	5800H								   ;AN000;
 EMS_HANDLE_NAME        EQU	53H
@@ -204,112 +239,95 @@ SINGLE_SEGMENT	       EQU	 1								   ;AN000;
 
 ;-------------------- STRUCTURES ---------------------------------
 
-PAGE_FRAME_STRUC    STRUC	    ; EMS page frame structure				       ;AN000;
 
-  PAGE_SEG	DW	?	    ;EMS page segment					     ;AN000;
-  PAGE_NUM	DW	?	    ;EMS page number (only one page is used)						 ;AN000;
-
-PAGE_FRAME_STRUC    ENDS
-
-BUFFER_ENTRY_SIZE      EQU    TYPE  PAGE_FRAME_STRUC
+BUFFER_ENTRY_SIZE      EQU    sizeof.PAGE_FRAME_STRUC
 
 
-SUB_LIST      STRUC			; Message handler sublist structure			   ;AN000;
-	DB	11			;							   ;AN000;
-	DB	0			;							   ;AN000;
-DATA_OFF DW	0			; offset of data to be inserted 			   ;AN000;
-DATA_SEG DW	0			; offset of data to be inserted 			   ;AN000;
-MSG_ID	DB	0			; n of %n						   ;AN000;
-FLAGS	DB	0			; Flags 						   ;AN000;
-MAX_WIDTH DB	0			; Maximum field width					   ;AN000;
-MIN_WIDTH DB	0			; Minimum field width					   ;AN000;
-PAD_CHAR DB	0			; character for pad field				   ;AN000;
-SUB_LIST      ENDS										   ;AN000;
 
 ;-------------------------------------------------------------------------------
 ; Following two segments are used to define external variable that
 ; are defined in two other segments.
 ;-------------------------------------------------------------------------------
 
-CSEG_OPEN   SEGMENT   PARA   PUBLIC 'CODE'       ; Cseg_Open segment
-  EXTRN   Open_name_cache_seg:word
-  EXTRN   Open_Name_Drive_Buff:word
-  EXTRN   End_Open:byte
-  EXTRN   Chk_Flag:word
-  EXTRN   VECTOR_LOOKUP:dword	  ; jump vector inside Cseg_Main to make
+if SEGSEL = S_CSEG_OPEN; Cseg_Open segment
+;  EXTRN   Open_name_cache_seg:word
+;  EXTRN   Open_Name_Drive_Buff:word
+;  EXTRN   End_Open:byte
+;  EXTRN   Chk_Flag:word
+;  EXTRN   VECTOR_LOOKUP:dword	  ; jump vector inside Cseg_Main to make
 				; a FAR call to Fopen LookUp function within
 				; the segment
-CSEG_OPEN	ENDS
+end if
 
 
-CSEG_SEEK   SEGMENT   PARA   PUBLIC 'CODE'       ; Cseg_Seek segment
-  EXTRN   Seek_Extent_Drive_buff:word
-  EXTRN   Seek_Name_Drive_buff:word
-  EXTRN   Seek_Name_Cache_buff:word
-  EXTRN   Seek_Name_Cache_Seg:word
-  EXTRN   Seek_Num_Of_Drives:word
-  EXTRN   Seek_Total_Ext_Count:word
-  EXTRN   Seek_Total_Name_Count:word
-  EXTRN   End_Seek:byte
-  EXTRN   Check_Flag:word
-  EXTRN   VECTOR_DELETE:dword	  ; jump vector inside Cseg_Seek to make
+if SEGSEL = S_CSEG_SEEK; Cseg_Seek segment
+;  EXTRN   Seek_Extent_Drive_buff:word
+;  EXTRN   Seek_Name_Drive_buff:word
+;  EXTRN   Seek_Name_Cache_buff:word
+;  EXTRN   Seek_Name_Cache_Seg:word
+;  EXTRN   Seek_Num_Of_Drives:word
+;  EXTRN   Seek_Total_Ext_Count:word
+;  EXTRN   Seek_Total_Name_Count:word
+;  EXTRN   End_Seek:byte
+;  EXTRN   Check_Flag:word
+;  EXTRN   VECTOR_DELETE:dword	  ; jump vector inside Cseg_Seek to make
 				; a FAR call to FSeek Delete function within
 				; the segment
-CSEG_SEEK      ENDS
+end if
 
 
 
 
 
 ;อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออ
-CSEG_MAIN   SEGMENT   PARA   PUBLIC 'CODE'       ;  MAIN segment
+if SEGSEL = S_CSEG_MAIN;  MAIN segment
 
 ; This segment is a continuation of the Cseg_Main segment in Fastopen.asm
 ; and contains code to initializes name and extent drive buffers
 ;อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออ
-ASSUME	 CS:cseg_main,DS:nothing,SS:stack,ES:nothing
+;ASSUME	 CS:cseg_main,DS:nothing,SS:stack,ES:nothing
 
-EXTRN	MAIN:FAR										   ;AN000;
+;EXTRN	MAIN:FAR										   ;AN000;
 
 IF	BUFFERFLAG
 
-extrn	restore_page_state:near		; HKN 8/25/88	
+;extrn	restore_page_state:near		; HKN 8/25/88	
 
-extrn	ems_save_handle1:word		; HKN
-extrn	ems_page_number:word		; HKN
+;extrn	ems_save_handle1:word		; HKN
+;extrn	ems_page_number:word		; HKN
 
-ENDIF
+end if
 
-EXTRN	Main_Total_Ext_Count:word								   ;AN000;
-EXTRN	Main_Total_Name_Count:word								   ;AN000;
-EXTRN	Main_Name_Drive_Buff:word								   ;AN000;
-EXTRN	Main_Name_Cache_Buff:word								    ;AN000;
-EXTRN	Main_Name_Cache_Seg:word								   ;AN000;
-EXTRN	Main_Parambuff:byte									   ;AN000;
-EXTRN	Main_extent_drive_Buff:word								   ;AN000;
-EXTRN	Main_Num_Of_drives:word 								   ;AN000;
-EXTRN	Main_Ext_Count:word									   ;AN000;
-EXTRN	Main_Ext_Cache_Size:word								   ;AN000;
-EXTRN	Main_EMS_FLAG:word									   ;AN000;
-EXTRN	Main_Res_Segs:word									   ;AN000;
-EXTRN	Main_EMS_PAGE_SEG:word									   ;AN000;
-EXTRN	Main_EMS_PAGE_SIZE:word 								    ;AN000;
+;EXTRN	Main_Total_Ext_Count:word								   ;AN000;
+;EXTRN	Main_Total_Name_Count:word								   ;AN000;
+;EXTRN	Main_Name_Drive_Buff:word								   ;AN000;
+;EXTRN	Main_Name_Cache_Buff:word								    ;AN000;
+;EXTRN	Main_Name_Cache_Seg:word								   ;AN000;
+;EXTRN	Main_Parambuff:byte									   ;AN000;
+;EXTRN	Main_extent_drive_Buff:word								   ;AN000;
+;EXTRN	Main_Num_Of_drives:word 								   ;AN000;
+;EXTRN	Main_Ext_Count:word									   ;AN000;
+;EXTRN	Main_Ext_Cache_Size:word								   ;AN000;
+;EXTRN	Main_EMS_FLAG:word									   ;AN000;
+;EXTRN	Main_Res_Segs:word									   ;AN000;
+;EXTRN	Main_EMS_PAGE_SEG:word									   ;AN000;
+;EXTRN	Main_EMS_PAGE_SIZE:word 								    ;AN000;
 
-EXTRN	FOPEN_Insert:dword									   ;AN000;
-EXTRN	FOPEN_Update:dword									   ;AN000;
-EXTRN	FOPEN_Delete:dword									   ;AN000;
-EXTRN	FOPEN_Lookup:dword									   ;AN000;
+;EXTRN	FOPEN_Insert:dword									   ;AN000;
+;EXTRN	FOPEN_Update:dword									   ;AN000;
+;EXTRN	FOPEN_Delete:dword									   ;AN000;
+;EXTRN	FOPEN_Lookup:dword									   ;AN000;
 IF	BUFFERFLAG
-EXTRN	FOPEN_Purge:dword
-ENDIF
+;EXTRN	FOPEN_Purge:dword
+end if
 
-EXTRN	FSEEK_Open:dword
-EXTRN	FSEEK_Close:dword
-EXTRN	FSEEK_Insert:dword
-EXTRN	FSEEK_Delete:dword
-EXTRN	FSEEK_Lookup:dword
-EXTRN	FSEEK_Truncate:dword
-EXTRN	FSEEK_Purge:dword
+;EXTRN	FSEEK_Open:dword
+;EXTRN	FSEEK_Close:dword
+;EXTRN	FSEEK_Insert:dword
+;EXTRN	FSEEK_Delete:dword
+;EXTRN	FSEEK_Lookup:dword
+;EXTRN	FSEEK_Truncate:dword
+;EXTRN	FSEEK_Purge:dword
 
 ;*************************************************************************
 ;
@@ -326,36 +344,36 @@ EXTRN	FSEEK_Purge:dword
 ;
 ;*************************************************************************
 	IF  ($-Cseg_Main) MOD 16								   ;AN000;
-	   ORG ($-Cseg_Main)+16-(($-Cseg_Main) MOD 16)						   ;AN000;
-	ENDIF											   ;AN000;
-End_Main1  label   word 									   ;AN000;
+	   times (($-Cseg_Main)+16-(($-Cseg_Main) MOD 16)) - $ db 0 ;AN000;
+	end if ;AN000;
+label End_Main1 word                ;AN000;
 
 
 INIT_TREE:
-	mov	ax,cseg_Main		       ;get addressiblity to				   ;AN000;
+	mov	ax,CSEG_MAIN_		       ;get addressiblity to				   ;AN000;
 	mov	ds,ax			       ;DS --> Cseg_Main		      ;AN000;
-	ASSUME	ds:cseg_Main									   ;AN000;
+;	ASSUME	ds:cseg_Main									   ;AN000;
 
-	cmp	Main_Total_Name_Count,0        ;initialize Name drive headers?? 			   ;AN000;
+	cmp	word [Main_Total_Name_Count],0 ;initialize Name drive headers?? 			   ;AN000;
 	je	Init_Ext_Drive_Hdrs	       ;no, init extent drive headers						;AN000;
 
 ;-----------------------------------------------------------------------------
 ; Following code adds 'n' directory entry buffers to each Name Drive headers,
 ; depending on the value of 'n' specified with each drive ID
 ;-----------------------------------------------------------------------------
-	mov	si,Main_Name_Drive_Buff        ;SI-->first Name drive cache buff
-	mov	bx,Main_Name_Cache_Buff        ;BX-->Name cache buffer
+	mov	si,[Main_Name_Drive_Buff]      ;SI-->first Name drive cache buff
+	mov	bx,[Main_name_cache_Buff]      ;BX-->Name cache buffer
 	xor	dx,dx
 	xor	ax,ax
 
-	mov	ax,Main_Name_Cache_Seg	       ;get addresability to CSeg_Init
+	mov	ax,[Main_name_cache_seg]      ;get addresability to CSeg_Init
 	mov	ds,ax			       ;DS=addressablity to Cseg_Init
-	ASSUME	ds:cseg_Init
+;	ASSUME	ds:cseg_Init
 
 Set_Up_Cache:
-	mov	[si].DCH_LRU_ROOT,bx		;set to point to first name
-	mov	[si].DCH_NAME_BUFF,bx		;set to point to first name
-	mov	cx,[si].DCH_num_entries 	;get number of name records
+	mov	[si+DRIVE_CACHE_HEADER.DCH_LRU_ROOT],bx ;set to point to first name
+	mov	[si+DRIVE_CACHE_HEADER.DCH_Name_Buff],bx ;set to point to first name
+	mov	cx,[si+DRIVE_CACHE_HEADER.DCH_Num_Entries] ;get number of name records
 
 ;-----------------------------------------------------------------------------
 ;  set up MRU and LRU pointers
@@ -363,28 +381,31 @@ Set_Up_Cache:
 ;  BX points to current name record
 ;  DX points to next name record
 ;-----------------------------------------------------------------------------
-	mov	[bx].nMRU_ptr,-1		;make first MRU -1
-	jmp	short set_start
+	mov	[bx+NAME_RECORD.nMRU_ptr],-1 ;make first MRU -1
+	jmp	short Set_Start_fastinit
 
-Set_Up_Names:
-	mov	[bx].nMRU_ptr,ax		;set up MRU
-	add	ax,size name_record
+Set_Up_Names_fastinit:
+	mov	[bx+NAME_RECORD.nMRU_ptr],ax ;set up MRU
+; MASM worked LENGTH out as the number of elements a variable was
+; declared with and SIZE as the bytes they take up.  The arrays these
+; ask about are all of bytes, so the two come to the same number.
+	add	ax,sizeof.NAME_RECORD
 
-Set_Start:
-	mov	[bx].nChild_ptr,no_child	;no children or siblings
-	mov	[bx].nsibling_ptr,no_siblings	;  right now
-	mov	[bx].nBackward_ptr,no_backward
+Set_Start_fastinit:
+	mov	[bx+NAME_RECORD.nChild_ptr],No_child ;no children or siblings
+	mov	[bx+NAME_RECORD.nSibling_ptr],No_siblings ;  right now
+	mov	[bx+NAME_RECORD.nBackward_ptr],No_backward
 	push	es
 	push	di
 	push	ax
 
 	push	ds
 	pop	es				;ES-->name cache buffer
-	ASSUME	es:Cseg_Init
+;	ASSUME	es:Cseg_Init
 
 	mov	ax, '  '
 	mov	di, bx
-	add	di, nCmpct_Dir_Info		;blank out the Dir name area
+	add	di, NAME_RECORD.nCmpct_Dir_Info		;blank out the Dir name area
 	stosb					;the directory buffer
 	stosw
 	stosw
@@ -397,23 +418,23 @@ Set_Start:
 	pop	es
 
 	mov	dx,bx				;get name offset
-	add	dx,size name_record		;get start of next name
+	add	dx,sizeof.NAME_RECORD ;get start of next name
 	dec	cx				;decrement num_entries
-	jcxz	get_next_drive			;if zero - get next drive
-	mov	[bx].nLRU_ptr,dx		;LRU pointer - next name
-	add	bx,size name_record		;
-	jmp	set_up_names
+	jcxz	Get_Next_Drive			;if zero - get next drive
+	mov	[bx+NAME_RECORD.nLRU_ptr],dx ;LRU pointer - next name
+	add	bx,sizeof.NAME_RECORD ;
+	jmp	Set_Up_Names_fastinit
 
 Get_Next_Drive:
-	mov	[bx].nLRU_ptr,-1		;LRU pointer - next name
+	mov	[bx+NAME_RECORD.nLRU_ptr],-1 ;LRU pointer - next name
 
-	mov	[si].DCH_MRU_ROOT,bx		;set to point to last name
+	mov	[si+DRIVE_CACHE_HEADER.DCH_MRU_ROOT],bx ;set to point to last name
 	mov	bx,dx				;get pointer to next name
-	cmp	[si].dch_sibling_ptr,no_siblings  ;is there any more to set up??
+	cmp	[si+DRIVE_CACHE_HEADER.DCH_Sibling_ptr],No_siblings ;is there any more to set up??
 	jz	Init_Ext_Drive_Hdrs		; no - set extent drive headers
-	add	ax,size name_record		; yes - get next name directory buffer
-	add	si,size drive_cache_header	;point to next drive header
-	jmp	set_up_cache
+	add	ax,sizeof.NAME_RECORD ; yes - get next name directory buffer
+	add	si,sizeof.DRIVE_CACHE_HEADER ;point to next drive header
+	jmp	Set_Up_Cache
 
 
 ;----------------------------------------------------------------------------
@@ -422,13 +443,13 @@ Get_Next_Drive:
 ; addressability to Cache buffer segment (CSEG_INIT)
 ;----------------------------------------------------------------------------
 Init_Ext_Drive_Hdrs:
-	 mov	 ax,cseg_Main									 ;AN000;
+	 mov	 ax,CSEG_MAIN_									 ;AN000;
 	 mov	 ds,ax			    ;DS-->Cseg_Main			   ;AN000;
-	 ASSUME  ds:cseg_Main									   ;AN000;
+;	 ASSUME  ds:cseg_Main									   ;AN000;
 												   ;AN000;
-	 cmp	Main_Total_Ext_Count,0	    ;initialize extent drive buffers ?? 			   ;AN000;
-	 jne	init_extent_cache	    ;yes - continue
-	 jmp	Init_exit		    ;no - exit						   ;AN000;
+	 cmp	word [Main_Total_Ext_Count],0 ;initialize extent drive buffers ?? 			   ;AN000;
+	 jne	Init_Extent_Cache	    ;yes - continue
+	 jmp	INIT_EXIT		    ;no - exit						   ;AN000;
 
 ;============================================================================
 ; Fill extent cache buffer with zeros. Otherwise a (-2) left in the buffer
@@ -436,30 +457,30 @@ Init_Ext_Drive_Hdrs:
 ; mark.
 
 Init_Extent_Cache:
-	mov	cx, Main_Ext_Cache_Size     ; CX = extent buffer size				 ;AN000;
-	mov	si,Main_Extent_Drive_Buff   ; SI-->start of extent cache buff		     ;AN000;
+	mov	cx, [Main_ext_cache_size]   ; CX = extent buffer size				 ;AN000;
+	mov	si,[Main_extent_drive_Buff] ; SI-->start of extent cache buff		     ;AN000;
 	push	ds										   ;AN000;
-	mov	ax,Main_Name_Cache_Seg
+	mov	ax,[Main_name_cache_seg]
 	mov	ds,ax			    ; DS-->new init seg (init segment			       ;AN000;
-	ASSUME	ds:Cseg_Init									   ;AN000;
+;	ASSUME	ds:Cseg_Init									   ;AN000;
 	mov	al,0			    ; pattern "0"                                              ;AN000;
 
 Next_Byte:				    ; may be in Extended memory)
 	mov	[si],al 									   ;AN000;
 	inc	si										   ;AN000;
-	LOOP	next_byte									   ;AN000;
+	LOOP	Next_Byte									   ;AN000;
 	pop	ds			    ; retore original init seg ID			       ;AN000;
 ;============================================================================
 
 
 Init_Set_Cache:
-	 mov	si,Main_Extent_Drive_Buff   ; SI-->first extent drive header	     ;AN000;
-	 mov	cx,Main_num_of_drives	    ; number of drives
+	 mov	si,[cs:Main_extent_drive_Buff] ; SI-->first extent drive header	     ;AN000;
+	 mov	cx,[cs:Main_Num_Of_drives] ; number of drives
 	 mov	dx,0			    ; drive counter
-	 lea	di,Main_ParamBuff	    ; DS:DI-->parameter buff contains			   ;AN000;
+	 lea	di,[Main_ParamBuff]   ; DS:DI-->parameter buff contains			   ;AN000;
 					    ; drive ID and number of extents	      ;AN000;
-	 mov	 es,Main_name_cache_seg     ; ES = addressability to Cseg_Init			   ;AN000;
-	 ASSUME  es:Cseg_Init		    ;							   ;AN000;
+	 mov	 es,[cs:Main_name_cache_seg] ; ES = addressability to Cseg_Init			   ;AN000;
+;	 ASSUME  es:Cseg_Init		    ;							   ;AN000;
 												   ;AN000;
 INIT_LOOP:				    ; ES:SI-->cache buffer				   ;AN000;
 	 push	cx			    ; save counter					   ;AN000;
@@ -467,28 +488,28 @@ INIT_LOOP:				    ; ES:SI-->cache buffer				   ;AN000;
 	 xor	ax,ax										   ;AN000;
 	 mov	ax,[di+2]		    ; get Extent Count					   ;AN000;
 	 cmp	ax, -1			    ; any extent under this drive ??			   ;AN000;
-	 je	skip_this_drive 	    ; no - dont create header for this		     ;AN000;
+	 je	SKIP_THIS_DRIVE 	    ; no - dont create header for this		     ;AN000;
 					    ; this drive
 	 mov	ax,0			    ; *** for debugging sequence count
-	 mov	es:[si].EXTENT_COUNT,ax     ; *** use this area for sequence counting
+	 mov	[es:si+DRIVE_HEADER.Extent_Count],ax ; *** use this area for sequence counting
 	 xor	ax,ax										   ;AN000;
 	 mov	ax,[di] 		    ; get drive ID from drive ID buff			   ;AN000;
-	 mov	es:[si].DRIVE_NUMBER,ax     ; save drive ID in drive header			   ;AN000;
-	 mov	bx, size Drive_Header								   ;AN000;
+	 mov	[es:si+DRIVE_HEADER.Drive_Number],ax ; save drive ID in drive header			   ;AN000;
+	 mov	bx, sizeof.DRIVE_HEADER         ;AN000;
 	 add	bx,si			    ; BX-->Free area				     ;AN000;
-	 mov	es:[si].FREE_PTR,bx	    ; pointing to free area				   ;AN000;
+	 mov	[es:si+DRIVE_HEADER.Free_ptr],bx ; pointing to free area				   ;AN000;
 												   ;AN000;
-	 mov	es:[si].MRU_HDR_PTR,-1	    ; mark OPEN QUEUE empty				   ;AN000;
-	 mov	es:[si].CLOSE_PTR,-1	    ; make CLOSE QUEUE empty				   ;AN000;
+	 mov	[es:si+DRIVE_HEADER.MRU_Hdr_Ptr],-1 ; mark OPEN QUEUE empty				   ;AN000;
+	 mov	[es:si+DRIVE_HEADER.Close_Ptr],-1 ; make CLOSE QUEUE empty				   ;AN000;
 	 xor	ax,ax										   ;AN000;
 	 mov	ax,[di+2]		    ; get extent count (n)				   ;AN000;
-	 mov	cx, size Extent_Header	    ; get extent size				     ;AN000;
+	 mov	cx, sizeof.EXTENT_HEADER   ; get extent size				     ;AN000;
 	 mul	cx			    ; AX=total cache for this drive			   ;AN000;
-	 mov	es:[si].BUFF_SIZE,ax	    ; save it as initial available size 			    ;AN000;
-	 mov	es:[si].FREE_SIZE,ax	    ; save it as initial free size
-	 add	ax, size Drive_Header	    ; (2/9/88)
+	 mov	[es:si+DRIVE_HEADER.Buff_Size],ax ; save it as initial available size 			    ;AN000;
+	 mov	[es:si+DRIVE_HEADER.Free_Size],ax ; save it as initial free size
+	 add	ax, sizeof.DRIVE_HEADER   ; (2/9/88)
 	 add	ax,si			    ; AX-->offset to next drive hdr			   ;AN000;
-	 mov	es:[si].Next_Drv_hdr_Ptr,ax    ; save next drive header ptr in			   ;AN000;
+	 mov	[es:si+DRIVE_HEADER.Next_Drv_Hdr_Ptr],ax ; save next drive header ptr in			   ;AN000;
 					    ; current drive header				   ;AN000;
 	 mov	bx,ax										   ;AN000;
 	 mov	ax,si			    ; save current header pointer			   ;AN000;
@@ -497,10 +518,10 @@ INIT_LOOP:				    ; ES:SI-->cache buffer				   ;AN000;
 SKIP_THIS_DRIVE:										   ;AN000;
 	 add	dx,4			    ; update index to next drive/extent 		   ;AN000;
 	 pop	cx			    ; restore loop count				   ;AN000;
-	 LOOP	init_loop		    ; repeat for next drive number			   ;AN000;
+	 LOOP	INIT_LOOP		    ; repeat for next drive number			   ;AN000;
 												   ;AN000;
 	 mov	si,ax										   ;AN000;
-	 mov	es:[si].Next_Drv_hdr_Ptr,-1   ; mark current header as last
+	 mov	[es:si+DRIVE_HEADER.Next_Drv_Hdr_Ptr],-1 ; mark current header as last
 					      ; drive header
 ;----------------------------------------------------------------------------
 ; Close handles 0 - 4
@@ -527,7 +548,7 @@ INIT_EXIT:
 	 mov   si,02CH		   ; SI-->address of enviroment segment
 	 mov   ax,[si]		   ; AX = environment seg id
 	 cmp   ax,0		   ; environment present ??
-	 je    dont_dealloc	   ; no - dont deallocate
+	 je    Dont_Dealloc	   ; no - dont deallocate
 	 mov   es,ax
 	 mov   ah,49H
 	 INT   21H		   ; deallocate environment
@@ -542,13 +563,13 @@ Dont_Dealloc:
 
 IF	BUFFERFLAG
 
-	call	restore_page_state	; HKN 8/25/88
+	call	RESTORE_PAGE_STATE	; HKN 8/25/88
 
-ENDIF
+end if
 
-	  mov	 ah,KEEP_PROCESS	      ;remain resident
+	  mov	 ah,Keep_Process	      ;remain resident
 	  mov	 al,0			      ;return code
-	  mov	 dx,Main_Res_Segs	      ;size of area in paragraph
+	  mov	 dx,[cs:Main_Res_Segs]  ;size of area in paragraph
 	  INT	 21h			      ;keep resident and then return
 					      ;control to DOS
 
@@ -557,29 +578,29 @@ ENDIF
 ; segment can be found in the Fastopen.asm
 ;----------------------------------------------------------------------------
 	IF  ($-Cseg_Main) MOD 16								   ;AN000;
-	   ORG ($-Cseg_Main)+16-(($-Cseg_Main) MOD 16)						   ;AN000;
-	ENDIF											   ;AN000;
-End_Main   label   word 									   ;AN000;
+	   times (($-Cseg_Main)+16-(($-Cseg_Main) MOD 16)) - $ db 0 ;AN000;
+	end if ;AN000;
+label End_Main word                 ;AN000;
 
 
-CSEG_MAIN	ENDS		     ; End of Cseg_Main segment
+end if ; End of Cseg_Main segment
 page
 
 
 ;อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออ
 
-CSEG_INIT	SEGMENT PUBLIC PARA 'CODE'
+if SEGSEL = S_CSEG_INIT
 
 ;อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออ
-	 ASSUME    cs:cseg_init,ds:cseg_init,ss:stack,es:cseg_init
+;	 ASSUME    cs:cseg_init,ds:cseg_init,ss:stack,es:cseg_init
 
-	 EXTRN	  SYSPARSE:NEAR 								   ;AN000;
-	 EXTRN	  SYSLOADMSG:NEAR								   ;AN000;
-	 EXTRN	  SYSDISPMSG:NEAR								   ;AN000;
+;	 EXTRN	  SYSPARSE:NEAR 								   ;AN000;
+;	 EXTRN	  SYSLOADMSG:NEAR								   ;AN000;
+;	 EXTRN	  SYSDISPMSG:NEAR								   ;AN000;
 
 IF	BUFFERFLAG
-	extrn	save_ems_page_state:far		; HKN 8/25/88
-ENDIF
+;	extrn	save_ems_page_state:far		; HKN 8/25/88
+end if
 
 
 ;----------------------------------------------------------------------------
@@ -595,8 +616,16 @@ ENDIF
 ; during second half of the initialization which is in the MAIN module (see INit_Tree).
 ;-----------------------------------------------------------------------------
 
-Drive_header_start	label	byte	    ;Name cache drive buffer
-Drive_Cache		Drive_Cache_Header    max_drives DUP (<>)  ; header for 24 drives are reserved
+label Drive_header_start byte     ;Name cache drive buffer
+; Drive_Cache_Header declares something other than a zero, so the max_drives of them
+; are laid down as instances.  fasm names an instance, so each
+; takes the array's name and its place in it; what the program
+; asks for is the label.
+label Drive_Cache byte; header for 24 drives are reserved
+rept Max_drives each
+{
+	Drive_Cache_#each DRIVE_CACHE_HEADER
+}
 
 ;-----------------------------------------------------------------------------
 ; Anything below this point will be overlayed by the Cache Buffers
@@ -605,7 +634,9 @@ Drive_Cache		Drive_Cache_Header    max_drives DUP (<>)  ; header for 24 drives a
 ;=============================================================================
 ;		   Non_Resident Data Area
 ;=============================================================================
-INIT_VECTOR		DD     INIT_TREE	;jump vector to INIT_TREE			   ;AN000;
+label INIT_VECTOR dword
+	dw INIT_TREE	;jump vector to INIT_TREE			   ;AN000;
+	dw CSEG_MAIN_
 MAIN_VECTOR		DD     MAIN		;entry point to MAIN routine			   ;AN000;
 source_xname		DB	" :\",0         ;used for xname translate                          ;AN000;
 target_xname		DB	65 DUP (0)	;used for xname translate			   ;AN000;
@@ -628,14 +659,14 @@ ELSE
 
 FRAME_BUFFER		DB	100h DUP(0)	; EMS frame buffer
 
-ENDIF
+end if
 
 IF 	BUFFERFLAG
 FST_PAGE		DW	0,0		; holds the second highest page above 640k
-ENDIF
+end if
 
 Cmdline_buff		db	135  dup (0)	;command line buffer					  ;AN000;
-name_cache_seg		dw	Cseg_Init	;default to Init1 seg					  ;AN000;
+name_cache_seg		dw	CSEG_INIT_	;default to Init1 seg					  ;AN000;
 Ext_Count		dw	0		;total name extent entries				  ;AN000;
 extent_drive_Buff	dw	0		;ptr to extent drive					  ;AN000;
 name_cache_Buff 	dw	0		;pointer to Name cache buffer				  ;AN000;
@@ -661,15 +692,15 @@ SEEK_Size		DW	0		;size of Cseg_Seek in paragraph 			 ;AN000;
 ;-----------------------------------------------------------------------;
 ;	EMS Support							;
 ;-----------------------------------------------------------------------;
-EXT_HANDLE     DW   ?		     ; EMS handle for reference 					 ;AN000;
-EMS_PAGESIZE   DW   ?		     ; EMS handle for reference 					 ;AN000;
-EMS_FRAME_ADDR DW   ?		     ; EMS handle for reference 					 ;AN000;
-CURR_EMS_PAGE  DB   ?		     ; Current EMS page number						 ;AN000;
+EXT_HANDLE     rw      1    ; EMS handle for reference 					 ;AN000;
+EMS_PAGESIZE   rw      1    ; EMS handle for reference 					 ;AN000;
+EMS_FRAME_ADDR rw      1    ; EMS handle for reference 					 ;AN000;
+CURR_EMS_PAGE  rb      1    ; Current EMS page number						 ;AN000;
 HANDLE_NAME    DB   'FASTOPEN',0     ; EMS handle name                                                   ;AN000;
 
 IF	BUFFERFLAG
-SAVE_MAP_ADDR	DD	?	; HKN 8/25/88
-ENDIF
+SAVE_MAP_ADDR	rd      1 ; HKN 8/25/88
+end if
 
 ;---------------------------------------------------------------------------
 ;	PARSER Support
@@ -692,7 +723,7 @@ MSG_NUM     DW	  0		   ;message number						   ;AN000;
 ;----------------------------------------------------------------------------
 ; Following three sublists are used by the  Message Retriever
 ;----------------------------------------------------------------------------
-SUBLIST1 LABEL	DWORD		   ;SUBSTITUTE LIST 1
+label SUBLIST1 dword     ;SUBSTITUTE LIST 1
 	DB	11		   ;sublist size						   ;AN000;
 	DB	0		   ;reserved							   ;AN000;
 	DD	0		   ;substition data Offset					   ;AN000;
@@ -703,7 +734,7 @@ SUBLIST1 LABEL	DWORD		   ;SUBSTITUTE LIST 1
 	DB	0		   ;characters for Pad field					   ;AN000;
 
 
-SUBLIST2 LABEL	DWORD		   ;SUBSTITUTE LIST 2
+label SUBLIST2 dword     ;SUBSTITUTE LIST 2
 	DB	11		   ;sublist size						   ;AN000;
 	DB	0		   ;reserved							   ;AN000;
 	DD	0		   ;substition data Offset					   ;AN000;
@@ -719,8 +750,8 @@ SUBLIST2 LABEL	DWORD		   ;SUBSTITUTE LIST 2
 ;   PARSER  Control Blocks and Buffers
 ;--------------------------------------------------------------------------
 
-PARMS	   label   word
-	    DW	    parmsx									   ;AN000;
+label PARMS word
+	    DW	    PARMSX									   ;AN000;
 	    DB	    1		  ; number of delemeters					   ;AN000;
 	    DB	    1		  ; extra delimeters length					   ;AN000;
 	    DB	    "="           ; extra delimeter expected                                       ;AN000;
@@ -728,13 +759,13 @@ PARMS	   label   word
 	    DB	    0										   ;AN000;
 
 
-PARMSX	   label   byte 									   ;AN000;
+label PARMSX byte                  ;AN000;
 par_min     DB	    1		  ; min, max positional operands allowed			   ;AN000;
 par_max     DB	    2		  ; min, max positional operands allowed			   ;AN000;
-	    DW	    Pos1	  ; offset into positonal-1 control block			   ;AN000;
-	    DW	    Pos2	  ; offset into positonal-1 control block			   ;AN000;
+	    DW	    POS1	  ; offset into positonal-1 control block			   ;AN000;
+	    DW	    POS2	  ; offset into positonal-1 control block			   ;AN000;
 par_sw	    DB	    1		  ; one switch							   ;AN000;
-	    DW	    Switch	  ; offset into switch-1 control bloc				   ;AN000;
+	    DW	    SWITCH	  ; offset into switch-1 control bloc				   ;AN000;
 	    DB	    0		  ; no keywords 						   ;AN000;
 	    DB	    0		  ; 0								   ;AN000;
 
@@ -742,69 +773,69 @@ par_sw	    DB	    1		  ; one switch							   ;AN000;
 
 ;------------------ POS2 CONTROL BLOCK --------------------------------------
 
-POS1	  label  word	  ; positional-1 control definition
+label POS1 word      ; positional-1 control definition
 Pos1Type    DW	   0100H	; control type flag (drive only)				   ;AN000;
 	    DW	   0		; function flags						   ;AN000;
-	    DW	   Result	; offset into result buffer					   ;AN000;
-	    DW	   value_pos1	; offset value list buffer					   ;AN000;
+	    DW	   RESULT	; offset into result buffer					   ;AN000;
+	    DW	   Value_Pos1	; offset value list buffer					   ;AN000;
 	    DB	   0		; number of keyword/switch synonyms				   ;AN000;
 
 
-Value_Pos1    label   byte	; postional parameter value expected				      ;AN000;
+label Value_Pos1 byte      ; postional parameter value expected				      ;AN000;
 	    DB	    0		; no values expected						    ;AN000;
 
 
 
 ;---------------- POS1 CONTROL BLOCK ----------------------------------------
 
-POS2	 label	word	       ; positional-2 control definition				     ;AN000;
+label POS2 word         ; positional-2 control definition				     ;AN000;
 Pos2Type   DW	  08502H       ; Control type (complex/integer/drive/				   ;AN000;
 			       ; repeat)						  ;AN000;
 	   DW	  0	       ; function flags 						   ;AN000;
-	   DW	  Result       ; offset into result buffer					   ;AN000;
-	   DW	  value_pos2   ; offset value list buffer					   ;AN000;
+	   DW	  RESULT       ; offset into result buffer					   ;AN000;
+	   DW	  Value_Pos2   ; offset value list buffer					   ;AN000;
 	   DB	  0	       ; number of keyword/switch synonyms				   ;AN000;
 
-Value_Pos2    label   byte
+label Value_Pos2 byte
 	   DB	   0	       ; either (n) or (m) will be returned
 
 
 
 ;--------------- RESULT BUFFER ---------------------------------------------
 
-RESULT	 label	byte	 ; postional2 parameter result buffer					   ;AN000;
-PosType    DB	  ?	       ; type of operand returned					   ;AN000;
-Postag	   DB	  ?	       ; type of item tage returned					   ;AN000;
-synonym    DW	  ?	       ; offset into synonyms returned					   ;AN000;
-valuelo    DW	  ?	       ; space for drive number/integer/strin				   ;AN000;
-valuehi    DW	  ?										   ;AN000;
+label RESULT byte   ; postional2 parameter result buffer					   ;AN000;
+PosType    rb      1     ; type of operand returned					   ;AN000;
+Postag	   rb      1     ; type of item tage returned					   ;AN000;
+synonym    rw      1     ; offset into synonyms returned					   ;AN000;
+valuelo    rw      1     ; space for drive number/integer/strin				   ;AN000;
+valuehi    rw      1          ;AN000;
 
 
 ;---------------- SWITCH CONTROL BLOCK ------------------------------------------
 
-SWITCH	 label	word	 ; switch control definition
+label SWITCH word   ; switch control definition
 	   DW	  0	       ; no match flag							   ;AN000;
 	   DW	  0	       ; no function flags						   ;AN000;
-	   DW	  Result       ; offset into result buffer					   ;AN000;
-	   DW	  value_sw1    ; offset value list buffer					   ;AN000;
+	   DW	  RESULT       ; offset into result buffer					   ;AN000;
+	   DW	  Value_sw1    ; offset value list buffer					   ;AN000;
 	   DB	  1	       ; number of keyword/switch synonyms				   ;AN000;
 E_Switch   DB	  "/X"         ; /X option for extended memory access                              ;AN000;
 	   DB	  0										   ;AN000;
 
 
-Result_sw1   label  byte     ; switch	parameter result					   ;AN000;
+label Result_sw1 byte        ; switch	parameter result					   ;AN000;
 	   DB	  ?	       ; type of operand returned					   ;AN000;
 	   DB	  ?	       ; type of item tage returned					   ;AN000;
-Swval	   DW	  ?	       ; offset into synonyms returned					   ;AN000;
+Swval	   rw      1     ; offset into synonyms returned					   ;AN000;
 	   DB	  ?	       ; switch value							   ;AN000;
 
 
-Value_sw1     label   byte   ; switch parameter value expected					   ;AN000;
+label Value_sw1 byte         ; switch parameter value expected					   ;AN000;
 	   DB	   0	       ; no values expected						   ;AN000;
 
 
 
-
+ 
 
 
 
@@ -825,14 +856,14 @@ START:
 					; on entry DS and ES -->PSP				   ;AN000;
 	push	cs			; DS-->Cseg_Init					   ;AN000;
 	pop	ds										   ;AN000;
-	ASSUME	ds:cseg_init									   ;AN000;
-	mov	psp_seg,es		; save PSP segment for later use			   ;AN000;
+;	ASSUME	ds:cseg_init									   ;AN000;
+	mov	[psp_seg],es ; save PSP segment for later use			   ;AN000;
 	push	cs										   ;AN000;
 	pop	es			; ES-->Cseg_Init					   ;AN000;
-	ASSUME	es:cseg_init									   ;AN000;
+;	ASSUME	es:cseg_init									   ;AN000;
 
 	CALL	SYSLOADMSG		; Preload messages					   ;AN000;
-	jnc	Parse_cmd_line		; If no error, parse command line			   ;AN000;
+	jnc	Parse_Cmd_Line		; If no error, parse command line			   ;AN000;
 
 	mov	ax,1										   ;AN000;
 	CALL	SYSDISPMSG		; display error 					   ;AN000;
@@ -843,46 +874,46 @@ START:
 
 Parse_Cmd_Line: 										   ;AN000;
 	CALL	PARSE			;Parse command line					   ;AN000;
-	lea	si,parambuff		;drive ID buff address					   ;AN000;
-	mov	ax,Total_name_Count	;							   ;AN000;
-	mov	ax,Total_ext_Count								   ;AN000;
-	mov	ax,num_of_drives								   ;AN000;
-	mov	ax,ext_mem									   ;AN000;
+	lea	si,[Parambuff];drive ID buff address					   ;AN000;
+	mov	ax,[Total_Name_Count] ;							   ;AN000;
+	mov	ax,[Total_Ext_Count]         ;AN000;
+	mov	ax,[num_of_drives]         ;AN000;
+	mov	ax,[Ext_Mem]          ;AN000;
 	jnc	Check_Installed 	;no, check if Fastopen already installed
-	jmp	error_exit		;yes - exit						   ;AN000;
+	jmp	ERROR_EXIT_fastinit		;yes - exit						   ;AN000;
 
 Check_Installed:
 	CALL	CHECK_INSTALL		; Fastopen installed ??
-	jnc	Save_SegIDs		; no - save segment IDs
-	jmp	error_exit		; yes - exit
+	jnc	Save_SegIds		; no - save segment IDs
+	jmp	ERROR_EXIT_fastinit		; yes - exit
 
 ;-----------------------------------------------------------------------------
 ; Set seg IDs of three segments.
 ;-----------------------------------------------------------------------------
 Save_SegIds:
-	mov	Open_SegID, Cseg_Open								   ;AN000;
-	mov	Seek_SegID, Cseg_Seek								   ;AN000;
-	mov	Init_SegID, Cseg_Init								   ;AN000;
+	mov	word [Open_SegID], CSEG_OPEN_    ;AN000;
+	mov	word [Seek_SegID], CSEG_SEEK_    ;AN000;
+	mov	word [Init_SegID], CSEG_INIT_    ;AN000;
 
 ;-----------------------------------------------------------------------------
 ; Compute the size of segments and cache buffers.  Setup a temporary stack
 ; to be used by the second half of initilization.
 ;-----------------------------------------------------------------------------
 	CALL	CHECK_MEM		;See if we have enough memory				   ;AN000;
-	jnc	chk_extended_mem	;yes, check for extended memory 			   ;AN000;
-	jmp	error_exit		;no  - display not enough mem msg			   ;AN000;
+	jnc	Chk_Extended_Mem	;yes, check for extended memory 			   ;AN000;
+	jmp	ERROR_EXIT_fastinit		;no  - display not enough mem msg			   ;AN000;
 
 ;-----------------------------------------------------------------------------
 ; Check if Extended Memeory is specified. If true, check if Extended memory is
 ; available.  Get segid of one extended memory page.
 ;-----------------------------------------------------------------------------
 Chk_Extended_Mem:
-	cmp	ext_mem,1		; enable EMS ?? 					   ;AN000;
+	cmp	word [Ext_Mem],1 ; enable EMS ?? 					   ;AN000;
 	jne	Set_Data_Areas		; no, set data areas					   ;AN000;
 
 	CALL	SET_EMS 		; set expanded memory					   ;AN000;
 	jnc	Set_Data_Areas		; if no error						   ;AN000;
-	jmp	error_exit		; error exit						   ;AN000;
+	jmp	ERROR_EXIT_fastinit		; error exit						   ;AN000;
 
 ;------------------------------------------------------------------------------
 ; Copy Data and segid of Init segments to Main, Open and Seek segments.
@@ -908,19 +939,19 @@ Relocate_Code:
 ; installation.
 ;-----------------------------------------------------------------------------
 Disp_Install_Msg:			; display FASTOPEN installed message
-	MOV	AX,INSTALL1		; message number					   ;AN000;
-	MOV	MSG_NUM,AX		; set message number					   ;AN000;
-	MOV	SUBST_COUNT,0		; no message						   ;AN000;
-	MOV	MSG_CLASS,-1		; message class 					   ;AN000;
-	MOV	INPUT_FLAG,0		; no input						   ;AN000;
+	MOV	AX,Install1		; message number					   ;AN000;
+	MOV	[MSG_NUM],AX ; set message number					   ;AN000;
+	MOV	word [SUBST_COUNT],0 ; no message						   ;AN000;
+	MOV	byte [MSG_CLASS],-1 ; message class 					   ;AN000;
+	MOV	byte [INPUT_FLAG],0 ; no input						   ;AN000;
 	CALL	PRINT_STDOUT		; show message						   ;AN000;
 
 ;-----------------------------------------------------------------------------
 ; Install Fastopen
 ;-----------------------------------------------------------------------------
 	CALL	INSTALL_FASTOPEN	; Install Fastopen					  ;AN000;
-	jnc	Setup_Stack		; Installed Ok, setup stack				  ;AN000;
-	jmp	error_exit		; error - exit
+	jnc	SETUP_STACK		; Installed Ok, setup stack				  ;AN000;
+	jmp	ERROR_EXIT_fastinit		; error - exit
 
 
 ;----------------------------------------------------------------------------
@@ -931,16 +962,16 @@ Disp_Install_Msg:			; display FASTOPEN installed message
 SETUP_STACK:
 	nop										   ;AN000;
 	CLI				;no interrupts allowed during stach change	   ;AN000;
-	mov	SS,Stack_Seg_Start	;set up new stack				   ;AN000;
+	mov	SS,[stack_seg_start] ;set up new stack				   ;AN000;
 	mov	SP,0			;						   ;AN000;
 	STI				;interrupts ok now				   ;AN000;
-	jmp	INIT_VECTOR		;Jump to Cseg_Main to do second
+	jmp	[INIT_VECTOR] ;Jump to Cseg_Main to do second
 					;phase of the initialization
-ERROR_EXIT:
+ERROR_EXIT_fastinit:
 	mov	al,1			;set up return code
-	mov	ah,exit 		;set function code
-	INT	INT_COMMAND		;exit to DOS
-
+	mov	ah,Exit 		;set function code
+	INT	int_command		;exit to DOS
+ 
 
 
 
@@ -960,7 +991,7 @@ ERROR_EXIT:
 ;  Already Installed message.
 ;----------------------------------------------------------------------------
 
-CHECK_INSTALL	PROC	 NEAR
+CHECK_INSTALL:
 
 	push	ax				;save every registers that may
 	push	bx				;be destroyed by DOS
@@ -973,7 +1004,7 @@ CHECK_INSTALL	PROC	 NEAR
 	push	ds
 	mov	bx, 1				;Fastopen function code
 	mov	si, -1				;special check install code
-	CALLINSTALL fastopencom,multdos,42	;see if fastopen installed
+	CallInstall fastopencom,MultDOS,42	;see if fastopen installed
 	pop	ds
 	jc	Install_Msg			;yes, display already installed
 						;message
@@ -983,16 +1014,16 @@ CHECK_INSTALL	PROC	 NEAR
 	push	ds										   ;AN000;
 	mov	si, -1				;special check installed code
 	mov	bx, 2				;for Fastseek
-	CALLINSTALL fastopencom,multdos,42	;see if fastopen installed			   ;AN000;
+	CallInstall fastopencom,MultDOS,42	;see if fastopen installed			   ;AN000;
 	pop	ds										   ;AN000;
 	jnc	Chk_Install_Exit		; no, exit					   ;AN000;
 
 Install_Msg:					;installed previously display message
-	MOV	AX,ALREADY_INSTALL		;message number 					       ;AN000;
-	MOV	MSG_NUM,AX			;set message number					       ;AN000;
-	MOV	SUBST_COUNT,0			;no message substitution				       ;AN000;
-	MOV	MSG_CLASS,-1			;message class						       ;AN000;
-	MOV	INPUT_FLAG,0			;no input						       ;AN000;
+	MOV	AX,Already_install		;message number 					       ;AN000;
+	MOV	[MSG_NUM],AX ;set message number					       ;AN000;
+	MOV	word [SUBST_COUNT],0 ;no message substitution				       ;AN000;
+	MOV	byte [MSG_CLASS],-1 ;message class						       ;AN000;
+	MOV	byte [INPUT_FLAG],0 ;no input						       ;AN000;
 	CALL	PRINT_STDOUT			;show message "Already Installed"
 	stc
 
@@ -1006,9 +1037,9 @@ Chk_Install_Exit:
 	pop	ax
 	ret					;return
 
-CHECK_INSTALL	  ENDP
+;CHECK_INSTALL	  ENDP
 
-
+ 
 
 
 
@@ -1031,7 +1062,7 @@ CHECK_INSTALL	  ENDP
 ;  already installed message.
 ;----------------------------------------------------------------------------
 
-INSTALL_FASTOPEN    PROC    NEAR
+INSTALL_FASTOPEN:
 
 	push	ax				;Save every registers,point reg since
 	push	bx				;DOS may destroy it.
@@ -1041,13 +1072,13 @@ INSTALL_FASTOPEN    PROC    NEAR
 	push	di
 	push	bp
 
-	cmp	Total_Name_Count, 0		;FastOpen enabled ??				  ;AN000;
+	cmp	word [Total_Name_Count], 0 ;FastOpen enabled ??				  ;AN000;
 	je	Install_Ext			;no - jump
 
 	push	ds				;yes - install fastopen
 	mov	bx, 1				;tell DOS that this is the
-	lds	si,Main_Vector
-	CALLINSTALL fastopencom,multdos,42	;see if fastopen installed
+	lds	si,[MAIN_VECTOR]
+	CallInstall fastopencom,MultDOS,42	;see if fastopen installed
 	pop	ds
 	jc	Install_Exit			;error	- exit
 
@@ -1056,26 +1087,26 @@ INSTALL_FASTOPEN    PROC    NEAR
 ; point and the Fastseek enabled information to DOS
 ;----------------------------------------------------------------------------			   ;AN000;
 Install_Ext:
-	cmp	Total_Ext_Count, 0		; Fastseek enabled ??				   ;AN000;
-	jne	ext_install			; yes - install fastseek		      ;AN000;
+	cmp	word [Total_Ext_Count], 0 ; Fastseek enabled ??				   ;AN000;
+	jne	Ext_Install			; yes - install fastseek		      ;AN000;
 	clc											   ;AN000;
 	jmp	short Install_Exit		; no, exit				      ;AN000;
 
 Ext_Install:
 	push	ds										   ;AN000;
 	mov	bx, 2				;tell DOS that this is the			   ;AN000;
-	lds	si,Main_Vector			;fastseek  entry point				   ;AN000;
-	CALLINSTALL fastopencom,multdos,42	;see if fastopen installed			   ;AN000;
+	lds	si,[MAIN_VECTOR] ;fastseek  entry point				   ;AN000;
+	CallInstall fastopencom,MultDOS,42	;see if fastopen installed			   ;AN000;
 	pop	ds										   ;AN000;
-	jnc	short install_exit
-	jmp	short install_exit
+	jnc	short Install_Exit
+	jmp	short Install_Exit
 
 Installx_Msg:					;installed previously display message
-	MOV	AX,ALREADY_INSTALL		;message number 					       ;AN000;
-	MOV	MSG_NUM,AX			;set message number					       ;AN000;
-	MOV	SUBST_COUNT,0			;no message substitution				       ;AN000;
-	MOV	MSG_CLASS,-1			;message class						       ;AN000;
-	MOV	INPUT_FLAG,0			;no input						       ;AN000;
+	MOV	AX,Already_install		;message number 					       ;AN000;
+	MOV	[MSG_NUM],AX ;set message number					       ;AN000;
+	MOV	word [SUBST_COUNT],0 ;no message substitution				       ;AN000;
+	MOV	byte [MSG_CLASS],-1 ;message class						       ;AN000;
+	MOV	byte [INPUT_FLAG],0 ;no input						       ;AN000;
 	CALL	PRINT_STDOUT			;show message "Already Installed"
 	stc
 
@@ -1089,9 +1120,9 @@ Install_Exit:
 	pop	ax
 	ret			    ;return
 
-INSTALL_FASTOPEN    ENDP
+;INSTALL_FASTOPEN    ENDP
 
-
+ 
 
 
 
@@ -1107,94 +1138,94 @@ INSTALL_FASTOPEN    ENDP
 ;  Output:    Memory is validated, Resident segment size is calculated
 ;	      Temporary stack segment is set
 ;----------------------------------------------------------------------------
-CHECK_MEM	PROC	NEAR		     ; DS-->Cseg_init
+CHECK_MEM:                ; DS-->Cseg_init
 
 ;** Compute the total resident segment size and then add the cache buffer
 ;** size.  The Resident segment size should be adjusted again after relocation.
 
-	mov	Total_Cache_Size,0	     ;reset total cache size (Name +Ext)
-	mov	Name_Cache_Size,0	     ;reset Name cache buffer size
-	mov	ax, offset End_Main	     ;size of Main_Seg in bytes 			   ;AN000;
+	mov	word [Total_Cache_Size],0 ;reset total cache size (Name +Ext)
+	mov	word [Name_Cache_Size],0 ;reset Name cache buffer size
+	mov	ax, End_Main             ;size of Main_Seg in bytes 			   ;AN000;
 	add	ax,15										   ;AN000;
 	mov	cl,4			     ;convert size to paragraph 			   ;AN000;
 	shr	ax,cl			     ;by dividng by 16					   ;AN000;
-	mov	MAIN_Size, ax		     ;save MAIN segment size in para			   ;AN000;
-	add	Res_Segs,ax		     ;update resident seg count 			   ;AN000;
+	mov	[MAIN_Size], ax     ;save MAIN segment size in para			   ;AN000;
+	add	[RES_SEGS],ax     ;update resident seg count 			   ;AN000;
 												   ;AN000;
-	mov	ax, offset End_Open	     ;size of Open_Seg in bytes 			   ;AN000;
+	mov	ax, END_OPEN             ;size of Open_Seg in bytes 			   ;AN000;
 	add	ax,15										   ;AN000;
 	mov	cl,4			     ;convert it to paragraph				   ;AN000;
 	shr	ax,cl										   ;AN000;
-	mov	OPEN_Size, ax		     ;save OPEN segment size in para			   ;AN000;
-	add	RES_SEGS,ax		     ;update resident seg count 			   ;AN000;
+	mov	[OPEN_Size], ax     ;save OPEN segment size in para			   ;AN000;
+	add	[RES_SEGS],ax     ;update resident seg count 			   ;AN000;
 												   ;AN000;
-	mov	ax, offset End_Seek	     ;add size of Seek_Seg
+	mov	ax, END_SEEK             ;add size of Seek_Seg
 	add	ax,15										   ;AN000;
 	mov	cl,4										   ;AN000;
 	shr	ax,cl			     ; convert to para (divide by 16)			   ;AN000;
-	mov	SEEK_Size, ax		     ;save Seek segment size in para			   ;AN000;
-	add	RES_SEGS,ax		    ;update resident seg count				   ;AN000;
+	mov	[SEEK_Size], ax     ;save Seek segment size in para			   ;AN000;
+	add	[RES_SEGS],ax    ;update resident seg count				   ;AN000;
 
 ;----------------------------------------------------------------------------
 ; Calculate the size of the NAME DRIVE HEADER BUFFERS
 ;----------------------------------------------------------------------------
 	xor	ax,ax			    ;reset the cache size register
-	cmp	total_Name_Count,0	    ;Fastopen  enabled ??
-	je	Check_ext_cache 	    ;no - compute extent cache size
+	cmp	word [Total_Name_Count],0 ;Fastopen  enabled ??
+	je	Check_Ext_Cache 	    ;no - compute extent cache size
 
-	mov	bx,offset DRIVE_CACHE	    ;get beginning of cache buff
+	mov	bx,Drive_Cache            ;get beginning of cache buff
 	xor	ax,ax
-	mov	al,size drive_cache_header  ;get size of one name entry
-	mul	Num_Of_drives		    ;get total needed for drive cache
+	mov	al,sizeof.DRIVE_CACHE_HEADER ;get size of one name entry
+	mul	[num_of_drives]    ;get total needed for drive cache
 	add	ax,bx			    ;set up correct offset
 	add	ax,15			    ;round up to paragraph boundary
 	mov	cl,4
 	shr	ax,cl			    ;convert to paragraphs
-	add	RES_SEGS,ax		    ;update resident seg count
-	mov	Total_Cache_Size, ax	    ;update total cache buff size
-	mov	Name_Cache_Size, ax	    ;size in paragraph
+	add	[RES_SEGS],ax    ;update resident seg count
+	mov	[Total_Cache_Size], ax   ;update total cache buff size
+	mov	[Name_Cache_Size], ax   ;size in paragraph
 
 ; Calculate the offset of the Name cache buffers
 	shl	ax,cl			    ;AX = offset to Name cache buff
-	mov	NAME_CACHE_BUFF,ax	    ;save Name cache address
+	mov	[name_cache_Buff],ax   ;save Name cache address
 
 ;-----------------------------------------------------------------------------
 ; Compute the size of the NAME CACHE  buffer
 ;-----------------------------------------------------------------------------
-	mov	ax,size Name_Record
-	mul	Total_Name_Count
+	mov	ax,sizeof.NAME_RECORD
+	mul	[Total_Name_Count]
 	add	ax,15			    ;round up to paragraph boundary
 	mov	cl,4
 	shr	ax,cl			    ;convert to paragraphs ( divide 16)
-	add	RES_SEGS,ax		    ;AX = End of Name cache buffers
-	add	Total_Cache_Size,ax	    ;update total cache buff size
-	add	Name_Cache_Size, ax	    ;
+	add	[RES_SEGS],ax    ;AX = End of Name cache buffers
+	add	[Total_Cache_Size],ax   ;update total cache buff size
+	add	[Name_Cache_Size], ax   ;
 
 Check_Ext_Cache:
-	cmp	total_ext_count,0	    ;Fastseek enabled ??
+	cmp	word [Total_Ext_Count],0 ;Fastseek enabled ??
 	je	Set_Stack		    ;no, set stack
 
 ;---------------------------------------------------------------------------
 ; Compute the size of the Extent cache including drive headers
 ;---------------------------------------------------------------------------
 Compute_Ext_Cache:			    ;calculate the extent buff offset
-	mov	ax,Name_Cache_Size
+	mov	ax,[Name_Cache_Size]
 	mov	cl,4
 	shl	ax,cl			    ;convert to bytes ( multiply by 16) 		   ;AN000;
-	mov	EXTENT_DRIVE_BUFF, ax	    ;save EXTENT DRIVE BUFFER address			     ;AN000;
+	mov	[extent_drive_Buff], ax   ;save EXTENT DRIVE BUFFER address			     ;AN000;
 
-	mov	ax, size Drive_Header								   ;AN000;
-	mul	num_Of_drives		    ;calc size of drive header buff			   ;AN000;
+	mov	ax, sizeof.DRIVE_HEADER         ;AN000;
+	mul	[num_of_drives]    ;calc size of drive header buff			   ;AN000;
 	mov	bx,ax			    ;save AX in BX					   ;AN000;
-	mov	ax, size Extent_Header	    ;size of one extent 				   ;AN000;
-	mul	Total_Ext_Count 	    ;calc size of extent buffers			   ;AN000;
+	mov	ax, sizeof.EXTENT_HEADER   ;size of one extent 				   ;AN000;
+	mul	[Total_Ext_Count]    ;calc size of extent buffers			   ;AN000;
 	add	ax,bx			    ;AX = size of extent buff in bytes			   ;AN000;
-	mov	ext_cache_size,ax	    ;save it for later use				   ;AN000;
+	mov	[Ext_Cache_Size],ax   ;save it for later use				   ;AN000;
 	add	ax,15			    ;round up to paragraph boundary			   ;AN000;
 	mov	cl,4										   ;AN000;
 	shr	ax,cl			    ;convert to paragraphs				   ;AN000;
-	add	RES_SEGS,ax		    ;update resident seg count				   ;AN000;
-	add	Total_Cache_Size,ax	    ;update total cache buff size
+	add	[RES_SEGS],ax    ;update resident seg count				   ;AN000;
+	add	[Total_Cache_Size],ax   ;update total cache buff size
 
 
 ;----------------------------------------------------------------------------
@@ -1203,28 +1234,28 @@ Compute_Ext_Cache:			    ;calculate the extent buff offset
 ; Cseg_Main segment.  This stack will be overlayed by the cache buffers.
 ;----------------------------------------------------------------------------
 Set_Stack:
-	mov	ax,RES_SEGS		    ;AX=size of code and buffs in para
-	add	ax,PSP_Seg		    ;AX=segID of stack
-	mov	Stack_Seg_Start,ax	    ;start of the new STACK
+	mov	ax,[RES_SEGS]    ;AX=size of code and buffs in para
+	add	ax,[psp_seg]    ;AX=segID of stack
+	mov	[stack_seg_start],ax   ;start of the new STACK
 	add	ax,20h			    ;add the size of the stack
-	mov	Stack_Seg_End,ax	    ;get end of what we need
+	mov	[stack_seg_end],ax   ;get end of what we need
 
 	push	ds			    ;
-	mov	ds,PSP_Seg		    ;access PSP for memory size
+	mov	ds,[psp_seg]    ;access PSP for memory size
 	mov	si,Top_mem
 	LODSW				    ;get total memory size
 	pop	ds
-	sub	ax,Stack_Seg_End	    ;see if there is enough for us
+	sub	ax,[stack_seg_end]   ;see if there is enough for us
 	jc	Not_Enough_Memory	    ;no - error exit
 	sub	ax,1000h		    ;will there still be 64K ??
 	jnc	Check_Reloc_Size	    ;and return
 
 Not_Enough_Memory:
-	MOV	AX,NOT_ENOUGH_MEM	    ;message number					   ;AN000;
-	MOV	MSG_NUM,AX		    ;set message number 				   ;AN000;
-	MOV	SUBST_COUNT,0		    ;no message substitution				   ;AN000;
-	MOV	MSG_CLASS,-1		    ;message class					   ;AN000;
-	MOV	INPUT_FLAG,0		    ;no input						   ;AN000;
+	MOV	AX,Not_enough_mem	    ;message number					   ;AN000;
+	MOV	[MSG_NUM],AX    ;set message number 				   ;AN000;
+	MOV	word [SUBST_COUNT],0 ;no message substitution				   ;AN000;
+	MOV	byte [MSG_CLASS],-1 ;message class					   ;AN000;
+	MOV	byte [INPUT_FLAG],0 ;no input						   ;AN000;
 	CALL	PRINT_STDOUT		    ;show message "Insufficient Memory"                    ;AN000;
 	stc				    ;set error flag					   ;AN000;
 	jmp	short Set_Mem_Ret	    ;return						   ;AN000;
@@ -1235,7 +1266,7 @@ Not_Enough_Memory:
 ; eliminated from the current resident seg.
 ;-----------------------------------------------------------------------------
 Check_Reloc_Size:
-	cmp	Ext_Mem,1		; extended memory relocation ??
+	cmp	word [Ext_Mem],1 ; extended memory relocation ??
 	jne	Set_Mem_Exit		; no - exit						   ;AN000;
 
 ;-----------------------------------------------------------------------------
@@ -1246,47 +1277,47 @@ Check_Reloc_Size:
 ;-----------------------------------------------------------------------------
 	xor	ax,ax
 	xor	bx,bx
-	cmp	total_Name_Count,0	;Fastseek enabled ??
-	je	Skip_name_size		;no - skip name size
-	mov	ax, OPEN_SIZE		;size of Open seg in para				  ;AN000;
+	cmp	word [Total_Name_Count],0 ;Fastseek enabled ??
+	je	Skip_Name_Size		;no - skip name size
+	mov	ax, [OPEN_Size] ;size of Open seg in para				  ;AN000;
 Skip_Name_Size:
-	cmp	total_ext_count,0	;Fastseek enabled ??
+	cmp	word [Total_Ext_Count],0 ;Fastseek enabled ??
 	je	Skip_Ext_Size		;no - skip extent size
-	mov	bx, SEEK_Size		;size of Seek_Seg in para				  ;AN000;
+	mov	bx, [SEEK_Size] ;size of Seek_Seg in para				  ;AN000;
 Skip_Ext_Size:
 	add	ax,bx
-	add	ax, Total_Cache_Size	;size of Init_Seg in para				  ;AN000;
+	add	ax, [Total_Cache_Size] ;size of Init_Seg in para				  ;AN000;
 	cmp	ax, 0404H		;Less than 16K ??					  ;AN000;
 	jge	Not_Enough_Space	;no - display message					;AN000;
 
-	mov	ax, OPEN_SIZE		;size of Open seg in para				  ;AN000;
-	add	ax, SEEK_Size		;size of Seek_Seg in para				  ;AN000;
-	add	ax, Total_Cache_Size	;reduce resident seg size				   ;AN000;
-	sub	RES_SEGS,ax		;update resident seg count				   ;AN000;
+	mov	ax, [OPEN_Size] ;size of Open seg in para				  ;AN000;
+	add	ax, [SEEK_Size] ;size of Seek_Seg in para				  ;AN000;
+	add	ax, [Total_Cache_Size] ;reduce resident seg size				   ;AN000;
+	sub	[RES_SEGS],ax ;update resident seg count				   ;AN000;
 
 ;-----------------------------------------------------------------------------
 ; If the code is to be moved to extended memory.  There is no reason to
 ; keep Init_Tree in main memory.  Remove that also to save space in base memory
 ;-----------------------------------------------------------------------------
-	mov	ax, offset End_Main1	;size of Main_Seg until Init_Tree (bytes)	      ;AN000;
+	mov	ax, End_Main1        ;size of Main_Seg until Init_Tree (bytes)	      ;AN000;
 	add	ax,15										   ;AN000;
 	mov	cl,4			;convert size to paragraph			      ;AN000;
 	shr	ax,cl			;by dividng by 16				      ;AN000;
-	mov	bx,Main_Size		;bx=total size of Main seg including Init_Tree
+	mov	bx,[MAIN_Size] ;bx=total size of Main seg including Init_Tree
 	sub	bx,ax			;bx=size after reducing Init_Tree
-	sub	RES_SEGS,bx		;update base memory resident seg count				       ;AN000;
+	sub	[RES_SEGS],bx ;update base memory resident seg count				       ;AN000;
 	jmp	short Set_Mem_Exit
 					;
 Not_Enough_Space:
-	MOV	AX,NO_PAGE_SPACE	; not enough space in EMS page
-	MOV	MSG_NUM,AX		; set message number
-	MOV	SUBST_COUNT,0		; no message
-	MOV	MSG_CLASS,-1		; message class
-	MOV	INPUT_FLAG,0		; no input
+	MOV	AX,No_page_space	; not enough space in EMS page
+	MOV	[MSG_NUM],AX ; set message number
+	MOV	word [SUBST_COUNT],0 ; no message
+	MOV	byte [MSG_CLASS],-1 ; message class
+	MOV	byte [INPUT_FLAG],0 ; no input
 	CALL	PRINT_STDOUT		; display message
-	mov	Ext_Mem, 0		; RESET XMA FLAG
+	mov	word [Ext_Mem], 0 ; RESET XMA FLAG
 	stc
-	jmp	set_mem_ret
+	jmp	Set_Mem_Ret
 
 Set_Mem_Exit:											   ;AN000;
 	clc											   ;AN000;
@@ -1294,9 +1325,9 @@ Set_Mem_Exit:											   ;AN000;
 Set_Mem_Ret:
 	ret											   ;AN000;
 
-CHECK_MEM	endp
+;CHECK_MEM	endp
 
-
+ 
 
 
 
@@ -1316,21 +1347,21 @@ CHECK_MEM	endp
 ;
 ;----------------------------------------------------------------------------
 
-RELOCATE_SEGMENT    PROC    NEAR
-	cmp	Ext_Mem,1		; Extended memory enabled ??						;AN000;
+RELOCATE_SEGMENT:
+	cmp	word [Ext_Mem],1 ; Extended memory enabled ??						;AN000;
 	je	Set_Seg_Ids		; yes - do extented memory relocation
-	jmp	Reloc_Low_Mem		; no - do low memory relocation 			    ;AN000;
+	jmp	Reloc_LOW_Mem		; no - do low memory relocation 			    ;AN000;
 
 ;----------------------------------------------------------------------------
 ; Move Fastopen, FastSeek or both to the Extended memory
 ;----------------------------------------------------------------------------
 Set_Seg_Ids:
 	cld				; clear direction flag (increment si and di)
-	cmp	Total_Name_Count,0	; Fastopen enabled ??
+	cmp	word [Total_Name_Count],0 ; Fastopen enabled ??
 	jne	Set_Open_Seg		; yes - set open seg in extented memory
 
-	mov	ax,EMS_Page_Seg 	; AX = seg id of Cseg_Seek in ext mem
-	mov	Seek_SegID,ax		; save it
+	mov	ax,[EMS_PAGE_SEG] ; AX = seg id of Cseg_Seek in ext mem
+	mov	[Seek_SegID],ax ; save it
 	jmp	Set_Seek_Seg		; no - fastopen, set Seek segment
 
 ;-----------------------------------------------------------------------------
@@ -1338,47 +1369,47 @@ Set_Seg_Ids:
 ;  Setup Cseg_Open segment in Extended Memory
 ;------------------------------------------------------------------------------
 Set_Open_Seg:
-	mov	ax,Cseg_Init		;
+	mov	ax,CSEG_INIT_		;
 	mov	ds,ax			; DS-->Cseg_Init
-	ASSUME	ds:Cseg_Init
-	mov	ax,EMS_Page_Seg 	; AX = seg id of Cseg_Open in ext mem
-	mov	Open_SegID,ax		; save it
+;	ASSUME	ds:Cseg_Init
+	mov	ax,[EMS_PAGE_SEG] ; AX = seg id of Cseg_Open in ext mem
+	mov	[Open_SegID],ax ; save it
 
 Copy_Open_Seg:
-	mov	ax, offset End_Open	; size of Open seg in bytes				   ;AN000;
+	mov	ax, END_OPEN        ; size of Open seg in bytes				   ;AN000;
 	mov	cl,1
 	shr	ax,cl			; convert to words					   ;AN000;
 	mov	cx,ax			; CX = number of WORDS to transfer			   ;AN000;
 	xor	si,si			; offset of the source in low memory					;AN000;
 	xor	di,di			; offset of the destination in XMA				 ;AN000;
-	mov	ax,Cseg_Open		; set source segID					   ;AN000;
+	mov	ax,CSEG_OPEN_		; set source segID					   ;AN000;
 	mov	ds,ax			; DS-->Cseg_Open					;AN000;
-	ASSUME	ds:Cseg_Open									   ;AN000;
-	mov	ax,Open_SegID		; set destination XMA  seg id					;AN000;
+;	ASSUME	ds:Cseg_Open									   ;AN000;
+	mov	ax,[es:Open_SegID] ; set destination XMA  seg id					;AN000;
 	mov	es,ax			; ES-->Extended memory page				;AN000;
-	ASSUME	es:nothing									   ;AN000;
+;	ASSUME	es:nothing									   ;AN000;
 	REP	MOVSW			; copy Open segment to extended memory
 					; SI-->Cseg_Seek segment
-	mov	ax,Cseg_Init		; no - only Fastseek specified
+	mov	ax,CSEG_INIT_		; no - only Fastseek specified
 	mov	ds,ax			; DS-->Cseg_Init
-	ASSUME	ds:Cseg_Init
-	cmp	Total_Ext_Count,0	; Fastseek enabled ??
-	jne	Set_Seek_id		; yes -set seek id
+;	ASSUME	ds:Cseg_Init
+	cmp	word [Total_Ext_Count],0 ; Fastseek enabled ??
+	jne	Set_Seek_Id		; yes -set seek id
 
-	mov	ax,Cseg_Seek		; only Fastopen is enabled							     ;AN000;
-	sub	ax,Cseg_Open		; AX = size of Cesg_Open segment			;AN000;
-	add	ax,EMS_Page_Seg 	; AX = new seg ID of Cseg_Init in ext			   ;AN000;
-	mov	Init_SegID,ax		; only if Fastopen is specified 	       ;AN000;
+	mov	ax,CSEG_SEEK_		; only Fastopen is enabled							     ;AN000;
+	sub	ax,CSEG_OPEN_		; AX = size of Cesg_Open segment			;AN000;
+	add	ax,[EMS_PAGE_SEG] ; AX = new seg ID of Cseg_Init in ext			   ;AN000;
+	mov	[Init_SegID],ax ; only if Fastopen is specified 	       ;AN000;
 	jmp	Copy_Init_Seg		; copy init_seg to extended memory
 
 ;-----------------------------------------------------------------------------
 ;  Setup Cseg_Seek segment in Extended Memory
 ;------------------------------------------------------------------------------
 Set_Seek_Id:
-	mov	ax,Cseg_Seek		;
-	sub	ax,Cseg_Open		; AX = size of Cesg_Open segment			;AN000;
-	add	ax,EMS_Page_Seg 	; AX = new seg ID of Cseg_Seek in		       ;AN000;
-	mov	Seek_SegID,ax		; extended memory					;AN000;
+	mov	ax,CSEG_SEEK_		;
+	sub	ax,CSEG_OPEN_		; AX = size of Cesg_Open segment			;AN000;
+	add	ax,[EMS_PAGE_SEG] ; AX = new seg ID of Cseg_Seek in		       ;AN000;
+	mov	[Seek_SegID],ax ; extended memory					;AN000;
 	jmp	Copy_Seek_Seg
 
 Set_Seek_Seg:				; only Fastseek is specified
@@ -1386,58 +1417,58 @@ Set_Seek_Seg:				; only Fastseek is specified
 	xor	di,di			; offset of the destination in XMA				 ;AN000;
 
 Copy_Seek_Seg:
-	mov	ax, offset End_Seek	;size of Cseg_Seek in bytes				 ;AN000;
+	mov	ax, END_SEEK        ;size of Cseg_Seek in bytes				 ;AN000;
 	mov	cl,1
 	shr	ax,cl			; convert to words					   ;AN000;
 	mov	cx,ax			; CX = number of WORDS to transfer			   ;AN000;
 	xor	si,si			; offset of the source in low memory					;AN000;
 	xor	di,di			; offset of the destination in XMA				 ;AN000;
-	mov	ax,Cseg_Seek		; set source segID					   ;AN000;
+	mov	ax,CSEG_SEEK_		; set source segID					   ;AN000;
 	mov	ds,ax
-	ASSUME	ds:Cseg_Seek									   ;AN000;
-	mov	ax,Seek_SegID		; set destination XMA  seg id					;AN000;
+;	ASSUME	ds:Cseg_Seek									   ;AN000;
+	mov	ax,[cs:Seek_SegID] ; set destination XMA  seg id					;AN000;
 	mov	es,ax
-	ASSUME	es:nothing									   ;AN000;
+;	ASSUME	es:nothing									   ;AN000;
 	REP	MOVSW			; copy Seek segment to extended memory
 					; SI-->Cseg_Init segment
-	mov	ax,Cseg_Init		; no - only Fastseek specified
+	mov	ax,CSEG_INIT_		; no - only Fastseek specified
 	mov	ds,ax			; DS-->Cseg_Init
-	ASSUME	ds:Cseg_Init
-	cmp	total_Name_Count,0	; FastOpen enabled ??
-	jne	Set_Init_Seg		; yes - set Init Segment
+;	ASSUME	ds:Cseg_Init
+	cmp	word [Total_Name_Count],0 ; FastOpen enabled ??
+	jne	Set_Init_seg		; yes - set Init Segment
 
-	mov	ax,Cseg_Init
-	sub	ax,Cseg_Seek		; ax = size of Cseg_Seek
-	add	ax,EMS_Page_Seg 	; Cseg_Init id only if Fastseek is specified
-	mov	Init_SegID,ax		;
-	jmp	copy_init_seg		; copy cseg_init area to extentde memory
+	mov	ax,CSEG_INIT_
+	sub	ax,CSEG_SEEK_		; ax = size of Cseg_Seek
+	add	ax,[EMS_PAGE_SEG] ; Cseg_Init id only if Fastseek is specified
+	mov	[Init_SegID],ax ;
+	jmp	Copy_Init_Seg		; copy cseg_init area to extentde memory
 
 ;-----------------------------------------------------------------------------
 ;  Setup Cseg_Init segment in Extended Memory
 ;------------------------------------------------------------------------------
 Set_Init_seg:
-	mov	ax,Cseg_Init		; yes - set init seg id
-	sub	ax,Cseg_Open		; AX = size of Open_Cseg+Seek_Cseg
-	add	ax,EMS_Page_Seg 	; new Cseg_Init id in XMA if both
-	mov	Init_SegID,ax		; Fastopen and Fastseek are enabled			   ;AN000;
+	mov	ax,CSEG_INIT_		; yes - set init seg id
+	sub	ax,CSEG_OPEN_		; AX = size of Open_Cseg+Seek_Cseg
+	add	ax,[EMS_PAGE_SEG] ; new Cseg_Init id in XMA if both
+	mov	[Init_SegID],ax ; Fastopen and Fastseek are enabled			   ;AN000;
 
 Copy_Init_Seg:				; comes here if no Cseg_Seek is required
 	xor	si,si			; offset of the source in low memory					;AN000;
 	xor	di,di			; offset of the destination in XMA				 ;AN000;
-	mov	ax, Total_Cache_Size	; size of Init seg area to be copied			 ;AN000;
+	mov	ax, [Total_Cache_Size] ; size of Init seg area to be copied			 ;AN000;
 	mov	cl,4			; in paragraph						  ;AN000;
 	shl	ax,cl			; convert to number of bytes			       ;AN000;
 	mov	cl,1			;
 	shr	ax,cl			; convert to number ofwords					    ;AN000;
 	mov	cx,ax			; CX = number of WORDS to transfer			   ;AN000;
-	mov	ax,Cseg_Init		; set source segID					   ;AN000;
+	mov	ax,CSEG_INIT_		; set source segID					   ;AN000;
 	mov	ds,ax
-	ASSUME	ds:Cseg_Init									   ;AN000;
-	mov	ax,Init_SegID		; set destination XMA  seg id					;AN000;
+;	ASSUME	ds:Cseg_Init									   ;AN000;
+	mov	ax,[Init_SegID] ; set destination XMA  seg id					;AN000;
 	mov	es,ax
-	ASSUME	es:nothing									   ;AN000;
+;	ASSUME	es:nothing									   ;AN000;
 	REP	MOVSW			; copy Init segment to extended memory
-	jmp	reloc_exit		; then return						    ;AN000;
+	jmp	Reloc_Exit		; then return						    ;AN000;
 
 
 ;NOTE:	No need to adjust the resident segment size (Res_Segs) since it is
@@ -1450,43 +1481,43 @@ Copy_Init_Seg:				; comes here if no Cseg_Seek is required
 ; resident size of the code.
 ;-----------------------------------------------------------------------
 Reloc_LOW_Mem:
-	cmp	Total_Name_Count,0     ; Fastopen function enabled ??
+	cmp	word [Total_Name_Count],0 ; Fastopen function enabled ??
 	jne	Check_Seek	       ; yes, check Fastseek function
 
 ; Relocate Cseg_Seek segment over Cseg_Open segment
-	mov	ax, offset End_Seek	; size of Cseg_Seek in bytes				       ;AN000;
+	mov	ax, END_SEEK        ; size of Cseg_Seek in bytes				       ;AN000;
 	mov	cl,1
 	shr	ax,cl			; convert to words					   ;AN000;
 	mov	cx,ax			; CX = number of WORDS to transfer			   ;AN000;
 	xor	si,si			; offset of the source					   ;AN000;
 	xor	di,di			; offset of the destination				   ;AN000;;AN000;
-	mov	ax,Cseg_Seek		; set source segID					   ;AN000;
+	mov	ax,CSEG_SEEK_		; set source segID					   ;AN000;
 	mov	ds,ax			; DS:SI-->Cseg_Seek					   ;AN000;
-	ASSUME	ds:Cseg_Seek									   ;AN000;
-	mov	ax,Cseg_Open		; set destination seg id				   ;AN000;
+;	ASSUME	ds:Cseg_Seek									   ;AN000;
+	mov	ax,CSEG_OPEN_		; set destination seg id				   ;AN000;
 	mov	es,ax			; ES:DI--> Cseg_Open				      ;AN000;
-	ASSUME	es:Cseg_Open									   ;AN000;
+;	ASSUME	es:Cseg_Open									   ;AN000;
 												   ;AN000;
 	REP	MOVSW			; relocate code and cache buffer
-	mov	ax,OPEN_Size		; reduce Open seg size from
-	sub	RES_SEGS,ax		; the resident size
+	mov	ax,[cs:OPEN_Size] ; reduce Open seg size from
+	sub	[cs:RES_SEGS],ax ; the resident size
 
 ;-----------------------------------------------------------------------
 ; Compute the new segID after relocation and save it
 ;-----------------------------------------------------------------------
-	mov	ax,Cseg_Init		;
+	mov	ax,CSEG_INIT_		;
 	mov	ds,ax			; DS-->Cseg_Init
-	ASSUME	ds:Cseg_Init
-	mov	ax,Cseg_Open		; AX = seg id of Cseg_Open in ext mem
-	mov	Seek_SegID,ax		; save it
+;	ASSUME	ds:Cseg_Init
+	mov	ax,CSEG_OPEN_		; AX = seg id of Cseg_Open in ext mem
+	mov	[Seek_SegID],ax ; save it
 												   ;AN000;
-	mov	ax,Seek_Size		; AX = size of Cseg_Seek
-	add	ax,Cseg_Open		; AX = new seg ID of Cseg_Init in ext			   ;AN000;
-	mov	Init_SegID,ax		; save it						   ;AN000;
-	jmp	short reloc_exit	;then return						   ;AN000;
+	mov	ax,[SEEK_Size] ; AX = size of Cseg_Seek
+	add	ax,CSEG_OPEN_		; AX = new seg ID of Cseg_Init in ext			   ;AN000;
+	mov	[Init_SegID],ax ; save it						   ;AN000;
+	jmp	short Reloc_Exit	;then return						   ;AN000;
 
 Check_Seek:
-	cmp	Total_Ext_Count,0	; Fastseek function enabled ??
+	cmp	word [Total_Ext_Count],0 ; Fastseek function enabled ??
 	jne	Reloc_Exit		; yes, no need for relocation
 
 ;-----------------------------------------------------------------------
@@ -1494,51 +1525,51 @@ Check_Seek:
 ; this portion should be same as the current size of Drive cache headers
 ; Anything more will overlay on Cseg_Init code which is currently active.
 ;-----------------------------------------------------------------------
-	mov	ax, size Drive_Cache_Header   ; size of one drive cache hdr
-	mov	cx,Max_Drives		; CX = maximum number of drives
+	mov	ax, sizeof.DRIVE_CACHE_HEADER ; size of one drive cache hdr
+	mov	cx,Max_drives		; CX = maximum number of drives
 	mul	cx			; AX = size of Cseg_Init portion
 	mov	cl,1
 	shr	ax,cl			; AX = size of portion in words
 	mov	cx,ax			; CX = number of WORDS to transfer			   ;AN000;
 	mov	si,0			; offset of the source					   ;AN000;
 	mov	di,0			; offset of the destination				   ;AN000;;AN000;
-	mov	ax,Cseg_Init		; set source segID					   ;AN000;
+	mov	ax,CSEG_INIT_		; set source segID					   ;AN000;
 	mov	ds,ax			; DS:SI-->Cseg_Seek					   ;AN000;
-	ASSUME	ds:Cseg_Init									   ;AN000;
-	mov	ax,Cseg_Seek		; set destination seg id				   ;AN000;
+;	ASSUME	ds:Cseg_Init									   ;AN000;
+	mov	ax,CSEG_SEEK_		; set destination seg id				   ;AN000;
 	mov	es,ax			; ES:DI--> Cseg_Open				      ;AN000;
-	ASSUME	es:Cseg_Seek									   ;AN000;
+;	ASSUME	es:Cseg_Seek									   ;AN000;
 												   ;AN000;
 	REP	MOVSW			; relocate Cseg_Init over Cseg_Seek
-	mov	ax,Seek_Size		; reduce Seek seg size from
-	sub	RES_SEGS,ax		; the resident size
+	mov	ax,[SEEK_Size] ; reduce Seek seg size from
+	sub	[RES_SEGS],ax ; the resident size
 
 ;-----------------------------------------------------------------------
 ; Compute the new segID after reloaction and save it
 ;-----------------------------------------------------------------------
-	mov	ax,Cseg_Init		;
+	mov	ax,CSEG_INIT_		;
 	mov	ds,ax			; DS-->Cseg_Init
-	ASSUME	ds:Cseg_Init
-	mov	ax,Cseg_Seek		; AX = seg id of Cseg_Open in ext mem
-	mov	Init_SegID,ax
+;	ASSUME	ds:Cseg_Init
+	mov	ax,CSEG_SEEK_		; AX = seg id of Cseg_Open in ext mem
+	mov	[Init_SegID],ax
 
 Reloc_Exit:
 ; copy the latest RES_SEGS size to Cseg_Main
-	mov	ax,Cseg_Init		;							   ;AN000;
+	mov	ax,CSEG_INIT_		;							   ;AN000;
 	mov	ds,ax			; DS-->Cseg_Init					   ;AN000;
-	ASSUME	ds:Cseg_Init									   ;AN000;
-	mov	ax,Cseg_Main		; set destination seg id				   ;AN000;;AN000;
+;	ASSUME	ds:Cseg_Init									   ;AN000;
+	mov	ax,CSEG_MAIN_		; set destination seg id				   ;AN000;;AN000;
 	mov	es,ax			; ES--> Cseg_Main				   ;AN000; ;AN000;
-	ASSUME	es:Cseg_Main									   ;AN000;;AN000;
-	mov	ax,Res_Segs									   ;AN000;
-	mov	es:Main_Res_Segs,ax	; save it						   ;AN000;
+;	ASSUME	es:Cseg_Main									   ;AN000;;AN000;
+	mov	ax,[RES_SEGS]          ;AN000;
+	mov	[es:Main_Res_Segs],ax ; save it						   ;AN000;
 
 	RET											   ;AN000;
 
-RELOCATE_SEGMENT      ENDP
+;RELOCATE_SEGMENT      ENDP
 
 
-
+ 
 
 
 
@@ -1555,98 +1586,98 @@ RELOCATE_SEGMENT      ENDP
 ;
 ;-----------------------------------------------------------------------
 
-COPY_DATA	PROC	NEAR
+COPY_DATA:
 
-	mov	ax,cseg_init									   ;AN000;
+	mov	ax,CSEG_INIT_									   ;AN000;
 	mov	ds,ax			      ;DS--> Cseg_Init			    ;AN000;
-	ASSUME	ds:Cseg_init									   ;AN000;
-	mov	ax,cseg_Main									   ;AN000;
+;	ASSUME	ds:Cseg_init									   ;AN000;
+	mov	ax,CSEG_MAIN_									   ;AN000;
 	mov	es,ax			      ;ES--> CSEG_MAIN			    ;AN000;
-	ASSUME	es:Cseg_Main									   ;AN000;
+;	ASSUME	es:Cseg_Main									   ;AN000;
 												   ;AN000;
-	mov	es:Main_Name_Cache_Seg, Cseg_Init						   ;AN000;
-	mov	ax,Num_Of_Drives								   ;AN000;
-	mov	es:Main_Num_Of_Drives,ax							   ;AN000;
-	mov	ax,ext_count									   ;AN000;
-	mov	es:Main_Ext_Count,ax								   ;AN000;
-	mov	ax,Extent_Drive_Buff								   ;AN000;
-	mov	es:Main_Extent_Drive_Buff,ax							   ;AN000;
-	mov	ax,Name_Cache_Buff								   ;AN000;
-	mov	es:Main_Name_Cache_Buff,ax							    ;AN000;
-	mov	ax,Name_Drive_Buff								   ;AN000;
-	mov	es:Main_Name_Drive_Buff,ax							   ;AN000;
-	mov	ax,Ems_Flag
-	mov	es:Main_EMS_FLAG,ax
-	mov	ax,EMS_PAGE_Seg 								   ;AN000;
-	mov	es:Main_EMS_PAGE_Seg,ax 							   ;AN000;
+	mov	word [es:Main_name_cache_seg], Cseg_Init  ;AN000;
+	mov	ax,[num_of_drives]         ;AN000;
+	mov	[es:Main_Num_Of_drives],ax        ;AN000;
+	mov	ax,[Ext_Count]          ;AN000;
+	mov	[es:Main_Ext_Count],ax         ;AN000;
+	mov	ax,[extent_drive_Buff]         ;AN000;
+	mov	[es:Main_extent_drive_Buff],ax        ;AN000;
+	mov	ax,[name_cache_Buff]         ;AN000;
+	mov	[es:Main_name_cache_Buff],ax         ;AN000;
+	mov	ax,[Name_Drive_Buff]         ;AN000;
+	mov	[es:Main_Name_Drive_Buff],ax        ;AN000;
+	mov	ax,[EMS_FLAG]
+	mov	[es:Main_EMS_FLAG],ax
+	mov	ax,[EMS_PAGE_SEG]          ;AN000;
+	mov	[es:Main_EMS_PAGE_SEG],ax         ;AN000;
 
 IF	BUFFERFLAG
-	mov	ax, EMS_PAGE_NUM
-	mov	es:ems_page_number, ax	       ;HKN
-ENDIF
+	mov	ax, [EMS_PAGE_NUM]
+	mov	[es:EMS_PAGE_NUMBER], ax      ;HKN
+end if
 					       
 	mov	ax,EMS_PAGE_SIZE								   ;AN000;
-	mov	es:Main_EMS_PAGE_SIZE,ax							    ;AN000;
-	mov	ax,Total_Ext_Count								   ;AN000;
-	mov	es:Main_Total_Ext_Count,ax							   ;AN000;
-	mov	ax,Ext_Cache_Size								   ;AN000;
-	mov	es:Main_Ext_Cache_Size,ax							  ;AN000;
-	mov	ax,Total_Name_Count								   ;AN000;
-	mov	es:Main_Total_Name_Count,ax
+	mov	[es:Main_EMS_PAGE_SIZE],ax         ;AN000;
+	mov	ax,[Total_Ext_Count]         ;AN000;
+	mov	[es:Main_Total_Ext_Count],ax        ;AN000;
+	mov	ax,[Ext_Cache_Size]         ;AN000;
+	mov	[es:Main_ext_cache_size],ax       ;AN000;
+	mov	ax,[Total_Name_Count]         ;AN000;
+	mov	[es:Main_Total_Name_Count],ax
 
 ; Copy drive buffer to MAIN segment
-	 lea   si,ParamBuff									   ;AN000;
-	 lea   di,es:Main_ParamBuff								   ;AN000;
+	 lea   si,[Parambuff]          ;AN000;
+	 lea   di,[es:Main_ParamBuff]         ;AN000;
 	 mov   cx,50										   ;AN000;
 
 Paramloop:
 	 mov   al,[si]										   ;AN000;
-	 mov   es:[di],al									   ;AN000;
+	 mov   [es:di],al									   ;AN000;
 	 inc   si										   ;AN000;
 	 inc   di										   ;AN000;
-	 LOOP  paramloop									   ;AN000;
+	 LOOP  Paramloop									   ;AN000;
 
 ;-----------------------------------------------------------------------
 ; Copy data values to OPEN segment (Cseg_Open)
 ;-----------------------------------------------------------------------
-	mov	ax,cseg_Open									   ;AN000;
+	mov	ax,CSEG_OPEN_									   ;AN000;
 	mov	es,ax			      ;ES--> CSEG_Open			    ;AN000;
-	ASSUME	es:Cseg_Open									   ;AN000;
-	mov	si,offset drive_cache								   ;AN000;
-	mov	es:Open_Name_Drive_Buff,si							   ;AN000;
-	mov	es:Open_Name_Cache_Seg,Cseg_Init						   ;AN000;
-	mov	ax,check_Queue
-	mov	es:chk_Flag,ax
+;	ASSUME	es:Cseg_Open									   ;AN000;
+	mov	si,Drive_Cache                  ;AN000;
+	mov	[es:Open_name_Drive_Buff],si        ;AN000;
+	mov	word [es:Open_name_cache_seg],Cseg_Init  ;AN000;
+	mov	ax,[CHECK_QUEUE]
+	mov	[es:Chk_Flag],ax
 
 ;-----------------------------------------------------------------------
 ; Copy data values to SEEK segment (Cseg_Seek) for Fastseek functions
 ;-----------------------------------------------------------------------
-	mov	ax,cseg_Seek									   ;AN000;
+	mov	ax,CSEG_SEEK_									   ;AN000;
 	mov	es,ax			      ;ES--> CSEG_Seek			    ;AN000;
-	ASSUME	es:Cseg_Seek									   ;AN000;
-	mov	si,Extent_Drive_Buff								   ;AN000;
-	mov	es:Seek_Extent_Drive_Buff,si							   ;AN000;
-	mov	es:Seek_Name_Cache_Seg,Cseg_Init						   ;AN000;
-	mov	ax,Num_Of_Drives								   ;AN000;
-	mov	es:Seek_Num_Of_Drives,ax							   ;AN000;
-	mov	ax,Total_Ext_Count									 ;AN000;
-	mov	es:Seek_Total_Ext_Count,ax							   ;AN000;
-	mov	ax,Total_Name_Count									 ;AN000;
-	mov	es:Seek_Total_name_Count,ax							    ;AN000;
-	mov	ax,Name_Cache_Buff								   ;AN000;
-	mov	es:Seek_Name_Cache_Buff,ax							    ;AN000;
-	mov	ax,Name_Drive_Buff								   ;AN000;
-	mov	es:Seek_Name_Drive_Buff,ax							   ;AN000;
-	mov	ax,check_Queue
-	mov	es:check_Flag,ax
+;	ASSUME	es:Cseg_Seek									   ;AN000;
+	mov	si,[extent_drive_Buff]         ;AN000;
+	mov	[es:Seek_extent_drive_Buff],si        ;AN000;
+	mov	word [es:Seek_name_cache_seg],Cseg_Init  ;AN000;
+	mov	ax,[num_of_drives]         ;AN000;
+	mov	[es:Seek_Num_Of_drives],ax        ;AN000;
+	mov	ax,[Total_Ext_Count]        ;AN000;
+	mov	[es:Seek_Total_Ext_Count],ax        ;AN000;
+	mov	ax,[Total_Name_Count]        ;AN000;
+	mov	[es:Seek_Total_Name_Count],ax         ;AN000;
+	mov	ax,[name_cache_Buff]         ;AN000;
+	mov	[es:Seek_Name_Cache_Buff],ax         ;AN000;
+	mov	ax,[Name_Drive_Buff]         ;AN000;
+	mov	[es:Seek_Name_Drive_Buff],ax        ;AN000;
+	mov	ax,[CHECK_QUEUE]
+	mov	[es:Check_Flag],ax
 												   ;AN000;
-	mov	ax,cseg_Init									   ;AN000;
+	mov	ax,CSEG_INIT_									   ;AN000;
 	mov	es,ax			      ;ES addressability to CSEG_Init			   ;AN000;
-	ASSUME	es:Cseg_Init									   ;AN000;
+;	ASSUME	es:Cseg_Init									   ;AN000;
 												   ;AN000;
 	ret
 
-COPY_DATA	ENDP
+;COPY_DATA	ENDP
 
 
 
@@ -1665,90 +1696,92 @@ COPY_DATA	ENDP
 ;	be changed after the code and buffers are relocated.
 ;-----------------------------------------------------------------------
 
-ADJUST_SEGIDS	PROC	NEAR
+ADJUST_SEGIDS:
 
-	mov	ax,Cseg_Init									   ;AN000;
+	mov	ax,CSEG_INIT_									   ;AN000;
 	mov	ds,ax			      ;DS addressability to Cseg_Init			   ;AN000;
-	ASSUME	ds:Cseg_init									   ;AN000;;AN000;
-	mov	ax,cseg_Main									   ;AN000;
+;	ASSUME	ds:Cseg_init									   ;AN000;;AN000;
+	mov	ax,CSEG_MAIN_									   ;AN000;
 	mov	es,ax			      ;ES addressability to CSEG_MAIN			   ;AN000;
-	ASSUME	es:Cseg_Main									   ;AN000;
+;	ASSUME	es:Cseg_Main									   ;AN000;
 
-	mov	bx, Init_segID		      ; copy seg ID of Init_Seg to			   ;AN000;
-	mov	es:Main_Name_Cache_Seg, bx    ; Main seg					   ;AN000;
+	mov	bx, [Init_SegID]      ; copy seg ID of Init_Seg to			   ;AN000;
+	mov	[es:Main_name_cache_seg], bx  ; Main seg					   ;AN000;
 
-	cmp	Total_Name_Count,0	      ; Fastopen function enabled ??
+	cmp	word [Total_Name_Count],0 ; Fastopen function enabled ??
 	je	Adjust_Seek		      ; yes, Adjust Cseg_Seek ID
 
-	mov	ax,Open_SegID									   ;AN000;
+	mov	ax,[Open_SegID]          ;AN000;
 	mov	es,ax			      ; ES addressability to CSEG_Open			    ;AN000;
-	ASSUME	es:Cseg_Open		      ; copy segid of init_seg to			   ;AN000;
-	mov	es:Open_Name_Cache_Seg, bx    ; Open segment
+;	ASSUME	es:Cseg_Open		      ; copy segid of init_seg to			   ;AN000;
+	mov	[es:Open_name_cache_seg], bx  ; Open segment
 
 Adjust_Seek:
-	cmp	Total_Ext_Count,0	      ;Fastopen function enabled ??
+	cmp	word [Total_Ext_Count],0 ;Fastopen function enabled ??
 	je	Adjust_Vectors		      ;yes, check Fastseek function
 
-	mov	ax,Seek_SegID									   ;AN000;
+	mov	ax,[Seek_SegID]          ;AN000;
 	mov	es,ax			      ; ES addressability to CSEG_Seek			    ;AN000;
-	ASSUME	es:Cseg_Seek									   ;AN000;
-	mov	es:Seek_Name_Cache_Seg, bx							   ;AN000;
+;	ASSUME	es:Cseg_Seek									   ;AN000;
+	mov	[es:Seek_name_cache_seg], bx        ;AN000;
 
 
 ; Adjust seg ids of jump vectors to Fastopen and Fastseek functions				   ;AN000;
 Adjust_Vectors:
-	mov	ax,cseg_Main									   ;AN000;
+	mov	ax,CSEG_MAIN_									   ;AN000;
 	mov	es,ax			      ;ES addressability to CSEG_MAIN			   ;AN000;
-	ASSUME	es:Cseg_Main									   ;AN000;
+;	ASSUME	es:Cseg_Main									   ;AN000;
 					      ;DS addressability to Cseg_Init
-	mov	ax, Open_SegID									   ;AN000;
-	mov	word ptr es:FOPEN_Insert + word, ax						   ;AN000;
-	mov	word ptr es:FOPEN_Update + word, ax						   ;AN000;
-	mov	word ptr es:FOPEN_Delete + word, ax						   ;AN000;
-	mov	word ptr es:FOPEN_Lookup + word, ax						   ;AN000;
+	mov	ax, [Open_SegID]          ;AN000;
+; MASM read a type name in an expression as the number of bytes it
+; takes up, so BYTE on its own is 1 and WORD is 2.
+	mov	word [es:FOPEN_Insert+2], ax                ;AN000;
+	mov	word [es:FOPEN_Update+2], ax                ;AN000;
+	mov	word [es:FOPEN_Delete+2], ax                ;AN000;
+	mov	word [es:FOPEN_Lookup+2], ax                ;AN000;
 IF	BUFFERFLAG
-	mov	word ptr es:FOPEN_Purge + word, ax						   ;TEL 9/29
-ENDIF
+	mov	word [es:FOPEN_Purge+2], ax                ;TEL 9/29
+end if
 
 
-	mov	ax, Seek_SegID									   ;AN000;
-	mov	word ptr es:FSEEK_Open	   + word, ax						    ;AN000;
-	mov	word ptr es:FSEEK_Close    + word, ax						    ;AN000;
-	mov	word ptr es:FSEEK_Insert   + word, ax						    ;AN000;
-	mov	word ptr es:FSEEK_Delete   + word, ax						    ;AN000;
-	mov	word ptr es:FSEEK_Lookup   + word, ax						    ;AN000;
-	mov	word ptr es:FSEEK_Truncate + word, ax						    ;AN000;
-	mov	word ptr es:FSEEK_Purge    + word, ax						    ;AN000;
+	mov	ax, [Seek_SegID]          ;AN000;
+	mov	word [es:FSEEK_Open	+2], ax                   ;AN000;
+	mov	word [es:FSEEK_Close+2], ax                    ;AN000;
+	mov	word [es:FSEEK_Insert+2], ax                   ;AN000;
+	mov	word [es:FSEEK_Delete+2], ax                   ;AN000;
+	mov	word [es:FSEEK_Lookup+2], ax                   ;AN000;
+	mov	word [es:FSEEK_Truncate+2], ax                 ;AN000;
+	mov	word [es:FSEEK_Purge+2], ax                    ;AN000;
 
-	cmp	Total_Name_Count,0	      ; Fastopen function enabled ??
+	cmp	word [Total_Name_Count],0 ; Fastopen function enabled ??
 	je	Adjust_Delete		      ; no , exit
 
 ; Change the segID of single Jump Vector inside Cseg_Main
-	mov	ax,cseg_Main									   ;AN000;;AN000;
+	mov	ax,CSEG_MAIN_									   ;AN000;;AN000;
 	mov	es,ax			      ;ES addressability to CSEG_MAIN			   ;AN000;;AN000;
-	ASSUME	es:Cseg_Main									   ;AN000;;AN000;
-	mov	ax,Open_SegID									   ;AN000;
-	mov	word ptr es:Vector_LookUp + word, ax						  ;;AN000;AN000;
+;	ASSUME	es:Cseg_Main									   ;AN000;;AN000;
+	mov	ax,[Open_SegID]          ;AN000;
+	mov	word [es:VECTOR_LookUp+2], ax               ;;AN000;AN000;
 
 Adjust_Delete:
-	cmp	Total_Ext_Count,0	      ; Fastseek function enabled ??
+	cmp	word [Total_Ext_Count],0 ; Fastseek function enabled ??
 	je	Adjust_Exit		      ; no , exit
 
 ; Change the segID of single Jump Vector inside Cseg_Main
-	mov	ax,cseg_Main									   ;AN000;;AN000;
+	mov	ax,CSEG_MAIN_									   ;AN000;;AN000;
 	mov	es,ax			      ;ES addressability to CSEG_MAIN			   ;AN000;;AN000;
-	ASSUME	es:Cseg_Main									   ;AN000;;AN000;
-	mov	ax,Seek_SegID									   ;AN000;
-	mov	word ptr es:Vector_Delete + word, ax						  ;;AN000;AN000;
+;	ASSUME	es:Cseg_Main									   ;AN000;;AN000;
+	mov	ax,[Seek_SegID]          ;AN000;
+	mov	word [es:VECTOR_Delete+2], ax               ;;AN000;AN000;
 
 Adjust_Exit:
 	ret											   ;AN000;
 					      ;return
-ADJUST_SEGIDS	ENDP
+;ADJUST_SEGIDS	ENDP
 
 
 
-
+ 
 
 
 
@@ -1774,22 +1807,22 @@ ADJUST_SEGIDS	ENDP
 ; *
 ; *************************************************************************
 
-EOL	       EQU   -1 	   ; Indicator for End-Of-Line
+EOL	       equ   (-1)	; Indicator for End-Of-Line
 NOERROR        EQU    0 	   ; Return Indicator for No Errors
 
 
-PARSE	 PROC	  NEAR
+PARSE:
 
-	 mov   num_of_drives,0	   ; initialize drive count
-	 mov   name_count,0
-	 mov   ext_count,0
-	 mov   Total_name_count,0								   ;AN000;
-	 mov   Total_ext_count,0								   ;AN000;
-	 mov   Prev_Type,0									   ;AN000;
-	 mov   Ext_Mem,0									   ;AN000;
-	 mov   Check_Queue,0									   ;AN000;
-	 lea   si,parambuff	    ; drive ID buff address					   ;AN000;
-	 mov   parmbuff_Ptr,si	    ; save it							   ;AN000;
+	 mov   word [num_of_drives],0 ; initialize drive count
+	 mov   word [Name_Count],0
+	 mov   word [Ext_Count],0
+	 mov   word [Total_Name_Count],0    ;AN000;
+	 mov   word [Total_Ext_Count],0    ;AN000;
+	 mov   byte [PREV_TYPE],0     ;AN000;
+	 mov   word [Ext_Mem],0     ;AN000;
+	 mov   word [CHECK_QUEUE],0     ;AN000;
+	 lea   si,[Parambuff]   ; drive ID buff address					   ;AN000;
+	 mov   [Parmbuff_Ptr],si   ; save it							   ;AN000;
 
 ;----------------------------------------------------------------------------
 ; Get command string address from PSP
@@ -1797,22 +1830,22 @@ PARSE	 PROC	  NEAR
 	 mov   si,0081H
 	 mov   ah,62H
 	 INT   21H		   ; get program PSP segment					   ;AN000;
-	 mov   PSP_Seg,bx	   ; save PSP segment						   ;AN000;
+	 mov   [psp_seg],bx  ; save PSP segment						   ;AN000;
 												   ;AN000;
 	 mov   ds,bx		   ; DS = PSP segment						   ;AN000;
 	 mov   si,0081h 	   ; SI-->beginning of parameter string in PSP
-	 lea   di,cmdline_buff	   ; DI-->command param buffer				 ;AN000;
+	 lea   di,[Cmdline_buff]  ; DI-->command param buffer				 ;AN000;
 	 mov   cx,127		   ; copy 127 bytes from PSP					   ;AN000;
 
 ;----------------------------------------------------------------------------
 ; Copy command parameters from PSP  to the  command buffer
 ;----------------------------------------------------------------------------
 Cmdloop:
-	 mov   al,ds:[si]	   ; DS:SI-->Command line					   ;AN000;
-	 mov   es:[di],al	   ; ES:DI-->program command buffer				   ;AN000;
+	 mov   al,[ds:si]	   ; DS:SI-->Command line					   ;AN000;
+	 mov   [es:di],al	   ; ES:DI-->program command buffer				   ;AN000;
 	 inc   si										   ;AN000;
 	 inc   di										   ;AN000;
-	 LOOP  cmdloop		   ; copy command line
+	 LOOP  Cmdloop		   ; copy command line
 	 push  cs										   ;AN000;
 	 pop   ds										   ;AN000;
 
@@ -1820,70 +1853,70 @@ Cmdloop:
 ; set parametrs for SysParse call
 ;----------------------------------------------------------------------------
 	 xor   cx,cx		   ; no params processed so far 				    ;AN000;
-	 MOV  ORDINAL,CX	   ; SAVE initial ordinal value 				    ;AN000;
-	 lea   si,cmdline_buff	   ; ES:SI-->command line								 ;AN000;
-	 lea   di,parms 	   ; ES:DI-->parameter
-	 MOV  CURRENT_PARM,SI	   ; pointer to next positional 				     ;AN000;
+	 MOV  [ORDINAL],CX  ; SAVE initial ordinal value 				    ;AN000;
+	 lea   si,[Cmdline_buff]  ; ES:SI-->command line								 ;AN000;
+	 lea   di,[PARMS]   ; ES:DI-->parameter
+	 MOV  [CURRENT_PARM],SI  ; pointer to next positional 				     ;AN000;
 
 	 mov   ax,0100h 	   ; Drive only
-	 mov   pos1type,ax	   ; set positional control block 1								 ;AN000;
+	 mov   [Pos1Type],ax  ; set positional control block 1								 ;AN000;
 	 mov   ax,08502h	   ; Numeric/Complex/Drive/Repeat
-	 mov   pos2type,ax	   ; set positional control block 2								 ;AN000;
+	 mov   [Pos2Type],ax  ; set positional control block 2								 ;AN000;
 	 mov   al,1		   ; minimum 1 positional								 ;AN000;
-	 mov   Par_Min,al	   ;
+	 mov   [par_min],al  ;
 	 mov   al,2										   ;AN000;
-	 mov   Par_Max,al	   ; maximum 1 positional								 ;AN000;
-	 jmp   short set_param
+	 mov   [par_max],al  ; maximum 1 positional								 ;AN000;
+	 jmp   short Set_Param
 
 ;----------------------------------------------------------------------------
 ;   MAIN PARSE LOOP
 ;----------------------------------------------------------------------------
 PARSE_LOOP:			   ; MAIN PARSE LOOP
 	 mov   ax,08502h	   ; number/drive ID/comlex/repeat
-	 mov   pos1type,ax	   ; set positional control block								 ;AN000;
+	 mov   [Pos1Type],ax  ; set positional control block								 ;AN000;
 	 mov   ax,08502h	   ;
-	 mov   pos2type,ax	   ;
+	 mov   [Pos2Type],ax  ;
 	 mov   al,1		   ; minimum 1 positional								 ;AN000;
-	 mov   Par_Min,al	   ; set min
+	 mov   [par_min],al  ; set min
 	 mov   al,2		   ; maximum 2 positionals								  ;AN000;
-	 mov   Par_Max,al	   ; set max										 ;AN000;
+	 mov   [par_max],al  ; set max										 ;AN000;
 
 Set_Param:
-	 mov   Par_sw,1 	   ; set switch flag in PARSMX
+	 mov   byte [par_sw],1 ; set switch flag in PARSMX
 	 xor   dx,dx
 	 push  cs										   ;AN000;
 	 pop   es		   ; ES=DS=CS							 ;AN000;
-	 LEA  DI,PARMS		   ; ES:DI = PARSE CONTROL DEFINITON				    ;AN000;
-	 MOV  SI,CURRENT_PARM	   ; DS:SI = next positional				 ;AN000;
+	 LEA  DI,[PARMS]   ; ES:DI = PARSE CONTROL DEFINITON				    ;AN000;
+	 MOV  SI,[CURRENT_PARM]  ; DS:SI = next positional				 ;AN000;
 	 XOR  DX,DX		   ; RESERVED, INIT TO ZERO					    ;AN000;
-	 MOV  CX,ORDINAL	   ; OPERAND ORDINAL, INITIALLY 				    ;AN000;
+	 MOV  CX,[ORDINAL]  ; OPERAND ORDINAL, INITIALLY 				    ;AN000;
 
-	 CALL  SYSPARSE 	   ; Parse current positional
+	 CALL  SysParse 	   ; Parse current positional
 
-	 mov   Next_Parm,si	   ; save pointer to next positional				  ;AN000;
-	 mov   ORDINAL,CX	   ; save current ordinal					   ;AN000;
+	 mov   [NEXT_PARM],si  ; save pointer to next positional				  ;AN000;
+	 mov   [ORDINAL],CX  ; save current ordinal					   ;AN000;
 	 cmp   ax,EOL		   ; END-OF-COMMAND string ??					   ;AN000;
-	 jne   Parse_chk_Error	   ; no -  check error
+	 jne   Parse_Chk_Error	   ; no -  check error
 
 
 ;----------------------------------------------------------------------------
 ; If previous positional is a drive ID without Name or Extent count then assign
 ; default counts .
 ;----------------------------------------------------------------------------
-	 cmp   Prev_Type,6	   ; previous param = drive ID					   ;AN000;
+	 cmp   byte [PREV_TYPE],6 ; previous param = drive ID					   ;AN000;
 	 jne   Take_Exit	   ; no - exit							    ;AN000;
 												   ;AN000;
 	 CALL  PROC_DEFAULT	   ; yes - setup default counts for previous drive			 ;AN000;
 	 jnc   Take_Exit	   ; exit						 ;AN000;
-	 jmp   parse_Error	   ; error exit 							       ;AN000;
+	 jmp   PARSE_ERROR	   ; error exit 							       ;AN000;
 
 Take_Exit:
-	 CALL  Verify_Counts	   ; verify the Total counts
-	 jnc   Counts_OK	   ; exit if count ok
-	 jmp   parse_error	   ; else error exit
+	 CALL  VERIFY_COUNTS	   ; verify the Total counts
+	 jnc   Counts_Ok	   ; exit if count ok
+	 jmp   PARSE_ERROR	   ; else error exit
 
 Counts_Ok:
-	 jmp   parse_exit	   ; normal - exit
+	 jmp   Parse_Exit	   ; normal - exit
 
 
 ;----------------------------------------------------------------------------
@@ -1891,19 +1924,19 @@ Counts_Ok:
 ;----------------------------------------------------------------------------
 Parse_Chk_Error:		   ; check for error conditions
 	 cmp   ax,NOERROR	   ; any parse error ??
-	 jne   verify_missing_oper ; yes - check missing operand
+	 jne   Verify_Missing_Oper ; yes - check missing operand
 	 jmp   Chk_Result	   ; no - check result buffer					     ;AN000;
 
 Verify_Missing_Oper:
 	 cmp   ax,2		   ; yes - missing operand error??
-	 jne   disp_error	   ; no - jump							    ;AN000;
+	 jne   Disp_Error	   ; no - jump							    ;AN000;
 
-	 cmp   Prev_Type,0	   ; yes - any previous parameters ??
-	 jne   Chk_Prev_Drive	   ; yes, previous drive id							;AN000;
-	 mov	 MSG_CLASS,2
-	 MOV	 MSG_NUM,AX	   ; set message number 					   ;AN000;
-	 MOV	 SUBST_COUNT,0	   ; no message substitution					   ;AN000;
-	 MOV	 INPUT_FLAG,0	   ; no input							   ;AN000;
+	 cmp   byte [PREV_TYPE],0 ; yes - any previous parameters ??
+	 jne   Chk_prev_drive	   ; yes, previous drive id							;AN000;
+	 mov	 byte [MSG_CLASS],2
+	 MOV	 [MSG_NUM],AX  ; set message number 					   ;AN000;
+	 MOV	 word [SUBST_COUNT],0 ; no message substitution					   ;AN000;
+	 MOV	 byte [INPUT_FLAG],0 ; no input							   ;AN000;
 	 CALL	 PRINT_STDOUT	   ; show message						   ;AN000;
 	 stc			   ; set error flag						   ;AN000;
 	 jmp   Parse_Exit	   ; exit
@@ -1912,30 +1945,30 @@ Verify_Missing_Oper:
 ; If previous positional is drive ID without counts then assign default counts
 ;----------------------------------------------------------------------------
 Chk_prev_drive:
-	 cmp   Prev_Type,6	   ; previous param = drive ID ??				      ;AN000;
+	 cmp   byte [PREV_TYPE],6 ; previous param = drive ID ??				      ;AN000;
 	 jne   Take_Exit1	   ; no - exit							    ;AN000;
 
 	 CALL  PROC_DEFAULT	   ; yes - assign default ID
 	 jnc   Take_Exit1	   ; no error, verify counts						   ;AN000;
-	 jmp   parse_Error	   ; error exit 							       ;AN000;
+	 jmp   PARSE_ERROR	   ; error exit 							       ;AN000;
 
 Take_Exit1:
-	 CALL  Verify_Counts	   ; verify the Total counts
+	 CALL  VERIFY_COUNTS	   ; verify the Total counts
 	 jnc   Counts_right	   ; count ok - check special case
-	 jmp   parse_error	   ; error - exit
+	 jmp   PARSE_ERROR	   ; error - exit
 
 Counts_right:
-	 cmp   Prev_Type,0	   ; no previous param ?  (Special case)					 ;AN000;
-	 je    invalid_operand	   ; no, exit ( FASTOPEN >TEMP ) case				   ;AN000;
+	 cmp   byte [PREV_TYPE],0 ; no previous param ?  (Special case)					 ;AN000;
+	 je    Invalid_Operand	   ; no, exit ( FASTOPEN >TEMP ) case				   ;AN000;
 	 clc											   ;AN000;
-	 jmp   parse_exit	   ; exit
+	 jmp   Parse_Exit	   ; exit
 
 Invalid_Operand:		   ; else error
-	 jmp   bad_param
+	 jmp   Bad_Param
 
 Disp_Error:
 	 cmp   ax, 3		   ; invalid switch type ??
-	 jne   bad_param	   ; no -
+	 jne   Bad_Param	   ; no -
 	 jmp   Bad_Switch
 
 ;----------------------------------------------------------------------------
@@ -1944,31 +1977,31 @@ Disp_Error:
 ; flag and take normal exit.
 ;----------------------------------------------------------------------------
 Bad_Param:
-	mov   si,Current_Parm	   ; SI-->current parameter (analyser hook)
+	mov   si,[CURRENT_PARM]  ; SI-->current parameter (analyser hook)
 	mov   al,0e0h		   ; เ (hidden character to activate analyser)
 	cmp   [si],al		   ; activate analyser ??
-	jne   set_disp_param	   ; no - normal error
-	mov   Check_Queue,1	   ; yes - set flag to activate analyser
+	jne   Set_Disp_Param	   ; no - normal error
+	mov   word [CHECK_QUEUE],1 ; yes - set flag to activate analyser
 	clc
-	jmp   Chk_Prev_Drive	   ; exit
+	jmp   Chk_prev_drive	   ; exit
 
 Set_Disp_Param:
-	mov   di,Next_Parm	  ; ending address of bad param  (1/6/88)
+	mov   di,[NEXT_PARM] ; ending address of bad param  (1/6/88)
 	mov   al,0
-	mov   ds:[di],al	   ; set termination character
-	LEA   SI,SUBLIST1	  ; DS:SI-->Substitution list					   ;AN000;
-	MOV   AX,CURRENT_PARM	  ; starting address of bad parameter				  ;AN000;
-	MOV   [SI].DATA_OFF,AX	  ; SI-->File name						   ;AN000;
-	MOV   [SI].DATA_SEG,DS	  ; DS-->Segment						   ;AN000;
-	MOV   [SI].MSG_ID,0	  ; message ID							   ;AN000;
-	MOV   [SI].FLAGS,010H	  ; ASCIIZ string, left align					   ;AN000;
-	MOV   [SI].MAX_WIDTH,0	  ; MAXIMUM FIELD WITH						   ;AN000;
-	MOV   [SI].MIN_WIDTH,0	  ; MINIMUM FIELD WITH						   ;AN000;
-	mov   ax,incorrect_param  ; Error Code					;AN000;
-	MOV   MSG_NUM,AX	  ; set message number						   ;AN000;
-	MOV   SUBST_COUNT,1	  ; substitution count						   ;AN000;
-	MOV   MSG_CLASS,-1	  ; message class						   ;AN000;
-	MOV   INPUT_FLAG,0	  ; no input							   ;AN000;
+	mov   [ds:di],al	   ; set termination character
+	LEA   SI,[SUBLIST1] ; DS:SI-->Substitution list					   ;AN000;
+	MOV   AX,[CURRENT_PARM] ; starting address of bad parameter				  ;AN000;
+	MOV   [SI+SUB_LIST.DATA_OFF],AX ; SI-->File name						   ;AN000;
+	MOV   [SI+SUB_LIST.DATA_SEG],DS ; DS-->Segment						   ;AN000;
+	MOV   [SI+SUB_LIST.MSG_ID],0 ; message ID							   ;AN000;
+	MOV   [SI+SUB_LIST.FLAGS],010H ; ASCIIZ string, left align					   ;AN000;
+	MOV   [SI+SUB_LIST.MAX_WIDTH],0 ; MAXIMUM FIELD WITH						   ;AN000;
+	MOV   [SI+SUB_LIST.MIN_WIDTH],0 ; MINIMUM FIELD WITH						   ;AN000;
+	mov   ax,Incorrect_param  ; Error Code					;AN000;
+	MOV   [MSG_NUM],AX ; set message number						   ;AN000;
+	MOV   word [SUBST_COUNT],1 ; substitution count						   ;AN000;
+	MOV   byte [MSG_CLASS],-1 ; message class						   ;AN000;
+	MOV   byte [INPUT_FLAG],0 ; no input							   ;AN000;
 	CALL  PRINT_STDOUT	  ; display message						   ;AN000;
 	stc			  ; error flag
 	jmp   Parse_Exit	  ; exit		      (1/6/88 P2670)
@@ -1980,22 +2013,22 @@ Set_Disp_Param:
 Chk_Result:
 	 push  es		   ; get DS back to Program data segment			   ;AN000;
 	 pop   ds										   ;AN000;
-	 cmp   postype,1	   ; number  ?? 						   ;AN000;
+	 cmp   byte [PosType],1 ; number  ?? 						   ;AN000;
 	 jne   chk_switch									   ;AN000;
-	 jmp   short Proc_Name	   ; yes, process name entry					   ;AN000;
+	 jmp   short PROC_NAME	   ; yes, process name entry					   ;AN000;
 
 chk_switch:
-	 cmp   postype,3	   ; switch  ?? 						   ;AN000;
-	 je    Proc_sw		   ; yes, process switch					   ;AN000;
-	 cmp   postype,6	   ; drive id ??						   ;AN000;
-	 je    Proc_driveid	   ; yes, Process Drive ID					   ;AN000;
-	 cmp   postype,4	   ; complex item ??						   ;AN000;
+	 cmp   byte [PosType],3 ; switch  ?? 						   ;AN000;
+	 je    Proc_Sw		   ; yes, process switch					   ;AN000;
+	 cmp   byte [PosType],6 ; drive id ??						   ;AN000;
+	 je    PROC_DRIVEID	   ; yes, Process Drive ID					   ;AN000;
+	 cmp   byte [PosType],4 ; complex item ??						   ;AN000;
 	 jne   disp_msg 									   ;AN000;
-	 jmp   Proc_complex	   ; yes, process Complex item					   ;AN000;
+	 jmp   PROC_COMPLEX	   ; yes, process Complex item					   ;AN000;
 
 disp_msg:
-	 mov   ax,incorrect_param  ; no, check reult buffer					   ;AN000;
-	 jmp   bad_param	   ; else error 						   ;AN000;
+	 mov   ax,Incorrect_param  ; no, check reult buffer					   ;AN000;
+	 jmp   Bad_Param	   ; else error 						   ;AN000;
 
 Proc_Sw: jmp   Proc_Switch	   ; process switch						   ;AN000;
 
@@ -2005,191 +2038,191 @@ Proc_Sw: jmp   Proc_Switch	   ; process switch						   ;AN000;
 ;	    PROCESS  DRIVE ID
 ;----------------------------------------------------------------------------
 PROC_DRIVEID:			   ; PROCESS DRIVE ID
-	 cmp   Prev_Type,6	   ; previous param = drive ID					   ;AN000;
-	 jne   check_drive_id	   ; no, jump							   ;AN000;
+	 cmp   byte [PREV_TYPE],6 ; previous param = drive ID					   ;AN000;
+	 jne   Check_Drive_Id_fastinit	   ; no, jump							   ;AN000;
 												   ;AN000;
 ; if not set default name and extent entry count for previous drive
 	 CALL  PROC_DEFAULT	  ;  setup default counts					   ;AN000;
-	 jnc   Check_Drive_id	  ;								   ;AN000;
-	 jmp   parse_Error									   ;AN000;
+	 jnc   Check_Drive_Id_fastinit	  ;								   ;AN000;
+	 jmp   PARSE_ERROR									   ;AN000;
 
-Check_Drive_Id: 		   ; process current drive ID
-	 mov   ax,ValueLo	   ; get drive letter number from result buff			   ;AN000;
+Check_Drive_Id_fastinit: 		   ; process current drive ID
+	 mov   ax,[valuelo]  ; get drive letter number from result buff			   ;AN000;
 				   ; C:=3 D:=4 etc, Parser drive id convention			   ;AN000;
 	 add   al,040H		   ; convert to drive letter					   ;AN000;
 
 	 CALL  CHECK_DRIVE	   ; validate drive ID ??					   ;AN000;
-	 jnc   set_drive_id	   ; yes, jump							   ;AN000;
+	 jnc   Set_Drive_Id	   ; yes, jump							   ;AN000;
 	 jmp   Parse_Exit	   ; no, invalid drive id , exit				   ;AN000;
 
 Set_Drive_Id:
-	 inc   num_of_drives	   ; update the drive count					   ;AN000;
+	 inc   word [num_of_drives] ; update the drive count					   ;AN000;
 	 xor   ax,ax										   ;AN000;
-	 mov   ax,valuelo	   ; get drive number						   ;AN000;
+	 mov   ax,[valuelo]  ; get drive number						   ;AN000;
 	 xor   ah,ah		   ; only low byte is valid					   ;AN000;;AN000;
-	 mov   di,ParmBuff_Ptr	   ; DS:DI-->driveID buffer					   ;AN000;
+	 mov   di,[Parmbuff_Ptr]  ; DS:DI-->driveID buffer					   ;AN000;
 	 dec   ax		   ; C:=2  D:=3 E:=4 etc Fastopen drive id			   ;AN000;
 	 mov   [di],ax		   ; save drive in Drive ID table				   ;AN000;
-	 add   parmbuff_ptr,2	   ; points to next extent count area				   ;AN000;
-	 mov   al,PosTYpe	   ; set previous type before look for next			   ;AN000;
-	 mov   Prev_Type,al	   ; positional parameter					   ;AN000;
-	 mov   si,Next_Parm	   ; get pointer to next param (switch) 			   ;AN000;
-	 mov   Current_Parm,si	   ;								   ;AN000;
-	 jmp   Parse_Loop	   ; look for next posistional parameter			   ;AN000;
+	 add   word [Parmbuff_Ptr],2 ; points to next extent count area				   ;AN000;
+	 mov   al,[PosType]  ; set previous type before look for next			   ;AN000;
+	 mov   [PREV_TYPE],al  ; positional parameter					   ;AN000;
+	 mov   si,[NEXT_PARM]  ; get pointer to next param (switch) 			   ;AN000;
+	 mov   [CURRENT_PARM],si  ;								   ;AN000;
+	 jmp   PARSE_LOOP	   ; look for next posistional parameter			   ;AN000;
 
 
 ;----------------------------------------------------------------------------
 ;	PROCESS INTEGER ( C:=n )  followed by drive ID
 ;----------------------------------------------------------------------------
 PROC_NAME:
-	 cmp   Prev_Type, 6	   ; previous type = drive ID
+	 cmp   byte [PREV_TYPE], 6 ; previous type = drive ID
 	 je    Get_Name_Value	   ; yes - jump
-	 mov   ax,incorrect_param  ; error code 						   ;AN000;
-	 jmp   bad_param
+	 mov   ax,Incorrect_param  ; error code 						   ;AN000;
+	 jmp   Bad_Param
 
 Get_Name_Value:
 	 xor   ax,ax										   ;AN000;
-	 mov   ax,valuelo	   ; get name value						   ;AN000;
+	 mov   ax,[valuelo]  ; get name value						   ;AN000;
 	 cmp   ax,10		   ; check validity of the count				  ;AN000;
 	 jl    Bad_Name_Count
 	 cmp   ax,999										   ;AN000;
-	 jle   save_name_count	   ; count OK, save it					      ;AN000;
+	 jle   Save_Name_Count	   ; count OK, save it					      ;AN000;
 
 Bad_Name_Count: 		   ; bad name count
-	 mov   ax,Invalid_Name	   ; error code 						   ;AN000;
-	 jmp   parse_error	   ; error - exit						   ;AN000;
+	 mov   ax,Invalid_name	   ; error code 						   ;AN000;
+	 jmp   PARSE_ERROR	   ; error - exit						   ;AN000;
 
 Save_Name_Count:
-	 mov   name_count,ax	   ; save it (name count)
-	 add   Total_Name_Count,ax ; update total name count
-	 mov   di,ParmBuff_Ptr	   ; DS:DI-->driveID buffer					   ;AN000;
+	 mov   [Name_Count],ax  ; save it (name count)
+	 add   [Total_Name_Count],ax ; update total name count
+	 mov   di,[Parmbuff_Ptr]  ; DS:DI-->driveID buffer					   ;AN000;
 	 mov   ax,-1										   ;AN000;
 	 mov   [di],ax		   ; MARK this drive has no extent entry			   ;AN000;
-	 add   parmbuff_ptr,2	   ; points to extent count area				   ;AN000;
+	 add   word [Parmbuff_Ptr],2 ; points to extent count area				   ;AN000;
 
 Set_Drive_Hdr:
-	 mov   ax,Name_Count	   ; get name count entry								 ;AN000;
+	 mov   ax,[Name_Count]  ; get name count entry								 ;AN000;
 	 CALL  SET_DRIVE_CACHE_HEADER	; Set Name cache header 				   ;AN000;
-	 jnc   set_min_max	   ; no error set min and max								     ;AN000;
-	 jmp   parse_Error	   ; display error								  ;AN000;
+	 jnc   Set_Min_Max	   ; no error set min and max								     ;AN000;
+	 jmp   PARSE_ERROR	   ; display error								  ;AN000;
 
 Set_Min_Max:
 	 mov   al,1										   ;AN000;
-	 mov   Par_Min,al	   ; change min-max						    ;AN000;
+	 mov   [par_min],al  ; change min-max						    ;AN000;
 	 mov   al,2										   ;AN000;;AN000;
-	 mov   Par_Max,al									   ;AN000;
-	 mov   al,PosTYpe	   ; set previous type before look for next			  ;AN000;
-	 mov   Prev_Type,al									   ;AN000;
-	 mov   si,Next_Parm	   ; get pointer to next param (switch) 			   ;AN000;
-	 mov   Current_Parm,si	   ;								   ;AN000;
-	 mov   ordinal,0									   ;AN000;
-	 Jmp   Parse_Loop	   ; parse nexy positional								  ;AN000;
+	 mov   [par_max],al          ;AN000;
+	 mov   al,[PosType]  ; set previous type before look for next			  ;AN000;
+	 mov   [PREV_TYPE],al          ;AN000;
+	 mov   si,[NEXT_PARM]  ; get pointer to next param (switch) 			   ;AN000;
+	 mov   [CURRENT_PARM],si  ;								   ;AN000;
+	 mov   word [ORDINAL],0     ;AN000;
+	 Jmp   PARSE_LOOP	   ; parse nexy positional								  ;AN000;
 
 
 ;----------------------------------------------------------------------------
 ;	 PROCESS COMPLEX (n,m)	followed by a drive id
 ;----------------------------------------------------------------------------
 PROC_COMPLEX:
-	 cmp   Prev_Type, 6	  ; previous type = drive ID ??
+	 cmp   byte [PREV_TYPE], 6 ; previous type = drive ID ??
 	 je    Get_Cmplx_Item	  ; yes - ok
-	 mov   ax,incorrect_param ; no - error, previous must be drive id						     ;AN000;
-	 jmp   bad_param	  ; display error
+	 mov   ax,Incorrect_param ; no - error, previous must be drive id						     ;AN000;
+	 jmp   Bad_Param	  ; display error
 
 Get_Cmplx_Item:
-	 mov   al, PosType	  ;
-	 mov   Prev_Type,al	  ; save current type as previous
-	 lea   di,valuelo	  ; DI-->result buffer						   ;AN000;
+	 mov   al, [PosType] ;
+	 mov   [PREV_TYPE],al ; save current type as previous
+	 lea   di,[valuelo] ; DI-->result buffer						   ;AN000;
 	 mov   si,[di]		  ; get next positional param address		    ;AN000;
-	 mov   current_parm,si	  ; SI-->first complex item					   ;AN000;
+	 mov   [CURRENT_PARM],si ; SI-->first complex item					   ;AN000;
 	 mov   ax,08001h	  ; Control ( Numeric/Optional )		      ;AN000;
-	 mov   Pos1Type,ax	  ; change pos-param control block flag 			   ;AN000;
-	 mov   Pos2Type,ax									   ;AN000;
+	 mov   [Pos1Type],ax ; change pos-param control block flag 			   ;AN000;
+	 mov   [Pos2Type],ax          ;AN000;
 	 mov   al,1		  ; atleast 1 or maximun two positionals in complex item								 ;AN000;
-	 mov   Par_Min,al	  ; set minimum = 1
+	 mov   [par_min],al ; set minimum = 1
 	 mov   al,2										   ;AN000;
-	 mov   Par_Max,al	  ; set maximum = 2						       ;AN000;
-	 mov   ordinal1,0	  ; initialize ordinal for complex item loop			   ;AN000;
-	 mov   par_sw,0 	  ; reset switch flag in PARMSX
+	 mov   [par_max],al ; set maximum = 2						       ;AN000;
+	 mov   word [ORDINAL1],0 ; initialize ordinal for complex item loop			   ;AN000;
+	 mov   byte [par_sw],0 ; reset switch flag in PARMSX
 
 COMPLX_LOOP:
 	 xor   dx,dx
-	 LEA  DI,PARMS		   ;ES:DI = PARSE CONTROL DEFINITON				   ;AN000;
-	 MOV  SI,CURRENT_PARM	   ;SI = COMMAND STRING, NEXT PARM				   ;AN000;
+	 LEA  DI,[PARMS]   ;ES:DI = PARSE CONTROL DEFINITON				   ;AN000;
+	 MOV  SI,[CURRENT_PARM]  ;SI = COMMAND STRING, NEXT PARM				   ;AN000;
 	 XOR  DX,DX		   ;RESERVED, INIT TO ZERO					   ;AN000;
-	 MOV  CX,ORDINAL1	   ;OPERAND ORDINAL, INITIALLY ZERO				   ;AN000;
+	 MOV  CX,[ORDINAL1]  ;OPERAND ORDINAL, INITIALLY ZERO				   ;AN000;
 
-	 CALL  SYSPARSE 	   ; parse positional param in complex item
+	 CALL  SysParse 	   ; parse positional param in complex item
 
 	 cmp   ax,NOERROR	   ; parse error ??
 	 je    Chk_Complex_Result  ; no, check result buffer				    ;AN000;
 	 cmp   ax,EOL		   ; END-OF-COMMAND string ??					   ;AN000;
 	 jne   Complex_Error	   ; no, check error
-	 mov   si,Next_Parm	   ; Set pointer to next param	       (4/3/88)
-	 mov   Current_Parm,si	   ; set next param address before parsing		      ;AN000;
-	 jmp   Parse_Loop	   ; go to main parse loop
+	 mov   si,[NEXT_PARM]  ; Set pointer to next param	       (4/3/88)
+	 mov   [CURRENT_PARM],si  ; set next param address before parsing		      ;AN000;
+	 jmp   PARSE_LOOP	   ; go to main parse loop
 
 Complex_Error:
-	 mov   ax,Incorrect_Param  ; no, check reult buffer					   ;AN000;
-	 jmp   bad_param	   ; display error
+	 mov   ax,Incorrect_param  ; no, check reult buffer					   ;AN000;
+	 jmp   Bad_Param	   ; display error
 
 ;-------------------------------------------------------------------------------
 ;    Ckeck The Result Buffer
 ;-------------------------------------------------------------------------------
 Chk_Complex_Result:
-	 mov   ordinal1,cx	   ; save current ordinal		;AN000; 		   ;AN000;
-	 cmp   postype,1	   ; positional type = number  ??
+	 mov   [ORDINAL1],cx  ; save current ordinal		;AN000; 		   ;AN000;
+	 cmp   byte [PosType],1 ; positional type = number  ??
 	 je    Proc_Complex_Name   ; yes, process name entry					   ;AN000;
-	 cmp   postype,3	   ; positional type = String ??
-	 je    Miss_param	   ; yes, process missing parameter
-	 mov   ax,incorrect_param  ; no, check reult buffer					   ;AN000;
-	 jmp   bad_param
+	 cmp   byte [PosType],3 ; positional type = String ??
+	 je    Miss_Param	   ; yes, process missing parameter
+	 mov   ax,Incorrect_param  ; no, check reult buffer					   ;AN000;
+	 jmp   Bad_Param
 
 Miss_Param:
-	 mov  current_parm,si	   ; save current chara pointer 				   ;AN000;
-	 jmp   complx_loop	   ; get extent count
+	 mov  [CURRENT_PARM],si  ; save current chara pointer 				   ;AN000;
+	 jmp   COMPLX_LOOP	   ; get extent count
 
 
 ;-------------------------------------------------------------------------------
 ;   PROCESS NAME  ENTRY  (n)
 ;-------------------------------------------------------------------------------
 Proc_Complex_Name:		   ; PROCESS COMPLEX ITEM
-	 mov  current_parm,si	   ; save current chara pointer 				   ;AN000;
+	 mov  [CURRENT_PARM],si  ; save current chara pointer 				   ;AN000;
 	 cmp   cx,2		   ; second positional in the complex				      ;AN000;
-	 je    proc_extent_entry   ; yes, process Extent count					   ;AN000;
+	 je    Proc_Extent_Entry   ; yes, process Extent count					   ;AN000;
 	 xor   ax,ax		   ; eles process Name Count					  ;AN000;
-	 mov   ax,valuelo	   ; get name value from result buffer				   ;AN000;
+	 mov   ax,[valuelo]  ; get name value from result buffer				   ;AN000;
 	 cmp   ax,10		   ; validate the name value for higher 			  ;AN000;
 	 jl    Name_Error	   ; and lower boundries					   ;AN000;
-	 cmp   ax,Max_Entry_Num    ; name entry count ok ??
+	 cmp   ax,Max_entry_num    ; name entry count ok ??
 	 jg    Name_Error	   ; no - error
 	 jmp   short Store_Name_Count	 ; yes - store it
 
 Name_Error:			   ; invalid name count
-	 mov   ax,invalid_name	   ; error code 						   ;AN000;
-	 jmp   parse_error	   ; display error
+	 mov   ax,Invalid_name	   ; error code 						   ;AN000;
+	 jmp   PARSE_ERROR	   ; display error
 
 Store_Name_Count:
-	 mov   Name_Count,ax	   ; save it (name count)			  ;AN000;		     ;AN000;
-	 add   Total_name_count,ax ; update total name count			    ;AN000;		       ;AN000;
+	 mov   [Name_Count],ax  ; save it (name count)			  ;AN000;		     ;AN000;
+	 add   [Total_Name_Count],ax ; update total name count			    ;AN000;		       ;AN000;
 
 	 CALL  SET_DRIVE_CACHE_HEADER	; Set Name cache header 				   ;AN000;
 	 jc    Cant_Set_Header	   ; jump if error					     ;AN000;
-	 jmp   Complx_loop	   ; look for extent count					   ;AN000;
+	 jmp   COMPLX_LOOP	   ; look for extent count					   ;AN000;
 
 Cant_Set_Header:
-	 jmp   Parse_Error	   ; error exit
+	 jmp   PARSE_ERROR	   ; error exit
 
 
 ;-------------------------------------------------------------------------------
 ;   PROCESS EXTENT ENTRY  (m)
 ;-------------------------------------------------------------------------------
 Proc_Extent_Entry:
-	 mov   ax,valuelo	   ; get extent count entry
+	 mov   ax,[valuelo]  ; get extent count entry
 	 cmp   ax,1		   ; validate entry between 1 an 10					       ;AN000;
 	 jl    Extent_Error									   ;AN000;
 	 cmp   ax,10
-	 jl    set_default_ext	   ; if <10 set default entry 12
-	 cmp   ax,Max_Entry_Num    ; >999 ??
+	 jl    Set_Default_Ext	   ; if <10 set default entry 12
+	 cmp   ax,Max_entry_num    ; >999 ??
 	 jg    Extent_Error	   ; yes - error
 	 jmp   short Store_Extent_Count  ; value OK, save it
 
@@ -2198,73 +2231,73 @@ Set_Default_Ext:		   ; for count 1 throug 9 set default count 12
 	 jmp   short Store_Extent_Count
 
 Extent_Error:			   ; invalid entry error
-	 mov   ax,invalid_extent   ; error code
-	 jmp   parse_error	   ; display error						  ;AN000;
+	 mov   ax,Invalid_extent   ; error code
+	 jmp   PARSE_ERROR	   ; display error						  ;AN000;
 
 Store_Extent_Count:
-	 mov   ext_count,ax	   ; save the count
-	 add   Total_Ext_count,ax  ; update total extent count
-	 mov   di,parmbuff_ptr	   ; DI-->drive/extent buffer					;AN000;
+	 mov   [Ext_Count],ax  ; save the count
+	 add   [Total_Ext_Count],ax ; update total extent count
+	 mov   di,[Parmbuff_Ptr]  ; DI-->drive/extent buffer					;AN000;
 	 mov   [di],ax		   ; save in buffer						   ;AN000;
-	 add   parmbuff_ptr,2	   ; move pointer to next extent in buffer	;AN000;
-	 mov   si,Next_Parm	   ; get pointer to next param
-	 mov   Current_Parm,si	   ; set next param address before parsing		      ;AN000;
-	 mov   Par_Sw,1 	   ; set switch flag in PARMSX
-	 Jmp   Parse_Loop	   ; parse next positional parameter				  ;AN000;
+	 add   word [Parmbuff_Ptr],2 ; move pointer to next extent in buffer	;AN000;
+	 mov   si,[NEXT_PARM]  ; get pointer to next param
+	 mov   [CURRENT_PARM],si  ; set next param address before parsing		      ;AN000;
+	 mov   byte [par_sw],1 ; set switch flag in PARMSX
+	 Jmp   PARSE_LOOP	   ; parse next positional parameter				  ;AN000;
 
 
 ;----------------------------------------------------------------------------
 ;	    PROCESS SWITCH (/X) OPTION
 ;----------------------------------------------------------------------------
 Proc_Switch:
-	 cmp   Prev_Type,0	   ; any previous type ??
+	 cmp   byte [PREV_TYPE],0 ; any previous type ??
 	 je    Switch_Error	   ; no  - error
-	 cmp   Ext_Mem,0	   ; switch previously specified ??					    ;AN000;
-	 je    set_sw_flag	   ; no, set flag						   ;AN000;
+	 cmp   word [Ext_Mem],0 ; switch previously specified ??					    ;AN000;
+	 je    Set_Sw_flag	   ; no, set flag						   ;AN000;
 
 Switch_Error:
-	 mov   ax,incorrect_param  ; error code 					      ;AN000;
-	 jmp   bad_param	   ; error - /x could be specified only once
+	 mov   ax,Incorrect_param  ; error code 					      ;AN000;
+	 jmp   Bad_Param	   ; error - /x could be specified only once
 
 Set_Sw_flag:
-	 cmp   Prev_Type,6	   ; previous param = drive ID	12/15 P2939				     ;AN000;
-	 jne   sw_save_Ptr	   ; no - continue		12/15 p2939				       ;AN000;
+	 cmp   byte [PREV_TYPE],6 ; previous param = drive ID	12/15 P2939				     ;AN000;
+	 jne   Sw_save_ptr	   ; no - continue		12/15 p2939				       ;AN000;
 												   ;AN000;
 	 CALL  PROC_DEFAULT	   ; yes setup default counts for previous drive		       ;AN000;
-	 jnc   sw_save_ptr	   ; no error - continue	12/15 p2939					  ;AN000;
-	 jmp   short parse_Error   ; error - exit		12/15 P2939						    ;AN000;
+	 jnc   Sw_save_ptr	   ; no error - continue	12/15 p2939					  ;AN000;
+	 jmp   short PARSE_ERROR   ; error - exit		12/15 P2939						    ;AN000;
 
 Sw_save_ptr:
-	 mov   current_parm,si	   ; save current chara pointer 				   ;AN000;
-	 mov   bx,synonym	   ; get synonym (/x)			;AN000; 		   ;AN000;
-	 cmp   bx,offset e_switch  ; /X ??							   ;AN000;
-	 je    set_extflag	   ; yes - check result buffer					      ;AN000;
+	 mov   [CURRENT_PARM],si  ; save current chara pointer 				   ;AN000;
+	 mov   bx,[synonym]  ; get synonym (/x)			;AN000; 		   ;AN000;
+	 cmp   bx,E_Switch         ; /X ??							   ;AN000;
+	 je    Set_ExtFlag	   ; yes - check result buffer					      ;AN000;
 	 jmp   Bad_Switch	   ; error exit
 
 Set_ExtFlag:			   ; no, check reult buffer
-	 mov   Ext_Mem,1	   ; yes, set Hi Memory flag					   ;AN000;
-	 mov   si,Current_parm	   ; -->next parameter						   ;AN000;
-	 mov   al,PosTYpe	   ; set prevvious type before look for next			   ;AN000;
-	 mov   Prev_Type,al									   ;AN000;
-	 jmp   parse_loop						;AN000;
+	 mov   word [Ext_Mem],1 ; yes, set Hi Memory flag					   ;AN000;
+	 mov   si,[CURRENT_PARM]  ; -->next parameter						   ;AN000;
+	 mov   al,[PosType]  ; set prevvious type before look for next			   ;AN000;
+	 mov   [PREV_TYPE],al          ;AN000;
+	 jmp   PARSE_LOOP						;AN000;
 
 Bad_Switch:
-	mov   di,Next_Parm	  ; ending address of bad param  1/6/88
+	mov   di,[NEXT_PARM] ; ending address of bad param  1/6/88
 	mov   al,0
-	mov   ds:[di],al	   ; set termination character
-	LEA   SI,SUBLIST1	  ; DS:SI-->Substitution list					   ;AN000;
-	MOV   AX,CURRENT_PARM	  ; starting address of bad parameter				  ;AN000;
-	MOV   [SI].DATA_OFF,AX	  ; SI-->File name						   ;AN000;
-	MOV   [SI].DATA_SEG,DS	  ; DS-->Segment						   ;AN000;
-	MOV   [SI].MSG_ID,0	  ; message ID							   ;AN000;
-	MOV   [SI].FLAGS,010H	  ; ASCIIZ string, left align					   ;AN000;
-	MOV   [SI].MAX_WIDTH,0	  ; MAXIMUM FIELD WITH						   ;AN000;
-	MOV   [SI].MIN_WIDTH,0	  ; MINIMUM FIELD WITH						   ;AN000;
-	MOV   BX,Invalid_Switch   ; get message number
-	MOV   MSG_NUM,BX	  ; set message number						   ;AN000;
-	MOV   SUBST_COUNT,1	  ; substitution count						   ;AN000;
-	MOV   MSG_CLASS,-1	  ; message class						   ;AN000;
-	MOV   INPUT_FLAG,0	  ; no input							   ;AN000;
+	mov   [ds:di],al	   ; set termination character
+	LEA   SI,[SUBLIST1] ; DS:SI-->Substitution list					   ;AN000;
+	MOV   AX,[CURRENT_PARM] ; starting address of bad parameter				  ;AN000;
+	MOV   [SI+SUB_LIST.DATA_OFF],AX ; SI-->File name						   ;AN000;
+	MOV   [SI+SUB_LIST.DATA_SEG],DS ; DS-->Segment						   ;AN000;
+	MOV   [SI+SUB_LIST.MSG_ID],0 ; message ID							   ;AN000;
+	MOV   [SI+SUB_LIST.FLAGS],010H ; ASCIIZ string, left align					   ;AN000;
+	MOV   [SI+SUB_LIST.MAX_WIDTH],0 ; MAXIMUM FIELD WITH						   ;AN000;
+	MOV   [SI+SUB_LIST.MIN_WIDTH],0 ; MINIMUM FIELD WITH						   ;AN000;
+	MOV   BX,Invalid_switch   ; get message number
+	MOV   [MSG_NUM],BX ; set message number						   ;AN000;
+	MOV   word [SUBST_COUNT],1 ; substitution count						   ;AN000;
+	MOV   byte [MSG_CLASS],-1 ; message class						   ;AN000;
+	MOV   byte [INPUT_FLAG],0 ; no input							   ;AN000;
 	CALL  PRINT_STDOUT	  ; display message						   ;AN000;
 	stc			  ; error flag
 	jmp   Parse_Exit	  ; exit		      (1/6/88 P2670)
@@ -2275,10 +2308,10 @@ Bad_Switch:
 ;	      PROCESS PARSE ERROR
 ;----------------------------------------------------------------------------
 PARSE_ERROR:			   ; AX = meassage number
-	MOV	MSG_CLASS,-1	   ; message class						   ;AN000;
-	MOV	MSG_NUM,AX	   ; set message number 					   ;AN000;
-	MOV	SUBST_COUNT,0	   ; no message substitution					   ;AN000;
-	MOV	INPUT_FLAG,0	   ; no input							   ;AN000;
+	MOV	byte [MSG_CLASS],-1 ; message class						   ;AN000;
+	MOV	[MSG_NUM],AX  ; set message number 					   ;AN000;
+	MOV	word [SUBST_COUNT],0 ; no message substitution					   ;AN000;
+	MOV	byte [INPUT_FLAG],0 ; no input							   ;AN000;
 	CALL	PRINT_STDOUT	   ; show message						   ;AN000;
 	stc			   ; set error flag						   ;AN000;
 
@@ -2286,7 +2319,7 @@ Parse_Exit:			   ; EXIT
 	push	cs										   ;AN000;
 	pop	ds		   ; DS - Program data area seg 				   ;AN000;
 	ret								;AN000; 		   ;AN000;
-PARSE	ENDP			   ; end of parser
+;PARSE	ENDP			   ; end of parser
 
 
 
@@ -2300,24 +2333,24 @@ PARSE	ENDP			   ; end of parser
 ;
 ;----------------------------------------------------------------------------
 
-PROC_DEFAULT	PROC		   ; PROCESS DEFAULT
+PROC_DEFAULT:         ; PROCESS DEFAULT
 	 push  si		   ; makesure to save next chara pointer			   ;AN000;
 	 mov   ax,30h		   ; get default name count					   ;AN000;
-	 mov   name_count,ax	   ; save it							   ;AN000;
-	 add   Total_name_count,ax ; update total name count					   ;AN000;
-	 mov   ext_count,ax	   ; save it				;AN000; 		   ;AN000;
-	 add   Total_Ext_count,ax  ; save it			   ;AN000;			   ;AN000;
-	 mov   di,ParmBuff_Ptr	   ; DS:DI-->parameter buffer					   ;AN000;
+	 mov   [Name_Count],ax  ; save it							   ;AN000;
+	 add   [Total_Name_Count],ax ; update total name count					   ;AN000;
+	 mov   [Ext_Count],ax  ; save it				;AN000; 		   ;AN000;
+	 add   [Total_Ext_Count],ax ; save it			   ;AN000;			   ;AN000;
+	 mov   di,[Parmbuff_Ptr]  ; DS:DI-->parameter buffer					   ;AN000;
 	 mov   [di],ax		   ; save in buffer						   ;AN000;
-	 add   Parmbuff_ptr,2	   ; points to next drive id position
-	 mov   ax,Name_Count									   ;AN000;
-	 CALL  Set_drive_Cache_Header	; Set Name cache header 				   ;AN000;
+	 add   word [Parmbuff_Ptr],2 ; points to next drive id position
+	 mov   ax,[Name_Count]          ;AN000;
+	 CALL  SET_DRIVE_CACHE_HEADER	; Set Name cache header 				   ;AN000;
 
 Default_Exit:
 	 pop   si										   ;AN000;
 	 ret			   ; return								   ;AN000;
 
-PROC_DEFAULT   ENDP
+;PROC_DEFAULT   ENDP
 
 
 
@@ -2328,45 +2361,45 @@ PROC_DEFAULT   ENDP
 ; Function:    Verify the validity of the name and extent counts
 
 ;----------------------------------------------------------------------------
-VERIFY_COUNTS	PROC   NEAR
+VERIFY_COUNTS:
 
 ; Check the validity of NAME and EXTENT count entries
-	cmp	Total_ext_count,0	 ; any extent param ??					    ;AN000;
+	cmp	word [Total_Ext_Count],0 ; any extent param ??					    ;AN000;
 	je	Chk_Name_Count		 ; no, dont check extent count				   ;AN000;
-	cmp	Total_ext_count, Max_Entry_Num	  ; check lower boundry 					  ;AN000;
-	jg	invalid_ext		 ; error if not within								;AN000;
+	cmp	word [Total_Ext_Count], Max_entry_num ; check lower boundry 					  ;AN000;
+	jg	Invalid_ext		 ; error if not within								;AN000;
 	clc				 ; Extent Count is valid
 
 ; Extent count is OK, check Name count
 Chk_Name_Count:
-	cmp	Total_Name_Count,0	 ; any name param ??							      ;AN000;
+	cmp	word [Total_Name_Count],0 ; any name param ??							      ;AN000;
 	je	Verify_Exit		 ; no, dont check extent count				  ;AN000;
 
-	cmp	Total_name_count, Max_Entry_Num 						 ;AN000;
-	jg	invalid_name_entry								   ;AN000;
+	cmp	word [Total_Name_Count], Max_entry_num ;AN000;
+	jg	Invalid_name_entry								   ;AN000;
 	clc				 ; Name count is OK							     ;AN000;
-	jmp	short verify_exit	 ; exit 							 ;AN000;
+	jmp	short Verify_Exit	 ; exit 							 ;AN000;
 
 Invalid_ext:
-	mov	ax,many_ext_entries	 ; AX = error code						       ;AN000;
+	mov	ax,Many_Ext_Entries	 ; AX = error code						       ;AN000;
 	stc
-	jmp	short verify_exit									 ;AN000;
+	jmp	short Verify_Exit									 ;AN000;
 
 Invalid_name_entry:
-	mov	ax,many_name_entries	 ; AX = error code								 ;AN000;
+	mov	ax,Many_Name_Entries	 ; AX = error code								 ;AN000;
 	stc											   ;AN000;
 
 Verify_Exit:		     ;
 
 	RET											   ;AN000;
 
-VERIFY_COUNTS	ENDP
+;VERIFY_COUNTS	ENDP
 
 
 
 
 
-
+ 
 
 
 
@@ -2391,73 +2424,73 @@ VERIFY_COUNTS	ENDP
 ;    or form hosed.
 ;=========================================================================
 
-CHECK_DRIVE    PROC    NEAR
+CHECK_DRIVE:
 
-	CALL	Convert_To_Caps 	; make sure it is a capital letter
-	mov	byte ptr user_drive,al	; save it in user drive
-	mov	byte ptr source_xname,al ; put in source string for call
+	CALL	CONVERT_TO_CAPS 	; make sure it is a capital letter
+	mov	byte [user_drive],al   ; save it in user drive
+	mov	byte [source_xname],al   ; put in source string for call
 
 	mov	bl,al			;put drive letter in bl
 	sub	bl,"A"-1                ;convert to 1 based number
 
-	mov	ah,ioctl		;set up for removable call
+	mov	ah,IOCtl		;set up for removable call
 	mov	al,8			;function code
 	INT	int_command
 
 	cmp	ax,1			;is drive fixed?
-	jz	okay_drive		;yes - see if it's subst
+	jz	Okay_Drive		;yes - see if it's subst
 	cmp	ax,0fh			;is drive valid?
-	jnz	hosed_drive		;yes - but hosed
+	jnz	Hosed_Drive		;yes - but hosed
 
-	mov	ax,invalid_drive	; set bad drive message
-	jmp	short drive_Error	; display error message
+	mov	ax,Invalid_drive	; set bad drive message
+	jmp	short Drive_Error	; display error message
 
 Okay_Drive:
-	lea	si,source_xname 	; set up for name translate
-	lea	di,target_xname
+	lea	si,[source_xname]; set up for name translate
+	lea	di,[target_xname]
 	mov	ax,xNameTrans SHL 8
 	INT	int_command		;do the translation
 
-	lea	si,source_xname 	;compare source and target drive
-	lea	di,target_xname
+	lea	si,[source_xname];compare source and target drive
+	lea	di,[target_xname]
 
 	mov	cx,Len_source_xname	;get count of invalid chars
 	repz	cmpsb			;compare until mismatch found
-	jz	check_drive_end 	;no mismatch - exit
+	jz	Check_Drive_End 	;no mismatch - exit
 
 Hosed_Drive:
-	MOV   AX,BAD_USE_MESSAGE	 ; message number
+	MOV   AX,Bad_Use_Message	 ; message number
 
 Drive_Error:
 	push  ax		  ; save message number
-	mov   ax,Valuelo	  ; get drive letter number from result buff
+	mov   ax,[valuelo] ; get drive letter number from result buff
 				  ; C:=3 D:=4 etc, Parser drive id convention
 	add   al,040H		  ; convert to drive letter
-	lea   si,Drive_Id	  ; DS:SI-->drive letter save area
+	lea   si,[drive_id] ; DS:SI-->drive letter save area
 	mov   [si],al		  ; save drive letter in buffer
 
-	LEA   SI,SUBLIST1	  ; DS:SI-->Substitution list					   ;AN000;
-	MOV   AX,OFFSET DRIVE_ID								   ;AN000;
-	MOV   [SI].DATA_OFF,AX	  ; SI-->File name						   ;AN000;
-	MOV   [SI].DATA_SEG,DS	  ; DS-->Segment						   ;AN000;
-	MOV   [SI].MSG_ID,1	  ; message ID							   ;AN000;
-	MOV   [SI].FLAGS,010H	  ; ASCIIZ string, left align					   ;AN000;
-	MOV   [SI].MAX_WIDTH,0	  ; MAXIMUM FIELD WITH						   ;AN000;
-	MOV   [SI].MIN_WIDTH,0	  ; MINIMUM FIELD WITH						   ;AN000;
+	LEA   SI,[SUBLIST1] ; DS:SI-->Substitution list					   ;AN000;
+	MOV   AX,drive_id                  ;AN000;
+	MOV   [SI+SUB_LIST.DATA_OFF],AX ; SI-->File name						   ;AN000;
+	MOV   [SI+SUB_LIST.DATA_SEG],DS ; DS-->Segment						   ;AN000;
+	MOV   [SI+SUB_LIST.MSG_ID],1 ; message ID							   ;AN000;
+	MOV   [SI+SUB_LIST.FLAGS],010H ; ASCIIZ string, left align					   ;AN000;
+	MOV   [SI+SUB_LIST.MAX_WIDTH],0 ; MAXIMUM FIELD WITH						   ;AN000;
+	MOV   [SI+SUB_LIST.MIN_WIDTH],0 ; MINIMUM FIELD WITH						   ;AN000;
 	POP   AX		  ; restore message number					   ;AN000;
-	MOV   MSG_NUM,AX	  ; set message number						   ;AN000;
-	MOV   SUBST_COUNT,1	  ; substitution count						   ;AN000;
-	MOV   MSG_CLASS,-1	  ; message class						   ;AN000;
-	MOV   INPUT_FLAG,0	  ; no input							   ;AN000;
+	MOV   [MSG_NUM],AX ; set message number						   ;AN000;
+	MOV   word [SUBST_COUNT],1 ; substitution count						   ;AN000;
+	MOV   byte [MSG_CLASS],-1 ; message class						   ;AN000;
+	MOV   byte [INPUT_FLAG],0 ; no input							   ;AN000;
 	CALL  PRINT_STDOUT	  ; display message						   ;AN000;
 	stc			  ; error flag
 
 Check_Drive_End:
 	ret			  ; return
 
-CHECK_DRIVE  endp
+;CHECK_DRIVE  endp
 
-
+ 
 
 
 
@@ -2485,19 +2518,19 @@ CHECK_DRIVE  endp
 ; 3) Set up drive cache header
 ;=========================================================================
 
-SET_DRIVE_CACHE_HEADER	 PROC	 NEAR
+SET_DRIVE_CACHE_HEADER:
 
-	mov	cx,num_of_drives	  ;get current count of drives
-	mov	bx,offset drive_cache	  ;get start of name drive cache
-	mov	dl,user_drive		  ;get user entered drive
+	mov	cx,[num_of_drives] ;get current count of drives
+	mov	bx,Drive_Cache          ;get start of name drive cache
+	mov	dl,[user_drive]  ;get user entered drive
 	dec	cx			  ;is this the 1st drive entered ?
-	jcxz	set_it_up		  ;yes - don't check
+	jcxz	Set_it_up		  ;yes - don't check
 
-	cmp	num_Of_drives,max_drives  ;no - check for maximum num of drives
-	jng	we_have_room		  ;yes - go check for dup drives
-	mov	ax,too_many_entries	  ;set up for error message
+	cmp	word [num_of_drives],Max_drives ;no - check for maximum num of drives
+	jng	We_Have_Room		  ;yes - go check for dup drives
+	mov	ax,Too_many_entries	  ;set up for error message
 	stc				  ;set up error flag
-	jmp	short set_dheader_exit	  ;and exit
+	jmp	short Set_dheader_Exit	  ;and exit
 
 ;-----------------------------------------------------------------------
 ; Search through the drive headers to see the duplicate drive exist.
@@ -2505,33 +2538,33 @@ SET_DRIVE_CACHE_HEADER	 PROC	 NEAR
 ; If no drives exist, then create the new header as the first drive header.
 ;-----------------------------------------------------------------------
 We_Have_Room:				  ;BX-->current drive header
-	cmp	dl,[bx].dch_drive_letter  ;drive header exist for this drive??
-	jnz	not_dup_drive		  ;no - continue
-	mov	ax,dup_drive		  ;yes - set up for error message
+	cmp	dl,[bx+DRIVE_CACHE_HEADER.DCH_Drive_letter] ;drive header exist for this drive??
+	jnz	Not_Dup_Drive		  ;no - continue
+	mov	ax,Dup_drive		  ;yes - set up for error message
 	stc
-	jmp	short set_dheader_exit	  ;exit
+	jmp	short Set_dheader_Exit	  ;exit
 
 Not_Dup_Drive:
-	cmp	[bx].dch_sibling_ptr,no_siblings  ;any more header to search ??
-	jz	set_drive_sibling		  ;no - go create the new drive header
-	add	bx,size drive_cache_header	  ;yes - get pointer to next drive header
-	jmp short we_have_room			  ;check it
+	cmp	[bx+DRIVE_CACHE_HEADER.DCH_Sibling_ptr],No_siblings ;any more header to search ??
+	jz	Set_drive_sibling		  ;no - go create the new drive header
+	add	bx,sizeof.DRIVE_CACHE_HEADER ;yes - get pointer to next drive header
+	jmp short We_Have_Room			  ;check it
 
 Set_drive_sibling:
 	mov	cx,bx				  ;save current header address
-	add	cx,size drive_cache_header	  ;pointer to next header
-	mov	[bx].dch_sibling_ptr,cx 	  ;set pointer to new header from current hdr
+	add	cx,sizeof.DRIVE_CACHE_HEADER ;pointer to next header
+	mov	[bx+DRIVE_CACHE_HEADER.DCH_Sibling_ptr],cx ;set pointer to new header from current hdr
 	mov	bx,cx				  ;BX-->new header
 
 Set_it_up:
-	mov	[bx].dch_drive_letter,dl	  ;save drive letter in new header
-	mov	[bx].dch_sibling_ptr,no_siblings  ;mark new header as last header in chain
-	mov	[bx].dch_num_entries,ax 	  ;save name count in new header
+	mov	[bx+DRIVE_CACHE_HEADER.DCH_Drive_letter],dl ;save drive letter in new header
+	mov	[bx+DRIVE_CACHE_HEADER.DCH_Sibling_ptr],No_siblings ;mark new header as last header in chain
+	mov	[bx+DRIVE_CACHE_HEADER.DCH_Num_Entries],ax ;save name count in new header
 
 Set_dheader_Exit:				  ; Exit
 	ret
 
-SET_DRIVE_CACHE_HEADER	 ENDP
+;SET_DRIVE_CACHE_HEADER	 ENDP
 
 
 
@@ -2547,21 +2580,21 @@ page
 
 ;=========================================================================
 
-CONVERT_TO_CAPS    PROC     NEAR
+CONVERT_TO_CAPS:
 
 	cmp	al,"a"
-	JNAE	no_convert
+	JNAE	No_Convert
 	cmp	al,"z"
-	JNBE	no_convert
+	JNBE	No_Convert
 	sub	al,32
 
 No_Convert:
 	ret					;and return
 
-CONVERT_TO_CAPS    ENDP
+;CONVERT_TO_CAPS    ENDP
 
 
-
+ 
 
 
 
@@ -2581,11 +2614,11 @@ CONVERT_TO_CAPS    ENDP
 ;			  NC  - EMS_PAGE_SEG - SEG ID OF SINGLE PAGE FRAME
 ;=========================================================================
 
-SET_EMS  PROC  NEAR
+SET_EMS:
 	CALL	EMS_CHECK1		;SEE IF EMS INSTALLED					   ;AN000;
 	JNC	EMS_GET_PAGE		; yes, get page 					   ;AN000;
 
-	MOV	EMS_FLAG,0		;  Flag EMS not installed				   ;AN000;
+	MOV	word [EMS_FLAG],0 ;  Flag EMS not installed				   ;AN000;
 	STC				;  Make sure carry is Clear				   ;AN000;
 	JMP	EMS_EXIT	  ;  Leave check routine				     ;AN000;
 
@@ -2607,8 +2640,8 @@ IF	NOT BUFFERFLAG
 	INT	2FH		       ; get EMS page
 	OR	AH,AH
 	JNZ	EMS_PAGE_ERR
-	MOV	EMS_PAGE_SEG,ES        ; SAVE PAGE SEG ID
-	MOV	EMS_PAGE_NUM,DI        ; SAVE PHYSICAL PAGE NUMBER
+	MOV	[EMS_PAGE_SEG],ES      ; SAVE PAGE SEG ID
+	MOV	[EMS_PAGE_NUM],DI      ; SAVE PHYSICAL PAGE NUMBER
 
 ELSE
 
@@ -2616,13 +2649,13 @@ ELSE
 ;	Fastopen must get an EMS page like a well behaved program and
 ;	should not grab a reserved page from the BIOS.
 ;
-	mov	cx, FRAME_COUNT
+	mov	cx, [FRAME_COUNT]
 	xor	ax, ax
 	mov	bx, ax
 	mov	dx, ax
 	
 get_page:
-	cmp	es:[di], 0a000h		; is the page in ax above 640K
+	cmp	word [es:di], 0a000h      ; is the page in ax above 640K
 	jb	next_page		; if no get next_page
 
 	mov	bx, di			; we have a valid page
@@ -2632,9 +2665,9 @@ get_page:
 	cmp	dx, 1
 	je	next_page
 	sub	di, 4
-	mov	ax, es:[di]
+	mov	ax, [es:di]
 	mov	[FST_PAGE], ax
-	mov	ax, es:[di+2]
+	mov	ax, [es:di+2]
 	mov	[FST_PAGE+2], ax
 	mov	di, bx			; restore di
 
@@ -2642,44 +2675,44 @@ next_page:
 	add	di, 4
 	loop	get_page
 	jne	found_page
-	jmp	ems_page_err
+	jmp	EMS_PAGE_ERR
 
 found_page:
 ;	int	3
 	cmp	dx, 1
 	jne	second_last_page
 	mov	di, bx
-	mov	ax, es:[di]
-	mov	ems_page_seg, ax
-	mov	ax, es:[di+2]
-	mov	ems_page_num, ax
+	mov	ax, [es:di]
+	mov	[EMS_PAGE_SEG], ax
+	mov	ax, [es:di+2]
+	mov	[EMS_PAGE_NUM], ax
 	jmp	save_state
 
 second_last_page:
 	mov	ax, [FST_PAGE]
-	mov	ems_page_seg, ax
+	mov	[EMS_PAGE_SEG], ax
 	mov	ax, [FST_PAGE+2]
-	mov	ems_page_num, ax
+	mov	[EMS_PAGE_NUM], ax
 
 save_state:
 	push	es
-	mov	ax, Cseg_Main
+	mov	ax, CSEG_MAIN_
 	mov	es, ax
-	assume 	es:Cseg_Main
+;	assume 	es:Cseg_Main
 
-	mov	word ptr save_map_addr, offset es:save_ems_page_state
-	mov	word ptr save_map_addr + 2, ax
+	mov	word [SAVE_MAP_ADDR], SAVE_EMS_PAGE_STATE
+	mov	word [SAVE_MAP_ADDR+2], ax
 	
-	mov	ax, ems_page_seg
-	mov	es:Main_EMS_PAGE_SEG, ax
+	mov	ax, [EMS_PAGE_SEG]
+	mov	[es:Main_EMS_PAGE_SEG], ax
 	pop	es
-	assume	es:Cseg_Init
-	call	[save_map_addr]
-	jc	ems_page_err
+;	assume	es:Cseg_Init
+	call	[SAVE_MAP_ADDR]
+	jc	EMS_PAGE_ERR
 
 ;--------------------------------------------------------------------------
 
-ENDIF
+end if
 
 	POP	DI
 	POP	ES
@@ -2700,7 +2733,7 @@ EMS_ALLOCATE_PAGE:
 	INT	EMS_INT 	     ;allocate page							   ;AN000;
 	OR	AH,AH		     ;Was there an error allocating?				;AN000;
 	JNZ	EMS_ERROR	     ;yes - display error							;AN000;
-	MOV	EXT_HANDLE,DX	     ;no -Save EMS handle
+	MOV	[EXT_HANDLE],DX    ;no -Save EMS handle
 
 IF	BUFFERFLAG
 
@@ -2709,24 +2742,24 @@ IF	BUFFERFLAG
 
 	push	es
 	push	ax
-	mov	ax, Cseg_Main
+	mov	ax, CSEG_MAIN_
 	mov	es, ax
-	assume	es:Cseg_Main
-	mov	es:ems_save_handle1, dx
+;	assume	es:Cseg_Main
+	mov	[es:EMS_SAVE_HANDLE1], dx
 	pop	ax
 	pop	es
-	assume	es:Cseg_Init
+;	assume	es:Cseg_Init
 
-ENDIF
+end if
 
 ;-----------------------------------------------------------------------
 ; SET HANDLE NAME TO THE PAGE HANDLE
 ;-----------------------------------------------------------------------
 	PUSH	DS										   ;AN000;
 	POP	ES										   ;AN000;
-	ASSUME	ES:CSEG_INIT									   ;AN000;
-	LEA	SI,HANDLE_NAME	     ; DS:SI-->Handle name string				   ;AN000;
-	MOV	DX,EXT_HANDLE	     ; handle number						   ;AN000;
+;	ASSUME	ES:CSEG_INIT									   ;AN000;
+	LEA	SI,[HANDLE_NAME]    ; DS:SI-->Handle name string				   ;AN000;
+	MOV	DX,[EXT_HANDLE]    ; handle number						   ;AN000;
 	MOV	AH,EMS_HANDLE_NAME								   ;AN000;
 	MOV	AL,1		     ; set op code code 					    ;AN000;
 	INT	67H		     ; set handle							       ;AN000;
@@ -2749,24 +2782,24 @@ EMS_GET_SIZE:
 	OR	AH,AH
 	JNZ	EMS_ERROR
 	XOR	AH,AH
-	MOV	EMS_PAGESIZE,AX     ;save EMS page size
+	MOV	[EMS_PAGESIZE],AX   ;save EMS page size
 	CLC
 	JMP	SHORT EMS_EXIT
 
 EMS_ERROR:
-	MOV	AX,EMS_FAILED	    ;error message						   ;AN000;
-	MOV	MSG_NUM,AX	    ;save message number
-	MOV	SUBST_COUNT,0	    ;no message substitution					   ;AN000;
-	MOV	MSG_CLASS,-1	    ;message class						   ;AN000;
-	MOV	INPUT_FLAG,0	    ;no input							   ;AN000;
+	MOV	AX,Ems_failed_fastinit	    ;error message						   ;AN000;
+	MOV	[MSG_NUM],AX   ;save message number
+	MOV	word [SUBST_COUNT],0 ;no message substitution					   ;AN000;
+	MOV	byte [MSG_CLASS],-1 ;message class						   ;AN000;
+	MOV	byte [INPUT_FLAG],0 ;no input							   ;AN000;
 	CALL	PRINT_STDOUT	    ;show message "Incorrect Parameter"                            ;AN000;
 	STC			    ; set error flag						   ;AN000;
 
 EMS_EXIT:
 	RET			    ;	 Return 					       ;AN000;
 
-SET_EMS   ENDP
-
+;SET_EMS   ENDP
+ 
 
 
 
@@ -2783,12 +2816,12 @@ SET_EMS   ENDP
 ;			  NC	- EMS AVAILABLE
 ;=========================================================================
 
-EMS_CHECK1 PROC NEAR			;EMS INSTALL CHECK
+EMS_CHECK1:            ;EMS INSTALL CHECK
 
 	PUSH	DS			;save ds						   ;AN000;
 	XOR	AX,AX			;set ax to 0						   ;AN000;
 	MOV	DS,AX			;set ds to 0						   ;AN000;
-	CMP	DS:WORD PTR[067h*4+0],0 ;see if int 67h is there				   ;AN000;
+	CMP	word [ds:067h*4+0],0    ;see if int 67h is there				   ;AN000;
 	POP	DS			;restore ds						   ;AN000;
 	JE	EMS_NOT_INST1		;no, EMS not installed					   ;AN000;
 
@@ -2810,7 +2843,7 @@ EMS_CHECK1 PROC NEAR			;EMS INSTALL CHECK
 	CMP	AH,0
 	JNE	EMS_NOT_INST1
 
-	MOV	FRAME_COUNT,CX
+	MOV	[FRAME_COUNT],CX
 	MOV	AX, BUFFER_ENTRY_SIZE
 	MUL	CX			; CALCULATE THE ARRAY SIZE BE RESERVED
 
@@ -2818,40 +2851,40 @@ IF	NOT IBMCOPYRIGHT
 	CMP	AX, 100h			
 ELSE
 	CMP	AX, 30H				
-ENDIF
+end if
 
 	JG	EMS_NOT_INST1
 
 	MOV	AX,EMS_GET_FRAME_ADDR	;YES, GET FRAME ADDRESS 				   ;AN000;
 	PUSH	DS			;SWAP DS & ES						   ;AN000;
 	POP	ES			;							   ;AN000;
-	LEA	DI,FRAME_BUFFER 	;ES:DI--> RESULT BUFFER 				   ;AN000;
+	LEA	DI,[FRAME_BUFFER];ES:DI--> RESULT BUFFER 				   ;AN000;
 	INT	EMS_INT 		;GET FRAME ADDRESSES						     ;AN000;
 	CMP	AH,0			;IS EMS INSTALLED					   ;AN000;
 	JNE	EMS_NOT_INST1		;NO,exit
-	CMP	CX,FRAME_COUNT		;				       ;AN000;
+	CMP	CX,[FRAME_COUNT] ;				       ;AN000;
 	JNE	SHORT EMS_NOT_INST1
 
 	CLC
-	MOV	EMS_FLAG,1		; EMS IS ACTIVE, SET FLAG
+	MOV	word [EMS_FLAG],1 ; EMS IS ACTIVE, SET FLAG
 	JMP	EMS_CHECK1_EXIT
 
 EMS_NOT_INST1:				;EMS NOT INSTALLED
-	MOV	AX,EMS_NOT_INSTALL	;error message						   ;AN000;
-	MOV	MSG_NUM,AX		;set message number					   ;AN000;
-	MOV	SUBST_COUNT,0		;no message substitution				   ;AN000;
-	MOV	MSG_CLASS,-1		;message class						   ;AN000;
-	MOV	INPUT_FLAG,0		;no input						   ;AN000;
+	MOV	AX,Ems_not_install	;error message						   ;AN000;
+	MOV	[MSG_NUM],AX ;set message number					   ;AN000;
+	MOV	word [SUBST_COUNT],0 ;no message substitution				   ;AN000;
+	MOV	byte [MSG_CLASS],-1 ;message class						   ;AN000;
+	MOV	byte [INPUT_FLAG],0 ;no input						   ;AN000;
 	CALL	PRINT_STDOUT		;show message
 	STC				;FLAG EMS NOT INSTALLED 				   ;AN000;
 												   ;AN000;
 EMS_CHECK1_EXIT:			;EXIT ROUTINE
 	RET				;RETURN TO CALLER					   ;AN000;
 
-EMS_CHECK1 ENDP
+;EMS_CHECK1 ENDP
 
 
-
+ 
 
 ;=========================================================================
 ; MAP_FRAME		: THIS MODULE MAPS TWO LOGICAL PAGES IN THE HIGH
@@ -2864,12 +2897,12 @@ EMS_CHECK1 ENDP
 ;			  NC	- PAGE IS MAPPED
 ;=========================================================================
 
-MAP_FRAME    PROC  NEAR 		; MAP physical page frames
+MAP_FRAME:                ; MAP physical page frames
 	PUSH	BX			; DMS;
 	XOR	BX,BX			; Logical page 0					   ;AN000;
-	MOV	AX,EMS_PAGE_NUM 	; AL=Physical Page frame number 			;AN000;
+	MOV	AX,[EMS_PAGE_NUM] ; AL=Physical Page frame number 			;AN000;
 	MOV	AH,EMS_MAP_HANDLE	; AH=EMS function to map page				      ;AN000;
-	MOV	DX,EXT_HANDLE		; EMS handle						   ;AN000;
+	MOV	DX,[EXT_HANDLE] ; EMS handle						   ;AN000;
 	INT	EMS_INT 									   ;AN000;
 	OR	AH,AH			; Was there an error allocating?			   ;AN000;
 	JNZ	MAP_ERROR		; yes - set flag						     ;AN000;
@@ -2884,12 +2917,12 @@ MAP_EXIT:
 	RET				; return						 ;AN000;
 
 
-MAP_FRAME ENDP
+;MAP_FRAME ENDP
 
 
 
 
-
+ 
 
 
 
@@ -2927,16 +2960,16 @@ MAP_FRAME ENDP
 ;*	None
 ;*
 ;************************************************************
-PRINT_STDOUT PROC NEAR
+PRINT_STDOUT:
 	PUSH	BX										   ;AN000;
 	PUSH	CX										   ;AN000;
 	PUSH	DX										   ;AN000;
 
-	MOV	AX,MSG_NUM		; Message ID						   ;AN000;
+	MOV	AX,[MSG_NUM] ; Message ID						   ;AN000;
 	MOV	BX,STDOUT		; standard input message handle 			   ;AN000;
-	MOV	CX,SUBST_COUNT		; message substitution count				   ;AN000;
-	MOV	DH,MSG_CLASS		; message class 					   ;AN000;
-	MOV	DL,INPUT_FLAG		; Type of INT 10 for KBD input				   ;AN000;
+	MOV	CX,[SUBST_COUNT] ; message substitution count				   ;AN000;
+	MOV	DH,[MSG_CLASS] ; message class 					   ;AN000;
+	MOV	DL,[INPUT_FLAG] ; Type of INT 10 for KBD input				   ;AN000;
 
 	CALL	SYSDISPMSG		;  AX=Extended key value if wait			   ;AN000;
 					;for key						   ;AN000;
@@ -2951,20 +2984,20 @@ DISP_DONE:				;	CH - Locus
 	POP	BX										   ;AN000;
 												   ;AN000;
 	RET
-PRINT_STDOUT ENDP
+;PRINT_STDOUT ENDP
 
 
-CSEG_INIT	ENDS
+end if
 
 
 ;===========================================================================
 ;;;	    STACK    SEGMENT	   SIZE = 20 PARAGRAPHS
 ;===========================================================================
 
-STACK		SEGMENT PARA STACK 'STACK'
+if SEGSEL = S_STACK
 		DB	64 dup("STACK   ")     ; 512  WORD STACK AREA                               ;AN000;
-STACK		ENDS
+end if
 
 
-END		START
+;END		START
 

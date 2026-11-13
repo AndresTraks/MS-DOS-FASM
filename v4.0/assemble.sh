@@ -257,3 +257,12 @@ utility APPEND APPENDLNK APPEND.EXE
 # and runs TOOLS/CONVERT over the result, which only renames the .EXE, so the
 # MZ image is what comes out here under the release's name.
 utility PRINT PRILNK PRINT.COM
+
+# FASTOPEN, five modules in five segments and no group -- STACK, CSEG_MAIN,
+# CSEG_OPEN, CSEG_SEEK and CSEG_INIT, in the order FASTSEGS.INC's .seq tells
+# LINK to lay them down -- which FOPLNK.ASM lays down as five address spaces
+# in turn.  They are separate segments so that the initialisation can write
+# whichever cache was not asked for over the other's code and keep the rest
+# resident.  The release links the five and stops: this is an .EXE in its own
+# right.
+utility FASTOPEN FOPLNK FASTOPEN.EXE

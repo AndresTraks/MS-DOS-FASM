@@ -93,36 +93,37 @@
 ;	     "Licensed Material - Property of Microsoft "
 ;
 ;****************** END OF SPECIFICATIONS *****************************
-	IF1				;					;AN000;
-	    %OUT    COMPONENT=fastopen, MODULE=fastsm.asm...
-	ENDIF				;					;AN000;
+;	IF1				;					;AN000;
+;	    %OUT    COMPONENT=fastopen, MODULE=fastsm.asm...
+;	ENDIF				;					;AN000;
 ; =  =	=  =  =  =  =  =  =  =	=  =
 
-HEADER	MACRO	TEXT			;;					;AN000;
+macro HEADER [TEXT]
+{			;;					;AN000;
 .XLIST					;;
 	SUBTTL	TEXT
 .LIST					;;
 	PAGE				;;					;AN000;
-	ENDM				;;					;AN000;
+}				;;					;AN000;
 ; =  =	=  =  =  =  =  =  =  =	=  =
-	INCLUDE SYSMSG.INC		;PERMIT SYSTEM MESSAGE HANDLER DEFINITION ;AN000;
+	include 'SYSMSG.INC' ;PERMIT SYSTEM MESSAGE HANDLER DEFINITION ;AN000;
 	MSG_UTILNAME <fastopen> 	;IDENTIFY THE COMPONENT 		;AN000;
 ; =  =	=  =  =  =  =  =  =  =	=  =
 	HEADER	<DEFINITION OF MESSAGES> ;					;AN000;
-CSEG_INIT    SEGMENT PARA PUBLIC 'CODE' ;
-	   ASSUME CS:CSEG_INIT		;ESTABLISHED BY CALLER
-	   ASSUME DS:CSEG_INIT		;ESTABLISHED BY CALLER
-	   ASSUME ES:CSEG_INIT		;ESTABLISHED BY CALLER
+if SEGSEL = S_CSEG_INIT;
+;	   ASSUME CS:CSEG_INIT		;ESTABLISHED BY CALLER
+;	   ASSUME DS:CSEG_INIT		;ESTABLISHED BY CALLER
+;	   ASSUME ES:CSEG_INIT		;ESTABLISHED BY CALLER
 
-	   PUBLIC COPYRIGHT	   ;						;AN000;
+;	   PUBLIC COPYRIGHT	   ;						;AN000;
 COPYRIGHT  DB	 "MS DOS FASTOPEN Utility " ;                 ;AN000;
-	   INCLUDE COPYRIGH.INC    ;						;AN000;
+	   include 'COPYRIGH.INC'  ;						;AN000;
 	   HEADER <MESSAGE DATA AREAS> ;					;AN000;
 	   MSG_SERVICES <MSGDATA>  ;WORKAREAS FOR SYSTEM MESSAGE HANDLER	;AN000;
 ; =  =	=  =  =  =  =  =  =  =	=  =
 	   HEADER <SYSTEM MESSAGE HANDLER> ;					;AN000;
-	   PUBLIC SYSLOADMSG	   ;						;AN000;
-	   PUBLIC SYSDISPMSG	   ;						;AN000;
+;	   PUBLIC SYSLOADMSG	   ;						;AN000;
+;	   PUBLIC SYSDISPMSG	   ;						;AN000;
 
 
 	MSG_SERVICES <FASTOPEN.CLA,FASTOPEN.CL1,FASTOPEN.CL2> ;
@@ -134,12 +135,12 @@ COPYRIGHT  DB	 "MS DOS FASTOPEN Utility " ;                 ;AN000;
 				   ;DEFAULT=NO TIMEmsg
 				   ;DEFAULT=NO DATEmsg
 
-.xlist
-.xcref
+.XLIST
+.XCREF
 	MSG_SERVICES <LOADmsg,GETmsg,DISPLAYmsg,INPUTmsg,CHARmsg,NUMmsg> ;AN000;
-	include msgdcl.inc
-.cref
-.list
+	include 'MSGDCL.INC'
+.CREF
+.LIST
 ; = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-CSEG_INIT	ENDS			;
-	   END			   ;						;AN000;
+end if ;
+;	   END			   ;						;AN000;

@@ -539,6 +539,70 @@ UTILITIES = {
         # rather than an EQU it has not read yet.
         FORWARD=('no_lptx',),
     ),
+    # FASTOPEN's five modules in the order FASTOPEN.LNK names them, and the
+    # one header of its own they read.  FASTSEGS.INC declares the five
+    # segments in the order .seq tells LINK to lay them down -- stack,
+    # cseg_main, cseg_open, cseg_seek, cseg_init -- and nothing else, which
+    # is why FASTOPEN.ASM says it "cannot include in Fastopen.inc": the
+    # header of that name is the shared one in src/INC.
+    'FASTOPEN': dict(
+        MODULES=('FASTOPEN.ASM', 'FASTSEEK.ASM', 'FASTINIT.ASM', 'FASTP.ASM',
+                 'FASTSM.ASM', 'FASTSEGS.INC'),
+        TAG={},
+        # FASTOPEN.INC is the shared header of the same name, which holds
+        # the cache's structures and the DOS equates the modules read; the
+        # directory entry and the vector table come with it.
+        SHARED=('SYSCALL.INC', 'DOSSYM.INC', 'SYSMSG.INC', 'PSDATA.INC',
+                'MSGHAN.INC', 'DOSMAC.INC', 'MSGDCL.INC', 'MSGSERV.ASM',
+                'VERSIONA.INC', 'BPB.INC', 'BUFFER.INC', 'SYSVAR.INC',
+                'VECTOR.INC', 'MULT.INC', 'DIRENT.INC', 'DPB.INC',
+                'CURDIR.INC', 'CPMFCB.INC', 'FIND.INC', 'PDB.INC', 'EXE.INC',
+                'SF.INC', 'ARENA.INC', 'INTNAT.INC', 'MI.INC',
+                'FILEMODE.INC', 'ERROR.INC', 'VERSION.INC', 'PARSE.ASM',
+                'DEVSYM.INC', 'COPYRIGH.INC', 'FASTOPEN.INC', 'FASTSEEK.INC',
+                'FASTXXXX.INC'),
+        # Each of the four code segments says ASSUME CS to itself and
+        # nothing else at its head: FASTOPEN is entered as an .EXE, with DS
+        # and ES on the program prefix, and the resident parts are entered
+        # on the multiplex interrupt with whatever the caller had.
+        START={'cs': 'CSEG_INIT', 'ds': None, 'es': None, 'ss': 'STACK'},
+        # FASTOPEN and FASTSEEK each open with "DEBUG=0", which their own
+        # comment says is an equate only for DOSMAC.INC, and FASTINIT says
+        # "Debug EQU 0" for the routine that calls the installation check
+        # -- over the DEBUG=FALSE it has already set itself.  MASM minded
+        # neither the case nor the third declaration, every one of them
+        # being nought; fasm's EQU puts the text where the name stands, so
+        # the two assignments are read as "0 = 0" on the second reading of
+        # the module.  The EQU becomes an = like the others, which fasm
+        # resolves wherever it stands and lets be said again.
+        FORWARD=('DEBUG',),
+        # Eight names each of two modules has one of, which MASM let them
+        # have because it assembled them apart: FASTOPEN and FASTSEEK both
+        # walk their own cache from a CHECK_IT and keep the function they
+        # were called for in a func_cod, and both have a check_exit to
+        # leave by; FASTOPEN and FASTINIT share five more, four of them
+        # labels and the fifth FASTOPEN's EMS_FAILED against the message
+        # number of that name in FASTINIT's numbered block.  Each takes the
+        # name of the module it is in.
+        LOCALS=('CHECK_DRIVE_ID', 'CHECK_EXIT', 'CHECK_IT', 'EMS_FAILED',
+                'ERROR_EXIT', 'FUNC_COD', 'SET_START', 'SET_UP_NAMES'),
+        # FASTOPEN names the way out of its dispatcher EXIT, and
+        # INC/SYSCALL.INC gives the same name to the number 4CH, the DOS
+        # call that ends a program.  FASTOPEN.ASM does not read that
+        # header, so MASM met the two in no one module; one assembly meets
+        # them both, and the label is the one that gives way, the header's
+        # name being shared with every other utility.
+        PRIVATE={'FASTOPEN.ASM': (('EXIT', 'EXIT_'),)},
+        # The one line in FASTOPEN that leaves a reference's width unsaid.
+        # Looking for the expanded memory page frame, FASTINIT reads the
+        # page's segment out of the mapping table with MOV AX,ES:[DI] two
+        # lines further on, and compares the same place against 0A000H
+        # here with nothing to say how wide it is: the operand is a bare
+        # register, so there is no name for fasm to take the width from.
+        # It is the word MOV reads, and the line says so now.
+        PATCHES={'FASTINIT.ASM': [
+            ('\tcmp\tes:[di], 0a000h', '\tcmp\tword ptr es:[di], 0a000h')]},
+    ),
 }
 
 NAME = sys.argv[1].upper() if len(sys.argv) > 1 else ''
@@ -693,7 +757,12 @@ for stem, pairs in PRIVATE.items():
         j = comment_at(line)
         code, comment = (line, '') if j < 0 else (line[:j], line[j:])
         for was, now in pairs:
-            code = outside_strings(r"(?<![A-Za-z0-9_@?$.])" + was
+            # MASM read the two cases alike, so a module can declare the
+            # name in one and read it in another: FASTOPEN writes EXIT
+            # where the label stands and "jmp short exit" where it jumps
+            # to it.  The name the table gives is written in either case,
+            # the spellings being settled later like any other name's.
+            code = outside_strings(r"(?i)(?<![A-Za-z0-9_@?$.])" + was
                                    + r"(?![A-Za-z0-9_@?$])", now, code)
         out.append(code + comment)
     source[stem] = '\n'.join(out)
@@ -713,10 +782,15 @@ if LOCALS:
             # of them indented, and the names it keeps to itself are
             # equates as well: one-letter ones, which the structured
             # statements want for the flags and two modules give different
-            # values to.
+            # values to.  A procedure and a byte of storage are the other
+            # two shapes: FASTOPEN and FASTSEEK each declare a CHECK_IT to
+            # walk their own cache with and a func_cod to keep the call's
+            # function in, in segments of their own.
             code = code_of(line)
             m = re.match(r"^[ \t]*(" + N + r"):", code) \
-                or re.match(r"(?i)^(" + N + r")[ \t]+(?:equ|=)[ \t]", code)
+                or re.match(r"(?i)^(" + N + r")[ \t]+(?:equ|=)[ \t]", code) \
+                or re.match(r"(?i)^[ \t]*(" + N + r")[ \t]+"
+                            r"(?:proc|label|d[bwdq])\b", code)
             if m and localpat.match(m.group(1)):
                 mine.add(m.group(1))
         if not mine:
@@ -726,10 +800,17 @@ if LOCALS:
             j = comment_at(line)
             code, comment = (line, '') if j < 0 else (line[:j], line[j:])
             for name in sorted(mine, key=len, reverse=True):
-                code = outside_strings(r"(?<![A-Za-z0-9_@?$.])"
+                # MASM read the two alike, so a module can declare the name
+                # in one case and read it in another: FASTOPEN writes
+                # EMS_FAILED where the label stands and "jc ems_failed"
+                # where it jumps to it.  The spelling each occurrence has is
+                # kept and the mark goes on the end of it, the spellings
+                # being settled later like any other name's.
+                code = outside_strings(r"(?i)(?<![A-Za-z0-9_@?$.])("
                                        + re.escape(name)
-                                       + r"(?![A-Za-z0-9_@?$])",
-                                       '%s_%s' % (name, mark), code)
+                                       + r")(?![A-Za-z0-9_@?$])",
+                                       lambda m: '%s_%s' % (m.group(1), mark),
+                                       code)
             # A name a macro pastes together is not the name until fasm has
             # put it together, so the rule above passes over it: MODELENG's
             # BREAK writes JMP ENDCASE_#destination for one of the ENDCASE_0
@@ -2108,6 +2189,12 @@ PROCEDURE = (re.compile(r"(?mi)^procedure([ \t]+)(" + N
 FIELD = {}
 # And how wide each one is, for a reference that has to say so.
 FIELDSIZE = {}
+# And which structure a field holds, where its room is another structure's:
+# INC/FASTOPEN.INC gives NAME_RECORD a .nCmpct_Dir_Info of
+# sizeof.CMPCT_DIR_INFO bytes, and FASTOPEN reads the cluster in it as
+# [bp.nCmpct_Dir_Info.CDI_cluster] -- a field of the one inside a field of
+# the other.
+HOLDS = {}
 for text in SEEN:
     here = None
     for line in text.split('\n'):
@@ -2122,6 +2209,9 @@ for text in SEEN:
                 FIELDSIZE[m.group(1).upper()] = {'b': 'byte', 'w': 'word',
                                                  'd': 'dword', 'q': 'qword'
                                                  }[m.group(2)[1].lower()]
+            held = re.search(r"(?i)\bsizeof\.(" + N + r")\b", line)
+            if held:
+                HOLDS[m.group(1).upper()] = held.group(1)
 
 
 # Everything the program gives a name to, so that a name which is only a
@@ -2439,15 +2529,27 @@ def structures(code):
     """
     def one(m):
         reg, field, tail = m.group(1), m.group(2), m.group(3)
-        found = FIELD.get(field.upper())
-        if found is None:
-            # not a field of a structure but a number of its own, which
-            # MASM added the same way: INC/CPMFCB.INC declares fcb_sfn as
-            # the offset of the FCB's reserved bytes, where DOS keeps the
-            # system file number.
-            return '[%s+%s%s]' % (reg, field, tail.replace(' ', ''))
-        owner, spelt = found
-        return '[%s+%s.%s%s]' % (reg, owner, spelt, tail.replace(' ', ''))
+        # A field of a structure that is itself inside a field, which MASM
+        # added the two offsets of: the room the outer field reserves is
+        # the inner structure's, and HOLDS says which.
+        path = field.split('.')
+        parts, holder = [], None
+        for name in path:
+            if holder is not None:
+                parts.append('%s.%s' % (holder, name))
+                holder = HOLDS.get(name.upper())
+                continue
+            found = FIELD.get(name.upper())
+            if found is None:
+                # not a field of a structure but a number of its own,
+                # which MASM added the same way: INC/CPMFCB.INC declares
+                # fcb_sfn as the offset of the FCB's reserved bytes, where
+                # DOS keeps the system file number.
+                parts.append(name)
+            else:
+                parts.append('%s.%s' % found)
+            holder = HOLDS.get(name.upper())
+        return '[%s+%s%s]' % (reg, '+'.join(parts), tail.replace(' ', ''))
     # SYS2 writes the register and the field inside the one pair of
     # brackets: [BX.dpb_first_FAT] says what [BX].dpb_first_FAT does.  This
     # goes first because what the rule below writes -- the structure's name
@@ -2455,11 +2557,13 @@ def structures(code):
     # itself, and would be read a second time.
     code = re.sub(r"(?i)\[\s*((?:(?:cs|ds|es|ss):)?(?:" + BASEPAT + r")"
                   r"(?:\s*\+\s*(?:" + BASEPAT + r"))?"
-                  r"(?:\s*[-+]\s*\w+(?!\.))?)\s*\.(" + N + r")"
+                  r"(?:\s*[-+]\s*\w+(?!\.))?)\s*\.(" + N
+                  + r"(?:\." + N + r")*)"
                   r"((?:\s*[-+]\s*\w+)?)\s*\]", one, code)
     code = re.sub(r"(?i)\[\s*((?:(?:cs|ds|es|ss):)?(?:" + BASEPAT + r")"
                   r"(?:\s*\+\s*(?:" + BASEPAT + r"))?"
-                  r"(?:\s*[-+]\s*\w+(?!\.))?)\s*\]\s*\.(" + N + r")"
+                  r"(?:\s*[-+]\s*\w+(?!\.))?)\s*\]\s*\.(" + N
+                  + r"(?:\." + N + r")*)"
                   r"((?:\s*[-+]\s*\w+)?)", one, code)
     # The index with no brackets at all, which MASM read as a reference
     # just the same: MODEVID passes video_info_DI.active_display to a macro
@@ -2471,6 +2575,7 @@ def structures(code):
         code = re.sub(r"(?i)(?<![\w.$\]])((?:" + "|".join(
             sorted(map(re.escape, NAMEDREG), key=len, reverse=True))
             + r"))\s*\.(" + N + r")((?:\s*[-+]\s*\w+)?)", one, code)
+
     return code
 
 
@@ -2819,6 +2924,33 @@ def sized(code):
         return code
     head, rest = m.group(1), m.group(2)
     parts = rest.split(',')
+    # A field of a structure that stands inside a field of another: MASM
+    # read the width from the field the reference ends at, where fasm reads
+    # it from the first name in the expression that has one -- the room the
+    # outer field reserves, which is bytes.  FASTOPEN compares a word with
+    # [bp.nCmpct_Dir_Info.CDI_cluster].  The other operand being a register
+    # settles nothing here, so this is said before the rule below, which
+    # leaves those alone.
+    for i, part in enumerate(parts):
+        nested = re.match(r"(?i)^\[(?:(?:cs|ds|es|ss):)?[^\]]*?" + N + r"\.("
+                          + N + r")\+" + N + r"\.(" + N + r")"
+                          r"(?:[-+][\w.$]+)*\]$", part.strip())
+        # The outer name has to be a field whose room is the inner
+        # structure's, which HOLDS says: MODEPARS writes
+        # [parm_list+...+sizeof.parm_list_entry+parm_list_entry.item_tag],
+        # two dotted names of which neither is that.
+        if not nested or nested.group(1).upper() not in HOLDS:
+            continue
+        size = FIELDSIZE.get(nested.group(2).upper())
+        if not size:
+            continue
+        # the width goes on the operand it belongs to, which can be either
+        # of the two: FASTOPEN reads the reference into a register as often
+        # as it writes one to it.
+        said = list(parts)
+        lead = re.match(r"^[ \t]*", part).group(0)
+        said[i] = '%s%s %s' % (lead, size, part.lstrip())
+        return head + ','.join(said)
     ref = re.match(r"^\[(?:(?:cs|ds|es|ss):)?(" + N + r")\]$",
                    parts[0].strip(), re.I)
     if not ref:
@@ -2846,8 +2978,18 @@ def pushed(code):
 
 def sizes(code):
     """A type name in an expression, as the number of bytes it takes up."""
-    return re.sub(r"\b(BYTE|WORD|DWORD)\b(?!\s*\[)",
+    code = re.sub(r"\b(BYTE|WORD|DWORD)\b(?!\s*\[)",
                   lambda m: {'BYTE': '1', 'WORD': '2', 'DWORD': '4'}[m.group(1)],
+                  code)
+    # The release wrote it in lower case as well, where the rule above would
+    # have taken it for the size the conversion writes: a type name after a
+    # plus or a minus is inside an expression and is the number.  FASTINIT
+    # patches the segment half of each of its fourteen jump vectors with
+    # "MOV WORD PTR ES:FOPEN_Insert + word, AX", the word two bytes past
+    # the start of the far pointer.
+    return re.sub(r"(?i)([-+][ \t]*)(byte|word|dword)\b(?![ \t]*\[)",
+                  lambda m: m.group(1) + {'byte': '1', 'word': '2',
+                                          'dword': '4'}[m.group(2).lower()],
                   code)
 
 

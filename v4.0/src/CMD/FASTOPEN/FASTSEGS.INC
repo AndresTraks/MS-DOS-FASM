@@ -2,19 +2,19 @@
 
 
 .seq
-stack       segment  Stack  'STACK' ; represents STACK                            ;AN000;
-stack       ends                                                             ;AN000;
+if SEGSEL = S_STACK; represents STACK                            ;AN000;
+end if ;AN000;
 
-cseg_main   segment   Public 'CODE'; represents MAIN
-cseg_main   ends
+if SEGSEL = S_CSEG_MAIN; represents MAIN
+end if
 
-cseg_open   segment   Public 'CODE'; represents  FASTOPEN                          ;AN000;
-cseg_open   ends                                                             ;AN000;
+if SEGSEL = S_CSEG_OPEN; represents  FASTOPEN                          ;AN000;
+end if ;AN000;
 
-cseg_seek   segment   Public 'CODE'; represents FASTSEEK                           ;AN000;
-cseg_seek   ends                                                             ;AN000;
+if SEGSEL = S_CSEG_SEEK; represents FASTSEEK                           ;AN000;
+end if ;AN000;
 
-cseg_init   segment  Public 'CODE' ; represents INIT
-cseg_init   ends
+if SEGSEL = S_CSEG_INIT; represents INIT
+end if
 
 
