@@ -502,7 +502,7 @@ NotAtInit:
 	ja	CmdIret
 	add	sp,6				; remove int frame
 	stc
-	ret	2				; remove those flags...
+	retf	2				; remove those flags...
 ;
 ; We have now received a ^C for some process (maybe ourselves but not at INIT).
 ;

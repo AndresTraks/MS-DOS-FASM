@@ -32,6 +32,11 @@ reserves the transient's parameter area where MASM moved the origin over it;
 and TDATA.ASM's inner ENDM closed an IRP, which is a block in its own braces
 here.
 
+It also reads each far procedure's RET.  The mnemonic on the line is still
+RET, so the pass above lets it through -- RETF is one of the spellings the
+conversion is allowed to have made of it -- and a near return where a far one
+was wanted is the one kind of changed meaning that pass cannot see.
+
     python3 checkcode.py
 """
 import os
@@ -144,6 +149,44 @@ def allowed(was, now):
     return False
 
 
+# A far procedure's RET, which MASM assembled as a far return.  The mnemonic
+# is still RET on the line, so the pass above lets it through -- RETF is one
+# of the spellings it is allowed to have become -- and a near return where a
+# far one was wanted pops one word where two were pushed.  PRINT_R chains
+# interrupt 13H to the ROM by pushing the address of INT_13_BACK under the
+# ROM's own, and the RET 2 that ends it has to be a far return over the
+# caller's flags; COMMAND.COM's ^C handler ends the same way.
+FARPROC = re.compile(r"(?i)^[ \t]*(" + r"[A-Za-z_@?$][A-Za-z0-9_@?$]*"
+                     + r")[ \t]+PROC\b(.*)$")
+PROCEDURE = re.compile(r"(?i)^[ \t]*procedure[ \t]+"
+                       r"[A-Za-z_@?$][A-Za-z0-9_@?$]*[ \t]*,[ \t]*far\b")
+PROCEND = re.compile(r"(?i)^[ \t]*(?:[A-Za-z_@?$][A-Za-z0-9_@?$]*[ \t]+ENDP"
+                     r"|EndProc)\b")
+
+
+def far_returns(rel, was, now):
+    """Every RET the release wrote inside a FAR procedure, and what it is."""
+    bad, far = 0, False
+    for n, (a, b) in enumerate(zip(was, now), 1):
+        code = a.split(";")[0]
+        m = FARPROC.match(code)
+        if m:
+            far = "far" in m.group(2).lower()
+            continue
+        if PROCEDURE.match(code):
+            far = True
+            continue
+        if PROCEND.match(code):
+            far = False
+            continue
+        if far and mnemonic(code) == "RET" and mnemonic(b) != "RETF":
+            print("%-26s %5d  %-10s -> %-10s %s"
+                  % (rel, n, "RET (far)", mnemonic(b),
+                     b.split(";")[0].strip()[:40]))
+            bad += 1
+    return bad
+
+
 def origin(rel):
     adds = subprocess.run(["git", "-C", REPO, "log", "--diff-filter=A",
                            "--format=%H", "--", rel],
@@ -251,6 +294,10 @@ def main():
                 print("%-26s %5d  %-10s -> %-10s %s"
                       % (rel, n, ma, mb, b.split(";")[0].strip()[:40]))
                 total += 1
+        # A file still word for word the release's own has not been
+        # converted, and its RETs are the release's RETs.
+        if was != now:
+            total += far_returns(rel, was, now)
     print("\n%d lines carry a different instruction; %d files are a different "
           "length and were lined up by their instructions instead"
           % (total, lengths))
