@@ -194,9 +194,10 @@ macro go$ yes, no, label, sense
 ; ----------------------------------------------------------------------------
 ; The conditions.
 ;
-; Five shapes, told apart by how many words they are written in: a bit test
+; Six shapes, told apart by how many words they are written in: a bit test
 ; is BIT and three more, a comparison is three, a register against itself is
-; two and a flag is one.  A shape is tried only if nothing longer has already
+; two and a flag is one, and either of the first two can have a first
+; operand of more than one word, written in angle brackets of its own.  A shape is tried only if nothing longer has already
 ; answered, since fasm's MATCH lets the last name in a pattern stand for the
 ; rest of the line.
 ;
@@ -209,6 +210,7 @@ macro go$ yes, no, label, sense
 macro cond$ cond, label, sense
 {
 	define HIT$ no
+	bitgroup$ <cond>, label, sense
 	bit$ <cond>, label, sense
 	group$ <cond>, label, sense
 	three$ <cond>, label, sense
@@ -217,7 +219,26 @@ macro cond$ cond, label, sense
 	lost$ <cond>
 }
 
+; A bit test whose first operand is more than one word, which the sources
+; write inside angle brackets of its own the way the fifth shape does --
+; GRINST asks <BIT <[cs:BP+SHARED_DATA_AREA_STR.SWITCHES]> NZ BACKGROUND_SW>.
+; It is the longest shape of all, so it is tried before the plain bit test,
+; which would otherwise take the bracket for the operand.
+macro bitgroup$ cond, label, sense
+{
+	match =BIT =< l => op r, cond \{ test l, r
+	    jumpon$ op, label, sense
+	    define HIT$ yes \}
+	match =bit =< l => op r, cond \{ test l, r
+	    jumpon$ op, label, sense
+	    define HIT$ yes \}
+}
+
 macro bit$ cond, label, sense
+{
+	match =no, HIT$ \{ bittest$ <cond>, label, sense \}
+}
+macro bittest$ cond, label, sense
 {
 	match =BIT l op r, cond \{ test l, r
 	    jumpon$ op, label, sense

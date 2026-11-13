@@ -149,6 +149,13 @@ def allowed(was, now):
     # a conditional's spelling: IFxx became IF or MATCH, ENDIF became END IF
     if was and now and was.rstrip("0123456789") == now.rstrip("0123456789"):
         return True
+    # An instance of a structure the release wrote with no name of its own:
+    # fasm hangs an instance's fields on its name, so the conversion makes
+    # one up out of the structure's and a count -- GRPATTRN writes ninety-
+    # nine of its printer patterns that way, as TAB_ENTRY <...> and the
+    # rest.
+    if was and now and re.match(r"^" + re.escape(was) + r"\$\d+$", now):
+        return True
     return False
 
 
