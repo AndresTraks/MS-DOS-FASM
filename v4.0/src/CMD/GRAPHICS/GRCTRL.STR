@@ -1,3 +1,17 @@
+STRUC PIXEL_STR R_=0, G_=0, B_=0
+{
+ .R	DB	R_ ; RED component (0 to MAX_INT)			;AN000;
+ .G	DB	G_ ; GREEN component (0 to MAX_INT)		;AN000;
+ .B	DB	B_ ; BLUE component (0 to MAX_INT) 		;AN000;
+}
+match =PIXEL_STR_LAID_OUT, PIXEL_STR_LAID_OUT
+{
+    PIXEL_STR_LAID_OUT equ 1
+    virtual at 0
+      PIXEL_STR PIXEL_STR 0, 0, 0
+      sizeof.PIXEL_STR = $ - PIXEL_STR
+    end virtual
+}
 .XLIST										;AN000;
 PAGE	,132									;AN000;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;					;AN000;
@@ -39,11 +53,6 @@ PRINTER_ERROR	 EQU	8	; An error occurred while printing a byte	;AN000;
 ; PIXEL INTERNAL REPRESENTATION 						;AN000;
 ;										;AN000;
 ;-------------------------------------------------------------------------------;AN000;
-PIXEL_STR	STRUC								;AN000;
- R	DB	?		; RED component (0 to MAX_INT)			;AN000;
- G	DB	?		; GREEN component (0 to MAX_INT)		;AN000;
- B	DB	?		; BLUE component (0 to MAX_INT) 		;AN000;
-PIXEL_STR	ENDS								;AN000;
 ;-------------------------------------------------------------------------------;AN000;
 ;										;AN000;
 ; VIDEO MODE TYPES								;AN000;
@@ -99,8 +108,8 @@ WHITE_INT	EQU	63	; Intensity for WHITE on the printer		;AN000;
 BLACK_INT	EQU	0	; Intensity for BLACK on the printer		;AN000;
 MAX_INT 	EQU   WHITE_INT ; Maximum intensity for a RGB value,		;AN000;
 				;  (Red, Green, or Blue).			;AN000;
-ONE_THIRD	EQU MAX_INT*1/3 ; Used to calculate Red, Green, Blue intensity	;AN000;
-TWO_THIRD	EQU MAX_INT*2/3 ;  values.					;AN000;
+ONE_THIRD	equ (MAX_INT*1/3)	; Used to calculate Red, Green, Blue intensity	;AN000;
+TWO_THIRD	equ (MAX_INT*2/3)	;  values.					;AN000;
 										;AN000;
 ;-------------------------------------------------------------------------------;AN000;
 ;										;AN000;

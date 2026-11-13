@@ -276,3 +276,13 @@ utility FASTOPEN FOPLNK FASTOPEN.EXE
 # 101-key enhancements.  The release links the ten and runs EXE2BIN over the
 # result, which is the flat image fasm writes here.
 utility KEYB KEYBLNK KEYB.COM
+
+# GRAPHICS, thirteen modules in one segment, CODE, and no group -- so the
+# modules are read once, the way KEYB's and GRAFTABL's are.  CODE begins
+# where the load module does and GRAPHICS.ASM's org 100H is where DOS
+# enters.  It hooks interrupt 5, the print-screen key, and prints the screen
+# through whichever printer GRAPHICS.PRO describes.  GRCOMMON.ASM, the
+# routines both printer modules want, goes into each of them and so into the
+# program twice; GRAPHLNK.ASM reads each copy under names of its own.  The
+# release links the thirteen and runs EXE2BIN over the result.
+utility GRAPHICS GRAPHLNK GRAPHICS.COM

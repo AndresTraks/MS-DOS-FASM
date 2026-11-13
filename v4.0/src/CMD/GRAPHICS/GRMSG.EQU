@@ -74,7 +74,7 @@ UNABLE_RELOAD	    EQU 18	; 'Unable to reload with profile supplied'      ;AN000;
 ;-------------------------------------------------------------------------------;AN000;
 										;AN000;
 RC_NO_ERROR	     EQU     0							;AN000;
-RC_EOL		     EQU    -1							;AN000;
+RC_EOL		     equ    (-1)	;AN000;
 RC_TOO_MANY	     EQU     1							;AN000;
 RC_NOT_IN_SW	     EQU     3							;AN000;
 RC_NOT_IN_VAL	     EQU     7							;AN000;

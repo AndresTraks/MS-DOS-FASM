@@ -682,6 +682,76 @@ UTILITIES = {
         # read through CS until the code says otherwise.
         START={'cs': 'CODE', 'ds': None, 'es': None, 'ss': None},
     ),
+    # GRAPHICS's thirteen modules in the order GRAPHICS.LNK names them, and
+    # the seventeen headers of its own they read: a .EXT of EXTRNs for each
+    # module, a .STR of structures for the three that have any, and
+    # GRMSG.EQU for the message numbers.  One segment, CODE, and no group,
+    # so the modules are read once -- the shape KEYB and GRAFTABL have.
+    # CODE begins where the load module does and GRAPHICS.ASM's org 100H is
+    # where DOS enters; the release links the thirteen and runs EXE2BIN.
+    #
+    # GRCOMMON.ASM is the fourteenth and is not linked: the two printer
+    # modules each INCLUDE it at the end of their own code, so the program
+    # carries two copies of it and MASM gave each module the one in it.
+    # GRAPHLNK.ASM reads each copy under names of its own; see the note
+    # there.  GRCOMMON.EXT and GRPRINT.EXT are read by nothing at all.
+    'GRAPHICS': dict(
+        MODULES=('GRAPHICS.ASM', 'GRINT2FH.ASM', 'GRPATTRN.ASM',
+                 'GRCTRL.ASM', 'GRCPSD.ASM', 'GRCOLPRT.ASM', 'GRBWPRT.ASM',
+                 'GRINST.ASM', 'GRPARSE.ASM', 'GRPARMS.ASM', 'GRLOAD.ASM',
+                 'GRLOAD2.ASM', 'GRLOAD3.ASM', 'GRCOMMON.ASM',
+                 'GRBWPRT.EXT', 'GRCOLPRT.EXT', 'GRCPSD.EXT', 'GRCTRL.EXT',
+                 'GRCTRL.STR', 'GRINST.EXT', 'GRINT2FH.EXT', 'GRLOAD.EXT',
+                 'GRLOAD2.EXT', 'GRLOAD3.EXT', 'GRMSG.EQU', 'GRPARMS.EXT',
+                 'GRPARSE.EXT', 'GRPATTRN.EXT', 'GRPATTRN.STR',
+                 'GRSHAR.STR'),
+        TAG={},
+        ONESEG=True,
+        # Four names GRLOAD2 and GRLOAD3 each have one of, and a SUBLIST in
+        # GRLOAD and another in GRPARMS; none is PUBLIC and none is EXTRN'd,
+        # so each takes the name of the module it is in.  That settles
+        # SUBLIST against the structure of that name in INC/MSGHAN.INC as
+        # well.  YES and NO, which four modules declare apiece, are left
+        # alone: all four say YES EQU 1 and NO EQU 0.
+        LOCALS=('RESULT_BUFFER', 'RESULT_TAG', 'RESULT_VAL', 'SUBLIST'),
+        # LIMIT is the end of what the program lays down, which GRINST asks
+        # for to build its tables past it.  GRLOAD3 declares it and makes
+        # it PUBLIC, GRLOAD3.EXT is where GRINST reads it, and GRLOAD2 has
+        # one of its own as well -- so this is not a name each module keeps
+        # to itself and LOCALS would take the public one with it.  GRLOAD2's
+        # is the one that gives way.
+        PRIVATE={'GRLOAD2.ASM': (('LIMIT', 'LIMIT_'),)},
+        # Five EQUs the walk meets before the line that declares them.
+        # Three are a module reading its own further down -- GRINT2FH's
+        # multiplex number, GRLOAD's carriage return, GRLOAD3's count of
+        # colour bands -- and two are the lengths of the printer modules,
+        # which each module declares at its end and its own .EXT asks for
+        # at its head.  MASM resolved them on its second pass, and fasm
+        # wants a number it can resolve wherever it stands rather than an
+        # EQU it has not read yet.
+        FORWARD=('PRT_SCR_2FH_NUMBER', 'LEN_OF_BW_MODULES',
+                 'LEN_OF_COLOR_MODULES', 'CARRIAGE_RET', 'MAX_BANDS'),
+        SHARED=('SYSCALL.INC', 'DOSSYM.INC', 'SYSMSG.INC', 'PSDATA.INC',
+                'MSGHAN.INC', 'DOSMAC.INC', 'MSGDCL.INC', 'MSGSERV.ASM',
+                'VERSIONA.INC', 'BPB.INC', 'BUFFER.INC', 'SYSVAR.INC',
+                'VECTOR.INC', 'MULT.INC', 'DIRENT.INC', 'DPB.INC',
+                'CURDIR.INC', 'CPMFCB.INC', 'FIND.INC', 'PDB.INC', 'EXE.INC',
+                'SF.INC', 'ARENA.INC', 'INTNAT.INC', 'MI.INC',
+                'FILEMODE.INC', 'ERROR.INC', 'VERSION.INC', 'PARSE.ASM',
+                'DEVSYM.INC', 'STRUC.INC', 'COPYRIGH.INC'),
+        # Every module says ASSUME CS:CODE,DS:CODE at its head, which is
+        # what the transient runs with; where a routine is entered on an
+        # interrupt instead the modules say so themselves.
+        START={'cs': 'CODE', 'ds': 'CODE', 'es': None, 'ss': None},
+        # GRCOMMON.ASM has no ASSUME of its own because it is never
+        # assembled on its own: each printer module INCLUDEs it at the end
+        # of its own code, where that module's ASSUME CS:CODE,DS:CODE
+        # stands.  Converted as a module it would start on CS alone and
+        # every one of its sixty-seven references would be given the CS
+        # override MASM did not write.
+        STARTS={'GRCOMMON.ASM': {'cs': 'CODE', 'ds': 'CODE',
+                                 'es': None, 'ss': None}},
+    ),
 }
 
 NAME = sys.argv[1].upper() if len(sys.argv) > 1 else ''
@@ -2087,6 +2157,26 @@ def conditions(text):
                 if re.match(r"^" + N + r"$", word) and word.lower() in DATA
                 else word)
 
+    # A bit test is written the other way about -- BIT, the place, how to
+    # read the answer, and the bits asked for -- and its operators are the
+    # ones a TEST leaves in the zero flag.  GRINST tests the switches at
+    # BP with <BIT CS:[BP].SWITCHES NZ BACKGROUND_SW>, which is four words
+    # where MATCH can take three, so the place goes in brackets of its own
+    # the way a comparison's does; STRUC.INC has a shape for that.
+    BITOPS = r"(?:NZ|Z|AND|NAND)"
+
+    def bit(m):
+        head, cond, tail = m.group(1), m.group(2), m.group(3)
+        inner = re.match(r"(?i)^[ \t]*bit[ \t]+(.*?)[ \t]+(" + BITOPS
+                         + r")[ \t]+(.*)$", cond)
+        if not inner:
+            return m.group(0)
+        left = place(inner.group(1).strip())
+        if left.startswith('<') or not re.search(r"[\s\[\]:]", left):
+            return m.group(0)
+        return '%s<BIT <%s> %s %s>%s' % (head, left, inner.group(2),
+                                         inner.group(3).strip(), tail)
+
     def one(m):
         head, cond, tail = m.group(1), m.group(2), m.group(3)
         inner = re.match(r"(?i)^[ \t]*(.*?)[ \t]+(" + OPS + r")[ \t]+(.*)$",
@@ -2095,12 +2185,29 @@ def conditions(text):
             return m.group(0)
         left, right = place(inner.group(1).strip()), \
             place(inner.group(3).strip())
+        # A reference with nothing in it to take a width from, against an
+        # immediate too wide for a byte: MASM sized the one from the other
+        # and compared words.  GRCTRL asks <ES:[DI] EQ 5140H>, the two
+        # characters an LCD display answers with.  The width is said the
+        # way the release says it where it says it at all -- WORD PTR,
+        # which the rules for a size turn into fasm's own.  FASTINIT has
+        # the same shape outside a condition and says so on the line.
+        if re.match(r"(?i)^(?:(?:cs|ds|es|ss):)?\[[^\]]*\]$", left) \
+                and not re.search(N, re.sub(r"(?i)\b(?:cs|ds|es|ss|"
+                                            r"[abcd]x|[abcd][lh]|si|di|bp|sp)"
+                                            r"\b", '', left)) \
+                and re.match(r"(?i)^[0-9][0-9A-F]*H?$", right) \
+                and int(right.rstrip('Hh'), 16 if right[-1] in 'Hh' else 10) \
+                > 0xFF:
+            left = 'WORD PTR ' + left
         if left.startswith('<') or not re.search(r"[\s\[\]:]", left):
             if right == inner.group(3).strip():
                 return m.group(0)
             return '%s<%s %s %s>%s' % (head, left, inner.group(2), right, tail)
         return '%s<<%s> %s %s>%s' % (head, left, inner.group(2), right, tail)
 
+    text = re.sub(r"(?mi)^([ \t]*\." + STATEMENTS + r"\b[ \t]+)"
+                  r"<([^<>]*)>(.*)$", bit, text)
     return re.sub(r"(?mi)^([ \t]*\." + STATEMENTS + r"\b[ \t]+)"
                   r"<([^<>]*)>(.*)$", one, text)
 
@@ -2587,6 +2694,10 @@ BASEPAT = "|".join(['bp', 'bx', 'si', 'di']
 # by an ASSUME of its own where it is wanted, so it starts at nothing, and
 # the stack is a segment outside the group.
 START = dict(U['START'])
+# What a module starts on where that is not what the utility starts on: a
+# file one module INCLUDEs inherits the ASSUMEs standing where the INCLUDE
+# is, and is converted on its own here.
+STARTS = {stem: dict(where) for stem, where in U.get('STARTS', {}).items()}
 cover = [dict(START)]
 
 
@@ -3007,6 +3118,13 @@ def bracket(code):
                                         + r")?(?:\s*[-+]\s*\S+)?\s*$",
                                         parts[1]):
             return head + parts[0] + ',[' + parts[1].strip() + ']'
+    # A transfer's target is a place and not a word read from memory, so
+    # long as the name is no wider than one: MASM read CALL name as an
+    # indirect call where the name is a WORD or a DWORD variable -- PRINT
+    # jumps through a far pointer that way -- and as a direct one where it
+    # is a label.  GRCOLPRT marks the start of its own code with
+    # PRINT_MODULE_START LABEL BYTE and GRCTRL calls it.
+    transfer = bool(re.search(r"(?i)\b(?:call|jmp)\s*$", head))
     out = []
     for part in rest.split(','):
         s = part.strip()
@@ -3017,6 +3135,9 @@ def bracket(code):
         if m2:
             base, field = m2.group(1), m2.group(2)
             if inmacro[0] and base.lower() in PARAMS:
+                out.append(part)
+                continue
+            if transfer and SIZE.get(base.lower()) == 'byte':
                 out.append(part)
                 continue
             if (field and base.lower() in WRITTEN) or \
@@ -3250,7 +3371,13 @@ for stem in MODULES:
     # the macro and REPT blocks open inside a module, which close in the
     # order they were opened and with the same word
     blocks = []
-    cover[0] = dict(START)
+    # A file the release reads inside another module's segment is read with
+    # that module's ASSUMEs in force, which are not the ones a module of its
+    # own would start with: GRAPHICS's GRCOMMON.ASM is INCLUDEd at the end
+    # of each printer module, where ASSUME CS:CODE,DS:CODE stands, so MASM
+    # wrote no override for anything it reads.  STARTS says so for such a
+    # file; everything else starts where START says.
+    cover[0] = dict(STARTS.get(stem, START))
     for line in text.split('\n'):
         assumed(code_of(line))
         # a name qualified with a segment, which grouped() marked: it is
@@ -3623,6 +3750,24 @@ for stem in MODULES:
         code = bracket(code)
         code = overridden(code)
         code = re.sub(r"(?i)\boffset\s+", '', code)
+        # A structured statement's operand written in angle brackets of its
+        # own because MASM's library read a condition as a list of words:
+        # GRINST asks .IF <AX B <OFFSET LIMIT>>, and with the OFFSET gone
+        # the group holds one word, which is what it would have been
+        # without the brackets.  fasm's MATCH hands the brackets to the
+        # instruction, so they come off -- except round a name that stands
+        # for a reference with a width, where the brackets are what tells
+        # the statement it is more than one word.
+        m = re.match(r"(?i)^([ \t]*\." + STATEMENTS + r"\b[ \t]*<)(.*)$",
+                     code)
+        if m:
+            # Only inside the condition's own brackets: the outermost pair
+            # is the condition itself, and a flag written on its own --
+            # NLSFUNC's .IF <NC> -- is one word in them already.
+            code = m.group(1) + re.sub(
+                r"<(" + N + r")>",
+                lambda m2: (m2.group(0) if m2.group(1).lower() in WIDE
+                            else m2.group(1)), m.group(2))
         code = sized(code)
         code = pushed(code)
 

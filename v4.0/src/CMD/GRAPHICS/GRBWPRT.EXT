@@ -20,5 +20,5 @@ PAGE										;AN000;
 				       ;;					;AN000;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;					;AN000;
 .LIST										;AN000;
-   EXTRN   PRINT_BW_APA:NEAR							;AN000;
-   EXTRN   LEN_OF_BW_MODULES:ABS	;;					;AN000;
+;   EXTRN   PRINT_BW_APA:NEAR							;AN000;
+;   EXTRN   LEN_OF_BW_MODULES:ABS	;;					;AN000;

@@ -1,3 +1,101 @@
+STRUC SHARED_DATA_AREA_STR SD_TOTAL_SIZE_=0, SWITCHES_=0, HARDWARE_CONFIG_=0, PRINTER_TYPE_=0, DARKADJUST_VALUE_=0, NUM_PRT_COLOR_=0, COLORPRINT_PTR_=0, NUM_PRT_BANDS_=0, COLORSELECT_PTR_=0, DISPLAYMODE_PTR_=0
+{
+  .SD_TOTAL_SIZE       DW    SD_TOTAL_SIZE_ ; Total # bytes ALLOCATED to the	;AN000;
+					;  the Shared Data Area.		;AN000;
+  ;;;;;;;;;;;; Environment ;;;;;;;;;;;;;;					;AN000;
+  .SWITCHES	      DB    SWITCHES_ ; Command line switches 		;AN000;
+  .HARDWARE_CONFIG     DB    HARDWARE_CONFIG_ ; Type of video hardware		;AN000;
+  .PRINTER_TYPE	      DB    PRINTER_TYPE_ ; Type of printer attached		;AN000;
+					;					;AN000;
+  ;;;;;;;;;;;; Profile Data ;;;;;;;;;;;;;					;AN000;
+  .DARKADJUST_VALUE    DB    DARKADJUST_VALUE_ ; Darkness adjustment value		;AN000;
+					;					;AN000;
+  .NUM_PRT_COLOR       DB    NUM_PRT_COLOR_ ; Number of print colors		;AN000;
+  .COLORPRINT_PTR      DW    COLORPRINT_PTR_ ; Pointer to COLORPRINT info		;AN000;
+					;					;AN000;
+  .NUM_PRT_BANDS       DB    NUM_PRT_BANDS_ ; Number of selectable print bands	;AN000;
+  .COLORSELECT_PTR     DW    COLORSELECT_PTR_ ; Pointer to COLORSELECT info		;AN000;
+					;  bands				;AN000;
+  .DISPLAYMODE_PTR     DW  DISPLAYMODE_PTR_ ; Pointer to start of DISPLAYMODE	;AN000;
+					;  info 				;AN000;
+}
+match =SHARED_DATA_AREA_STR_LAID_OUT, SHARED_DATA_AREA_STR_LAID_OUT
+{
+    SHARED_DATA_AREA_STR_LAID_OUT equ 1
+    virtual at 0
+      SHARED_DATA_AREA_STR SHARED_DATA_AREA_STR 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+      sizeof.SHARED_DATA_AREA_STR = $ - SHARED_DATA_AREA_STR
+    end virtual
+}
+STRUC COLORSELECT_STR NUM_SELECT_ESC_=0, SELECT_ESC_=0
+{
+  .NUM_SELECT_ESC    DB	NUM_SELECT_ESC_ ; number of escape bytes to		;AN000;
+					;  select this band			;AN000;
+  .SELECT_ESC	    DB	SELECT_ESC_ ; Escape bytes to select band		;AN000;
+}
+match =COLORSELECT_STR_LAID_OUT, COLORSELECT_STR_LAID_OUT
+{
+    COLORSELECT_STR_LAID_OUT equ 1
+    virtual at 0
+      COLORSELECT_STR COLORSELECT_STR 0, 0
+      sizeof.COLORSELECT_STR = $ - COLORSELECT_STR
+    end virtual
+}
+STRUC COLORPRINT_STR RED_=0, GREEN_=0, BLUE_=0, SELECT_MASK_=0
+{
+  .RED		    DB	RED_ ; RGB value				;AN000;
+  .GREEN 	    DB	GREEN_ ;					;AN000;
+  .BLUE		    DB	BLUE_ ;					;AN000;
+					; Bit mask indicating color		;AN000;
+  .SELECT_MASK	    DB	SELECT_MASK_ ;  bands required:			;AN000;
+					;  Bit 0: first band in table		;AN000;
+}
+match =COLORPRINT_STR_LAID_OUT, COLORPRINT_STR_LAID_OUT
+{
+    COLORPRINT_STR_LAID_OUT equ 1
+    virtual at 0
+      COLORPRINT_STR COLORPRINT_STR 0, 0, 0, 0
+      sizeof.COLORPRINT_STR = $ - COLORPRINT_STR
+    end virtual
+}
+STRUC DISPLAYMODE_STR NEXT_DISP_MODE_=0, NUM_DISP_MODE_=0, DISP_MODE_LIST_PTR_=0, BOX_WIDTH_=0, BOX_HEIGHT_=0, NUM_PATTERNS_=0, PATTERN_TAB_PTR_=0, NUM_GRAPHICS_ESC_=0, GRAPHICS_ESC_PTR_=0, LOW_BYT_COUNT_PTR_=0, HGH_BYT_COUNT_PTR_=0, NUM_SETUP_ESC_=0, SETUP_ESC_PTR_=0, NUM_RESTORE_ESC_=0, RESTORE_ESC_PTR_=0, PRINT_OPTIONS_=0
+{
+					;   found				;AN000;
+  .NEXT_DISP_MODE    DW	NEXT_DISP_MODE_ ; Pointer to info for next		;AN000;
+					;  display mode; -1 if last		;AN000;
+  .NUM_DISP_MODE     DB	NUM_DISP_MODE_ ; Number of display modes for		;AN000;
+  .DISP_MODE_LIST_PTR DW DISP_MODE_LIST_PTR_ ;  this record - list of them		;AN000;
+					;					;AN000;
+  .BOX_WIDTH	    DB	BOX_WIDTH_ ; Print box size - horizontal		;AN000;
+  .BOX_HEIGHT	    DB	BOX_HEIGHT_ ; Print box size - vertical		;AN000;
+					;					;AN000;
+  .NUM_PATTERNS	    DB	NUM_PATTERNS_ ; Number of grey patterns for		;AN000;
+					;  this box size			;AN000;
+  .PATTERN_TAB_PTR   DW	PATTERN_TAB_PTR_ ; pointer to grey pattern table 	;AN000;
+					;  for this display mode		;AN000;
+  .NUM_GRAPHICS_ESC  DB	NUM_GRAPHICS_ESC_ ; # of escape byte for GRAPHICS 	;AN000;
+  .GRAPHICS_ESC_PTR  DW	GRAPHICS_ESC_PTR_ ; pointer to GRAPHICS escape		;AN000;
+  .LOW_BYT_COUNT_PTR DW	LOW_BYT_COUNT_PTR_ ; pointers to number of bytes sent	;AN000;
+  .HGH_BYT_COUNT_PTR DW	HGH_BYT_COUNT_PTR_ ;  to the printer (1 word holds this	;AN000;
+					;    number but, must be send 1 byte	;AN000;
+					;     at a time).			;AN000;
+  .NUM_SETUP_ESC     DB	NUM_SETUP_ESC_ ; # of escape byte for SETUP		;AN000;
+  .SETUP_ESC_PTR     DW	SETUP_ESC_PTR_ ; pointer to SETUP escape seq		;AN000;
+					;  for this display mode		;AN000;
+  .NUM_RESTORE_ESC   DB	NUM_RESTORE_ESC_ ; # of escape byte for RESTORE		;AN000;
+  .RESTORE_ESC_PTR   DW	RESTORE_ESC_PTR_ ; pointer to RESTORE escape		;AN000;
+					;  seq for this display mode		;AN000;
+  .PRINT_OPTIONS     DB	PRINT_OPTIONS_ ;					;AN000;
+					;					;AN000;
+}
+match =DISPLAYMODE_STR_LAID_OUT, DISPLAYMODE_STR_LAID_OUT
+{
+    DISPLAYMODE_STR_LAID_OUT equ 1
+    virtual at 0
+      DISPLAYMODE_STR DISPLAYMODE_STR 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+      sizeof.DISPLAYMODE_STR = $ - DISPLAYMODE_STR
+    end virtual
+}
 .XLIST										;AN000;
 PAGE										;AN000;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;					;AN000;
@@ -26,81 +124,19 @@ PAGE										;AN000;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;					;AN000;
 .LIST										;AN000;
 					;					;AN000;
-SHARED_DATA_AREA_STR STRUC		;					;AN000;
-  SD_TOTAL_SIZE       DW    ?		; Total # bytes ALLOCATED to the	;AN000;
-					;  the Shared Data Area.		;AN000;
-  ;;;;;;;;;;;; Environment ;;;;;;;;;;;;;;					;AN000;
-  SWITCHES	      DB    0		; Command line switches 		;AN000;
-  HARDWARE_CONFIG     DB    ?		; Type of video hardware		;AN000;
-  PRINTER_TYPE	      DB    ?		; Type of printer attached		;AN000;
-					;					;AN000;
-  ;;;;;;;;;;;; Profile Data ;;;;;;;;;;;;;					;AN000;
-  DARKADJUST_VALUE    DB    0		; Darkness adjustment value		;AN000;
-					;					;AN000;
-  NUM_PRT_COLOR       DB    ?		; Number of print colors		;AN000;
-  COLORPRINT_PTR      DW    ?		; Pointer to COLORPRINT info		;AN000;
-					;					;AN000;
-  NUM_PRT_BANDS       DB    ?		; Number of selectable print bands	;AN000;
-  COLORSELECT_PTR     DW    ?		; Pointer to COLORSELECT info		;AN000;
-					;  bands				;AN000;
-  DISPLAYMODE_PTR     DW  ?		; Pointer to start of DISPLAYMODE	;AN000;
-					;  info 				;AN000;
-SHARED_DATA_AREA_STR ENDS	       ;;					;AN000;
 										;AN000;
 										;AN000;
 ;;;;;;;;; COLORSELECT info structure ;;;;					;AN000;
 					;					;AN000;
-COLORSELECT_STR  STRUC			;					;AN000;
-  NUM_SELECT_ESC    DB	?		; number of escape bytes to		;AN000;
-					;  select this band			;AN000;
-  SELECT_ESC	    DB	?		; Escape bytes to select band		;AN000;
-COLORSELECT_STR  ENDS		       ;;					;AN000;
 										;AN000;
 										;AN000;
 										;AN000;
 ;;;;;;;;; COLORPRINT info structure ;;;;;					;AN000;
 					;					;AN000;
-COLORPRINT_STR	STRUC			;					;AN000;
-  RED		    DB	?		; RGB value				;AN000;
-  GREEN 	    DB	?		;					;AN000;
-  BLUE		    DB	?		;					;AN000;
-					; Bit mask indicating color		;AN000;
-  SELECT_MASK	    DB	?		;  bands required:			;AN000;
-					;  Bit 0: first band in table		;AN000;
-COLORPRINT_STR	ENDS		       ;;  Bit 1: second band...		;AN000;
 										;AN000;
 										;AN000;
 ;;;;;;;;; DISPLAYMODE info structure ;;;;					;AN000;
 					; A new block is built when a		;AN000;
-DISPLAYMODE_STR STRUC			;  DISPLAYMODE statement is		;AN000;
-					;   found				;AN000;
-  NEXT_DISP_MODE    DW	?		; Pointer to info for next		;AN000;
-					;  display mode; -1 if last		;AN000;
-  NUM_DISP_MODE     DB	?		; Number of display modes for		;AN000;
-  DISP_MODE_LIST_PTR DW ?		;  this record - list of them		;AN000;
-					;					;AN000;
-  BOX_WIDTH	    DB	?		; Print box size - horizontal		;AN000;
-  BOX_HEIGHT	    DB	?		; Print box size - vertical		;AN000;
-					;					;AN000;
-  NUM_PATTERNS	    DB	?		; Number of grey patterns for		;AN000;
-					;  this box size			;AN000;
-  PATTERN_TAB_PTR   DW	?		; pointer to grey pattern table 	;AN000;
-					;  for this display mode		;AN000;
-  NUM_GRAPHICS_ESC  DB	?		; # of escape byte for GRAPHICS 	;AN000;
-  GRAPHICS_ESC_PTR  DW	?		; pointer to GRAPHICS escape		;AN000;
-  LOW_BYT_COUNT_PTR DW	?		; pointers to number of bytes sent	;AN000;
-  HGH_BYT_COUNT_PTR DW	?		;  to the printer (1 word holds this	;AN000;
-					;    number but, must be send 1 byte	;AN000;
-					;     at a time).			;AN000;
-  NUM_SETUP_ESC     DB	?		; # of escape byte for SETUP		;AN000;
-  SETUP_ESC_PTR     DW	?		; pointer to SETUP escape seq		;AN000;
-					;  for this display mode		;AN000;
-  NUM_RESTORE_ESC   DB	?		; # of escape byte for RESTORE		;AN000;
-  RESTORE_ESC_PTR   DW	?		; pointer to RESTORE escape		;AN000;
-					;  seq for this display mode		;AN000;
-  PRINT_OPTIONS     DB	?		;					;AN000;
-					;					;AN000;
-DISPLAYMODE_STR ENDS		       ;;					;AN000;
 										;AN000;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;					;AN000;
 ;;										;AN000;

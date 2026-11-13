@@ -1,3 +1,149 @@
+STRUC TAB_ENTRY TAB_OFFSET_=0, TAB_COPY_=0, TAB_SIZE_=0, BOX_W_PAT_=0, BOX_H_PAT_=0, NB_INT_=0
+{
+			   ;   WHAT TABLE OF PATTERNS TO USE			;AN000;
+  .TAB_OFFSET DW  TAB_OFFSET_ ; ADDRESS OF THE PATTERN TABLE			;AN000;
+  .TAB_COPY   DW  TAB_COPY_ ; ADDRESS OF PATTERN TABLE COPY IN SHARED DATA	;AN000;
+  .TAB_SIZE   DW  TAB_SIZE_ ; SIZE OF THE PATTERN TABLE				;AN000;
+  .BOX_W_PAT  DB  BOX_W_PAT_ ; BOX WIDTH	FOR PATTERNS IN THIS TABLE		;AN000;
+  .BOX_H_PAT  DB  BOX_H_PAT_ ; BOX HEIGHT FOR PATTERNS IN THIS TABLE		;AN000;
+  .NB_INT     DB  NB_INT_ ; NUMBER OF INTENSITIES IN THIS TABLE		;AN000;
+}
+match =TAB_ENTRY_LAID_OUT, TAB_ENTRY_LAID_OUT
+{
+    TAB_ENTRY_LAID_OUT equ 1
+    virtual at 0
+      TAB_ENTRY TAB_ENTRY 0, 0, 0, 0, 0, 0
+      sizeof.TAB_ENTRY = $ - TAB_ENTRY
+    end virtual
+}
+STRUC PAT_4X2_STR MAX_4X2_=0, C1_4X2_=00B, C2_4X2_=00B, C3_4X2_=00B, C4_4X2_=00B
+{
+  .MAX_4X2 DB	MAX_4X2_ ; Maximum intensity			;AN000;
+  .C1_4X2  DB	C1_4X2_ ; Column 1 (Leftmost column)		;AN000;
+  .C2_4X2  DB	C2_4X2_ ; Column 2				;AN000;
+  .C3_4X2  DB	C3_4X2_ ; Column 3				;AN000;
+  .C4_4X2  DB	C4_4X2_ ; Column 4 (Rightmost column) 	;AN000;
+}
+match =PAT_4X2_STR_LAID_OUT, PAT_4X2_STR_LAID_OUT
+{
+    PAT_4X2_STR_LAID_OUT equ 1
+    virtual at 0
+      PAT_4X2_STR PAT_4X2_STR 0, 0, 0, 0, 0
+      sizeof.PAT_4X2_STR = $ - PAT_4X2_STR
+    end virtual
+}
+STRUC PAT_4X4_STR MAX_4X4_=0, C1_4X4_=0000B, C2_4X4_=0000B, C3_4X4_=0000B, C4_4X4_=0000B
+{
+  .MAX_4X4 DB	MAX_4X4_ ; Maximum intensity			;AN000;
+  .C1_4X4  DB	C1_4X4_ ; Column 1 (Leftmost column)		;AN000;
+  .C2_4X4  DB	C2_4X4_ ; Column 2				;AN000;
+  .C3_4X4  DB	C3_4X4_ ; Column 3				;AN000;
+  .C4_4X4  DB	C4_4X4_ ; Column 4 (Rightmost column) 	;AN000;
+}
+match =PAT_4X4_STR_LAID_OUT, PAT_4X4_STR_LAID_OUT
+{
+    PAT_4X4_STR_LAID_OUT equ 1
+    virtual at 0
+      PAT_4X4_STR PAT_4X4_STR 0, 0, 0, 0, 0
+      sizeof.PAT_4X4_STR = $ - PAT_4X4_STR
+    end virtual
+}
+STRUC PAT_6X2_STR MAX_6X2_=0, C1_6X2_=00B, C2_6X2_=00B, C3_6X2_=00B, C4_6X2_=00B, C5_6X2_=00B, C6_6X2_=00B
+{
+  .MAX_6X2 DB	MAX_6X2_ ; Maximum intensity			;AN000;
+  .C1_6X2  DB	C1_6X2_ ; Column 1 (Leftmost column)		;AN000;
+  .C2_6X2  DB	C2_6X2_ ; Column 2				;AN000;
+  .C3_6X2  DB	C3_6X2_ ; Column 3				;AN000;
+  .C4_6X2  DB	C4_6X2_ ; Column 4				;AN000;
+  .C5_6X2  DB	C5_6X2_ ; Column 5				;AN000;
+  .C6_6X2  DB	C6_6X2_ ; Column 6 (Rightmost column) 	;AN000;
+}
+match =PAT_6X2_STR_LAID_OUT, PAT_6X2_STR_LAID_OUT
+{
+    PAT_6X2_STR_LAID_OUT equ 1
+    virtual at 0
+      PAT_6X2_STR PAT_6X2_STR 0, 0, 0, 0, 0, 0, 0
+      sizeof.PAT_6X2_STR = $ - PAT_6X2_STR
+    end virtual
+}
+STRUC PAT_8X2_STR MAX_8X2_=0, C1_8X2_=00B, C2_8X2_=00B, C3_8X2_=00B, C4_8X2_=00B, C5_8X2_=00B, C6_8X2_=00B, C7_8X2_=00B, C8_8X2_=00B
+{
+  .MAX_8X2 DB	MAX_8X2_ ; Maximum intensity			;AN000;
+  .C1_8X2  DB	C1_8X2_ ; Column 1 (Leftmost column)		;AN000;
+  .C2_8X2  DB	C2_8X2_ ; Column 2				;AN000;
+  .C3_8X2  DB	C3_8X2_ ; Column 3				;AN000;
+  .C4_8X2  DB	C4_8X2_ ; Column 4				;AN000;
+  .C5_8X2  DB	C5_8X2_ ; Column 5				;AN000;
+  .C6_8X2  DB	C6_8X2_ ; Column 6				;AN000;
+  .C7_8X2  DB	C7_8X2_ ; Column 7				;AN000;
+  .C8_8X2  DB	C8_8X2_ ; Column 8 (Rightmost column) 	;AN000;
+}
+match =PAT_8X2_STR_LAID_OUT, PAT_8X2_STR_LAID_OUT
+{
+    PAT_8X2_STR_LAID_OUT equ 1
+    virtual at 0
+      PAT_8X2_STR PAT_8X2_STR 0, 0, 0, 0, 0, 0, 0, 0, 0
+      sizeof.PAT_8X2_STR = $ - PAT_8X2_STR
+    end virtual
+}
+STRUC PAT_8X4_STR MAX_8X4_=0, C1_8X4_=0000B, C2_8X4_=0000B, C3_8X4_=0000B, C4_8X4_=0000B, C5_8X4_=0000B, C6_8X4_=0000B, C7_8X4_=0000B, C8_8X4_=0000B
+{
+  .MAX_8X4 DB	MAX_8X4_ ; Maximum intensity			;AN000;
+  .C1_8X4  DB	C1_8X4_ ; Column 1 (Leftmost column)		;AN000;
+  .C2_8X4  DB	C2_8X4_ ; Column 2				;AN000;
+  .C3_8X4  DB	C3_8X4_ ; Column 3				;AN000;
+  .C4_8X4  DB	C4_8X4_ ; Column 4				;AN000;
+  .C5_8X4  DB	C5_8X4_ ; Column 5				;AN000;
+  .C6_8X4  DB	C6_8X4_ ; Column 6				;AN000;
+  .C7_8X4  DB	C7_8X4_ ; Column 7				;AN000;
+  .C8_8X4  DB	C8_8X4_ ; Column 8 (Rightmost column) 	;AN000;
+}
+match =PAT_8X4_STR_LAID_OUT, PAT_8X4_STR_LAID_OUT
+{
+    PAT_8X4_STR_LAID_OUT equ 1
+    virtual at 0
+      PAT_8X4_STR PAT_8X4_STR 0, 0, 0, 0, 0, 0, 0, 0, 0
+      sizeof.PAT_8X4_STR = $ - PAT_8X4_STR
+    end virtual
+}
+STRUC PAT_6X4_STR MAX_6X4_=0, C1_6X4_=0000B, C2_6X4_=0000B, C3_6X4_=0000B, C4_6X4_=0000B, C5_6X4_=0000B, C6_6X4_=0000B
+{
+  .MAX_6X4 DB	MAX_6X4_ ; Maximum intensity			;AN000;
+  .C1_6X4  DB	C1_6X4_ ; Column 1 (Leftmost column)		;AN000;
+  .C2_6X4  DB	C2_6X4_ ; Column 2				;AN000;
+  .C3_6X4  DB	C3_6X4_ ; Column 3				;AN000;
+  .C4_6X4  DB	C4_6X4_ ; Column 4				;AN000;
+  .C5_6X4  DB	C5_6X4_ ; Column 5				;AN000;
+  .C6_6X4  DB	C6_6X4_ ; Column 6 (Rightmost column) 	;AN000;
+}
+match =PAT_6X4_STR_LAID_OUT, PAT_6X4_STR_LAID_OUT
+{
+    PAT_6X4_STR_LAID_OUT equ 1
+    virtual at 0
+      PAT_6X4_STR PAT_6X4_STR 0, 0, 0, 0, 0, 0, 0
+      sizeof.PAT_6X4_STR = $ - PAT_6X4_STR
+    end virtual
+}
+STRUC PAT_8X6_STR MAX_8X6_=0, C1_8X6_=000000B, C2_8X6_=000000B, C3_8X6_=000000B, C4_8X6_=000000B, C5_8X6_=000000B, C6_8X6_=000000B, C7_8X6_=000000B, C8_8X6_=000000B
+{
+  .MAX_8X6 DB	MAX_8X6_ ; Maximum intensity			;AN000;
+  .C1_8X6  DB	C1_8X6_ ; Column 1 (Leftmost column)		;AN000;
+  .C2_8X6  DB	C2_8X6_ ; Column 2				;AN000;
+  .C3_8X6  DB	C3_8X6_ ; Column 3				;AN000;
+  .C4_8X6  DB	C4_8X6_ ; Column 4				;AN000;
+  .C5_8X6  DB	C5_8X6_ ; Column 5				;AN000;
+  .C6_8X6  DB	C6_8X6_ ; Column 6				;AN000;
+  .C7_8X6  DB	C7_8X6_ ; Column 7				;AN000;
+  .C8_8X6  DB	C8_8X6_ ; Column 8 (Rightmost column) 	;AN000;
+}
+match =PAT_8X6_STR_LAID_OUT, PAT_8X6_STR_LAID_OUT
+{
+    PAT_8X6_STR_LAID_OUT equ 1
+    virtual at 0
+      PAT_8X6_STR PAT_8X6_STR 0, 0, 0, 0, 0, 0, 0, 0, 0
+      sizeof.PAT_8X6_STR = $ - PAT_8X6_STR
+    end virtual
+}
 .XLIST										;AN000;
 PAGE	,132									;AN000;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;					;AN000;
@@ -21,15 +167,6 @@ PAGE	,132									;AN000;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;					;AN000;
 .LIST										;AN000;
 										;AN000;
-TAB_ENTRY STRUC 	   ; TABLE DIRECTORY ENTRY USED TO LOCATED		;AN000;
-			   ;   WHAT TABLE OF PATTERNS TO USE			;AN000;
-  TAB_OFFSET DW  ?	   ; ADDRESS OF THE PATTERN TABLE			;AN000;
-  TAB_COPY   DW  ?	   ; ADDRESS OF PATTERN TABLE COPY IN SHARED DATA	;AN000;
-  TAB_SIZE   DW  ?	   ; SIZE OF THE PATTERN TABLE				;AN000;
-  BOX_W_PAT  DB  ?	   ; BOX WIDTH	FOR PATTERNS IN THIS TABLE		;AN000;
-  BOX_H_PAT  DB  ?	   ; BOX HEIGHT FOR PATTERNS IN THIS TABLE		;AN000;
-  NB_INT     DB  ?	   ; NUMBER OF INTENSITIES IN THIS TABLE		;AN000;
-TAB_ENTRY ENDS									;AN000;
 										;AN000;
 ;-------------------------------------------------------------------------------;AN000;
 ; PATTERN TYPES:								;AN000;
@@ -52,74 +189,9 @@ TAB_ENTRY ENDS									;AN000;
 ;										;AN000;
 ;-------------------------------------------------------------------------------;AN000;
 										;AN000;
-PAT_4X2_STR STRUC			; PATTERN MADE OF 2X1 BOXES		;AN000;
-  MAX_4X2 DB	?			  ; Maximum intensity			;AN000;
-  C1_4X2  DB	00B			  ; Column 1 (Leftmost column)		;AN000;
-  C2_4X2  DB	00B			  ; Column 2				;AN000;
-  C3_4X2  DB	00B			  ; Column 3				;AN000;
-  C4_4X2  DB	00B			  ; Column 4 (Rightmost column) 	;AN000;
-PAT_4X2_STR ENDS								;AN000;
 										;AN000;
-PAT_4X4_STR STRUC			; PATTERN MADE OF 2X2 BOXES		;AN000;
-  MAX_4X4 DB	?			  ; Maximum intensity			;AN000;
-  C1_4X4  DB	0000B			  ; Column 1 (Leftmost column)		;AN000;
-  C2_4X4  DB	0000B			  ; Column 2				;AN000;
-  C3_4X4  DB	0000B			  ; Column 3				;AN000;
-  C4_4X4  DB	0000B			  ; Column 4 (Rightmost column) 	;AN000;
-PAT_4X4_STR ENDS								;AN000;
 										;AN000;
-PAT_6X2_STR STRUC			; PATTERN MADE OF 3X1 BOXES		;AN000;
-  MAX_6X2 DB	?			  ; Maximum intensity			;AN000;
-  C1_6X2  DB	00B			  ; Column 1 (Leftmost column)		;AN000;
-  C2_6X2  DB	00B			  ; Column 2				;AN000;
-  C3_6X2  DB	00B			  ; Column 3				;AN000;
-  C4_6X2  DB	00B			  ; Column 4				;AN000;
-  C5_6X2  DB	00B			  ; Column 5				;AN000;
-  C6_6X2  DB	00B			  ; Column 6 (Rightmost column) 	;AN000;
-PAT_6X2_STR ENDS								;AN000;
 										;AN000;
-PAT_8X2_STR STRUC			; PATTERN MADE OF 4X1 BOXES		;AN000;
-  MAX_8X2 DB	?			  ; Maximum intensity			;AN000;
-  C1_8X2  DB	00B			  ; Column 1 (Leftmost column)		;AN000;
-  C2_8X2  DB	00B			  ; Column 2				;AN000;
-  C3_8X2  DB	00B			  ; Column 3				;AN000;
-  C4_8X2  DB	00B			  ; Column 4				;AN000;
-  C5_8X2  DB	00B			  ; Column 5				;AN000;
-  C6_8X2  DB	00B			  ; Column 6				;AN000;
-  C7_8X2  DB	00B			  ; Column 7				;AN000;
-  C8_8X2  DB	00B			  ; Column 8 (Rightmost column) 	;AN000;
-PAT_8X2_STR ENDS								;AN000;
 										;AN000;
-PAT_8X4_STR STRUC			; PATTERN MADE OF 4X2 BOXES		;AN000;
-  MAX_8X4 DB	?			  ; Maximum intensity			;AN000;
-  C1_8X4  DB	0000B			  ; Column 1 (Leftmost column)		;AN000;
-  C2_8X4  DB	0000B			  ; Column 2				;AN000;
-  C3_8X4  DB	0000B			  ; Column 3				;AN000;
-  C4_8X4  DB	0000B			  ; Column 4				;AN000;
-  C5_8X4  DB	0000B			  ; Column 5				;AN000;
-  C6_8X4  DB	0000B			  ; Column 6				;AN000;
-  C7_8X4  DB	0000B			  ; Column 7				;AN000;
-  C8_8X4  DB	0000B			  ; Column 8 (Rightmost column) 	;AN000;
-PAT_8X4_STR ENDS								;AN000;
 										;AN000;
-PAT_6X4_STR STRUC			; PATTERN MADE OF 3X2 BOXES		;AN000;
-  MAX_6X4 DB	?			  ; Maximum intensity			;AN000;
-  C1_6X4  DB	0000B			  ; Column 1 (Leftmost column)		;AN000;
-  C2_6X4  DB	0000B			  ; Column 2				;AN000;
-  C3_6X4  DB	0000B			  ; Column 3				;AN000;
-  C4_6X4  DB	0000B			  ; Column 4				;AN000;
-  C5_6X4  DB	0000B			  ; Column 5				;AN000;
-  C6_6X4  DB	0000B			  ; Column 6 (Rightmost column) 	;AN000;
-PAT_6X4_STR ENDS								;AN000;
 										;AN000;
-PAT_8X6_STR STRUC			; PATTERN MADE OF 4X3 BOXES		;AN000;
-  MAX_8X6 DB	?			  ; Maximum intensity			;AN000;
-  C1_8X6  DB	000000B 		  ; Column 1 (Leftmost column)		;AN000;
-  C2_8X6  DB	000000B 		  ; Column 2				;AN000;
-  C3_8X6  DB	000000B 		  ; Column 3				;AN000;
-  C4_8X6  DB	000000B 		  ; Column 4				;AN000;
-  C5_8X6  DB	000000B 		  ; Column 5				;AN000;
-  C6_8X6  DB	000000B 		  ; Column 6				;AN000;
-  C7_8X6  DB	000000B 		  ; Column 7				;AN000;
-  C8_8X6  DB	000000B 		  ; Column 8 (Rightmost column) 	;AN000;
-PAT_8X6_STR ENDS								;AN000;
