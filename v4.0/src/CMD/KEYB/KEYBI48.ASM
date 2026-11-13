@@ -45,21 +45,21 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                                        ;;
-        INCLUDE KEYBEQU.INC            ;;
-        INCLUDE KEYBSHAR.INC           ;;
-        INCLUDE KEYBMAC.INC            ;;
-        INCLUDE KEYBCMD.INC            ;;
-        INCLUDE KEYBCPSD.INC           ;;
-        INCLUDE POSTEQU.inc            ;;
-        INCLUDE DSEG.inc               ;;
+        include 'KEYBEQU.INC'          ;;
+        include 'KEYBSHAR.INC'         ;;
+        include 'KEYBMAC.INC'          ;;
+        include 'KEYBCMD.INC'          ;;
+        include 'KEYBCPSD.INC'         ;;
+        include 'POSTEQU.INC'          ;;
+        include 'DSEG.INC'             ;;
                                        ;;
-        PUBLIC KEYB_INT_48             ;;
+;        PUBLIC KEYB_INT_48             ;;
                                        ;;
-        EXTRN  ERROR_BEEP:NEAR         ;;
+;        EXTRN  ERROR_BEEP:NEAR         ;;
                                        ;;
-CODE    SEGMENT PUBLIC 'CODE'          ;;
+;CODE    SEGMENT PUBLIC 'CODE'          ;;
                                        ;;
-        ASSUME  CS:CODE,DS:CODE,ES:DATA;;
+;        ASSUME  CS:CODE,DS:CODE,ES:DATA_;;
                                        ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -87,7 +87,7 @@ CODE    SEGMENT PUBLIC 'CODE'          ;;
 ;;   Program Code
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                                        ;;
-KEYB_INT_48   PROC                     ;;
+KEYB_INT_48:                           ;;
                                        ;;
         STI                            ;; allow NON-KB interrupts
         PUSH   BX                      ;;
@@ -100,7 +100,7 @@ KEYB_INT_48   PROC                     ;;
         PUSH   ES                      ;;
         PUSH   AX                      ;;
                                        ;;
-        MOV     SD.JR_KB_FLAG,0        ;; Clear the flag
+        MOV     [SHARED_DATA.JR_KB_FLAG],0      ;; Clear the flag
                                        ;;
         CMP     AL,80H                 ;; Test for break code
         JA      INT48_EXIT             ;; IF not a break code THEN
@@ -110,10 +110,10 @@ KEYB_INT_48   PROC                     ;;
                                        ;;
         PUSH    CS                     ;; Set up addressing
         POP     DS                     ;;  for DATA SEGMENT (=CODE SEGMENT)
-        MOV     BX,DATA                ;; Set up addressing
+        MOV     BX,DATA_                ;; Set up addressing
         MOV     ES,BX                  ;;  for EXTRA SEGMENT (=BIOS RAM AREA)
                                        ;;
-        MOV     AH,KB_FLAG             ;; Get the flag status
+        MOV     AH,[KB_FLAG]           ;; Get the flag status
         AND     AH,0FH                 ;; Clear all shift states
                                        ;;
         TEST    AH,CTL_SHIFT           ;; Test if CNTL was entered?
@@ -123,12 +123,12 @@ KEYB_INT_48   PROC                     ;;
         CMP     AH,ALT_SHIFT                         ;;     SHIFT were pressed
         JBE     INT48_PASS                           ;; IF no THEN
                                                      ;;     pass to ROM INT48
-        MOV     BH,KB_FLAG                           ;;;;;;;;;;;; IF yes then
-        MOV     SD.JR_KB_FLAG,BH                               ;;  Setup JR flag
-        AND     SD.JR_KB_FLAG,ALT_SHIFT+RIGHT_SHIFT+LEFT_SHIFT ;; Pass flags
+        MOV     BH,[KB_FLAG]                         ;;;;;;;;;;;; IF yes then
+        MOV     [SHARED_DATA.JR_KB_FLAG],BH                             ;;  Setup JR flag
+        AND     [SHARED_DATA.JR_KB_FLAG],ALT_SHIFT+RIGHT_SHIFT+LEFT_SHIFT ;; Pass flags
                                                                ;;   (ALT and
                                        ;;;;;;;;;;;;;;;;;;;;;;;;;; EITHER/BOTH SHIFT)
-        XOR     KB_FLAG,AH             ;; Clear the ALT state and SHIFT state
+        XOR     [KB_FLAG],AH           ;; Clear the ALT state and SHIFT state
                                        ;; Reset the KB_FLAG to permit
                                        ;;    third shifts to go through
 INT48_PASS:                            ;;
@@ -136,9 +136,9 @@ INT48_PASS:                            ;;
         POP     DS                     ;;
                                        ;;;;;;;
 INT48_EXIT:                                 ;;
-        CMP   WORD PTR CS:SD.OLD_INT_48,0   ;; Q..are we the last in the chain?
+        CMP   word [cs:SHARED_DATA.OLD_INT_48],0     ;; Q..are we the last in the chain?
         JNE   INT_48_JMP                    ;; N..call next in chain
-        CMP   WORD PTR CS:SD.OLD_INT_48+2,0 ;; Q..are we the last in the chain?
+        CMP   word [cs:SHARED_DATA.OLD_INT_48+2],0   ;; Q..are we the last in the chain?
         JNE   INT_48_JMP                    ;; N..call next in chain
                                        ;;;;;;;
         POP    AX                      ;; restore regs
@@ -165,10 +165,10 @@ INT_48_JMP:                            ;;
         POP    BP                      ;;
         POP    BX                      ;;
                                        ;;
-        JMP   CS:SD.OLD_INT_48         ;;
+        JMP   [cs:SHARED_DATA.OLD_INT_48]       ;;
                                        ;;
-KEYB_INT_48   ENDP                     ;;
+;KEYB_INT_48   ENDP                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-CODE   ENDS
-       END
+;CODE   ENDS
+;       END

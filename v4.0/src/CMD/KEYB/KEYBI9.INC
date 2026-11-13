@@ -21,7 +21,7 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                                        ;;
-        EXTRN    KEYB_STATE_PROCESSOR:NEAR
+;        EXTRN    KEYB_STATE_PROCESSOR:NEAR
                                        ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

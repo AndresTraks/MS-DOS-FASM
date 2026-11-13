@@ -23,11 +23,11 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					       ;;
-	EXTRN	 TABLE_BUILD   :NEAR	       ;;
-	EXTRN	 FIND_CP_TABLE :NEAR	       ;;
+;	EXTRN	 TABLE_BUILD   :NEAR	       ;;
+;	EXTRN	 FIND_CP_TABLE :NEAR	       ;;
 					       ;;
-	EXTRN	 CPN_INVALID   :WORD	       ;;
-	EXTRN	 SD_LENGTH     :WORD	       ;;
+;	EXTRN	 CPN_INVALID   :WORD	       ;;
+;	EXTRN	 SD_LENGTH     :WORD	       ;;
 					       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .LIST

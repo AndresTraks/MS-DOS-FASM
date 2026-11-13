@@ -1,3 +1,159 @@
+STRUC SHARED_DATA_STR OLD_INT_9_=0, OLD_INT_2F_=0, OLD_INT_48_=0, KEYB_TYPE_=0, SYSTEM_FLAG_=0, TABLE_OK_=0, JR_KB_FLAG_=0, TIMING_FACTOR_=1, ACTIVE_LANGUAGE_='US', INVOKED_CP_TABLE_=437, INVOKED_KBD_ID_=0, ACTIVE_XLAT_PTR_=-1, FIRST_XLAT_PTR_=-1, RESIDENT_END_=0ffffh, LOGIC_PTR_=-1, COMMON_XLAT_PTR_=-1, SPECIAL_FEATURES_=0, TABLE_OVERFLOW_=0, HOT_KEY_ON_SCAN_=0, HOT_KEY_OFF_SCAN_=0, TABLE_AREA_=0
+{
+                                       ;;
+.OLD_INT_9           DD    OLD_INT_9_ ;; saved int 9 vector
+.OLD_INT_2F          DD    OLD_INT_2F_ ;; saved int 2F vector
+.OLD_INT_48          DD    OLD_INT_48_ ;; saved int 48 vector (if PCjr)
+.KEYB_TYPE           DW    KEYB_TYPE_ ;; type of keyboard
+.SYSTEM_FLAG         DW    SYSTEM_FLAG_ ;; system configuration flags
+.TABLE_OK            DB    TABLE_OK_ ;; flag to INT 9 that table is built
+.JR_KB_FLAG          DB    JR_KB_FLAG_ ;; flag for special PCjr processing
+.TIMING_FACTOR       DW    TIMING_FACTOR_ ;; Scale factor for INT 9 timing loops
+                                       ;;  PC_AT = 1
+                    DB    2 DUP(0)     ;; reserved
+                                       ;;
+                                       ;; Table copy begins here:
+.ACTIVE_LANGUAGE     DB    ACTIVE_LANGUAGE_ ;; language code
+.INVOKED_CP_TABLE    DW    INVOKED_CP_TABLE_ ;; ptr to table for invoked code page
+.INVOKED_KBD_ID      DW    INVOKED_KBD_ID_ ;; WGR invoked keyboard id.             ;AN000
+.ACTIVE_XLAT_PTR     DW    ACTIVE_XLAT_PTR_ ;; ptr to active Specific Translate Sect
+.FIRST_XLAT_PTR      DW    FIRST_XLAT_PTR_ ;; ptr to first Specific Translate Sect
+.RESIDENT_END        DW    RESIDENT_END_ ;; offset of last byte in resident mem
+.LOGIC_PTR           DW    LOGIC_PTR_ ;; ptr to State Logic
+.COMMON_XLAT_PTR     DW    COMMON_XLAT_PTR_ ;; ptr to Common Translate Section
+.SPECIAL_FEATURES    DW    SPECIAL_FEATURES_ ;; special Features
+.TABLE_OVERFLOW      DB    TABLE_OVERFLOW_ ;; overflow flag for table rebuild
+.HOT_KEY_ON_SCAN     DB    HOT_KEY_ON_SCAN_ ;; scan codes to use with ALT+CTRL
+.HOT_KEY_OFF_SCAN    DB    HOT_KEY_OFF_SCAN_ ;;  to turn hot key on and off
+                    DB    4 DUP(0)     ;; reserved
+.TABLE_AREA          DB    TABLE_AREA_ ;; tables loaded here:
+                                       ;;  State Logic
+                                       ;;  Common Translate Section
+                                       ;;  Specific Translate Sections for
+                                       ;;   each code page
+}
+match =SHARED_DATA_STR_LAID_OUT, SHARED_DATA_STR_LAID_OUT
+{
+    SHARED_DATA_STR_LAID_OUT equ 1
+    virtual at 0
+      SHARED_DATA_STR SHARED_DATA_STR 0, 0, 0, 0, 0, 0, 0, 0, 'US', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+      sizeof.SHARED_DATA_STR = $ - SHARED_DATA_STR
+    end virtual
+}
+STRUC STATE_LOGIC_STR SL_LOGIC_LEN_=0, SL_SPECIAL_FEATURES_=0, SL_LOGIC_CMDS_=0
+{
+                                       ;;
+.SL_LOGIC_LEN    DW   SL_LOGIC_LEN_ ;; length of state logic
+.SL_SPECIAL_FEATURES   DW   SL_SPECIAL_FEATURES_ ;;
+.SL_LOGIC_CMDS   DB   SL_LOGIC_CMDS_ ;; state logic commands begin here
+                                       ;;
+}
+match =STATE_LOGIC_STR_LAID_OUT, STATE_LOGIC_STR_LAID_OUT
+{
+    STATE_LOGIC_STR_LAID_OUT equ 1
+    virtual at 0
+      STATE_LOGIC_STR STATE_LOGIC_STR 0, 0, 0
+      sizeof.STATE_LOGIC_STR = $ - STATE_LOGIC_STR
+    end virtual
+}
+STRUC XLAT_SECT_STR XS_NEXT_SECT_PTR_=0, XS_CP_ID_=0, XS_FIRST_STATE_=0
+{
+                                       ;;
+.XS_NEXT_SECT_PTR       DW    XS_NEXT_SECT_PTR_ ;; Pointer to next Specific Translate
+                                       ;;  Section
+.XS_CP_ID               DW    XS_CP_ID_ ;; code page id
+.XS_FIRST_STATE         DB    XS_FIRST_STATE_ ;;
+                                       ;;
+}
+match =XLAT_SECT_STR_LAID_OUT, XLAT_SECT_STR_LAID_OUT
+{
+    XLAT_SECT_STR_LAID_OUT equ 1
+    virtual at 0
+      XLAT_SECT_STR XLAT_SECT_STR 0, 0, 0
+      sizeof.XLAT_SECT_STR = $ - XLAT_SECT_STR
+    end virtual
+}
+STRUC STATE_STR XS_STATE_LEN_=0, XS_STATE_ID_=0, XS_KBD_TYPE_=0, XS_ERROR_CHAR_=0, XS_FIRST_TAB_=0
+{
+                                       ;;
+.XS_STATE_LEN     DW    XS_STATE_LEN_ ;; length of state section
+.XS_STATE_ID      DB    XS_STATE_ID_ ;; State ID
+.XS_KBD_TYPE      DW    XS_KBD_TYPE_ ;; Keyboard Type
+.XS_ERROR_CHAR    DW    XS_ERROR_CHAR_ ;; Buffer entry for error character
+.XS_FIRST_TAB     DB    XS_FIRST_TAB_ ;;
+                                       ;;
+}
+match =STATE_STR_LAID_OUT, STATE_STR_LAID_OUT
+{
+    STATE_STR_LAID_OUT equ 1
+    virtual at 0
+      STATE_STR STATE_STR 0, 0, 0, 0, 0
+      sizeof.STATE_STR = $ - STATE_STR
+    end virtual
+}
+STRUC XLAT_STR XLAT_TAB_SIZE_=0, XLAT_OPTIONS_=0
+{
+                                       ;;
+.XLAT_TAB_SIZE       DW    XLAT_TAB_SIZE_ ;; Size in bytes of this table -
+                                       ;;  includes this field, options etc.
+.XLAT_OPTIONS        DB    XLAT_OPTIONS_ ;; xlat options
+                                       ;; XLAT TABLE IS HERE
+}
+match =XLAT_STR_LAID_OUT, XLAT_STR_LAID_OUT
+{
+    XLAT_STR_LAID_OUT equ 1
+    virtual at 0
+      XLAT_STR XLAT_STR 0, 0
+      sizeof.XLAT_STR = $ - XLAT_STR
+    end virtual
+}
+STRUC XLAT_TYPE_1_STR XLAT_SCAN_LO_=0, XLAT_SCAN_HI_=0, XLAT_1_BUF_ENTRY_=0
+{
+                    rb      sizeof.XLAT_STR   ;; filler
+.XLAT_SCAN_LO        DB    XLAT_SCAN_LO_ ;; Scan code
+.XLAT_SCAN_HI        DB    XLAT_SCAN_HI_ ;;  range
+.XLAT_1_BUF_ENTRY    DB    XLAT_1_BUF_ENTRY_ ;; The table itself
+}
+match =XLAT_TYPE_1_STR_LAID_OUT, XLAT_TYPE_1_STR_LAID_OUT
+{
+    XLAT_TYPE_1_STR_LAID_OUT equ 1
+    virtual at 0
+      XLAT_TYPE_1_STR XLAT_TYPE_1_STR 0, 0, 0
+      sizeof.XLAT_TYPE_1_STR = $ - XLAT_TYPE_1_STR
+    end virtual
+}
+STRUC XLAT_TYPE_2_STR XLAT_NUM_=0, XLAT_SCAN_=0, XLAT_2_BUF_ENTRY_=0
+{
+                    rb      sizeof.XLAT_STR   ;; filler
+.XLAT_NUM            DB    XLAT_NUM_ ;; number of scans
+.XLAT_SCAN           DB    XLAT_SCAN_ ;; Scan code
+.XLAT_2_BUF_ENTRY    DB    XLAT_2_BUF_ENTRY_ ;; The table itself
+}
+match =XLAT_TYPE_2_STR_LAID_OUT, XLAT_TYPE_2_STR_LAID_OUT
+{
+    XLAT_TYPE_2_STR_LAID_OUT equ 1
+    virtual at 0
+      XLAT_TYPE_2_STR XLAT_TYPE_2_STR 0, 0, 0
+      sizeof.XLAT_TYPE_2_STR = $ - XLAT_TYPE_2_STR
+    end virtual
+}
+STRUC SET_FLAG_STR SF_NUM_=0, SF_SCAN_CODE_=0, SF_FLAG_ID_=0, SF_FLAG_MASK_=0
+{
+                                       ;;
+.SF_NUM              DB    SF_NUM_ ;; Number of entries
+.SF_SCAN_CODE        DB    SF_SCAN_CODE_ ;; scan code
+.SF_FLAG_ID          DB    SF_FLAG_ID_ ;; flag id
+.SF_FLAG_MASK        DB    SF_FLAG_MASK_ ;; flag mask
+                                       ;;
+}
+match =SET_FLAG_STR_LAID_OUT, SET_FLAG_STR_LAID_OUT
+{
+    SET_FLAG_STR_LAID_OUT equ 1
+    virtual at 0
+      SET_FLAG_STR SET_FLAG_STR 0, 0, 0, 0
+      sizeof.SET_FLAG_STR = $ - SET_FLAG_STR
+    end virtual
+}
 .XLIST
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -57,39 +213,6 @@ US_MODE     EQU   0                    ;;  hot key is active => US
 LANG_MODE   EQU   0FFH                 ;;  hot key is inactive
                                        ;;
                                        ;; -----------------------------------
-SHARED_DATA_STR     STRUC              ;; SHARED DATA AREA
-                                       ;;
-OLD_INT_9           DD    0            ;; saved int 9 vector
-OLD_INT_2F          DD    0            ;; saved int 2F vector
-OLD_INT_48          DD    0            ;; saved int 48 vector (if PCjr)
-KEYB_TYPE           DW    0            ;; type of keyboard
-SYSTEM_FLAG         DW    0            ;; system configuration flags
-TABLE_OK            DB    0            ;; flag to INT 9 that table is built
-JR_KB_FLAG          DB    0            ;; flag for special PCjr processing
-TIMING_FACTOR       DW    1            ;; Scale factor for INT 9 timing loops
-                                       ;;  PC_AT = 1
-                    DB    2 DUP(0)     ;; reserved
-                                       ;;
-                                       ;; Table copy begins here:
-ACTIVE_LANGUAGE     DB    'US'         ;; language code
-INVOKED_CP_TABLE    DW    437          ;; ptr to table for invoked code page
-INVOKED_KBD_ID      DW    0            ;; WGR invoked keyboard id.             ;AN000
-ACTIVE_XLAT_PTR     DW    -1           ;; ptr to active Specific Translate Sect
-FIRST_XLAT_PTR      DW    -1           ;; ptr to first Specific Translate Sect
-RESIDENT_END        DW    0ffffh       ;; offset of last byte in resident mem
-LOGIC_PTR           DW    -1           ;; ptr to State Logic
-COMMON_XLAT_PTR     DW    -1           ;; ptr to Common Translate Section
-SPECIAL_FEATURES    DW    ?            ;; special Features
-TABLE_OVERFLOW      DB    0            ;; overflow flag for table rebuild
-HOT_KEY_ON_SCAN     DB    ?            ;; scan codes to use with ALT+CTRL
-HOT_KEY_OFF_SCAN    DB    ?            ;;  to turn hot key on and off
-                    DB    4 DUP(0)     ;; reserved
-TABLE_AREA          DB    ?            ;; tables loaded here:
-                                       ;;  State Logic
-                                       ;;  Common Translate Section
-                                       ;;  Specific Translate Sections for
-                                       ;;   each code page
-SHARED_DATA_STR     ENDS               ;;
                                        ;;
                                        ;;
                                        ;;
@@ -100,18 +223,11 @@ SHARED_DATA_STR     ENDS               ;;
 ;; State Logic command macros are defined in KEYBMAC.INC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                                        ;;
-STATE_LOGIC_STR STRUC                  ;;
-                                       ;;
-SL_LOGIC_LEN    DW   ?                 ;; length of state logic
-SL_SPECIAL_FEATURES   DW   ?           ;;
-SL_LOGIC_CMDS   DB   0                 ;; state logic commands begin here
-                                       ;;
-STATE_LOGIC_STR ENDS                   ;;
                                        ;;
                                        ;;
 NUM_BIOS_FLAGS      EQU   4            ;;
 NUM_NLS_FLAGS       EQU   2            ;; '+1' below is the EXT_KB_FLAG
-NUM_FLAGS           EQU   NUM_BIOS_FLAGS+NUM_NLS_FLAGS+1
+NUM_FLAGS           equ   (NUM_BIOS_FLAGS+NUM_NLS_FLAGS+1)
                                        ;;
                                        ;;
 EITHER_SHIFT        EQU   80H          ;; EXT_KB_FLAG : our own shift state
@@ -206,14 +322,6 @@ P12_KB               EQU   0400H       ;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                                        ;;
-XLAT_SECT_STR       STRUC              ;;
-                                       ;;
-XS_NEXT_SECT_PTR       DW    ?         ;; Pointer to next Specific Translate
-                                       ;;  Section
-XS_CP_ID               DW    ?         ;; code page id
-XS_FIRST_STATE         DB    ?         ;;
-                                       ;;
-XLAT_SECT_STR       ENDS               ;;
                                        ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; State structure.
@@ -221,15 +329,6 @@ XLAT_SECT_STR       ENDS               ;;
 ;; XS_STATE_LEN field with a value of 0.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                                        ;;
-STATE_STR           STRUC              ;;
-                                       ;;
-XS_STATE_LEN     DW    ?               ;; length of state section
-XS_STATE_ID      DB    ?               ;; State ID
-XS_KBD_TYPE      DW    ?               ;; Keyboard Type
-XS_ERROR_CHAR    DW    ?               ;; Buffer entry for error character
-XS_FIRST_TAB     DB    ?               ;;
-                                       ;;
-STATE_STR           ENDS               ;;
                                        ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Translate Table structures.
@@ -256,33 +355,14 @@ TYPE_2_TAB          EQU   40H          ;; search xlat table for matching scan
 ZERO_SCAN           EQU   20H          ;; set the scan half of the buffer
                                        ;;  entry to 0
                                        ;;
-NULL_ASCII_CODE     EQU   -1           ;;
+NULL_ASCII_CODE     equ   (-1)	;;
                                        ;;
 DEFAULT_TAB_2_ENT_SZ   EQU   3         ;;
 ASC_ONLY_TAB_2_ENT_SZ  EQU   2         ;;
                                        ;;
                                        ;;
-XLAT_STR            STRUC              ;;
                                        ;;
-XLAT_TAB_SIZE       DW    ?            ;; Size in bytes of this table -
-                                       ;;  includes this field, options etc.
-XLAT_OPTIONS        DB    ?            ;; xlat options
-                                       ;; XLAT TABLE IS HERE
-XLAT_STR            ENDS               ;;
                                        ;;
-XLAT_TYPE_1_STR     STRUC              ;; use scan code as index into table
-                    DB TYPE XLAT_STR DUP(?)   ;; filler
-XLAT_SCAN_LO        DB    ?            ;; Scan code
-XLAT_SCAN_HI        DB    ?            ;;  range
-XLAT_1_BUF_ENTRY    DB    ?            ;; The table itself
-XLAT_TYPE_1_STR     ENDS               ;;
-                                       ;;
-XLAT_TYPE_2_STR     STRUC              ;; search table for scan
-                    DB TYPE XLAT_STR DUP(?)   ;; filler
-XLAT_NUM            DB    ?            ;; number of scans
-XLAT_SCAN           DB    ?            ;; Scan code
-XLAT_2_BUF_ENTRY    DB    ?            ;; The table itself
-XLAT_TYPE_2_STR     ENDS               ;;
                                        ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Set_Flag Tables.
@@ -293,14 +373,6 @@ XLAT_TYPE_2_STR     ENDS               ;;
                                        ;;
 SF_ENT_SZ     EQU   3                  ;; size of entry
                                        ;;
-SET_FLAG_STR        STRUC              ;;
-                                       ;;
-SF_NUM              DB    0            ;; Number of entries
-SF_SCAN_CODE        DB    0            ;; scan code
-SF_FLAG_ID          DB    0            ;; flag id
-SF_FLAG_MASK        DB    0            ;; flag mask
-                                       ;;
-SET_FLAG_STR        ENDS               ;;
                                        ;;
                                        ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

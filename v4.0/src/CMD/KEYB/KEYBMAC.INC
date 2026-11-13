@@ -78,242 +78,262 @@ DIVIDE_SIGN         EQU   37           ;;
 
 UNKNOWN = 255
 
-FIND_FLAG MACRO  FLAG_MASK
-       IFIDN <FLAG_MASK>,<SCAN_MATCH>
+macro FIND_FLAG FLAG_MASK
+{
+       match =SCAN_MATCH, FLAG_MASK \{
           FLAG_ID = EXT_KB_FLAG_ID
        ELSE
-       IFIDN <FLAG_MASK>,<EITHER_SHIFT>
+       match =EITHER_SHIFT, FLAG_MASK \\{
           FLAG_ID = EXT_KB_FLAG_ID
        ELSE
-       IFIDN <FLAG_MASK>,<CAPS_STATE>
+       match =CAPS_STATE, FLAG_MASK \\\{
           FLAG_ID = KB_FLAG_ID
        ELSE
-       IFIDN <FLAG_MASK>,<NUM_STATE>
+       match =NUM_STATE, FLAG_MASK \\\\{
           FLAG_ID = KB_FLAG_ID
        ELSE
-       IFIDN <FLAG_MASK>,<EITHER_CTL>
+       match =EITHER_CTL, FLAG_MASK \\\\\{
           FLAG_ID = EXT_KB_FLAG_ID
        ELSE
-       IFIDN <FLAG_MASK>,<EITHER_ALT>
+       match =EITHER_ALT, FLAG_MASK \\\\\\{
           FLAG_ID = EXT_KB_FLAG_ID
        ELSE
-       IFIDN <FLAG_MASK>,<LEFT_SHIFT>
+       match =LEFT_SHIFT, FLAG_MASK \\\\\\\{
           FLAG_ID = KB_FLAG_ID
        ELSE
-       IFIDN <FLAG_MASK>,<RIGHT_SHIFT>
+       match =RIGHT_SHIFT, FLAG_MASK \\\\\\\\{
           FLAG_ID = KB_FLAG_ID
        ELSE
-       IFIDN <FLAG_MASK>,<ALT_SHIFT>
+       match =ALT_SHIFT, FLAG_MASK \\\\\\\\\{
           FLAG_ID = KB_FLAG_ID
        ELSE
-       IFIDN <FLAG_MASK>,<CTL_SHIFT>
+       match =CTL_SHIFT, FLAG_MASK \\\\\\\\\\{
           FLAG_ID = KB_FLAG_ID
        ELSE
-       IFIDN <FLAG_MASK>,<R_ALT_SHIFT>
+       match =R_ALT_SHIFT, FLAG_MASK \\\\\\\\\\\{
           FLAG_ID = KB_FLAG_3_ID
        ELSE
-       IFIDN <FLAG_MASK>,<R_CTL_SHIFT>
+       match =R_CTL_SHIFT, FLAG_MASK \\\\\\\\\\\\{
           FLAG_ID = KB_FLAG_3_ID
        ELSE
-       IFIDN <FLAG_MASK>,<TILDE>
+       match =TILDE, FLAG_MASK \\\\\\\\\\\\\{
           FLAG_ID = NLS_FLAG_1_ID
        ELSE
-       IFIDN <FLAG_MASK>,<ACUTE>
+       match =ACUTE, FLAG_MASK \\\\\\\\\\\\\\{
           FLAG_ID = NLS_FLAG_1_ID
        ELSE
-       IFIDN <FLAG_MASK>,<GRAVE>
+       match =GRAVE, FLAG_MASK \\\\\\\\\\\\\\\{
           FLAG_ID = NLS_FLAG_1_ID
        ELSE
-       IFIDN <FLAG_MASK>,<DIARESIS>
+       match =DIARESIS, FLAG_MASK \\\\\\\\\\\\\\\\{
           FLAG_ID = NLS_FLAG_1_ID
        ELSE
-       IFIDN <FLAG_MASK>,<CEDILLA>
+       match =CEDILLA, FLAG_MASK \\\\\\\\\\\\\\\\\{
           FLAG_ID = NLS_FLAG_1_ID
        ELSE
-       IFIDN <FLAG_MASK>,<CIRCUMFLEX>
+       match =CIRCUMFLEX, FLAG_MASK \\\\\\\\\\\\\\\\\\{
           FLAG_ID = NLS_FLAG_1_ID
        ELSE
-       IFIDN <FLAG_MASK>,<LC_E0>
+       match =LC_E0, FLAG_MASK \\\\\\\\\\\\\\\\\\\{
           FLAG_ID = KB_FLAG_3_ID
        ELSE
           FLAG_ID = UNKNOWN
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-    ENDM
+       \\\\\\\\\\\\\\\\\\\}
+       \\\\\\\\\\\\\\\\\\}
+       \\\\\\\\\\\\\\\\\}
+       \\\\\\\\\\\\\\\\}
+       \\\\\\\\\\\\\\\}
+       \\\\\\\\\\\\\\}
+       \\\\\\\\\\\\\}
+       \\\\\\\\\\\\}
+       \\\\\\\\\\\}
+       \\\\\\\\\\}
+       \\\\\\\\\}
+       \\\\\\\\}
+       \\\\\\\}
+       \\\\\\}
+       \\\\\}
+       \\\\}
+       \\\}
+       \\}
+       \}
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-FLAG MACRO  FLAG_MASK
+macro FLAG FLAG_MASK
+{
        FIND_FLAG FLAG_MASK
        IF (FLAG_ID EQ UNKNOWN)
           IF2
-              %OUT Unknown parameter FLAG_MASK on FLAG MACRO
-          ENDIF
+;              %OUT Unknown parameter FLAG_MASK on FLAG MACRO
+          end if
        ELSE
           DB FLAG_ID
           DB FLAG_MASK
-       ENDIF
-    ENDM
+       end if
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-IFF MACRO  FLAG_MASK,MASK_TYPE
+macro IFF FLAG_MASK,MASK_TYPE
+{
     MAC_OK = 1
-    IFB  <MASK_TYPE>
+    match , MASK_TYPE \{
          NOT_BIT = 00000000B
-    ELSE
-         IFIDN <MASK_TYPE>,<NOT>
+    \}
+    match any$, MASK_TYPE \{
+         match =NOT, MASK_TYPE \\{
              NOT_BIT = 00001000B
          ELSE
              MAC_OK = 0
              IF2
-                 %OUT Unknown parameter MASK_TYPE on IFF MACRO
-             ENDIF
-         ENDIF
-    ENDIF
+;                 %OUT Unknown parameter MASK_TYPE on IFF MACRO
+             \\}
+         \}
+    end if
     IF MAC_OK
        FIND_FLAG FLAG_MASK
        IF (FLAG_ID EQ UNKNOWN)
           IF2
-              %OUT Unknown parameter FLAG_MASK on IFF MACRO
-          ENDIF
+;              %OUT Unknown parameter FLAG_MASK on IFF MACRO
+          end if
        ELSE
           DB IFF_COMMAND+NOT_BIT+FLAG_ID
           DB FLAG_MASK
-       ENDIF
-    ENDIF
-    ENDM
+       end if
+    end if
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-IFKBD MACRO  SYS
+macro IFKBD SYS
+{
        DB IFKBD_COMMAND
        DW SYS
-    ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-ANDF MACRO  FLAG_MASK,MASK_TYPE
+macro ANDF FLAG_MASK,MASK_TYPE
+{
     MAC_OK = 1
-    IFB  <MASK_TYPE>
+    match , MASK_TYPE \{
          NOT_BIT = 00000000B
-    ELSE
-         IFIDN <MASK_TYPE>,<NOT>
+    \}
+    match any$, MASK_TYPE \{
+         match =NOT, MASK_TYPE \\{
              NOT_BIT = 00001000B
          ELSE
              MAC_OK = 0
              IF2
-                 %OUT Unknown parameter MASK_TYPE on ANDF MACRO
-             ENDIF
-         ENDIF
-    ENDIF
+;                 %OUT Unknown parameter MASK_TYPE on ANDF MACRO
+             \\}
+         \}
+    end if
     IF MAC_OK
        FIND_FLAG FLAG_MASK
        IF (FLAG_ID EQ UNKNOWN)
           IF2
-              %OUT Unknown parameter FLAG_MASK on ANDF MACRO
-          ENDIF
+;              %OUT Unknown parameter FLAG_MASK on ANDF MACRO
+          end if
        ELSE
           DB ANDF_COMMAND+NOT_BIT+FLAG_ID
           DB FLAG_MASK
-       ENDIF
-    ENDIF
-    ENDM
+       end if
+    end if
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-ELSEF  MACRO
+macro ELSEF 
+{
        DB  ELSEF_COMMAND
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-ENDIFF MACRO
+macro ENDIFF 
+{
        DB  ENDIFF_COMMAND
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-XLATT  MACRO STATE
+macro XLATT STATE
+{
        DB  XLATT_COMMAND
        DB  STATE
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-PUT_ERROR_CHAR  MACRO STATE
+macro PUT_ERROR_CHAR STATE
+{
        DB  PUT_ERROR_COMMAND
        DB  STATE
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-OPTION MACRO MASK,MASK_TYPE
+macro OPTION MASK,MASK_TYPE
+{
     MAC_OK = 1
-    IFB  <MASK_TYPE>
+    match , MASK_TYPE \{
          NOT_BIT = 00000000B
-    ELSE
-         IFIDN <MASK_TYPE>,<NOT>
+    \}
+    match any$, MASK_TYPE \{
+         match =NOT, MASK_TYPE \\{
              NOT_BIT = 00001000B
          ELSE
              MAC_OK = 0
              IF2
-                 %OUT Unknown parameter MASK_TYPE on OPTION MACRO
-             ENDIF
-         ENDIF
-    ENDIF
+;                 %OUT Unknown parameter MASK_TYPE on OPTION MACRO
+             \\}
+         \}
+    end if
     IF MAC_OK
        DB  OPTION_COMMAND+NOT_BIT
        DB  MASK
-    ENDIF
-    ENDM
+    end if
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-SET_FLAG  MACRO STATE
+macro SET_FLAG STATE
+{
        DB  SET_FLAG_COMMAND
        DB  STATE
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-RESET_NLS  MACRO
+macro RESET_NLS 
+{
        DB  RESET_NLS_COMMAND
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-BEEP   MACRO
+macro BEEP 
+{
        DB  BEEP_COMMAND
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-GOTO    MACRO GOTO_OFFSET
+macro GOTO GOTO_OFFSET
+{
        DB  GOTO_COMMAND
        DW  GOTO_OFFSET-$-2
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-EXIT_INT_9  MACRO
+macro EXIT_INT_9 
+{
        DB  GOTO_COMMAND+EXIT_INT_9_FLAG
        DW  0
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-EXIT_STATE_LOGIC  MACRO
+macro EXIT_STATE_LOGIC 
+{
        DB  GOTO_COMMAND+EXIT_STATE_LOGIC_FLAG
        DW  0
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-CHECK_FOR_CORE_KEY MACRO
+macro CHECK_FOR_CORE_KEY 
+{
        DB  CHECK_CORE_COMMAND
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .LIST

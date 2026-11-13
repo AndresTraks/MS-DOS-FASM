@@ -37,22 +37,22 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-	PUBLIC FIND_SYS_TYPE	       ;;
-	PUBLIC FIND_KEYB_TYPE	       ;;
-	PUBLIC HW_TYPE		       ;;
-	PUBLIC SECURE_FL	       ;;
+;	PUBLIC FIND_SYS_TYPE	       ;;
+;	PUBLIC FIND_KEYB_TYPE	       ;;
+;	PUBLIC HW_TYPE		       ;;
+;	PUBLIC SECURE_FL	       ;;
 
 				       ;;
-	INCLUDE KEYBEQU.INC	       ;;
-	INCLUDE KEYBCPSD.INC	       ;;
-	INCLUDE KEYBSHAR.INC	       ;;
-	INCLUDE KEYBCMD.INC	       ;;
-	INCLUDE DSEG.INC	       ;;
-	INCLUDE POSTEQU.INC	       ;;
+	include 'KEYBEQU.INC'      ;;
+	include 'KEYBCPSD.INC'      ;;
+	include 'KEYBSHAR.INC'      ;;
+	include 'KEYBCMD.INC'      ;;
+	include 'DSEG.INC'      ;;
+	include 'POSTEQU.INC'      ;;
 				       ;;
-CODE	SEGMENT PUBLIC 'CODE'          ;;
+;CODE	SEGMENT PUBLIC 'CODE'          ;;
 				       ;;
-	ASSUME	CS:CODE,DS:CODE        ;;
+;	ASSUME	CS:CODE,DS:CODE        ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -75,9 +75,9 @@ CODE	SEGMENT PUBLIC 'CODE'          ;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					       ;;
-ROM	   SEGMENT AT 0F000H		       ;;
+virtual at 0F000H;;
 		ORG	0FFFEH		       ;;
-ROMID		DB	?		       ;;
+ROMID		rb      1    ;;
 					       ;; SEGMENT F000. (F000:FFFE)
 					       ;;
 ROMPC1		EQU	0FFH		       ;; ID OF PC1 hardware
@@ -89,16 +89,16 @@ ROMPAL		EQU	0FAH		       ;; ID FOR PALACE
 ROMLAP		EQU	0F9H		       ;; ID FOR PC LAP (P-14)
 ROM_RU_386	EQU	0F8H		       ;; ID FOR ROUNDUP-386
 					       ;;
-ROM	   ENDS 			       ;;
+end virtual ;;
 					       ;;
 					       ;; ******** CNS
- ROMEXT     SEGMENT AT 00000H		       ;; ADDRESS SHOULD NOT BE FIXED AT
+virtual at 00000H;; ADDRESS SHOULD NOT BE FIXED AT
 		 ORG	 0003BH 		;;AT 09FC0H -- This is just a ;;
  KEYBID1	 DB	 ?			;;a dummy value of 000H INT 15H call
 					       ;; will load dynamically depending
 					       ;; upon system mem size- 9FC0 was only for 640K system
 					       ;; *** UNTRUE SEGMENT 9FC0. (9FC0:003B)
- ROMEXT     ENDS				;;
+end virtual ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;***CNS
 
@@ -112,24 +112,24 @@ ROM	   ENDS 			       ;;
 ;;  Program Code
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-FIND_SYS_TYPE	       PROC  NEAR      ;;
+FIND_SYS_TYPE:                       ;;
 				       ;;
-	MOV	AX,ROM		       ;; Set segmant to look at ROM
+	MOV	AX,0F000H		       ;; Set segmant to look at ROM
 	MOV	DS,AX		       ;;    using the data segment
-	ASSUME	DS:ROM		       ;;
+;	ASSUME	DS:ROM		       ;;
 				       ;;
-	MOV	AL,ROMID	       ;; Get hardware ID
+	MOV	AL,[ROMID]      ;; Get hardware ID
 	PUSH	AX		       ;; save it
 				       ;;
 	PUSH	CS		       ;; Set data seg back to code
 	POP	DS		       ;;
-	ASSUME	DS:CODE 	       ;;
+;	ASSUME	DS:CODE 	       ;;
 				       ;;
 	MOV	AH,92H		       ;; SET INVALID CALL FOR INT16
 	INT	16H		       ;; CALL BIOS
 	CMP	AH,80H		       ;; IS EXTENDED INTERFACE THERE?
 	JA	CHECK_PC_NET	       ;;  NO, SKIP FLAG
-	OR	SD.SYSTEM_FLAG,EXT_16  ;; default is extended INT 16 support
+	OR	[SHARED_DATA.SYSTEM_FLAG],EXT_16 ;; default is extended INT 16 support
 				       ;;
 CHECK_PC_NET:			       ;;
 	MOV	AH,30H		       ;; GET DOS VERSION NUMBER
@@ -150,14 +150,14 @@ CHECK_PC_NET:			       ;;
 	CMP	AL,0		       ;; NOT INSTALLED IF AL=0
 	JE	CHECK_SYSTEM	       ;; SOMEBODY ELSE HAS LINKED INTO THE INT VECTOR
 				       ;; 9 & I'M GOING TO DROP RIGHT IN AS USUAL
-	OR	SD.SYSTEM_FLAG,PC_NET  ;; INDICATE PC NET IS RUNNING
+	OR	[SHARED_DATA.SYSTEM_FLAG],PC_NET ;; INDICATE PC NET IS RUNNING
 				       ;;
 CHECK_SYSTEM:			       ;;
 	POP	AX		       ;; get code back
 				       ;; Is the hardware a PCjr
 	CMP   AL,ROMJR		       ;;
 	JNE   TEST_PC_XT	       ;; IF not then check for next type
-	OR    SD.SYSTEM_FLAG,PC_JR     ;; system type
+	OR    [SHARED_DATA.SYSTEM_FLAG],PC_JR   ;; system type
 	JMP   FIND_SYS_END	       ;; Done
 				       ;;
 TEST_PC_XT:			       ;;
@@ -167,7 +167,7 @@ TEST_PC_XT:			       ;;
 	CMP   AL,ROMXT_ENHAN	       ;; IF FB IT IS ALSO AN XT
 	JNE   TEST_PC_AT	       ;; IF not then check for next type
 ITS_AN_XT:			       ;;
-	OR    SD.SYSTEM_FLAG,PC_XT     ;; system type
+	OR    [SHARED_DATA.SYSTEM_FLAG],PC_XT   ;; system type
 	JMP   FIND_SYS_END	       ;;
 				       ;;
 TEST_PC_AT:			       ;;
@@ -175,33 +175,33 @@ TEST_PC_AT:			       ;;
 	CMP   AL,ROMAT		       ;;
 	JNE   TEST_P12		       ;; IF not then check for next type
 				       ;;
-	OR    SD.SYSTEM_FLAG,PC_AT     ;; system type
+	OR    [SHARED_DATA.SYSTEM_FLAG],PC_AT   ;; system type
 				       ;;
 	JMP   FIND_SYS_END	       ;;
 				       ;;
 TEST_P12:			       ;;
 	CMP   AL,ROMLAP 	       ;; IS this a P12?
 	JNE   TEST_PAL		       ;; IF not then check for next type
-	OR    SD.SYSTEM_FLAG,PC_LAP    ;; system type
+	OR    [SHARED_DATA.SYSTEM_FLAG],PC_LAP  ;; system type
 	JMP   FIND_SYS_END	       ;;
 				       ;;
 TEST_PAL:			       ;;
 	CMP   AL,ROMPAL 	       ;; IS this a PALACE?
 	JNE   TEST_RU_386	       ;; IF not then check for next type
-	OR    SD.SYSTEM_FLAG,PC_PAL    ;; system type
+	OR    [SHARED_DATA.SYSTEM_FLAG],PC_PAL  ;; system type
 	JMP   FIND_SYS_END	       ;;
 				       ;;
 TEST_RU_386:			       ;;
 	CMP   AL,ROM_RU_386	       ;; IS this a ROUNDUP with a 386?
 	JNE   FIND_SYS_END	       ;; IF not then check for next type
-	OR    SD.SYSTEM_FLAG,PC_386    ;; system type
-	MOV   SD.TIMING_FACTOR,2       ;; Bump scale factor to account for 386
+	OR    [SHARED_DATA.SYSTEM_FLAG],PC_386  ;; system type
+	MOV   [SHARED_DATA.TIMING_FACTOR],2     ;; Bump scale factor to account for 386
 				       ;;
 FIND_SYS_END:			       ;;
 				       ;;
 	RET			       ;;
 				       ;;
-FIND_SYS_TYPE	    ENDP	       ;;
+;FIND_SYS_TYPE	    ENDP	       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -246,31 +246,31 @@ P_KB_ID 	DB	08		       ;;
 ;;  Program Code
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-FIND_KEYB_TYPE	      PROC  NEAR       ;;
+FIND_KEYB_TYPE:                       ;;
 				       ;;
 	PUSH	ES		       ;;
 	PUSH	DS		       ;;
 				       ;;
-	MOV	AX,ROM		       ;; Set segmant to look at ROM
+	MOV	AX,0F000H		       ;; Set segmant to look at ROM
 	MOV	DS,AX		       ;;    using the data segment
-	ASSUME	DS:ROM		       ;;
+;	ASSUME	DS:ROM		       ;;
 				       ;;
-	MOV	AX,DATA 	       ;;
+	MOV	AX,DATA_ 	       ;;
 	MOV	ES,AX		       ;; ES points to BIOS data
 				       ;;
-	MOV	AL,ROMID	       ;; Get hardware ID
+	MOV	AL,[ROMID]      ;; Get hardware ID
 				       ;;
 	PUSH	CS		       ;; Set data seg back to code
 	POP	DS		       ;;
-	ASSUME	DS:CODE 	       ;;
+;	ASSUME	DS:CODE 	       ;;
 				       ;;
 				       ;;
-	MOV   HW_TYPE,G_KB	       ;; Default keyboard is G_KB
+	MOV   word [HW_TYPE],G_KB ;; Default keyboard is G_KB
 				       ;;
 				       ;; Is the hardware a PCjr
 	CMP   AL,ROMJR		       ;;
 	JNE   TEST_PC_XT_2	       ;; IF not then check for next type
-	MOV   HW_TYPE,JR_KB	       ;; keyboard type
+	MOV   word [HW_TYPE],JR_KB ;; keyboard type
 	JMP   FIND_KEYB_END	       ;; Done
 				       ;;
 TEST_PC_XT_2:			       ;;
@@ -280,12 +280,12 @@ TEST_PC_XT_2:			       ;;
 	CMP   AL,ROMXT_ENHAN	       ;; IF FB IT IS ALSO AN XT
 	JNE   TEST_PC_AT_2	       ;; IF not then check for next type
 ITS_AN_XT_2:			       ;;
-	TEST  ES:KB_FLAG_3,KBX	       ;; IS THE ENHANCED KEYBOARD INSTALLED?
+	TEST  byte [es:KB_FLAG_3],KBX ;; IS THE ENHANCED KEYBOARD INSTALLED?
 	JZ    ITS_AN_XT_3	       ;;
 	JMP   FIND_KEYB_END	       ;; Yes, exit
 				       ;;
 ITS_AN_XT_3:			       ;;
-	MOV   HW_TYPE,XT_KB	       ;; NO, normal XT keyboard
+	MOV   word [HW_TYPE],XT_KB ;; NO, normal XT keyboard
 	JMP   FIND_KEYB_END	       ;;
 				       ;;
 TEST_PC_AT_2:			       ;;
@@ -294,17 +294,17 @@ TEST_PC_AT_2:			       ;;
 	JNE   TEST_P12_2	       ;; IF not then check for next type
 				       ;;
 				       ;; CHECK FOR ENHANCED KEYBOARD...
-	OR    ES:KB_FLAG_2,08H	       ;; FROM COMNBODY.ASM - DON'T KNOW WHY
+	OR    byte [es:KB_FLAG_2],08H ;; FROM COMNBODY.ASM - DON'T KNOW WHY
 				       ;;
 				       ;; READ ID COMMAND TO TEST FOR A KBX
 				       ;;
-	MOV   ES:KB_FLAG_3,RD_ID       ;; INDICATE THAT A READ ID IS BEING
+	MOV   byte [es:KB_FLAG_3],RD_ID ;; INDICATE THAT A READ ID IS BEING
 				       ;; DONE
 	MOV   AL,0F2H		       ;; SEND THE READ ID COMMAND
 	CALL  SND_DATA_AT	       ;;
 				       ;;
 	MOV	CX,03F00H	       ;; LOAD COUNT FOR ABOUT 37MS
-WT_ID:	TEST	ES:KB_FLAG_3,KBX       ;; TEST FOR KBX SET
+WT_ID:	TEST	byte [es:KB_FLAG_3],KBX ;; TEST FOR KBX SET
 	LOOPZ	WT_ID		       ;; WAIT OTHERWISE
 				       ;; BE SURE FLAGS GOT RESET
 ;***CNS
@@ -337,24 +337,24 @@ WT_ID:	TEST	ES:KB_FLAG_3,KBX       ;; TEST FOR KBX SET
 	JNC	ASSUME_AT		       ;AN000;SECURITY UNAVAILABLE OR AN AT KB
 
 
-	MOV	SECURE_FL,1		       ;AN000;SECURITY IS ACTIVE
+	MOV	byte [SECURE_FL],1  ;AN000;SECURITY IS ACTIVE
 	JMP	FIND_KEYB_END		       ;AN000;ASSUME IT IS A G_KB  WITH
 					       ;AN000;NUM LOCK OFF
 ASSUME_AT:
 ;***CNS
-	AND	ES:KB_FLAG_3,NOT RD_ID+LC_AB
+	AND	byte [es:KB_FLAG_3],NOT RD_ID+LC_AB
 				       ;;
-	TEST	ES:KB_FLAG_3,KBX       ;; WAS IT A KBX?
+	TEST	byte [es:KB_FLAG_3],KBX ;; WAS IT A KBX?
 	JNZ	DONE_AT_2	       ;; YES, WE ARE DONE
 				       ;;
-	MOV   HW_TYPE,AT_KB	       ;; NO, AT KBD
+	MOV   word [HW_TYPE],AT_KB ;; NO, AT KBD
 DONE_AT_2:			       ;;
 	JMP   FIND_KEYB_END	       ;;
 				       ;;
 TEST_P12_2:			       ;;
 	CMP   AL,ROMLAP 	       ;; IS this a P12?
 	JNE   TEST_XT_ENH_OR_NEWER     ;; IF not then check for next type
-	MOV   HW_TYPE,P12_KB	       ;; IF yes then set flag
+	MOV   word [HW_TYPE],P12_KB ;; IF yes then set flag
 				       ;;
 TEST_XT_ENH_OR_NEWER:		       ;;
 	CMP   AL,ROMXT_ENHAN	       ;;
@@ -384,13 +384,13 @@ NEW_SYSTEM:
   ;;	using the data segment
 	PUSH	ES		       ;; SEG value returned from INT15h -- C1 call
 	POP	DS
-	ASSUME	DS:ROMEXT	       ;;
+;	ASSUME	DS:ROMEXT	       ;;
 				       ;;
-	MOV	AX,DATA 	       ;;
+	MOV	AX,DATA_ 	       ;;
 	MOV	ES,AX		       ;; BP points to BIOS data
 
 				       ;;
-	MOV	AL,KEYBID1	       ;; Get keyboard ID  ********** CNS
+	MOV	AL,[KEYBID1]      ;; Get keyboard ID  ********** CNS
 ;**CNS
 ;*****************************************************************************
 ;old	 MOV	 AX,ROMEXT		;; Set segment to look at extended ROM
@@ -404,22 +404,22 @@ NEW_SYSTEM:
 ;******************************************************************************
 	PUSH	CS		       ;; Set data seg back to code
 	POP	DS		       ;;
-	ASSUME	DS:CODE 	       ;;
+;	ASSUME	DS:CODE 	       ;;
 				       ;;
 	AND	AL,0FH		       ;; Remove high nibble
-	CMP	AL,P_KB_ID	       ;; IF keyboard is a FERRARI P THEN
+	CMP	AL,[P_KB_ID]      ;; IF keyboard is a FERRARI P THEN
 	JNE	FIND_KEYB_END	       ;;
-	OR	HW_TYPE,P_KB	       ;;    Set the HW_TYPE flag
+	OR	word [HW_TYPE],P_KB ;;    Set the HW_TYPE flag
 				       ;;
 FIND_KEYB_END:			       ;; ELSE
-	MOV   AX,HW_TYPE	       ;;    Leave default alone
-	MOV   SD.KEYB_TYPE,AX	       ;;
+	MOV   AX,[HW_TYPE]      ;;    Leave default alone
+	MOV   [SHARED_DATA.KEYB_TYPE],AX      ;;
 				       ;;
 	POP   DS		       ;;
 	POP   ES		       ;;
 	RET			       ;;
 				       ;;
-FIND_KEYB_TYPE		ENDP	       ;;
+;FIND_KEYB_TYPE		ENDP	       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -441,14 +441,14 @@ FIND_KEYB_TYPE		ENDP	       ;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-SND_DATA_AT PROC   NEAR
+SND_DATA_AT:
 	PUSH	AX			; SAVE REGISTERS
 	PUSH	BX			; *
 	PUSH	CX
 	MOV	BH,AL			; SAVE TRANSMITTED BY FOR RETRIES
 	MOV	BL,3			; LOAD RETRY COUNT
-SD0:	CLI				; DISABLE INTERRUPTS
-	AND	ES:KB_FLAG_2,NOT (KB_FE+KB_FA) ; CLEAR ACK AND RESEND FLAGS
+SD0_commsubs:	CLI				; DISABLE INTERRUPTS
+	AND	byte [es:KB_FLAG_2],NOT (KB_FE+KB_FA) ; CLEAR ACK AND RESEND FLAGS
 
 ;------- WAIT FOR COMMAND TO BE ACCEPTED
 
@@ -462,19 +462,19 @@ SD5:
 	OUT	PORT_A,AL		; SEND BYTE
 	STI				; ENABLE INTERRUPTS
 	MOV	CX,01A00H		; LOAD COUNT FOR 10mS+
-SD1:	TEST	ES:KB_FLAG_2,KB_FE+KB_FA   ; SEE IF EITHER BIT SET
-	JNZ	SD3			; IF SET, SOMETHING RECEIVED GO PROCESS
+SD1_commsubs:	TEST	byte [es:KB_FLAG_2],KB_FE+KB_FA ; SEE IF EITHER BIT SET
+	JNZ	SD3_commsubs			; IF SET, SOMETHING RECEIVED GO PROCESS
 ;
-	LOOP	SD1			; OTHERWISE WAIT
+	LOOP	SD1_commsubs			; OTHERWISE WAIT
 ;
-SD2:	DEC	BL			; DECREMENT RETRY COUNT
-	JNZ	SD0			; RETRY TRANSMISSION
+SD2_commsubs:	DEC	BL			; DECREMENT RETRY COUNT
+	JNZ	SD0_commsubs			; RETRY TRANSMISSION
 ;
-	OR	ES:KB_FLAG_2,KB_ERR	   ; TURN ON TRANSMIT ERROR FLAG
-	JMP	SHORT SD4		; RETRIES EXHAUSTED FORGET TRANSMISSION
+	OR	byte [es:KB_FLAG_2],KB_ERR ; TURN ON TRANSMIT ERROR FLAG
+	JMP	SHORT SD4_commsubs		; RETRIES EXHAUSTED FORGET TRANSMISSION
 ;
-SD3:	TEST	ES:KB_FLAG_2,KB_FA	   ; SEE IF THIS IS AN ACKNOWLEDGE
-	JZ	SD2			; IF NOT, GO RESEND
+SD3_commsubs:	TEST	byte [es:KB_FLAG_2],KB_FA ; SEE IF THIS IS AN ACKNOWLEDGE
+	JZ	SD2_commsubs			; IF NOT, GO RESEND
 ;
 				       ;; If this was an acknowledge, determine*RPS
 				       ;;     if keyboard is FERRARI G or P    *RPS
@@ -493,14 +493,14 @@ IO_DELAY2:			       ;;
 	MOV	BL,AL		       ;;				       *RPS
 				       ;;				       *RPS
 	CMP	BX,P_KEYBOARD	       ;; Set HW_TYPE appropriately	       *RPS
-	JNE	SD4		       ;;				       *RPS
-	OR	HW_TYPE,P_KB	       ;;				       *RPS
+	JNE	SD4_commsubs		       ;;				       *RPS
+	OR	word [HW_TYPE],P_KB ;;				       *RPS
 				       ;;
-SD4:	POP	CX			; RESTORE REGISTERS
+SD4_commsubs:	POP	CX			; RESTORE REGISTERS
 	POP	BX
 	POP	AX			; *
 	RET				; RETURN, GOOD TRANSMISSION
-SND_DATA_AT ENDP
+;SND_DATA_AT ENDP
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;************************************************************************
@@ -520,7 +520,7 @@ SND_DATA_AT ENDP
 
 ;************************************************************************
 
-KEYB_SECURE	PROC	NEAR
+KEYB_SECURE:
 
 
 
@@ -594,10 +594,10 @@ SECURE_RET:
 	RET
 
 
-KEYB_SECURE	ENDP
+;KEYB_SECURE	ENDP
 
 
 
 
-CODE   ENDS
-       END
+;CODE   ENDS
+;       END

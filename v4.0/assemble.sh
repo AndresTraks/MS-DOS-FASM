@@ -266,3 +266,13 @@ utility PRINT PRILNK PRINT.COM
 # resident.  The release links the five and stops: this is an .EXE in its own
 # right.
 utility FASTOPEN FOPLNK FASTOPEN.EXE
+
+# KEYB, ten modules in one segment, CODE, and no group -- so the modules are
+# read once, the way GRAFTABL's and ASSIGN's are.  CODE begins where the load
+# module does, which for a .COM is the program's own prefix, and KEYB.ASM's
+# org 100H is where DOS enters.  It reads a keyboard layout and keeps a
+# handler on interrupt 9 that turns a scan code into the character that
+# layout asks for, with 2FH so a second copy finds the first and 48H for the
+# 101-key enhancements.  The release links the ten and runs EXE2BIN over the
+# result, which is the flat image fasm writes here.
+utility KEYB KEYBLNK KEYB.COM

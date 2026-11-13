@@ -18,10 +18,10 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                                        ;;
-        EXTRN    COPY_SD_AREA:NEAR     ;;
+;        EXTRN    COPY_SD_AREA:NEAR     ;;
                                        ;;
-        EXTRN    SD_DEST_PTR :BYTE     ;;
-        EXTRN    SHARED_DATA :BYTE     ;;
+;        EXTRN    SD_DEST_PTR :BYTE     ;;
+;        EXTRN    SHARED_DATA :BYTE     ;;
                                        ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

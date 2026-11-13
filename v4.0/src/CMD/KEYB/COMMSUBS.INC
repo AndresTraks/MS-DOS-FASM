@@ -20,10 +20,10 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                                        ;;
-        EXTRN    FIND_SYS_TYPE   :NEAR ;;
-        EXTRN    FIND_KEYB_TYPE  :NEAR ;;
+;        EXTRN    FIND_SYS_TYPE   :NEAR ;;
+;        EXTRN    FIND_KEYB_TYPE  :NEAR ;;
                                        ;;
-        EXTRN    HW_TYPE         :WORD ;;
+;        EXTRN    HW_TYPE         :WORD ;;
                                        ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

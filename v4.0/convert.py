@@ -603,6 +603,85 @@ UTILITIES = {
         PATCHES={'FASTINIT.ASM': [
             ('\tcmp\tes:[di], 0a000h', '\tcmp\tword ptr es:[di], 0a000h')]},
     ),
+    # KEYB's ten modules in the order KEYB.LNK names them, and the fifteen
+    # headers of its own they read.  One segment, CODE, and no group, so
+    # the modules are read once rather than once per segment -- the shape
+    # TREE, COMP, GRAFTABL and ASSIGN have.  CODE begins where the load
+    # module does, which for a .COM is the program's own prefix, and
+    # KEYB.ASM's org 100H is where DOS enters; the release links the ten
+    # and runs EXE2BIN over the result.
+    #
+    # Each module has a header of its own named after it that holds its
+    # EXTRNs -- KEYBI9.INC for KEYBI9.ASM -- and every module reads most of
+    # the others', so all thirteen are in the list.
+    #
+    # KBMSG.INC and KEYBMSG.INC are not: nothing includes either, and they
+    # are what KEYB had before the message retriever took its text over --
+    # KBMSG.INC holds the messages as DBs and KEYBMSG.INC the EXTRNs for
+    # them, every line of it commented out.  Reading KBMSG.INC would be
+    # worse than idle: it gives INV_FN to the text "Bad or missing Keyboard
+    # Definition File" where KEYBCMD gives it to the number 9, so the one
+    # line that asks the retriever for that message would have read a word
+    # of the old text instead of the message number.
+    'KEYB': dict(
+        MODULES=('KEYB.ASM', 'KEYBI9.ASM', 'KEYBI9C.ASM', 'KEYBI2F.ASM',
+                 'KEYBI48.ASM', 'KEYBCPSD.ASM', 'COMMSUBS.ASM',
+                 'KEYBTBBL.ASM', 'PARSER.ASM', 'KEYBCMD.ASM',
+                 'KEYBEQU.INC', 'KEYBSHAR.INC', 'KEYBSYS.INC',
+                 'KEYBDCL.INC', 'KEYBMAC.INC',
+                 'KEYBCMD.INC', 'KEYBTBBL.INC', 'COMMSUBS.INC',
+                 'KEYBCPSD.INC', 'KEYBI2F.INC', 'KEYBI9.INC',
+                 'KEYBI9C.INC', 'KEYBI48.INC'),
+        TAG={},
+        ONESEG=True,
+        # DATA is what INC/DSEG.INC calls the ROM BIOS's data area at 40H,
+        # which KEYB loads a register with to reach the keyboard flags, and
+        # it is one of fasm's own words; the header calls it DATA_ and the
+        # modules are given the same spelling.  K5, K6 and K7 are three of
+        # KEYBI9C's translation tables, and fasm keeps K0 to K7 for the
+        # mask registers of a processor thirty years off.
+        RESERVED=('DATA', 'K5', 'K6', 'K7'),
+        # Nine names two modules each have one of, which MASM let them have
+        # because it assembled them apart: a way out called EXIT in the two
+        # interrupt 9 modules, the five shift-state labels SD0 to SD4 in
+        # KEYBI9C and COMMSUBS, a KEYB_INSTALLED word in KEYBTBBL and
+        # another in KEYBCMD, a RESTORE_BP in KEYBI2F and another in
+        # KEYBTBBL, and PARSER's FILE_NAME label against KEYBCMD's 128-byte
+        # buffer of that name.  None is PUBLIC and none is EXTRN'd, so each
+        # takes the name of the module it is in.
+        #
+        # The fourteen equates two modules both declare are left alone:
+        # every one of them is given the same value in both -- PARSER and
+        # KEYBCMD share the parser's result codes -- and each module
+        # declares it before it reads it, which is the one thing that
+        # matters when the modules are read in order.
+        LOCALS=('EXIT', 'SD0', 'SD1', 'SD2', 'SD3', 'SD4', 'KEYB_INSTALLED',
+                'RESTORE_BP', 'FILE_NAME'),
+        # The size of the buffer the keyboard definition file is read into.
+        # KEYBCMD declares it beside the buffer, which is the last module
+        # the walk reads; KEYBCMD.INC, which the eight before it read, is
+        # where the buffer is EXTRN'd and the size is first asked for.
+        # MASM resolved the name on its second pass, and fasm wants a
+        # number it can resolve wherever it stands rather than an EQU it
+        # has not read yet.
+        FORWARD=('FILE_BUFFER_SIZE',),
+        # DSEG.INC is the ROM BIOS's data segment at 40H and POSTEQU.INC
+        # the equates for what it holds, which the interrupt 9 handler
+        # reads the shift states out of.
+        SHARED=('SYSCALL.INC', 'DOSSYM.INC', 'SYSMSG.INC', 'PSDATA.INC',
+                'MSGHAN.INC', 'DOSMAC.INC', 'MSGDCL.INC', 'MSGSERV.ASM',
+                'VERSIONA.INC', 'BPB.INC', 'BUFFER.INC', 'SYSVAR.INC',
+                'VECTOR.INC', 'MULT.INC', 'DIRENT.INC', 'DPB.INC',
+                'CURDIR.INC', 'CPMFCB.INC', 'FIND.INC', 'PDB.INC', 'EXE.INC',
+                'SF.INC', 'ARENA.INC', 'INTNAT.INC', 'MI.INC',
+                'FILEMODE.INC', 'ERROR.INC', 'VERSION.INC', 'PARSE.ASM',
+                'DEVSYM.INC', 'STRUC.INC', 'DSEG.INC', 'POSTEQU.INC'),
+        # Every module says ASSUME CS:CODE, and KEYB.ASM DS:CODE with it:
+        # the resident handlers are entered on an interrupt, with the
+        # interrupted program's DS, so what they read of their own they
+        # read through CS until the code says otherwise.
+        START={'cs': 'CODE', 'ds': None, 'es': None, 'ss': None},
+    ),
 }
 
 NAME = sys.argv[1].upper() if len(sys.argv) > 1 else ''
@@ -1035,6 +1114,45 @@ def strings(text):
                   + r")([ \t]*;[^\n]*)?$", named, text, flags=re.M)
 
 
+def aliased(text):
+    """A name that stands for an instance, where a field is read through it.
+
+    KEYB's KEYBEQU.INC says SD EQU SHARED_DATA and its modules read
+    SD.TABLE_OK and the rest of the shift state through it.  MASM read the
+    two as one name; fasm reads a name with a dot in it as a single word,
+    so SD.TABLE_OK would never meet the SD the EQU declares.  The name it
+    stands for is written out where a field follows it, which leaves the
+    EQU itself alone -- expanding that would make it stand for itself --
+    and leaves a bare SD, which is the instance's own address either way.
+    """
+    if not ALIASED:
+        return text
+    return re.sub(r"(?i)(?<![A-Za-z0-9_@?$.])(" + "|".join(
+        sorted(map(re.escape, ALIASED), key=len, reverse=True))
+        + r")(?=\.)", lambda m: ALIASED[m.group(1).lower()], text)
+
+
+def translated(text):
+    """XLAT written with the table it reads.
+
+    XLAT always translates through BX, so the operand MASM was given told
+    it the width and the segment and nothing else -- KEYBI9 writes
+    XLAT [SI].XLAT_1_BUF_ENTRY, which is not even the register it reads.
+    fasm wants XLATB, or the one operand it will take where a segment has
+    to be said: KEYBI9C reads two of its tables out of its own code
+    segment with XLAT CS:K11, and MASM laid the CS prefix down for it.
+    """
+    def one(m):
+        lead, operand, note = m.group(1), m.group(2) or '', m.group(3) or ''
+        seg = re.search(r"(?i)\b(cs|es|ss)[ \t]*:", operand)
+        if seg:
+            return '%sxlat byte [%s:bx]%s' % (lead, seg.group(1).lower(), note)
+        return '%sxlatb%s' % (lead, note)
+
+    return re.sub(r"(?mi)^([ \t]*)xlat(?:[ \t]+([^;\n]+?))?[ \t]*"
+                  r"(;[^\n]*)?$", one, text)
+
+
 def far_pointers(text):
     """DD of a name, which MASM wrote as a far pointer.
 
@@ -1326,15 +1444,30 @@ WIDE = set()
 # it as a WORD and so stored a word.  One assembly has to settle on a width,
 # and the width the code was assembled with is the one that makes it run.
 ASKED = {}
+# A shared header can give storage a name as well: INC/DSEG.INC declares
+# the ROM BIOS data area at 40H, which KEYB's interrupt 9 handler reads the
+# keyboard flags out of, and without it those references keep the bare name
+# MASM read from memory.  The headers declare their fields with a dot in
+# front, which is not a name here, so what this adds is only what they
+# declare at the top level.
 for text in (list(source.values())
-             + [read(h + '.INC', converted=True) for h in HEADERS]):
+             + [read(h + '.INC', converted=True) for h in HEADERS]
+             + [shared(h) for h in U['SHARED']]):
     for line in text.split('\n'):
         code = code_of(line)
-        m = re.match(r"^[ \t]*(" + N + r")\s+(db|dw|dd)\b", code, re.I)
+        # A reservation is storage as much as a DB is.  Inside a module
+        # the DB ? is still a DB at this point, the rules that turn it
+        # into an RB running later; a shared header that has been
+        # converted already shows the RB, which is how INC/DSEG.INC
+        # declares every byte of the ROM BIOS data area.
+        m = re.match(r"^[ \t]*(" + N + r")\s+(db|dw|dd|rb|rw|rd)\b",
+                     code, re.I)
         if m:
             DATA.add(m.group(1).lower())
             SIZE[m.group(1).lower()] = {'db': 'byte', 'dw': 'word',
-                                        'dd': 'dword'}[m.group(2).lower()]
+                                        'dd': 'dword', 'rb': 'byte',
+                                        'rw': 'word', 'rd': 'dword'
+                                        }[m.group(2).lower()]
         m = re.match(r"^[ \t]*(" + N + r")\s+label\s+(byte|word|dword)\b", code, re.I)
         if m:
             DATA.add(m.group(1).lower())
@@ -1572,6 +1705,15 @@ for text in list(source.values()) + SEEN:
             if m.group(2) in FIRST:
                 SIZE[m.group(1).lower()] = FIRST[m.group(2)]
                 DATA.add(m.group(1).lower())
+
+# The names that stand for storage, which a field is read through:
+# KEYBEQU.INC's SD EQU SHARED_DATA, an instance of a structure, and
+# KEYBTBBL's FB EQU FILE_BUFFER, a plain buffer with the keyboard file's
+# header read over it.  The spelling the storage is declared with is the
+# one written out, the aliased() rule running before the pass that settles
+# spellings.
+ALIASED = {was: spelling.get(now, now)
+           for was, now in ALIAS.items() if now in WRITTEN or now in DATA}
 
 # The macros the modules declare for themselves, in fasm's shapes.  DOSCALL
 # asked IFNB whether it had been given a subfunction; MATCH answers the same
@@ -3069,7 +3211,9 @@ for stem in MODULES:
         text = PROCEDURE[0].sub(PROCEDURE[1], text)
     text = struct_arrays(text)
     text = literals(text)
+    text = aliased(text)
     text = strings(text)
+    text = translated(text)
     text = spaced_overrides(text)
     text = far_pointers(text)
     text = far_jumps(text)

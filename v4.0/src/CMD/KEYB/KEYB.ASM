@@ -53,11 +53,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                                        ;;
                                        ;;
-CODE    SEGMENT PUBLIC 'CODE' BYTE     ;;
+;CODE    SEGMENT PUBLIC 'CODE' BYTE     ;;
                                        ;;
-        INCLUDE KEYBCMD.INC            ;; Bring in external declarations
+        include 'KEYBCMD.INC'          ;; Bring in external declarations
                                        ;;  for transient command processing
-        ASSUME  CS:CODE,DS:CODE        ;;
+;        ASSUME  CS:CODE,DS:CODE        ;;
         ORG   100H                     ;; required for .COM
                                        ;;
                                        ;;
@@ -67,5 +67,5 @@ START:                                 ;;
                                        ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-CODE   ENDS
-       END    START
+;CODE   ENDS
+;       END    START

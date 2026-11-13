@@ -72,75 +72,75 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-	PUBLIC KEYB_COMMAND	       ;;
+;	PUBLIC KEYB_COMMAND	       ;;
 				       ;;
 ;*****************CNS********************
-	PUBLIC ID_TAB_OFFSET	       ;AN000;
+;	PUBLIC ID_TAB_OFFSET	       ;AN000;
 ;*****************CNS********************
-	PUBLIC CP_TAB_OFFSET	       ;;
-	PUBLIC STATE_LOGIC_OFFSET      ;;
-	PUBLIC SYS_CODE_PAGE	       ;;
-	PUBLIC KEYBCMD_LANG_ENTRY_PTR  ;;
-	PUBLIC DESIG_CP_BUFFER	       ;;
-	PUBLIC DESIG_CP_OFFSET	       ;;
-	PUBLIC KEYBSYS_FILE_HANDLE     ;;
-	PUBLIC NUM_DESIG_CP	       ;;
-	PUBLIC TB_RETURN_CODE	       ;;
-	PUBLIC FILE_BUFFER	       ;;
-	PUBLIC FILE_BUFFER_SIZE
-	PUBLIC FB		       ;;
+;	PUBLIC CP_TAB_OFFSET	       ;;
+;	PUBLIC STATE_LOGIC_OFFSET      ;;
+;	PUBLIC SYS_CODE_PAGE	       ;;
+;	PUBLIC KEYBCMD_LANG_ENTRY_PTR  ;;
+;	PUBLIC DESIG_CP_BUFFER	       ;;
+;	PUBLIC DESIG_CP_OFFSET	       ;;
+;	PUBLIC KEYBSYS_FILE_HANDLE     ;;
+;	PUBLIC NUM_DESIG_CP	       ;;
+;	PUBLIC TB_RETURN_CODE	       ;;
+;	PUBLIC FILE_BUFFER	       ;;
+;	PUBLIC FILE_BUFFER_SIZE
+;	PUBLIC FB		       ;;
 ;*****************CNS********************
-	PUBLIC ID_PTR_SIZE	       ;AN000;
-	PUBLIC LANG_PTR_SIZE	       ;AN000;
-	PUBLIC CP_PTR_SIZE	       ;AN000;
-	PUBLIC NUM_ID		       ;AN000;
-	PUBLIC NUM_LANG 	       ;AN000;
-	PUBLIC NUM_CP		       ;AN000;
-	PUBLIC SHARED_AREA_PTR	       ;;
+;	PUBLIC ID_PTR_SIZE	       ;AN000;
+;	PUBLIC LANG_PTR_SIZE	       ;AN000;
+;	PUBLIC CP_PTR_SIZE	       ;AN000;
+;	PUBLIC NUM_ID		       ;AN000;
+;	PUBLIC NUM_LANG 	       ;AN000;
+;	PUBLIC NUM_CP		       ;AN000;
+;	PUBLIC SHARED_AREA_PTR	       ;;
 ;*****************CNS********************
-	PUBLIC SD_SOURCE_PTR	       ;;
-	PUBLIC TEMP_SHARED_DATA        ;;
+;	PUBLIC SD_SOURCE_PTR	       ;;
+;	PUBLIC TEMP_SHARED_DATA        ;;
 				       ;;
-	PUBLIC FOURTH_PARM	       ;AN000;					    ;AN000
-	PUBLIC ONE_PARMID	       ;AN000;					    ;AN000
-	PUBLIC FTH_PARMID	       ;AN000;					    ;AN000
-	PUBLIC ID_FOUND 	       ;AN000;					    ;AN000
-	PUBLIC BAD_ID		       ;AN000;					    ;AN000
-	PUBLIC ALPHA		       ;AN000;					    ;AN000
-	EXTRN  PARSE_PARAMETERS:NEAR   ;AN000;					    ;AN000
+;	PUBLIC FOURTH_PARM	       ;AN000;					    ;AN000
+;	PUBLIC ONE_PARMID	       ;AN000;					    ;AN000
+;	PUBLIC FTH_PARMID	       ;AN000;					    ;AN000
+;	PUBLIC ID_FOUND 	       ;AN000;					    ;AN000
+;	PUBLIC BAD_ID		       ;AN000;					    ;AN000
+;	PUBLIC ALPHA		       ;AN000;					    ;AN000
+;	EXTRN  PARSE_PARAMETERS:NEAR   ;AN000;					    ;AN000
 ;***CNS
-	EXTRN  SECURE_FL:BYTE	       ;an002;
-	EXTRN  CUR_PTR:WORD	       ;an003;
-	EXTRN  OLD_PTR:WORD	       ;an003;
-	EXTRN  ERR_PART:WORD		;an003;
+;	EXTRN  SECURE_FL:BYTE	       ;an002;
+;	EXTRN  CUR_PTR:WORD	       ;an003;
+;	EXTRN  OLD_PTR:WORD	       ;an003;
+;	EXTRN  ERR_PART:WORD		;an003;
 ;***CNS
-.xlist
-	INCLUDE STRUC.INC	       ;AN000;;; WGR structured macros			   ;AN000
-	INCLUDE SYSMSG.INC	       ;AN000;;; WGR message retriever			   ;AN000
-.list
+.XLIST
+	include 'STRUC.INC'      ;AN000;;; WGR structured macros			   ;AN000
+	include 'SYSMSG.INC'      ;AN000;;; WGR message retriever			   ;AN000
+.LIST
 				       ;;
 MSG_UTILNAME <KEYB>		       ;AN000;;; WGR identify to message retriever	   ;AN000
 				       ;;
-CODE	SEGMENT PUBLIC 'CODE'          ;;
+;CODE	SEGMENT PUBLIC 'CODE'          ;;
 				       ;;
-.xlist				       ;;
-	INCLUDE KEYBEQU.INC	       ;;
-	INCLUDE KEYBSYS.INC	       ;;
-	INCLUDE KEYBI9.INC	       ;;
-	INCLUDE KEYBI9C.INC	       ;;
-	INCLUDE KEYBI2F.INC	       ;;
-	INCLUDE KEYBI48.INC	       ;;
-	INCLUDE KEYBSHAR.INC	       ;;
-	INCLUDE KEYBDCL.INC	       ;;
-	INCLUDE KEYBTBBL.INC	       ;;
-	INCLUDE COMMSUBS.INC	       ;;
-	INCLUDE KEYBCPSD.INC	       ;;
-.xlist
-	INCLUDE POSTEQU.INC	       ;;
-	INCLUDE DSEG.INC	       ;;
+.XLIST				       ;;
+	include 'KEYBEQU.INC'      ;;
+	include 'KEYBSYS.INC'      ;;
+	include 'KEYBI9.INC'      ;;
+	include 'KEYBI9C.INC'      ;;
+	include 'KEYBI2F.INC'      ;;
+	include 'KEYBI48.INC'      ;;
+	include 'KEYBSHAR.INC'      ;;
+	include 'KEYBDCL.INC'      ;;
+	include 'KEYBTBBL.INC'      ;;
+	include 'COMMSUBS.INC'      ;;
+	include 'KEYBCPSD.INC'      ;;
+.XLIST
+	include 'POSTEQU.INC'      ;;
+	include 'DSEG.INC'      ;;
 				       ;;
-.list
-	ASSUME	CS:CODE,DS:CODE        ;;
+.LIST
+;	ASSUME	CS:CODE,DS:CODE        ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -356,11 +356,11 @@ ALPHA	       DB	0		    ;AN000;;; WGR first parm a language id	   ;AN000
 					    ;;
 ID_DISPLAYED   DB	0		    ;AN000;;; WGR Indicating ID already displayed  ;AN000
 					    ;; WGR				    ;AN000
-SUBLIST_NUMBER LABEL BYTE		    ;AN000;;; WGR sublist for numbers		   ;AN000
+label SUBLIST_NUMBER byte      ;AN000;;; WGR sublist for numbers		   ;AN000
 	       DB	11		    ;AN000;;; WGR size				   ;AN000
 	       DB	0		    ;AN000;;; WGR				   ;AN000
-PTR_TO_NUMBER  DW	?		    ;AN000;;; WGR offset ptr			   ;AN000
-SEG_OF_NUMBER  DW	?		    ;AN000;;; WGR segment			   ;AN000
+PTR_TO_NUMBER  rw      1 ;AN000;;; WGR offset ptr			   ;AN000
+SEG_OF_NUMBER  rw      1 ;AN000;;; WGR segment			   ;AN000
 	       DB	1		    ;AN000;;; WGR				   ;AN000
 	       DB	10100001B	    ;AN000;;; WGR flag				   ;AN000
 	       DB	3		    ;AN000;;; WGR max width			   ;AN000
@@ -368,26 +368,26 @@ SEG_OF_NUMBER  DW	?		    ;AN000;;; WGR segment			   ;AN000
 	       DB	" "                 ;AN000;;; WGR filler                           ;AN000
 					    ;AN000;;; WGR
 					    ;AN000;;; WGR
-SUBLIST_ASCIIZ LABEL BYTE		    ;AN000;;; WGR sublist for asciiz		   ;AN000
+label SUBLIST_ASCIIZ byte      ;AN000;;; WGR sublist for asciiz		   ;AN000
 	       DB	11		    ;AN000;;; WGR size				   ;AN000
 	       DB	0		    ;AN000;;; WGR				   ;AN000
-PTR_TO_ASCIIZ  DW	?		    ;AN000;;; WGR offset ptr			   ;AN000
-SEG_OF_ASCIIZ  DW	?		    ;AN000;;; WGR segment			   ;AN000
+PTR_TO_ASCIIZ  rw      1 ;AN000;;; WGR offset ptr			   ;AN000
+SEG_OF_ASCIIZ  rw      1 ;AN000;;; WGR segment			   ;AN000
 	       DB	1		    ;AN000;;; WGR				   ;AN000
 	       DB	00010000B	    ;AN000;;; WGR flag				   ;AN000
 	       DB	2		    ;AN000;;; WGR max width			   ;AN000
 	       DB	2		    ;AN000;;; WGR min width			   ;AN000
 	       DB	" "                 ;AN000;;; WGR filler                           ;AN000
 					    ;AN000;;; WGR				   ;AN000
-NUMBER_HOLDER  DW	?		    ;AN000;;; WGR used for message retriever	   ;AN000
+NUMBER_HOLDER  rw      1 ;AN000;;; WGR used for message retriever	   ;AN000
 ;***CNS
-SUBLIST_COMLIN LABEL BYTE		    ;an003;;; WGR sublist for asciiz		   ;AN000
+label SUBLIST_COMLIN byte      ;an003;;; WGR sublist for asciiz		   ;AN000
 	       DB	11		    ;an003;;; WGR size				   ;AN000
 	       DB	0		    ;an003;;; WGR				   ;AN000
-PTR_TO_COMLIN  DW	?		    ;an003;;; WGR offset ptr			   ;AN000
-SEG_OF_COMLIN  DW	?
+PTR_TO_COMLIN  rw      1 ;an003;;; WGR offset ptr			   ;AN000
+SEG_OF_COMLIN  rw      1
 	       DB	0		    ;an003;;; WGR				   ;AN000
-	       DB	LEFT_ALIGN+CHAR_FIELD_ASCIIZ  ;AN000;;; WGR flag			     ;AN000
+	       DB	Left_Align+Char_Field_ASCIIZ  ;AN000;;; WGR flag			     ;AN000
 
 	       DB	0		    ;an003;;; WGR max width			   ;AN000
 	       DB	1		    ;an003;;; WGR min width			   ;AN000
@@ -397,22 +397,22 @@ SEG_OF_COMLIN  DW	?
 STRING_HOLDER  DB	64 DUP(0)
 ;***CNS 				    ;;
 					    ;;
-FILE_BUFFER_SIZE     EQU  50*6
+FILE_BUFFER_SIZE     =  (50*6)
 FILE_BUFFER	     DB   FILE_BUFFER_SIZE DUP(0) ;AC000;;; Buffer for Keyboard Def file
 FB		     EQU  FILE_BUFFER	    ;AC000;m for 32 language entries)
-DESIG_CP_BUFFER      DW   28 DUP(?)	    ;; (Room for 25 code pages)
+DESIG_CP_BUFFER      rw      28         ;; (Room for 25 code pages)
 DESIG_CP_BUF_LEN     DW   $-DESIG_CP_BUFFER ;;	Length of code page buffer
 NUM_DESIG_CP	     DW   0		    ;;
-CP_TAB_OFFSET	     DD   ?		    ;;
+CP_TAB_OFFSET	     rd      1   ;;
 ;******************  CNS  ******************;AN000;
 TOTAL_SIZE	     DW   0		    ;AN000;
 PASS_LANG	     DW   0		    ;AN000;
-ID_TAB_OFFSET	     DD   ?		    ;AN000;
+ID_TAB_OFFSET	     rd      1   ;AN000;
 ;******************  CNS  ******************;;
 STATE_LOGIC_OFFSET   DD   -1		    ;;
-KEYBSYS_FILE_HANDLE  DW   ?		    ;;;;;;;;;;;
+KEYBSYS_FILE_HANDLE  rw      1   ;;;;;;;;;;;
 TB_RETURN_CODE	     DW   1			     ;;
-DESIG_CP_OFFSET      DW   OFFSET DESIG_CP_BUFFER     ;;
+DESIG_CP_OFFSET      DW   DESIG_CP_BUFFER            ;;
 SYS_CODE_PAGE	     DW   0			     ;;
 DESIG_LIST	     DW   0			     ;;
 QUERY_CALL	     DB   0			     ;;
@@ -426,28 +426,31 @@ NUM_ID		     DW   0			     ;AN000;
 ERR4ID		     DB   0			     ;AN000;
 NUM_LANG	     DW   0			     ;AN000;
 NUM_CP		     DW   0			     ;AN000;
-ID_PTR_SIZE	     DW   SIZE KEYBSYS_ID_PTRS	     ;AN000;
+; MASM worked LENGTH out as the number of elements a variable was
+; declared with and SIZE as the bytes they take up.  The arrays these
+; ask about are all of bytes, so the two come to the same number.
+ID_PTR_SIZE	     DW   sizeof.KEYBSYS_ID_PTRS    ;AN000;
 ;******************  CNS  *****************************
-LANG_PTR_SIZE	     DW   SIZE KEYBSYS_LANG_PTRS     ;;
-CP_PTR_SIZE	     DW   SIZE KEYBSYS_CP_PTRS	     ;;
-KEYBCMD_LANG_ENTRY_PTR DD ?			     ;;
+LANG_PTR_SIZE	     DW   sizeof.KEYBSYS_LANG_PTRS   ;;
+CP_PTR_SIZE	     DW   sizeof.KEYBSYS_CP_PTRS    ;;
+KEYBCMD_LANG_ENTRY_PTR rd      1   ;;
 						     ;;
-KEYB_INSTALLED	     DW   0			     ;;
+KEYB_INSTALLED_keybcmd	     DW   0			     ;;
 CON_INSTALLED	     DW   0			     ;;
 SHARED_AREA_PTR      DD   0			     ;;
 GOOD_MATCH	     DW   0			     ;;
 ;******************  CNS  ***************************;;
 LANGUAGE_ASCII	     DB   '??',0                     ;; WGR                         ;AC000
 						     ;;
-CMD_PARM_LIST	     PARM_LIST <>		     ;;
+CMD_PARM_LIST	     PARM_LIST          ;;
 						     ;;
-JR_LANGUAGE_CODES    DW   'FR','GR','IT','SP','UK'   ;;
+JR_LANGUAGE_CODES    DW   'RF','RG','TI','PS','KU'   ;;; the release writes 'FR', 'GR', 'IT', 'SP', 'UK'
 						     ;;
 JR_NUM_CODES	     EQU   5			     ;;
 						     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;----------  TABLES FOR EXTENDED KEYBOARD SUPPORT CTRL CASE  ---------	   RWV 11-06-85 ;;
 											;;
-RPL_K8	LABEL	BYTE			;-------- CHARACTERS ---------			;;
+label RPL_K8 byte   ;-------- CHARACTERS ---------			;;
 	DB	27,-1,00,-1,-1,-1	; Esc, 1, 2, 3, 4, 5				;;
 	DB	30,-1,-1,-1,-1,31	; 6, 7, 8, 9, 0, -				;;
 	DB	-1,127,148,17,23,5	; =, Bksp, Tab, Q, W, E 			;;
@@ -464,41 +467,43 @@ RPL_K8	LABEL	BYTE			;-------- CHARACTERS ---------			;;
 	DB	119,141,132,142,115,143 ; Home, Up, PgUp, -, Left, Pad5 		;;
 	DB	116,144,117,145,118,146 ; Right, +, End, Down, PgDn, Ins		;;
 	DB	147,-1,-1,-1,137,138	; Del, SysReq, Undef, WT, F11, F12		;;
-L_CTRL_TAB	EQU	$-RPL_K8							;;
+; = and not equ: fasm's equ is text put in where the name is used, so a $
+; in it would be the address of the use and not of this line.
+L_CTRL_TAB	=	($-RPL_K8)	;;
 											;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;    Program Code
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 						    ;;
-KEYB_COMMAND  PROC NEAR 			    ;;
+KEYB_COMMAND:                  ;;
 						    ;;
 	CALL  SYSLOADMSG			    ;AN000;load messages		 ;AN000
 	JNC   VERSION_OK			    ;AN000;if no carry then version ok	 ;AN000
 	CALL  SYSDISPMSG			    ;AN000;error..display version error  ;AN000
 	MOV   AL,BAD_DOS_VER			    ;AN000;bad DOS version		 ;AN000
-	MOV   EXIT_RET_CODE,AL			    ;AN000;				 ;AN000
+	MOV   [EXIT_RET_CODE],AL     ;AN000;				 ;AN000
 	JMP   KEYB_EXIT_NOT_RESIDENT		    ;AN000;exit..non resident		 ;AN000
 VERSION_OK:					    ;; WGR				 ;AN000
-	MOV   SEG_OF_NUMBER,CS			    ;AN000;initialize.. 		 ;AN000
-	MOV   SEG_OF_ASCIIZ,CS			    ;AN000;  ..sublists 		 ;AN000
-	MOV   BP,OFFSET CMD_PARM_LIST		    ;AN000;pointer for parm list
-	MOV   WORD PTR SHARED_AREA_PTR,ES	    ;AN000; ES segment
+	MOV   [SEG_OF_NUMBER],CS     ;AN000;initialize.. 		 ;AN000
+	MOV   [SEG_OF_ASCIIZ],CS     ;AN000;  ..sublists 		 ;AN000
+	MOV   BP,CMD_PARM_LIST             ;AN000;pointer for parm list
+	MOV   word [SHARED_AREA_PTR],ES       ;AN000; ES segment
 						    ;;
 KEYB_INSTALL_CHECK:				    ;;
 	MOV   AX,0AD80H 			    ;; KEYB install check
 	INT   2FH				    ;;
 	CMP   AL,-1				    ;; If flag is not 0FFh THEN
 	JE    INSTALLED_KEYB			    ;;
-	MOV   WORD PTR SHARED_AREA_PTR+2,OFFSET TSD ;;
+	MOV   word [SHARED_AREA_PTR+2],TSD          ;;
 	JMP   CON_INSTALL_CHECK 		    ;;
 					    ;;;;;;;;;;
 INSTALLED_KEYB: 			    ;;
-	MOV   KEYB_INSTALLED,1		    ;;	Set KEYB_INSTALLED flag = YES
-	MOV   WORD PTR SHARED_AREA_PTR,ES   ;;	Save segment of SHARED_DATA_AREA
-	MOV   WORD PTR SHARED_AREA_PTR+2,DI ;;	Save offset of SHARED_DATA_AREA
-	MOV   AX,ES:[DI].KEYB_TYPE	    ;;
-	MOV   HW_TYPE,AX		    ;;
-	MOV   ES:[DI].TABLE_OK,0	    ;;	Do not allow processing
+	MOV   word [KEYB_INSTALLED_keybcmd],1 ;;	Set KEYB_INSTALLED flag = YES
+	MOV   word [SHARED_AREA_PTR],ES     ;;	Save segment of SHARED_DATA_AREA
+	MOV   word [SHARED_AREA_PTR+2],DI   ;;	Save offset of SHARED_DATA_AREA
+	MOV   AX,[es:DI+SHARED_DATA_STR.KEYB_TYPE] ;;
+	MOV   [HW_TYPE],AX    ;;
+	MOV   [es:DI+SHARED_DATA_STR.TABLE_OK],0 ;;	Do not allow processing
 	PUSH  CS			    ;;		  while building table
 	POP   ES			    ;;	Reset ES until required
 					    ;;
@@ -510,7 +515,7 @@ CON_INSTALL_CHECK:		       ;;;;;;;
 	JMP   CALL_FIRST_STAGE	       ;;
 				       ;;
 INSTALLED_CON:			       ;;
-	MOV   CON_INSTALLED,1	       ;;    Set CON_INSTALLED flag = YES
+	MOV   word [CON_INSTALLED],1 ;;    Set CON_INSTALLED flag = YES
 				       ;;
 CALL_FIRST_STAGE:		       ;;
 	PUSH  CS		       ;;
@@ -518,73 +523,73 @@ CALL_FIRST_STAGE:		       ;;
 	CALL  PARSE_PARAMETERS	       ;; Validate parameter list
 				       ;;
 BEGIN_PARM_CHECK:		       ;; CHECK ALL RETURN CODES
-	MOV   DL,[BP].RET_CODE_3       ;;
+	MOV   DL,[BP+PARM_LIST.RET_CODE_3] ;;
 	CMP   DL,1		       ;; Check for invalid syntax
 	JNE   VALID1		       ;;
 	JMP   ERROR3		       ;;
 				       ;;
 VALID1: 			       ;;
-	MOV   DL,[BP].RET_CODE_1       ;; Check for invalid language parm
+	MOV   DL,[BP+PARM_LIST.RET_CODE_1] ;; Check for invalid language parm
 	CMP   DL,1		       ;;
 	JNE   VALID2		       ;;
 	JMP   ERROR1		       ;;
 				       ;;
 VALID2: 			       ;;
-	MOV   DL,[BP].RET_CODE_2       ;; Check for invalid code page parm
+	MOV   DL,[BP+PARM_LIST.RET_CODE_2] ;; Check for invalid code page parm
 	CMP   DL,1		       ;;
 	JNE   VALID3		       ;;
 	JMP   ERROR2		       ;;
 				       ;;
 VALID3: 			       ;;
-	MOV   DL,[BP].RET_CODE_1       ;; Check for query command
+	MOV   DL,[BP+PARM_LIST.RET_CODE_1] ;; Check for query command
 	CMP   DL,2		       ;;
 	JE    QUERY		       ;;
 ;******************************* CNS **;;
-	MOV   DL,[BP].RET_CODE_1       ;AN000;k for query command
+	MOV   DL,[BP+PARM_LIST.RET_CODE_1] ;AN000;k for query command
 	CMP   DL,3		       ;AN000;;; Get a status of the codepage
 	JE    QUERY		       ;AN000;;; language, and possible ID code
 ;******************************* CNS **;;
 	JMP   NOT_QUERY 	       ;;
 				       ;; IF QUERY is requested THEN
 QUERY:				       ;;
-	MOV   QUERY_CALL,DL	       ;;
-	MOV   AX,KEYB_INSTALLED        ;;     If KEYB is installed THEN
+	MOV   [QUERY_CALL],DL      ;;
+	MOV   AX,[KEYB_INSTALLED_keybcmd]      ;;     If KEYB is installed THEN
 	CMP   AX,0		       ;;
 	JE    QUERY_CONTINUE1	       ;;;;;;;;;;;;;;;;
 						     ;;
-	MOV   DI,WORD PTR SHARED_AREA_PTR+2	     ;; Get offset of
-	MOV   ES,WORD PTR SHARED_AREA_PTR	     ;; 	 shared area
-	MOV   BX,WORD PTR ES:[DI].ACTIVE_LANGUAGE    ;; Get active language
+	MOV   DI,word [SHARED_AREA_PTR+2]        ;; Get offset of
+	MOV   ES,word [SHARED_AREA_PTR]        ;; 	 shared area
+	MOV   BX,word [es:DI+SHARED_DATA_STR.ACTIVE_LANGUAGE] ;; Get active language
 	CMP   BX,0				     ;; WGR if no language..		 ;AN000
 	JE    I_MESSAGE 			     ;; WGR then id was specified	 ;AN000
 						     ;;
 					   ;;;;;;;;;;;;
 L_MESSAGE:				   ;;
-	MOV   WORD PTR LANGUAGE_ASCII,BX   ;AC000;;;  Display Language
-	LEA   SI,LANGUAGE_ASCII 	   ;AN000;;; WGR sublist points to...			;AN000
-	MOV   PTR_TO_ASCIIZ,SI		   ;AN000;;; WGR language code asciiz string		;AN000
+	MOV   word [LANGUAGE_ASCII],BX     ;AC000;;;  Display Language
+	LEA   SI,[LANGUAGE_ASCII]   ;AN000;;; WGR sublist points to...			;AN000
+	MOV   [PTR_TO_ASCIIZ],SI   ;AN000;;; WGR language code asciiz string		;AN000
 	MOV   AX,ACT_KEYB		   ;AC000;;; WGR display 'Current keyboard code'        ;AN000
 	MOV   BX,STDOUT 		   ;AN000;;; WGR to standard out			;AN000
 	MOV   CX,1			   ;AN000;;; WGR one replacement			;AN000
 	MOV   DH,UTILITY_MSG_CLASS	   ;AN000;;; WGR utility message			;AN000
 	XOR   DL,DL			   ;AN000;;; WGR no input				;AN000
-	LEA   SI,SUBLIST_ASCIIZ 	   ;AN000;;; WGR ptr to sublist 			;AN000
+	LEA   SI,[SUBLIST_ASCIIZ]   ;AN000;;; WGR ptr to sublist 			;AN000
 	CALL  SYSDISPMSG		   ;AN000;;; WGR					;AN000
 	JMP   KEYB_L_FINISHED		   ;;
 					   ;;;;;;;
 I_MESSAGE:					;;
-	MOV   BX,WORD PTR ES:[DI].INVOKED_KBD_ID;AN000;;; WGR get id code.			;AN000
-	MOV   NUMBER_HOLDER,BX			;AN000;;; WGR transfer number to temp loc.	;AN000
-	LEA   SI,NUMBER_HOLDER			;AN000;;; WGR sublist points to...		;AN000
-	MOV   PTR_TO_NUMBER,SI			;AN000;;; WGR code page word			;AN000
+	MOV   BX,word [es:DI+SHARED_DATA_STR.INVOKED_KBD_ID] ;AN000;;; WGR get id code.			;AN000
+	MOV   [NUMBER_HOLDER],BX ;AN000;;; WGR transfer number to temp loc.	;AN000
+	LEA   SI,[NUMBER_HOLDER] ;AN000;;; WGR sublist points to...		;AN000
+	MOV   [PTR_TO_NUMBER],SI ;AN000;;; WGR code page word			;AN000
 	MOV   AX,ACT_ID 			;AN000;;; WGR display 'Current ID:  '           ;AN000
 	MOV   BX,STDOUT 			;AN000;;; WGR to standard out			;AN000
 	MOV   CX,1				;AN000;;; WGR one replacement			;AN000
 	MOV   DH,UTILITY_MSG_CLASS		;AN000;;; WGR utility message			;AN000
 	XOR   DL,DL				;AN000;;; WGR no input				;AN000
-	LEA   SI,SUBLIST_NUMBER 		;AN000;;; WGR ptr to sublist			;AN000
+	LEA   SI,[SUBLIST_NUMBER] ;AN000;;; WGR ptr to sublist			;AN000
 	CALL  SYSDISPMSG			;AN000;;; WGR					;AN000
-	MOV   ID_DISPLAYED,1			;AN000;;; WGR ID was displayed. 		;AN000
+	MOV   byte [ID_DISPLAYED],1 ;AN000;;; WGR ID was displayed. 		;AN000
 	JMP   KEYB_L_FINISHED			;AN000;;; WGR					;AN000
 				       ;;;;;;;;;;;
 QUERY_CONTINUE1:		       ;;
@@ -597,41 +602,41 @@ QUERY_CONTINUE1:		       ;;
 	JMP   KEYB_CP_FINISHED	       ;AC000;;;
 				       ;;;;;;;;;;;
 KEYB_L_FINISHED:				;;
-	MOV   BX,ES:[DI].INVOKED_CP_TABLE	;; Get invoked code page
+	MOV   BX,[es:DI+SHARED_DATA_STR.INVOKED_CP_TABLE] ;; Get invoked code page
 						;;
-	MOV   NUMBER_HOLDER,BX			;AN000;;; WGR transfer number to temp loc.	;AN000
-	LEA   SI,NUMBER_HOLDER			;AN000;;; WGR sublist points to...		;AN000
-	MOV   PTR_TO_NUMBER,SI			;AN000;;; WGR code page word			;AN000
+	MOV   [NUMBER_HOLDER],BX ;AN000;;; WGR transfer number to temp loc.	;AN000
+	LEA   SI,[NUMBER_HOLDER] ;AN000;;; WGR sublist points to...		;AN000
+	MOV   [PTR_TO_NUMBER],SI ;AN000;;; WGR code page word			;AN000
 	MOV   AX,ACT_KEYB_CP			;AC000;;; WGR display '  code page: '           ;AN000
 	MOV   BX,STDOUT 			;AN000;;; WGR to standard out			;AN000
 	MOV   CX,1				;AN000;;; WGR one replacement			;AN000
 	MOV   DH,UTILITY_MSG_CLASS		;AN000;;; WGR utility message			;AN000
 	XOR   DL,DL				;AN000;;; WGR no input				;AN000
-	LEA   SI,SUBLIST_NUMBER 		;AN000;;; WGR ptr to sublist			;AN000
+	LEA   SI,[SUBLIST_NUMBER] ;AN000;;; WGR ptr to sublist			;AN000
 	CALL  SYSDISPMSG			;AN000;;; WGR					;AN000
-	CMP   ID_DISPLAYED,1			;AN000;;; WGR was id displayed? 		;AN000
+	CMP   byte [ID_DISPLAYED],1 ;AN000;;; WGR was id displayed? 		;AN000
 	JE    KEYB_CP_FINISHED			;AN000;;; WGR yes..continue.			;AN000
 						;;
-	MOV   BX,WORD PTR ES:[DI].INVOKED_KBD_ID;AN000;;; WGR get id code.			;AN000
+	MOV   BX,word [es:DI+SHARED_DATA_STR.INVOKED_KBD_ID] ;AN000;;; WGR get id code.			;AN000
 	CMP   BX,0				;AN000;;; WGR no id given..			;AN000
 	JE    KEYB_CP_FINISHED			;AN000;;; WGR					;AN000
 						;;
-	MOV   NUMBER_HOLDER,BX			;AN000;;; WGR transfer number to temp loc.	;AN000
-	LEA   SI,NUMBER_HOLDER			;AN000;;; WGR sublist points to...		;AN000
-	MOV   PTR_TO_NUMBER,SI			;AN000;;; WGR code page word			;AN000
+	MOV   [NUMBER_HOLDER],BX ;AN000;;; WGR transfer number to temp loc.	;AN000
+	LEA   SI,[NUMBER_HOLDER] ;AN000;;; WGR sublist points to...		;AN000
+	MOV   [PTR_TO_NUMBER],SI ;AN000;;; WGR code page word			;AN000
 	MOV   AX,ACT_ID 			;AC000;;; WGR display 'Current ID:  '           ;AN000
 	MOV   BX,STDOUT 			;AN000;;; WGR to standard out			;AN000
 	MOV   CX,1				;AN000;;; WGR one replacement			;AN000
 	MOV   DH,UTILITY_MSG_CLASS		;AN000;;; WGR utility message			;AN000
 	XOR   DL,DL				;AN000;;; WGR no input				;AN000
-	LEA   SI,SUBLIST_NUMBER 		;AN000;;; WGR ptr to sublist			;AN000
+	LEA   SI,[SUBLIST_NUMBER] ;AN000;;; WGR ptr to sublist			;AN000
 	CALL  SYSDISPMSG			;AN000;;; WGR					;AN000
 	MOV   AH,09H				;AC000;;; WGR need a CR_LF here.		;AN000
-	MOV   DX,OFFSET CR_LF			;AC000;;; WGR					;AN000
+	MOV   DX,CR_LF          ;AC000;;; WGR					;AN000
 	INT   21H				;; WGR					 ;AN000
 				       ;;;;;;;;;;;
 KEYB_CP_FINISHED:		       ;;
-	MOV   AX,CON_INSTALLED	       ;;  If CON has been installed THEN
+	MOV   AX,[CON_INSTALLED]      ;;  If CON has been installed THEN
 	CMP   AX,0		       ;;
 	JNE   GET_ACTIVE_CP	       ;;
 	JMP   CON_NOT_INSTALLED        ;;
@@ -643,15 +648,15 @@ GET_ACTIVE_CP:			       ;;
 	JMP   ERROR5		       ;;
 				       ;;
 DISPLAY_ACTIVE_CP:		       ;;
-	MOV   NUMBER_HOLDER,BX	       ;AC000;;; WGR transfer number to temp loc.		;AN000
-	LEA   SI,NUMBER_HOLDER	       ;AC000;;; WGR sublist points to...			;AN000
-	MOV   PTR_TO_NUMBER,SI	       ;AC000;;; WGR code page word				;AN000
+	MOV   [NUMBER_HOLDER],BX      ;AC000;;; WGR transfer number to temp loc.		;AN000
+	LEA   SI,[NUMBER_HOLDER]      ;AC000;;; WGR sublist points to...			;AN000
+	MOV   [PTR_TO_NUMBER],SI      ;AC000;;; WGR code page word				;AN000
 	MOV   AX,ACT_CON_CP	       ;AN000;;; WGR display 'Current CON code page: '          ;AN000
 	MOV   BX,STDOUT 	       ;AN000;;; WGR to standard out				;AN000
 	MOV   CX,1		       ;AN000;;; WGR one replacement				;AN000
 	MOV   DH,UTILITY_MSG_CLASS     ;AN000;;; WGR utility message				;AN000
 	XOR   DL,DL		       ;AN000;;; WGR no input					;AN000
-	LEA   SI,SUBLIST_NUMBER        ;AN000;;; WGR ptr to sublist				;AN000
+	LEA   SI,[SUBLIST_NUMBER]      ;AN000;;; WGR ptr to sublist				;AN000
 	CALL  SYSDISPMSG	       ;AN000;;; WGR						;AN000
 				       ;;
 	JMP   KEYB_EXIT_NOT_RESIDENT   ;;  Exit from Proc
@@ -673,23 +678,23 @@ NOT_QUERY:			       ;; IF not a query function requested
 	JMP   ERROR4		       ;;
 				       ;;
 VALID4: 			       ;;
-	MOV   KEYBSYS_FILE_HANDLE,AX   ;; Save handle
-	MOV   BP,OFFSET CMD_PARM_LIST  ;; Set base pointer for structures
-	MOV   BX,KEYBSYS_FILE_HANDLE   ;; Retrieve the file handle
-	MOV   DX,OFFSET FILE_BUFFER    ;; Set address of buffer
+	MOV   [KEYBSYS_FILE_HANDLE],AX ;; Save handle
+	MOV   BP,CMD_PARM_LIST         ;; Set base pointer for structures
+	MOV   BX,[KEYBSYS_FILE_HANDLE] ;; Retrieve the file handle
+	MOV   DX,FILE_BUFFER           ;; Set address of buffer
 ;************************* CNS ********;;
-	cmp   [BP].RET_CODE_4,ID_VALID ;AN000;	 ;; CNS is there an ID available
+	cmp   [BP+PARM_LIST.RET_CODE_4],ID_VALID ;AN000;	 ;; CNS is there an ID available
 	je    ID_TYPED		       ;AN000;	 ;; if so go find out if it is
 	jmp   GET_LANG		       ;AN000;	 ;; a 1st or 4th parm, if not must
 				       ;AN000;	 ;; must be a language
 ID_TYPED:			       ;AN000;
 
 	call  SCAN_ID		       ;AN000;	 ;; scan the table for the ID
-	cmp   ID_FOUND,1	       ;AN000;	 ;; if a legal ID check and see if
+	cmp   byte [ID_FOUND],1 ;AN000;	 ;; if a legal ID check and see if
 	jne   LOST_ID		       ;AN000;	 ;; it is a first or fourth parm
-	cmp   FTH_PARMID,1	       ;AN000;	 ;; if it is a fourth parm go
+	cmp   byte [FTH_PARMID],1 ;AN000;	 ;; if it is a fourth parm go
 	je    GET_ID		       ;AN000;	 ;; check for language compatibility
-	jmp   Language_found	       ;AN000;	 ;; otherwise it must be a first
+	jmp   LANGUAGE_FOUND	       ;AN000;	 ;; otherwise it must be a first
 					  ;; parm id value
 
 LOST_ID:			       ;AN000;	 ;; otherwise must be a bogus match
@@ -701,7 +706,7 @@ GET_LANG:				  ;; Must be a language/or a 1st parm ID
 				       ;;;;;
 				       ;;
 	XOR   DI,DI		       ;; Set number
-	LEA   CX,[DI].KH_NUM_LANG+2    ;;	 bytes to read header
+	LEA   CX,[DI+KEYBSYS_HEADER.KH_NUM_LANG+2] ;;	 bytes to read header
 				       ;;
 	MOV   AH,3FH		       ;; Read header of the Keyb Def file
 	INT   21H		       ;;
@@ -710,18 +715,18 @@ GET_LANG:				  ;; Must be a language/or a 1st parm ID
 				       ;;;;
 VALID5: 				 ;;
 	CLD				 ;; WGR all moves/scans forward 		 ;AN000
-	MOV   CX,SIGNATURE_LENGTH	 ;;
-	MOV   DI,OFFSET SIGNATURE	 ;; Verify matching
-	MOV   SI,OFFSET FB.KH_SIGNATURE  ;;	     signatures
+	MOV   CX,[SIGNATURE_LENGTH] ;;
+	MOV   DI,SIGNATURE         ;; Verify matching
+	MOV   SI,FILE_BUFFER+KEYBSYS_HEADER.KH_SIGNATURE ;;	     signatures
 	REPE  CMPSB			 ;;
 	JE    LANGUAGE_SPECIFIED	 ;;
 	JMP   ERROR4		       ;;;;
 				       ;; READ the language table
 LANGUAGE_SPECIFIED:		       ;;
-	MOV   AX,FB.KH_NUM_LANG        ;;
-	MOV   NUM_LANG,AX	       ;; Save the number of languages
-	MUL   LANG_PTR_SIZE	       ;; Determine # of bytes to read
-	MOV   DX,OFFSET FILE_BUFFER    ;; Establish beginning of buffer
+	MOV   AX,word [FILE_BUFFER+KEYBSYS_HEADER.KH_NUM_LANG] ;;
+	MOV   [NUM_LANG],AX      ;; Save the number of languages
+	MUL   [LANG_PTR_SIZE]      ;; Determine # of bytes to read
+	MOV   DX,FILE_BUFFER           ;; Establish beginning of buffer
 	MOV   CX,AX		       ;;
 	CMP   CX,FILE_BUFFER_SIZE      ;; Make sure buffer is not to small
 	JBE   READ_LANG_TAB	       ;;
@@ -734,14 +739,14 @@ READ_LANG_TAB:			       ;;
 	JMP   ERROR4		       ;; Else display ERROR message
 				       ;;
 READ_VALID:			       ;;
-	MOV   CX,NUM_LANG	       ;;    Number of valid codes
-	MOV   DI,OFFSET FILE_BUFFER    ;;    Point to correct word in table
+	MOV   CX,[NUM_LANG]      ;;    Number of valid codes
+	MOV   DI,FILE_BUFFER           ;;    Point to correct word in table
 				       ;;
 SCAN_LANG_TABLE:		       ;; FOR language parm
-	MOV   AX,[BP].LANGUAGe_PARM    ;;    Get parameter
-	CMP   [DI].KP_LANG_CODE,AX     ;;    Valid Code ??
+	MOV   AX,[BP+PARM_LIST.LANGUAGE_PARM] ;;    Get parameter
+	CMP   [DI+KEYBSYS_LANG_PTRS.KP_LANG_CODE],AX ;;    Valid Code ??
 	JE    LANGUAGE_FOUND	       ;; If not found AND more entries THEN
-	ADD   DI,LANG_PTR_SIZE	       ;;    Check next entry
+	ADD   DI,[LANG_PTR_SIZE]      ;;    Check next entry
 	DEC   CX		       ;;    Decrement count of entries
 	JNE   SCAN_LANG_TABLE	       ;; Else
 	JMP   ERROR1		       ;;    Display error message
@@ -763,10 +768,10 @@ FINDID: 				;AN000;
 					;; reading the table data from the disk
 ;**************************** CNS *****************;;
 LANGUAGE_FOUND: 				   ;;
-	MOV   CX,WORD PTR [DI].KP_ENTRY_PTR+2	   ;; Get offset of lang entry
-	MOV   DX,WORD PTR [DI].KP_ENTRY_PTR	   ;;	in the Keyb Def file
-	MOV   WORD PTR KEYBCMD_LANG_ENTRY_PTR,DX   ;; Save
-	MOV   WORD PTR KEYBCMD_LANG_ENTRY_PTR+2,CX ;;	offset
+	MOV   CX,word [DI+KEYBSYS_LANG_PTRS.KP_ENTRY_PTR+2] ;; Get offset of lang entry
+	MOV   DX,word [DI+KEYBSYS_LANG_PTRS.KP_ENTRY_PTR] ;;	in the Keyb Def file
+	MOV   word [KEYBCMD_LANG_ENTRY_PTR],DX     ;; Save
+	MOV   word [KEYBCMD_LANG_ENTRY_PTR+2],CX   ;;	offset
 	MOV   AH,42H				   ;; Move file pointer to
 	MOV   AL,0			      ;;;;;;;	location of language
 	INT   21H			      ;;	    entry
@@ -775,18 +780,18 @@ LANGUAGE_FOUND: 				   ;;
 					      ;;
 LSEEK_VALID:				      ;;
 	MOV   DI,AX			      ;;
-	MOV   CX,SIZE KEYBSYS_LANG_ENTRY-1    ;; Set number
+	MOV   CX,sizeof.KEYBSYS_LANG_ENTRY-1  ;; Set number
 					      ;;	bytes to read header
-	MOV   DX,OFFSET FILE_BUFFER    ;;;;;;;;;
+	MOV   DX,FILE_BUFFER           ;;;;;;;;;
 	MOV   AH,3FH		       ;; Read language entry in
 	INT   21H		       ;;	 Keyb Def file
-	JNC   VALID6a		       ;; If no error in file then
+	JNC   valid6a		       ;; If no error in file then
 	JMP   ERROR4		       ;;;;;;;;;;
 ;**************************** CNS **********************************************
 
 
 valid6a:
-	cmp   FOURTH_PARM,1		;AN000;;; Is the ID a 4th Parm
+	cmp   byte [FOURTH_PARM],1 ;AN000;;; Is the ID a 4th Parm
 	jne   VALID6			;AN000;;; if not get out of routine, otherwise
 	pop	cx			;AN000;;;restore # of ids for the country
       ; .IF <cx eq 1>			;AN000;;;Check to see if this is the first
@@ -794,22 +799,22 @@ valid6a:
 	cmp	cx,1			;AN000;;;if there is just one ID check to make
 	jne	CHK4PARM		;AN000;;;sure both flags are not set
 					;AN000;;; this should not be necessary w/ new parser
-	cmp	 FTH_PARMID,1		;AN000;;; is the ID flag for switch set
+	cmp	 byte [FTH_PARMID],1 ;AN000;;; is the ID flag for switch set
 	jne	 CHK1N4 		;AN000;;; is the flag set only for the 4th
-	cmp	 FOURTH_PARM,1		;AN000;;; if set only for the switch proceed
+	cmp	 byte [FOURTH_PARM],1 ;AN000;;; if set only for the switch proceed
 	jne	 CHK1N4 		;AN000;;; if not must be a positional
-	mov	 cl,fb.kl_num_id	;AN000;;; get the number of IDs available from the table
-	mov	 FTH_PARMID,0		;AN000;;; turn switch flag off so the table
+	mov	 cl,byte [FILE_BUFFER+KEYBSYS_LANG_ENTRY.KL_NUM_ID] ;AN000;;; get the number of IDs available from the table
+	mov	 byte [FTH_PARMID],0 ;AN000;;; turn switch flag off so the table
 					;AN000;;; counter will not be reset
 
 						   ;;ids available for the
 CHK1N4: 				;AN000; 	  ;;country
-	cmp ONE_PARMID,1		;AN000; 	  ;; this was to be done if
+	cmp byte [ONE_PARMID],1 ;AN000; 	  ;; this was to be done if
 	jne CHK4PARM			;AN000; 	  ;; two the positional
-	cmp FOURTH_PARM,0		;AN000; 	  ;; and switch was specified
+	cmp byte [FOURTH_PARM],0 ;AN000; 	  ;; and switch was specified
 	jne CHK4PARM			;AN000; 	  ;; this should never happen
 	pop di				;AN000; 	  ;; if the parser is intact
-	jmp error3			;AN000; 	  ;; report error & exit
+	jmp ERROR3			;AN000; 	  ;; report error & exit
 
 CHK4PARM:				;AN000; 	   ;; check on the first ID
       ; .IF <FOURTH_PARM EQ 1>		;AN000; 	   ;;switch specified
@@ -818,7 +823,7 @@ CHK4PARM:				;AN000; 	   ;; check on the first ID
       ;     xor  cx,cx			;AN000; 	   ;;clear to exit loop
       ; .ENDIF				;AN000;
       ;
-	   cmp FOURTH_PARM,1		;AN000; 	   ;; ID was a switch
+	   cmp byte [FOURTH_PARM],1 ;AN000; 	   ;; ID was a switch
 	   jne ABORT_LOOP		;AN000; 	   ;; otherwise get out of routine
 	   call IDLANG_CHK		;AN000; 	   ;; check the ID
 	   jmp ADVANCE_PTR		;AN000; 	   ;; advance to the next position
@@ -832,9 +837,9 @@ ADVANCE_PTR:				;AN000;
 	   dec cx			;AN000; 	   ;;# of ids left to check
 	   cmp cx,0			;AN000; 	   ;; if at 0 don't advance to next
 	   je NO_ADVANCE		;AN000; 	   ;; table position
-	   cmp GOOD_MATCH,1		;AN000; 	   ;; check to see if ID matched language
+	   cmp word [GOOD_MATCH],1 ;AN000; 	   ;; check to see if ID matched language
 	   je NO_ADVANCE		;AN000; 	   ;; if equal do not advance
-	   add di,LANG_PTR_SIZE 	;AN000; 	   ;;step to the next entry
+	   add di,[LANG_PTR_SIZE] ;AN000; 	   ;;step to the next entry
 						    ;;in the table
 
 NO_ADVANCE:				;AN000;
@@ -845,25 +850,25 @@ NO_ADVANCE:				;AN000;
 
 END_IDCHK:				;AN000;
 
-	   cmp	  FOURTH_PARM,1 	;AN000; 	    ;; see if id was found
+	   cmp	  byte [FOURTH_PARM],1 ;AN000; 	    ;; see if id was found
 	   jne	  VALID6		;AN000;
-	   cmp	  GOOD_MATCH,0		;AN000; 	    ;; none found
+	   cmp	  word [GOOD_MATCH],0 ;AN000; 	    ;; none found
 	   jne	  VALID6		;AN000; 	    ;; report error
-	   mov	  [bp].ret_code_4,1	;AN000; 	    ;; incompatible lang code
-	   mov	  al,[bp].ret_code_4	;AN000; 	    ;; id combo
-	   jmp	  err2id		;AN000;
+	   mov	  [bp+PARM_LIST.RET_CODE_4],1 ;AN000; 	    ;; incompatible lang code
+	   mov	  al,[bp+PARM_LIST.RET_CODE_4] ;AN000; 	    ;; id combo
+	   jmp	  ERR2ID		;AN000;
 
 						    ;; otherwise found it
 						    ;; continue to build tbl
 ;**************************** CNS **********************************************
 					       ;;
 VALID6: 				       ;;
-	MOV   AX,WORD PTR FB.KL_LOGIC_PTR      ;; Save the offset of the state
-	MOV   WORD PTR STATE_LOGIC_OFFSET,AX   ;;      logic section
-	MOV   AX,WORD PTR FB.KL_LOGIC_PTR+2    ;; Save the offset of the state
-	MOV   WORD PTR STATE_LOGIC_OFFSET+2,AX ;;      logic section
+	MOV   AX,word [FILE_BUFFER+KEYBSYS_LANG_ENTRY.KL_LOGIC_PTR] ;; Save the offset of the state
+	MOV   word [STATE_LOGIC_OFFSET],AX     ;;      logic section
+	MOV   AX,word [FILE_BUFFER+KEYBSYS_LANG_ENTRY.KL_LOGIC_PTR+2] ;; Save the offset of the state
+	MOV   word [STATE_LOGIC_OFFSET+2],AX   ;;      logic section
 					       ;;
-	MOV   DL,[BP].RET_CODE_2       ;;;;;;;;;; IF code page was specified
+	MOV   DL,[BP+PARM_LIST.RET_CODE_2] ;;;;;;;;;; IF code page was specified
 	CMP   DL,2		       ;;
 	JNE   CODE_PAGE_SPECIFIED      ;;
 	JMP   DONE		       ;;
@@ -871,11 +876,11 @@ VALID6: 				       ;;
 CODE_PAGE_SPECIFIED:		       ;;  Then
 ;************************** CNS ***********************************************
 	xor   ah,ah		       ;AN000;
-	MOV   Al,FB.KL_NUM_CP	       ;AN000;;;
+	MOV   Al,byte [FILE_BUFFER+KEYBSYS_LANG_ENTRY.KL_NUM_CP] ;AN000;;;
 ;************************** CNS ***********************************************
-	MOV   NUM_CP,AX 	       ;; Save the number of code pages
-	MUL   CP_PTR_SIZE	       ;; Determine # of bytes to read
-	MOV   DX,OFFSET FILE_BUFFER    ;; Establish beginning of buffer
+	MOV   [NUM_CP],AX       ;; Save the number of code pages
+	MUL   [CP_PTR_SIZE]      ;; Determine # of bytes to read
+	MOV   DX,FILE_BUFFER           ;; Establish beginning of buffer
 	MOV   CX,AX		       ;;
 	CMP   CX,FILE_BUFFER_SIZE      ;; Make sure buffer is not to small
 	JBE   VALID7		       ;;
@@ -888,42 +893,42 @@ VALID7: 			       ;;
 	JMP   ERROR4		       ;;
 				       ;;
 VALID8: 			       ;;
-	MOV   CX,NUM_CP 	       ;;    Number of valid codes
-	MOV   DI,OFFSET FILE_BUFFER    ;;    Point to correct word in table
+	MOV   CX,[NUM_CP]       ;;    Number of valid codes
+	MOV   DI,FILE_BUFFER           ;;    Point to correct word in table
 				       ;;
 SCAN_CP_TABLE:			       ;; FOR code page parm
-	MOV   AX,[BP].CODE_PAGE_PARM   ;;    Get parameter
-	CMP   [DI].KC_CODE_PAGE,AX     ;;    Valid Code ??
+	MOV   AX,[BP+PARM_LIST.CODE_PAGE_PARM] ;;    Get parameter
+	CMP   [DI+KEYBSYS_CP_PTRS.KC_CODE_PAGE],AX ;;    Valid Code ??
 	JE    CODE_PAGE_FOUND	       ;; If not found AND more entries THEN
-	ADD   DI,CP_PTR_SIZE	       ;;    Check next entry
+	ADD   DI,[CP_PTR_SIZE]      ;;    Check next entry
 	DEC   CX		       ;;    Decrement count of entries
 	JNE   SCAN_CP_TABLE	       ;; Else
 	JMP   ERROR2		       ;;    Display error message
 				       ;;;;;;;;;
 CODE_PAGE_FOUND:			      ;;
-	MOV   AX,WORD PTR [DI].KC_ENTRY_PTR   ;;
-	MOV   WORD PTR CP_TAB_OFFSET,AX       ;;
-	MOV   AX,WORD PTR [DI].KC_ENTRY_PTR+2 ;;
-	MOV   WORD PTR CP_TAB_OFFSET+2,AX     ;;
+	MOV   AX,word [DI+KEYBSYS_CP_PTRS.KC_ENTRY_PTR] ;;
+	MOV   word [CP_TAB_OFFSET],AX         ;;
+	MOV   AX,word [DI+KEYBSYS_CP_PTRS.KC_ENTRY_PTR+2] ;;
+	MOV   word [CP_TAB_OFFSET+2],AX       ;;
 					  ;;;;;;
 DONE:					  ;;
-	MOV   SI,OFFSET DESIG_CP_BUFFER   ;;
+	MOV   SI,DESIG_CP_BUFFER          ;;
 					  ;;
-	MOV   AX,CON_INSTALLED	       ;;;;;  If CON is NOT installed THEN
+	MOV   AX,[CON_INSTALLED]      ;;;;;  If CON is NOT installed THEN
 	CMP   AX,0		       ;;
 	JE    SYSTEM_CP 	       ;;
 	JMP   GET_DESIG_CPS	       ;;
 				       ;;
 SYSTEM_CP:			       ;;
 	MOV   CX,1		       ;;
-	MOV   NUM_DESIG_CP,CX	       ;;    Set number of CPs = 1
-	MOV   [SI].NUM_DESIGNATES,CX   ;;
+	MOV   [NUM_DESIG_CP],CX      ;;    Set number of CPs = 1
+	MOV   [SI+DESIG_CP_STRUC.NUM_DESIGNATES],CX ;;
 				       ;;
-	MOV   DL,[BP].RET_CODE_2       ;;    Check if code page parm
+	MOV   DL,[BP+PARM_LIST.RET_CODE_2] ;;    Check if code page parm
 	CMP   DL,0		       ;;			was specified
 	JNE   SET_TO_SYSTEM_CP	       ;;
-	MOV   DX,[BP].CODE_PAGE_PARM   ;;
-	MOV   [SI].DESIG_CP_ENTRY,DX   ;;    Load specified code page into
+	MOV   DX,[BP+PARM_LIST.CODE_PAGE_PARM] ;;
+	MOV   [SI+DESIG_CP_STRUC.DESIG_CP_ENTRY],DX ;;    Load specified code page into
 	JMP   READY_TO_BUILD_TABLE     ;;      designated code page list
 				       ;;
 SET_TO_SYSTEM_CP:		       ;;
@@ -933,36 +938,36 @@ SET_TO_SYSTEM_CP:		       ;;
 	JMP   ERROR4		       ;;
 				       ;;
 SET_TO_SYSTEM_CP2:		       ;;
-	MOV   SYS_CODE_PAGE,BX	       ;;
-	MOV   [BP].CODE_PAGE_PARM,BX   ;;
-	MOV   [SI].DESIG_CP_ENTRY,BX   ;;    Move sys CP into desig list
+	MOV   [SYS_CODE_PAGE],BX      ;;
+	MOV   [BP+PARM_LIST.CODE_PAGE_PARM],BX ;;
+	MOV   [SI+DESIG_CP_STRUC.DESIG_CP_ENTRY],BX ;;    Move sys CP into desig list
 	JMP   READY_TO_BUILD_TABLE     ;;
 				       ;;
 GET_DESIG_CPS:			       ;;  ELSE
 	MOV   AX,0AD03H 	       ;;
 	PUSH  CS		       ;;    Make sure ES is set
 	POP   ES		       ;;
-	LEA   DI,DESIG_CP_BUFFER       ;;
-	MOV   CX,DESIG_CP_BUF_LEN      ;;
+	LEA   DI,[DESIG_CP_BUFFER]     ;;
+	MOV   CX,[DESIG_CP_BUF_LEN]    ;;
 	INT   2FH		       ;;     Get all designated code pages
 	JNC   SET_DESIG_VARIABLES      ;;	from console
 	JMP   ERROR5		       ;;
 				       ;;
 SET_DESIG_VARIABLES:		       ;;
-	MOV   CX,[SI].NUM_DESIGNATES   ;;
-	ADD   CX,[SI].NUM_HW_CPS       ;;
-	MOV   NUM_DESIG_CP,CX	       ;;     Set number of Designated CPs
+	MOV   CX,[SI+DESIG_CP_STRUC.NUM_DESIGNATES] ;;
+	ADD   CX,[SI+DESIG_CP_STRUC.NUM_HW_CPS] ;;
+	MOV   [NUM_DESIG_CP],CX      ;;     Set number of Designated CPs
 				       ;;
 BUFFER_CREATED: 		       ;;
 	MOV   AX,0AD02H 	       ;;
 	INT   2FH		       ;;     Get invoked code page
 				       ;;
 SET_TO_CP_INVOKED:		       ;;
-	MOV   DL,[BP].RET_CODE_2       ;; IF code page parm was specified
+	MOV   DL,[BP+PARM_LIST.RET_CODE_2] ;; IF code page parm was specified
 	CMP   DL,0		       ;;
 	JNE   SET_TO_INVOKED_CP        ;;
-	MOV   CX,NUM_DESIG_CP	       ;;
-	MOV   DESIG_LIST,SI	       ;;
+	MOV   CX,[NUM_DESIG_CP]      ;;
+	MOV   [DESIG_LIST],SI      ;;
 	JMP   TEST_IF_DESIGNATED       ;;
 				       ;;
 SET_TO_INVOKED_CP:		       ;;
@@ -974,17 +979,17 @@ SET_TO_INVOKED_CP:		       ;;
 	JMP   ERROR4		       ;;
 				       ;;
 SET_TO_INVOKED_CP2:		       ;;
-	MOV   [BP].CODE_PAGE_PARM,BX   ;;
-	MOV   SYS_CODE_PAGE,BX	       ;;
+	MOV   [BP+PARM_LIST.CODE_PAGE_PARM],BX ;;
+	MOV   [SYS_CODE_PAGE],BX      ;;
 				       ;;
 	JMP   TEST_IF_DESIGNATED       ;;
 				       ;;
 SET_TO_INVOKED_CP3:		       ;;
-	MOV   [BP].CODE_PAGE_PARM,BX   ;;
+	MOV   [BP+PARM_LIST.CODE_PAGE_PARM],BX ;;
 				       ;;
 TEST_IF_DESIGNATED:		       ;;
-	MOV   DX,[BP].CODE_PAGE_PARM   ;;
-	CMP   [SI].DESIG_CP_ENTRY,DX   ;;  Is Code page specified in the list
+	MOV   DX,[BP+PARM_LIST.CODE_PAGE_PARM] ;;
+	CMP   [SI+DESIG_CP_STRUC.DESIG_CP_ENTRY],DX ;;  Is Code page specified in the list
 	JE    CODE_PAGE_DESIGNATED     ;;    of designated code pages ?
 				       ;;
 NEXT_DESIG_CP:			       ;;
@@ -994,11 +999,11 @@ NEXT_DESIG_CP:			       ;;
 	JMP   ERROR6		       ;;
 				       ;;
 CODE_PAGE_DESIGNATED:		       ;;
-	CMP   SYS_CODE_PAGE,0	       ;;
+	CMP   word [SYS_CODE_PAGE],0 ;;
 	JNE   READY_TO_BUILD_TABLE     ;;
 	CMP   AX,1		       ;;   IF a code page has been invoked
 	JE    READY_TO_BUILD_TABLE     ;;
-	CMP   [BP].CODE_PAGE_PARM,BX   ;;     IF Invoked CP <>	Specified CP
+	CMP   [BP+PARM_LIST.CODE_PAGE_PARM],BX ;;     IF Invoked CP <>	Specified CP
 	JE    READY_TO_BUILD_TABLE     ;;	 Issue warning
 ;;***************************************************************************
 	PUSH  BX		       ;AN000;;; WGR						;AN000
@@ -1015,13 +1020,13 @@ CODE_PAGE_DESIGNATED:		       ;;
 				       ;;
 READY_TO_BUILD_TABLE:		       ;;
 				       ;;
-	MOV   AX,KEYB_INSTALLED        ;;
+	MOV   AX,[KEYB_INSTALLED_keybcmd]      ;;
 	CMP   AX,0		       ;; Else if KEYB has not been installed
 	JNE   BUILD_THE_TABLE	       ;;
 				       ;;
 	CALL  FIND_SYS_TYPE	       ;; Determine system type for INT 9 use
 				       ;;
-	TEST  SD.SYSTEM_FLAG,PC_JR     ;; IS THIS ROM MULTILINGUAL? (JR.)  AAD
+	TEST  [SHARED_DATA.SYSTEM_FLAG],PC_JR   ;; IS THIS ROM MULTILINGUAL? (JR.)  AAD
 	JZ    CONTINUE_INSTALL		;  NO, LOAD THE NEW INT9 CODE
 					; SEE IF MULTILINGUAL OPTION IS PRESENT
 	MOV	AH,5			; ADDRESS THE MULTILINGUAL SUPPORT
@@ -1039,9 +1044,9 @@ READY_TO_BUILD_TABLE:		       ;;
 ;I AM GOING TO IGNORE WHAT LANGUAGE IS CURRENTLY SET.  I WILL SET THE
 ;MULTILINGUAL KEYBOARD TO BECOME MY LANGUAGE.
 
-	MOV	AX,[BP].LANGUAGE_PARM	     ;;
+	MOV	AX,[BP+PARM_LIST.LANGUAGE_PARM] ;;
 	XCHG	AH,AL			     ;;
-	MOV	DI,OFFSET JR_LANGUAGE_CODES  ;;
+	MOV	DI,JR_LANGUAGE_CODES         ;;
 	MOV	CX,JR_NUM_CODES 	     ;;
 	PUSH	CS			     ;;
 	POP	ES			     ;;
@@ -1067,11 +1072,11 @@ BUILD_THE_TABLE:		       ;;
 				       ;;
 CHECK_ERRORS:			       ;;
 	XOR   CX,CX		       ;; Take appropriate action considering
-	MOV   CX,TB_RETURN_CODE        ;;	  return codes from TABLE_BUILD
+	MOV   CX,[TB_RETURN_CODE]      ;;	  return codes from TABLE_BUILD
 	CMP   CX,0		       ;;
 	JE    CHECK_FOR_INV_CP	       ;; If return code is not 0
 				       ;;
-	MOV   AX,KEYB_INSTALLED        ;;
+	MOV   AX,[KEYB_INSTALLED_keybcmd]      ;;
 	CMP   AX,0		       ;; If KEYB has not been installed
 	JNE   CHECK_ERROR_CONTINUE     ;;
 	CALL  REMOVE_INT_9	       ;;     remove installed vector
@@ -1105,7 +1110,7 @@ CHECK_ERROR6A:			       ;;
 	JMP   ERROR6A		       ;; If return code not 0,1,2,3,4 then
 				       ;;      display error message
 CHECK_FOR_INV_CP:		       ;;
-	MOV   CX,CPN_INVALID	       ;; Check if any CPs were not loaded
+	MOV   CX,[CPN_INVALID]      ;; Check if any CPs were not loaded
 	CMP   CX,0		       ;;
 	JE    TERMINATE 	       ;;   If some were invalid, issue
 				       ;;	warning message
@@ -1124,37 +1129,37 @@ CHECK_FOR_INV_CP:		       ;;
 				       ;;
 TERMINATE:			       ;;
 	MOV   AH,3EH		       ;;  Close the KEYBOARD.SYS file
-	MOV   BX,KEYBSYS_FILE_HANDLE   ;;  if open
+	MOV   BX,[KEYBSYS_FILE_HANDLE] ;;  if open
 	CMP   BX,0		       ;;
 	JE    KEYB_EXIT 	       ;;
 	INT   21H		       ;;
 				       ;;
-	MOV   AX,KEYB_INSTALLED        ;;
+	MOV   AX,[KEYB_INSTALLED_keybcmd]      ;;
 	CMP   AX,0		       ;;
 	JE    KEYB_EXIT 	       ;;
 	JMP   KEYB_EXIT_NOT_RESIDENT   ;;
 				       ;;
 KEYB_EXIT:			       ;;
-	TEST  SD.KEYB_TYPE,G_KB        ;; Q..FERRARI G??
+	TEST  [SHARED_DATA.KEYB_TYPE],G_KB      ;; Q..FERRARI G??
 	JZ    NO_FERRARI_G	       ;; N..LEAVE NUMLK ALONE
-	TEST  SD.SYSTEM_FLAG,PC_XT     ;;   Q..PC/XT?
+	TEST  [SHARED_DATA.SYSTEM_FLAG],PC_XT   ;;   Q..PC/XT?
 	JNZ   NO_FERRARI_G	       ;;   Y..LEAVE NUMLK ALONE
-	TEST  SD.KEYB_TYPE,P_KB        ;;      Q..FERRARI P??		***RPS
+	TEST  [SHARED_DATA.KEYB_TYPE],P_KB      ;;      Q..FERRARI P??		***RPS
 	JNZ   NO_FERRARI_G	       ;;      Y..LEAVE NUMLK ALONE	***RPS
 ;***CNS
-	CMP   SECURE_FL,1	       ;AN002;; IF SECURITY FLAG SET
+	CMP   byte [SECURE_FL],1 ;AN002;; IF SECURITY FLAG SET
 	JNE   NO_FERRARI_G	       ;AN002;; DON'T TURN ON NUM_LK
 
 ;***CNS
 	CALL  NUMLK_ON		       ;;      N..TURN NUMLK ON
 				       ;;
 NO_FERRARI_G:			       ;;
-	TEST  SD.SYSTEM_FLAG,EXT_16    ;; extended INT 16 support?
+	TEST  [SHARED_DATA.SYSTEM_FLAG],EXT_16  ;; extended INT 16 support?
 	JZ    SKIP_CTRL_COPY	       ;;
 				       ;; Yes, load extened CTRL case table
 	MOV	CX,L_CTRL_TAB	       ;; CX = LENGTH OF EXTENDED TABLE
-	MOV	SI,OFFSET CS:RPL_K8    ;; POINT TO EXT. CTRL TABLES
-	MOV	DI,OFFSET CS:K8        ;; POINT TO REGULAR CTRL TABLE
+	MOV	SI,RPL_K8           ;; POINT TO EXT. CTRL TABLES
+	MOV	DI,K8               ;; POINT TO REGULAR CTRL TABLE
 	CLD			       ;;
 	REP	MOVSB		       ;; OVERLAY WITH EXT. CTRL TABLE
 				       ;;
@@ -1167,21 +1172,21 @@ SKIP_CTRL_COPY: 		       ;;
 	MOV   BL,-1		       ;;
 	INT   2FH		       ;;
 				       ;;
-	MOV   DX,ES:TSD.RESIDENT_END   ;; Get resident end
+	MOV   DX,[es:TEMP_SHARED_DATA.RESIDENT_END] ;; Get resident end
 	MOV   CL,4		       ;; Convert into paragrahs
 	SHR   DX,CL		       ;;
 	INC   DX		       ;;
 	MOV   AH,31H		       ;; Function call to terminate but stay
 	XOR   AL,AL		       ;;   resident
 				       ;;
-	MOV   DI,OFFSET SD_DEST_PTR    ;; Initialize destination ptr
-	MOV   SI,OFFSET SD_SOURCE_PTR  ;; Initialize source ptr
+	MOV   DI,SD_DEST_PTR           ;; Initialize destination ptr
+	MOV   SI,SD_SOURCE_PTR         ;; Initialize source ptr
 	XOR   BP,BP		       ;;
-	LEA   BX,[BP].ACTIVE_LANGUAGE  ;;
+	LEA   BX,[BP+SHARED_DATA_STR.ACTIVE_LANGUAGE] ;;
 	ADD   DI,BX		       ;; Adjust for portion not copied
 	ADD   SI,BX		       ;; Adjust for portion not copied
 				       ;;
-	MOV   CX,SD_LENGTH	       ;; Set length of SHARED_DATA_AREA
+	MOV   CX,[SD_LENGTH]      ;; Set length of SHARED_DATA_AREA
 	SUB   CX,BX		       ;; Adjust for portion not copied
 				       ;;
 	JMP   COPY_SD_AREA	       ;; Jump to proc that copies area in new
@@ -1196,7 +1201,7 @@ ERR1ID: 			       ;AN000;
 	XOR   DL,DL		       ;AN000;;; WGR no input					;AN000
 	CALL  SYSDISPMSG	       ;AN000;;; WGR display message				;AN000
 	MOV   AL,INVALID_PARMS	       ;AN000;;;				   |
-	MOV   EXIT_RET_CODE,AL	       ;AN000;;;				   |
+	MOV   [EXIT_RET_CODE],AL      ;AN000;;;				   |
 ;;***************************************************************************
 	JMP   KEYB_EXIT_NOT_RESIDENT   ;;
 ERR2ID:
@@ -1208,7 +1213,7 @@ ERR2ID:
 	XOR   DL,DL		       ;AN000;;; WGR no input					;AN000
 	CALL  SYSDISPMSG	       ;AN000;;; WGR display message				;AN000
 	MOV   AL,INVALID_PARMS	       ;AN000;;;				   |
-	MOV   EXIT_RET_CODE,AL	       ;AN000;;;				   |
+	MOV   [EXIT_RET_CODE],AL      ;AN000;;;				   |
 ;;***************************************************************************
 	JMP   KEYB_EXIT_NOT_RESIDENT   ;;
 ;***************************** CNS *********************************************
@@ -1221,7 +1226,7 @@ ERROR1:
 	XOR   DL,DL		       ;AN000;;; WGR no input					;AN000
 	CALL  SYSDISPMSG	       ;AN000;;; WGR display message				;AN000
 	MOV   AL,INVALID_PARMS	       ;AN000;;;				   |
-	MOV   EXIT_RET_CODE,AL	       ;AN000;;;				   |
+	MOV   [EXIT_RET_CODE],AL      ;AN000;;;				   |
 ;;***************************************************************************
 	JMP   KEYB_EXIT_NOT_RESIDENT   ;;
 ERROR2:
@@ -1233,7 +1238,7 @@ ERROR2:
 	XOR   DL,DL		       ;AN000;;; WGR no input					;AN000
 	CALL  SYSDISPMSG	       ;AN000;;; WGR display message				;AN000
 	MOV   AL,INVALID_PARMS	       ;AN000;;;				   |
-	MOV   EXIT_RET_CODE,AL	       ;AN000;;;				   |
+	MOV   [EXIT_RET_CODE],AL      ;AN000;;;				   |
 ;;***************************************************************************
 	JMP   KEYB_EXIT_NOT_RESIDENT   ;;
 ERROR3:
@@ -1242,41 +1247,41 @@ ERROR3:
 	MOV   BX,STDOUT 	       ;AN000;;; WGR to standard out				;AN000
 ;***CNS
 
-	LEA   DI,STRING_HOLDER	      ;AN003;Set PTR to look at the STRING
+	LEA   DI,[STRING_HOLDER]     ;AN003;Set PTR to look at the STRING
 	PUSH  SI		      ;AN003;Save current SI index
 	PUSH  AX
-	MOV   AX,OLD_PTR	      ;AN003;Last locale of the end of a PARAM
-	SUB   CUR_PTR,AX		   ;AN003;Get the length via the PSP
-	MOV   SI,CUR_PTR
+	MOV   AX,[OLD_PTR]     ;AN003;Last locale of the end of a PARAM
+	SUB   [CUR_PTR],AX   ;AN003;Get the length via the PSP
+	MOV   SI,[CUR_PTR]
 	MOV   CX,SI		      ;AN003;Save it in CX to move in the chars
 	POP   AX		      ;AN003;Restore the PTR to the command line position
 
-	MOV   SI,OLD_PTR	      ;AN003;Last locale of the end of a PARAM
+	MOV   SI,[OLD_PTR]     ;AN003;Last locale of the end of a PARAM
 	REP   MOVSB		      ;AN003;Move in the chars until no more
 
-	LEA   DI,STRING_HOLDER	      ;AN003;Set PTR to look at the STRING
+	LEA   DI,[STRING_HOLDER]     ;AN003;Set PTR to look at the STRING
 
 
 	POP   SI		      ;AN003;Restore the PTR to the command line position
 
 	MOV   CX,1		       ;AN003;One replacement
-	MOV   PTR_TO_COMLIN,DI	       ;AN003;;; WGR language code asciiz string	    ;AN000
+	MOV   [PTR_TO_COMLIN],DI      ;AN003;;; WGR language code asciiz string	    ;AN000
 
 
 	PUSH  AX		       ;AN003;
 	MOV   AX,DS		       ;AN003;;; WGR language code asciiz string	    ;AN000
-	MOV   SEG_OF_COMLIN,AX	       ;AN003;
+	MOV   [SEG_OF_COMLIN],AX      ;AN003;
 	POP   AX		       ;AN003;
        ;XOR   CX,CX		       ;AN000;;; WGR no substitutions				;AN000
 
-	MOV   AX,ERR_PART	       ;AN003;
-	LEA   SI,SUBLIST_COMLIN        ;AN003;
+	MOV   AX,[ERR_PART]      ;AN003;
+	LEA   SI,[SUBLIST_COMLIN]      ;AN003;
 ;	MOV   DH,UTILITY_MSG_CLASS     ;AN000;;; WGR parse error message			;AN000
 	MOV   DH,PARSE_ERR_CLASS      ;AN000;;; WGR parse error message 		       ;AN000
 	XOR   DL,DL		       ;AN000;;; WGR no input					;AN000
 	CALL  SYSDISPMSG	       ;AN000;;; WGR display message				;AN000
 	MOV   AL,INVALID_PARMS	       ;AN000;;;				   |
-	MOV   EXIT_RET_CODE,AL	       ;AN000;;;				   |
+	MOV   [EXIT_RET_CODE],AL      ;AN000;;;				   |
 ;;***************************************************************************
 	JMP   KEYB_EXIT_NOT_RESIDENT   ;;
 ERROR4:
@@ -1288,7 +1293,7 @@ ERROR4:
 	XOR   DL,DL		       ;AN000;;; WGR no input					;AN000
 	CALL  SYSDISPMSG	       ;AN000;;; WGR display message				;AN000
 	MOV   AL,BAD_KEYB_DEF_FILE     ;AN000;;;				   |
-	MOV   EXIT_RET_CODE,AL	       ;AN000;;;				   |
+	MOV   [EXIT_RET_CODE],AL      ;AN000;;;				   |
 ;;***************************************************************************
 	JMP   KEYB_EXIT_NOT_RESIDENT   ;;
 ERROR5:
@@ -1300,7 +1305,7 @@ ERROR5:
 	XOR   DL,DL		       ;AN000;;; WGR no input					;AN000
 	CALL  SYSDISPMSG	       ;AN000;;; WGR display message				;AN000
 	MOV   AL,CONSOLE_ERROR	       ;AN000;;;				   |
-	MOV   EXIT_RET_CODE,AL	       ;AN000;;;				   |
+	MOV   [EXIT_RET_CODE],AL      ;AN000;;;				   |
 ;;***************************************************************************
 	JMP   KEYB_EXIT_NOT_RESIDENT   ;;
 ERROR5A:
@@ -1312,7 +1317,7 @@ ERROR5A:
 	XOR   DL,DL		       ;AN000;;; WGR no input					;AN000
 	CALL  SYSDISPMSG	       ;AN000;;; WGR display message				;AN000
 	MOV   AL,MEMORY_OVERFLOW       ;AN000;;;				   |
-	MOV   EXIT_RET_CODE,AL	       ;AN000;;;				   |
+	MOV   [EXIT_RET_CODE],AL      ;AN000;;;				   |
 ;;***************************************************************************
 	JMP   KEYB_EXIT_NOT_RESIDENT   ;;
 ERROR6:
@@ -1324,31 +1329,31 @@ ERROR6:
 	XOR   DL,DL		       ;AN000;;; WGR no input					;AN000
 	CALL  SYSDISPMSG	       ;AN000;;; WGR display message				;AN000
 	MOV   AL,CP_NOT_DESIGNATED     ;AN000;;;				   |
-	MOV   EXIT_RET_CODE,AL	       ;AN000;;;				   |
+	MOV   [EXIT_RET_CODE],AL      ;AN000;;;				   |
 ;;***************************************************************************
 	JMP   KEYB_EXIT_NOT_RESIDENT   ;;
 ERROR6A:
 ;;***************************************************************************
-	MOV   NUMBER_HOLDER,BX	       ;AN000;;; WGR transfer number to temp loc.		;AN000
-	LEA   SI,NUMBER_HOLDER	       ;AN000;;; WGR sublist points to...			;AN000
-	MOV   PTR_TO_NUMBER,SI	       ;AN000;;; WGR code page word				;AN000
+	MOV   [NUMBER_HOLDER],BX      ;AN000;;; WGR transfer number to temp loc.		;AN000
+	LEA   SI,[NUMBER_HOLDER]      ;AN000;;; WGR sublist points to...			;AN000
+	MOV   [PTR_TO_NUMBER],SI      ;AN000;;; WGR code page word				;AN000
 	MOV   AX,NOT_VALID	       ;AN000;;; WGR display 'Code page requested....'          ;AN000
 	MOV   BX,STDOUT 	       ;AN000;;; WGR to standard out				;AN000
 	MOV   CX,1		       ;AN000;;; WGR one replacement				;AN000
 	MOV   DH,UTILITY_MSG_CLASS     ;AN000;;; WGR utility message				;AN000
 	XOR   DL,DL		       ;AN000;;; WGR no input					;AN000
-	LEA   SI,SUBLIST_NUMBER        ;AN000;;; WGR ptr to sublist				;AN000
+	LEA   SI,[SUBLIST_NUMBER]      ;AN000;;; WGR ptr to sublist				;AN000
 	CALL  SYSDISPMSG	       ;AN000;;; WGR						;AN000
 	MOV   AL,KEYB_TABLE_NOT_LOAD   ;AN000;;;				   |
-	MOV   EXIT_RET_CODE,AL	       ;AN000;;;				   |
+	MOV   [EXIT_RET_CODE],AL      ;AN000;;;				   |
 ;;***************************************************************************
 				       ;;
 KEYB_EXIT_NOT_RESIDENT: 	       ;;
 	MOV   AH,04CH		       ;;
-	MOV   AL,QUERY_CALL	       ;; Check if this was a query call
+	MOV   AL,[QUERY_CALL]      ;; Check if this was a query call
 	CMP   AL,0		       ;;
 	JNE   KEYB_EXIT3	       ;;  IF yes then EXIT
-	MOV   AL,EXIT_RET_CODE	       ;; Check if return code was valid
+	MOV   AL,[EXIT_RET_CODE]      ;; Check if return code was valid
 	CMP   AL,0		       ;;
 	JNE   KEYB_EXIT3	       ;;  IF not then EXIT
 				       ;;
@@ -1358,32 +1363,32 @@ COPY_INTO_SDA:			       ;;
 	INT   2FH		       ;;
 				       ;;
 	MOV   AH,04CH		       ;;;;;;;;;;;
-	MOV   AL,EXIT_RET_CODE			;;
-	MOV   DI,WORD PTR SHARED_AREA_PTR+2	;; Initialize destination ptr
-	MOV   ES,WORD PTR SHARED_AREA_PTR	;;
-	MOV   DX,[BP].RESIDENT_END     ;;;;;;;;;;;
+	MOV   AL,[EXIT_RET_CODE] ;;
+	MOV   DI,word [SHARED_AREA_PTR+2]   ;; Initialize destination ptr
+	MOV   ES,word [SHARED_AREA_PTR]   ;;
+	MOV   DX,[BP+SHARED_DATA_STR.RESIDENT_END] ;;;;;;;;;;;
 	MOV   CL,4		       ;; Calculate resident end in paragraphs
 	SHR   DX,CL		       ;;
 	INC   DX		       ;;
 				       ;;
-	MOV   SI,OFFSET SD_SOURCE_PTR  ;; Initialize source ptr
+	MOV   SI,SD_SOURCE_PTR         ;; Initialize source ptr
 	XOR   BP,BP		       ;;
-	LEA   BX,[BP].ACTIVE_LANGUAGE  ;;
+	LEA   BX,[BP+SHARED_DATA_STR.ACTIVE_LANGUAGE] ;;
 	ADD   DI,BX		       ;;
 	ADD   SI,BX		       ;;
-	MOV   CX,SD_LENGTH	       ;; Set length of SHARED_DATA_AREA
+	MOV   CX,[SD_LENGTH]      ;; Set length of SHARED_DATA_AREA
 	SUB   CX,BX		       ;;
 				       ;;
 	JMP   COPY_SD_AREA	       ;; Jump to proc that copies area in new
 				       ;;
 KEYB_EXIT3:			       ;;;;;;;;;;;
-	MOV   AL,EXIT_RET_CODE			;;
-	MOV   DI,WORD PTR SHARED_AREA_PTR+2	;; Initialize destination ptr
-	MOV   ES,WORD PTR SHARED_AREA_PTR	;;
-	MOV   ES:[DI].TABLE_OK,1		;;
+	MOV   AL,[EXIT_RET_CODE] ;;
+	MOV   DI,word [SHARED_AREA_PTR+2]   ;; Initialize destination ptr
+	MOV   ES,word [SHARED_AREA_PTR]   ;;
+	MOV   [es:DI+SHARED_DATA_STR.TABLE_OK],1 ;;
 	INT   21H		       ;;;;;;;;;;;
 				       ;;
-KEYB_COMMAND  ENDP		       ;;
+;KEYB_COMMAND  ENDP		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -1405,15 +1410,15 @@ KEYB_COMMAND  ENDP		       ;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-NUMLK_ON     PROC		       ;;
+NUMLK_ON:                 ;;
 				       ;;
 	PUSH	ES		       ;;
 	PUSH	AX		       ;;
 				       ;;
-	MOV	AX,DATA 	       ;;
+	MOV	AX,DATA_ 	       ;;
 	MOV	ES,AX		       ;;
 				       ;;
-	OR	ES:KB_FLAG,NUM_STATE   ;; Num Lock state active
+	OR	byte [es:KB_FLAG],NUM_STATE ;; Num Lock state active
 	MOV	AH,1		       ;; Issue keyboard query call to
 	INT	16H		       ;;  have BIOS update the lights
 				       ;;
@@ -1421,7 +1426,7 @@ NUMLK_ON     PROC		       ;;
 	POP	ES		       ;;
 	RET			       ;;
 				       ;;
-NUMLK_ON   ENDP 		       ;;
+;NUMLK_ON   ENDP 		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -1447,34 +1452,34 @@ NUMLK_ON   ENDP 		       ;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-REPLACE_INT_SEGMENT1 DW  ?	       ;;
+REPLACE_INT_SEGMENT1 rw      1    ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;   Program Code
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					    ;;
-INSTALL_INT_9	     PROC		    ;;
+INSTALL_INT_9:               ;;
 					    ;;
 	PUSH  ES			    ;;
 					    ;;
 	MOV   AH,35H			    ;; Get int 9 vector
 	MOV   AL,9			    ;;
 	INT   21H			    ;; Vector in ES:BX
-	MOV   REPLACE_INT_SEGMENT1,ES	    ;;
+	MOV   [REPLACE_INT_SEGMENT1],ES   ;;
 	PUSH  CS			    ;;
 	POP   ES			    ;;
-	MOV   WORD PTR ES:SD.OLD_INT_9,BX   ;; Offset
-	MOV   AX,REPLACE_INT_SEGMENT1	    ;;
-	MOV   WORD PTR ES:SD.OLD_INT_9+2,AX ;; Segment
+	MOV   word [es:SHARED_DATA.OLD_INT_9],BX     ;; Offset
+	MOV   AX,[REPLACE_INT_SEGMENT1]   ;;
+	MOV   word [es:SHARED_DATA.OLD_INT_9+2],AX   ;; Segment
 	MOV   AH,25H			    ;;
 	MOV   AL,9			    ;;
-	MOV   DX,OFFSET KEYB_INT_9	    ;; Let DOS know about our handler
+	MOV   DX,KEYB_INT_9            ;; Let DOS know about our handler
 	INT   21H			    ;;
 					    ;;
 	POP   ES			    ;;
 	RET				    ;;
 					    ;;
-INSTALL_INT_9	     ENDP		    ;;
+;INSTALL_INT_9	     ENDP		    ;;
 					    ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -1504,17 +1509,17 @@ INSTALL_INT_9	     ENDP		    ;;
 ;;   Program Code
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-INSTALL_INT_9_NET    PROC	       ;;
+INSTALL_INT_9_NET:               ;;
 				       ;;
 	PUSH  ES		       ;;
 				       ;;
-	TEST  SD.SYSTEM_FLAG,PC_NET    ;; TEST FOR PC_NETWORK
+	TEST  [SHARED_DATA.SYSTEM_FLAG],PC_NET  ;; TEST FOR PC_NETWORK
 	JNZ   NET_HAND_SHAKE	       ;; JUMP IF NETWORK INSTALLED
 	JMP   INSTALL_9_DONE_NET       ;; SKIP THE PC NETWORK HANDSHAKE
 				       ;;
 NET_HAND_SHAKE: 		       ;;
 				       ;; ES:BX TO CONTAIN INT 9 ADDR
-	MOV   BX,OFFSET KEYB_INT_9     ;;
+	MOV   BX,KEYB_INT_9            ;;
 	MOV   AX,0B808H 	       ;; FUNCTION FOR PC NETWORK TO INSTALL
 				       ;; THIS ADDRESS FOR THEIR JUMP TABLE
 	INT   02FH		       ;; TELL PC_NET TO USE MY ADDR TO CHAIN TO
@@ -1523,7 +1528,7 @@ INSTALL_9_DONE_NET:		       ;;
 	POP   ES		       ;;
 	RET			       ;;
 				       ;;
-INSTALL_INT_9_NET    ENDP	       ;;
+;INSTALL_INT_9_NET    ENDP	       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -1549,45 +1554,45 @@ INSTALL_INT_9_NET    ENDP	       ;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-REPLACE_INT_SEGMENT2 DW  ?	       ;;
+REPLACE_INT_SEGMENT2 rw      1    ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;   Program Code
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					     ;;
-INSTALL_INT_2F_48    PROC		     ;;
+INSTALL_INT_2F_48:              ;;
 					     ;;
 	MOV   AH,35H			     ;; Get int 2f vector
 	MOV   AL,2FH			     ;;
 	INT   21H			     ;; Vector in ES:BX
-	MOV   REPLACE_INT_SEGMENT2,ES	     ;;
+	MOV   [REPLACE_INT_SEGMENT2],ES    ;;
 	PUSH  CS			     ;;
 	POP   ES			     ;;
-	MOV   WORD PTR ES:SD.OLD_INT_2F,BX   ;; Offset
-	MOV   AX,REPLACE_INT_SEGMENT2	     ;;
-	MOV   WORD PTR ES:SD.OLD_INT_2F+2,AX ;; Segment
+	MOV   word [es:SHARED_DATA.OLD_INT_2F],BX     ;; Offset
+	MOV   AX,[REPLACE_INT_SEGMENT2]    ;;
+	MOV   word [es:SHARED_DATA.OLD_INT_2F+2],AX   ;; Segment
 	MOV   AH,25H			     ;; Set int 9 vector
 	MOV   AL,2FH			     ;;
-	MOV   DX,OFFSET KEYB_INT_2F	     ;; Vector in DS:DX
+	MOV   DX,KEYB_INT_2F             ;; Vector in DS:DX
 	INT   21H			     ;;
 					     ;;
 ARE_WE_A_PCJR:				     ;;
 					     ;;
-	MOV   AX,SD.SYSTEM_FLAG 	     ;; Test if we are a PCjr
+	MOV   AX,[SHARED_DATA.SYSTEM_FLAG]     ;; Test if we are a PCjr
 	CMP   AX,PC_JR			     ;;
 	JNE   INSTALL_DONE		     ;;  IF yes then
 	MOV   AH,35H			     ;;    Get int 48 vector
 	MOV   AL,48H			     ;;
 	INT   21H			     ;;    Vector in ES:BX
-	MOV   REPLACE_INT_SEGMENT2,ES	     ;;
+	MOV   [REPLACE_INT_SEGMENT2],ES    ;;
 	PUSH  CS			     ;;
 	POP   ES			     ;;
-	MOV   WORD PTR ES:SD.OLD_INT_48,BX   ;;    Offset
-	MOV   AX,REPLACE_INT_SEGMENT2	     ;;
-	MOV   WORD PTR ES:SD.OLD_INT_48+2,AX ;;    Segment
+	MOV   word [es:SHARED_DATA.OLD_INT_48],BX     ;;    Offset
+	MOV   AX,[REPLACE_INT_SEGMENT2]    ;;
+	MOV   word [es:SHARED_DATA.OLD_INT_48+2],AX   ;;    Segment
 	MOV   AH,25H			     ;;    Set int 48 vector
 	MOV   AL,48H			     ;;
-	MOV   DX,OFFSET KEYB_INT_48	     ;;    Vector in DS:DX
+	MOV   DX,KEYB_INT_48             ;;    Vector in DS:DX
 	INT   21H			     ;;
 					     ;;
 INSTALL_DONE:				     ;;
@@ -1595,7 +1600,7 @@ INSTALL_DONE:				     ;;
 
 	RET				     ;;
 					     ;;
-INSTALL_INT_2F_48    ENDP		     ;;
+;INSTALL_INT_2F_48    ENDP		     ;;
 					     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -1625,14 +1630,14 @@ INSTALL_INT_2F_48    ENDP		     ;;
 ;;   Program Code
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					      ;;
-REMOVE_INT_9	    PROC		      ;;
+REMOVE_INT_9:                ;;
 					      ;;
 	PUSH  DS			      ;;
 	PUSH  ES			      ;;
-	MOV   ES,WORD PTR SHARED_AREA_PTR     ;;
-	MOV   AX,WORD PTR ES:SD.OLD_INT_9+2   ;; int 9 vector - segment
+	MOV   ES,word [SHARED_AREA_PTR]       ;;
+	MOV   AX,word [es:SHARED_DATA.OLD_INT_9+2]     ;; int 9 vector - segment
 	MOV   DS,AX			      ;;
-	MOV   DX,WORD PTR ES:SD.OLD_INT_9     ;; int 9 vector - offset
+	MOV   DX,word [es:SHARED_DATA.OLD_INT_9]       ;; int 9 vector - offset
 					      ;;
 	MOV   AH,25H		       ;;;;;;;;; Set int 9 vector
 	MOV   AL,9		       ;;
@@ -1643,7 +1648,7 @@ REMOVE_9_DONE:			       ;;
 	POP   DS		       ;;
 	RET			       ;;
 				       ;;
-REMOVE_INT_9		 ENDP	       ;;
+;REMOVE_INT_9		 ENDP	       ;;
 				       ;;
 ;*********************** CNS **********;;
 PURPOSE:			       ;;
@@ -1653,16 +1658,16 @@ OUTPUT: 			       ;;
 				       ;AN000;;;
 				       ;AN000;;;
 				       ;AN000;;;
-    IDLANG_CHK	PROC	NEAR	       ;AN000;;;
+IDLANG_CHK:                     ;AN000;;;
 				       ;AN000;;;
-	mov	ax,fb.kl_id_code       ;AN000;;;get the id code from the table
-	cmp	ax,[bp].id_parm        ;AN000;;;;;;;;;;;compare it to value taken
+	mov	ax,word [FILE_BUFFER+KEYBSYS_LANG_ENTRY.KL_ID_CODE] ;AN000;;;get the id code from the table
+	cmp	ax,[bp+PARM_LIST.ID_PARM] ;AN000;;;;;;;;;;;compare it to value taken
 	jne	end_match	       ;AN000;	       ;from the switch-- if found
-	cmp	ALPHA,0 	       ;AN000;	       ;a keyboard code was specified
+	cmp	byte [ALPHA],0  ;AN000;	       ;a keyboard code was specified
 	je	a_match 	       ;AN000;	       ;no lang & a match
 				       ;AN000;	       ;
-	mov	ax,fb.kl_lang_code     ;AN000;	       ;compare lang codes
-	cmp	ax,[BP].LANGUAGE_PARM  ;AN000;	       ;they are equal
+	mov	ax,word [FILE_BUFFER+KEYBSYS_LANG_ENTRY.KL_LANG_CODE] ;AN000;	       ;compare lang codes
+	cmp	ax,[BP+PARM_LIST.LANGUAGE_PARM] ;AN000;	       ;they are equal
 	je	a_match 	       ;AN000;	       ;
 				       ;AN000;	       ;
 	jmp	end_match	       ;AN000;	       ;if not found go check next
@@ -1670,26 +1675,26 @@ OUTPUT: 			       ;;
 				       ;AN000;	       ;
     a_match:			       ;AN000;	       ;
 						;
-	mov	good_match,1	       ;AN000;	       ;report the ids match
+	mov	word [GOOD_MATCH],1 ;AN000;	       ;report the ids match
 						;
     end_match:			       ;AN000;	       ;
 						;
 	ret			       ;AN000;	       ;
 						;
-    IDLANG_CHK	ENDP		       ;AN000;	       ;
+;    IDLANG_CHK	ENDP		       ;AN000;	       ;
 ;*********************** CNS *******************;
 ;**********************************SCAN_ID***********************;
 ; New variables defined - NUM_ID,ADRSS_LANG,ID_PTR_SIZE,ID_FOUND ;
 ;****************************************************************;
 								 ;
 								 ;
-	SCAN_ID     PROC	NEAR				 ;
+SCAN_ID:                   ;
 								 ;
 	xor	di,di		;AN000;;clear di to set at the
 				;AN000;;beginning of KEYBSYS STRUCTURE
 				;;;;;;;;;;
 					 ;
-	lea	cx,[di].kh_num_ID+4	 ;AN000;; set number of bytes to read header
+	lea	cx,[di+KEYBSYS_HEADER.KH_NUM_ID+4] ;AN000;; set number of bytes to read header
 					 ;
 	mov	ah,3fh			 ;AN000;;
 	int	21h			 ;AN000;;
@@ -1698,9 +1703,9 @@ OUTPUT: 			       ;;
 					  ;
  VAL5ID:				 ;AN000; ;
 					  ;
-	mov	cx,SIGNATURE_LENGTH	 ;AN000; ;
-	mov	di,offset SIGNATURE	 ;AN000; ;
-	mov	si,offset FB.KH_SIGNATURE;AN000; ;
+	mov	cx,[SIGNATURE_LENGTH] ;AN000; ;
+	mov	di,SIGNATURE         ;AN000; ;
+	mov	si,FILE_BUFFER+KEYBSYS_HEADER.KH_SIGNATURE ;AN000; ;
 	repe	CMPSB			 ;AN000; ;
 	je	ID_SPECIFIED		 ;AN000; ;
 	jmp	BAD_TAB 		 ;AN000; ;
@@ -1709,18 +1714,18 @@ OUTPUT: 			       ;;
 					  ;
  ID_SPECIFIED:				 ;AN000; ;
 					  ;
-	mov	ax,FB.KH_NUM_ID 	 ;AN000; ;;;;;;;;;;;;;;;
-	mov	NUM_ID,ax		 ;AN000; ;save # of IDs
-	mul	ID_PTR_SIZE		 ;AN000; ;determine # of bytes to read
+	mov	ax,word [FILE_BUFFER+KEYBSYS_HEADER.KH_NUM_ID] ;AN000; ;;;;;;;;;;;;;;;
+	mov	[NUM_ID],ax ;AN000; ;save # of IDs
+	mul	[ID_PTR_SIZE] ;AN000; ;determine # of bytes to read
 	push	ax			 ;AN000; ;save current # of bytes to read for
 					 ;AN000; ;ID values only
-	mov	ax,FB.KH_NUM_LANG	 ;AN000; ;add on lang data in table
-	mul	LANG_PTR_SIZE		 ;AN000; ;data that comes before the ID data
+	mov	ax,word [FILE_BUFFER+KEYBSYS_HEADER.KH_NUM_LANG] ;AN000; ;add on lang data in table
+	mul	[LANG_PTR_SIZE] ;AN000; ;data that comes before the ID data
 	mov	cx,ax			 ;AN000; ;save that value for the size compare
-	mov	PASS_LANG,cx		 ;AN000; ;
+	mov	[PASS_LANG],cx ;AN000; ;
 	pop	ax			 ;AN000; ;restore the info for # of ID bytes to read
 	add	cx,ax			 ;AN000; ;add that value to get total in CX
-	mov	TOTAL_SIZE,cx		 ;AN000; ;save the total size
+	mov	[TOTAL_SIZE],cx ;AN000; ;save the total size
 	cmp	cx,FILE_BUFFER_SIZE	 ;AN000; ;
 	jbe	READ_ID_TAB		 ;AN000; ;
 	jmp	BAD_TAB 		 ;AN000; ;
@@ -1728,7 +1733,7 @@ OUTPUT: 			       ;;
 					  ;
   READ_ID_TAB:				 ;AN000; ;
 					  ;
-	mov	dx,offset FILE_BUFFER	 ;AN000; ;
+	mov	dx,FILE_BUFFER         ;AN000; ;
 	mov	ah,3fh			;;AN000;read language table from
 	int	21h			;;AN000;keyb defn file
 	jnc	READ_IDVAL		;;AN000;
@@ -1736,30 +1741,30 @@ OUTPUT: 			       ;;
 					;
   READ_IDVAL:				;;AN000;
 					;;AN000;
-	mov	cx,NUM_ID		;;AN000;
-	mov	di,offset FILE_BUFFER	;;AN000;;;;;;;;;;
-	add	di,PASS_LANG		 ;AN000;	;
+	mov	cx,[NUM_ID] ;;AN000;
+	mov	di,FILE_BUFFER        ;;AN000;;;;;;;;;;
+	add	di,[PASS_LANG] ;AN000;	;
 						 ;
   SCAN_ID_TAB:				 ;AN000;	;
 						 ;
-	mov	ax,[bp].ID_PARM 	 ;AN000;	;
-	cmp	[di].KP_ID_CODE,ax	 ;AN000;	;
+	mov	ax,[bp+PARM_LIST.ID_PARM] ;AN000;	;
+	cmp	[di+KEYBSYS_ID_PTRS.KP_ID_CODE],ax ;AN000;	;
 	je	ID_HERE 		 ;AN000;	;
-	add	di,ID_PTR_SIZE		 ;AN000;	;
+	add	di,[ID_PTR_SIZE] ;AN000;	;
 	dec	cx			 ;AN000;	;
 	jne	SCAN_ID_TAB		 ;AN000;	;
 	jmp	FINALE			 ;AN000;	;
 					 ;
   BAD_TAB:				 ;AN000;;
 						 ;
-	mov	ERR4ID,1		 ;AN000;	;
+	mov	byte [ERR4ID],1 ;AN000;	;
 	jmp	FINALE			 ;AN000;	;
 						 ;
 						 ;
 						 ;
    ID_HERE:				 ;AN000;	;
 						 ;
-	mov	ID_FOUND,1	;AN000;;reset ptr for	;
+	mov	byte [ID_FOUND],1 ;AN000;;reset ptr for	;
 				;AN000;;current country ;
 						 ;
 
@@ -1769,7 +1774,7 @@ OUTPUT: 			       ;;
 	ret			;AN000; 		;
 						 ;
 						 ;
-	SCAN_ID 	ENDP	;AN000; 		;
+;	SCAN_ID 	ENDP	;AN000; 		;
 						 ;
 ;*******************************SCAN_ID END******;
 ;;
@@ -1820,7 +1825,7 @@ KEYB_SYS_ACTIVE DB   'KEYBOARD.SYS',00   ;AN000;;; WGR                          
 KEYB_SYS_LENG	EQU  14 		 ;AN000;;;
 KEYB_SYS_A_LENG EQU  13 		 ;AN000;;; WGR					   ;AN000
 					 ;;
-FILE_NAME	DB   128 DUP(0) 	 ;AN000;;;
+FILE_NAME_keybcmd	DB   128 DUP(0) 	 ;AN000;;;
 					 ;;
 FILE_NOT_FOUND	EQU  2			 ;AN000;;; WGR					   ;AN000
 PATH_NOT_FOUND	EQU  3			 ;AN000;;; WGR					   ;AN000
@@ -1828,43 +1833,43 @@ PATH_NOT_FOUND	EQU  3			 ;AN000;;; WGR					   ;AN000
 ;;  Program Code
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-BUILD_PATH    PROC  NEAR	       ;;
+BUILD_PATH:                     ;;
 	CLD			       ;AN000;;; WGR					   ;AN000
-	MOV	DI,OFFSET FILE_NAME    ;; Get the offset of the filename
-	MOV	CX,[BP].PATH_LENGTH    ;; If path is specified then
+	MOV	DI,FILE_NAME_keybcmd           ;; Get the offset of the filename
+	MOV	CX,[BP+PARM_LIST.PATH_LENGTH] ;; If path is specified then
 	CMP	CX,0		       ;;
 	JE	APPEND_KEYB_SYS        ;;
-	MOV	SI,[BP].PATH_OFFSET    ;;   Get the offset of the path
+	MOV	SI,[BP+PARM_LIST.PATH_OFFSET] ;;   Get the offset of the path
 				       ;;
 	REPE	MOVSB		       ;AC000;;;   Copy each char of the specified
 	MOV	AX,3D00H	       ;AC000;;; WGR Open the KEYBOARD.SYS file 	   ;AN000
-	MOV	DX,OFFSET FILE_NAME    ;AC000;;; WGR					   ;AN000
+	MOV	DX,FILE_NAME_keybcmd           ;AC000;;; WGR					   ;AN000
 	INT	21H		       ;AC000;;; WGR					   ;AN000
 	RET			       ;;   path into the filename location
 				       ;;
 APPEND_KEYB_SYS:		       ;;;;;
-	MOV	SI,OFFSET KEYB_SYS_ACTIVE ;AC000;;; WGR  copy name for active directory    ;AN000
+	MOV	SI,KEYB_SYS_ACTIVE        ;AC000;;; WGR  copy name for active directory    ;AN000
 	MOV	CX,KEYB_SYS_A_LENG     ;AC000;;;;;; WGR  to file name variable. 	   ;AN000
 	REPE	MOVSB		       ;AC000;;; WGR					   ;AN000
 	MOV	AX,3D00H	       ;AC000;;; WGR try to open it.			   ;AN000
-	MOV	DX,OFFSET FILE_NAME    ;AC000;;; WGR					   ;AN000
+	MOV	DX,FILE_NAME_keybcmd           ;AC000;;; WGR					   ;AN000
 	INT	21H		       ;AC000;;; WGR					   ;AN000
 	.IF C			       ;AC000;;; WGR error in opening...was it..	   ;AN000
-	  .IF <AX EQ PATH_NOT_FOUND> OR ;AN000;;; WGR path or.. 			   ;AN000
-	  .IF <AX EQ FILE_NOT_FOUND>   ;AN000;;; WGR file not found?... 		   ;AN000
+	  .IF <AX EQ PATH_NOT_FOUND>, OR	;AN000;;; WGR path or.. 			   ;AN000
+	  .IF <AX EQ FILE_NOT_FOUND> ;AN000;;; WGR file not found?... 		   ;AN000
 	    CALL   COPY_ARGV0	       ;AC000;;; WGR yes....try ARGV(0) directory.	   ;AN000
 	    MOV    AX,3D00H	       ;AC000;;; WGR					   ;AN000
-	    MOV    DX,OFFSET FILE_NAME ;AC000;;; WGR					   ;AN000
+	    MOV    DX,FILE_NAME_keybcmd        ;AC000;;; WGR					   ;AN000
 	    INT    21H		       ;AC000;;; WGR					   ;AN000
 	    .IF C		       ;AC000;;; WGR error in opening....was it..	   ;AN000
-	      .IF <AX EQ PATH_NOT_FOUND> OR ;AC000;;; WGR path or..			   ;AN000
+	      .IF <AX EQ PATH_NOT_FOUND>, OR	;AC000;;; WGR path or..			   ;AN000
 	      .IF <AX EQ FILE_NOT_FOUND> ;AC000;;; WGR file not found?			   ;AN000
-		MOV	SI,OFFSET KEYBOARD_SYS ;AC000;;; WGR try ROOT directory.	   ;AN000
-		MOV	DI,OFFSET FILE_NAME    ;AC000;;; WGR				   ;AN000
+		MOV	SI,KEYBOARD_SYS        ;AC000;;; WGR try ROOT directory.	   ;AN000
+		MOV	DI,FILE_NAME_keybcmd           ;AC000;;; WGR				   ;AN000
 		MOV	CX,KEYB_SYS_LENG       ;AC000;;; WGR				   ;AN000
 		REPE	MOVSB		       ;AC000;;; WGR				   ;AN000
 		MOV	AX,3D00H	       ;AC000;;; WGR				   ;AN000
-		MOV	DX,OFFSET FILE_NAME    ;AC000;;; WGR				   ;AN000
+		MOV	DX,FILE_NAME_keybcmd           ;AC000;;; WGR				   ;AN000
 		INT	21H		       ;AC000;;; WGR				   ;AN000
 	      .ELSE			       ;AC000;;; WGR if failed then carry set..    ;AN000
 		STC			      ;AC000;;; WGR some other error..set flag	   ;AN000
@@ -1877,7 +1882,7 @@ APPEND_KEYB_SYS:		       ;;;;;
 				       ;;
 	RET			       ;AN000;;;
 				       ;;
-BUILD_PATH	     ENDP	       ;;
+;BUILD_PATH	     ENDP	       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; WGR
 ;;					  WGR
@@ -1887,7 +1892,7 @@ BUILD_PATH	     ENDP	       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; WGR
 				       ;; WGR
 				       ;; WGR
-COPY_ARGV0  PROC		       ;; WGR					    ;AN000
+COPY_ARGV0:              ;; WGR					    ;AN000
 				       ;; WGR					    ;AN000
   PUSH	 ES			       ;AN000;;; WGR					   ;AN000
   PUSH	 DI			       ;AN000;;; WGR					   ;AN000
@@ -1897,25 +1902,25 @@ COPY_ARGV0  PROC		       ;; WGR					    ;AN000
   MOV	 DI,2CH 		       ;AN000;;; WGR Locate environment string		   ;AN000
   MOV	 ES,[DI]		       ;AN000;;; WGR					   ;AN000
   XOR	 SI,SI			       ;AN000;;; WGR					   ;AN000
-  .WHILE <<WORD PTR ES:[SI]> NE 0>     ;AN000;;; WGR find ARGV(0) string.		   ;AN000
+  .WHILE <<word [es:SI]> NE 0>     ;AN000;;; WGR find ARGV(0) string.		   ;AN000
      INC   SI			       ;AN000;;; WGR					   ;AN000
   .ENDWHILE			       ;AN000;;; WGR					   ;AN000
   ADD	 SI,4			       ;AN000;;; WGR					   ;AN000
-  LEA	 DI,FILE_NAME		       ;AN000;;; WGR move string to work area		   ;AN000
+  LEA	 DI,[FILE_NAME_keybcmd]       ;AN000;;; WGR move string to work area		   ;AN000
   .REPEAT			       ;AN000;;; WGR					   ;AN000
-     MOV    AL,ES:[SI]		       ;AN000;;; WGR					   ;AN000
+     MOV    AL,[es:SI]		       ;AN000;;; WGR					   ;AN000
      MOV    [DI],AL		       ;AN000;;; WGR					   ;AN000
      INC    SI			       ;AN000;;; WGR					   ;AN000
      INC    DI			       ;AN000;;; WGR					   ;AN000
-  .UNTIL <<BYTE PTR ES:[SI]> EQ 0>     ;AN000;;; WGR					   ;AN000
+  .UNTIL <<byte [es:SI]> EQ 0>     ;AN000;;; WGR					   ;AN000
   .REPEAT			       ;AN000;;; WGR					   ;AN000
      DEC    DI			       ;AN000;;; WGR					   ;AN000
-  .UNTIL <<BYTE PTR [DI]> EQ '\'> OR   ;AN000;;; WGR                                       ;AN000
-  .UNTIL <<BYTE PTR [DI]> EQ 0>        ;AN000;;; WGR scan back to..			   ;AN000
+  .UNTIL <<byte [DI]> EQ '\'>, OR     ;AN000;;; WGR                                       ;AN000
+  .UNTIL <<byte [DI]> EQ 0>     ;AN000;;; WGR scan back to..			   ;AN000
   INC	 DI			       ;AN000;;; WGR first character after "\"             ;AN000
   PUSH	 CS			       ;AN000;;; WGR					   ;AN000
   POP	 ES			       ;AN000;;; WGR					   ;AN000
-  LEA	 SI,KEYB_SYS_ACTIVE	       ;AN000;;; WGR copy in "KEYBOARD.SYS"                ;AN000
+  LEA	 SI,[KEYB_SYS_ACTIVE]      ;AN000;;; WGR copy in "KEYBOARD.SYS"                ;AN000
   MOV	 CX,KEYB_SYS_A_LENG	       ;AN000;;; WGR					   ;AN000
   REPE	 MOVSB			       ;AN000;;; WGR					   ;AN000
 				       ;AN000;;; WGR					   ;AN000
@@ -1925,7 +1930,7 @@ COPY_ARGV0  PROC		       ;; WGR					    ;AN000
   POP	    ES			       ;AN000;;; WGR					   ;AN000
   RET				       ;AN000;;; WGR					   ;AN000
 				       ;AN000;;; WGR					   ;AN000
-COPY_ARGV0  ENDP		       ;AN000;;;
+;COPY_ARGV0  ENDP		       ;AN000;;;
 				       ;AN000;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -1977,16 +1982,16 @@ COPY_ARGV0  ENDP		       ;AN000;;;
 ;;  Program Code
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 						   ;;
-FIND_FIRST_CP PROC  NEAR			   ;;
+FIND_FIRST_CP:                ;;
 						   ;;
 	PUSH  CX				   ;; Save everything that
 	PUSH  DX				   ;;  that will be changed
 	PUSH  SI				   ;;
 	PUSH  DI				   ;;
 						   ;;
-	MOV   BX,KEYBSYS_FILE_HANDLE		   ;; Get handle
-	MOV   DX,WORD PTR KEYBCMD_LANG_ENTRY_PTR   ;; LSEEK file pointer
-	MOV   CX,WORD PTR KEYBCMD_LANG_ENTRY_PTR+2 ;;  to top of language entry
+	MOV   BX,[KEYBSYS_FILE_HANDLE]   ;; Get handle
+	MOV   DX,word [KEYBCMD_LANG_ENTRY_PTR]     ;; LSEEK file pointer
+	MOV   CX,word [KEYBCMD_LANG_ENTRY_PTR+2]   ;;  to top of language entry
 	MOV   AH,42H				   ;;
 	MOV   AL,0		       ;;;;;;;;;;;;;; If no problem with
 	INT   21H		       ;;		     Keyb Def file Then
@@ -1995,9 +2000,9 @@ FIND_FIRST_CP PROC  NEAR			   ;;
 				       ;;;;;;;;;
 FIND_FIRST_BEGIN:			      ;;
 	MOV   DI,AX			      ;;
-	MOV   CX,SIZE KEYBSYS_LANG_ENTRY-1    ;; Set number
+	MOV   CX,sizeof.KEYBSYS_LANG_ENTRY-1  ;; Set number
 					      ;;	bytes to read header
-	MOV   DX,OFFSET FILE_BUFFER    ;;;;;;;;;
+	MOV   DX,FILE_BUFFER           ;;;;;;;;;
 	MOV   AH,3FH		       ;; Read language entry in
 	INT   21H		       ;;	 keyboard definition file
 	JNC   FIND_FIRST_VALID4        ;; If no error in opening file then
@@ -2006,10 +2011,10 @@ FIND_FIRST_BEGIN:			      ;;
 FIND_FIRST_VALID4:		       ;;
 ;************************** CNS *******;;
 	xor   ah,ah		       ;AC000;;;
-	MOV   Al,FB.KL_NUM_CP	       ;AC000;;;
+	MOV   Al,byte [FILE_BUFFER+KEYBSYS_LANG_ENTRY.KL_NUM_CP] ;AC000;;;
 ;************************** CNS *******;;
-	MUL   CP_PTR_SIZE	       ;; Determine # of bytes to read
-	MOV   DX,OFFSET FILE_BUFFER    ;; Establish beginning of buffer
+	MUL   [CP_PTR_SIZE]      ;; Determine # of bytes to read
+	MOV   DX,FILE_BUFFER           ;; Establish beginning of buffer
 	MOV   CX,AX		       ;;
 	CMP   CX,FILE_BUFFER_SIZE      ;; Make sure buffer is not to small
 	JBE   FIND_FIRST_VALID5        ;;
@@ -2022,10 +2027,10 @@ FIND_FIRST_VALID5:		       ;;
 	JMP   FIND_FIRST_CP_ERROR4     ;;
 				       ;;
 FIND_FIRST_VALID6:		       ;;
-	MOV   CX,NUM_CP 	       ;;    Number of valid codes
-	MOV   DI,OFFSET FILE_BUFFER    ;;    Point to correct word in table
+	MOV   CX,[NUM_CP]       ;;    Number of valid codes
+	MOV   DI,FILE_BUFFER           ;;    Point to correct word in table
 				       ;;
-	MOV   BX,[DI].KC_CODE_PAGE     ;;    Get parameter
+	MOV   BX,[DI+KEYBSYS_CP_PTRS.KC_CODE_PAGE] ;;    Get parameter
 	XOR   AX,AX		       ;;
 	JMP   FIND_FIRST_RETURN        ;;
 				       ;;
@@ -2040,15 +2045,15 @@ FIND_FIRST_RETURN:		       ;;
 				       ;;
 	RET			       ;;
 				       ;;
-FIND_FIRST_CP	     ENDP	       ;;
+;FIND_FIRST_CP	     ENDP	       ;;
 				       ;;;;;;;;;;;;;
-.xlist						  ;;
+.XLIST						  ;;
 MSG_SERVICES <MSGDATA>				  ;AN000;;; WGR 			   ;AN000
 MSG_SERVICES <LOADmsg,DISPLAYmsg,CHARmsg,NUMmsg>  ;AN000;;; WGR 			   ;AN000
 MSG_SERVICES <KEYB.CL1> 			  ;AN000;;; WGR 			   ;AN000
 MSG_SERVICES <KEYB.CL2> 			  ;AN000;;; WGR 			   ;AN000
 MSG_SERVICES <KEYB.CLA> 			  ;AN000;;; WGR 			   ;AN000
-.list						  ;;
+.LIST						  ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Temp Shared Data Area
 ;; Contains data which is required by
@@ -2058,15 +2063,15 @@ MSG_SERVICES <KEYB.CLA> 			  ;AN000;;; WGR 			   ;AN000
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
 				       ;;
- db 'TEMP SHARED DATA'                 ;;
-SD_SOURCE_PTR	  LABEL     BYTE       ;;
-TEMP_SHARED_DATA   SHARED_DATA_STR <>  ;;
+ db 'TEMP SHARED DATA_'                 ;;
+label SD_SOURCE_PTR byte             ;;
+TEMP_SHARED_DATA   SHARED_DATA_STR     ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-CODE	ENDS
+;CODE	ENDS
 
-include msgdcl.inc
+include 'MSGDCL.INC'
 
-	END
+;	END
 

@@ -3137,7 +3137,7 @@ IF191$$T:
 IF194$$T:
 
 	   lea	bx,[Parse_Ret_Code]
-	   xlat [cs:bx]
+	   xlat byte [cs:bx]
 
 ;      endif$				; endif errors			       ;AN000;
 IF193$$T:

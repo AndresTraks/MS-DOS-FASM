@@ -44,20 +44,20 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                                        ;;
-        INCLUDE KEYBEQU.INC            ;;
-        INCLUDE KEYBSHAR.INC           ;;
-        INCLUDE KEYBMAC.INC            ;;
-        INCLUDE KEYBCMD.INC            ;;
-        INCLUDE KEYBCPSD.INC           ;;
-        INCLUDE KEYBI9C.INC            ;;
+        include 'KEYBEQU.INC'          ;;
+        include 'KEYBSHAR.INC'         ;;
+        include 'KEYBMAC.INC'          ;;
+        include 'KEYBCMD.INC'          ;;
+        include 'KEYBCPSD.INC'         ;;
+        include 'KEYBI9C.INC'          ;;
                                        ;;
-        PUBLIC KEYB_INT_2F             ;;
+;        PUBLIC KEYB_INT_2F             ;;
                                        ;;
-        EXTRN  ERROR_BEEP:NEAR         ;;
+;        EXTRN  ERROR_BEEP:NEAR         ;;
                                        ;;
-CODE    SEGMENT PUBLIC 'CODE'          ;;
+;CODE    SEGMENT PUBLIC 'CODE'          ;;
                                        ;;
-        ASSUME  CS:CODE,DS:CODE        ;;
+;        ASSUME  CS:CODE,DS:CODE        ;;
                                        ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -111,13 +111,13 @@ VERSION_MAJOR   EQU   01H              ;;
 VERSION_MINOR   EQU   00H              ;;
                                        ;;
 CARRY_FLAG      EQU   01H              ;;
-RESTORE_BP       DW    ?               ;;
+RESTORE_BP_keybi2f       rw      1             ;;
                                        ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                                        ;;
-KEYB_INT_2F   PROC                     ;;
+KEYB_INT_2F:                           ;;
                                        ;;
         PUSH  DS                       ;;
         PUSH  BX                       ;;
@@ -132,10 +132,10 @@ KEYB_INT_2F   PROC                     ;;
         JMP   INT_2F_DONE              ;; N..get out
                                        ;;
 CHECK_REQUEST_CODE:                    ;; Y..check request code
-        MOV   RESTORE_BP,BP            ;;;;;;;;;;;
+        MOV   [RESTORE_BP_keybi2f],BP          ;;;;;;;;;;;
         MOV   BP,SP                             ;;  Clear CARRY flag
-        AND   WORD PTR [BP]+12,NOT CARRY_FLAG   ;;
-        MOV   BP,RESTORE_BP                     ;;
+        AND   word [BP+12],NOT CARRY_FLAG       ;;
+        MOV   BP,[RESTORE_BP_keybi2f]                   ;;
                                        ;;;;;;;;;;;
                                        ;;
 INT_2F_CP_QUERY:                       ;;
@@ -144,7 +144,7 @@ INT_2F_CP_QUERY:                       ;;
         MOV   AX,-1                    ;; Y..process query
         MOV   BH,VERSION_MAJOR         ;;
         MOV   BL,VERSION_MINOR         ;;
-        MOV   DI,OFFSET SD             ;;
+        MOV   DI,SD                    ;;
         PUSH  CS                       ;;
         POP   ES                       ;;
         JMP   INT_2F_DONE              ;;
@@ -153,29 +153,29 @@ INT_2F_CP_INVOKE:                      ;;
         CMP   AL,CP_INVOKE             ;; Q..invoke CP?
         JNE   INT_2F_CP_LANGUAGE       ;; N..next
                                        ;;
-        MOV   SI,SD.FIRST_XLAT_PTR     ;; Get FIRST_XLAT_PTR
+        MOV   SI,[SHARED_DATA.FIRST_XLAT_PTR]   ;; Get FIRST_XLAT_PTR
                                        ;;
 INT_2F_NEXT_SECTION:                   ;;
         CMP   SI,-1                    ;;
         JE    INT_2F_ERROR_FLAG        ;;
-        MOV   CX,[SI].XS_CP_ID         ;; Read in the code page value
+        MOV   CX,[SI+XLAT_SECT_STR.XS_CP_ID] ;; Read in the code page value
         CMP   CX,BX                    ;; Is this the table to make active?
         JNE   INT_2F_CP_INVOKE_CONT1   ;;
-        MOV   SD.ACTIVE_XLAT_PTR,SI    ;; IF Yes, Set the ACTIVE_XLAT_PTR
-        MOV   SD.INVOKED_CP_TABLE,BX   ;;   record new code page
+        MOV   [SHARED_DATA.ACTIVE_XLAT_PTR],SI  ;; IF Yes, Set the ACTIVE_XLAT_PTR
+        MOV   [SHARED_DATA.INVOKED_CP_TABLE],BX ;;   record new code page
         JMP   INT_2F_DONE              ;;
                                        ;;
 INT_2F_CP_INVOKE_CONT1:                ;; Else
-        MOV   DI,[SI].XS_NEXT_SECT_PTR ;; IF No,
+        MOV   DI,[SI+XLAT_SECT_STR.XS_NEXT_SECT_PTR] ;; IF No,
         MOV   SI,DI                    ;;    Get NEXT_SECT_PTR
         JMP   INT_2F_NEXT_SECTION      ;;    NEXT_SECTION
                                        ;;
 INT_2F_ERROR_FLAG:                     ;;
         MOV   AX,1                     ;;
-        MOV   RESTORE_BP,BP            ;;;;;;
+        MOV   [RESTORE_BP_keybi2f],BP          ;;;;;;
         MOV   BP,SP                        ;;
-        OR    WORD PTR [BP]+12,CARRY_FLAG  ;; Set carry flag
-        MOV   BP,RESTORE_BP                ;;
+        OR    word [BP+12],CARRY_FLAG      ;; Set carry flag
+        MOV   BP,[RESTORE_BP_keybi2f]              ;;
                                        ;;;;;;
         JMP   INT_2F_DONE              ;;
                                        ;;
@@ -185,20 +185,20 @@ INT_2F_CP_LANGUAGE:                    ;;
                                        ;;
         CMP   BL,0                     ;; Y..Check if Language is to be US437
         JNE   INT_2F_CONTINUE1         ;; IF yes THEN,
-        MOV   COUNTRY_FLAG,BL          ;;   Set COUNTRY_FLAG to 0
+        MOV   [COUNTRY_FLAG],BL        ;;   Set COUNTRY_FLAG to 0
         JMP   INT_2F_DONE              ;;
                                        ;;
 INT_2F_CONTINUE1:                      ;; ELSE
         CMP   BL,-1                    ;;   Check if language is to be national
         JNE   INT_2F_LANG_ERROR_FLAG   ;;   IF yes THEN,
-        MOV   COUNTRY_FLAG,BL          ;;     Set COUNTRY_FLAG to -1 (0FFH)
+        MOV   [COUNTRY_FLAG],BL        ;;     Set COUNTRY_FLAG to -1 (0FFH)
         JMP   INT_2F_DONE              ;;
                                        ;;
 INT_2F_LANG_ERROR_FLAG:                ;;   ELSE
-        MOV   RESTORE_BP,BP            ;;;;;;     Set CARRY flag
+        MOV   [RESTORE_BP_keybi2f],BP          ;;;;;;     Set CARRY flag
         MOV   BP,SP                        ;;
-        OR    WORD PTR [BP]+12,CARRY_FLAG  ;;
-        MOV   BP,RESTORE_BP                ;;
+        OR    word [BP+12],CARRY_FLAG      ;;
+        MOV   BP,[RESTORE_BP_keybi2f]              ;;
                                        ;;;;;;
         JMP   INT_2F_DONE              ;;
                                        ;;
@@ -207,19 +207,19 @@ INT_2F_DONE:                           ;;
         POP   CX                       ;;
         POP   BX                       ;;;;;;;
         POP   DS                            ;;
-        CMP   WORD PTR CS:SD.OLD_INT_2F,0   ;; Q..are we the last in the chain?
+        CMP   word [cs:SHARED_DATA.OLD_INT_2F],0     ;; Q..are we the last in the chain?
         JNE   INT_2F_JMP                    ;; N..call next in chain
-        CMP   WORD PTR CS:SD.OLD_INT_2F+2,0 ;; Q..are we the last in the chain?
+        CMP   word [cs:SHARED_DATA.OLD_INT_2F+2],0   ;; Q..are we the last in the chain?
         JNE   INT_2F_JMP                    ;; N..call next in chain
                                        ;;;;;;;
         IRET                           ;; Y..return to caller
                                        ;;
 INT_2F_JMP:                            ;;
                                        ;;
-        JMP   CS:SD.OLD_INT_2F         ;;
+        JMP   [cs:SHARED_DATA.OLD_INT_2F]       ;;
                                        ;;
-KEYB_INT_2F   ENDP                     ;;
+;KEYB_INT_2F   ENDP                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-CODE   ENDS
-       END
+;CODE   ENDS
+;       END
