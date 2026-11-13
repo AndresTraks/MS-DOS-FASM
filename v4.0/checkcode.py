@@ -95,7 +95,9 @@ SAME = {
     "TITLE": {"TITLE"},
     "NAME": {"NAME"},
     "ASSUME": {None},
-    "SEGMENT": {"IF", None},
+    # a SEGMENT opens the pass that lays it down, or, where it is a
+    # SEGMENT AT, a VIRTUAL block that lays nothing down at all
+    "SEGMENT": {"IF", "VIRTUAL", None},
     "GROUP": {None},
     "END": {None, "END"},
     ".XLIST": {None}, ".LIST": {None}, ".XCREF": {None}, ".CREF": {None},
