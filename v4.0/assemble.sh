@@ -296,3 +296,15 @@ utility GRAPHICS GRAPHLNK GRAPHICS.COM
 # and tests/share.sh holds the one against the other.  The release links the
 # eight and stops: this is an .EXE in its own right.
 utility SHARE SHRLNK SHARE.EXE
+
+# IFSFUNC, seventeen modules in nine segments and three address spaces --
+# which IFSLNK.ASM lays down in turn.  Seven of the seventeen are the
+# kernel's own: IFSFUNC.LNK links NIBDOS, CONST2, MSDATA, MSTABLE, MSDISP,
+# MSCODE and MSDOSME in beside its own, for the same reason SHARE links four
+# of them, and so DOSGROUP comes out here with the offsets it has in
+# MSDOS.SYS.  It answers for a drive the kernel cannot read itself -- a
+# network redirector or any other installable file system.  The release
+# links the seventeen and runs LINK's /EXEPACK over the result; nothing here
+# packs an .EXE, and DOS unpacks one as it loads it, so the image this
+# writes is the same program unpacked.
+utility IFSFUNC IFSLNK IFSFUNC.EXE

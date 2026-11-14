@@ -87,7 +87,7 @@ label SERIAL_BASE word ;SERIAL PORT ADDRESSES									   ;AN000;
 end virtual ;AN000;
 end if
 PAGE															   ;AN000;
-if SEGSEL = S_PRINTF_CODE;AN000;
+if SEGSEL = S_PRINTF_CODE ;AN000;
 ;	   ASSUME CS:PRINTF_CODE,DS:PRINTF_CODE 									   ;AN000;
 															   ;AN000;
 ;ษอออออออออออออออออออออออออออออออ  E X T R N S	ออออออออออออออออออออออออออออออออออออออออออป				   ;AN000;

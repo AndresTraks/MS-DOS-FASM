@@ -1,7 +1,7 @@
 	PAGE	,132				; 					 ;AN000;
 ;	SCCSID = @(#)IFSERROR.INC	1.0 87/05/11					 ;AN000;
 TITLE	IFSFUNC ERROR ROUTINES								 ;AN000;
-NAME	IFSERROR									 ;AN000;
+name	IFSERROR									 ;AN000;
 ;************************************************************************************	 ;AN000;
 ;											 ;AN000;
 ; IFS error Routines									 ;AN000;
@@ -30,53 +30,53 @@ NAME	IFSERROR									 ;AN000;
 											 ;AN000;
 .xlist											 ;AN000;
 .xcref											 ;AN000;
-INCLUDE IFSSYM.INC									 ;AN000;
-INCLUDE IFSFSYM.INC									 ;AN000;
-INCLUDE DOSSYM.INC									 ;AN000;
-INCLUDE DEVSYM.INC									 ;AN000;
-INCLUDE SYSMSG.INC
-msg_utilname <IFSFUNC>
+include 'IFSSYM.INC'        ;AN000;
+include 'IFSFSYM.INC'        ;AN000;
+include 'DOSSYM.INC'        ;AN000;
+include 'DEVSYM.INC'        ;AN000;
+include 'SYSMSG.INC'
+MSG_UTILNAME <IFSFUNC>
 .cref											 ;AN000;
 .list											 ;AN000;
 											 ;AN000;
-AsmVars <IBM, Installed, Debug> 							 ;AN000;
+AsmVars <IBM, Installed, DEBUG> 							 ;AN000;
 											 ;AN000;
 ; define the base code segment of the network support  first				 ;AN000;
 											 ;AN000;
-IFSSEG	SEGMENT BYTE PUBLIC 'IFSSEG'                                                     ;AN000;
-IFSSEG	ENDS										 ;AN000;
+if SEGSEL = S_IFSSEG ;AN000;
+end if ;AN000;
 											 ;AN000;
 ; include the rest of the segment definitions for normal MSDOS				 ;AN000;
 											 ;AN000;
-include dosseg.asm									 ;AN000;
+include 'DOSSEG.ASM'        ;AN000;
 											 ;AN000;
-DATA		SEGMENT WORD PUBLIC 'DATA'                                               ;AN000;
+if SEGSEL = S_DATA ;AN000;
 	; DOSGROUP Data 								 ;AN000;
-	Extrn	THISDPB:DWORD								 ;AN000;
-	Extrn	EXTERR:WORD								 ;AN000;
-	Extrn	EXTERR_ACTION:BYTE							 ;AN000;
-	Extrn	EXTERR_CLASS:BYTE							 ;AN000;
-	Extrn	EXTERR_LOCUS:BYTE							 ;AN000;
-	Extrn	ALLOWED:BYTE								 ;AN000;
-	Extrn	ExitHold:DWORD								 ;AN000;
-	Extrn	ERR_TABLE_21:BYTE
-DATA		ENDS									 ;AN000;
+;	Extrn	THISDPB:DWORD								 ;AN000;
+;	Extrn	EXTERR:WORD								 ;AN000;
+;	Extrn	EXTERR_ACTION:BYTE							 ;AN000;
+;	Extrn	EXTERR_CLASS:BYTE							 ;AN000;
+;	Extrn	EXTERR_LOCUS:BYTE							 ;AN000;
+;	Extrn	ALLOWED:BYTE								 ;AN000;
+;	Extrn	ExitHold:DWORD								 ;AN000;
+;	Extrn	ERR_TABLE_21:BYTE
+end if ;AN000;
 											 ;AN000;
-IFSSEG	SEGMENT BYTE PUBLIC 'IFSSEG'                                                     ;AN000;
-	ASSUME	SS:DOSGROUP,CS:IFSSEG							 ;AN000;
+if SEGSEL = S_IFSSEG ;AN000;
+;	ASSUME	SS:DOSGROUP,CS:IFSSEG							 ;AN000;
 											 ;AN000;
 	; IFS Data									 ;AN000;
-	Extrn	IFSDRV:BYTE								 ;AN000;
-	Extrn	IFSR:WORD								 ;AN000;
-	Extrn	TEMPBUF:BYTE								 ;AN003;
-	Extrn	IFSPROC_FLAGS:WORD							 ;AN003;
-	Extrn	SYSGetMsg:NEAR
-	Extrn	IFSSEM:BYTE
-	Extrn	THISIFS:DWORD								 ;AN006;
+;	Extrn	IFSDRV:BYTE								 ;AN000;
+;	Extrn	IFSR:WORD								 ;AN000;
+;	Extrn	TEMPBUF:BYTE								 ;AN003;
+;	Extrn	IFSPROC_FLAGS:WORD							 ;AN003;
+;	Extrn	SYSGetMsg:NEAR
+;	Extrn	IFSSEM:BYTE
+;	Extrn	THISIFS:DWORD								 ;AN006;
 											 ;AN000;
 ; Phoney DPB used by IFS Share/Lock errors						 ;AN000;
 											 ;AN000;
-DUMMY_DPB LABEL BYTE									 ;AN000;
+label DUMMY_DPB byte          ;AN000;
 	DB	0   ; dpb_drive 							 ;AN000;
 	DB	0   ; dpb_UNIT								 ;AN000;
 	DW	512 ; dpb_sector_size							 ;AN000;
@@ -99,32 +99,32 @@ DUMMY_DPB LABEL BYTE									 ;AN000;
 											 ;AN000;
 ; Phoney device headers used by IFS INT 24H						 ;AN000;
 											 ;AN000;
-PHONEY_BLOCK	LABEL  BYTE								 ;AN000;
+label PHONEY_BLOCK byte          ;AN000;
 	DD	?			; Pointer					 ;AN000;
 	DW	ISNET			; Block net dev 				 ;AN000;
 	DW	?			; Strat entry					 ;AN000;
 	DW	?			; Int entry					 ;AN000;
 	DB	8 DUP (0)								 ;AN000;
 											 ;AN000;
-PHONEY_DEVICE	LABEL  BYTE								 ;AN000;
+label PHONEY_DEVICE byte          ;AN000;
 	DD	?			; Pointer					 ;AN000;
 	DW	DEVTYP + ISNET		; Char net dev					 ;AN000;
 	DW	?			; Strat entry					 ;AN000;
 	DW	?			; Int entry					 ;AN000;
 											 ;AN000;
-	PUBLIC	PHONEY_NAME								 ;AN000;
+;	PUBLIC	PHONEY_NAME								 ;AN000;
 PHONEY_NAME	DB	"        "                                                       ;AN000;
 											 ;AN000;
 											 ;AN000;
-NEXT_2F_5	DD	?								 ;AN000;
-PUBLIC	NEXT_2F_5									 ;AN000;
+NEXT_2F_5	rd      1    ;AN000;
+;PUBLIC	NEXT_2F_5									 ;AN000;
 											 ;AN000;
 ;											 ;AN000;
 ;											 ;AN000;
 MAXERR	EQU	89		; Don't know errors above 79                             ;AN000;
 											 ;AN000;
-	PUBLIC	 RODS_LABEL
-RODS_LABEL	LABEL	BYTE
+;	PUBLIC	 RODS_LABEL
+label RODS_LABEL byte
 .xcref											 ;AN000;
 .xlist
 MSG_SERVICES <IFSFUNC.CL1>
@@ -138,7 +138,7 @@ MSG_SERVICES <IFSFUNC.CL1>
 ;	Err#,Class,Action,Locus,Allowed_Val
 ;
 
-ERR_TABLE_IFS	LABEL	BYTE
+label ERR_TABLE_IFS byte
   DB errCLASS_BadFmt,  errACT_User,   errLOC_Disk, Allowed_FAIL+Allowed_RETRY	;50	  ;AN003;
   DB errCLASS_TempSit, errACT_DlyRet, errLOC_Disk, Allowed_FAIL+Allowed_RETRY	;51	  ;AN003;
   DB errCLASS_Already, errACT_Abort,  errLOC_Disk, Allowed_FAIL+Allowed_RETRY	;52	  ;AN003;
@@ -184,7 +184,7 @@ ERR_TABLE_IFS	LABEL	BYTE
 ; We need to map old int 24 errors and device driver errors into the new set
 ; of errors.  The following table is indexed by the new errors
 ;
-ErrMap24    Label   BYTE
+label ErrMap24_ byte
     DB	error_write_protect		;   0
     DB	error_bad_unit			;   1
     DB	error_not_ready 		;   2
@@ -202,7 +202,7 @@ ErrMap24    Label   BYTE
     DB	error_gen_failure		;   E	RESERVED
     DB	error_wrong_disk		;   F
 
-ErrMap24End LABEL   BYTE
+label ErrMap24End_ byte
 
 
 BREAK <INT_2F_5 -- Routine for Extended error messages>
@@ -284,13 +284,13 @@ BREAK <INT_2F_5 -- Routine for Extended error messages>
 ;************************************************************************************
 											 ;AN000;
 	procedure INT_2F_5,FAR								 ;AN000;
-ASSUME	DS:NOTHING,ES:NOTHING,SS:NOTHING						 ;AN000;
+;ASSUME	DS:NOTHING,ES:NOTHING,SS:NOTHING						 ;AN000;
 											 ;AN000;
-	ifsr_fcn_def  CRITMSG								 ;AN000;
+	IFSR_FCN_DEF  CRITMSG								 ;AN000;
 											 ;AN000;
 	CMP	AH,5				; check for IFS error 2F call		 ;AN000;
 	JZ	I2F5_20 								 ;AN000;
-	JMP	[NEXT_2F_5]								 ;AN000;
+	JMP	[cs:NEXT_2F_5]      ;AN000;
 											 ;AN000;
 I2F5_20:					; call ok				 ;AN000;
 	STI					; INTs OK				 ;AN000;
@@ -316,27 +316,27 @@ I2F5_75:										 ;AN005;
 	JMP	I2F5_1000								 ;AN000;
 											 ;AN000;
 I2F5_80:										 ;AN000;
-	CMP	WORD PTR CS:[THISIFS+2],NULL_PTR ;if no ifs driver set, quit w/carry	 ;AN006;
+	CMP	word [cs:THISIFS+2],NULL_PTR     ;if no ifs driver set, quit w/carry	 ;AN006;
 	JNE	I2F5_85 								 ;AN006;
-	CMP	WORD PTR CS:[THISIFS],NULL_PTR						 ;AN006;
+	CMP	word [cs:THISIFS],NULL_PTR           ;AN006;
 	JZ	I2F5_75 								 ;AN006;
 I2F5_85:										 ;AN006;
-	TEST	CS:IFSSEM,MR_ERRMSG_SEM 	; if already in msgret loop, exit fast	 ;AN005;
+	TEST	byte [cs:IFSSEM],MR_ERRMSG_SEM ; if already in msgret loop, exit fast	 ;AN005;
 	JNZ	I2F5_75 								 ;AN005;
-	MOV	CS:IFSPROC_FLAGS,0							 ;AN005;
+	MOV	word [cs:IFSPROC_FLAGS],0 ;AN005;
 	CMP	AL,I2F5_MsgRet								 ;AN005;
 	JNE	I2F5_90 								 ;AN005;
-	OR	CS:IFSPROC_FLAGS,IsMsgRet						 ;AN005;
-	OR	CS:IFSSEM,MR_ERRMSG_SEM 	; set msgret error msg semaphore	 ;AN005;
+	OR	word [cs:IFSPROC_FLAGS],IsMsgRet ;AN005;
+	OR	byte [cs:IFSSEM],MR_ERRMSG_SEM ; set msgret error msg semaphore	 ;AN005;
 I2F5_90:										 ;AN005;
 	SaveReg <DS,SI,BX,CS>			; save command.com regs 		 ;AN002;AC003;
 	RestoreReg <DS> 			; set ds-ifsseg 			 ;AN002;
 	MOV	AX,BX				; whole ax now ext error		 ;AN003;;AC005;
 	SaveReg <AX>				; save ext err #			 ;AN000;
 	invoke	PREP_IFSR			; zero out ifsr, sets es:bx -> ifsr	 ;AN000;
-	MOV	ES:[BX.IFSR_LENGTH],LENGTH_CRITMSG					 ;AN000;
-	MOV	ES:[BX.IFSR_FUNCTION],IFSCRITMSG					 ;AN000;
-	MOV	ES:[BX.IFSR_RETCODE],AX 						 ;AN003;
+	MOV	[es:BX+IFSRH.IFSR_LENGTH],LENGTH_CRITMSG ;AN000;
+	MOV	[es:BX+IFSRH.IFSR_FUNCTION],IFSCRITMSG ;AN000;
+	MOV	[es:BX+IFSRH.IFSR_RETCODE],AX  ;AN003;
 
 ;***********************************************************************************************
 	invoke	CALL_IFS			; call ifs with chance to set errmsg	 ;AN000;
@@ -344,7 +344,7 @@ I2F5_90:										 ;AN005;
 
 	JNC	I2F5_200								 ;AN000;
 	POP	AX				; fs error set - get ifsfunc msg	 ;AN000;
-	TEST	CS:IFSPROC_FLAGS,IsMsgRet	;   if msg ret don't call msg ret for    ;AN005;
+	TEST	word [cs:IFSPROC_FLAGS],IsMsgRet ;   if msg ret don't call msg ret for    ;AN005;
 	JZ	I2F5_95 			;   default msg - just fail		 ;AN005;
 	STC										 ;AN005;
 	JMP	SHORT I2F5_220								 ;AN005;
@@ -370,7 +370,7 @@ I2F5_120:										 ;AN000;
 	MOV	AL,AH									 ;AN000;
 	SaveReg <CS>				; msg ret has 0D0A24 at end of msg	 ;AN003;
 	RestoreReg <ES> 			; must change this to asciiz		 ;AN003;
-	MOV	DI,OFFSET CS:TEMPBUF+80 	; move to temp buff and put 0 at 0DH	 ;AN003;;AC008;(80)
+	MOV	DI,TEMPBUF+80         ; move to temp buff and put 0 at 0DH	 ;AN003;;AC008;(80)
 	SaveReg <DI,AX> 			; preserve msg offset and msg type	 ;AN003;
 	REP	MOVSB				; move msg to temp buff 		 ;AN003;
 	XOR	AL,AL									 ;AN003;
@@ -381,25 +381,25 @@ I2F5_160:										 ;AN003;
 											 ;AN000;
 											 ;AN000;
 I2F5_200:					; fs supplies error msg 		 ;AN000;
-	MOV	AL,ES:[BX.IFSR_MSG_TYPE]	; grab ifs msg info			 ;AN000;
-	MOV	DI,WORD PTR ES:[BX.IFSR_MSG@]						 ;AN000;
-	MOV	ES,WORD PTR ES:[BX.IFSR_MSG@+2] 					 ;AN000;
+	MOV	AL,byte [es:BX+IFSR_MSG_TYPE] ; grab ifs msg info			 ;AN000;
+	MOV	DI,word [es:BX+IFSR_MSG@]           ;AN000;
+	MOV	ES,word [es:BX+IFSR_MSG@+2]           ;AN000;
 	ADD	SP,2				; restore stack 			 ;AN000;
 I2F5_220:										 ;AN000;
 	PUSHF					; save carry				 ;AN005;
-	TEST	CS:IFSPROC_FLAGS,IsMsgRet	; if msgret reset semaphore		 ;AN005;
+	TEST	word [cs:IFSPROC_FLAGS],IsMsgRet ; if msgret reset semaphore		 ;AN005;
 	JZ	I2F5_240								 ;AN005;
-	AND	CS:IFSSEM,NOT MR_ERRMSG_SEM						 ;AN005;
+	AND	byte [cs:IFSSEM],NOT MR_ERRMSG_SEM ;AN005;
 I2F5_240:										 ;AN005;
 	POPF					; restore carry 			 ;AN005;
 	RestoreReg <BX,SI,DS>			; retrieve command.com regs		 ;AN002;AC003;
 											 ;AN000;
 I2F5_1000:										 ;AN000;
-	RET	2				; Fakey IRET				 ;AN000;
+	RETF	2   ; Fakey IRET				 ;AN000;
 											 ;AN000;
 EndProc INT_2F_5									 ;AN000;
 											 ;AN000;
-ASSUME	SS:DOSGROUP									 ;AN000;
+;ASSUME	SS:DOSGROUP									 ;AN000;
 											 ;AN000;
 											 ;AN000;
 											 ;AN000;
@@ -429,16 +429,16 @@ BREAK <SET_EXTERR_INFO -- Set IBMDOS error info>					 ;AN000;
 ;************************************************************************************	 ;AN000;
 											 ;AN000;
 	procedure SET_EXTERR_INFO,NEAR							 ;AN000;
-    ASSUME  DS:IFSSEG,ES:NOTHING							 ;AN000;
+;    ASSUME  DS:IFSSEG,ES:NOTHING							 ;AN000;
 											 ;AN000;
-	ifsr_fcn_def  EXECAPI								 ;AN000;
+	IFSR_FCN_DEF  EXECAPI								 ;AN000;
 											 ;AN000;
 	PUSHF										 ;AN000;
 	SaveReg <AX,CX,SI,DS>								 ;AC003;
 											 ;AN000;
 	XOR	AH,AH				; set unknown ah=0			 ;AN003;
-	MOV	SS:[EXTERR],AX			; Set extended error			 ;AC003;
-	MOV	SI,OFFSET ERR_TABLE_IFS 						 ;AC003;
+	MOV	[ss:EXTERR],AX			; Set extended error			 ;AC003;
+	MOV	SI,ERR_TABLE_IFS               ;AC003;
 	SaveReg <CS>									 ;AN003;
 	RestoreReg <DS> 			; ds-ifsseg to access err_table_ifs	 ;AN003;
 	CMP	AL,50				; if err not in range, set to ??	 ;AN003;
@@ -456,15 +456,15 @@ SEI_20: 										 ;AN003;
 
 SEI_40: 										 ;AN003;
 	LODSW					; AL is CLASS, AH is ACTION		 ;AN003;
-	MOV	[EXTERR_ACTION],AH		; Set ACTION				 ;AN003;
-	MOV	[EXTERR_CLASS],AL		; Set CLASS				 ;AN003;
+	MOV	[ss:EXTERR_ACTION],AH ; Set ACTION				 ;AN003;
+	MOV	[ss:EXTERR_CLASS],AL ; Set CLASS				 ;AN003;
 	LODSW					; al- LOCUS ah- ALLOWED 		 ;AN003;
-	TEST	IFSPROC_FLAGS,ISCDS							 ;AN003;
+	TEST	word [IFSPROC_FLAGS],IsCDS ;AN003;
 	JNZ	SEI_50									 ;AN003;
 	ADD	AL,2									 ;AN003;
 SEI_50: 										 ;AN003;
-	MOV	[EXTERR_LOCUS],AL							 ;AN003;
-	MOV	[ALLOWED],AH								 ;AN003;
+	MOV	[ss:EXTERR_LOCUS],AL     ;AN003;
+	MOV	[ss:ALLOWED],AH      ;AN003;
 											 ;AN003;
 	MOV	SI,BX				; Set ds:si -> ifsr so can use		 ;AN003;
 	SaveReg <ES>				; lodsw to get cl,act,loc,allowed	 ;AN003;
@@ -474,20 +474,20 @@ SEI_50: 										 ;AN003;
 	LODSW					; AH = action,	AL = class		 ;AN000;
 	CMP	AL,ERROR_INFO_NOT_SET							 ;AN000;
 	JE	SEI_60									 ;AN000;
-	MOV	[EXTERR_CLASS],AL		; set class				 ;AN000;
+	MOV	[ss:EXTERR_CLASS],AL ; set class				 ;AN000;
 SEI_60: 										 ;AN000;
 	CMP	AH,ERROR_INFO_NOT_SET							 ;AN000;
 	JE	SEI_80									 ;AN000;
-	MOV	[EXTERR_ACTION],AH		; set action				 ;AN000;
+	MOV	[ss:EXTERR_ACTION],AH ; set action				 ;AN000;
 SEI_80: 										 ;AN000;
 	LODSW					; AH = allowed, AL = locus		 ;AN000;
 	CMP	AL,ERROR_INFO_NOT_SET							 ;AN000;
 	JE	SEI_100 								 ;AN000;
-	MOV	[EXTERR_LOCUS],AL		; Set locus				 ;AN000;
+	MOV	[ss:EXTERR_LOCUS],AL ; Set locus				 ;AN000;
 SEI_100:										 ;AN000;
 	CMP	AH,ERROR_INFO_NOT_SET							 ;AN000;
 	JE	SEI_1000								 ;AN000;
-	MOV	[ALLOWED],AH								 ;AN000;
+	MOV	[ss:ALLOWED],AH      ;AN000;
 
 SEI_1000:										 ;AN003;
 	RestoreReg <DS,SI,CX,AX>							 ;AN000;
@@ -521,14 +521,14 @@ BREAK <DEVICE2EXTERR   -- Convert device error to extended error >			       ;AN0
 											 ;AN004;
 	SaveReg <DI>									 ;AN004;
 	MOV	DI,AX									 ;AN004;
-	MOV	AX,OFFSET ErrMap24End							 ;AN004;
-	SUB	AX,OFFSET ErrMap24		; AX is the index of the first		 ;AN004;
+	MOV	AX,ErrMap24End_               ;AN004;
+	SUB	AX,ErrMap24_         ; AX is the index of the first		 ;AN004;
 						; unavailable error.			 ;AN004;
 						; Do not translate if >= AX.		 ;AN004;
 	CMP	DI,AX									 ;AN004;
 	MOV	AX,DI									 ;AN004;
 	JAE	D2E_20									 ;AN004;
-	MOV	AL,ErrMap24[DI] 							 ;AN004;
+	MOV	AL,[DI+ErrMap24_]        ;AN004;
 	XOR	AH,AH									 ;AN004;
 D2E_20: 										 ;AN004;
 	RestoreReg <DI> 								 ;AN004;
@@ -570,26 +570,26 @@ BREAK <IFS_I24 -- Do an INT 24 error>							 ;AN000;
 ;************************************************************************************	 ;AN000;
 											 ;AN000;
 	procedure IFS_I24,NEAR								 ;AN000;
-ASSUME	DS:NOTHING,ES:NOTHING								 ;AN000;
+;ASSUME	DS:NOTHING,ES:NOTHING								 ;AN000;
 											 ;AN000;
 	XOR	AH,AH				; AL - extended error (retcode) 	 ;AD007;
 	MOV	DI,AX				; set DI = i24 error code C-general fail ;AC007;
-	MOV	WORD PTR [EXITHOLD+2],ES	; save es:bp here since fetchi		 ;AN000;
-	MOV	WORD PTR [EXITHOLD],BP		; restores in NET_I24_ENTRY		 ;AN000;
+	MOV	word [ss:EXITHOLD+2],ES  ; save es:bp here since fetchi		 ;AN000;
+	MOV	word [ss:EXITHOLD],BP   ; restores in NET_I24_ENTRY		 ;AN000;
 	PUSH	CS									 ;AN000;
 	POP	BP				; BP=seg part of BP:SI dev ptr		 ;AN000;
 											 ;AN000;
-	MOV	AL,[IFSDRV]			; set dev hdr offset			 ;AN000;
+	MOV	AL,[cs:IFSDRV] ; set dev hdr offset			 ;AN000;
 	CMP	AL,-1									 ;AN000;
 	JZ	I24_20									 ;AN000;
-	MOV	SI,OFFSET PHONEY_BLOCK		;     block device			 ;AN000;
+	MOV	SI,PHONEY_BLOCK         ;     block device			 ;AN000;
 	JMP	SHORT I24_40								 ;AN000;
 I24_20: 										 ;AN000;
-	MOV	SI,OFFSET PHONEY_DEVICE 	;     char device			 ;AN000;
+	MOV	SI,PHONEY_DEVICE         ;     char device			 ;AN000;
 	MOV	AH,87H				;     char dev, write, data area	 ;AN007;
 											 ;AN000;
 I24_40: 										 ;AN000;
-	OR	AH,ES:[BX.IFSR_ALLOWED] 	; bit 7 = 0-disk or 1(other),...	 ;AC007;
+	OR	AH,byte [es:BX+IFSR_ALLOWED] ; bit 7 = 0-disk or 1(other),...	 ;AC007;
 											 ;AN000;
 	CallInstall NET_I24_ENTRY,MultDOS,6,<AX>,<SI>					 ;AN000;
 											 ;AN000;
@@ -597,7 +597,7 @@ I24_40: 										 ;AN000;
 											 ;AN000;
 EndProc IFS_I24 									 ;AN000;
 											 ;AN000;
-BREAK <PHONEY_DPB -- Set up a phoney DPB for sharing NET INT 24 errors> 		 ;AN000;
+BREAK <PHONEY_DPB -- Set up a phoney dpb for sharing NET INT 24 errors> 		 ;AN000;
 											 ;AN000;
 ;************************************************************************************	 ;AN000;
 ;											 ;AN000;
@@ -617,21 +617,21 @@ BREAK <PHONEY_DPB -- Set up a phoney DPB for sharing NET INT 24 errors> 		 ;AN00
 ;************************************************************************************	 ;AN000;
 											 ;AN000;
 	procedure PHONEY_DPB,NEAR							 ;AN000;
-ASSUME	DS:DOSGROUP,ES:NOTHING								 ;AN000;
+;ASSUME	DS:DOSGROUP,ES:NOTHING								 ;AN000;
 											 ;AN000;
 	PUSH	AX									 ;AN000;
-	MOV	WORD PTR [THISDPB],OFFSET DUMMY_DPB					 ;AN000;
-	MOV	WORD PTR [THISDPB+2],CS 						 ;AN000;
-	MOV	AL,[IFSDRV]								 ;AN000;
-	MOV	BYTE PTR [DUMMY_DPB + dpb_drive],AL					 ;AN000;
-	MOV	WORD PTR [DUMMY_DPB + dpb_driver_addr],OFFSET PHONEY_BLOCK		 ;AN000;
-	MOV	WORD PTR [DUMMY_DPB + dpb_driver_addr + 2],CS				 ;AN000;
+	MOV	word [THISDPB],DUMMY_DPB                 ;AN000;
+	MOV	word [THISDPB+2],CS            ;AN000;
+	MOV	AL,[cs:IFSDRV]      ;AN000;
+	MOV	byte [cs:DUMMY_DPB + dpb.dpb_drive],AL       ;AN000;
+	MOV	word [cs:DUMMY_DPB + dpb.dpb_driver_addr],PHONEY_BLOCK           ;AN000;
+	MOV	word [cs:DUMMY_DPB + dpb.dpb_driver_addr + 2],CS      ;AN000;
 	POP	AX									 ;AN000;
 	return										 ;AN000;
 											 ;AN000;
 EndProc PHONEY_DPB									 ;AN000;
 
-include msgdcl.inc											 ;AN000;
+include 'MSGDCL.INC'          ;AN000;
 											 ;AN000;
-IFSSEG	ENDS										 ;AN000;
-    END 										 ;AN000;
+end if ;AN000;
+;    END 										 ;AN000;

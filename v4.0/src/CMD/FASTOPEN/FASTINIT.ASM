@@ -249,7 +249,7 @@ BUFFER_ENTRY_SIZE      EQU    sizeof.PAGE_FRAME_STRUC
 ; are defined in two other segments.
 ;-------------------------------------------------------------------------------
 
-if SEGSEL = S_CSEG_OPEN; Cseg_Open segment
+if SEGSEL = S_CSEG_OPEN ; Cseg_Open segment
 ;  EXTRN   Open_name_cache_seg:word
 ;  EXTRN   Open_Name_Drive_Buff:word
 ;  EXTRN   End_Open:byte
@@ -260,7 +260,7 @@ if SEGSEL = S_CSEG_OPEN; Cseg_Open segment
 end if
 
 
-if SEGSEL = S_CSEG_SEEK; Cseg_Seek segment
+if SEGSEL = S_CSEG_SEEK ; Cseg_Seek segment
 ;  EXTRN   Seek_Extent_Drive_buff:word
 ;  EXTRN   Seek_Name_Drive_buff:word
 ;  EXTRN   Seek_Name_Cache_buff:word
@@ -280,7 +280,7 @@ end if
 
 
 ;อออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออ
-if SEGSEL = S_CSEG_MAIN;  MAIN segment
+if SEGSEL = S_CSEG_MAIN ;  MAIN segment
 
 ; This segment is a continuation of the Cseg_Main segment in Fastopen.asm
 ; and contains code to initializes name and extent drive buffers

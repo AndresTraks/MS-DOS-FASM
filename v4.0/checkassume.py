@@ -314,7 +314,12 @@ def stream(path, seen=None):
 
 # A group MASM counted offsets from, as COMSEG.ASM names one: the segments
 # in it are reached through any register assumed to the group.
-GROUPLINE = re.compile(r"(?i)^\s*;\s*(" + N + r")\s+GROUP\s+([\w\s,]+)$")
+# The members run to the end of the line or to a comment of the release's
+# own: IFSSESS writes its GROUP with an ;AN000; after it, and a pattern
+# anchored on the end of the line read IFSFUNC as having no group at all
+# -- which made every read of the kernel's data in it look unreachable.
+GROUPLINE = re.compile(r"(?i)^\s*;\s*(" + N + r")\s+GROUP\s+"
+                       r"([\w\s,]+?)\s*(?:;.*)?$")
 
 
 def groups_of(paths):

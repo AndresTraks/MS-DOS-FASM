@@ -1037,6 +1037,202 @@ UTILITIES = {
             ('       ENDIF\n   ENDIF\nInitLocks DW 20\n',
              '       ENDIF\n;   ENDIF\nInitLocks DW 20\n')]},
     ),
+    # IFSFUNC's ten modules in the order IFSFUNC.LNK names them, and the two
+    # headers of its own they read.  IFSFUNC.LNK names seven more after
+    # them, out of src/INC and src/DOS: NIBDOS, CONST2, MSDATA, MSTABLE,
+    # MSDISP, MSCODE and MSDOSME, seven of the kernel's own modules, which
+    # the link file reads with these and which are converted already.
+    # IFSFLINK goes last and is a stub for each of the hundred and
+    # seventy-four kernel names the installable file system calls and those
+    # seven modules do not define.
+    #
+    # Nine segments and three address spaces, the shape SHARE has: IFSSEG
+    # holds the whole of the file system and is outside the group, DOSGROUP
+    # is the kernel's six, and STACK is the third.  IFSSESS declares all
+    # eight -- it cannot read DOSSEG.ASM for them, as the comment there
+    # says, because START has to be PARA aligned here -- and none of the
+    # declarations stands inside a conditional, so unlike SHARE there is
+    # nothing for EARLY to do.
+    #
+    # Not one line of it came through the structured-assembly preprocessor:
+    # there is no $$ label in any of the twelve files and so no TAG.
+    #
+    # The release links the seventeen and runs LINK's /EXEPACK over the
+    # result, which is what the /EX on IFSFUNC.LNK's last line asks for.
+    # Nothing here packs an .EXE and nothing needs to: DOS unpacks one as
+    # it loads it, and an unpacked image is the same program.
+    'IFSFUNC': dict(
+        MODULES=('IFSSESS.ASM', 'IFSDIR.ASM', 'IFSFILE.ASM', 'IFSHAND.ASM',
+                 'IFSDEV.ASM', 'IFSUTIL.ASM', 'IFSERROR.ASM', 'IFSFDOS.ASM',
+                 'IFSINIT.ASM', 'IFSFLINK.ASM',
+                 'IFSFSYM.INC', 'IFSPARSE.INC'),
+        TAG={},
+        # Five names IFSFUNC keeps of its own that one of the kernel modules
+        # it links also has.  ErrMap24 and ErrMap24End are the table that
+        # maps a DOS error to an interrupt 24H one: IFSERROR declares a pair
+        # for the file system and IFSUTIL reads them, and MS_TABLE.ASM has
+        # the kernel's pair with the PUBLIC commented out, so MASM saw two
+        # local names and one assembly sees one.  FOO, INT2F and Leave2F are
+        # IFSINIT's own interrupt 2FH handler and the word it dispatches
+        # through, which are the same three names MS_CODE.ASM and
+        # MS_TABLE.ASM give the kernel's.  None of the five is EXTRN'd
+        # across the two, so the file system's take the underscore.
+        RESERVED=('ErrMap24', 'ErrMap24End', 'FOO', 'INT2F', 'Leave2F'),
+        # IFSSYM.INC is the installable file system interface, which the
+        # kernel reads as well; DOSCNTRY.INC the country and code page
+        # tables, EA.INC the extended attribute calls, FASTOPEN.INC and
+        # FASTXXXX.INC the caches MSINIT and MS_TABLE name.
+        #
+        # After them the kernel's own modules, in the order the linker read
+        # them, and the files they read between them.  As with SHARE, they
+        # are here so that the converter can see how a name the file system
+        # only EXTRNs is spelt and how wide it is -- and with a hundred and
+        # seventy-four stubs there is a great deal of that.
+        SHARED=('SYSCALL.INC', 'DOSSYM.INC', 'SYSMSG.INC', 'PSDATA.INC',
+                'MSGHAN.INC', 'DOSMAC.INC', 'MSGDCL.INC', 'MSGSERV.ASM',
+                'VERSIONA.INC', 'BPB.INC', 'BUFFER.INC', 'SYSVAR.INC',
+                'VECTOR.INC', 'MULT.INC', 'DIRENT.INC', 'DPB.INC',
+                'CURDIR.INC', 'CPMFCB.INC', 'FIND.INC', 'PDB.INC', 'EXE.INC',
+                'SF.INC', 'ARENA.INC', 'INTNAT.INC', 'MI.INC',
+                'FILEMODE.INC', 'ERROR.INC', 'VERSION.INC', 'PARSE.ASM',
+                'DEVSYM.INC', 'IFSSYM.INC', 'DOSSEG.ASM', 'BUGTYP.ASM',
+                'DOSCNTRY.INC', 'COPYRIGH.INC', 'EA.INC', 'FASTOPEN.INC',
+                'FASTXXXX.INC',
+                'NIBDOS.ASM', '../DOS/MSSW.ASM', '../DOS/MSCONST.ASM',
+                'MSHEAD.ASM', 'CONST2.ASM', 'MSDATA.ASM', 'MS_DATA.ASM',
+                '../DOS/MSINIT.ASM', 'MSTABLE.ASM', '../DOS/MS_TABLE.ASM',
+                '../DOS/MSDISP.ASM', '../DOS/DISP.ASM', '../DOS/MSCODE.ASM',
+                '../DOS/MS_CODE.ASM', 'MSDOSME.ASM', '../DOS/DOSMES.ASM',
+                'DIVMES.ASM', 'YESNO.ASM'),
+        # Sixty-four of IFSFLINK's stubs, in the spelling the kernel's own
+        # modules read them at: it writes most of its hundred and
+        # seventy-four names in capitals where the module that reaches one
+        # writes it in mixed case -- TABLEDISPATCH against MS_CODE's
+        # TableDispatch, STRCPY against its StrCpy -- and MASM read the two
+        # as one name.  The kernel's files are converted already and are
+        # read as they stand, so theirs is the spelling that is kept.
+        # SKIPONE is not among them: DOSMES writes it both ways and the one
+        # that is reached is the capitals, which is what IFSFLINK writes.
+        SPELLING={'allocoper$': 'AllocOper$', 'assignoper$': 'AssignOper$',
+                  'backsp': 'BackSp', 'bufwrite': 'BufWrite',
+                  'close$': 'Close$', 'commit$': 'Commit$',
+                  'copystr': 'CopyStr', 'creat$': 'Creat$',
+                  'createnewfile$': 'CreateNewFile$',
+                  'createtempfile$': 'CreateTempFile$',
+                  'drivefromtext': 'DriveFromText', 'dskread': 'DskRead',
+                  'dstrlen': 'DStrLen', 'dup2$': 'Dup2$',
+                  'dup_pdb$': 'Dup_PDB$', 'ecs_call$': 'ECS_call$',
+                  'exec$': 'Exec$', 'extended_open$': 'Extended_Open$',
+                  'exthandle$': 'ExtHandle$', 'fake_version': 'Fake_version',
+                  'fast_dispatch': 'Fast_Dispatch', 'fastinit': 'FastInit',
+                  'fastret': 'FastRet', 'fcb_close$': 'FCB_Close$',
+                  'fcb_create$': 'FCB_Create$', 'fcb_delete$': 'FCB_Delete$',
+                  'fcb_open$': 'FCB_Open$',
+                  'fcb_random_read$': 'FCB_Random_Read$',
+                  'fcb_random_read_block$': 'FCB_Random_Read_Block$',
+                  'fcb_random_write$': 'FCB_Random_Write$',
+                  'fcb_random_write_block$': 'FCB_Random_Write_Block$',
+                  'fcb_rename$': 'FCB_Rename$',
+                  'fcb_seq_read$': 'FCB_Seq_Read$',
+                  'fcb_seq_write$': 'FCB_Seq_Write$',
+                  'file_times$': 'File_Times$',
+                  'get_fcb_file_length$': 'Get_FCB_File_Length$',
+                  'get_fcb_position$': 'Get_FCB_Position$',
+                  'getcdsfromdrv': 'GetCDSFromDrv', 'getdevlist': 'GetDevList',
+                  'getextcntry$': 'GetExtCntry$',
+                  'getextendederror$': 'GetExtendedError$',
+                  'getsetcdpg$': 'GetSetCdPg$', 'getthisdrv': 'GetThisDrv',
+                  'gsetmediaid$': 'GSetMediaID$', 'idle': 'Idle',
+                  'initcds': 'InitCDS', 'intcne0': 'intCNE0',
+                  'keep_process$': 'Keep_process$', 'lockoper$': 'LockOper$',
+                  'nametrans$': 'NameTrans$', 'open$': 'Open$',
+                  'pjfnfromhandle': 'pJFNFromHandle', 'pointcomp': 'PointComp',
+                  'scanplace': 'ScanPlace', 'servercall$': 'ServerCall$',
+                  'sffromsfn': 'SFFromSFN', 'stay_resident': 'Stay_resident',
+                  'strcmp': 'StrCmp', 'strcpy': 'StrCpy', 'strlen': 'StrLen',
+                  'tabledispatch': 'TableDispatch', 'twoesc': 'TwoEsc',
+                  'ucase': 'uCase', 'useroper$': 'UserOper$',
+                  # the four critical sections CONST2's CritPatch table
+                  # names, which it pastes out of the section's own name
+                  'ecritdisk': 'EcritDisk', 'lcritdisk': 'LcritDisk',
+                  'ecritdevice': 'EcritDevice',
+                  'lcritdevice': 'LcritDevice'},
+        # The one page heading in the tree whose text ends in a backslash.
+        # BREAK writes nothing either way, but fasm reads a backslash as
+        # the mark that a line goes on, so it took the next line with it
+        # and then complained about what was left.  The heading goes out
+        # commented, which is what BREAK comes to.
+        # The three references to IFSR_MODE that have no register to take a
+        # width from.  The macros make it a word for an open and a byte for
+        # an lseek, so there is no one width for the table above to hold:
+        # IFSHAND's is the lseek, and IFSFILE's two are the open.
+        PATCHES={'IFSHAND.ASM': [
+            ("\tMOV\tES:[BX.IFSR_MODE],MODE2",
+             "\tMOV\tBYTE PTR ES:[BX.IFSR_MODE],MODE2")],
+                 'IFSFILE.ASM': [
+            ("        MOV     ES:[BX.IFSR_MODE],OLDCREATE_MODE",
+             "        MOV     WORD PTR ES:[BX.IFSR_MODE],OLDCREATE_MODE"),
+            ("        POP     ES:[BX.IFSR_MODE]",
+             "        POP     WORD PTR ES:[BX.IFSR_MODE]")],
+                 'IFSUTIL.ASM': [
+            ("Break\t<STRIP_WFP_START - strip leading d:\\ >",
+             ";Break\t<STRIP_WFP_START - strip leading d:\\ >")]},
+        # The widths of the fifty-five names IFSSYM.INC's two request
+        # macros make.  MASM wrote each with a type in front of it -- BYTE
+        # PTR, WORD PTR, DWORD PTR -- and read a reference through the name
+        # at that width; what the macro leaves here is the offset alone, so
+        # the width is said here instead.  IFSR_MODE is not among them: the
+        # macros give it two types, a word for an open and a byte for an
+        # lseek, and both are read -- so its three lines that have nothing
+        # else to take a width from say it themselves, below.
+        ABSWIDTH={'IFSR_ACTION': 'word', 'IFSR_ALLOCSIZE': 'word',
+                  'IFSR_ALLOCUNITS': 'word', 'IFSR_ALLOWED': 'byte',
+                  'IFSR_APIFUNC': 'byte', 'IFSR_API_PARMS': 'byte',
+                  'IFSR_ATTR': 'word', 'IFSR_AVAILALLOC': 'word',
+                  'IFSR_BUFFER1@': 'dword', 'IFSR_BUFFER2@': 'dword',
+                  'IFSR_BUFFER@': 'dword', 'IFSR_BUFSIZE': 'word',
+                  'IFSR_CATEGORY': 'byte', 'IFSR_CB@': 'dword',
+                  'IFSR_CONTINFO@': 'dword', 'IFSR_COUNT': 'word',
+                  'IFSR_CP': 'word', 'IFSR_CPSW': 'byte',
+                  'IFSR_CTLFUNC': 'byte', 'IFSR_DATE': 'word',
+                  'IFSR_DEVICE_CB@': 'dword', 'IFSR_DEVICE_STATUS': 'byte',
+                  'IFSR_ERROR_ACTION': 'byte', 'IFSR_ERROR_CLASS': 'byte',
+                  'IFSR_ERROR_LOCUS': 'byte', 'IFSR_FLAG': 'word',
+                  'IFSR_FSID': 'byte', 'IFSR_FUNC': 'byte',
+                  'IFSR_I24_COUNT': 'byte', 'IFSR_I24_RESP': 'byte',
+                  'IFSR_LK_LENGTH': 'dword', 'IFSR_LK_POSITION': 'dword',
+                  'IFSR_LSN': 'word', 'IFSR_MATCHATTR': 'word',
+                  'IFSR_MATCHATTR_47': 'word', 'IFSR_MAX_XMITT_SIZE': 'word',
+                  'IFSR_MSG@': 'dword',
+                  'IFSR_MSG_TYPE': 'byte', 'IFSR_NAME1@': 'dword',
+                  'IFSR_NAME2@': 'dword', 'IFSR_NAME@': 'dword',
+                  'IFSR_NET_NAME_ID': 'word', 'IFSR_OPEN_CB@': 'dword',
+                  'IFSR_PARMS@': 'dword', 'IFSR_PID': 'word',
+                  'IFSR_POSITION': 'dword', 'IFSR_RESSIZE': 'word',
+                  'IFSR_SECTSIZE': 'word', 'IFSR_SIZE': 'dword',
+                  'IFSR_SUBFUNC': 'byte', 'IFSR_TIME': 'word',
+                  'IFSR_TYPE': 'byte', 'IFSR_UID': 'word',
+                  'IFSR_USER_WORD': 'word'},
+        # checkassume reports six references in IFSSESS that lost an
+        # override, and they are the release's own doing rather than this
+        # conversion's.  Each stands after a Context DS -- DOSMAC's macro
+        # for PUSH SS/POP DS -- which leaves DS on DOSGROUP where the
+        # ASSUME still says IFSSEG, so MASM wrote no override and the
+        # reference goes to the kernel's data segment at the offset of a
+        # name in IFSSEG.  The release writes CS: by hand on two of the
+        # lines beside them, which is what the other six wanted.  They are
+        # converted as MASM assembled them, which is this project's rule,
+        # and so they are wrong here in the same way.
+        # Every module says ASSUME SS:DOSGROUP,CS:IFSSEG at the head of
+        # IFSSEG: the file system is called from inside the kernel, which
+        # has its own data segment on SS, and reads nothing through DS or ES
+        # until it says so itself.
+        START={'cs': 'IFSSEG', 'ds': None, 'es': None, 'ss': 'DOSGROUP'},
+        # IFSFLINK's stubs stand in the kernel's code segment and it says
+        # ASSUME CS:dosgroup for them, naming no other register.
+        STARTS={'IFSFLINK.ASM': {'cs': 'DOSGROUP', 'ds': None,
+                                 'es': None, 'ss': None}},
+    ),
 }
 
 NAME = sys.argv[1].upper() if len(sys.argv) > 1 else ''
@@ -2300,8 +2496,17 @@ def offsets(text):
     OFFSET itself stays until the operands have been read, so that the name
     after it is not taken for a place in memory.
     """
-    return re.sub(r"(?i)\b(offset[ \t]+)(?:cs|ds|es|ss)[ \t]*:[ \t]*",
+    text = re.sub(r"(?i)\b(offset[ \t]+)(?:cs|ds|es|ss)[ \t]*:[ \t]*",
                   lambda m: m.group(1), text)
+    # MASM let the name stand in brackets after OFFSET as well, and the
+    # brackets said no more there than the segment did: IFSUTIL asks twice
+    # for OFFSET CS:[PHONEY_NAME], the name it hands the interrupt 24H
+    # handler.  They have to come off with the segment, or the rules for
+    # storage below read the whole of it as a place in memory and the
+    # OFFSET falls away -- which is the same defect as an OFFSET that
+    # became a read, by another road.
+    return re.sub(r"(?i)\b(offset[ \t]+)\[[ \t]*(" + N + r"[^]\n]*?)"
+                  r"[ \t]*\]", lambda m: m.group(1) + m.group(2), text)
 
 
 # The structured statements INC/STRUC.INC takes a condition for.  A
@@ -3238,13 +3443,24 @@ def structures(code):
     the subtraction became an addition -- which lost the sharer every SFT
     it was given to close.
     """
+    # LEA asks for an address and not for what is at it, so a width in
+    # front of its operand would be nonsense.
+    lea = re.match(r"(?i)^\s*(?:" + N + r":)?\s*lea\b", code) is not None
+
     def one(m):
         reg, field, tail = m.group(1), m.group(2), m.group(3)
+        # Where MASM said the width itself -- WORD PTR in front of a field
+        # it declared as a DWORD, which IFSSESS writes to fill in half of a
+        # far pointer -- that width is the one that is meant, and a second
+        # one from the table below would stand inside the reference.
+        said = re.search(r"(?i)\b(?:byte|word|dword|qword)(?:[ \t]+ptr)?"
+                         r"[ \t]*(?:(?:cs|ds|es|ss):)?[ \t]*$",
+                         code[:m.start()]) is not None
         # A field of a structure that is itself inside a field, which MASM
         # added the two offsets of: the room the outer field reserves is
         # the inner structure's, and HOLDS says which.
         path = field.split('.')
-        parts, holder = [], None
+        parts, holder, size = [], None, None
         for name in path:
             if holder is not None:
                 parts.append('%s.%s' % (holder, name))
@@ -3252,6 +3468,14 @@ def structures(code):
                 continue
             found = FIELD.get(name.upper())
             if found is None:
+                # The width such a name was declared with, where the
+                # utility says so.  IFSSYM.INC's two request macros make
+                # fifty-five names and MASM wrote a type in front of each
+                # -- BYTE PTR, WORD PTR -- which is gone by the time the
+                # offset is all that is left of it, and fifty-two of the
+                # lines that read one have an immediate on the other side
+                # and nothing else to take a width from.
+                size = size or ABSWIDTH.get(name.upper())
                 # not a field of a structure but a number of its own,
                 # which MASM added the same way: INC/CPMFCB.INC declares
                 # fcb_sfn as the offset of the FCB's reserved bytes, where
@@ -3260,7 +3484,10 @@ def structures(code):
             else:
                 parts.append('%s.%s' % found)
             holder = HOLDS.get(name.upper())
-        return '[%s+%s%s]' % (reg, '+'.join(parts), tail.replace(' ', ''))
+        return '%s[%s+%s%s]' % ('' if size is None or lea or said
+                                else size + ' ',
+                                reg, '+'.join(parts),
+                                tail.replace(' ', ''))
     # SYS2 writes the register and the field inside the one pair of
     # brackets: [BX.dpb_first_FAT] says what [BX].dpb_first_FAT does.  This
     # goes first because what the rule below writes -- the structure's name
@@ -3282,6 +3509,15 @@ def structures(code):
     # rules for storage below, which say the width where the name no longer
     # tells it; a macro's argument is not one of those, and the rules that
     # look for a mnemonic pass the line over.
+    # A width in front of a reference has to stand in front of the segment
+    # override as well.  The release writes the override outside the
+    # brackets, as MASM wanted it -- MOV ES:[BX.IFSR_APIFUNC],IFSEOP -- and
+    # a width between the two is read as part of the reference instead.
+    code = re.sub(r"(?i)\b((?:cs|ds|es|ss):)(byte|word|dword|qword)"
+                  r"([ \t]*\[)",
+                  lambda m: '%s %s%s' % (m.group(2), m.group(1),
+                                         m.group(3).strip()),
+                  code)
     if NAMEDREG and not re.match(LED + MNEM + r")\s+)", code, re.I):
         code = re.sub(r"(?i)(?<![\w.$\]])((?:" + "|".join(
             sorted(map(re.escape, NAMEDREG), key=len, reverse=True))
@@ -3784,6 +4020,8 @@ CODELABEL = re.compile(r"(?i)^[ \t]*(" + N + r")\s+label\s+(?:near|far)\s*$")
 # routine it calls -- "J&rtn proc far" -- so the name here is not one the
 # release could write out.
 PASTE = r"[A-Za-z_@?$][A-Za-z0-9_@?$#]*"
+FARPROCEDURE = re.compile(r"(?i)^[ \t]*procedure[ \t]+" + PASTE
+                          + r"[ \t]*,[ \t]*far\b")
 PROC = re.compile(r"(?i)^[ \t]*(" + PASTE
                   + r")\s+proc(?:\s+(near|far))?\s*$")
 ENDP = re.compile(r"(?i)^[ \t]*" + PASTE + r"\s+endp\s*$")
@@ -4050,7 +4288,9 @@ for stem in MODULES:
             if opened:
                 out.append('end if')
             opened.append((m.group(1).upper(), 'guard', len(out) + 1))
-            out.append('if SEGSEL = S_%s%s' % (opened[-1][0], comment))
+            out.append('if SEGSEL = S_%s%s'
+                       % (opened[-1][0],
+                          ' ' + comment if comment else ''))
             continue
         if SEGEND.match(bare):
             how = opened.pop()[1] if opened else 'guard'
@@ -4073,6 +4313,15 @@ for stem in MODULES:
         if DIRECTIVE.match(code) or ENDALL.match(bare):
             out.append(';' + line)
             continue
+        # INC/DOSMAC.INC's procedure says the distance after a comma where
+        # MASM's PROC says it after a space, and a RET inside one of those
+        # is a far return just the same: IFSERROR's INT_2F_5 ends with a
+        # RET 2 it calls a fakey IRET, and IFSFDOS's IFSFUNC_DOSCALL@ with
+        # a plain RET.  checkcode.py has read this form since it was
+        # written; the conversion had not.
+        m = FARPROCEDURE.match(bare)
+        if m:
+            infar = True
         m = PROC.match(bare)
         if m:
             infar = (m.group(2) or '').lower() == 'far'
@@ -4272,11 +4521,18 @@ for stem in MODULES:
 # RECOVER declares a routine by handing its name to the Procedure macro,
 # which is where the name is written down, so a call to it takes the
 # spelling written there: RECINIT says Procedure Init_IO and calls Init_Io.
+# DOSMAC.INC's entry macro lays a label down, and its name may end in a
+# dollar -- the house gives one to every $-named procedure -- so what
+# follows it here is not \b, which would let the dollar be left off:
+# "entry GET_IN_VARS$,FAR" was read as a declaration of GET_IN_VARS, and
+# INC/SYSCALL.INC's Get_In_Vars, the number of that DOS call, then took its
+# spelling from a name that is not it.  The other arms keep \b, which is
+# what every utility converted so far was read with.
 DECL = re.compile(r"(?i)^\s*(?:(" + N + r"):|(" + N + r")\s+(?:(?:db|dw|dd|"
                   r"rb|rw|rd|equ)\b|=)|label\s+(" + N + r")\b|macro\s+(" + N
                   + r")\b|Define_Msg\s+(" + N + r")\b|Procedure\s+("
                   + N + r")\b|STRUC\s+(" + N + r")\b|I_am\s+("
-                  + N + r")\b)")
+                  + N + r")\b|entry\s+(" + N + r")(?![\w@?$]))")
 # The program's own modules name a thing first; the shared headers under
 # src/INC come after, so a name they both have takes the module's spelling.
 # MASM did not mind the case and fasm does, so a reference has to be written

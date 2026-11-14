@@ -599,7 +599,7 @@ include 'COMMON.STC' ;contains the following strucs, needed in invoke also
 
 
 	PAGE							;AN000;
-if SEGSEL = S_PRINTF_CODE;AN000;
+if SEGSEL = S_PRINTF_CODE ;AN000;
 ;	ASSUME	CS:PRINTF_CODE,DS:PRINTF_CODE,SS:PRINTF_CODE	;AN000;
 
 

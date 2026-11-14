@@ -146,7 +146,7 @@ end if
 ;DG	GROUP	CODE,CONST,CSTACK,DATA
 
 
-if SEGSEL = S_CODE;an000;code segment
+if SEGSEL = S_CODE ;an000;code segment
 ;	assume	cs:dg,ds:dg,ss:dg,es:dg ;an000;
 
 ;	public	printf			;an000;share printf

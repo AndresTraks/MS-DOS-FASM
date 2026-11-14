@@ -349,7 +349,7 @@ end if
 ;DGROUP	GROUP	DSEG,DSEG_INIT		;FOR CONVENIENT ADDRESSIBLITY OF
 					;DSEG_INIT in INIT routine
 ;******************************************************************************
-if SEGSEL = S_DSEG; DATA Segment
+if SEGSEL = S_DSEG ; DATA Segment
 ;--- EXTERNAL VARIABLES ---
 ;EXTRN	PARM_FLAG: BYTE
 ;EXTRN	COMMAND_LINE: BYTE		;AN000;THE COMMAND LINE FOR THE PARSER
@@ -3881,7 +3881,7 @@ INT24_ABORT_CNT DB 0
 include 'MSGDCL.INC'
 
 end if
-if SEGSEL = S_DSEG_INIT;AN000;
+if SEGSEL = S_DSEG_INIT ;AN000;
 end if ;AN000;
 ;	END	MAIN
 

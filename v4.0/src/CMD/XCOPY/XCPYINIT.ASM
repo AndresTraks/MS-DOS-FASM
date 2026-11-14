@@ -95,7 +95,7 @@ include 'DOS.EQU'
 include 'VERSIONA.INC'
 
 ;
-if SEGSEL = S_CSEG;PLACE HOLDER FOR INIT CODE
+if SEGSEL = S_CSEG ;PLACE HOLDER FOR INIT CODE
 end if
 
 ;******************************************************************************
@@ -157,7 +157,7 @@ if SEGSEL = S_DSEG
 ;
 end if
 ;
-if SEGSEL = S_DSEG_INIT;AN000;
+if SEGSEL = S_DSEG_INIT ;AN000;
 ;--- Local variables for INIT which will be free into memory after init.
 ;----include file(s)------
 include 'XINITMSG.EQU' ;AN000;xcopy initialization, prompt msg
@@ -208,7 +208,7 @@ COUNTRY_INFO DB 34 DUP (0)
 end if
 ;*******************************************************************************
 
-if SEGSEL = S_CSEG;ATTACHED TO MAIN PROGRAM
+if SEGSEL = S_CSEG ;ATTACHED TO MAIN PROGRAM
 ;	ASSUME	CS:CSEG, DS:DGROUP, ES:DGROUP
 ;
 ;--- PUBLIC   PROCEDURES ---		;USED BY PARSER

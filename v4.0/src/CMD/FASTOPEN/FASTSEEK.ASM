@@ -13,7 +13,7 @@ include 'FASTSEGS.INC' ; Cannot declare this in DOS includes
 include 'FASTOPEN.INC' ; This include file also contains DOS equates
 
 
-if SEGSEL = S_CSEG_MAIN; Cseg_Seek segment
+if SEGSEL = S_CSEG_MAIN ; Cseg_Seek segment
 
 ;EXTRN	VECTOR_DELETE:dword	; jump vector inside Cseg_Seek to make
 				; a FAR call to FSeek Delete function within

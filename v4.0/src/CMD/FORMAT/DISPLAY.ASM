@@ -45,7 +45,7 @@ match =Message_Table_LAID_OUT, Message_Table_LAID_OUT
 if SEGSEL = S_PSP
 end if
 
-if SEGSEL = S_DATA;
+if SEGSEL = S_DATA ;
 ;Public Test_Data_Start
 label Test_Data_Start byte
 end if ;
@@ -56,11 +56,11 @@ if SEGSEL = S_STACK
 end if
 
 
-if SEGSEL = S_CODE;
+if SEGSEL = S_CODE ;
 ;        assume  cs:code,ds:data                 ;
 end if
 
-if SEGSEL = S_END_OF_MEMORY;
+if SEGSEL = S_END_OF_MEMORY ;
 ;Public  Test_End
 label Test_End byte
 end if ;

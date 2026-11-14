@@ -1,3 +1,22 @@
+STRUC DFLL_LIST DFLL_FLAGS_=0, DFLL_TYPE_=0, DFLL_USER_WORD_=0, DFLL_ALIAS_INDEX_=0, DFLL_IFS_HDR_=0, DFLL_DEVPTR_=0
+{
+.DFLL_FLAGS	DB	DFLL_FLAGS_ ; Flags					 ;AN000;
+.DFLL_TYPE	DB	DFLL_TYPE_ ; 1=IFS, 3=NETUSE, 0=ALIAS			 ;AN000;
+.DFLL_DEV_NAME	rb      8      ; Device name 				 ;AN000;
+.DFLL_USER_WORD	DW	DFLL_USER_WORD_ ; attach user word				 ;AN001;
+.DFLL_ALIAS_INDEX DW	DFLL_ALIAS_INDEX_ ; Byte index into alias names list (resv)	 ;AN000;
+.DFLL_IFS_HDR	DD	DFLL_IFS_HDR_ ; Pointer to IFSHDR				 ;AN000;
+.DFLL_FSDA	rb      8      ; File System Dependent Data Area		 ;AN000;
+.DFLL_DEVPTR	DD	DFLL_DEVPTR_ ; sft_devptr					 ;AN012;
+}
+match =DFLL_LIST_LAID_OUT, DFLL_LIST_LAID_OUT
+{
+    DFLL_LIST_LAID_OUT equ 1
+    virtual at 0
+      DFLL_LIST DFLL_LIST 0, 0, 0, 0, 0, 0
+      sizeof.DFLL_LIST = $ - DFLL_LIST
+    end virtual
+}
 	PAGE	,132				; 					 ;AN000;
 ;	SCCSID = @(#)ifsfsym.inc 1.0 87/05/11						 ;AN000;
 
@@ -39,15 +58,15 @@ Installed = TRUE									 ;AN000;
 MSNET_TIMING = FALSE									 ;AN000;
 											 ;AN000;
 											 ;AN000;
-IF1											 ;AN000;
-	IF MSNET_TIMING 								 ;AN000;
-		%out  MSNET_TIMING version						 ;AN000;
-	ENDIF										 ;AN000;
-	IF DEBUG									 ;AN000;
-		%out  DEBUGGING version 						 ;AN000;
-	ENDIF										 ;AN000;
-		%out  INSTALLED version 						 ;AN000;
-ENDIF											 ;AN000;
+;IF1											 ;AN000;
+;	IF MSNET_TIMING 								 ;AN000;
+;		%out  MSNET_TIMING version						 ;AN000;
+;	ENDIF										 ;AN000;
+;	IF DEBUG									 ;AN000;
+;		%out  DEBUGGING version 						 ;AN000;
+;	ENDIF										 ;AN000;
+;		%out  INSTALLED version 						 ;AN000;
+;ENDIF											 ;AN000;
 ; Structures and equates for the network support					 ;AN000;
 											 ;AN000;
 ;Net call interrupt - used to generate critical sections				 ;AN000;
@@ -57,7 +76,7 @@ NET_CALL_INT	EQU	2AH								 ;AN000;
 MAX_PRE_STRING	EQU	64								 ;AN000;
 											 ;AN000;
 											 ;AN000;
-;AH function code for $GET_IN_VARS INT 21 function					 ;AN000;
+;AH function code for GET_IN_VARS$ INT 21 function					 ;AN000;
 GET_IN_VAR	EQU	52H								 ;AN000;
 											 ;AN000;
 											 ;AN000;
@@ -73,9 +92,9 @@ NewKeepVal	EQU	8								 ;AN000;
 SUBTTL	IFSFUNC Data									 ;AN000;
 PAGE											 ;AN000;
 ; miscellaneous IFS equates								 ;AN000;
-MINUS_ONE	EQU	-1								 ;AN000;
-NULL_PTR	EQU	-1								 ;AN000;
-ERROR_INFO_NOT_SET EQU	-1								 ;AN000;
+MINUS_ONE	equ	(-1)	;AN000;
+NULL_PTR	equ	(-1)	;AN000;
+ERROR_INFO_NOT_SET equ	(-1)	;AN000;
 CHECK_REMOVABLE EQU	4408H								 ;AN000;
 ICOLON		EQU	":"                                                              ;AN000;
 ZERO		EQU	0								 ;AN000;
@@ -139,16 +158,6 @@ MR_ERRMSG_SEM	EQU	80H	; used by ifserror INT2F AH=5 as gate for msgret entry	 ;A
 ; DFL -  This structure stores IFS/NETUSE/ALIAS Device information			 ;AN000;
 ;	 to IFS driver. 								 ;AN000;
 
-DFLL_LIST	STRUC									 ;AN000;
-DFLL_FLAGS	DB	?		  ; Flags					 ;AN000;
-DFLL_TYPE	DB	?		  ; 1=IFS, 3=NETUSE, 0=ALIAS			 ;AN000;
-DFLL_DEV_NAME	DB	8 DUP (?)	  ; Device name 				 ;AN000;
-DFLL_USER_WORD	DW	?		  ; attach user word				 ;AN001;
-DFLL_ALIAS_INDEX DW	?		  ; Byte index into alias names list (resv)	 ;AN000;
-DFLL_IFS_HDR	DD	?		  ; Pointer to IFSHDR				 ;AN000;
-DFLL_FSDA	DB	8 DUP (?)	  ; File System Dependent Data Area		 ;AN000;
-DFLL_DEVPTR	DD	?		  ; sft_devptr					 ;AN012;
-DFLL_LIST	ENDS									 ;AN000;
 											 ;AN000;
 ; dfl flags										 ;AN000;
 DFL_INPROG	EQU	80H		  ; in progress 				 ;AN000;

@@ -230,7 +230,11 @@ macro i_am    name,size,init
 ;
 ; define an entry in a procedure
 ;
-macro entry name
+; The distance is the second argument where there is one, and it says only
+; what the caller already knows: MASM laid a label down and took the extra
+; word as documentation.  IFSFUNC's IFSFLINK writes "entry NAME,FAR" for a
+; hundred and sixty-six of the kernel names it stands in for.
+macro entry name, distance
 {
 name:
 }
@@ -449,18 +453,23 @@ macro localvar    name,length
 	match =DWORD, length \{ restore LV_BYTES
 	    LV_BYTES equ 4 \}
 	?frame =  ?frame + LV_BYTES
-	restore LV_BYTES
 	name#__frame = ?frame
+; The width is taken from the count of bytes and not from the name the
+; release wrote, because by the time a module is read the name may be gone:
+; MASM read a type name in an expression as the bytes it takes up, so the
+; rules turn DWORD into 4 wherever one stands, and IFSDEV's three LocalVars
+; are the only calls of this in the tree.  Either says the same thing here.
 	name EQU  byte [BP-name#__frame]
-	match =WORD, length \{
+	match =2, LV_BYTES \{
 	    name EQU  word [BP-name#__frame] \}
-	match =DWORD, length \{
+	match =4, LV_BYTES \{
 	    name EQU  dword [BP-name#__frame]
 	    ; the two halves, in either case: MASM read NAMEL and NAMEl as one
 	    name#l EQU  word [BP-name#__frame]
 	    name#L EQU  word [BP-name#__frame]
 	    name#h EQU  word [BP-name#__frame+2]
 	    name#H EQU  word [BP-name#__frame+2] \}
+	restore LV_BYTES
 }
 
 ; ENTER and LEAVE are instructions of the 286 as well; a macro of the same

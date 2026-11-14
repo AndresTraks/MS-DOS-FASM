@@ -215,7 +215,7 @@ end if
 															   ;AN000;
 															   ;AN000;
 	PAGE														   ;AN000;
-if SEGSEL = S_PRINTF_CODE;AN000;
+if SEGSEL = S_PRINTF_CODE ;AN000;
 ;	ASSUME	CS:PRINTF_CODE,DS:PRINTF_CODE,SS:PRINTF_CODE								   ;AN000;
 															   ;AN000;
 															   ;AN000;

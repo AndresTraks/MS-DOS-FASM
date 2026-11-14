@@ -112,63 +112,71 @@ IFSEOCID	   EQU	19								 ;AN000;
 SUBTTL	Control Request Parameter Macro 						 ;AN000;
 PAGE											 ;AN000;
 											 ;AN000;
-; IFSR_FCN_DEF built a set of names for the fields of one IFS request out of
-; the function it was given, a different set each time.  fasm's
-; preprocessor would make every one of them, the last branch winning,
-; and nothing in the release calls either macro -- so both are left as
-; they stand.
-;IFSR_FCN_DEF	    MACRO  fcn								 ;AN000;
+; IFSR_FCN_DEF names the fields of one IFS request out of the function it is
+; given, a different set each time, and IFSR_API_DEF does the same for the
+; parameters of a mapped interrupt 21H call.  MASM chose the set with a
+; chain of IFIDNs; fasm's preprocessor would make every one of them and
+; the last would win, so each is a MATCH of its own here -- only the one
+; whose name is the argument lays anything down.  What they name are offsets
+; into IFSRH's parameter bytes, so the type MASM wrote in front of each
+; goes: the reference carries its own width where it is read.
+;
+; IFSFUNC is the only thing that calls either, forty-seven times and
+; nineteen, and it is the last of the utilities -- which is why they stood
+; commented out until now.
+macro IFSR_FCN_DEF fcn
+{
 ;											 ;AN000;
-;		    IFIDN  <fcn>,<INIT> 						 ;AN000;
-; IFSR_PARMS@	    =  DWORD PTR  IFSR_FCN_PARMS    ; command parameters		 ;AN000;
-; IFSR_RESSIZE	    =  WORD  PTR  IFSR_FCN_PARMS+4  ; driver total size 		 ;AN000;
-; LENGTH_INIT	    EQU IFSR_RESSIZE-IFSRH+2						 ;AN000;
+    match =INIT, fcn \{
+	IFSR_PARMS@ = IFSRH.IFSR_FCN_PARMS
+	IFSR_RESSIZE = IFSRH.IFSR_FCN_PARMS+4
+	LENGTH_INIT = IFSR_RESSIZE-IFSRH+2
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<ATTSTART>						 ;AN000;
-; IFSR_TYPE	    =  BYTE  PTR  IFSR_FCN_PARMS    ; attach type			 ;AC001;
-; IFSR_PARMS@	    =  DWORD PTR  IFSR_FCN_PARMS+2  ; command parameters		 ;AN000;
-; IFSR_DEVICE_CB@    =  DWORD PTR  IFSR_FCN_PARMS+6  ; CD/DF				 ;AN000;
-; IFSR_USER_WORD     =  WORD  PTR  IFSR_FCN_PARMS+10 ; for unc deviceless attach 	 ;AN001;
-; LENGTH_ATTSTART    EQU IFSR_USER_WORD-IFSRH+2						 ;AC001;/;AC004;
+    \}
+    match =ATTSTART, fcn \{
+	IFSR_TYPE = IFSRH.IFSR_FCN_PARMS
+	IFSR_PARMS@ = IFSRH.IFSR_FCN_PARMS+2
+	IFSR_DEVICE_CB@ = IFSRH.IFSR_FCN_PARMS+6
+	IFSR_USER_WORD = IFSRH.IFSR_FCN_PARMS+10
+	LENGTH_ATTSTART = IFSR_USER_WORD-IFSRH+2
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<ATTSTAT>						 ;AN000;
-; IFSR_TYPE	    =  BYTE  PTR  IFSR_FCN_PARMS    ; attach type			 ;AC001;
-; IFSR_PARMS@	    =  DWORD PTR  IFSR_FCN_PARMS+2  ; command parameters		 ;AN000;
-; IFSR_DEVICE_CB@    =  DWORD PTR  IFSR_FCN_PARMS+6  ; CD/DF				 ;AN000;
-; IFSR_USER_WORD     =  WORD  PTR  IFSR_FCN_PARMS+10 ; for unc deviceless attach 	 ;AN001;
-; IFSR_MAX_XMITT_SIZE = WORD  PTR  IFSR_FCN_PARMS+12 ; redir-maximum transmit size	 ;AN001;
-; IFSR_NET_NAME_ID   =  WORD  PTR  IFSR_FCN_PARMS+14 ; redir-net name id 		 ;AN001;
-; IFSR_LSN	    =  WORD  PTR  IFSR_FCN_PARMS+16 ; redir-low byte=local session #	 ;AN001;
-; IFSR_DEVICE_STATUS =  BYTE  PTR  IFSR_FCN_PARMS+18 ; redir-interesting bits		 ;AN001;
-; LENGTH_ATTSTAT     EQU IFSR_DEVICE_STATUS-IFSRH+2					 ;AC001;
+    \}
+    match =ATTSTAT, fcn \{
+	IFSR_TYPE = IFSRH.IFSR_FCN_PARMS
+	IFSR_PARMS@ = IFSRH.IFSR_FCN_PARMS+2
+	IFSR_DEVICE_CB@ = IFSRH.IFSR_FCN_PARMS+6
+	IFSR_USER_WORD = IFSRH.IFSR_FCN_PARMS+10
+	IFSR_MAX_XMITT_SIZE = IFSRH.IFSR_FCN_PARMS+12
+	IFSR_NET_NAME_ID = IFSRH.IFSR_FCN_PARMS+14
+	IFSR_LSN = IFSRH.IFSR_FCN_PARMS+16
+	IFSR_DEVICE_STATUS = IFSRH.IFSR_FCN_PARMS+18
+	LENGTH_ATTSTAT = IFSR_DEVICE_STATUS-IFSRH+2
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<ATTEND>						 ;AN000;
-; IFSR_DEVICE_CB@    =  DWORD PTR  IFSR_FCN_PARMS    ; CD/DF				 ;AN000;
-; IFSR_NAME@	    =  DWORD PTR  IFSR_FCN_PARMS+4  ; UNC deviceless detach		 ;AN000;
-; LENGTH_ATTEND	    EQU IFSR_NAME@-IFSRH+4						 ;AN000;
+    \}
+    match =ATTEND, fcn \{
+	IFSR_DEVICE_CB@ = IFSRH.IFSR_FCN_PARMS
+	IFSR_NAME@ = IFSRH.IFSR_FCN_PARMS+4
+	LENGTH_ATTEND = IFSR_NAME@-IFSRH+4
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<EXECAPI>						 ;AN000;
-; IFSR_APIFUNC	    =  BYTE  PTR  IFSR_FCN_PARMS    ; API function code 		 ;AN000;
-; IFSR_ERROR_CLASS   =  BYTE  PTR  IFSR_FCN_PARMS+1  ; DOS extended error class		 ;AN000;
-; IFSR_ERROR_ACTION  =  BYTE  PTR  IFSR_FCN_PARMS+2  ; DOS extended error action 	 ;AN000;
-; IFSR_ERROR_LOCUS   =  BYTE  PTR  IFSR_FCN_PARMS+3  ; DOS extended error locus		 ;AN000;
-; IFSR_ALLOWED	    =  BYTE  PTR  IFSR_FCN_PARMS+4  ; DOS extended error locus		 ;AN000;
-; IFSR_I24_COUNT     =  BYTE  PTR  IFSR_FCN_PARMS+5  ; critical error retry count	 ;AN000;
+    \}
+    match =EXECAPI, fcn \{
+	IFSR_APIFUNC = IFSRH.IFSR_FCN_PARMS
+	IFSR_ERROR_CLASS = IFSRH.IFSR_FCN_PARMS+1
+	IFSR_ERROR_ACTION = IFSRH.IFSR_FCN_PARMS+2
+	IFSR_ERROR_LOCUS = IFSRH.IFSR_FCN_PARMS+3
+	IFSR_ALLOWED = IFSRH.IFSR_FCN_PARMS+4
+	IFSR_I24_COUNT = IFSRH.IFSR_FCN_PARMS+5
 ;						    ;  0=first time			 ;AN000;
-; IFSR_I24_RESP	    =  BYTE  PTR  IFSR_FCN_PARMS+6  ; critical error response		 ;AN000;
+	IFSR_I24_RESP = IFSRH.IFSR_FCN_PARMS+6
 ;						    ;	 0=ignore  1=retry		 ;AN000;
-; IFSR_DEVICE_CB@    =  DWORD PTR  IFSR_FCN_PARMS+8  ; device (CD or DF) 		 ;AN000;
-; IFSR_OPEN_CB@	    =  DWORD PTR  IFSR_FCN_PARMS+12 ; open file instance  (SF)		 ;AN000;
-; IFSR_API_PARMS     =  BYTE  PTR  IFSR_FCN_PARMS+16					 ;AN000;
+	IFSR_DEVICE_CB@ = IFSRH.IFSR_FCN_PARMS+8
+	IFSR_OPEN_CB@ = IFSRH.IFSR_FCN_PARMS+12
+	IFSR_API_PARMS = IFSRH.IFSR_FCN_PARMS+16
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<CRITMSG>						 ;AN000;
-; IFSR_MSG@	    =  DWORD PTR  IFSR_FCN_PARMS    ; message buffer address		 ;AN000;
-; IFSR_MSG_TYPE	    =  BYTE  PTR  IFSR_FCN_PARMS+4  ; message type			 ;AN000;
+    \}
+    match =CRITMSG, fcn \{
+	IFSR_MSG@ = IFSRH.IFSR_FCN_PARMS
+	IFSR_MSG_TYPE = IFSRH.IFSR_FCN_PARMS+4
 ;						 ; 1=message is printed in form 	 ;AN000;
 ;						 ;    <message> 			 ;AN000;
 ;						 ;    Abort,Retry,Ignore,Fail		 ;AN000;
@@ -176,24 +184,20 @@ PAGE											 ;AN000;
 ;				 ; <message> error (read/writ)ing (drive/device) XXX ;	 ;AN000;
 ;				 ; Abort,Retry,Ignore,Fail				 ;AN000;
 ;											 ;AN000;
-; LENGTH_CRITMSG     EQU IFSR_MSG_TYPE-IFSRH+2						 ;AN000;
+	LENGTH_CRITMSG = IFSR_MSG_TYPE-IFSRH+2
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<UPDATECB>						 ;AN000;
-; IFSR_CB@	    =  DWORD PTR      IFSR_FCN_PARMS	; control block address 	 ;AN000;
-; IFSR_TYPE	    =  BYTE  PTR      IFSR_FCN_PARMS+4	; control block type		 ;AN000;
-; IFSOPEN	    EQU   0		  ; open instance (SFT) entry			 ;AN000;
-; IFSCB		    EQU   -1		  ; see control block type field		 ;AN000;
-; LENGTH_UPDATECB    EQU IFSR_TYPE-IFSRH+2						 ;AN000;
+    \}
+    match =UPDATECB, fcn \{
+	IFSR_CB@ = IFSRH.IFSR_FCN_PARMS
+	IFSR_TYPE = IFSRH.IFSR_FCN_PARMS+4
+	IFSOPEN = 0
+	IFSCB = -1
+	LENGTH_UPDATECB = IFSR_TYPE-IFSRH+2
 ;											 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    ENDM								 ;AN000;
+    \}
+}
+
+
 											 ;AN000;
 SUBTTL	INT 21H Mapped Request Parameter Macro						 ;AN000;
 PAGE											 ;AN000;
@@ -203,60 +207,98 @@ PAGE											 ;AN000;
 ; preprocessor would make every one of them, the last branch winning,
 ; and nothing in the release calls either macro -- so both are left as
 ; they stand.
-;IFSR_API_DEF	    MACRO  fcn								 ;AN000;
+
+macro IFSR_API_MKDIR
+{
+	IFSR_NAME@ = IFSR_API_PARMS
+	LENGTH_MKDIR = IFSR_NAME@-IFSRH+4
 ;											 ;AN000;
-;		    IFIDN  <fcn>,<DRIVERESET>						 ;AN000;
-; IFSR_FUNC	    =  BYTE  PTR  IFSR_API_PARMS    ; 0=flush				 ;AN000;
-; LENGTH_DRIVERESET  EQU IFSR_FUNC-IFSRH+2						 ;AN000;
+}
+macro IFSR_API_RMDIR
+{
+	IFSR_NAME@ = IFSR_API_PARMS
+	LENGTH_RMDIR = IFSR_NAME@-IFSRH+4
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<DISKATTR>						 ;AN000;
-; IFSR_ALLOCUNITS    =  WORD  PTR  IFSR_API_PARMS    ; # allocation units		 ;AN000;
-; IFSR_ALLOCSIZE     =  WORD  PTR  IFSR_API_PARMS+2  ; allocation unit sectors		 ;AN000;
-; IFSR_SECTSIZE	    =  WORD  PTR  IFSR_API_PARMS+4  ; sector size			 ;AN000;
-; IFSR_AVAILALLOC    =  WORD  PTR  IFSR_API_PARMS+6  ; free allocation units		 ;AN000;
-; IFSR_FSID	    =  BYTE  PTR  IFSR_API_PARMS+8  ; file system media id		 ;AN000;
-; LENGTH_DISKATTR    EQU IFSR_FSID-IFSRH+2						 ;AN000;
+}
+macro IFSR_API_CHDIR
+{
+	IFSR_NAME@ = IFSR_API_PARMS
+	LENGTH_CHDIR = IFSR_NAME@-IFSRH+4
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<MKDIR>						 ;AN000;
-; IFSR_NAME@	    =  DWORD PTR  IFSR_API_PARMS    ; asciiz name to process		 ;AN000;
-; LENGTH_MKDIR	    EQU IFSR_NAME@-IFSRH+4						 ;AN000;
+}
+macro IFSR_API_DEVIOCTL
+{
+	IFSR_FUNC = IFSR_API_PARMS
+;						 ; 01 Generic IOCTL by handle		 ;AN000;
+;						 ; 02 FS IOCTL query OS type		 ;AN000;
+	IFSR_BUFFER@ = IFSR_API_PARMS+2
+	IFSR_BUFSIZE = IFSR_API_PARMS+6
+; ; FUNC dependent parameters								 ;AN000;
+; ; For generic										 ;AN000;
+	IFSR_CATEGORY = IFSR_API_PARMS+8
+	IFSR_CTLFUNC = IFSR_API_PARMS+9
+	LENGTH_DEVIOCTL = IFSR_CTLFUNC-IFSRH+1
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<RMDIR>						 ;AN000;
-; IFSR_NAME@	    =  DWORD PTR  IFSR_API_PARMS    ; asciiz name to process		 ;AN000;
-; LENGTH_RMDIR	    EQU IFSR_NAME@-IFSRH+4						 ;AN000;
+}
+
+macro IFSR_API_DEF fcn
+{
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<CHDIR>						 ;AN000;
-; IFSR_NAME@	    =  DWORD PTR  IFSR_API_PARMS    ; asciiz name to process		 ;AN000;
-; LENGTH_CHDIR	    EQU IFSR_NAME@-IFSRH+4						 ;AN000;
+    match =DRIVERESET, fcn \{
+	IFSR_FUNC = IFSR_API_PARMS
+	LENGTH_DRIVERESET = IFSR_FUNC-IFSRH+2
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<DELFILE>						 ;AN000;
-; IFSR_MATCHATTR_47  =  WORD  PTR  IFSR_API_PARMS    ; format 00000000e0a00shr		 ;AN000;
-; IFSR_NAME@	    =  DWORD PTR  IFSR_API_PARMS+2  ; file to delete			 ;AN000;
-; LENGTH_DELFILE     EQU IFSR_NAME@-IFSRH+4						 ;AN000;
+    \}
+    match =DISKATTR, fcn \{
+	IFSR_ALLOCUNITS = IFSR_API_PARMS
+	IFSR_ALLOCSIZE = IFSR_API_PARMS+2
+	IFSR_SECTSIZE = IFSR_API_PARMS+4
+	IFSR_AVAILALLOC = IFSR_API_PARMS+6
+	IFSR_FSID = IFSR_API_PARMS+8
+	LENGTH_DISKATTR = IFSR_FSID-IFSRH+2
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<RENFILE>						 ;AN000;
-; IFSR_MATCHATTR     =  WORD  PTR  IFSR_API_PARMS    ; format 00000000e0a00shr		 ;AN000;
-; IFSR_NAME1@	    =  DWORD PTR  IFSR_API_PARMS+2  ; file to rename			 ;AN000;
-; IFSR_NAME2@	    =  DWORD PTR  IFSR_API_PARMS+6  ; new file name			 ;AN000;
-; LENGTH_RENFILE     EQU IFSR_NAME2@-IFSRH+4						 ;AN000;
+    \}
+    ; MKDIR is the number of a DOS call in INC/SYSCALL.INC, and
+    ; fasm puts the number in before this macro sees the name, so the
+    ; number is matched as well; the body stands in a macro of its own
+    ; rather than twice over.
+    match =MKDIR, fcn \{ IFSR_API_MKDIR \}
+    match =57, fcn \{ IFSR_API_MKDIR \}
+    ; RMDIR is the number of a DOS call in INC/SYSCALL.INC, and
+    ; fasm puts the number in before this macro sees the name, so the
+    ; number is matched as well; the body stands in a macro of its own
+    ; rather than twice over.
+    match =RMDIR, fcn \{ IFSR_API_RMDIR \}
+    match =58, fcn \{ IFSR_API_RMDIR \}
+    ; CHDIR is the number of a DOS call in INC/SYSCALL.INC, and
+    ; fasm puts the number in before this macro sees the name, so the
+    ; number is matched as well; the body stands in a macro of its own
+    ; rather than twice over.
+    match =CHDIR, fcn \{ IFSR_API_CHDIR \}
+    match =59, fcn \{ IFSR_API_CHDIR \}
+    match =DELFILE, fcn \{
+	IFSR_MATCHATTR_47 = IFSR_API_PARMS
+	IFSR_NAME@ = IFSR_API_PARMS+2
+	LENGTH_DELFILE = IFSR_NAME@-IFSRH+4
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<SEARCHFILE>						 ;AN000;
-; IFSR_SUBFUNC	    =  BYTE  PTR  IFSR_API_PARMS    ; 1=first, 2=next			 ;AN000;
-; IFSR_CONTINFO@     =  DWORD PTR  IFSR_API_PARMS+2  ; continuation info addr		 ;AN000;
-; IFSR_MATCHATTR     =  WORD  PTR  IFSR_API_PARMS+6  ; format 0000000re0advshr  (1st)	 ;AN000;
-; IFSR_NAME@	    =  DWORD PTR  IFSR_API_PARMS+8  ; asciiz name to process   (1st)	 ;AN000;
-; LENGTH_SEARCHFILE  EQU IFSR_NAME@-IFSRH+4						 ;AN000;
+    \}
+    match =RENFILE, fcn \{
+	IFSR_MATCHATTR = IFSR_API_PARMS
+	IFSR_NAME1@ = IFSR_API_PARMS+2
+	IFSR_NAME2@ = IFSR_API_PARMS+6
+	LENGTH_RENFILE = IFSR_NAME2@-IFSRH+4
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<OPENFILE>						 ;AN000;
-; IFSR_MODE	    =  WORD  PTR  IFSR_API_PARMS    ; open mode 			 ;AN000;
+    \}
+    match =SEARCHFILE, fcn \{
+	IFSR_SUBFUNC = IFSR_API_PARMS
+	IFSR_CONTINFO@ = IFSR_API_PARMS+2
+	IFSR_MATCHATTR = IFSR_API_PARMS+6
+	IFSR_NAME@ = IFSR_API_PARMS+8
+	LENGTH_SEARCHFILE = IFSR_NAME@-IFSRH+4
+;											 ;AN000;
+    \}
+    match =OPENFILE, fcn \{
+	IFSR_MODE = IFSR_API_PARMS
 ;						 ;  format: 0WF0000CISSS0AAA		 ;AN000;
 ;						 ;  AAA=access code 0=read,1=write	 ;AN000;
 ;						 ;		    2=read/write	 ;AN000;
@@ -269,134 +311,109 @@ PAGE											 ;AN000;
 ;						 ;  this open & any I/O to this handle	 ;AN000;
 ;						 ;  W 0=no commit, 1=auto-commit on	 ;AN000;
 ;						 ;		     write		 ;AN000;
-; IFSR_FLAG	    =  WORD  PTR  IFSR_API_PARMS+2  ; function control;  format=CE	 ;AN000;
+	IFSR_FLAG = IFSR_API_PARMS+2
 ;						 ; C=does not exist action		 ;AN000;
 ;						 ; 0=fail, 1=create			 ;AN000;
 ;						 ; E=exists action			 ;AN000;
 ;						 ; 0=fail, 1=open, 2=replace/open	 ;AN000;
-; IFSR_CP	    =  WORD  PTR  IFSR_API_PARMS+4  ; global code page			 ;AN000;
-; IFSR_CPSW	    =  BYTE  PTR  IFSR_API_PARMS+6  ; CPSW flag 			 ;AN000;
-; IFSR_NAME@	    =  DWORD PTR  IFSR_API_PARMS+8  ; asciiz name to open		 ;AN000;
-; IFSR_PARMS@	    =  DWORD PTR  IFSR_API_PARMS+12 ; format:
+	IFSR_CP = IFSR_API_PARMS+4
+	IFSR_CPSW = IFSR_API_PARMS+6
+	IFSR_NAME@ = IFSR_API_PARMS+8
+	IFSR_PARMS@ = IFSR_API_PARMS+12
 ;						 ;	     DD  EA address
 ;						 ;	     DW  #parms
 ;						 ;	     DB  IOMODE ID		 ;AN000;
 ;						 ;	     DW  IO Mode		 ;AN000;
-; IFSR_MATCHATTR     =  WORD  PTR  IFSR_API_PARMS+16 ; format 00000000e0advshr		 ;AN000;
-; IFSR_ACTION	    =  WORD  PTR  IFSR_API_PARMS+18					 ;AN000;
-; LENGTH_OPENFILE    EQU IFSR_ACTION-IFSRH+2						 ;AN000;
+	IFSR_MATCHATTR = IFSR_API_PARMS+16
+	IFSR_ACTION = IFSR_API_PARMS+18
+	LENGTH_OPENFILE = IFSR_ACTION-IFSRH+2
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<LSEEKFILE>						 ;AN000;
-; IFSR_MODE	    =  BYTE  PTR  IFSR_API_PARMS    ; see INT 21H AH=42H		 ;AN000;
-; IFSR_POSITION	    =  DWORD PTR  IFSR_API_PARMS+2  ; displacement of LSEEK		 ;AN000;
-; LENGTH_LSEEKFILE   EQU IFSR_POSITION-IFSRH+4						 ;AN000;
+    \}
+    match =LSEEKFILE, fcn \{
+	IFSR_MODE = IFSR_API_PARMS
+	IFSR_POSITION = IFSR_API_PARMS+2
+	LENGTH_LSEEKFILE = IFSR_POSITION-IFSRH+4
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<READFILE>						 ;AN000;
+    \}
+    match =READFILE, fcn \{
 ;;IFSR_MODE	    =  BYTE  PTR  IFSR_API_PARMS					 ;AD005;
-; IFSR_COUNT	    =  WORD  PTR  IFSR_API_PARMS+2					 ;AN000;
-; IFSR_BUFFER@	    =  DWORD PTR  IFSR_API_PARMS+4					 ;AN000;
-; LENGTH_READFILE    EQU IFSR_BUFFER@-IFSRH+4						 ;AN000;
+	IFSR_COUNT = IFSR_API_PARMS+2
+	IFSR_BUFFER@ = IFSR_API_PARMS+4
+	LENGTH_READFILE = IFSR_BUFFER@-IFSRH+4
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<WRITEFILE>						 ;AN000;
+    \}
+    match =WRITEFILE, fcn \{
 ;;IFSR_MODE	    =  BYTE  PTR  IFSR_API_PARMS					 ;AD005;
-; IFSR_COUNT	    =  WORD  PTR  IFSR_API_PARMS+2					 ;AN000;
-; IFSR_BUFFER@	    =  DWORD PTR  IFSR_API_PARMS+4					 ;AN000;
-; LENGTH_WRITEFILE   EQU IFSR_BUFFER@-IFSRH+4						 ;AN000;
+	IFSR_COUNT = IFSR_API_PARMS+2
+	IFSR_BUFFER@ = IFSR_API_PARMS+4
+	LENGTH_WRITEFILE = IFSR_BUFFER@-IFSRH+4
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<LOCKFILE>						 ;AN000;
+    \}
+    match =LOCKFILE, fcn \{
 ;;IFSR_MODE	    =  BYTE  PTR  IFSR_API_PARMS    ;  bit 0: 0=lock all operations	 ;AD005;
 ;						    ;  1=lock only write operations	 ;AD005;
-; IFSR_FUNC	    =  BYTE  PTR  IFSR_API_PARMS    ; 0=LOCK, 1=UNLOCK			 ;AC005;
+	IFSR_FUNC = IFSR_API_PARMS
 ;;IFSR_COUNT	    =  WORD  PTR  IFSR_API_PARMS+2					 ;AD005;
 ;;IFSR_RANGE@	    =  DWORD PTR  IFSR_API_PARMS+4					 ;AD005;
-; IFSR_LK_POSITION   =  DWORD PTR  IFSR_API_PARMS+2					 ;AN005;
-; IFSR_LK_LENGTH     =  DWORD PTR  IFSR_API_PARMS+6					 ;AN005;
-; LENGTH_LOCKFILE    EQU IFSR_LK_LENGTH-IFSRH+4						 ;AC005;
+	IFSR_LK_POSITION = IFSR_API_PARMS+2
+	IFSR_LK_LENGTH = IFSR_API_PARMS+6
+	LENGTH_LOCKFILE = IFSR_LK_LENGTH-IFSRH+4
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<CLOSEFILE>						 ;AN000;
-; IFSR_FUNC	    =  BYTE  PTR  IFSR_API_PARMS    ; 0=CLOSE, 1=COMMIT 		 ;AN000;
-; LENGTH_CLOSEFILE   EQU IFSR_FUNC-IFSRH+2						 ;AN000;
+    \}
+    match =CLOSEFILE, fcn \{
+	IFSR_FUNC = IFSR_API_PARMS
+	LENGTH_CLOSEFILE = IFSR_FUNC-IFSRH+2
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<FILEATTR>						 ;AN000;
-; IFSR_FUNC	    =  BYTE  PTR  IFSR_API_PARMS    ; 0=get, 1=set by handle		 ;AN000;
+    \}
+    match =FILEATTR, fcn \{
+	IFSR_FUNC = IFSR_API_PARMS
 ;						    ; 2=get, 3=set by name		 ;AN000;
-; IFSR_SUBFUNC	    =  BYTE  PTR  IFSR_API_PARMS+2  ; 0=none,2=EA List, 3-EA names	 ;AN000;
+	IFSR_SUBFUNC = IFSR_API_PARMS+2
 ;						    ; 2,3 used only on IFSR_FUNC=0,1	 ;AN000;
-; IFSR_BUFFER1@	    =  DWORD PTR  IFSR_API_PARMS+4  ; if IFSR_TYPE=2,3			 ;AN000;
-; IFSR_BUFFER2@	    =  DWORD PTR  IFSR_API_PARMS+8  ; if IFSR_TYPE=2			 ;AN000;
-; IFSR_COUNT	    =  WORD  PTR  IFSR_API_PARMS+12 ; if IFSR_TYPE=2,3			 ;AN000;
+	IFSR_BUFFER1@ = IFSR_API_PARMS+4
+	IFSR_BUFFER2@ = IFSR_API_PARMS+8
+	IFSR_COUNT = IFSR_API_PARMS+12
 ; ; Following present only if IFSR_FUNC=2,3						 ;AN000;
-; IFSR_MATCHATTR     =  WORD  PTR  IFSR_API_PARMS+14 ; format 0000000re0advshr		 ;AN000;
-; IFSR_NAME@	    =  DWORD PTR  IFSR_API_PARMS+16 ; ASCIIZ file name			 ;AN000;
-; IFSR_SIZE	    =  DWORD PTR  IFSR_API_PARMS+20 ; file size 			 ;AN000;
-; IFSR_DATE	    =  WORD  PTR  IFSR_API_PARMS+24 ; file date 			 ;AN000;
-; IFSR_TIME	    =  WORD  PTR  IFSR_API_PARMS+26 ; file time 			 ;AN000;
-; IFSR_ATTR	    =  WORD  PTR  IFSR_API_PARMS+28 ; format 0000000re0advshr		 ;AN000;
-; LENGTH_FILEATTR    EQU IFSR_ATTR-IFSRH+2						 ;AN000;
+	IFSR_MATCHATTR = IFSR_API_PARMS+14
+	IFSR_NAME@ = IFSR_API_PARMS+16
+	IFSR_SIZE = IFSR_API_PARMS+20
+	IFSR_DATE = IFSR_API_PARMS+24
+	IFSR_TIME = IFSR_API_PARMS+26
+	IFSR_ATTR = IFSR_API_PARMS+28
+	LENGTH_FILEATTR = IFSR_ATTR-IFSRH+2
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<DEPIOCTL>						 ;AN000;
-; IFSR_FUNC	    =  BYTE  PTR  IFSR_API_PARMS    ; 00 Generic IOCTL by device #	 ;AN000;
+    \}
+    match =DEPIOCTL, fcn \{
+	IFSR_FUNC = IFSR_API_PARMS
 ;						    ; 01 Generic IOCTL by handle	 ;AN000;
 ;						    ; 02 FS IOCTL query OS type 	 ;AN000;
-; IFSR_BUFFER@	    =  DWORD PTR  IFSR_API_PARMS+2  ; set on queries			 ;AN000;
-; IFSR_BUFSIZE	    =  WORD  PTR  IFSR_API_PARMS+6  ; Buffer size set for IFSR_FUNC=2	 ;AN000;
+	IFSR_BUFFER@ = IFSR_API_PARMS+2
+	IFSR_BUFSIZE = IFSR_API_PARMS+6
 ; ; FUNC dependent parameters								 ;AN000;
 ; ; For generic										 ;AN000;
-; IFSR_CATEGORY	    =  BYTE  PTR  IFSR_API_PARMS+8  ; generic subfunctions		 ;AN000;
-; IFSR_CTLFUNC	    =  BYTE  PTR  IFSR_API_PARMS+9  ; see INT 21H AH=6BH		 ;AN000;
-; LENGTH_DEPIOCTL    EQU IFSR_CTLFUNC-IFSRH+1						 ;AN000;
+	IFSR_CATEGORY = IFSR_API_PARMS+8
+	IFSR_CTLFUNC = IFSR_API_PARMS+9
+	LENGTH_DEPIOCTL = IFSR_CTLFUNC-IFSRH+1
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<DEVIOCTL>						 ;AN000;
-; IFSR_FUNC	    =  BYTE  PTR  IFSR_API_PARMS    ; 00 Generic IOCTL by device #	 ;AN000;
-;						 ; 01 Generic IOCTL by handle		 ;AN000;
-;						 ; 02 FS IOCTL query OS type		 ;AN000;
-; IFSR_BUFFER@	    =  DWORD PTR  IFSR_API_PARMS+2  ; set on queries			 ;AN000;
-; IFSR_BUFSIZE	    =  WORD  PTR  IFSR_API_PARMS+6  ; buffer size set for IFSR_FUNC=2	 ;AN000;
-; ; FUNC dependent parameters								 ;AN000;
-; ; For generic										 ;AN000;
-; IFSR_CATEGORY	    =  BYTE  PTR  IFSR_API_PARMS+8  ; generic subfunctions		 ;AN000;
-; IFSR_CTLFUNC	    =  BYTE  PTR  IFSR_API_PARMS+9  ; see INT 21H AH=6BH		 ;AN000;
-; LENGTH_DEVIOCTL    EQU IFSR_CTLFUNC-IFSRH+1						 ;AN000;
+    \}
+    ; DEVIOCTL is the number of a DOS call in INC/DEVSYM.INC, and
+    ; fasm puts the number in before this macro sees the name, so the
+    ; number is matched as well; the body stands in a macro of its own
+    ; rather than twice over.
+    match =DEVIOCTL, fcn \{ IFSR_API_DEVIOCTL \}
+    match =4000H, fcn \{ IFSR_API_DEVIOCTL \}
+    match =EOP, fcn \{
+	IFSR_PID = IFSR_API_PARMS
+	IFSR_SUBFUNC = IFSR_API_PARMS+2
+	LENGTH_EOP = IFSR_SUBFUNC-IFSRH+2
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<EOP>							 ;AN000;
-; IFSR_PID	    =  WORD  PTR  IFSR_API_PARMS    ; process ID			 ;AN000;
-; IFSR_SUBFUNC	    =  BYTE  PTR  IFSR_API_PARMS+2  ; 0=NORMAL EXIT, 1=ABORT EXIT	 ;AN000;
-; LENGTH_EOP	    EQU IFSR_SUBFUNC-IFSRH+2						 ;AN000;
+    \}
+    match =EOCID, fcn \{
+	IFSR_UID = IFSR_API_PARMS
+	LENGTH_EOCID = IFSR_UID-IFSRH+2
 ;											 ;AN000;
-;		    else								 ;AN000;
-;		    IFIDN  <fcn>,<EOCID>						 ;AN000;
-; IFSR_UID	    =  WORD  PTR  IFSR_API_PARMS    ; process ID			 ;AN000;
-; LENGTH_EOCID	    EQU IFSR_UID-IFSRH+2						 ;AN000;
-;											 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    end if								 ;AN000;
-;		    ENDM								 ;AN000;
+    \}
+}
 											 ;AN000;
 SUBTTL	Request Data									 ;AN000;
 PAGE											 ;AN000;
