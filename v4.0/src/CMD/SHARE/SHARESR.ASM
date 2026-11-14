@@ -1,6 +1,6 @@
 	Title	Sharesr -  IBM CONFIDENTIAL
-;				   $SALUT (0,36,41,44)
-				   include SHAREHDR.INC
+;				   SALUT$ (0,36,41,44)
+				   include 'SHAREHDR.INC'
 ;
 ;     Label: "The DOS SHARE Utility"
 ;	     "Version 4.00 (C) Copyright 1988 Microsoft"
@@ -8,23 +8,23 @@
 ;
 ;******************* END OF SPECIFICATIONS *************************************
 
-				   NAME Sharsr
+				   name Sharsr
 
 				   .xlist
 				   .xcref
 
-				   include SYSMSG.INC
+				   include 'SYSMSG.INC'
 
 				   .cref
 				   .list
 
 				   MSG_UTILNAME <SHARE>
 
-Share				   SEGMENT BYTE PUBLIC 'SHARE'
+if SEGSEL = S_SHARE
 
-				   PUBLIC SYSDISPMSG, SYSLOADMSG, SYSPARSE
+;				   PUBLIC SYSDISPMSG, SYSLOADMSG, SYSPARSE
 
-				   ASSUME CS:Share,DS:nothing,ES:nothing
+;				   ASSUME CS:Share,DS:nothing,ES:nothing
 
 					   ; include Message Code
 
@@ -61,13 +61,13 @@ Val3SW				   equ	false
 				   ; include parse.asm
 				   .xlist
 				   .xcref
-				   include parse.asm
-				   include msgdcl.inc
+				   include 'PARSE.ASM'
+				   include 'MSGDCL.INC'
 				   .cref
 				   .list
 
 
 
-Share				   ENDS
-END
+end if
+;END
 

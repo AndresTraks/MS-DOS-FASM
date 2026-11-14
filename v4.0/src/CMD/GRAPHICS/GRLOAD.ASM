@@ -632,7 +632,7 @@ FILE_ERROR_PROC:              ;;					;AN000;
 ;;										;AN000;
 ;; Output Parameters:								;AN000;
 ;;   PROFILE_LINE								;AN000;
-;;   RETURN 0 - successfull read 					;AN000;
+;;   RETURN CODE : 0 - successfull read 					;AN000;
 ;;		 : 1 - end of file						;AN000;
 ;;		 : 2 - error during read					;AN000;
 ;;										;AN000;

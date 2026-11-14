@@ -81,17 +81,24 @@ BREAK   <MFT Definitions>
 ;*              possibility.  If you add or remove flag values you must check
 ;*              all references to mft_flag.
 
-MFT_entry       STRUC
-
-mft_flag        DB      ?               ; flag/len field
-mft_len         DW      ?
-mft_sum         DB      ?               ; string sum word
-mft_lptr        DW      ?               ; LCK pointer
-mft_sptr        DD      ?               ; sft pointer
-mft_serl        DW      ?               ; serial number
-mft_name        DB      ?               ; offset to start of name
-
-MFT_entry       ENDS
+STRUC MFT_entry
+{
+.mft_flag       DB      0               ; flag/len field
+.mft_len        DW      0
+.mft_sum        DB      0               ; string sum word
+.mft_lptr       DW      0               ; LCK pointer
+.mft_sptr       DD      0               ; sft pointer
+.mft_serl       DW      0               ; serial number
+.mft_name       DB      0               ; offset to start of name
+}
+match =MFT_entry_LAID_OUT, MFT_entry_LAID_OUT
+{
+    MFT_entry_LAID_OUT equ 1
+    virtual at 0
+      MFT_entry MFT_entry
+      sizeof.MFT_entry = $ - MFT_entry
+    end virtual
+}
 
 MFLG_NAM        EQU     1               ; min value for name record
 MFLG_FRE        EQU     0               ; free record
@@ -110,17 +117,25 @@ MFLG_END        EQU     -1              ; end record
 ;                       LBA    = offset of last byte of locked region
 ;                       SPTR   = pointer to SFT lock was issued on
 
-RLR_entry       STRUC
-
-rlr_next        DW      ?               ; chain to next RLR, 0 if end
-rlr_fba         DW      ?               ; first byte addr (offset) of reigion
-                DW      ?
-rlr_lba         DW      ?               ; last byte addr of region
-                DW      ?
-rlr_sptr        DD      ?               ; SFT pointer
-rlr_pid         dw      ?               ; process id of issuer
-rlr_type        dw      ?               ; lock type
-RLR_entry       ENDS
+STRUC RLR_entry
+{
+.rlr_next       DW      0               ; chain to next RLR, 0 if end
+.rlr_fba        DW      0               ; first byte addr (offset) of reigion
+                DW      0
+.rlr_lba        DW      0               ; last byte addr of region
+                DW      0
+.rlr_sptr       DD      0               ; SFT pointer
+.rlr_pid        dw      0               ; process id of issuer
+.rlr_type       dw      0               ; lock type
+}
+match =RLR_entry_LAID_OUT, RLR_entry_LAID_OUT
+{
+    RLR_entry_LAID_OUT equ 1
+    virtual at 0
+      RLR_entry RLR_entry
+      sizeof.RLR_entry = $ - RLR_entry
+    end virtual
+}
 
 rlr_lall        equ     00h            ; lock all ops
 rlr_lwr         equ     01h            ; lock write ops

@@ -752,6 +752,291 @@ UTILITIES = {
         STARTS={'GRCOMMON.ASM': {'cs': 'CODE', 'ds': 'CODE',
                                  'es': None, 'ss': None}},
     ),
+    # SHARE's four modules in the order SHARE.LNK names them, and the one
+    # header of its own all three of the sharer's modules read -- SHAREHDR
+    # is the specification block and nothing else.  SHARE.LNK names four
+    # more after them, out of src/INC: nibdos, const2, msdata and msdosme,
+    # four of the kernel's own modules, which the link file reads with
+    # these and which are converted already.
+    #
+    # Eight segments and three address spaces.  Share, which holds the
+    # whole of the sharer, is outside the group; DOSGROUP is the kernel's
+    # six -- START, CONSTANTS, DATA, TABLE, CODE, LAST -- which the four
+    # kernel modules fill as they fill the kernel's, and SHARELNK fills
+    # CODE with a stub for each of the forty-four kernel names the sharer's
+    # own modules name and the kernel's do not define; STACK is the third.
+    # So the walk is the kernel's, over eight modules and eight passes.
+    #
+    # The sharer runs inside the kernel, entered through the jump table
+    # MSCONST.ASM lays down in CONSTANTS, with the kernel's own SS -- which
+    # is why the release linked the kernel's data modules in and why every
+    # routine here says ASSUME SS:DOSGROUP.  What the sharer reads of the
+    # kernel's it reads through SS at the offset this assembly gives it, so
+    # the copy of DOSGROUP in SHARE.EXE is there for its offsets and not
+    # for its bytes: nothing in it is ever read at run time.
+    'SHARE': dict(
+        MODULES=('GSHARE.ASM', 'GSHARE2.ASM', 'SHARESR.ASM', 'SHARELNK.ASM',
+                 'SHAREHDR.INC'),
+        # GSHARE and GSHARE2 are the two halves of one program and the
+        # structured-assembly preprocessor numbered each from one, so eight
+        # of the labels it wrote are in both.
+        TAG={'GSHARE2.ASM': '2'},
+        # MFT.INC is the Master File Table, which is what the sharer keeps:
+        # a heap of name records at one end of its pool and a chain of lock
+        # records at the other.  DPL.ASM is the server call parameter list,
+        # which the sharer is handed on a call from the network redirector,
+        # and DOSSEG.ASM is the kernel's segment order, which every one of
+        # these modules reads to get the six segment declarations.
+        SHARED=('SYSCALL.INC', 'DOSSYM.INC', 'SYSMSG.INC', 'PSDATA.INC',
+                'MSGHAN.INC', 'DOSMAC.INC', 'MSGDCL.INC', 'MSGSERV.ASM',
+                'VERSIONA.INC', 'BPB.INC', 'BUFFER.INC', 'SYSVAR.INC',
+                'VECTOR.INC', 'MULT.INC', 'DIRENT.INC', 'DPB.INC',
+                'CURDIR.INC', 'CPMFCB.INC', 'FIND.INC', 'PDB.INC', 'EXE.INC',
+                'SF.INC', 'ARENA.INC', 'INTNAT.INC', 'MI.INC',
+                'FILEMODE.INC', 'ERROR.INC', 'VERSION.INC', 'PARSE.ASM',
+                'DEVSYM.INC', 'MFT.INC', 'DPL.ASM', 'DOSSEG.ASM',
+                # The kernel's own modules, which the link file reads with
+                # SHARE's: the four SHARE.LNK names, and the five files
+                # they read between them.  Nothing here is a header the
+                # sharer's modules include -- they EXTRN what they want of
+                # it -- but the declarations are what say how a name is
+                # spelt and how wide it is, and an EXTRN says neither.
+                # Without them the sharer's own spelling of a name it did
+                # not declare is the one that is written, which is how
+                # WFP_Start came out of a module that EXTRNs WFP_START and
+                # MS_DATA.ASM declares as WFP_START.  They are in the
+                # order the linker read them, so where two of them have a
+                # name the first is the one that gives the spelling.
+                'NIBDOS.ASM', '../DOS/MSSW.ASM', '../DOS/MSCONST.ASM',
+                'CONST2.ASM', 'MSDATA.ASM', 'MS_DATA.ASM',
+                '../DOS/MSINIT.ASM', 'MSDOSME.ASM', '../DOS/DOSMES.ASM'),
+        # GSHARE2's own interrupt 2FH handler, which it hooks so that a
+        # second copy of SHARE finds the first, against the stub of that
+        # name SHARELNK lays down for the kernel modules that call the
+        # kernel's.  MASM assembled the two apart and only SHARELNK's is
+        # PUBLIC, so the handler is the one that gives way.
+        PRIVATE={'GSHARE2.ASM': (('INT2F', 'INT2F_'),)},
+        # Four EQUs GSHARE2 reads above the line that declares them.
+        # Three are message numbers, which SHARE's own block of them
+        # declares at the end of the module where the parse table and the
+        # routines that print them stand well above it, and the fourth says
+        # a parser switch takes a file name.  MASM resolved them on its
+        # second pass, and fasm wants a number it can resolve wherever it
+        # stands rather than an EQU it has not read yet.
+        FORWARD=('Bad_DOS_Ver', 'FILE_SWITCH', 'No_Mem_Error',
+                 'Sh_Already_Loaded'),
+        # Four of the fourteen routines the kernel reaches the sharer
+        # through, in the spelling the jump table's entries are pasted
+        # together from.  GSHARE2 declares each entry in an IRP block, as a
+        # J and the name of the routine it calls -- "J&rtn proc far" -- and
+        # the table below it is fourteen DDs of those names written out.
+        # MASM read a name in any case, so the paste and the DD met
+        # whatever case either was in; fasm pastes the letters as they
+        # stand, so the name has to be spelt the one way in both.  The
+        # table's spelling is the one that is kept, the other ten names
+        # being in it already, and the declarations take it with them.
+        #
+        # And sixteen of SHARELNK's stubs, in the spelling the kernel's own
+        # modules read them at.  SHARELNK writes most of its forty-four
+        # names in capitals where the module that reaches one writes it in
+        # mixed case -- BADCALL against MSCONST's BadCall, SYSINITTABLE
+        # against MSINIT's SysInitTable, Swap_in_DOS_Len against its
+        # SWAP_IN_DOS_LEN -- and MASM read the two as one name.  The
+        # kernel's modules are converted already and are read as they
+        # stand, so theirs is the spelling that is kept here.
+        SPELLING={'mft_enter': 'MFT_Enter', 'mftclose': 'MFTClose',
+                  'clr_mult_block': 'Clr_Mult_Block',
+                  'mft_get': 'MFT_Get',
+                  'backsp': 'BackSp', 'badcall': 'BadCall',
+                  'copystr': 'CopyStr', 'fastopentable': 'FastOpenTable',
+                  'header': 'Header', 'okcall': 'OKCall',
+                  'packet_temp': 'Packet_Temp',
+                  'stay_resident': 'Stay_resident',
+                  'sysinittable': 'SysInitTable', 'twoesc': 'TwoEsc',
+                  'dup_pdb$': 'Dup_PDB$',
+                  'swap_in_dos': 'SWAP_IN_DOS',
+                  'swap_in_dos_len': 'SWAP_IN_DOS_LEN',
+                  'swap_always_area': 'SWAP_ALWAYS_AREA',
+                  'swap_always_area_len': 'SWAP_ALWAYS_AREA_LEN',
+                  # the four critical sections CONST2's CritPatch table
+                  # names, which it pastes out of the section's own name:
+                  # the sharer patches each of these addresses to a PUSH AX
+                  # when it installs itself
+                  'ecritdisk': 'EcritDisk', 'lcritdisk': 'LcritDisk',
+                  'ecritdevice': 'EcritDevice',
+                  'lcritdevice': 'LcritDevice'},
+        # Every routine in the Share segment says ASSUME SS:DOSGROUP,
+        # CS:SHARE at the head of the module: the sharer is called from
+        # inside the kernel, which has its own data segment on SS, and
+        # reads nothing through DS or ES until it says so itself.
+        START={'cs': 'SHARE', 'ds': None, 'es': None, 'ss': 'DOSGROUP'},
+        # SHARESR is the parser and the message retriever, which run before
+        # the sharer is installed and so on SHARE's own stack, and
+        # SHARELNK's stubs stand in the kernel's code segment.  Each says
+        # as much at its head and neither names SS.
+        STARTS={'SHARESR.ASM': {'cs': 'SHARE', 'ds': None,
+                                'es': None, 'ss': None},
+                'SHARELNK.ASM': {'cs': 'DOSGROUP', 'ds': None,
+                                 'es': None, 'ss': None}},
+        # Five places where a conditional on Installed stands round a
+        # segment directive, which cannot be left to the assembler: a
+        # segment is a pass of the walk here, and the IF that chooses one
+        # would be read inside the guard the segment opens rather than
+        # round it.  Installed is TRUE and SHARE.EXE is the only thing
+        # these modules are ever assembled as -- the other way round they
+        # are part of the kernel's own code segment, which is how the
+        # sharer was built before it was a program -- so the dead branch
+        # goes and the live one is left as the release wrote it.
+        # Six places where a conditional on Installed stands round a
+        # segment directive, and the two macros each half declares for
+        # itself.  A conditional round a segment cannot be left to the
+        # assembler: a
+        # segment is a pass of the walk here, and the IF that chooses one
+        # would be read inside the guard the segment opens rather than
+        # round it.  Installed is TRUE and SHARE.EXE is the only thing
+        # these modules are ever assembled as -- the other way round they
+        # are part of the kernel's own code segment, which is how the
+        # sharer was built before it was a program -- so the dead branch
+        # goes and the live one is left as the release wrote it.
+        EARLY={'GSHARE.ASM': [
+            ("\tIF\tNOT INSTALLED\n"
+             "CODE\t    SEGMENT BYTE PUBLIC 'CODE'\n"
+             "\t    ASSUME  SS:DOSGROUP,CS:DOSGROUP\n"
+             "\tELSE\n",
+             ";\tIF\tNOT INSTALLED\n"
+             ";CODE\t    SEGMENT BYTE PUBLIC 'CODE'\n"
+             ";\t    ASSUME  SS:DOSGROUP,CS:DOSGROUP\n"
+             ";\tELSE\n"),
+            ("\t    ASSUME  SS:DOSGROUP,CS:SHARE\n\tENDIF\n",
+             "\t    ASSUME  SS:DOSGROUP,CS:SHARE\n;\tENDIF\n"),
+            # The two macros each of the sharer's halves declares for
+            # itself.  OFF loads a register with a name's offset, which is
+            # the name itself where the sharer is a segment of its own and
+            # the group with the name after it where it is part of the
+            # kernel's code.  It is written in fasm's shape, the body left
+            # as the release wrote it; the eleven calls spell it Off and
+            # off, which the rules bring to the one spelling as they bring
+            # any other reference to its declaration's.  ERRNZ is
+            # INC/DOSMAC.INC's own macro of that name written again, with a
+            # %OUT where DOSMAC stops the assembly: it goes, and the four
+            # calls are DOSMAC's, which answers to that spelling as of this
+            # release.
+            ("OFF\t\t\t\t   Macro reg,val\n"
+             "\t\t\t\t   IF\tinstalled\n"
+             "\t\t\t\t   mov\treg,OFFSET val\n"
+             "\t\t\t\t   ELSE\n"
+             "\t\t\t\t   mov\tsi,OFFSET DOSGROUP:val\n"
+             "\t\t\t\t   ENDIF\n"
+             "\t\t\t\t   ENDM\n",
+             ";OFF\t\t\t\t   Macro reg,val\n"
+             "\t\t\t\t   macro OFF reg,val\n"
+             "\t\t\t\t   {\n"
+             "\t\t\t\t   IF\tinstalled\n"
+             "\t\t\t\t   mov\treg,OFFSET val\n"
+             "\t\t\t\t   ELSE\n"
+             "\t\t\t\t   mov\tsi,OFFSET DOSGROUP:val\n"
+             "\t\t\t\t   ENDIF\n"
+             "\t\t\t\t   }\n"),
+            ("ERRNZ\t\t\t\t   Macro x\n"
+             "\t\t\t\t   IF\tx NE 0\n"
+             "\t\t\t\t   %out ERRNZ failed\n"
+             "\t\t\t\t   ENDIF\n"
+             "\t\t\t\t   ENDM\n",
+             ";ERRNZ\t\t\t\t   Macro x\n"
+             ";\t\t\t\t   IF\tx NE 0\n"
+             ";\t\t\t\t   %out ERRNZ failed\n"
+             ";\t\t\t\t   ENDIF\n"
+             ";\t\t\t\t   ENDM\n"),],
+               'GSHARE2.ASM': [
+            ("\tIF\tNOT\tINSTALLED\n\n"
+             "\t    CODE    SEGMENT BYTE PUBLIC 'CODE'\n\n"
+             "\t    ASSUME  SS:DOSGROUP,CS:DOSGROUP\n\n"
+             "\tELSE\n",
+             ";\tIF\tNOT\tINSTALLED\n\n"
+             ";\t    CODE    SEGMENT BYTE PUBLIC 'CODE'\n\n"
+             ";\t    ASSUME  SS:DOSGROUP,CS:DOSGROUP\n\n"
+             ";\tELSE\n"),
+            ("\t    ASSUME  SS:DOSGROUP,CS:SHARE\n\n\tENDIF\n",
+             "\t    ASSUME  SS:DOSGROUP,CS:SHARE\n\n;\tENDIF\n"),
+            # The lock records the kernel's own copy of the sharer kept in
+            # its code segment, and the ENDS that closed it.  The whole
+            # block is the not-installed half and lays nothing down here.
+            ("\n       CODE ENDS\n", "\n;      CODE ENDS\n"),
+            # The IF round everything from the pool to the end of the
+            # program, whose ENDIF stands after the stack segment: left in,
+            # the ENDS that closes the sharer's own segment would close
+            # this instead and the stack would be laid down inside a guard
+            # that is never true.
+            ("\nIF Installed\n\n"
+             "   ASSUME CS:SHARE,DS:NOTHING,ES:NOTHING,SS:NOTHING\n",
+             "\n;IF Installed\n\n"
+             "   ASSUME CS:SHARE,DS:NOTHING,ES:NOTHING,SS:NOTHING\n"),
+            ("   STACK ENDS\n\nENDIF\n", "   STACK ENDS\n\n;ENDIF\n"),
+            # The same two, declared again in this half.
+            ("OFF\t\t\t\t   Macro reg,val\n"
+             "\t\t\t\t   IF\tinstalled\n"
+             "\t\t\t\t   mov\treg,OFFSET val\n"
+             "\t\t\t\t   ELSE\n"
+             "\t\t\t\t   mov\tsi,OFFSET DOSGROUP:val\n"
+             "\t\t\t\t   ENDIF\n"
+             "\t\t\t\t   ENDM\n",
+             ";OFF\t\t\t\t   Macro reg,val\n"
+             "\t\t\t\t   macro OFF reg,val\n"
+             "\t\t\t\t   {\n"
+             "\t\t\t\t   IF\tinstalled\n"
+             "\t\t\t\t   mov\treg,OFFSET val\n"
+             "\t\t\t\t   ELSE\n"
+             "\t\t\t\t   mov\tsi,OFFSET DOSGROUP:val\n"
+             "\t\t\t\t   ENDIF\n"
+             "\t\t\t\t   }\n"),
+            ("ERRNZ\t\t\t\t   Macro x\n"
+             "\t\t\t\t   IF\tx    NE 0\n"
+             "\t\t\t\t   %out ERRNZ failed\n"
+             "\t\t\t\t   ENDIF\n"
+             "\t\t\t\t   ENDM\n",
+             ";ERRNZ\t\t\t\t   Macro x\n"
+             ";\t\t\t\t   IF\tx    NE 0\n"
+             ";\t\t\t\t   %out ERRNZ failed\n"
+             ";\t\t\t\t   ENDIF\n"
+             ";\t\t\t\t   ENDM\n"),]},
+        PATCHES={'GSHARE2.ASM': [
+            # Four reads of a sharing local FCB, whose width MASM took
+            # from the register on the other side.  INC/CPMFCB.INC lays the
+            # four fields out past the end of the FCB structure, as numbers
+            # measured from the reserved bytes -- fcb_l_mfs EQU
+            # (sys_fcb.fcb_reserved+4) -- and MASM read an EQU of an
+            # expression as a number with no type at all.  fasm keeps the
+            # width the field was declared with, which is a byte, so each
+            # of these came out a byte against a word register.  The width
+            # is said on the line, as the kernel's own reads of the same
+            # fields say it.
+            ("   CMP\tBX,[SI].fcb_l_mfs\n",
+             "   CMP\tBX,WORD PTR [SI].fcb_l_mfs\n"),
+            ("   MOV\tBX,[SI].fcb_l_firclus\n",
+             "   MOV\tBX,WORD PTR [SI].fcb_l_firclus\n"),
+            ("   MOV\t[SI].FCB_l_firclus,AX\n",
+             "   MOV\tWORD PTR [SI].FCB_l_firclus,AX\n"),
+            ("   MOV\t[SI].FCB_l_mfs,BX\n",
+             "   MOV\tWORD PTR [SI].FCB_l_mfs,BX\n"),
+            # A RestoreReg with nothing to restore, standing two lines
+            # above the one that restores the seven registers CPS saved.
+            # MASM read the < as the start of a literal and took the rest
+            # of the line for it, which was nothing, so the macro's IRP ran
+            # over an empty list and the line laid down not a byte.  fasm
+            # reads the arguments and finds the bracket unclosed.
+            ("   RestoreReg <\n", ";   RestoreReg <\n"),
+            # The room the sharer's pool has, which is the larger of the
+            # 2048 bytes it asks for and whatever is left between the table
+            # and the initialisation code that is thrown away -- MASM could
+            # not measure that on its first pass, so the IF1 gave it the
+            # 2048 and the second pass worked it out.  fasm resolves the
+            # span wherever it stands, so the first pass's answer goes and
+            # the second pass's is the one that is left.
+            ('   IF1\nInitSpace DW PoolSize\n   ELSE\n',
+             ';   IF1\n;InitSpace DW PoolSize\n;   ELSE\n'),
+            ('       ENDIF\n   ENDIF\nInitLocks DW 20\n',
+             '       ENDIF\n;   ENDIF\nInitLocks DW 20\n')]},
+    ),
 }
 
 NAME = sys.argv[1].upper() if len(sys.argv) > 1 else ''
@@ -778,7 +1063,10 @@ HEADERS = U.get('HEADERS', ())
 
 
 def shared(name):
-    return open(HERE + 'src/INC/' + name,
+    # A name with a directory on the front of it reaches outside src/INC:
+    # SHARE's link file reads four of the kernel's modules, and three of the
+    # files those read between them are in src/DOS.
+    return open(os.path.normpath(HERE + 'src/INC/' + name),
                 encoding='cp437', newline='').read().replace('\r\n', '\n')
 
 
@@ -834,6 +1122,25 @@ def code_of(line):
 
 
 STRING = re.compile(r"'[^']*'|\"[^\"]*\"")
+
+
+def unquoted(code, change):
+    """A change made to a line's code with its string literals held out of
+    the way, for a rule that has to read the line from one end.
+
+    outside_strings above works on the pieces between the quotes, which is
+    enough for a rule that reads a name wherever it stands; a rule anchored
+    on the start of the line cannot see that far once the line is in pieces.
+    So each literal comes out, the change is made, and they go back.
+    """
+    held = []
+
+    def hide(m):
+        held.append(m.group(0))
+        return '\x03%d\x03' % (len(held) - 1)
+
+    return re.sub(r"\x03(\d+)\x03", lambda m: held[int(m.group(1))],
+                  change(STRING.sub(hide, code)))
 
 
 def outside_strings(pattern, now, code):
@@ -893,7 +1200,49 @@ def parser_names(text):
 # written in, so a name that collides collides in every spelling.
 RESERVED = U.get('RESERVED', ())
 
-source = {m: dollars(parser_names(read(m)), TAG[m])
+# MASM stopped at END: the assembly was over there, and whatever stood
+# below was text in a file and nothing more.  GSHARE.ASM ends with the last
+# two dozen lines of itself written out twice -- the END, the ELSE that
+# would have closed the segment the other way, and then the whole tail of
+# GOM again -- so a reading that went past the END would meet a second gom2
+# and a second GOM, which one assembly cannot have.
+#
+# The lines below the END that carry code go out commented, the way a
+# directive does.  A comment, a blank line and the end-of-file mark are left
+# as they stand, being nothing either way, so this changes no module whose
+# END is its last word -- which is every other one.
+AFTEREND = re.compile(r"(?i)^\s*END"
+                      r"(?!\s+(?:if|virtual|struc|match|macro)\b)"
+                      r"(\s+" + N + r")?\s*$")
+
+
+def after_end(text):
+    lines = text.split('\n')
+    for i, line in enumerate(lines):
+        if AFTEREND.match(code_of(line)):
+            rest = [';' + l if l.split(';')[0].strip(' \t\x1a') else l
+                    for l in lines[i + 1:]]
+            return '\n'.join(lines[:i + 1] + rest)
+    return text
+
+
+# The lines of a module that have to stand in for the release's own before
+# anything at all reads it -- a conditional round a SEGMENT directive, which
+# is a pass of the walk here and cannot be left to the assembler to choose,
+# and a macro the module declares for itself, which the rules below would
+# read as the code it is not.  Everything else a module needs written for it
+# is in PATCHES, which goes on after the rules have had their say.
+EARLY = U.get('EARLY', {})
+
+
+def seg_patched(stem, text):
+    for was, now in EARLY.get(stem, ()):
+        assert was in text, (stem, was)
+        text = text.replace(was, now, 1)
+    return text
+
+
+source = {m: dollars(parser_names(after_end(seg_patched(m, read(m)))), TAG[m])
           for m in MODULES}
 
 # MASM assembled the modules apart, so each could keep a name of its own
@@ -1377,13 +1726,26 @@ def grouped(text):
     in a DW, which is how XCOPYPAR writes the parser's pointers -- and is
     marked where it is a place, to be resolved where the ASSUMEs can be read.
     """
-    text = re.sub(r"(?i)\boffset[ \t]+(?:" + SEGPAT + r")[ \t]*:[ \t]*",
-                  'offset ', text)
-    text = re.sub(r"(?mi)^([ \t]*(?:" + N + r"[ \t]+)?d[bwdq][ \t]+"
-                  r"(?:[^;\n]*,)?[ \t]*)(?:" + SEGPAT + r")[ \t]*:[ \t]*",
-                  lambda m: m.group(1), text)
-    return re.sub(r"(?i)(?<![\w.])(" + SEGPAT + r")[ \t]*:[ \t]*",
-                  lambda m: '\x01%s\x02' % m.group(1).upper(), text)
+    def one(code):
+        code = re.sub(r"(?i)\boffset[ \t]+(?:" + SEGPAT + r")[ \t]*:[ \t]*",
+                      'offset ', code)
+        code = re.sub(r"(?mi)^([ \t]*(?:" + N + r"[ \t]+)?d[bwdq][ \t]+"
+                      r"(?:[^;\n]*,)?[ \t]*)(?:" + SEGPAT
+                      + r")[ \t]*:[ \t]*",
+                      lambda m: m.group(1), code)
+        return re.sub(r"(?i)(?<![\w.])(" + SEGPAT + r")[ \t]*:[ \t]*",
+                      lambda m: '\x01%s\x02' % m.group(1).upper(), code)
+
+    # A segment's name inside a string is a word of the message and not a
+    # qualifier: GSHARE2 hangs on an internal error with "Share: Internal
+    # error", and Share is the segment the whole sharer is in, so the
+    # message came out saying "[cs:Internal] error".
+    out = []
+    for line in text.split('\n'):
+        j = comment_at(line)
+        code, note = (line, '') if j < 0 else (line[:j], line[j:])
+        out.append(unquoted(code, one) + note)
+    return '\n'.join(out)
 
 
 def declarations(text):
@@ -1823,9 +2185,14 @@ MACROS = U.get('MACROS', {})
 for ending in ('\tendm\t\t\t\t;AN000;',):
     MACROS[ending] = '}'
 
-# MASM's ORG inside a segment wrote the filler it skipped over; fasm's moves
-# the address counter and writes nothing, which would put the addresses out
-# of step with the file.  ALIGN is the same thing said in a way that writes.
+
+# The lines of a module this cannot write for itself, each given as the text
+# the release wrote and the text to put there -- MASM's ORG inside a segment
+# wrote the filler it skipped over, where fasm's moves the address counter
+# and writes nothing, and ALIGN is the same thing said in a way that writes.
+# These go on after the rules above have had their say, so a patch can name
+# a thing by the name they gave it: MODE's names the colon_byte the rules
+# made of MODEPARS's colon.
 PATCHES = U.get('PATCHES', {})
 
 
@@ -1834,6 +2201,31 @@ SWITCHES = {'FARSW': 'FarSW', 'DATESW': 'DateSW', 'TIMESW': 'TimeSW',
             'QUSSW': 'QusSW', 'NUMSW': 'NumSW', 'KEYSW': 'KeySW',
             'SWSW': 'SwSW', 'VAL1SW': 'Val1SW', 'VAL2SW': 'Val2SW',
             'VAL3SW': 'Val3SW', 'INCSW': 'IncSW', 'BASESW': 'BaseSW'}
+
+
+MASMREL = {'EQ': '=', 'NE': '<>', 'LT': '<', 'GT': '>', 'LE': '<=',
+           'GE': '>='}
+
+
+def relations(text):
+    """MASM's words for a comparison in a conditional, in fasm's signs.
+
+    GSHARE2 asks whether the room between the table and the initialisation
+    code that is thrown away comes to less than the pool the sharer wants
+    -- IF shareinit-MFT LT PoolSize -- and fasm reads LT as a name.  Only
+    the assembler's own IF is rewritten, and only a word standing alone in
+    it: the structured statements the preprocessor left behind carry these
+    words too, and INC/STRUC.INC is what takes those apart.
+    """
+    out = []
+    for line in text.split('\n'):
+        j = comment_at(line)
+        code, note = (line, '') if j < 0 else (line[:j], line[j:])
+        if re.match(r"(?i)^[ \t]*(?:ELSE)?IF[ \t]", code):
+            code = re.sub(r"(?i)(?<=\s)(" + '|'.join(MASMREL) + r")(?=\s)",
+                          lambda m: MASMREL[m.group(1).upper()], code)
+        out.append(code + note)
+    return '\n'.join(out)
 
 
 def switched(text):
@@ -2610,6 +3002,50 @@ SEGOF = {}
 FARSEG = {}
 
 
+def declared_in(code, here):
+    """What one line declares, and the segment it declares it in."""
+    # A procedure is in the segment it stands in like anything else,
+    # and a DD of its name is a far pointer to it: FASTOPEN's fifteen
+    # jump vectors are DDs of procedures, and without this every one of
+    # them was laid down with an offset and a zero segment -- which is
+    # what the kernel then far-called through.
+    m = re.match(r"(?i)^[ \t]*(" + N + r")\s+(?:d[bwdq]|label|proc)\b",
+                 code)
+    if m and here:
+        SEGOF.setdefault(m.group(1).lower(), here)
+    # A name declared FAR, by a PROC, by a LABEL, or by the procedure
+    # macro of INC/DOSMAC.INC.
+    m = re.match(r"(?i)^[ \t]*(?:(" + N + r")\s+(?:proc|label)|"
+                 r"procedure\s+(" + N + r")[ \t]*,)[ \t]*far\b", code)
+    if m and here:
+        FARSEG.setdefault((m.group(1) or m.group(2)).lower(), here)
+    # A name given a colon and the bytes laid down under it, which MASM
+    # read from memory like any other: APPEND writes version_loc: over
+    # the two bytes of its version and reads them as BYTE PTR
+    # version_loc.  The name is only reached through this where it
+    # stands in brackets already, so a label the program jumps to is
+    # none the worse for being known.
+    m = re.match(r"^[ \t]*(" + N + r"):", code)
+    if m and here:
+        SEGOF.setdefault(m.group(1).lower(), here)
+    # an instance of a structure is storage like any other
+    m = re.match(r"(?i)^[ \t]*(" + N + r")[ \t]+(" + N + r")", code)
+    if m and here and m.group(2).lower() in STRUC_CASE:
+        SEGOF.setdefault(m.group(1).lower(), here)
+    # Storage another module lays down, which MASM knew the segment of
+    # because the EXTRN stands in that segment: that is how it chose the
+    # register to reach the name through.  SHARE reads two dozen of the
+    # kernel's variables and declares every one of them inside a CONSTANTS
+    # or a DATA block of its own, both of them segments of DOSGROUP, which
+    # is the group its ASSUME puts SS on -- so each of those reads is an
+    # SS override, and without this not one of them had it.
+    m = re.match(r"(?i)^[ \t]*ext?rn[ \t]+(.*)$", code)
+    if m and here:
+        for nm in re.findall(r"(?i)(" + N + r")[ \t]*:[ \t]*"
+                             r"(?:byte|word|dword|qword|abs)\b", m.group(1)):
+            EXTRNOF.setdefault(nm.lower(), here)
+
+
 def segments_of(stem, here):
     """The names one module declares, and the names of whatever it reads
     while a segment of that module is open.
@@ -2620,8 +3056,33 @@ def segments_of(stem, here):
     INCLUDE stood in is what MASM did, and it is what the link file's walk
     does here.
     """
+    # An IRP block, which declares its names once per item in its list:
+    # the parameter, the list, and the lines gathered so far.  GSHARE2
+    # declares the fourteen entries of its jump table in two of them, each
+    # entry a J and the name of the routine it calls, and the table under
+    # them is fourteen DDs of those names -- so without reading the block
+    # the segment half of every one of them would be laid down as nought.
+    irp = None
     for line in source[stem].split('\n'):
         code = code_of(line)
+        if irp is not None:
+            if re.match(r"(?i)^[ \t]*ENDM\b", code):
+                var, items, body = irp
+                irp = None
+                for item in items:
+                    for held in body:
+                        declared_in(re.sub(r"(?i)(?<![\w?$@])"
+                                           + re.escape(var)
+                                           + r"(?![\w?$@])", item, held)
+                                    .replace('&', ''), here)
+                continue
+            irp[2].append(code)
+            continue
+        m = re.match(r"(?i)^[ \t]*IRP[ \t]+(" + N + r")[ \t]*,[ \t]*"
+                     r"<([^>]*)>", code)
+        if m:
+            irp = (m.group(1), [i.strip() for i in m.group(2).split(',')], [])
+            continue
         m = re.match(r"(?i)^[ \t]*(" + N + r")\s+SEGMENT\b", code)
         if m:
             here = m.group(1).upper()
@@ -2630,34 +3091,7 @@ def segments_of(stem, here):
         if re.match(r"(?i)^[ \t]*" + N + r"\s+ENDS\b", code):
             here = None
             continue
-        # A procedure is in the segment it stands in like anything else,
-        # and a DD of its name is a far pointer to it: FASTOPEN's fifteen
-        # jump vectors are DDs of procedures, and without this every one of
-        # them was laid down with an offset and a zero segment -- which is
-        # what the kernel then far-called through.
-        m = re.match(r"(?i)^[ \t]*(" + N + r")\s+(?:d[bwdq]|label|proc)\b",
-                     code)
-        if m and here:
-            SEGOF.setdefault(m.group(1).lower(), here)
-        # A name declared FAR, by a PROC, by a LABEL, or by the procedure
-        # macro of INC/DOSMAC.INC.
-        m = re.match(r"(?i)^[ \t]*(?:(" + N + r")\s+(?:proc|label)|"
-                     r"procedure\s+(" + N + r")[ \t]*,)[ \t]*far\b", code)
-        if m and here:
-            FARSEG.setdefault((m.group(1) or m.group(2)).lower(), here)
-        # A name given a colon and the bytes laid down under it, which MASM
-        # read from memory like any other: APPEND writes version_loc: over
-        # the two bytes of its version and reads them as BYTE PTR
-        # version_loc.  The name is only reached through this where it
-        # stands in brackets already, so a label the program jumps to is
-        # none the worse for being known.
-        m = re.match(r"^[ \t]*(" + N + r"):", code)
-        if m and here:
-            SEGOF.setdefault(m.group(1).lower(), here)
-        # an instance of a structure is storage like any other
-        m = re.match(r"(?i)^[ \t]*(" + N + r")[ \t]+(" + N + r")", code)
-        if m and here and m.group(2).lower() in STRUC_CASE:
-            SEGOF.setdefault(m.group(1).lower(), here)
+        declared_in(code, here)
         m = re.match(r"(?i)^[ \t]*include[ \t]+'?([A-Za-z0-9_.]+)'?", code)
         if m:
             name = m.group(1).upper()
@@ -2665,8 +3099,17 @@ def segments_of(stem, here):
                 segments_of(name, here)
 
 
+# Where an EXTRN said a name is, which is read only for a name no module
+# lays down itself: XCPYINIT declares EXTRN RESULT_PTR1:DWORD inside its own
+# code segment where XCOPYPAR lays the word down in the data, and the
+# declaration is the one that knows.
+EXTRNOF = {}
+
 for stem in MODULES:
     segments_of(stem, None)
+
+for name, where in EXTRNOF.items():
+    SEGOF.setdefault(name, where)
 
 
 # The names a module gives an index register.  MASM's EQU put the register
@@ -2785,6 +3228,15 @@ def structures(code):
     the parm_list entry after the one it is on as
     parm_list[current_parm_DI+TYPE parm_list_entry].item_tag, and the room
     an entry takes has become sizeof.parm_list_entry by now.
+
+    What is added or taken away after the field can carry a dot of its own,
+    and that part belongs to the reference: GSHARE2 finds the link in front
+    of the first SFT on a name record with LEA SI,[BX].mft_sptr-sf_chain,
+    so that [SI].sf_chain is the record's own pointer, and by this point the
+    bare field is written sf_entry.sf_chain.  Read as a plain word it broke
+    in two at the dot, the rest of it was folded in again with a plus, and
+    the subtraction became an addition -- which lost the sharer every SFT
+    it was given to close.
     """
     def one(m):
         reg, field, tail = m.group(1), m.group(2), m.group(3)
@@ -2818,12 +3270,12 @@ def structures(code):
                   r"(?:\s*\+\s*(?:" + BASEPAT + r"))?"
                   r"(?:\s*[-+]\s*\w+(?!\.))?)\s*\.(" + N
                   + r"(?:\." + N + r")*)"
-                  r"((?:\s*[-+]\s*\w+)?)\s*\]", one, code)
+                  r"((?:\s*[-+]\s*[\w.$@?]+)?)\s*\]", one, code)
     code = re.sub(r"(?i)\[\s*((?:(?:cs|ds|es|ss):)?(?:" + BASEPAT + r")"
                   r"(?:\s*\+\s*(?:" + BASEPAT + r"))?"
                   r"(?:\s*[-+]\s*\w+(?!\.))?)\s*\]\s*\.(" + N
                   + r"(?:\." + N + r")*)"
-                  r"((?:\s*[-+]\s*\w+)?)", one, code)
+                  r"((?:\s*[-+]\s*[\w.$@?]+)?)", one, code)
     # The index with no brackets at all, which MASM read as a reference
     # just the same: MODEVID passes video_info_DI.active_display to a macro
     # that moves it into AL.  An instruction's own operands are left to the
@@ -2833,7 +3285,8 @@ def structures(code):
     if NAMEDREG and not re.match(LED + MNEM + r")\s+)", code, re.I):
         code = re.sub(r"(?i)(?<![\w.$\]])((?:" + "|".join(
             sorted(map(re.escape, NAMEDREG), key=len, reverse=True))
-            + r"))\s*\.(" + N + r")((?:\s*[-+]\s*\w+)?)", one, code)
+            + r"))\s*\.(" + N + r")((?:\s*[-+]\s*[\w.$@?]+)?)",
+            one, code)
 
     return code
 
@@ -2964,8 +3417,16 @@ def fielded(code):
         return '[%s+%s.%s%s]' % (inside, found[0], found[1],
                                  tail.replace(' ', ''))
 
+    # What is added or taken away after the field can be a field itself,
+    # which by this point is written with the structure it belongs to:
+    # GSHARE2 finds the link in front of the first SFT on a name record with
+    # LEA SI,[BX].mft_sptr-sf_chain, so that [SI].sf_chain is the record's
+    # own pointer.  Read as a plain word the name broke in two at the dot
+    # and the rest of it was folded in again with a plus, which turned the
+    # subtraction into an addition and lost the sharer every SFT it was
+    # given to close.
     return re.sub(r"(?i)\[([^\]]*)\]\s*\.(" + N + r")"
-                  r"((?:\s*[-+]\s*\w+)?)", one, code)
+                  r"((?:\s*[-+]\s*[\w.$@?]+)?)", one, code)
 
 
 def indexed(code):
@@ -3317,8 +3778,15 @@ SEGEND = re.compile(r"(?i)^[ \t]*(" + N + r")\s+ENDS\b")
 ENDALL = re.compile(r"(?i)^\s*END(?!\s+(?:if|virtual|struc|match|macro)\b)(\s+" + N + r")?\s*$")
 LABELDEF = re.compile(r"(?i)^[ \t]*(" + N + r")(\s+)label(\s+)(byte|word|dword)\s*$")
 CODELABEL = re.compile(r"(?i)^[ \t]*(" + N + r")\s+label\s+(?:near|far)\s*$")
-PROC = re.compile(r"(?i)^[ \t]*(" + N + r")\s+proc(?:\s+(near|far))?\s*$")
-ENDP = re.compile(r"(?i)^[ \t]*" + N + r"\s+endp\s*$")
+# A procedure whose name a macro pastes together, which by this point is
+# written with the hash fasm pastes with: GSHARE2 declares the fourteen
+# entries of its jump table in two IRP blocks, each a J and the name of the
+# routine it calls -- "J&rtn proc far" -- so the name here is not one the
+# release could write out.
+PASTE = r"[A-Za-z_@?$][A-Za-z0-9_@?$#]*"
+PROC = re.compile(r"(?i)^[ \t]*(" + PASTE
+                  + r")\s+proc(?:\s+(near|far))?\s*$")
+ENDP = re.compile(r"(?i)^[ \t]*" + PASTE + r"\s+endp\s*$")
 ENDPROC = re.compile(r"(?i)^[ \t]*endproc\b")
 
 done = {}
@@ -3363,6 +3831,7 @@ for stem in MODULES:
     for was, now in PATCHES.get(stem, ()):
         assert was in text, (stem, was)
         text = text.replace(was, now, 1)
+    text = relations(text)
     out, infar, noted, measured = [], False, False, False
     opened = []
     # how many instances of each structure the module has written with no
@@ -3803,7 +4272,8 @@ for stem in MODULES:
 DECL = re.compile(r"(?i)^\s*(?:(" + N + r"):|(" + N + r")\s+(?:(?:db|dw|dd|"
                   r"rb|rw|rd|equ)\b|=)|label\s+(" + N + r")\b|macro\s+(" + N
                   + r")\b|Define_Msg\s+(" + N + r")\b|Procedure\s+("
-                  + N + r")\b|STRUC\s+(" + N + r")\b)")
+                  + N + r")\b|STRUC\s+(" + N + r")\b|I_am\s+("
+                  + N + r")\b)")
 # The program's own modules name a thing first; the shared headers under
 # src/INC come after, so a name they both have takes the module's spelling.
 # MASM did not mind the case and fasm does, so a reference has to be written

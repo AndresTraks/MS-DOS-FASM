@@ -286,3 +286,13 @@ utility KEYB KEYBLNK KEYB.COM
 # program twice; GRAPHLNK.ASM reads each copy under names of its own.  The
 # release links the thirteen and runs EXE2BIN over the result.
 utility GRAPHICS GRAPHLNK GRAPHICS.COM
+
+# SHARE, eight modules in eight segments and three address spaces -- which
+# SHRLNK.ASM lays down in turn.  Four of the eight are the kernel's own:
+# SHARE.LNK links NIBDOS, CONST2, MSDATA and MSDOSME in beside the sharer's
+# three modules and SHARELNK's stubs, because the sharer runs inside the
+# kernel and reads the kernel's data through SS at the offset this assembly
+# gives each name.  So DOSGROUP comes out here as it comes out in MSDOS.SYS,
+# and tests/share.sh holds the one against the other.  The release links the
+# eight and stops: this is an .EXE in its own right.
+utility SHARE SHRLNK SHARE.EXE

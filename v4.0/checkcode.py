@@ -293,6 +293,28 @@ DROPPED = {"PUBLIC", "EXTRN", "ASSUME", "PROC", "ENDP", "LABEL", "ENDS",
            "PURGE", "COMMENT", "ERRNZ", "DISPLAY", "ERR", "RESTORE"}
 
 
+ENDLINE = re.compile(r"(?i)^\s*END"
+                     r"(?!\s+(?:if|virtual|struc|match|macro)\b)"
+                     r"(\s+[A-Za-z_@?$][A-Za-z0-9_@?$]*)?\s*$")
+
+
+def before_end(lines):
+    """The release's lines down to its END, which is where MASM stopped.
+
+    GSHARE.ASM writes the last two dozen lines of itself out twice, the
+    second copy below the END: MASM read none of it, and convert.py sends
+    it out commented, so there is nothing here for those lines to be held
+    against.  A file whose END is its last word -- which is every other one
+    -- is left whole.
+    """
+    for i, line in enumerate(lines):
+        if ENDLINE.match(line.split(";")[0]):
+            if any(l.split(";")[0].strip(" \t\x1a") for l in lines[i + 1:]):
+                return lines[:i + 1]
+            break
+    return lines
+
+
 def sequence(lines):
     """Each line's instruction, the directives and the declarations aside."""
     out = []
@@ -336,7 +358,7 @@ def main():
         orig = origin(os.path.relpath(os.path.join(HERE, rel), REPO))
         if orig is None:
             continue
-        was = orig.replace("\r\n", "\n").split("\n")
+        was = before_end(orig.replace("\r\n", "\n").split("\n"))
         now = open(os.path.join(HERE, rel), encoding="cp437").read().split("\n")
         if len(was) != len(now):
             lengths += 1
@@ -360,7 +382,7 @@ def main():
         orig = origin(os.path.relpath(os.path.join(HERE, rel), REPO))
         if orig is None:
             continue
-        was = orig.replace("\r\n", "\n").split("\n")
+        was = before_end(orig.replace("\r\n", "\n").split("\n"))
         now = open(os.path.join(HERE, rel), encoding="cp437").read().split("\n")
         if was != now:
             total += addresses(rel, was, now)

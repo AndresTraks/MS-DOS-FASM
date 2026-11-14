@@ -41,7 +41,7 @@
 ;	     PARSE.SAL statement.
 ;
 ; EXIT-NORMAL:	Output registers:
-;	 AX - return cs:
+;	 AX - return code:
 ;	    RC_No_Error     equ     0	 ; No error
 ;	    RC_EOL	    equ     -1	 ; End of command line
 ;
@@ -51,7 +51,7 @@
 ;	 SI - set past scanned operand
 ;
 ; EXIT-ERROR: Output registers:
-;	 AX - return cs:
+;	 AX - return code:
 ;	    RC_Too_Many     equ     1	 ; Too many operands
 ;	    RC_Op_Missing   equ     2	 ; Required operand missing
 ;	    RC_Not_In_SW    equ     3	 ; Not in switch list provided

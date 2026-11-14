@@ -1,213 +1,213 @@
         PAGE    ,132                            ; 
 ;       SCCSID = @(#)SHARELNK.asm 1.0 87/05/11
 TITLE   SHARELNK LINK FIX ROUTINES - Routines to resolve SHARE externals
-NAME    SHARELNK
+name    SHARELNK
 
 .xlist
 .xcref
-INCLUDE DOSSYM.INC
-INCLUDE DEVSYM.INC
+include 'DOSSYM.INC'
+include 'DEVSYM.INC'
 .cref
 .list
 
-CODE    SEGMENT BYTE PUBLIC 'CODE'
-code    ENDS
+if SEGSEL = S_CODE
+end if
 
-include dosseg.asm
+include 'DOSSEG.ASM'
 
 
-code    SEGMENT BYTE PUBLIC 'code'
-        ASSUME  CS:dosgroup
+if SEGSEL = S_CODE
+;        ASSUME  CS:dosgroup
 
-        PUBLIC  IRETT, SWAP_AREA_LEN, Hash_Temp
+;        PUBLIC  IRETT, SWAP_AREA_LEN, Hash_Temp
 IRETT   DW      0
 SWAP_AREA_LEN  DW  0
 Hash_Temp   DW  0
 
-procedure   LCRITDEVICE,FAR
+procedure   LcritDevice
         NOP
-Endproc LCRITDEVICE,FAR
+EndProc LcritDevice,FAR
 
-procedure   SETMEM,FAR
+procedure   SETMEM
         NOP
-endproc SETMEM,FAR
+EndProc SETMEM,FAR
 
-procedure   SKIPONE,FAR
+procedure   SKIPONE
         NOP
-endproc SKIPONE,FAR
+EndProc SKIPONE,FAR
 
-procedure   TWOESC,FAR
+procedure   TwoEsc
         NOP
-endproc TWOESC,FAR
+EndProc TwoEsc,FAR
 
-procedure   $STD_CON_STRING_INPUT_NO_ECHO,FAR
+procedure   STD_CON_STRING_INPUT_NO_ECHO$
         NOP
-endproc $STD_CON_STRING_INPUT_NO_ECHO,FAR
+EndProc STD_CON_STRING_INPUT_NO_ECHO$,FAR
 
-procedure   $STD_CON_INPUT_NO_ECHO,FAR
+procedure   STD_CON_INPUT_NO_ECHO$
         NOP
-endproc $STD_CON_INPUT_NO_ECHO,FAR
+EndProc STD_CON_INPUT_NO_ECHO$,FAR
 
-procedure   INT2F,FAR
+procedure   INT2F
         NOP
-endproc   INT2F,FAR
+EndProc   INT2F,FAR
 
-procedure   $dup_pdb,FAR
+procedure   Dup_PDB$
         NOP
-endproc   $dup_pdb,FAR
+EndProc   Dup_PDB$,FAR
 
-procedure   LEAVEDOS,FAR
+procedure   LEAVEDOS
         NOP
-endproc   LEAVEDOS,FAR
+EndProc   LEAVEDOS,FAR
 
-procedure   GETCH,FAR
+procedure   GETCH
         NOP
-endproc   GETCH,FAR
+EndProc   GETCH,FAR
 
-procedure   COPYONE,FAR
+procedure   COPYONE
         NOP
-endproc   COPYONE,FAR
+EndProc   COPYONE,FAR
 
-procedure   $SETDPB,FAR
+procedure   SETDPB$
         NOP
-endproc     $SETDPB,FAR
+EndProc     SETDPB$,FAR
 
-procedure   CALL_ENTRY,FAR
+procedure   CALL_ENTRY
         NOP
-endproc     CALL_ENTRY,FAR
+EndProc     CALL_ENTRY,FAR
 
-procedure   ECRITDISK,FAR
+procedure   EcritDisk
         NOP
-endproc     ECRITDISK,FAR
+EndProc     EcritDisk,FAR
 
-procedure   COPYLIN,FAR
+procedure   COPYLIN
         NOP
-endproc     COPYLIN,FAR
+EndProc     COPYLIN,FAR
 
-procedure   LCRITDISK,FAR
+procedure   LcritDisk
         NOP
-endproc     LCRITDISK,FAR
+EndProc     LcritDisk,FAR
 
-procedure   QUIT,FAR
+procedure   QUIT
         NOP
-endproc     QUIT,FAR
+EndProc     QUIT,FAR
 
-procedure   BACKSP,FAR
+procedure   BackSp
         NOP
-endproc     BACKSP,FAR
+EndProc     BackSp,FAR
 
-procedure   DIVOV,FAR
+procedure   DIVOV
         NOP
-endproc     DIVOV,FAR
+EndProc     DIVOV,FAR
 
-procedure   STAY_RESIDENT,FAR
+procedure   Stay_resident
         NOP
-endproc     STAY_RESIDENT,FAR
+EndProc     Stay_resident,FAR
 
-procedure   CTRLZ,FAR
+procedure   CTRLZ
         NOP
-endproc     CTRLZ,FAR
+EndProc     CTRLZ,FAR
 
-procedure   EXITINS,FAR
+procedure   EXITINS
         NOP
-endproc     EXITINS,FAR
+EndProc     EXITINS,FAR
 
-procedure   OKCALL,FAR
+procedure   OKCall
         NOP
-endproc     OKCALL,FAR
+EndProc     OKCall,FAR
 
-procedure   SKIPSTR,FAR
+procedure   SKIPSTR
         NOP
-endproc     SKIPSTR,FAR
+EndProc     SKIPSTR,FAR
 
-procedure   ABSDWRT,FAR
+procedure   ABSDWRT
         NOP
-endproc     ABSDWRT,FAR
+EndProc     ABSDWRT,FAR
 
-procedure   BADCALL,FAR
+procedure   BadCall
         NOP
-endproc     BADCALL,FAR
+EndProc     BadCall,FAR
 
-procedure   REEDIT,FAR
+procedure   REEDIT
         NOP
-endproc     REEDIT,FAR
+EndProc     REEDIT,FAR
 
 
-procedure   INULDEV,FAR
+procedure   INULDEV
         NOP
-endproc     INULDEV,FAR
+EndProc     INULDEV,FAR
 
-procedure   ABSDRD,FAR
+procedure   ABSDRD
         NOP
-endproc     ABSDRD,FAR
+EndProc     ABSDRD,FAR
 
-procedure   SNULDEV,FAR
+procedure   SNULDEV
         NOP
-endproc     SNULDEV,FAR
+EndProc     SNULDEV,FAR
 
-procedure   COPYSTR,FAR
+procedure   CopyStr
         NOP
-endproc     COPYSTR,FAR
+EndProc     CopyStr,FAR
 
-procedure   ECRITDEVICE,FAR
+procedure   EcritDevice
         NOP
-endproc     ECRITDEVICE,FAR
+EndProc     EcritDevice,FAR
 
-procedure   COMMAND,FAR
+procedure   COMMAND
         NOP
-endproc     COMMAND,FAR
+EndProc     COMMAND,FAR
 
-procedure   ENTERINS,FAR
+procedure   ENTERINS
         NOP
-endproc     ENTERINS,FAR
+EndProc     ENTERINS,FAR
 
-procedure   DEVIOCALL2,FAR
+procedure   DEVIOCALL2
         NOP
-endproc     DEVIOCALL2,FAR
+EndProc     DEVIOCALL2,FAR
 
-procedure   FASTOPENTABLE,FAR
+procedure   FastOpenTable
         NOP
-endproc     FASTOPENTABLE,FAR
+EndProc     FastOpenTable,FAR
 
-procedure   HEADER,FAR
+procedure   Header
         NOP
-endproc     HEADER,FAR
+EndProc     Header,FAR
 
-procedure   SYSINITTABLE,FAR
+procedure   SysInitTable
         NOP
-endproc     SYSINITTABLE,FAR
+EndProc     SysInitTable,FAR
 
-procedure   FETCHI_TAG,FAR
+procedure   FETCHI_TAG
         NOP
-endproc     FETCHI_TAG,FAR
+EndProc     FETCHI_TAG,FAR
 
-procedure   IFS_DOSCALL,FAR
+procedure   IFS_DOSCALL
         NOP
-endproc     IFS_DOSCALL,FAR
+EndProc     IFS_DOSCALL,FAR
 
-procedure   KILNEW,FAR
+procedure   KILNEW
         NOP
-endproc     KILNEW,FAR
+EndProc     KILNEW,FAR
 
-procedure   PACKET_TEMP,FAR
+procedure   Packet_Temp
         NOP
-endproc     PACKET_TEMP,FAR
+EndProc     Packet_Temp,FAR
 
-procedure   Swap_in_DOS_Len,FAR
+procedure   SWAP_IN_DOS_LEN
         NOP
-endproc     Swap_in_DOS_Len,FAR
+EndProc     SWAP_IN_DOS_LEN,FAR
 
-procedure   swap_always_area,far
+procedure   SWAP_ALWAYS_AREA
         NOP
-endproc     swap_always_area,FAR
+EndProc     SWAP_ALWAYS_AREA,FAR
 
-procedure   swap_always_area_len,FAR
+procedure   SWAP_ALWAYS_AREA_LEN
         NOP
-endproc     swap_always_area_len,FAR
+EndProc     SWAP_ALWAYS_AREA_LEN,FAR
 
-procedure   swap_in_dos,FAR
+procedure   SWAP_IN_DOS
         NOP
-endproc     swap_in_dos,FAR
+EndProc     SWAP_IN_DOS,FAR
 
-code    ENDS
-    END
+end if
+;    END

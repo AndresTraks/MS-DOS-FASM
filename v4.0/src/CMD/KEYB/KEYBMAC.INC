@@ -163,7 +163,7 @@ macro FIND_FLAG FLAG_MASK
 macro FLAG FLAG_MASK
 {
        FIND_FLAG FLAG_MASK
-       IF (FLAG_ID EQ UNKNOWN)
+       IF (FLAG_ID = UNKNOWN)
           IF2
 ;              %OUT Unknown parameter FLAG_MASK on FLAG MACRO
           end if
@@ -192,7 +192,7 @@ macro IFF FLAG_MASK,MASK_TYPE
     end if
     IF MAC_OK
        FIND_FLAG FLAG_MASK
-       IF (FLAG_ID EQ UNKNOWN)
+       IF (FLAG_ID = UNKNOWN)
           IF2
 ;              %OUT Unknown parameter FLAG_MASK on IFF MACRO
           end if
@@ -229,7 +229,7 @@ macro ANDF FLAG_MASK,MASK_TYPE
     end if
     IF MAC_OK
        FIND_FLAG FLAG_MASK
-       IF (FLAG_ID EQ UNKNOWN)
+       IF (FLAG_ID = UNKNOWN)
           IF2
 ;              %OUT Unknown parameter FLAG_MASK on ANDF MACRO
           end if

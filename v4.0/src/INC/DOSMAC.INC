@@ -530,6 +530,11 @@ macro ENDPROC [args]
   common
 	EndProc args
 }
+macro ERRNZ [args]
+{
+  common
+	errnz args
+}
 macro Endproc [args]
 {
   common

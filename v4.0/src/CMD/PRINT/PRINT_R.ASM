@@ -180,26 +180,26 @@ CRLF			DB   13,10,0
 					; Resident Message Pointer Control Block
 					;--------------------------------------
 
-MESBAS			rw      1 ; offset ERR0	   This list is order sensitive
-			DW   ?		; offset ERR1	   and must not be changed without
-			DW   ?		; offset ERR2	   considering the logic in
-			DW   ?		; offset ERR3	   Load_R_Msg
-			DW   ?		; offset ERR4
-			DW   ?		; offset ERR5
-			DW   ?		; offset ERR6
-			DW   ?		; offset ERR7
-			DW   ?		; offset ERR8
-			DW   ?		; offset ERR9
-			DW   ?		; offset ERR10
-			DW   ?		; offset ERR11
-			DW   ?		; offset ERR12
-ERRMEST_PTR		rw      1 ; offset ERRMEST
-ErrMesT2_PTR		rw      1 ; offset ErrMesT2
-CANMES_PTR		rw      1 ; offset CANMES
-CanFilNam_PTR		rw      1 ; offset CanFilNam
-AllCan_PTR		rw      1 ; offset AllCan
-FATMES_PTR		rw      1 ; offset FATMES
-BADDRVM_PTR		rw      1 ; offset BADDRVM
+MESBAS			rw      1 ; OFFSET CodeR:ERR0	   This list is order sensitive
+			DW   ?		; OFFSET CodeR:ERR1	   and must not be changed without
+			DW   ?		; OFFSET CodeR:ERR2	   considering the logic in
+			DW   ?		; OFFSET CodeR:ERR3	   Load_R_Msg
+			DW   ?		; OFFSET CodeR:ERR4
+			DW   ?		; OFFSET CodeR:ERR5
+			DW   ?		; OFFSET CodeR:ERR6
+			DW   ?		; OFFSET CodeR:ERR7
+			DW   ?		; OFFSET CodeR:ERR8
+			DW   ?		; OFFSET CodeR:ERR9
+			DW   ?		; OFFSET CodeR:ERR10
+			DW   ?		; OFFSET CodeR:ERR11
+			DW   ?		; OFFSET CodeR:ERR12
+ERRMEST_PTR		rw      1 ; OFFSET CodeR:ERRMEST
+ErrMesT2_PTR		rw      1 ; OFFSET CodeR:ErrMesT2
+CANMES_PTR		rw      1 ; OFFSET CodeR:CANMES
+CanFilNam_PTR		rw      1 ; OFFSET CodeR:CanFilNam
+AllCan_PTR		rw      1 ; OFFSET CodeR:AllCan
+FATMES_PTR		rw      1 ; OFFSET CodeR:FATMES
+BADDRVM_PTR		rw      1 ; OFFSET CodeR:BADDRVM
 
 ENDRES			rw      1 ; filled in at initialization time
 

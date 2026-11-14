@@ -560,7 +560,7 @@ TB_ERROR6:                             ;;
 ;; Output Registers:
 ;;     DI  - offset of the end of the area used by STATE_BUILD
 ;;
-;;     CX - Return = 0  -  State build successful
+;;     CX - Return Code := 0  -  State build successful
 ;;                         4  -  State build unsuccessful
 ;;                              (Bad or missing Keyboard Def file)
 ;;
@@ -740,7 +740,7 @@ SB_ERROR4:                             ;;
 ;; Output Registers:
 ;;     CP_TAB_OFFSET - offset of the CP table in KEYBOARD.SYS
 ;;
-;;     CX - Return = 0  -  State build successful
+;;     CX - Return Code := 0  -  State build successful
 ;;                         2  -  Invalid Code page for language
 ;;                         4  -  Bad or missing Keyboard Def file
 ;; Logic:

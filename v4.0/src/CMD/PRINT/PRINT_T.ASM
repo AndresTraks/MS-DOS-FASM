@@ -832,7 +832,7 @@ IF33$$T:
 ;					;   (including any DBSC characters)
 ;					;
 ;					;------------------------------------
-;      mov  di,offset NameBuf	;				       ;AN009;
+;      mov  di,offset dg:NameBuf	;				       ;AN009;
 ;      mov  ax,(xNameTrans SHL 8)	; check for name translation	       ;AN009;
 ;      int  21h 			; get real path and name	       ;AN009;
 
@@ -859,7 +859,7 @@ DO36$$T:
 	       call copy_to_arg_buf
 ;;;;;;;;;;;;;xxxxxxxxxxxxxxxxx
 
-;		mov  di,offset NameBuf ;					;AN009;
+;		mov  di,offset dg:NameBuf ;					;AN009;
 ;		mov  ax,(xNameTrans SHL 8) ; check for name translation 	;AN009;
 ;		int  21h		 ; get real path and name		;AN009;
 	       mov  ax,[ss:whichmsg] ;				       ;AC009;
