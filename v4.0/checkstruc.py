@@ -161,8 +161,16 @@ def fields(body, pattern, defaults=None):
 
 
 def masm_strucs(text):
+    """The structures the release declares, from STRUC to ENDS.
+
+    A comment can stand after either word, and twelve of ANSI.INC's thirteen
+    write one: without that allowed, the file looked as though it declared
+    one structure and the other twelve went unchecked.
+    """
     found = {}
-    for m in re.finditer(r"^(\w+)\s+STRUC\s*$(.*?)^\1\s+ENDS\s*$", text, re.M | re.S | re.I):
+    for m in re.finditer(r"^(\w+)\s+STRUC[ \t]*(?:;[^\n]*)?$"
+                         r"(.*?)^\1\s+ENDS[ \t]*(?:;[^\n]*)?$",
+                         text, re.M | re.S | re.I):
         found[m.group(1).upper()] = fields(m.group(2), MASM)
     return found
 

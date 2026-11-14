@@ -13,10 +13,10 @@ match =PAGE_FRAME_STRUC_LAID_OUT, PAGE_FRAME_STRUC_LAID_OUT
       sizeof.PAGE_FRAME_STRUC = $ - PAGE_FRAME_STRUC
     end virtual
 }
-STRUC SUB_LIST DATA_OFF_=0, DATA_SEG_=0, MSG_ID_=0, FLAGS_=0, MAX_WIDTH_=0, MIN_WIDTH_=0, PAD_CHAR_=0
+STRUC SUB_LIST SUB_LIST_1_=11, SUB_LIST_2_=0, DATA_OFF_=0, DATA_SEG_=0, MSG_ID_=0, FLAGS_=0, MAX_WIDTH_=0, MIN_WIDTH_=0, PAD_CHAR_=0
 {
-	DB	11			;							   ;AN000;
-	DB	0			;							   ;AN000;
+	DB	SUB_LIST_1_ ;							   ;AN000;
+	DB	SUB_LIST_2_ ;							   ;AN000;
 .DATA_OFF DW	DATA_OFF_ ; offset of data to be inserted 			   ;AN000;
 .DATA_SEG DW	DATA_SEG_ ; offset of data to be inserted 			   ;AN000;
 .MSG_ID	DB	MSG_ID_ ; n of %n						   ;AN000;
@@ -29,7 +29,7 @@ match =SUB_LIST_LAID_OUT, SUB_LIST_LAID_OUT
 {
     SUB_LIST_LAID_OUT equ 1
     virtual at 0
-      SUB_LIST SUB_LIST 0, 0, 0, 0, 0, 0, 0
+      SUB_LIST SUB_LIST 0, 0, 0, 0, 0, 0, 0, 0, 0
       sizeof.SUB_LIST = $ - SUB_LIST
     end virtual
 }

@@ -249,7 +249,7 @@ PARSE_PARAMETERS:                         ;AN000
 	    OR	   AX,AX			 ;AN000;;				   ;AN000
 	    .IF NZ, OR	;AN000;;				   ;AN000
 	    MOV    AX,word [RESULT_VAL]    ;AN000;;				   ;AN000
-	    .IF <AX A MAX_ID>	;AN000;;				   ;AN000
+	    .IF <AX A MAX_ID> ;AN000;;				   ;AN000
 	      MOV    [BP+PARM_LIST.RET_CODE_1],ID_INVALID ;AN000;; no...invalid id.		   ;AN000
 	      MOV    [BP+PARM_LIST.RET_CODE_3],INVALID_SYNTAX ;AN000;; syntax error.		   ;AN000
 	      MOV    byte [LOOP_COUNT],ERROR_COND ;AN000;; set flag to exit parse	   ;AN000
@@ -370,7 +370,7 @@ PROCESS_1ST_PARM:                            ;AN000
 	   OR	  AX,AX 			 ;AN000;; within range. 		   ;AN000
 	   .IF NZ, OR	;AN000;;				   ;AN000
 	   MOV	  AX,word [RESULT_VAL]    ;AN000;;				   ;AN000
-	   .IF <AX A MAX_ID>	;AN000;;				   ;AN000
+	   .IF <AX A MAX_ID> ;AN000;;				   ;AN000
 	     MOV    [BP+PARM_LIST.RET_CODE_1],ID_INVALID ;AN000;; no...invalid id.		   ;AN000
 	     MOV    [BP+PARM_LIST.RET_CODE_3],INVALID_SYNTAX ;AN000;; syntax error.		   ;AN000
 	     MOV    byte [LOOP_COUNT],ERROR_COND ;AN000;; set flag to exit parse	   ;AN000
@@ -449,7 +449,7 @@ PROCESS_2ND_PARM:                            ;AN000
 	   OR	  AX,AX 			   ;AN000;;				   ;AN000
 	   .IF NZ, OR	;AN000;;				   ;AN000
 	   MOV	  AX,word [RESULT_VAL]      ;AN000;; valid..then 		   ;AN000
-	   .IF <AX A MAX_ID>	;AN000;;				   ;AN000
+	   .IF <AX A MAX_ID> ;AN000;;				   ;AN000
 	     MOV    [BP+PARM_LIST.RET_CODE_2],CODE_PAGE_INVALID ;AN000;; mark invalid..		   ;AN000
 	     MOV    [BP+PARM_LIST.RET_CODE_3],INVALID_SYNTAX ;AN000;; syntax error		   ;AN000
 	     MOV    byte [LOOP_COUNT],ERROR_COND ;AN000;; set flag to exit parse	   ;AN000

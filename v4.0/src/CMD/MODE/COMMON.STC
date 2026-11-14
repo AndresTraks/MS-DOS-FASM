@@ -1,3 +1,6 @@
+; the layouts below read these, and an EQU is read where it stands
+bogus	 EQU   88H	;totally invalid value
+
 STRUC codepage_parms cp_device_=0, des_pack_ptr_=0, font_filespec_=0, request_typ_=0
 {
    .cp_device	  DW	cp_device_
@@ -31,25 +34,25 @@ match =parm_list_entry_LAID_OUT, parm_list_entry_LAID_OUT
       sizeof.parm_list_entry = $ - parm_list_entry
     end virtual
 }
-STRUC sublist_def sublist_off_=0, sublist_seg_=0
+STRUC sublist_def sublist_def_1_=0, sublist_def_2_=0, sublist_off_=0, sublist_seg_=0, sublist_def_5_=0, sublist_def_6_=0, sublist_def_7_=0, sublist_def_8_=0, sublist_def_9_=0
 {
 
-	     db  ?  ;Sublist Length, fixed
-	     db  ?  ;Reserved, not used yet		      ;AN000;
+	     db  sublist_def_1_ ;Sublist Length, fixed
+	     db  sublist_def_2_ ;Reserved, not used yet		      ;AN000;
 .sublist_off  dw  sublist_off_ ;offset
 .sublist_seg  dw  sublist_seg_ ;segment part of pointer to piece of message
-	     db  ?  ;ID, special end of message format ;AN000;
-	     db  ?  ;flags
-	     db  ?
-	     db  ?
-	     db  ?
+	     db  sublist_def_5_ ;ID, special end of message format ;AN000;
+	     db  sublist_def_6_ ;flags
+	     db  sublist_def_7_
+	     db  sublist_def_8_
+	     db  sublist_def_9_
 
 }
 match =sublist_def_LAID_OUT, sublist_def_LAID_OUT
 {
     sublist_def_LAID_OUT equ 1
     virtual at 0
-      sublist_def sublist_def 0, 0
+      sublist_def sublist_def 0, 0, 0, 0, 0, 0, 0, 0, 0
       sizeof.sublist_def = $ - sublist_def
     end virtual
 }

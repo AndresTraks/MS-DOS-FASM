@@ -148,7 +148,7 @@ TERMINATE_DISPLAYMODE:            ;;					;AN000;
 TERMINATE_PRINTER:            ;;					;AN000;
 				       ;;					;AN000;
   MOV  AX,[BLOCK_END]       ;;					;AN000;
- .IF <AX A MAX_BLOCK_END>	;; Keep track of the largest PRINTER	;AN000;
+ .IF <AX A [MAX_BLOCK_END]> ;; Keep track of the largest PRINTER	;AN000;
     MOV  [MAX_BLOCK_END],AX      ;;  section so we can allow space for	;AN000;
  .ENDIF 			       ;;  reload with a different printer	;AN000;
 				       ;;  type.				;AN000;

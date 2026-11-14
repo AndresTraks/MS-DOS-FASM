@@ -13,40 +13,40 @@ match =FON_LAID_OUT, FON_LAID_OUT
       sizeof.FON = $ - FON
     end virtual
 }
-STRUC PACKET PACKLEN_=2, PACKCPID_=0, PACKVECTOR1_=0, PACKVECTOR12_=0
+STRUC PACKET PACKLEN_=2, PACKCPID_=0, PACKVECTOR1_=0, PACKET_4_=0, PACKET_5_=0, PACKET_6_=0, PACKET_7_=0, PACKET_8_=0, PACKET_9_=0, PACKET_10_=0, PACKET_11_=0, PACKET_12_=0, PACKET_13_=0, PACKET_14_=0, PACKET_15_=0, PACKET_16_=0, PACKET_17_=0, PACKET_18_=0, PACKET_19_=0, PACKET_20_=0, PACKET_21_=0, PACKET_22_=0, PACKET_23_=0, PACKET_24_=0, PACKVECTOR12_=0, PACKET_26_=0
 {
 .PACKLEN 	    DW	 PACKLEN_ ;LENGTH OF PACKET IN BYTES, FOR DBCS COUNTRIES, LENGTH OF DBCS TABLE (IF NON-ZERO) WILL be added
 .PACKCPID	    DW	 PACKCPID_ ;CODE PAGE ID
 .PACKVECTOR1	    DB	 PACKVECTOR1_ ;start of vector list if included							    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0     ; holders for maximum possible number of 						    ;AN000;
-		    DB	 0     ; DBCS vector pairs									    ;AN000;
-		    DB	 0     ;											    ;AN000;
-		    DB	 0     ;											    ;AN000;
-		    DB	 0     ;											    ;AN000;
+		    DB	 PACKET_4_ ;AN000;
+		    DB	 PACKET_5_ ;AN000;
+		    DB	 PACKET_6_ ;AN000;
+		    DB	 PACKET_7_ ;AN000;
+		    DB	 PACKET_8_ ;AN000;
+		    DB	 PACKET_9_ ;AN000;
+		    DB	 PACKET_10_ ;AN000;
+		    DB	 PACKET_11_ ;AN000;
+		    DB	 PACKET_12_ ;AN000;
+		    DB	 PACKET_13_ ;AN000;
+		    DB	 PACKET_14_ ;AN000;
+		    DB	 PACKET_15_ ;AN000;
+		    DB	 PACKET_16_ ;AN000;
+		    DB	 PACKET_17_ ;AN000;
+		    DB	 PACKET_18_ ;AN000;
+		    DB	 PACKET_19_ ;AN000;
+		    DB	 PACKET_20_ ; holders for maximum possible number of 						    ;AN000;
+		    DB	 PACKET_21_ ; DBCS vector pairs									    ;AN000;
+		    DB	 PACKET_22_ ;											    ;AN000;
+		    DB	 PACKET_23_ ;											    ;AN000;
+		    DB	 PACKET_24_ ;											    ;AN000;
 .PACKVECTOR12	    DB	 PACKVECTOR12_ ;											    ;AN000;
-		    DB	 0     ;											    ;AN000;
+		    DB	 PACKET_26_ ;											    ;AN000;
 }
 match =PACKET_LAID_OUT, PACKET_LAID_OUT
 {
     PACKET_LAID_OUT equ 1
     virtual at 0
-      PACKET PACKET 0, 0, 0, 0
+      PACKET PACKET 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
       sizeof.PACKET = $ - PACKET
     end virtual
 }
@@ -63,39 +63,39 @@ match =DBCS_head_LAID_OUT, DBCS_head_LAID_OUT
       sizeof.DBCS_head = $ - DBCS_head
     end virtual
 }
-STRUC DBCS_tabl table_len_=6, vector1_=0
+STRUC DBCS_tabl table_len_=6, vector1_=0, DBCS_tabl_3_=0, DBCS_tabl_4_=0, DBCS_tabl_5_=0, DBCS_tabl_6_=0, DBCS_tabl_7_=0, DBCS_tabl_8_=0, DBCS_tabl_9_=0, DBCS_tabl_10_=0, DBCS_tabl_11_=0, DBCS_tabl_12_=0, DBCS_tabl_13_=0, DBCS_tabl_14_=0, DBCS_tabl_15_=0, DBCS_tabl_16_=0, DBCS_tabl_17_=0, DBCS_tabl_18_=0, DBCS_tabl_19_=0, DBCS_tabl_20_=0, DBCS_tabl_21_=0, DBCS_tabl_22_=0, DBCS_tabl_23_=0, DBCS_tabl_24_=0, DBCS_tabl_25_=0
 {
 .table_len	    DW	 table_len_ ;length in bytes of the list of vectors							    ;AN000;
 .vector1 	    DB	 vector1_ ;start of vector list									    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0     ;each vector is two bytes, a start value and an						    ;AN000;
-		    DB	 0     ;end value										    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
-		    DB	 0												    ;AN000;
+		    DB	 DBCS_tabl_3_ ;AN000;
+		    DB	 DBCS_tabl_4_ ;AN000;
+		    DB	 DBCS_tabl_5_ ;AN000;
+		    DB	 DBCS_tabl_6_ ;AN000;
+		    DB	 DBCS_tabl_7_ ;AN000;
+		    DB	 DBCS_tabl_8_ ;AN000;
+		    DB	 DBCS_tabl_9_ ;AN000;
+		    DB	 DBCS_tabl_10_ ;AN000;
+		    DB	 DBCS_tabl_11_ ;AN000;
+		    DB	 DBCS_tabl_12_ ;each vector is two bytes, a start value and an						    ;AN000;
+		    DB	 DBCS_tabl_13_ ;end value										    ;AN000;
+		    DB	 DBCS_tabl_14_ ;AN000;
+		    DB	 DBCS_tabl_15_ ;AN000;
+		    DB	 DBCS_tabl_16_ ;AN000;
+		    DB	 DBCS_tabl_17_ ;AN000;
+		    DB	 DBCS_tabl_18_ ;AN000;
+		    DB	 DBCS_tabl_19_ ;AN000;
+		    DB	 DBCS_tabl_20_ ;AN000;
+		    DB	 DBCS_tabl_21_ ;AN000;
+		    DB	 DBCS_tabl_22_ ;AN000;
+		    DB	 DBCS_tabl_23_ ;AN000;
+		    DB	 DBCS_tabl_24_ ;AN000;
+		    DB	 DBCS_tabl_25_ ;AN000;
 }
 match =DBCS_tabl_LAID_OUT, DBCS_tabl_LAID_OUT
 {
     DBCS_tabl_LAID_OUT equ 1
     virtual at 0
-      DBCS_tabl DBCS_tabl 0, 0
+      DBCS_tabl DBCS_tabl 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
       sizeof.DBCS_tabl = $ - DBCS_tabl
     end virtual
 }

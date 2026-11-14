@@ -2152,7 +2152,7 @@ INSPECT_1_PRINT_COLOR:								;AN000;
 ;	Check how close is this print color to the screen color:		;AN000;
 ;------------------------------------------------------------------------------ ;AN000;
 	MOV	AX,[CUR_DIFF] ; If this color is better than what we	;AN000;
-       .IF <AX L MIN_DIFF>	;  had before.				;AN000;
+       .IF <AX L [MIN_DIFF]> ;  had before.				;AN000;
        .THEN				;					;AN000;
 	  MOV	  [MIN_DIFF],AX ; then, new minimum distance;		;AN000;
 	  MOV	  AL,[BX+COLORPRINT_STR.SELECT_MASK] ;	get its band mask.		;AN000;

@@ -1,3 +1,7 @@
+; the layouts below read these, and an EQU is read where it stands
+STDOUT		  EQU 1 	   ;STANDARD OUTPUT DEVICE
+CLASS_A 	  EQU 0A00H	   ;CLASS A TYPE MESSAGE			;AN000;
+
 STRUC VECTOR VECOFF_=0, VECSEG_=0
 {
 .VECOFF		  DW  VECOFF_ ;OFFSET PORTION OF VECTOR POINTER

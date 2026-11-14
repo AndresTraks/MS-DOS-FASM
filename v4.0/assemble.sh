@@ -336,3 +336,13 @@ device() {
 # EXE2BIN over the result; a driver has no header and no prefix, so what
 # this writes is the image itself.
 device DRIVER DRVLNK DRIVER.SYS
+
+# ANSI.SYS, the console driver with the escape sequences in it: four modules
+# in one segment, which ANSLNK.ASM reads in the order ANSI.LNK names them.
+# A CONFIG.SYS that names it gets a CON that answers to the ANSI sequences
+# -- the cursor moved, the screen cleared, the colours set, a key given a
+# string of its own -- because the kernel takes the last driver to call
+# itself CON for its console, and ANSI.SYS asks the kernel's own CON for
+# every character it does not handle itself.  The release links the four and
+# runs EXE2BIN over the result, as it does for DRIVER.
+device ANSI ANSLNK ANSI.SYS

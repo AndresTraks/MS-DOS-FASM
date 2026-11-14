@@ -1262,6 +1262,84 @@ UTILITIES = {
         FORWARD=('flagdrive', 'flagcyln', 'flagseclim', 'flagheads',
                  'flagff', 'NODRIVE_MSG_NUM', 'LOADOK_MSG_NUM'),
     ),
+    # ANSI.SYS, the console driver with the escape sequences in it: the four
+    # modules ANSI.LNK names, in one segment and no group, and the two
+    # headers they read.  ANSI.ASM is the driver proper -- the device header
+    # for CON, the command table, and the sequence parser; IOCTL.ASM is the
+    # generic IOCTL side, which is how MODE asks for a screen mode; ANSIINIT
+    # is the initialisation and the video tables; PARSER reads the switches
+    # the DEVICE= line carries.  The release links the four and runs EXE2BIN
+    # over the result, as it does for DRIVER.
+    'ANSI': dict(
+        DIR='src/DEV/ANSI',
+        MODULES=('ANSI.ASM', 'IOCTL.ASM', 'ANSIINIT.ASM', 'PARSER.ASM',
+                 'ANSI.INC', 'ANSIVID.INC'),
+        ONESEG=True,
+        SHARED=('VECTOR.INC', 'MULT.INC', 'STRUC.INC', 'SYSMSG.INC',
+                'VERSIONA.INC', 'MSGSERV.ASM', 'MSGDCL.INC', 'COPYRIGH.INC',
+                'PARSE.ASM', 'PSDATA.INC'),
+        # ANSI.ASM's own, which is the driver's: it is entered through the
+        # kernel's call to a device driver, so what it reads of its own it
+        # reads through CS until it says otherwise.  PARSER says CS:CODE and
+        # nothing else.
+        START={'cs': 'CODE', 'ds': None, 'es': None, 'ss': None},
+        # IOCTL and ANSIINIT are both reached with DS on the driver already,
+        # and say so at the head of the segment.
+        STARTS={'IOCTL.ASM': {'cs': 'CODE', 'ds': 'CODE',
+                              'es': None, 'ss': None},
+                'ANSIINIT.ASM': {'cs': 'CODE', 'ds': 'CODE',
+                                 'es': None, 'ss': None}},
+        # Two of ANSI's own names are fasm's.  MATCH is the directive that
+        # asks whether a name stands for the text after it, which is how
+        # this conversion writes a conditional on a name; ANSI gives it to
+        # the routine that has found the escape sequence it was reading.
+        # ENTRY is where the loader is told to start, and ANSI gives it to
+        # the second of the two addresses in the device header -- the
+        # interrupt routine, which is where the kernel calls a driver with a
+        # request.
+        RESERVED=('MATCH', 'ENTRY'),
+        # ANSI.INC declares INIT_REQ_HDR twice, with different fields: the
+        # INIT request header at the top of the file and the generic IOCTL
+        # one two hundred lines below it.  MASM made every field name a name
+        # for its offset and nothing else, so what the second declaration
+        # was called did not matter and both sets of offsets stood; here a
+        # field belongs to the structure it is declared in, and a reference
+        # names it.  So the second one is given the name the comment above
+        # it gives it, and IOCTL.ASM's two references to MIN_FUNC and
+        # REQ_PCKT_PTR come out as fields of that.
+        # IOCTL.ASM line 711 has a note where a conjunction would stand,
+        # written without a semicolon in front of it: MASM read the words as
+        # arguments its .IF had no parameters for and dropped them, and the
+        # line is "> 25 lines requested?" with the > become a gt.  There is
+        # nothing to keep of it but the note, so it is made the comment it
+        # was meant to be.
+        EARLY={'IOCTL.ASM': [(
+            "                  .IF <CS:REQ_TXT_LENGTH EQ DEFAULT_LENGTH>"
+            " gt 25 lines requested?                 ;AN000;\n",
+            "                  .IF <CS:REQ_TXT_LENGTH EQ DEFAULT_LENGTH>"
+            "   ;gt 25 lines requested?             ;AN000;\n")],
+               'ANSI.INC': [(
+            "INIT_REQ_HDR    STRUC                   ;"
+            "                                      ;AN000;\n"
+            "                DB   13 DUP(?)          ; standard request"
+            " header              ;AN000;\n"
+            "MAJ_FUNC        DB   ?                  ; major function"
+            "                       ;AN000;\n",
+            "IOCTL_REQ_HDR   STRUC                   ;"
+            "                                      ;AN000;\n"
+            "                DB   13 DUP(?)          ; standard request"
+            " header              ;AN000;\n"
+            "MAJ_FUNC        DB   ?                  ; major function"
+            "                       ;AN000;\n"),
+            ("REQ_PCKT_PTR    DD   ?                  ; pointer to request"
+             " packet            ;AN000;\n"
+             "INIT_REQ_HDR    ENDS                    ;"
+             "                                      ;AN000;\n",
+             "REQ_PCKT_PTR    DD   ?                  ; pointer to request"
+             " packet            ;AN000;\n"
+             "IOCTL_REQ_HDR   ENDS                    ;"
+             "                                      ;AN000;\n")]},
+    ),
 }
 
 NAME = sys.argv[1].upper() if len(sys.argv) > 1 else ''
@@ -2068,10 +2146,55 @@ def declarations(text):
                 body.append('%sR%s%s%s' % (m.group(1), m.group(2).lower(),
                                            m.group(3), m.group(4)))
                 continue
+            # A field with no name at all, which is one value wide: MASM
+            # gave it no name to read it by, and it still counted as a
+            # place an instance could fill in.  ANSI writes
+            # My_IOCTL_Req_Packet REQ_PCKT 0,0,0Eh,0,?,0,?,?,?,?,? and the
+            # second of those eleven values is the reserved byte between
+            # INFO_LEVEL and DATA_LENGTH, so leaving it out of the
+            # parameters would put every value after it one field early.
+            # It takes a parameter like any other field, named after the
+            # structure and the place it stands in, and what the release
+            # declared is its default.
+            m = re.match(r"(?i)^([ \t]*)(D[BWD])([ \t]+)(.*?)[ \t]*$", code)
+            if m and ' dup' not in m.group(4).lower() \
+                    and 'dup ' not in m.group(4).lower() \
+                    and ',' not in m.group(4):
+                value = m.group(4).strip()
+                spare = '%s_%d_' % (here, len(fields) + 1)
+                fields.append('%s=%s' % (spare, '0' if value == '?'
+                                         else value))
+                body.append('%s%s%s%s%s'
+                            % (m.group(1), m.group(2), m.group(3), spare,
+                               ' ' + note if note else ''))
+                continue
             body.append(line)
             continue
         out.append(line)
-    return '\n'.join(top + out)
+    # What the layouts read, which has to stand above them.  A field can
+    # reserve its room with a name rather than a number -- ANSI.INC's device
+    # header says DB NAME_LEN DUP(0) for the name in it, and declares
+    # NAME_LEN two lines above the structure -- and the layouts are gathered
+    # at the head of the module, which puts them above that line.  fasm
+    # reads an EQU where it stands, so the declaration is copied up with
+    # them; the release's own line stays where it wrote it, and an EQU may
+    # be given again.
+    wanted, seen = [], set()
+    for line in top:
+        for word in re.findall(N, code_of(line)):
+            if word.upper() in seen:
+                continue
+            for other in out:
+                m = re.match(r"(?i)^(" + re.escape(word)
+                             + r")[ \t]+EQU[ \t]+[^;\n]*$", code_of(other))
+                if m:
+                    seen.add(word.upper())
+                    wanted.append(other)
+                    break
+    if wanted:
+        wanted = ['; the layouts below read these, and an EQU is read where'
+                  ' it stands'] + wanted + ['']
+    return '\n'.join(wanted + top + out)
 
 # RECPARSE.INC writes its parse tables before it reads INC/PSDATA.INC, and
 # the tables ask the header for the return values a drive or a file spec is
@@ -2335,7 +2458,10 @@ INSTANCE = re.compile(r"^(\S+\s+)(" + '|'.join(sorted(STRUCS))
                       + r")\s*<(.*)>\s*$", re.I)
 # An instance with no name of its own, which MASM laid down where it stood.
 # fasm hangs an instance's fields on its name, so one has to be made up.
-NAMELESS = re.compile(r"^(\s+)(" + '|'.join(sorted(STRUCS))
+# It can stand at the margin as well: ANSI lays its video mode table down as
+# sixteen MODE_TABLE <> against the margin under a label of its own, and
+# PARSER six of its own structures the same way.
+NAMELESS = re.compile(r"^(\s*)(" + '|'.join(sorted(STRUCS))
                       + r")\s*<(.*)>\s*$", re.I)
 
 # Where one of them is written down.  fasm gives an instance's fields names of
@@ -2407,6 +2533,13 @@ def heading(m):
     return ('macro %s [TEXT]\n{' % m.group(1) + (m.group(5) or '') + body
             + '}' + (m.group(7) or ''))
 
+
+# How many instances of each structure have been written with no name of
+# their own, for naming the next one.  It is counted over the program and
+# not over the module: ANSI lays sixteen MODE_TABLE down in ANSI.ASM and
+# eight more in ANSIVID.INC, and two modules starting again at one would
+# give the same made-up name to two instances.
+nameless = {}
 
 MACROS = U.get('MACROS', {})
 
@@ -2544,12 +2677,27 @@ def offsets(text):
 # The structured statements INC/STRUC.INC takes a condition for.  A
 # conjunction or a jump distance after one needs a comma, and THEN or DO
 # after one is nothing at all.
+# What a condition's operator can be called.  INC/STRUC.INC pastes the
+# operator onto a j and lets the assembler read the mnemonic, which is what
+# MASM's own library did, so the processor's every name for a condition is
+# an operator as well as the library's own EQ, LT and GT: ANSI asks
+# <[SI].SCR_ROWS E UNOCCUPIED>, which is the processor's name for equal, and
+# GRAPHICS asks <AX A MAX_BLOCK_END> and <DI NA MAX_STMT_LEN>.  A rule that
+# does not know the name leaves the condition's operands as they stand,
+# which for a name that stands for storage is the address and not what is
+# at it.
+# Z and NZ are left out of it: they are how a bit test reads its answer --
+# <BIT CS:HDWR_FLAG AND EGA> NZ -- and the rule for a bit test owns them.
+RELOPS = (r"ABOVE|BELOW|NONZERO|ZERO|NAE|NBE|NGE|NLE|NLT|NGT|PE|PO|"
+          r"NA|NB|NC|NE|NG|NL|NO|NP|NS|AE|BE|GE|LE|EQ|LT|GT|AB|BL|"
+          r"A|B|C|E|G|L|O|P|S")
 STATEMENTS = r"(?:IF|ELSEIF|WHILE|UNTIL|REPEAT|WHEN|LEAVE|EXITIF|SELECT)"
 # A statement, its condition taken apart into the two sides of a comparison
 # and the operator between them, with whatever follows the condition kept.
-CONDITION = re.compile(r"(?i)^([ \t]*)(\." + STATEMENTS + r")[ \t]+"
+CONDITION = re.compile(r"(?i)^([ \t]*(?:" + N + r":)?[ \t]*)(\." + STATEMENTS
+                       + r")[ \t]+"
                        r"<[ \t]*(.*?)[ \t]+"
-                       r"(EQ|NE|LT|GT|LE|GE|AE|BE|AB|BL)[ \t]+"
+                       r"(" + RELOPS + r")[ \t]+"
                        # as far as the last bracket, because MASM put its own
                        # round an operand of more than one word
                        r"(.*)[ \t]*>[ \t]*(.*)$")
@@ -2573,7 +2721,7 @@ def distances(text):
 
     # MODE writes both at once -- .WHILE <cond> AND NEAR -- so a run of them
     # is taken together.
-    return re.sub(r"(?mi)^([ \t]*\." + STATEMENTS + r"\b"
+    return re.sub(r"(?mi)^([ \t]*(?:" + N + r":)?[ \t]*\." + STATEMENTS + r"\b"
                   r"[^;\n]*?[^;,\s])"
                   r"((?:[ \t]+(?:AND|OR|NEAR|FAR|SHORT|LONG)\b)+)"
                   r"[ \t]*(;[^\n]*)?$", one, text)
@@ -2771,7 +2919,7 @@ def conditions(text):
     did its own splitting and took CS:request as it stood; where MASM needed
     the brackets the sources have them already, as <<WORD PTR ES:[SI]> NE 0>.
     """
-    OPS = r"(?:EQ|NE|LT|GT|LE|GE|AE|BE|AB|BL|ABOVE|BELOW)"
+    OPS = r"(?:" + RELOPS + r")"
 
     def place(word):
         """A bare name of storage, in the brackets a condition needs.
@@ -2835,10 +2983,10 @@ def conditions(text):
             return '%s<%s %s %s>%s' % (head, left, inner.group(2), right, tail)
         return '%s<<%s> %s %s>%s' % (head, left, inner.group(2), right, tail)
 
-    text = re.sub(r"(?mi)^([ \t]*\." + STATEMENTS + r"\b[ \t]+)"
-                  r"<([^<>]*)>(.*)$", bit, text)
-    return re.sub(r"(?mi)^([ \t]*\." + STATEMENTS + r"\b[ \t]+)"
-                  r"<([^<>]*)>(.*)$", one, text)
+    head = (r"(?mi)^([ \t]*(?:" + N + r":)?[ \t]*\." + STATEMENTS
+            + r"\b[ \t]+)")
+    text = re.sub(head + r"<([^<>]*)>(.*)$", bit, text)
+    return re.sub(head + r"<([^<>]*)>(.*)$", one, text)
 
 
 def thens(text):
@@ -2858,10 +3006,10 @@ def thens(text):
                            '\t' + comment if comment else '')
 
     # a condition in brackets, and whatever MASM allowed after it
-    text = re.sub(r"(?mi)^([ \t]*\." + STATEMENTS + r"\b"
+    text = re.sub(r"(?mi)^([ \t]*(?:" + N + r":)?[ \t]*\." + STATEMENTS + r"\b"
                   r"[^;\n]*>)([^;\n]*?)[ \t]*(;[^\n]*)?$", one, text)
     # or a flag, which needs none
-    return re.sub(r"(?mi)^([ \t]*\." + STATEMENTS + r"\b"
+    return re.sub(r"(?mi)^([ \t]*(?:" + N + r":)?[ \t]*\." + STATEMENTS + r"\b"
                   r"[^;\n<>]*?)[ \t]+(?:THEN|DO)\b", r"\1", text)
 
 
@@ -3974,6 +4122,28 @@ def pushed(code):
                   lambda m: '%sword %s' % (m.group(1), m.group(2)), code)
 
 
+def jumped(code):
+    """JMP or CALL through a place with no width said, which MASM read as a
+    near one: the word at the address.
+
+    ANSI writes JMP WORD PTR [SI] at line 303 for the routine its state
+    machine is to go to next and JMP [SI] at line 832 for the same thing.
+    fasm will not guess a width, and the far form is two words rather than
+    one, so the word is said.  Only where the brackets hold nothing but
+    registers: a name in them has a width of its own, which may be the
+    double word of a far address, and that is the width MASM read.
+    """
+    def one(m):
+        inner = re.sub(r"(?i)\b(?:cs|ds|es|ss|[abcd]x|[abcd][lh]|si|di|bp|"
+                       r"sp)\b", '', m.group(2))
+        if re.search(N, inner):
+            return m.group(0)
+        return '%sword %s' % (m.group(1), m.group(2))
+
+    return re.sub(r"(?i)^(\s*(?:" + N + r":)?\s*(?:jmp|call)\s+)"
+                  r"(\[[^\]]*\])\s*$", one, code)
+
+
 def sizes(code):
     """A type name in an expression, as the number of bytes it takes up."""
     code = re.sub(r"\b(BYTE|WORD|DWORD)\b(?!\s*\[)",
@@ -4104,9 +4274,6 @@ for stem in MODULES:
     text = relations(text)
     out, infar, noted, measured = [], False, False, False
     opened = []
-    # how many instances of each structure the module has written with no
-    # name, for naming the next one
-    nameless = {}
     # the macro and REPT blocks open inside a module, which close in the
     # order they were opened and with the same word
     blocks = []
@@ -4376,7 +4543,12 @@ for stem in MODULES:
             # reach the rules that read operands, so the OFFSET comes off
             # here.
             args = re.sub(r"(?i)\boffset\s+", '', sizes(m.group(3)))
-            out.append(pad('%s%s %s' % (m.group(1), m.group(2), args),
+            # A colon after the instance's name, which MASM read as a
+            # label's and laid the instance down under: ANSI writes the
+            # console's buffer as BUF1: BUF_DATA <>.  fasm names an
+            # instance, and the name takes no colon.
+            head = re.sub(r"^(\s*" + N + r"):(\s*)$", r"\1\2 ", m.group(1))
+            out.append(pad('%s%s %s' % (head, m.group(2), args),
                            was_len, comment))
             continue
         # The same thing written with no name, which MASM wanted none for.
@@ -4511,8 +4683,8 @@ for stem in MODULES:
         # instruction, so they come off -- except round a name that stands
         # for a reference with a width, where the brackets are what tells
         # the statement it is more than one word.
-        m = re.match(r"(?i)^([ \t]*\." + STATEMENTS + r"\b[ \t]*<)(.*)$",
-                     code)
+        m = re.match(r"(?i)^([ \t]*(?:" + N + r":)?[ \t]*\."
+                     + STATEMENTS + r"\b[ \t]*<)(.*)$", code)
         if m:
             # Only inside the condition's own brackets: the outermost pair
             # is the condition itself, and a flag written on its own --
@@ -4523,6 +4695,7 @@ for stem in MODULES:
                             else m2.group(1)), m.group(2))
         code = sized(code)
         code = pushed(code)
+        code = jumped(code)
 
         if held:
             m2 = re.match(r"(?i)^\s*cmp\s+(.*?)\s*,\s*(.*?)\s*$", code)

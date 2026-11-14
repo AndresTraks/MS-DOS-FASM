@@ -24,11 +24,11 @@ match =des_strt_packet_LAID_OUT, des_strt_packet_LAID_OUT
       sizeof.des_strt_packet = $ - des_strt_packet
     end virtual
 }
-STRUC parms_def parmsx_ptr_=bogus, seperators_len_=1, seperators_=";"
+STRUC parms_def parmsx_ptr_=bogus, parms_def_2_=1, seperators_len_=1, seperators_=";"
 {
 
 .parmsx_ptr	  DW	  parmsx_ptr_ ;AN000;changed as the possibilities for parms following are determined
-		  DB	  1		  ;AN000;have extra delimiter list
+		  DB	  parms_def_2_ ;AN000;have extra delimiter list
 .seperators_len	  DB	  seperators_len_ ;AN000;length of extra delimiter list
 .seperators	  DB	  seperators_ ;AC003;EXTRA DELIMITER LIST
 		  DB	  8 DUP (" ")     ;AC003; extra blanks for adding more delimeters (. " \ [ ] : + =)
@@ -38,7 +38,7 @@ match =parms_def_LAID_OUT, parms_def_LAID_OUT
 {
     parms_def_LAID_OUT equ 1
     virtual at 0
-      parms_def parms_def 0, 0, ";"
+      parms_def parms_def 0, 0, 0, ";"
       sizeof.parms_def = $ - parms_def
     end virtual
 }

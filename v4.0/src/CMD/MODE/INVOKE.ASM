@@ -1,3 +1,6 @@
+; the layouts below read these, and an EQU is read where it stands
+text	 EQU   01	   ;mode field of IOCTL 0C call indicating screen mode type (vs APA mode)			   ;AN000;
+
 STRUC des_strt_packet des_strt_pkfl_=0000, des_strt_pklen_=02, des_strt_pknum_=0, des_strt_pkcp1_=-1, des_strt_pkcp2_=-1, des_strt_pkcp3_=-1, des_strt_pkcp4_=-1, des_strt_pkcp5_=-1, des_strt_pkcp6_=-1, des_strt_pkcp7_=-1, des_strt_pkcp8_=-1, des_strt_pkcp9_=-1, des_strt_pkcpA_=-1, des_strt_pkcpB_=-1, des_strt_pkcpC_=-1
 {
    .DES_STRT_PKFL  DW	des_strt_pkfl_ ;assume a filename specified							   ;AN000;
@@ -24,18 +27,18 @@ match =des_strt_packet_LAID_OUT, des_strt_packet_LAID_OUT
       sizeof.des_strt_packet = $ - des_strt_packet
     end virtual
 }
-STRUC IOCTL0C_def info_level_=0, data_length_=14, flags_=0, mode_=text, colors_=16, cols_=bogus, rows_=bogus
+STRUC IOCTL0C_def info_level_=0, IOCTL0C_def_2_=0, data_length_=14, flags_=0, mode_=text, IOCTL0C_def_6_=0, colors_=16, IOCTL0C_def_8_=bogus, IOCTL0C_def_9_=bogus, cols_=bogus, rows_=bogus
 {
 															   ;AN000;
 .info_level  DB	  info_level_ ;return code: 0 on input, 1 ?, 2 or 3 as returns						   ;AN000;
-	    DB	  0	;reserved											   ;AN000;
+	    DB	  IOCTL0C_def_2_ ;reserved											   ;AN000;
 .data_length DW	  data_length_ ;length of the data block not including this field						   ;AN000;
 .flags	    DW	  flags_ ;filled with intense or blink									   ;AN000;
 .mode	    DB	  mode_ ;filled with text, may be returned as 2 which means APA 					   ;AN000;
-	    DB	  0	;reserved											   ;AN000;
+	    DB	  IOCTL0C_def_6_ ;reserved											   ;AN000;
 .colors	    DW	  colors_ ;0 means monochrome										   ;AN000;
-	    DW	  bogus ;width in pixels for APA modes									   ;AN000;
-	    DW	  bogus ;length in pixels for APA modes 								   ;AN000;
+	    DW	  IOCTL0C_def_8_ ;width in pixels for APA modes									   ;AN000;
+	    DW	  IOCTL0C_def_9_ ;length in pixels for APA modes 								   ;AN000;
 .cols	    DW	  cols_ ;nubmer of text columns 									   ;AN000;
 .rows	    DW	  rows_ ;number of text rows										   ;AN000;
 															   ;AN000;
@@ -44,7 +47,7 @@ match =IOCTL0C_def_LAID_OUT, IOCTL0C_def_LAID_OUT
 {
     IOCTL0C_def_LAID_OUT equ 1
     virtual at 0
-      IOCTL0C_def IOCTL0C_def 0, 0, 0, 0, 0, 0, 0
+      IOCTL0C_def IOCTL0C_def 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
       sizeof.IOCTL0C_def = $ - IOCTL0C_def
     end virtual
 }
