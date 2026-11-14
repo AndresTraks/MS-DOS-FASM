@@ -241,7 +241,7 @@ FINISH:
 	XLAT	byte [ds:bx] 	;Get upper case character
 	POP	BX
 	POP	DS
-L_RET:	RET
+L_RET:	RETF		; the procedure is FAR, so MASM assembled this far
 EndProc MAP_CASE
 
 SUBTTL EDIT FUNCTION ASSIGNMENTS AND HEADERS

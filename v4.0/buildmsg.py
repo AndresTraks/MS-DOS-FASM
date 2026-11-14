@@ -273,24 +273,24 @@ def labelled_class(skeleton, messages, declared):
     return out
 
 
+# The table comes first and the routine that answers with its address after
+# it, because the address a class is registered under is the table's.
+# COMMAND.COM keeps its parse, critical and extended classes on the disk
+# rather than in memory: CRITICAL_MSG_START and the two labels beside it in
+# CMD/COMMAND/RDATA.ASM stand in front of these files, and INIT.ASM
+# registers each with DOS -- less the 100H a .COM is loaded at, and with a
+# segment of 1 for "on the disk".  READ_DISK_PROC in INC/MSGSERV.ASM seeks
+# to one of those offsets and reads a class header there.  With the routine
+# in front it read the routine's six bytes as the header, found a version of
+# 0BF07H where it wanted 4, and gave up: every utility's parse and extended
+# error messages came out empty, and for some of them the machine hung.
 def table_class(skeleton, messages, clsname, declared, routine, identifier):
     """A class as the table MSGSERV walks, and the routine that finds it."""
     tag = "M_CL%s" % clsname
     out = [
-        "; MSGSERV.ASM collects the classes by calling a routine for each; this",
-        "; one answers with the address of the table below.  Whether the call",
-        "; was near or far is the FARmsg service's business, so the return is",
-        "; written both ways and the switch picks one.",
-        "%s:" % routine,
-        "%-16s %-7s %s" % ("", "PUSH", "CS"),
-        "%-16s %-7s %s" % ("", "POP", "ES"),
-        "%-16s %-7s %s" % ("", "MOV", "DI,%s_TABLE" % tag),
-        "    if FARmsg",
-        "%-16s %-7s" % ("", "RETF"),
-        "    else",
-        "%-16s %-7s" % ("", "RET"),
-        "    end if",
-        "",
+        "; The table a class is registered by, and the routine that answers",
+        "; with its address after it -- see buildmsg.py for why that way",
+        "; round.",
         "%s_TABLE:" % tag,
         "%-16s %-7s %-24s ; the class identifier" % ("", "DB", identifier),
         "%-16s %-7s %-24s ; the version it was built for"
@@ -316,6 +316,20 @@ def table_class(skeleton, messages, clsname, declared, routine, identifier):
         for part in text:
             out.append("%-16s %-7s %s" % ("", "DB", part))
         out.append("%s_END:" % start)
+    # MSGSERV.ASM collects the classes by calling a routine for each, which
+    # answers with the address of the table above.  Whether the call was
+    # near or far is the FARmsg service's business, so the return is written
+    # both ways and the switch picks one.
+    out.append("")
+    out.append("%s:" % routine)
+    out.append("%-16s %-7s %s" % ("", "PUSH", "CS"))
+    out.append("%-16s %-7s %s" % ("", "POP", "ES"))
+    out.append("%-16s %-7s %s" % ("", "MOV", "DI,%s_TABLE" % tag))
+    out.append("    if FARmsg")
+    out.append("%-16s %-7s" % ("", "RETF"))
+    out.append("    else")
+    out.append("%-16s %-7s" % ("", "RET"))
+    out.append("    end if")
     return out
 
 

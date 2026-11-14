@@ -20,23 +20,19 @@
 # dumps come out on the printer:
 #
 #   DEBUG < LOCK.TXT > PRN    INT 21H AH=5CH on a file: CY and AX=0001
+#   SHARE /Z                  a switch the parse table does not have
 #   SHARE /F:2048 /L:40       installs, with room for 2048 bytes of names
 #   SHARE                     says it is there already, through interrupt 2FH
 #   DEBUG < LOCK.TXT > PRN    the same lock again: NC, the sharer answering
 #   TYPE, COPY, DIR           and the file calls still work, every open and
 #                             close of them now a far call into the sharer
 #
-# What is not here is a switch the parse table does not have, which ought to
-# answer "Invalid switch".  SHARE parses its own switches properly -- /F and
-# /L above are read, and InitSpace and InitLocks take them where they ask
-# for more than the default -- but the message
-# for a parse error goes out through the implied substitution in
-# INC/MSGSERV.ASM, and that path is broken for every utility, not just this
-# one: FASTOPEN /Z answers "Invalid swit -  /Zch", the insert spliced in two
-# characters early.  SHARE asks for the substitution where FASTOPEN does
-# not, and for SHARE the same defect hangs the machine -- the retriever
-# far-calls COMMAND.COM's READ_DISK_PROC and never comes back.  It is older
-# than this conversion and wants a fix of its own.
+# SHARE /Z answers out of the message file on the disk and not out of the
+# program: SHARE declares no parse messages of its own, so the retriever
+# asks DOS where COMMAND.COM keeps its parse class and calls COMMAND.COM's
+# READ_DISK_PROC to read it.  Three things had to be right for that, and two
+# of them were not until 2026-11-14 -- READ_DISK_PROC's far return, and
+# which end of a generated class file its registered address points at.
 #
 # The second DEBUG run is what says the installation took: the lock goes
 # through CheckShare, into the sharer's own Set_Block, and comes back with
@@ -92,6 +88,7 @@ mcopy -o -i "$IMG" "$OUT/LOCK.TXT" ::LOCK.TXT
 {
     printf 'ECHO OFF\r\n'
     printf 'DEBUG < LOCK.TXT > PRN\r\n'
+    printf 'SHARE /Z\r\n'
     printf 'SHARE /F:2048 /L:40\r\n'
     printf 'SHARE\r\n'
     printf 'DEBUG < LOCK.TXT > PRN\r\n'
@@ -168,6 +165,9 @@ if len(dumps) == 2:
        "table it wrote over JShare",
        "the second lock came back AX=%s %s" % (ax2, fl2))
 
+ok("Invalid switch" in screen,
+   "a switch the parse table does not have is refused, with the message "
+   "read off the disk out of COMMAND.COM's own parse class")
 ok("SHARE already installed" in screen,
    "a second run says it is there already, which is the sharer's own "
    "interrupt 2FH handler answering -- reached through the segment value "

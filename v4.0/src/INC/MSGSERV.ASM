@@ -408,7 +408,8 @@ MIF1$:
 	POP	BX					     ;;AN003;;
 	POP	AX					     ;;AN003;;
 							     ;;AN003;;	     abort everything
-	RET						     ;;AN003;;
+	RETF					     ;;AN003;; the procedure is FAR, and every
+						     ;;AN003;;   utility far-calls it through DOS
 
 ;READ_DISK_PROC ENDP                                         ;;AN003;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

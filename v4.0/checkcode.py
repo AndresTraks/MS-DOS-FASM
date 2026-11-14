@@ -175,10 +175,23 @@ PROCEND = re.compile(r"(?i)^[ \t]*(?:[A-Za-z_@?$][A-Za-z0-9_@?$]*[ \t]+ENDP"
 
 
 def far_returns(rel, was, now):
-    """Every RET the release wrote inside a FAR procedure, and what it is."""
-    bad, far = 0, False
-    for n, (a, b) in enumerate(zip(was, now), 1):
-        code = a.split(";")[0]
+    """Every RET the release wrote inside a FAR procedure, and what it is.
+
+    The two files are lined up on their instructions rather than on their
+    lines, so that a file the conversion made longer is read as well.  Read
+    line for line this pass saw only the files whose length had not changed,
+    which is a quarter of them: READ_DISK_PROC, the routine every utility
+    far-calls to read a message out of COMMAND.COM, was in the other
+    three-quarters, and its far return had come out near.
+
+    Only the stretches where the two streams agree are read, a line in one
+    standing for the line in the other; where they disagree the comparison
+    above has reported it already.
+    """
+    import difflib
+    far, release = False, []
+    for n, line in enumerate(was, 1):
+        code = line.split(";")[0]
         m = FARPROC.match(code)
         if m:
             far = "far" in m.group(2).lower()
@@ -189,11 +202,23 @@ def far_returns(rel, was, now):
         if PROCEND.match(code):
             far = False
             continue
-        if far and mnemonic(code) == "RET" and mnemonic(b) != "RETF":
-            print("%-26s %5d  %-10s -> %-10s %s"
-                  % (rel, n, "RET (far)", mnemonic(b),
-                     b.split(";")[0].strip()[:40]))
-            bad += 1
+        mn = canon(mnemonic(line))
+        if mn is None or mn in DROPPED or mn not in INSTRUCTIONS:
+            continue
+        release.append((n, mn, far))
+    converted = sequence(now)
+    sm = difflib.SequenceMatcher(None, [x[1] for x in release],
+                                 [x[1] for x in converted], autojunk=False)
+    bad = 0
+    for i, j, size in sm.get_matching_blocks():
+        for d in range(size):
+            n, mn, far = release[i + d]
+            line = converted[j + d]
+            if mn == "RET" and far and mnemonic(line[2]) != "RETF":
+                print("%-26s %5d  %-10s -> %-10s %s"
+                      % (rel, line[0], "RET (far)", mnemonic(line[2]),
+                         line[2][:40]))
+                bad += 1
     return bad
 
 
@@ -358,11 +383,19 @@ def main():
         orig = origin(os.path.relpath(os.path.join(HERE, rel), REPO))
         if orig is None:
             continue
-        was = before_end(orig.replace("\r\n", "\n").split("\n"))
+        whole = orig.replace("\r\n", "\n").split("\n")
+        was = before_end(whole)
         now = open(os.path.join(HERE, rel), encoding="cp437").read().split("\n")
         if len(was) != len(now):
             lengths += 1
             total += compare_aligned(rel, was, now)
+            # A file still word for word the release's own has not been
+            # converted, and its RETs are the release's RETs.  The test is
+            # the whole of the release's text, before the END cut anything
+            # off it: IFSFUNC's IFSINIT.ASM has a second END below its
+            # first, and is not converted at all.
+            if whole != now:
+                total += far_returns(rel, was, now)
             continue
         for n, (a, b) in enumerate(zip(was, now), 1):
             ma, mb = mnemonic(a), mnemonic(b)

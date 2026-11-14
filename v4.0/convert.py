@@ -4142,8 +4142,11 @@ for stem in MODULES:
         # INT_13_BACK under the ROM's own, so what comes back there is a
         # far call with the caller's flags under it, and the RET 2 that
         # ends it is a far return over them.
-        m = infar and re.match(r"(?i)^(\s*)(ret)(\s+[0-9A-Fa-f]+h?)?\s*$",
-                               bare)
+        # A label of its own on the line is no reason to miss it: the
+        # kernel's MAP_CASE ends with "L_RET:\tRET" inside a FAR
+        # procedure, and that one had to be put right by hand.
+        m = infar and re.match(r"(?i)^(\s*(?:" + N + r":)?\s*)"
+                               r"(ret)(\s+[0-9A-Fa-f]+h?)?\s*$", bare)
         if m:
             out.append(pad('%s%s%s' % (m.group(1),
                                        m.group(2) + ('F' if m.group(2).isupper()
