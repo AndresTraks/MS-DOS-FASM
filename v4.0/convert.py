@@ -1,4 +1,4 @@
-"""A utility under src/CMD from MASM to fasm, in place.
+"""A utility under src/CMD, or a driver under src/DEV, from MASM to fasm.
 
 usage: convert.py UTILITY [ORIGINALS]
 
@@ -13,8 +13,9 @@ wanted, and what its segment registers start on.  Converting the next one is
 an entry there, and whatever rule it is the first to need.
 
 The sources are converted in place, which is this project's way, so what is
-in src/CMD/<UTILITY> is the release's own text until this has run over it:
-that is where it reads from unless told otherwise.  To run it again
+in the utility's own directory -- src/CMD/<UTILITY>, or wherever its DIR
+says -- is the release's own text until this has run over it: that is where
+it reads from unless told otherwise.  To run it again
 afterwards, hand it a directory of pristine copies as ORIGINALS, each file
 named as the module is or with .orig after it, and the result goes over the
 sources as before.
@@ -1233,6 +1234,34 @@ UTILITIES = {
         STARTS={'IFSFLINK.ASM': {'cs': 'DOSGROUP', 'ds': None,
                                  'es': None, 'ss': None}},
     ),
+    # DRIVER.SYS, the first of the drivers under src/DEV and the smallest of
+    # them: one module in one segment, which the release linked on its own
+    # and ran EXE2BIN over.  A driver is not a program -- DOS reads the
+    # header at the front of the file, keeps the two addresses in it, and
+    # keeps the driver as far as ENDCODE, which is where the initialisation
+    # says the resident part stops -- so there is no prefix in front of it
+    # and nothing to enter at, and the module's END names nobody.  What it reads of the kernel it reads through INT 2FH
+    # multiplex 8, the BIOS's block driver answering, so it links nothing of
+    # the kernel's and needs none of the kernel's headers: the message
+    # retriever, the parser, and the BDS the BIOS keeps a drive in are all
+    # of it.
+    'DRIVER': dict(
+        DIR='src/DEV/DRIVER',
+        MODULES=('DRIVER.ASM',),
+        ONESEG=True,
+        SHARED=('SYSMSG.INC', 'VERSIONA.INC', 'MSGSERV.ASM', 'COPYRIGH.INC',
+                'PARSE.ASM', 'PSDATA.INC', 'MSBDS.INC'),
+        # The module says ASSUME CS:CODE,DS:CODE,ES:CODE at its head, and
+        # names no stack: a driver is called on the caller's.
+        START={'cs': 'CODE', 'ds': 'CODE', 'es': 'CODE', 'ss': None},
+        # The five switch flags and the two message numbers are declared in
+        # the last dozen lines of the module and read six hundred lines
+        # above them: MASM resolved them on its second pass, and fasm wants
+        # a number it can resolve wherever it stands rather than an EQU it
+        # has not read yet.
+        FORWARD=('flagdrive', 'flagcyln', 'flagseclim', 'flagheads',
+                 'flagff', 'NODRIVE_MSG_NUM', 'LOADOK_MSG_NUM'),
+    ),
 }
 
 NAME = sys.argv[1].upper() if len(sys.argv) > 1 else ''
@@ -1241,7 +1270,10 @@ if NAME not in UTILITIES:
              '       UTILITY is one of ' + ', '.join(sorted(UTILITIES)))
 U = UTILITIES[NAME]
 HERE = os.path.dirname(os.path.abspath(__file__)) + '/'
-R = HERE + 'src/CMD/' + NAME + '/'
+# Where the utility's own modules are.  The drivers under src/DEV are
+# programs of the same shape, built the same way and checked by the same
+# four checkers, so they are entries here as well and say where they are.
+R = HERE + U.get('DIR', 'src/CMD/' + NAME) + '/'
 S = os.path.join(sys.argv[2], '') if len(sys.argv) > 2 else R
 N = r"[A-Za-z_@?$][A-Za-z0-9_@?$]*"
 # MASM let a label and the instruction it names share a line,

@@ -26,12 +26,12 @@
 ;AN008 - d493 New init request structure			    2/25/88 J.K.
 ;==============================================================================
 
-code segment byte public
-assume cs:code,ds:code,es:code
+;code segment byte public
+;assume cs:code,ds:code,es:code
 
 ;AN000;
 .xlist
-include SYSMSG.INC			;equates and macros
+include 'SYSMSG.INC' ;equates and macros
 .list
 MSG_UTILNAME <DRIVER>
 
@@ -40,11 +40,11 @@ iTEST = 0
 ;
 ;	Device entry point
 ;
-DSKDEV	LABEL	WORD
+label DSKDEV word
 	DW	-1,-1			; link to next device
 	DW	0000100001000000B	; bit 6 indicates DOS 3.20 driver
 	DW	STRATEGY
-	DW	DSK$IN
+	DW	DSKIN$
 DRVMAX	DB	1
 
 ;
@@ -65,30 +65,30 @@ CONFIG_ERRMSG  equ     23		;AN009; To set this field to Non-zero
 PTRSAV	DD	0
 
 
-STRATP PROC FAR
+STRATP:
 
 STRATEGY:
-	MOV	WORD PTR CS:[PTRSAV],BX
-	MOV	WORD PTR CS:[PTRSAV+2],ES
-	RET
+	MOV	word [cs:PTRSAV],BX
+	MOV	word [cs:PTRSAV+2],ES
+	RETF
 
-STRATP ENDP
+;STRATP ENDP
 
-DSK$IN:
+DSKIN$:
 	push	es
 	push	bx
 	push	ax
-	les	bx,cs:[ptrsav]
-	cmp	byte ptr es:[bx].cmd,0
-	jnz	Not_Init
-	jmp	DSK$INIT
+	les	bx,[cs:PTRSAV]
+	cmp	byte [es:bx+CMD],0
+	jnz	not_init
+	jmp	DSKINIT$
 
 not_init:
 ; Because we are passing the call onto the block driver in IBMBIO, we need to
 ; ensure that the unit number corresponds to the logical (DOS) unit number, as
 ; opposed to the one that is relevant to this device driver.
-	mov	al,byte ptr cs:[DOS_Drive_Letter]
-	mov	byte ptr es:[bx].UNIT,al
+	mov	al,byte [cs:DOS_Drive_Letter]
+	mov	byte [es:bx+UNIT],al
 	mov	ax,0802H
 	int	2fH
 ;
@@ -100,15 +100,15 @@ not_init:
 	push	bx
 	popf
 
-exitp	proc	far
+exitp:
 DOS_Exit:
 	pop	ax
 	POP	BX
 	POP	ES
-	RET				;RESTORE REGS AND RETURN
-EXITP	ENDP
+	RETF   ;RESTORE REGS AND RETURN
+;EXITP	ENDP
 
-include msbds.inc			; include BDS structures
+include 'MSBDS.INC' ; include BDS structures
 ;include versiona.inc
 
 BDS	DW	-1			;Link to next structure
@@ -157,12 +157,12 @@ VOLID1	DB	"NO NAME    ",0         ;Volume ID for this disk
 VOLSER	dd	0			;AN000;
 FILE_ID db	"FAT12   ",0            ;AN000;
 
-DOS_Drive_Letter	db	?	; Logical drive associated with this unit
+DOS_Drive_Letter	rb      1 ; Logical drive associated with this unit
 
-ENDCODE LABEL WORD			; Everything below this is thrown away
+label ENDCODE word   ; Everything below this is thrown away
 					; after initialisation.
 
-DskDrv	    dw	    offset FDRIVE	; "array" of BPBs
+DskDrv	    dw	    FDRIVE        ; "array" of BPBs
 
 ;AN000; For system parser;
 
@@ -195,18 +195,18 @@ DrvSW	equ	0	; Support drive only format
 QusSW	equ	0	; Support quoted string format
 ;---------------------------------------------------
 ;.xlist
-assume ds:nothing				;AN007;!!!Parse.ASM sometimes assumes DS
+;assume ds:nothing				;AN007;!!!Parse.ASM sometimes assumes DS
 						;      to access its own variable!!!
-	include PARSE.ASM			;together with PSDATA.INC
-assume ds:code					;AN007;
+	include 'PARSE.ASM' ;together with PSDATA.INC
+;assume ds:code					;AN007;
 ;.list
 ;Control block definitions for PARSER.
 ;---------------------------------------------------
-Parms	label	byte
+label Parms byte
 	dw	Parmsx		;AN000;
 	db	0		;AN000;No extras
 
-Parmsx	label	byte		;AN000;
+label Parmsx byte  ;AN000;
 	db	0,0		;AN000;No positionals
 	db	5		;AN000;5 switch control definitions
 	dw	D_Control	;AN000;/D
@@ -216,93 +216,93 @@ Parmsx	label	byte		;AN000;
 	dw	F_Control	;AN000;/F
 	db	0		;AN000;no keywords
 
-D_Control	label	word	;AN000;
+label D_Control word ;AN000;
 	dw	8000h		;AN000;numeric value
 	dw	0		;AN000;no functions
 	dw	Result_Val	;AN000;result buffer
 	dw	D_Val		;AN000;value defintions
 	db	1		;AN000;# of switch in the following list
-Switch_D	label	byte	;AN000;
+label Switch_D byte ;AN000;
 	db	'/D',0          ;AN000;
 
-D_Val	label	byte		;AN000;
+label D_Val byte  ;AN000;
 	db	1		;AN000;# of value defintions
 	db	1		;AN000;# of ranges
 	db	1		;AN000;Tag value when match
 ;	 dd	 0,255		 ;AN000;
 	dd	0,127		;AN001;Do not allow a Fixed disk.
 
-Result_Val	label	byte	;AN000;
+label Result_Val byte ;AN000;
 	db	?		;AN000;
-Item_Tag	label	byte	;AN000;
+label Item_Tag byte ;AN000;
 	db	?		;AN000;
-Synonym_ptr	label	word	;AN000;
+label Synonym_ptr word ;AN000;
 	dw	?		;AN000;es:offset -> found Synonym
-RV_Byte 	label	byte	;AN000;
-RV_Word 	label	word	;AN000;
-RV_Dword	label	dword	;AN000;
+label RV_Byte byte  ;AN000;
+label RV_Word word  ;AN000;
+label RV_Dword dword ;AN000;
 	dd	?		;AN000;value if number, or seg:off to string
 
-T_Control	label	word	;AN000;
+label T_Control word ;AN000;
 	dw	8000h		;AN000;numeric value
 	dw	0		;AN000;no functions
 	dw	Result_Val	;AN000;result buffer
 	dw	T_Val		;AN000;value defintions
 	db	1		;AN000;# of switch in the following list
-Switch_T	label	byte	;AN000;
+label Switch_T byte ;AN000;
 	db	'/T',0          ;AN000;
 
-T_Val	label	byte		;AN000;
+label T_Val byte  ;AN000;
 	db	1		;AN000;# of value defintions
 	db	1		;AN000;# of ranges
 	db	1		;AN000;Tag value when match
 	dd	1,999		;AN000;
 
-HS_Control	label	word	;AN000;
+label HS_Control word ;AN000;
 	dw	8000h		;AN000;numeric value
 	dw	0		;AN000;no function flag
 	dw	Result_Val	;AN000;Result_buffer
-	dw	HS_VAL		;AN000;value definition
+	dw	HS_Val		;AN000;value definition
 	db	2		;AN000;# of switch in following list
-Switch_H	label	byte	;AN000;
+label Switch_H byte ;AN000;
 	db	'/H',0          ;AN000;
-Switch_S	label	byte	;AN000;
+label Switch_S byte ;AN000;
 	db	'/S',0          ;AN000;
 
-HS_Val	 label	 byte		;AN000;
+label HS_Val byte    ;AN000;
 	db	1		;AN000;# of value defintions
 	db	1		;AN000;# of ranges
 	db	1		;AN000;Tag value when match
 	dd	1,99		;AN000;
 
-CN_Control	 label	 word	;AN000;
+label CN_Control word   ;AN000;
 	dw	0		;AN000;no match flags
 	dw	0		;AN000;no function flag
 	dw	Result_Val	;AN000;no values returned
-	dw	NoVal		;AN000;no value definition
+	dw	Noval		;AN000;no value definition
 ;	 db	 2		 ;AN000;# of switch in following list
 	db	1		;AN001;
-Switch_C	label	byte	;AN000;
+label Switch_C byte ;AN000;
 	db	'/C',0          ;AN000;
 ;Switch_N	 label	 byte	 ;AN000;
 ;	 db	 '/N',0          ;AN000;
 
 Noval	db	0		;AN000;
 
-F_Control	label	word	;AN000;
+label F_Control word ;AN000;
 	dw	8000h		;AN000;numeric value
 	dw	0		;AN000;no function flag
 	dw	Result_Val	;AN000;Result_buffer
-	dw	F_VAL		;AN000;value definition
+	dw	F_Val		;AN000;value definition
 	db	1		;AN000;# of switch in following list
-Switch_F	label	byte	;AN000;
+label Switch_F byte ;AN000;
 	db	'/F',0          ;AN000;
 
-F_Val		label	byte	;AN000;
+label F_Val byte  ;AN000;
 	db	2		;AN000;# of value definitions (Order dependent)
 	db	0		;AN000;no ranges
 	db	4		;AN000;# of numeric choices
-F_Choices	label	byte	;AN000;
+label F_Choices byte ;AN000;
 	db	1		;AN000;1st choice (item tag)
 	dd	0		;AN000;0
 	db	2		;AN000;2nd choice
@@ -331,23 +331,23 @@ MSG_SERVICES <LOADmsg,DISPLAYmsg,CHARmsg>
 SetDrive:
 	push	cs
 	pop	ds
-	mov	di,offset BDS
+	mov	di,BDS
 	ret
 
 ;
-; Place for DSK$INIT to exit
+; Place for DSKINIT$ to exit
 ;
-ERR$EXIT:
+ERREXIT$:
 	MOV	AH,10000001B			   ;MARK ERROR RETURN
-	lds	bx, cs:[ptrsav]
-	mov	byte ptr ds:[bx.MEDIA], 0	   ;AN002; # of units
-	mov	word ptr ds:[bx.CONFIG_ERRMSG], -1 ;AN009;Show IBMBIO error message too.
+	lds	bx, [cs:PTRSAV]
+	mov	byte [ds:bx+MEDIA], 0        ;AN002; # of units
+	mov	word [ds:bx+CONFIG_ERRMSG], -1     ;AN009;Show IBMBIO error message too.
 	JMP	SHORT ERR1
 
-Public EXIT
+;Public EXIT
 EXIT:	MOV	AH,00000001B
-ERR1:	LDS	BX,CS:[PTRSAV]
-	MOV	WORD PTR [BX].STATUS,AX ;MARK OPERATION COMPLETE
+ERR1:	LDS	BX,[cs:PTRSAV]
+	MOV	word [BX+STATUS],AX     ;MARK OPERATION COMPLETE
 
 RestoreRegsAndReturn:
 	POP	DS
@@ -357,7 +357,7 @@ RestoreRegsAndReturn:
 	POP	CX
 	POP	AX
 	POP	SI
-	jmp	dos_exit
+	jmp	DOS_Exit
 
 
 drivenumb   db	    5
@@ -368,11 +368,11 @@ slim	    dw	    9
 
 Switches    dw	0
 
-Drive_Let_Sublist	label	dword
+label Drive_Let_Sublist dword
 	db     11	;AN000;length of this table
 	db	0	;AN000;reserved
 	dw	D_Letter;AN000;
-D_Seg	dw	?	;AN000;Segment value. Should be CS
+D_Seg	rw      1 ;AN000;Segment value. Should be CS
 	db	1	;AN000;DRIVER.SYS has only %1
 	db	00000000b ;AN000;left align(in fact, Don't care), a character.
 	db	1	;AN000;max field width 1
@@ -392,12 +392,12 @@ Message:
 	pop	ds
 	pop	ax
 	ret
-extrn	nodrive:byte,loadokmsg:byte,letter:byte, badvermsg:byte
-endif
+;extrn	nodrive:byte,loadokmsg:byte,letter:byte, badvermsg:byte
+end if
 
 
 if iTEST
-%OUT Testing On
+;%OUT Testing On
 initmsg     db	    "Initializing device driver",13,10,"$"
 stratmsg    db	    "In strategy of driver",10,13,"$"
 dskinmsg    db	    "In DSKIN part of driver",10,13,"$"
@@ -424,9 +424,9 @@ ffnum	    db	    "0",10,13,"$"
 nxtmsg	    db	    "Next switch ",10,13,"$"
 msg48tpi    db	    "Got a 48 tpi drive",10,13,"$"
 
-ENDIF
+end if
 
-DSK$INIT:
+DSKINIT$:
 	PUSH	SI
 	PUSH	AX
 	PUSH	CX
@@ -435,29 +435,29 @@ DSK$INIT:
 	PUSH	BP
 	PUSH	DS
 
-	LDS	BX,CS:[PTRSAV]		;GET POINTER TO I/O PACKET
+	LDS	BX,[cs:PTRSAV]		;GET POINTER TO I/O PACKET
 
-	MOV	AL,BYTE PTR DS:[BX].UNIT    ;AL = UNIT CODE
-	MOV	AH,BYTE PTR DS:[BX].MEDIA   ;AH = MEDIA DESCRIP
-	MOV	CX,WORD PTR DS:[BX].COUNT   ;CX = COUNT
-	MOV	DX,WORD PTR DS:[BX].START   ;DX = START SECTOR
+	MOV	AL,byte [ds:BX+UNIT]        ;AL = UNIT CODE
+	MOV	AH,byte [ds:BX+MEDIA]       ;AH = MEDIA DESCRIP
+	MOV	CX,word [ds:BX+COUNT]       ;CX = COUNT
+	MOV	DX,word [ds:BX+START]       ;DX = START SECTOR
 
-	LES	DI,DWORD PTR DS:[BX].TRANS
+	LES	DI,dword [ds:BX+TRANS]
 
 	PUSH	CS
 	POP	DS
 
-	ASSUME	DS:CODE
+;	ASSUME	DS:CODE
 
 	cld
 	push	cs			;AN000; Initialize Segment of Sub list.
-	pop	[D_Seg] 		;AN000;
+	pop	word [D_Seg] ;AN000;
 	call	SYSLOADMSG		;AN000; linitialize message handler
 	jnc	GoodVer 		;AN000; Error. Do not install driver.
 	mov	cx, 0			;AN000; No substitution
 	mov	dh, -1			;AN000; Utility message
 	call	Show_Message		;AN000; Show message
-	jmp	err$exitj2		;AN000;  and exit
+	jmp	errexitj2$		;AN000;  and exit
 
 ;; check for correct DOS version
 ;	 mov	 ah,30h
@@ -474,52 +474,52 @@ DSK$INIT:
 ;BadDOSVer:
 ;	 Mov	 dx,offset BadVerMsg
 ;	 call	 message
-;	 jmp	 err$exitj2		 ; do not install driver
+;	 jmp	 errexitj2$		 ; do not install driver
 
 GoodVer:
 	mov	ax,0800H
 	int	2fH			    ; see if installed
 	cmp	al,0FFH
-	jnz	err$exitj2		    ; do not install driver if not present
-	lds	bx,[ptrsav]
-	mov	si,word ptr [bx].count	    ; get pointer to line to be parsed
-	mov	ax,word ptr [bx].count+2
+	jnz	errexitj2$		    ; do not install driver if not present
+	lds	bx,[PTRSAV]
+	mov	si,word [bx+COUNT]         ; get pointer to line to be parsed
+	mov	ax,word [bx+COUNT+2]
 	mov	ds,ax
 	call	Skip_Over_Name		    ; skip over file name of driver
-	mov	di,offset BDS		    ; point to BDS for drive
+	mov	di,BDS             ; point to BDS for drive
 	push	cs
 	pop	es			    ; es:di -> BDS
 	Call	ParseLine
-	jc	err$exitj2
-	LDS	BX,cs:[PTRSAV]
-	mov	al,byte ptr [bx].extra	; get DOS drive letter
-	mov	byte ptr es:[di].DriveLet,al
-	mov	cs:[DOS_Drive_Letter],al
+	jc	errexitj2$
+	LDS	BX,[cs:PTRSAV]
+	mov	al,byte [bx+EXTRA]     ; get DOS drive letter
+	mov	byte [es:di+BDS_TYPE.DRIVELET],al
+	mov	[cs:DOS_Drive_Letter],al
 	add	al,"A"
 ;	 mov	 cs:[letter],al 	 ; set up for printing final message
-	mov	cs:[D_Letter], al	;AN000;
+	mov	[cs:D_Letter], al	;AN000;
 	call	SetDrvParms		; Set up BDS according to switches
-	jc	err$exitj2
+	jc	errexitj2$
 	mov	ah,8			; Int 2f multiplex number
 	mov	al,1			; install the BDS into the list
 	push	cs
 	pop	ds			; ds:di -> BDS for drive
-	mov	di,offset BDS
+	mov	di,BDS
 	int	2FH
-	lds	bx,dword ptr cs:[ptrsav]
+	lds	bx,dword [cs:PTRSAV]
 	mov	ah,1
-	mov	cs:[DRVMAX],ah
-	mov	byte ptr [bx].media,ah
-	mov	ax,offset ENDCODE
-	mov	word ptr [bx].TRANS,AX	    ; set address of end of code
-	mov	word ptr [bx].TRANS+2,CS
-	mov	word ptr [bx].count,offset DskDrv
-	mov	word ptr [bx].count+2,cs
+	mov	[cs:DRVMAX],ah
+	mov	byte [bx+MEDIA],ah
+	mov	ax,ENDCODE
+	mov	word [bx+TRANS],AX         ; set address of end of code
+	mov	word [bx+TRANS+2],CS
+	mov	word [bx+COUNT],DskDrv
+	mov	word [bx+COUNT+2],cs
 
 	push	dx
 	push	cs
 	pop	ds
-	mov	si, offset Drive_Let_SubList  ;AC000;
+	mov	si, Drive_Let_Sublist         ;AC000;
 	mov	ax, LOADOK_MSG_NUM	;load ok message
 	mov	cx, 1			;AN000; 1 substitution
 	mov	dh, -1			;AN000; utility message
@@ -529,15 +529,15 @@ GoodVer:
 	pop	dx
 	jmp	EXIT
 
-err$exitj2:
+errexitj2$:
 	stc
-	jmp	err$exit
+	jmp	ERREXIT$
 
 ;
 ; Skips over characters at ds:si until it hits a `/` which indicates a switch
 ; J.K. If it hits 0Ah or 0Dh, then will return with SI points to that character.
 Skip_Over_Name:
-	call	scanblanks
+	call	ScanBlanks
 loop_name:
 	lodsb
 	cmp	al,CR				;AN003;
@@ -622,7 +622,7 @@ End_SkipName:					;AN003;
 
 
 
-ParseLine	proc	near
+ParseLine:
 ;In) DS:SI -> Input string
 ;    ES = CS
 ;    ES:DI -> BDS table inside this program
@@ -656,21 +656,21 @@ ParseLine	proc	near
 ;		exit;
 ;	      };
 ;
-	assume	ds:nothing		;AN000;make sure
+;	assume	ds:nothing		;AN000;make sure
 	push	di			;AN000;save BDS pointer
-	mov	di, offset PARMS	;AN000;now, es:di -> parse control definition
+	mov	di, Parms        ;AN000;now, es:di -> parse control definition
 SysP_While:				;AN000;
 	xor	cx, cx			;AN004; I don't have positionals.
 	xor	dx, dx			;AN000;
-	call	SYSPARSE		;AN000;
-	cmp	ax, $P_RC_EOL		;AN000;end of line?
+	call	SysParse		;AN000;
+	cmp	ax, P_RC_EOL		;AN000;end of line?
 	je	SysP_End		;AN000;
-	cmp	ax, $P_NO_ERROR 	;AN000;no error?
+	cmp	ax, P_No_Error 	;AN000;no error?
 	jne	SysP_Fail		;AN000;
 	call	Get_Result		;AN000;
 	jmp	SysP_While		;AN000;
 SysP_End:				;AN000;
-	test	Switches, FLAGDRIVE	;AN000;drive number specified?
+	test	word [es:Switches], flagdrive ;AN000;drive number specified?
 	jnz	SysP_Ok 		;AN000;Drive number is a requirement
 	push	ds			;AN000;
 	mov	ax, NODRIVE_MSG_NUM	;AN000;no drive specification
@@ -691,10 +691,10 @@ SysP_Ok:				;AN000;
 PL_Ret: 				;AN000;
 	pop	di			;AN000;restore BDS pointer
 	ret				;AN000;
-ParseLine	endp
+;ParseLine	endp
 
 ;
-Get_Result	proc	near
+Get_Result:
 ;In) A successful result of SYSPARSE in Result_Val
 ;    es = cs, ds = command line segment
 ;Out)
@@ -735,40 +735,40 @@ Get_Result	proc	near
 ;
 
 
-	mov	ax, Synonym_Ptr 	;AN000;
+	mov	ax, [es:Synonym_ptr] ;AN000;
 	push	ax			;AN006; save Synonym_ptr
-	cmp	ax, offset Switch_D	;AN000;
+	cmp	ax, Switch_D        ;AN000;
 	jne	Stch_T			;AN000;
-	or	Switches, FLAGDRIVE	;AN000;
-	mov	al, RV_Byte		;AN000;
-	mov	Drivenumb, al		;AN000;
+	or	word [es:Switches], flagdrive ;AN000;
+	mov	al, [es:RV_Byte] ;AN000;
+	mov	[es:drivenumb], al ;AN000;
 	jmp	GR_Ret			;AN000;
 Stch_T: 				;AN000;
-	cmp	ax, offset Switch_T	;AN000;
+	cmp	ax, Switch_T        ;AN000;
 	jne	Stch_H			;AN000;
-	or	Switches, FLAGCYLN	;AN000;
-	mov	ax, RV_Word		;AN000;
-	mov	Cyln, ax		;AN000;
+	or	word [es:Switches], flagcyln ;AN000;
+	mov	ax, [es:RV_Word] ;AN000;
+	mov	[es:cyln], ax ;AN000;
 	jmp	GR_Ret			;AN000;
 Stch_H: 				;AN000;
-	cmp	ax, offset Switch_H	;AN000;
+	cmp	ax, Switch_H        ;AN000;
 	jne	Stch_S			;AN000;
-	or	Switches, FLAGHEADS	;AN000;
-	mov	ax, RV_Word		;AN000;
-	mov	Heads, ax		;AN000;
+	or	word [es:Switches], flagheads ;AN000;
+	mov	ax, [es:RV_Word] ;AN000;
+	mov	[es:heads], ax ;AN000;
 	jmp	GR_Ret			;AN000;
 Stch_S: 				;AN000;
-	cmp	ax, offset Switch_S	;AN000;
+	cmp	ax, Switch_S        ;AN000;
 	jne	Stch_C			;AN000;
-	or	Switches, FLAGSECLIM	;AN000;
-	mov	ax, RV_Word		;AN000;
-	mov	Slim, ax		;AN000;
+	or	word [es:Switches], flagseclim ;AN000;
+	mov	ax, [es:RV_Word] ;AN000;
+	mov	[es:slim], ax ;AN000;
 	jmp	GR_Ret			;AN000;
 Stch_C: 				;AN000;
-	cmp	ax, offset Switch_C	;AN000;
+	cmp	ax, Switch_C        ;AN000;
 ;	 jne	 Stch_N 		 ;AN000;
 	jne	Stch_F			;AN001;
-	or	Switches, fCHANGELINE	;AN000;
+	or	word [es:Switches], FCHANGELINE ;AN000;
 	jmp	GR_Ret			;AN000;
 ;Stch_N:				 ;AN000;
 ;	 cmp	 ax, offset Switch_N	 ;AN000;
@@ -776,33 +776,33 @@ Stch_C: 				;AN000;
 ;	 or	 Switches, fNON_REMOVABLE  ;AN000;
 ;	 jmp	 GR_Ret 		 ;AN000;
 Stch_F: 				;AN000;
-	cmp	ax, offset Switch_F	;AN000;
+	cmp	ax, Switch_F        ;AN000;
 	jne	GR_Not_Found_Ret	;AN000;error in SYSPARSE
-	or	Switches, FLAGFF	;AN000;
+	or	word [es:Switches], flagff ;AN000;
 	push	si			;AN004;
-	mov	si, offset F_Choices	;AN000;
+	mov	si, F_Choices        ;AN000;
 	xor	ax, ax			;AN000;
-	mov	al, Item_Tag		;AN000;
+	mov	al, [es:Item_Tag] ;AN000;
 	dec	al			;AN000;
 	mov	cl, 5			;AN000;
 	mul	cl			;AN000;
 	add	si, ax			;AN000;
-	mov	al, byte ptr es:[si+1]	;AN000;get the result of choices
-	mov	ffactor, al		;AN000;set form factor
+	mov	al, byte [es:si+1]     ;AN000;get the result of choices
+	mov	[es:ffactor], al ;AN000;set form factor
 	pop	si			;AN004;
 GR_Ret: 				;AN000;
 	pop	ax			;AN006; Restore Synonym ptr
 	push	di			;AN006; Save di
 	push	ax			;AN006;
 	pop	di			;AN006;
-	mov	byte ptr es:[di], ' '   ;AN006;We don't have this switch any more.
+	mov	byte [es:di], ' '       ;AN006;We don't have this switch any more.
 	pop	di			;AN006;
-	jmp	short Gr_Done_Ret	;AN006;
+	jmp	short GR_Done_Ret	;AN006;
 GR_Not_Found_Ret:
 	pop	ax			;AN006;adjust stack
 GR_Done_Ret:
 	ret				;AN000;
-Get_Result	endp
+;Get_Result	endp
 
 
 ;
@@ -1010,10 +1010,10 @@ SetDrvParms:
 	call	SetDrive		; ds:di -> BDS
 	;test	 cs:switches,flagff	 ; has formfactor been specified?
 	;jz	 formfcont
-	mov	bl,cs:[ffactor]
-	mov	byte ptr [di].formfactor,bl   ; replace with new value
+	mov	bl,[cs:ffactor]
+	mov	byte [di+BDS_TYPE.FORMFACTOR],bl ; replace with new value
 formfcont:
-	mov	bl,[di].FormFactor
+	mov	bl,[di+BDS_TYPE.FORMFACTOR]
 ;AC000; The followings are redundanat since there is no input specified for Hard file.
 ;	 cmp	 bl,ffHardFile
 ;	 jnz	 NotHardFF
@@ -1036,20 +1036,20 @@ formfcont:
 ;	 jmp	 short Set_RecBPB
 ;NotHardFF:
 ;AC000; End of deletion.
-	cmp	bl,ff48tpi
+	cmp	bl,FF48TPI
 	jnz	Got_80_cyln
 IF iTEST
-	mov	dx,offset msg48tpi
-	call	message
-ENDIF
+	mov	dx,msg48tpi
+	call	Message
+end if
 	mov	cx,40
-	mov	cs:[cyln],cx
+	mov	[cs:cyln],cx
 Got_80_cyln:
 	shl	bx,1			; bx is word index into table of BPBs
-	mov	si,offset BPBTable
-	mov	si,word ptr [si+bx]	; get address of BPB
+	mov	si,BPBTable
+	mov	si,word [si+bx]     ; get address of BPB
 Set_RecBPB:
-	add	di,RBytePerSec		; es:di -> Recommended BPB
+	add	di,BDS_TYPE.RBYTEPERSEC		; es:di -> Recommended BPB
 	mov	cx,BPBSIZ
 	cld
 	repe	movsb			; move BPBSIZ bytes
@@ -1061,13 +1061,13 @@ Set_RecBPB:
 ; number of heads. We do this by multiplying the number of heads by the number
 ; of 'sectors per head'. This is not a fool-proof scheme!!
 ;
-	mov	ax,[di].Rdrvlim 	; this is OK for two heads
+	mov	ax,[di+BDS_TYPE.RDRVLIM] ; this is OK for two heads
 	sar	ax,1			; ax contains # of sectors/head
-	mov	cx,[di].Rhdlim
+	mov	cx,[di+BDS_TYPE.RHDLIM]
 	dec	cl			; get it 0-based
 	sal	ax,cl
 	jc	Set_All_Done_BRG	; We have too many sectors - overflow!!
-	mov	[di].Rdrvlim,ax
+	mov	[di+BDS_TYPE.RDRVLIM],ax
 	cmp	cl,1
 ; We use media descriptor byte F0H for any type of medium that is not currently
 ; defined i.e. one that does not fall into the categories defined by media
@@ -1075,47 +1075,47 @@ Set_RecBPB:
 
 	JE	HEAD_2_DRV
 	MOV	AL, 1				;1 sector/cluster
-	MOV	BL, BYTE PTR [DI].Rmediad
-	CMP	BYTE PTR [DI].FormFactor, ffOther
-	JE	GOT_CORRECT_MEDIAD
-	MOV	CH, BYTE PTR [DI].FormFactor
-	CMP	CH, ff48tpi
+	MOV	BL, byte [DI+BDS_TYPE.RMEDIAD]
+	CMP	byte [DI+BDS_TYPE.FORMFACTOR], FFOTHER
+	JE	Got_Correct_Mediad
+	MOV	CH, byte [DI+BDS_TYPE.FORMFACTOR]
+	CMP	CH, FF48TPI
 	JE	SINGLE_MEDIAD
 	MOV	BL, 0F0h
-	JMP	GOT_CORRECT_MEDIAD
+	JMP	Got_Correct_Mediad
 Set_All_Done_BRG:jmp Set_All_Done
 SINGLE_MEDIAD:
-	CMP	WORD PTR [DI].RSecLim, 8	;8 SEC/TRACK?
+	CMP	word [DI+BDS_TYPE.RSECLIM], 8 ;8 SEC/TRACK?
 	JNE	SINGLE_9_SEC
 	MOV	BL, 0FEh
-	JMP	GOT_CORRECT_MEDIAD
+	JMP	Got_Correct_Mediad
 SINGLE_9_SEC:
 	MOV	BL, 0FCh
-	JMP	GOT_CORRECT_MEDIAD
+	JMP	Got_Correct_Mediad
 HEAD_2_DRV:
 	MOV	BL, 0F0h		;default 0F0h
 	MOV	AL, 1			;1 sec/cluster
-	CMP	BYTE PTR [DI].FormFactor, ffOther
-	JE	GOT_CORRECT_MEDIAD
-	CMP	BYTE PTR [DI].FormFactor, ff48tpi
+	CMP	byte [DI+BDS_TYPE.FORMFACTOR], FFOTHER
+	JE	Got_Correct_Mediad
+	CMP	byte [DI+BDS_TYPE.FORMFACTOR], FF48TPI
 	JNE	NOT_48TPI
 	MOV	AL, 2
-	CMP	WORD PTR [DI].RSecLim, 8	;8 SEC/TRACK?
+	CMP	word [DI+BDS_TYPE.RSECLIM], 8 ;8 SEC/TRACK?
 	JNE	DOUBLE_9_SEC
 	MOV	BL, 0FFh
-	JMP	GOT_CORRECT_MEDIAD
+	JMP	Got_Correct_Mediad
 DOUBLE_9_SEC:
 	MOV	BL, 0FDh
-	JMP	GOT_CORRECT_MEDIAD
+	JMP	Got_Correct_Mediad
 NOT_48TPI:
-	CMP	BYTE PTR [DI].FormFactor, ff96tpi
+	CMP	byte [DI+BDS_TYPE.FORMFACTOR], FF96TPI
 	JNE	NOT_96TPI
 	MOV	AL, 1			;1 sec/cluster
 	MOV	BL, 0F9h
-	JMP	GOT_CORRECT_MEDIAD
+	JMP	Got_Correct_Mediad
 NOT_96TPI:
-	CMP	BYTE PTR [DI].FormFactor, ffSmall	;3-1/2, 720kb
-	JNE	GOT_CORRECT_MEDIAD	;Not ffSmall. Strange Media device.
+	CMP	byte [DI+BDS_TYPE.FORMFACTOR], FFSMALL ;3-1/2, 720kb
+	JNE	Got_Correct_Mediad	;Not ffSmall. Strange Media device.
 	MOV	AL, 2			;2 sec/cluster
 	MOV	BL, 0F9h
 
@@ -1142,19 +1142,19 @@ NOT_96TPI:
 ;J.K. END OF OLD LOGIC
 
 Got_Correct_Mediad:
-	mov	byte ptr [di].RSecPerClus,al
-	mov	byte ptr [di].Rmediad,bl
+	mov	byte [di+BDS_TYPE.RSECPERCLUS],al
+	mov	byte [di+BDS_TYPE.RMEDIAD],bl
 ; Calculate the correct number of Total Sectors on medium
-	mov	ax,word ptr [di].Ccyln
-	mov	bx,word ptr [di].RHdLim
+	mov	ax,word [di+BDS_TYPE.CCYLN]
+	mov	bx,word [di+BDS_TYPE.RHDLIM]
 	mul	bx
-	mov	bx,word ptr [di].RSecLim
+	mov	bx,word [di+BDS_TYPE.RSECLIM]
 	mul	bx
 ; AX contains the total number of sectors on the disk
-	mov	word ptr [di].RDrvLim,ax
+	mov	word [di+BDS_TYPE.RDRVLIM],ax
 ;J.K. For ffOther type of media, we should set Sec/FAT, and # of Root directory
 ;J.K. accordingly.
-	cmp	byte ptr [di].FormFactor, ffOther  ;AN005;
+	cmp	byte [di+BDS_TYPE.FORMFACTOR], FFOTHER ;AN005;
 	jne	Set_All_Ok			;AN005;
 	xor	dx, dx				;AN005;
 	dec	ax				;AN005; DrvLim - 1.
@@ -1166,8 +1166,8 @@ Got_Correct_Mediad:
 	mov	bx, 512 			;AN005;
 	div	bx				;AN005;
 	inc	ax				;AN005;
-	mov	[di].RCSecFat, ax		;AN005;
-	mov	[di].RCDir, 0E0h		;AN005; directory entry # = 224
+	mov	[di+BDS_TYPE.RCSECFAT], ax ;AN005;
+	mov	[di+BDS_TYPE.RCDIR], 0E0h ;AN005; directory entry # = 224
 Set_All_Ok:					;AN005;
 	clc
 Set_All_Done:
@@ -1180,30 +1180,30 @@ Set_All_Done:
 ;	No checking is done for a valid BPB here.
 ;
 Handle_Switches:
-	call	setdrive		; ds:di -> BDS
-	test	cs:switches,flagdrive
+	call	SetDrive		; ds:di -> BDS
+	test	word [cs:Switches],flagdrive
 	jz	done_handle		    ; if drive not specified, exit
-	mov	al,cs:[drivenumb]
-	mov	byte ptr [di].DriveNum,al
+	mov	al,[cs:drivenumb]
+	mov	byte [di+BDS_TYPE.DRIVENUM],al
 ;	 test	 cs:switches,flagcyln
 ;	 jz	 no_cyln
-	mov	ax,cs:[cyln]
-	mov	word ptr [di].cCyln,ax
+	mov	ax,[cs:cyln]
+	mov	word [di+BDS_TYPE.CCYLN],ax
 no_cyln:
-	test	cs:switches,flagseclim
+	test	word [cs:Switches],flagseclim
 	jz	no_seclim
-	mov	ax,cs:[slim]
-	mov	word ptr [di].RSeclim,ax
+	mov	ax,[cs:slim]
+	mov	word [di+BDS_TYPE.RSECLIM],ax
 no_seclim:
-	test	cs:switches,flagheads
+	test	word [cs:Switches],flagheads
 	jz	done_handle
-	mov	ax,cs:[heads]
-	mov	word ptr [di].RHdlim,ax
+	mov	ax,[cs:heads]
+	mov	word [di+BDS_TYPE.RHDLIM],ax
 done_handle:
 	RET
 
 
-Show_Message	proc	near
+Show_Message:
 ;In) AX = message number
 ;    DS:SI -> Substitution list if necessary.
 ;    CX = 0 or n depending on the substitution number
@@ -1215,7 +1215,7 @@ Show_Message	proc	near
 	mov	dl, 0		;AN000;no input
 	call	SYSDISPMSG	;AN000;
 	ret			;AN000;
-Show_Message	endp
+;Show_Message	endp
 
 ;
 ; The following are the recommended BPBs for the media that we know of so
@@ -1280,17 +1280,17 @@ switchlist  db	7,"FHSTDCN"         ; Preserve the positions of N and C.
 
 ; The following depend on the positions of the various letters in SwitchList
 
-flagdrive   equ     0004H
-flagcyln    equ     0008H
-flagseclim  equ     0010H
-flagheads   equ     0020H
-flagff	    equ     0040H
+flagdrive   =     0004H
+flagcyln    =     0008H
+flagseclim  =     0010H
+flagheads   =     0020H
+flagff	    =     0040H
 
 ;AN000;
 ;Equates for message number
-NODRIVE_MSG_NUM   equ	2
-LOADOK_MSG_NUM	  equ	3
+NODRIVE_MSG_NUM   =	2
+LOADOK_MSG_NUM	  =	3
 
-code ends
+;code ends
 
-end
+;end

@@ -211,9 +211,17 @@ def headers(names):
 
 
 def utilities():
-    """The utilities assemble.sh builds, each its own program."""
+    """The programs assemble.sh builds, each its own program.
+
+    A utility is under src/CMD and a driver under src/DEV, and the shell
+    function that builds one says which: they are the same kind of thing
+    here, one program with names of its own, so what comes back is the
+    directory under src rather than the bare name.
+    """
     text = open(os.path.join(HERE, "assemble.sh")).read()
-    return re.findall(r"(?m)^utility\s+(\S+)\s", text)
+    return ["%s/%s" % ("CMD" if kind == "utility" else "DEV", name)
+            for kind, name
+            in re.findall(r"(?m)^(utility|device)\s+(\S+)\s", text)]
 
 
 def check(names):
@@ -264,7 +272,7 @@ def main():
     # variables are its own, and two of them may well name one the same.
     groups = [modules("src/DOS", "src/BIOS", "src/BOOT", "src/INC")]
     for u in utilities():
-        mine = modules("src/CMD/%s" % u)
+        mine = modules("src/%s" % u)
         groups.append(mine + headers(mine))
     total = lengths = 0
     for names in groups:

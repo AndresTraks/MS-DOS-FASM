@@ -7,13 +7,16 @@ QEMU=${QEMU:-qemu-system-i386}
 
 # create_image.sh makes the system disk and nothing else, which is what the
 # tests want of it -- two of them count what is on the disk.  A machine driven
-# by hand wants the utilities as well, so they go on here: the ones under
-# src/CMD that are converted, in the order assemble.sh builds them.
+# by hand wants the programs as well, so they go on here: the utilities under
+# src/CMD and the drivers under src/DEV that are converted, in the order
+# assemble.sh builds them.  A driver is loaded by a DEVICE= line in
+# CONFIG.SYS, which this disk has none of; it is here to be named by one.
 for util in MORE.COM SORT.EXE FIND.EXE LABEL.COM TREE.COM COMP.COM EXE2BIN.EXE \
             RECOVER.COM DISKCOMP.COM DISKCOPY.COM EDLIN.COM SYS.COM \
             CHKDSK.COM XCOPY.EXE FORMAT.COM DEBUG.COM GRAFTABL.COM \
             MODE.COM ASSIGN.COM NLSFUNC.EXE APPEND.EXE PRINT.COM \
-            FASTOPEN.EXE KEYB.COM GRAPHICS.COM SHARE.EXE IFSFUNC.EXE; do
+            FASTOPEN.EXE KEYB.COM GRAPHICS.COM SHARE.EXE IFSFUNC.EXE \
+            DRIVER.SYS; do
     mcopy -o -i msdos.img "bin/$util" "::$util"
 done
 

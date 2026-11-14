@@ -473,9 +473,17 @@ def report(title, paths, labels, groups):
 
 
 def utilities():
-    """The utilities assemble.sh builds, and the source it hands fasm."""
+    """The programs assemble.sh builds, and the source it hands fasm.
+
+    A utility is under src/CMD and a driver under src/DEV, and the shell
+    function that builds one says which, so what comes back is the
+    directory under src rather than the bare name.
+    """
     text = read(os.path.join(HERE, "assemble.sh"))
-    return re.findall(r"(?m)^utility\s+(\S+)\s+(\S+)\s+\S+", text)
+    return [("%s/%s" % ("CMD" if kind == "utility" else "DEV", where), source)
+            for kind, where, source
+            in re.findall(r"(?m)^(utility|device)\s+(\S+)\s+(\S+)\s+\S+",
+                          text)]
 
 
 def utility_program(where, source):
@@ -487,7 +495,7 @@ def utility_program(where, source):
     from.  A one-segment .COM is its own link file, and every label is in the
     segment its ASSUME puts CS on.
     """
-    top = os.path.join(SRC, "CMD", where, source + ".ASM")
+    top = os.path.join(SRC, where, source + ".ASM")
     if not os.path.exists(top):
         return None
     text = read(top)

@@ -308,3 +308,31 @@ utility SHARE SHRLNK SHARE.EXE
 # packs an .EXE, and DOS unpacks one as it loads it, so the image this
 # writes is the same program unpacked.
 utility IFSFUNC IFSLNK IFSFUNC.EXE
+
+# The drivers under src/DEV.  A driver is built the way a utility is -- the
+# same message retriever, the same INCLUDE path, its own directory after
+# src/INC -- and the only difference is where it is read from, so this is
+# the same function with that one change.
+# device <directory> <source> <output> [<skeleton>]
+device() {
+    python3 buildmsg.py "src/DEV/$1/${4:-$1}.SKL" >/dev/null
+    if [ "$FASM" = fasm ]; then
+        INCLUDE="$PWD/src/INC:$PWD/src/DEV/$1"
+    else
+        win() { printf 'Z:%s' "$(echo "$1" | sed 's|/|\\|g')"; }
+        INCLUDE="$(win "$PWD/src/INC");$(win "$PWD/src/DEV/$1")"
+    fi
+    export INCLUDE
+    $FASM "src/DEV/$1/$2.ASM" "bin/$3"
+    unset INCLUDE
+}
+
+# DRIVER.SYS, the smallest of the drivers: one module in one segment, which
+# DRVLNK.ASM reads on its own.  It is the driver CONFIG.SYS names to give a
+# second letter to a drive the BIOS already has -- B: for the one floppy, or
+# a letter whose BPB says something else -- and it does the work by handing
+# the request to the BIOS's block driver through INT 2FH multiplex 8, which
+# is why it is as small as it is.  The release links the one object and runs
+# EXE2BIN over the result; a driver has no header and no prefix, so what
+# this writes is the image itself.
+device DRIVER DRVLNK DRIVER.SYS
