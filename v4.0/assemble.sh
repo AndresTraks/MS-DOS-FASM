@@ -346,3 +346,13 @@ device DRIVER DRVLNK DRIVER.SYS
 # every character it does not handle itself.  The release links the four and
 # runs EXE2BIN over the result, as it does for DRIVER.
 device ANSI ANSLNK ANSI.SYS
+
+# VDISK.SYS, the RAM disk: one module, which VDSKLNK.ASM reads on its own.
+# A CONFIG.SYS line gives it a size, a sector size and a count of directory
+# entries, and it answers as a block device for a disk it keeps in memory
+# -- in what is left of the first megabyte, in extended memory above it, or
+# in expanded memory, which are the /E and /X the switches ask for.  It
+# writes the boot record, the FAT and the directory itself, volume label
+# and all, so a drive it has made is one DOS can read without FORMAT.  The
+# release links the one object and runs EXE2BIN over the result.
+device VDISK VDSKLNK VDISK.SYS

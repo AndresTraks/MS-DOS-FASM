@@ -124,6 +124,12 @@ def norm(expr):
     # MASM's SIZE operator against the converted sizeof., without turning
     # an already converted SIZEOF.X into SIZEOF.OF.X.
     expr = re.sub(r"\bSIZE(?!OF\.)([A-Z_]\w*)", r"SIZEOF.\1", expr)
+    # And MASM's TYPE of a structure, which is the room an instance of it
+    # takes and so the same number: VDISK reserves the common part of each
+    # request header with DB (TYPE RHC) DUP (?), KEYB its two translate
+    # tables with TYPE XLAT_STR, and the conversion writes sizeof. for
+    # both.
+    expr = re.sub(r"\bTYPE(?!OF\.)([A-Z_]\w*)", r"SIZEOF.\1", expr)
     return expr.strip("()") or "1"
 
 
@@ -156,7 +162,7 @@ def fields(body, pattern, defaults=None):
         m = NESTED.match(code) if pattern is FASM else None
         if m:
             out.append((m.group(1).lstrip(".").upper(),
-                        "TYPE%s*1" % m.group(2).upper()))
+                        "SIZEOF.%s*1" % m.group(2).upper()))
     return out
 
 

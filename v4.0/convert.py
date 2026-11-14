@@ -1340,6 +1340,28 @@ UTILITIES = {
              "IOCTL_REQ_HDR   ENDS                    ;"
              "                                      ;AN000;\n")]},
     ),
+    # VDISK.SYS, the RAM disk: one module and the header it reads, which is
+    # all VDISK.LNK links -- VDISK.ASM beside it is the same driver before
+    # the message retriever took its text over, and nothing reads it.  Two
+    # segments and no group: CSEG, which is the driver, and INT_VEC AT 0,
+    # which names the two words of the INT 15H vector the driver hooks to
+    # keep the extended memory it has taken.
+    'VDISK': dict(
+        DIR='src/DEV/VDISK',
+        MODULES=('VDISKSYS.ASM', 'VDISKSYS.INC'),
+        ONESEG=True,
+        SHARED=('SYSMSG.INC', 'VERSIONA.INC', 'MSGSERV.ASM', 'COPYRIGH.INC',
+                'PARSE.ASM', 'PSDATA.INC'),
+        # The segment's own ASSUME, which says CS and nothing else: the
+        # driver is entered through the two addresses in its header, with
+        # the caller's DS, and says where DS is itself as it goes.
+        START={'cs': 'CSEG', 'ds': None, 'es': None, 'ss': None},
+        # INC/SYSMSG.INC gives FALSE and TRUE their values, in capitals,
+        # and the one line of VDISK that lays a flag down with the first of
+        # them spells it lower case -- one name to MASM.  The other five
+        # uses are in capitals already.
+        SPELLING={'false': 'FALSE'},
+    ),
 }
 
 NAME = sys.argv[1].upper() if len(sys.argv) > 1 else ''
@@ -4144,6 +4166,22 @@ def jumped(code):
                   r"(\[[^\]]*\])\s*$", one, code)
 
 
+def tenbytes(code):
+    """MASM's DT, which lays down ten bytes of packed decimal.
+
+    fasm's DT is the x87's ten-byte real and will not take an integer at
+    all.  VDISK's boot record reserves its ten bytes with DT 0, which is
+    the digits of nought and so ten zero bytes; the only other DT in the
+    release is the same line in the copy of the driver that nothing links.
+    Any other value would have its digits worked out, and there is none.
+    """
+    return re.sub(r"(?i)^(\s*)dt(\s+)(0|\?)[ \t]*$",
+                  lambda m: '%sdb%s10 dup (0)' % (m.group(1), m.group(2))
+                  if m.group(3) == '0' else '%srb%s10' % (m.group(1),
+                                                          m.group(2)),
+                  code)
+
+
 def sizes(code):
     """A type name in an expression, as the number of bytes it takes up."""
     code = re.sub(r"\b(BYTE|WORD|DWORD)\b(?!\s*\[)",
@@ -4696,6 +4734,7 @@ for stem in MODULES:
         code = sized(code)
         code = pushed(code)
         code = jumped(code)
+        code = tenbytes(code)
 
         if held:
             m2 = re.match(r"(?i)^\s*cmp\s+(.*?)\s*,\s*(.*?)\s*$", code)

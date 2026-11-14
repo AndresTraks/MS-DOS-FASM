@@ -211,7 +211,7 @@ def headers(names):
 
 
 def utilities():
-    """The programs assemble.sh builds, each its own program.
+    """The programs assemble.sh builds, and the source it hands fasm.
 
     A utility is under src/CMD and a driver under src/DEV, and the shell
     function that builds one says which: they are the same kind of thing
@@ -219,9 +219,48 @@ def utilities():
     directory under src rather than the bare name.
     """
     text = open(os.path.join(HERE, "assemble.sh")).read()
-    return ["%s/%s" % ("CMD" if kind == "utility" else "DEV", name)
-            for kind, name
-            in re.findall(r"(?m)^(utility|device)\s+(\S+)\s", text)]
+    return [("%s/%s" % ("CMD" if kind == "utility" else "DEV", name), source)
+            for kind, name, source
+            in re.findall(r"(?m)^(utility|device)\s+(\S+)\s+(\S+)\s",
+                          text)]
+
+
+def linked(where, source):
+    """The modules the program's link file reads, which is the program.
+
+    Every file in the directory is not: VDISK's holds the same driver twice
+    -- VDISK.ASM is what it was before the message retriever took its text
+    over, and VDISKMSG.ASM is the text it took -- and VDISK.LNK links
+    neither.  Read as part of the program they were two hundred findings of
+    their own, every bare name in them being a name the conversion had not
+    bracketed, because nothing had converted them at all.
+    """
+    inside = {os.path.basename(p).upper(): p
+              for p in modules("src/" + where)}
+    top = os.path.join("src", where, source + ".ASM")
+    # The source assemble.sh names is a module itself where the program is
+    # one -- MORE is its own link file -- and a link file of this project's
+    # where it is not, which check() leaves alone anyway, the release
+    # having no such file to compare it with.
+    want, seen = [top], set()
+    pending = [top]
+    while pending:
+        rel = pending.pop(0)
+        if rel in seen:
+            continue
+        seen.add(rel)
+        path = os.path.join(HERE, rel)
+        if not os.path.exists(path):
+            continue
+        with open(path, encoding="cp437", newline="") as f:
+            text = f.read()
+        for name in re.findall(r"(?im)^[ \t]*include[ \t]+'?"
+                               r"([A-Za-z0-9_.$@?]+)'?", text):
+            p = inside.get(name.upper())
+            if p and p not in seen:
+                want.append(p)
+                pending.append(p)
+    return want or modules("src/" + where)
 
 
 def check(names):
@@ -271,8 +310,8 @@ def main():
     # One group for the system, and one for each utility: a program's
     # variables are its own, and two of them may well name one the same.
     groups = [modules("src/DOS", "src/BIOS", "src/BOOT", "src/INC")]
-    for u in utilities():
-        mine = modules("src/%s" % u)
+    for where, source in utilities():
+        mine = linked(where, source)
         groups.append(mine + headers(mine))
     total = lengths = 0
     for names in groups:

@@ -364,7 +364,31 @@ def macro_assumes(paths):
     return {name: pairs for name, pairs in out.items() if pairs}
 
 
-def scan(path, labels, groups, macros=None):
+CARRIES = re.compile(r"(?i)^\s*(" + N + r")\s+(?:equ|=)\s+"
+                     r"(?:(?:byte|word|dword|qword)\s+)?(?:ptr\s+)?"
+                     r"(CS|DS|ES|SS)\s*:")
+
+
+def carried(paths):
+    """The names an EQU gave a register of their own.
+
+    VDISK says RH EQU DS:[BX] for the request header and reads every field
+    of it through that name, so the override is in the name and not on the
+    line; ANSI's CONPTR EQU CS:[BX] is the same thing.  Such a name is not
+    storage in a segment of the program's at all, so a reference through it
+    is none of this checker's business -- read as one it was a finding
+    against whatever segment the EQU itself stands in.
+    """
+    found = {}
+    for path in paths:
+        for where, n, line in stream(path):
+            m = CARRIES.match(line.split(";")[0])
+            if m:
+                found[m.group(1).upper()] = m.group(2).upper()
+    return found
+
+
+def scan(path, labels, groups, macros=None, carries=None):
     """Every reference in one module, judged against the ASSUMEs around it."""
     assume = {"CS": None, "DS": None, "ES": None, "SS": None}
     macros = macros or {}
@@ -408,6 +432,15 @@ def scan(path, labels, groups, macros=None):
             through = prefix or ("SS" if re.search(
                 r"(?i)(?<![\w.@?$])(?:bp|sp)(?![\w@?$])", ref.group(2))
                 else None)
+            # A name that carries its own register says which one the
+            # reference goes through, whether or not it is the first name
+            # in the brackets: VDISK reads the request header's fields as
+            # [RH+RH0_BPBA], where RH is DS:[BX] and RH0_BPBA the field's
+            # own offset, and what is at it is no part of the program's own
+            # segments.
+            if any(inside.group(1).upper() in (carries or {})
+                   for inside in INSIDE.finditer(ref.group(2))):
+                continue
             for inside in INSIDE.finditer(ref.group(2)):
                 label = inside.group(1).upper()
                 if label in REGISTERS or label not in labels:
@@ -457,8 +490,9 @@ def report(title, paths, labels, groups):
     total = 0
     allnotes = 0
     macros = macro_assumes(paths)
+    carries = carried(paths)
     for path in paths:
-        findings, notes = scan(path, labels, groups, macros)
+        findings, notes = scan(path, labels, groups, macros, carries)
         total += len(findings)
         allnotes += len(notes)
         if findings:
