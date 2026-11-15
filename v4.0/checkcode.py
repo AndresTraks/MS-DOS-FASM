@@ -170,6 +170,8 @@ FARPROC = re.compile(r"(?i)^[ \t]*(" + r"[A-Za-z_@?$][A-Za-z0-9_@?$]*"
                      + r")[ \t]+PROC\b(.*)$")
 PROCEDURE = re.compile(r"(?i)^[ \t]*procedure[ \t]+"
                        r"[A-Za-z_@?$][A-Za-z0-9_@?$]*[ \t]*,[ \t]*far\b")
+NEARPROCEDURE = re.compile(r"(?i)^[ \t]*procedure[ \t]+"
+                           r"[A-Za-z_@?$][A-Za-z0-9_@?$]*\b")
 PROCEND = re.compile(r"(?i)^[ \t]*(?:[A-Za-z_@?$][A-Za-z0-9_@?$]*[ \t]+ENDP"
                      r"|EndProc)\b")
 
@@ -189,19 +191,32 @@ def far_returns(rel, was, now):
     above has reported it already.
     """
     import difflib
-    far, release = False, []
+    # MASM let one procedure stand inside another -- PRINTER declares
+    # INTERRUPT1, INTERRUPT2 and INTERRUPT3 inside INTERRUPT0 -- so the
+    # procedures open at a line are a stack and a RET is far or near by the
+    # innermost of them.  Read with one flag, as this was until
+    # 2026-11-15, the first inner ENDP ended the outer procedure and every
+    # RET after it looked near in the release as well, which is why the
+    # conversion's near return where PRINTER wanted a far one went
+    # unreported.
+    opened, release = [], []
     for n, line in enumerate(was, 1):
         code = line.split(";")[0]
         m = FARPROC.match(code)
         if m:
-            far = "far" in m.group(2).lower()
+            opened.append("far" in m.group(2).lower())
             continue
         if PROCEDURE.match(code):
-            far = True
+            opened.append(True)
+            continue
+        if NEARPROCEDURE.match(code):
+            opened.append(False)
             continue
         if PROCEND.match(code):
-            far = False
+            if opened:
+                opened.pop()
             continue
+        far = opened[-1] if opened else False
         mn = canon(mnemonic(line))
         if mn is None or mn in DROPPED or mn not in INSTRUCTIONS:
             continue

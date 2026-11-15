@@ -2721,7 +2721,7 @@ FORMAT_VDISK:       ;format boot record, FATs and directory
 	ADD	AX,STACK_SIZE		;plus stack size
 	ADC	DL,0			;pick up carry
 
-	DIV	[WPARA_SIZE] ;split into segment(AX)&offset(DX)
+	DIV	[WPARA_SIZE] ;split into segment(AX)&offset DX
 	MOV	[MOVE_RHS],AX ;save in Request Header for move
 	MOV	[MOVE_RHO],DX
 

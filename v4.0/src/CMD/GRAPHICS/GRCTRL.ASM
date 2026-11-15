@@ -140,7 +140,7 @@ ERROR_CODE	DB	0		; ERROR CODE 0 = NO ERROR		;AN000;
 ; SCREEN PIXEL: INTERNAL REPRESENTATION 					;AN000;
 ;										;AN000;
 ;-------------------------------------------------------------------------------;AN000;
-RGB	PIXEL_STR  , ,      ; PIXEL := RED, GREEN, BLUE Values		;AN000;
+RGB	PIXEL_STR           ; PIXEL := RED, GREEN, BLUE Values		;AN000;
 										;AN000;
 ;-------------------------------------------------------------------------------;AN000;
 ;										;AN000;

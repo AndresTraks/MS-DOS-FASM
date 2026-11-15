@@ -1423,6 +1423,30 @@ UTILITIES = {
             "        MOV     CS:CPD_FONT_DATA.[SI],AX;\n",
             "        MOV     CS:CPD_FONT_DATA[SI],AX ;\n")]},
     ),
+    # PRINTER.SYS, the code page driver for the printer and DISPLAY's own
+    # shape: the five modules PRINTER.LNK names and the one header they all
+    # read.  CPSPM10.ASM is the driver and the fonts for the 5202 printer,
+    # CPSFONT3.ASM the font writer, PRTINT2F.ASM the INT 2FH handler,
+    # CPSPI07.ASM the generic IOCTL side -- which is how MODE CP PREPARE
+    # hands it a .CPI file -- and PARSER.ASM the switches the DEVICE= line
+    # carries.  Four more files in the directory are earlier copies of
+    # three of those and the text the retriever took over; PRINTER.LNK
+    # links none of them.  The release links the five and runs EXE2BIN over
+    # the result with ZERO.DAT on its input, which is the 0 that answers
+    # the question EXE2BIN asks about an image with fixups in it.
+    'PRINTER': dict(
+        DIR='src/DEV/PRINTER',
+        MODULES=('CPSPM10.ASM', 'CPSFONT3.ASM', 'PRTINT2F.ASM',
+                 'CPSPI07.ASM', 'PARSER.ASM', 'CPSPEQU.INC'),
+        ONESEG=True,
+        SHARED=('SYSMSG.INC', 'VERSIONA.INC', 'MSGSERV.ASM', 'MSGDCL.INC',
+                'COPYRIGH.INC', 'STRUC.INC', 'PARSE.ASM', 'PSDATA.INC'),
+        # Every module says ASSUME CS:CSEG where its segment opens and
+        # names no other register: the driver is entered on an interrupt or
+        # through the two addresses in its header, with whatever DS the
+        # caller had, so what it reads of its own it reads through CS.
+        START={'cs': 'CSEG', 'ds': None, 'es': None, 'ss': None},
+    ),
 }
 
 NAME = sys.argv[1].upper() if len(sys.argv) > 1 else ''
@@ -2540,15 +2564,24 @@ for text in SEEN:
         FIRST[m.group(1)] = {'db': 'byte', 'dw': 'word', 'dd': 'dword',
                              'rb': 'byte', 'rw': 'word',
                              'rd': 'dword'}[m.group(2).lower()]
-INSTANCE = re.compile(r"^(\S+\s+)(" + '|'.join(sorted(STRUCS))
-                      + r")\s*<(.*)>\s*$", re.I)
+# The name can carry a colon, with or without white space in front of it:
+# ANSI writes BUF1: BUF_DATA <> and PRINTER HARD_SL1 : SLTS <,>, both of
+# which MASM read as a label's colon with the instance laid down under it.
+# The name and the structure's own have to be told apart by what stands
+# between them -- white space, or the colon and then white space -- and the
+# structure's name has to end where the alternation says it does: without
+# either, PRINT's unnamed "qea <...>" read as an instance called q of the
+# structure ea, and the name it needs went missing.
+INSTANCE = re.compile(r"^(\s*" + N + r"(?:\s*:)?\s+)("
+                      + '|'.join(sorted(STRUCS))
+                      + r")\b\s*<(.*)>\s*$", re.I)
 # An instance with no name of its own, which MASM laid down where it stood.
 # fasm hangs an instance's fields on its name, so one has to be made up.
 # It can stand at the margin as well: ANSI lays its video mode table down as
 # sixteen MODE_TABLE <> against the margin under a label of its own, and
 # PARSER six of its own structures the same way.
 NAMELESS = re.compile(r"^(\s*)(" + '|'.join(sorted(STRUCS))
-                      + r")\s*<(.*)>\s*$", re.I)
+                      + r")\b\s*<(.*)>\s*$", re.I)
 
 # Where one of them is written down.  fasm gives an instance's fields names of
 # their own -- SUBLIST_VOL.SUB_VALUE_SEG -- so a reference to a field is a
@@ -2561,7 +2594,12 @@ for text in list(source.values()) + SEEN:
     for line in text.split('\n'):
         # INVOKE writes the brackets against the structure's name --
         # IOCTL0C_data_block IOCTL0C_def<> -- so they end it as a space does
-        m = re.match(r"^[ \t]*(" + N + r")\s+(" + '|'.join(sorted(STRUCS))
+        # The name can carry a colon, as it can where the instance itself
+        # is written: PRINTER declares its four printer buffers
+        # BUF0: BUF_DATA <,,,,,,,,,,> and reads the first of them as buf0,
+        # which was one name to MASM.
+        m = re.match(r"^[ \t]*(" + N + r")(?:\s*:)?\s+("
+                     + '|'.join(sorted(STRUCS))
                      + r")(\s|<|$)", code_of(line), re.I)
         # the one each layout writes inside its VIRTUAL block, to measure
         # the structure by, names the structure after itself and is no
@@ -2759,6 +2797,13 @@ def offsets(text):
     OFFSET itself stays until the operands have been read, so that the name
     after it is not taken for a place in memory.
     """
+    # The name can stand in parentheses of its own, with no space in front
+    # of them: PRINTER writes DW OFFSET(PRINTER_DESC1) for each of the
+    # three printers it describes.  The parentheses say as little about a
+    # number as the segment does, and with none of the space the rules
+    # below look for the OFFSET would have stayed in the line.
+    text = re.sub(r"(?i)\b(offset)[ \t]*\([ \t]*(" + N + r")[ \t]*\)",
+                  lambda m: '%s %s' % (m.group(1), m.group(2)), text)
     text = re.sub(r"(?i)\b(offset[ \t]+)(?:cs|ds|es|ss)[ \t]*:[ \t]*",
                   lambda m: m.group(1), text)
     # MASM let the name stand in brackets after OFFSET as well, and the
@@ -4230,6 +4275,16 @@ def pushed(code):
                   lambda m: '%sword %s' % (m.group(1), m.group(2)), code)
 
 
+def close_proc(opened, kind):
+    """Close the innermost procedure of that kind, and say whether what is
+    left around it is a far one."""
+    for i in range(len(opened) - 1, -1, -1):
+        if opened[i][0] == kind:
+            del opened[i]
+            break
+    return opened[-1][1] if opened else False
+
+
 def jumped(code):
     """JMP or CALL through a place with no width said, which MASM read as a
     near one: the word at the address.
@@ -4348,6 +4403,7 @@ CODELABEL = re.compile(r"(?i)^[ \t]*(" + N + r")\s+label\s+(?:near|far)\s*$")
 PASTE = r"[A-Za-z_@?$][A-Za-z0-9_@?$#]*"
 FARPROCEDURE = re.compile(r"(?i)^[ \t]*procedure[ \t]+" + PASTE
                           + r"[ \t]*,[ \t]*far\b")
+ANYPROCEDURE = re.compile(r"(?i)^[ \t]*procedure[ \t]+" + PASTE + r"\b")
 PROC = re.compile(r"(?i)^[ \t]*(" + PASTE
                   + r")\s+proc(?:\s+(near|far))?\s*$")
 ENDP = re.compile(r"(?i)^[ \t]*" + PASTE + r"\s+endp\s*$")
@@ -4397,6 +4453,8 @@ for stem in MODULES:
         text = text.replace(was, now, 1)
     text = relations(text)
     out, infar, noted, measured = [], False, False, False
+    # the procedures open at this line, innermost last
+    opened_procs = []
     opened = []
     # the macro and REPT blocks open inside a module, which close in the
     # order they were opened and with the same word
@@ -4652,23 +4710,37 @@ for stem in MODULES:
         # RET 2 it calls a fakey IRET, and IFSFDOS's IFSFUNC_DOSCALL@ with
         # a plain RET.  checkcode.py has read this form since it was
         # written; the conversion had not.
+        # MASM let one procedure stand inside another, and PRINTER writes
+        # four that way: INTERRUPT1, INTERRUPT2 and INTERRUPT3 are declared
+        # inside INTERRUPT0, whose ENDP is four hundred lines below theirs,
+        # and the exit every one of them returns through stands after the
+        # inner three have been closed.  So the procedures open here are a
+        # stack and a RET is far or near by the innermost of them: read with
+        # one flag, the first inner ENDP ended the outer procedure and the
+        # shared exit's RET came out near, where DOS had far-called the
+        # driver.  The machine ran away into the driver's own data.
         m = FARPROCEDURE.match(bare)
         if m:
+            opened_procs.append(('procedure', True))
             infar = True
+        elif ANYPROCEDURE.match(bare):
+            opened_procs.append(('procedure', False))
+            infar = False
         m = PROC.match(bare)
         if m:
-            infar = (m.group(2) or '').lower() == 'far'
+            opened_procs.append(('proc', (m.group(2) or '').lower() == 'far'))
+            infar = opened_procs[-1][1]
             out.append(pad('%s:' % m.group(1), was_len, comment))
             continue
         if ENDP.match(bare):
-            infar = False
+            infar = close_proc(opened_procs, 'proc')
             out.append(';' + line)
             continue
         # INC/DOSMAC.INC's EndProc closes a procedure as well, and RECOVER
         # closes twenty-four of its own that way: int_24, the only one
         # declared FAR, is one of them, so the RETs after it are near again.
         if ENDPROC.match(bare):
-            infar = False
+            infar = close_proc(opened_procs, 'procedure')
         m = INSTANCE.match(bare)
         if m:
             # An address among the values is the name itself here, as it is
@@ -4677,11 +4749,20 @@ for stem in MODULES:
             # reach the rules that read operands, so the OFFSET comes off
             # here.
             args = re.sub(r"(?i)\boffset\s+", '', sizes(m.group(3)))
+            # An instance that fills nothing in: PRINTER writes
+            # REQ_NORM1 GIH <,,,,,> for the three request packets it keeps
+            # and FTB1 FTBLK <,,,,,,,,,,,,> for twelve font table blocks,
+            # which is MASM's way of saying every field takes the value its
+            # declaration gave it.  fasm takes an argument left out as the
+            # default and an empty one as nothing at all, so the commas go.
+            if args.strip(', \t') == '':
+                args = ''
             # A colon after the instance's name, which MASM read as a
             # label's and laid the instance down under: ANSI writes the
             # console's buffer as BUF1: BUF_DATA <>.  fasm names an
             # instance, and the name takes no colon.
-            head = re.sub(r"^(\s*" + N + r"):(\s*)$", r"\1\2 ", m.group(1))
+            head = re.sub(r"^(\s*" + N + r")\s*:(\s*)$", r"\1\2 ",
+                          m.group(1))
             out.append(pad('%s%s %s' % (head, m.group(2), args),
                            was_len, comment))
             continue

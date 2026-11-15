@@ -366,3 +366,12 @@ device VDISK VDSKLNK VDISK.SYS
 # prepared font back.  The release links the three and runs EXE2BIN over the
 # result.
 device DISPLAY DISPLNK DISPLAY.SYS
+
+# PRINTER.SYS, the code page driver for the printer and DISPLAY's own shape:
+# five modules in one segment, which PRTLNK.ASM reads in the order
+# PRINTER.LNK names them.  It takes PRN and LPT1 to LPT3 over the way
+# DISPLAY takes CON, and MODE CP PREPARE hands it a .CPI file through the
+# generic IOCTL call, after which a character the printer has no glyph for
+# comes out of the prepared font instead.  The release links the five and
+# runs EXE2BIN over the result with ZERO.DAT on its input.
+device PRINTER PRTLNK PRINTER.SYS

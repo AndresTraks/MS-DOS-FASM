@@ -133,18 +133,18 @@ FSTAT_BOTTOM EQU 0FFF0H 		; below this are the DOS_STATUS.
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 FTABLE  FBUFS 0FFFFH,,,    ;; for temporary testing
-FTB1	FTBLK ,,,,,,,,,,,,    ;; -- at most 12 entries
-FTB2	FTBLK ,,,,,,,,,,,,    ;;
-FTB3	FTBLK ,,,,,,,,,,,,    ;;
-FTB4	FTBLK ,,,,,,,,,,,,    ;;
-FTB5	FTBLK ,,,,,,,,,,,,    ;;
-FTB6	FTBLK ,,,,,,,,,,,,    ;;
-FTB7	FTBLK ,,,,,,,,,,,,    ;;
-FTB8	FTBLK ,,,,,,,,,,,,    ;;
-FTB9	FTBLK ,,,,,,,,,,,,    ;;
-FTBa	FTBLK ,,,,,,,,,,,,    ;;
-FTBb	FTBLK ,,,,,,,,,,,,    ;;
-FTBc	FTBLK ,,,,,,,,,,,,    ;;
+FTB1	FTBLK                 ;; -- at most 12 entries
+FTB2	FTBLK                 ;;
+FTB3	FTBLK                 ;;
+FTB4	FTBLK                 ;;
+FTB5	FTBLK                 ;;
+FTB6	FTBLK                 ;;
+FTB7	FTBLK                 ;;
+FTB8	FTBLK                 ;;
+FTB9	FTBLK                 ;;
+FTBa	FTBLK                 ;;
+FTBb	FTBLK                 ;;
+FTBc	FTBLK                 ;;
 					;;
 FP_ERROR	DW   0000H		;; internal error register
 					;;
