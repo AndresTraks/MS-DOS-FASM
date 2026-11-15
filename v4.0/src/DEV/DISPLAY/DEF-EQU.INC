@@ -1,3 +1,248 @@
+; the layouts below read these, and an EQU is read where it stands
+NAME_LEN EQU    8                       ;
+
+STRUC RHC RHC_1_=0, RHC_2_=0, RHC_CMD_=0, RHC_STA_=0
+{
+         DB      RHC_1_ ; length of Request Header
+         DB      RHC_2_ ; unit code (subunit)
+.RHC_CMD  DB      RHC_CMD_ ; command code
+.RHC_STA  DW      RHC_STA_ ; status
+         DQ      ?                      ; reserved for DOS
+}
+match =RHC_LAID_OUT, RHC_LAID_OUT
+{
+    RHC_LAID_OUT equ 1
+    virtual at 0
+      RHC RHC 0, 0, 0, 0
+      sizeof.RHC = $ - RHC
+    end virtual
+}
+STRUC DHS DH_NEXTO_=0, DH_NEXTS_=0, DHS_3_=0, DH_STRAO_=0, DH_INTRO_=0
+{
+.DH_NEXTO DW     DH_NEXTO_ ; offset of pointer to next header
+.DH_NEXTS DW     DH_NEXTS_ ; segment of pointer to next header
+        DW      DHS_3_ ; attribute
+.DH_STRAO DW     DH_STRAO_ ; offset to strategy routine
+.DH_INTRO DW     DH_INTRO_ ; offset to interrupt routine
+.DH_NAME DB      NAME_LEN DUP(0)         ; device name in this header
+}
+match =DHS_LAID_OUT, DHS_LAID_OUT
+{
+    DHS_LAID_OUT equ 1
+    virtual at 0
+      DHS DHS 0, 0, 0, 0, 0
+      sizeof.DHS = $ - DHS
+    end virtual
+}
+STRUC RH0 RH0_UNIT_=0, RH0_ENDO_=0, RH0_ENDS_=0, RH0_BPBA_=0, RH0_5_=0
+{
+        rb      (sizeof.RHC)            ;
+                                        ;
+.RH0_UNIT DB     RH0_UNIT_ ; not used for CHAR devices
+.RH0_ENDO DW     RH0_ENDO_ ; offset  of ending address
+.RH0_ENDS DW     RH0_ENDS_ ; segment of ending address
+.RH0_BPBA DD     RH0_BPBA_ ; POINTER TO BPB FOR CHAR DEVICES
+         db     RH0_5_ ;
+}
+match =RH0_LAID_OUT, RH0_LAID_OUT
+{
+    RH0_LAID_OUT equ 1
+    virtual at 0
+      RH0 RH0 0, 0, 0, 0, 0
+      sizeof.RH0 = $ - RH0
+    end virtual
+}
+STRUC RH3 RH3_1_=0, RH3_DTAO_=0, RH3_DTAS_=0, RH3_CNT_=0
+{
+        rb      (sizeof.RHC)            ; common portion
+                                        ;
+                                        ;
+        DB      RH3_1_ ; media descriptor
+.RH3_DTAO DW     RH3_DTAO_ ; offset  of transfer address
+.RH3_DTAS DW     RH3_DTAS_ ; segment of transfer address
+.RH3_CNT DW      RH3_CNT_ ; byte count
+}
+match =RH3_LAID_OUT, RH3_LAID_OUT
+{
+    RH3_LAID_OUT equ 1
+    virtual at 0
+      RH3 RH3 0, 0, 0, 0
+      sizeof.RH3 = $ - RH3
+    end virtual
+}
+STRUC RH_IOCTL MAJOR_F_=0, MINOR_F_=0, CONTENT_SI_=0, CONTENT_DI_=0, REQUEST_PACKET_=0
+{
+.STATIC_RH       rb      13              ; STANDARD STATIC REQUEST HEADER
+.MAJOR_F         DB      MAJOR_F_ ; MAJOR FUNCTION CALL (SEE DOS 3.30)
+.MINOR_F         DB      MINOR_F_ ; MINOR FUNCTION CALL (SEE DOS 3.30)
+.CONTENT_SI      DW      CONTENT_SI_ ; CONTENTS OF SI
+.CONTENT_DI      DW      CONTENT_DI_ ; CONTENTS OF DI
+.REQUEST_PACKET  DD      REQUEST_PACKET_ ; POINTER TO GENERIC IOCTL REQ. PACKET
+}
+match =RH_IOCTL_LAID_OUT, RH_IOCTL_LAID_OUT
+{
+    RH_IOCTL_LAID_OUT equ 1
+    virtual at 0
+      RH_IOCTL RH_IOCTL 0, 0, 0, 0, 0
+      sizeof.RH_IOCTL = $ - RH_IOCTL
+    end virtual
+}
+STRUC DESG_BUFFER DESG_CARTRIDGE_=0, DESG_LENGTH_=0, DESG_N_=0, DESG_CP_=0
+{
+.DESG_CARTRIDGE  DW      DESG_CARTRIDGE_ ; 0=NO CARTRIDGE, 1=CARTRIDGE
+.DESG_LENGTH     DW      DESG_LENGTH_ ; LENGTH OF REMAINING HEADER
+.DESG_N          DW      DESG_N_ ; NUMBER OF CP's DESIGNATED
+.DESG_CP         DW      DESG_CP_ ; FIRST CP DESIGNATED
+}
+match =DESG_BUFFER_LAID_OUT, DESG_BUFFER_LAID_OUT
+{
+    DESG_BUFFER_LAID_OUT equ 1
+    virtual at 0
+      DESG_BUFFER DESG_BUFFER 0, 0, 0, 0
+      sizeof.DESG_BUFFER = $ - DESG_BUFFER
+    end virtual
+}
+STRUC INVK_BUFFER INVK_LENGTH_=0, INVK_CP_=0
+{
+.INVK_LENGTH     DW      INVK_LENGTH_ ; LENGTH OF REMAINING HEADER
+.INVK_CP         DW      INVK_CP_ ; CP TO INVOKE
+}
+match =INVK_BUFFER_LAID_OUT, INVK_BUFFER_LAID_OUT
+{
+    INVK_BUFFER_LAID_OUT equ 1
+    virtual at 0
+      INVK_BUFFER INVK_BUFFER 0, 0
+      sizeof.INVK_BUFFER = $ - INVK_BUFFER
+    end virtual
+}
+STRUC QLST_BUFFER QLST_LENGTH_=0, QLST_N_HDWR_=0, QLST_HDWR_CP_=0, QLST_N_DESG_=0, QLST_DESG_CP_=0
+{
+.QLST_LENGTH     DW      QLST_LENGTH_ ; LENGTH OF REMAINING HEADER
+.QLST_N_HDWR     DW      QLST_N_HDWR_ ; NUMBER OF HARDWARE CP's
+.QLST_HDWR_CP    DW      QLST_HDWR_CP_ ; FIRST HDWR CODE PAGE
+.QLST_N_DESG     DW      QLST_N_DESG_ ; NUMBER OF DESIGNATED CP's
+.QLST_DESG_CP    DW      QLST_DESG_CP_ ; DESINATED CODE PAGES
+                                        ; ...there is more data to be
+                                        ;    filled in by the DRIVER
+}
+match =QLST_BUFFER_LAID_OUT, QLST_BUFFER_LAID_OUT
+{
+    QLST_BUFFER_LAID_OUT equ 1
+    virtual at 0
+      QLST_BUFFER QLST_BUFFER 0, 0, 0, 0, 0
+      sizeof.QLST_BUFFER = $ - QLST_BUFFER
+    end virtual
+}
+STRUC PARSE_TABLE1 NUM_DEVICES_=0, DEVICE1_OFFSET_=0
+{
+.NUM_DEVICES     DW      NUM_DEVICES_ ; NUMBER OF DEVICES TO SUPPORT
+.DEVICE1_OFFSET  DW      DEVICE1_OFFSET_ ; (hopefully) CON!!!
+}
+match =PARSE_TABLE1_LAID_OUT, PARSE_TABLE1_LAID_OUT
+{
+    PARSE_TABLE1_LAID_OUT equ 1
+    virtual at 0
+      PARSE_TABLE1 PARSE_TABLE1 0, 0
+      sizeof.PARSE_TABLE1 = $ - PARSE_TABLE1
+    end virtual
+}
+STRUC PARSE_TABLE2 NUM_ITEMS_=0, OFFSET_LIST_=0
+{
+.NUM_ITEMS       DW      NUM_ITEMS_ ; NUMBER OF ITEMS CREATED BY THE
+.OFFSET_LIST     DW      OFFSET_LIST_ ; THE 1ST OFFSET OF [ TABLE 2 ]
+}
+match =PARSE_TABLE2_LAID_OUT, PARSE_TABLE2_LAID_OUT
+{
+    PARSE_TABLE2_LAID_OUT equ 1
+    virtual at 0
+      PARSE_TABLE2 PARSE_TABLE2 0, 0
+      sizeof.PARSE_TABLE2 = $ - PARSE_TABLE2
+    end virtual
+}
+STRUC CP_PNTER_STRUC HDWR_CP_STRUC_=0, DESG_CP_STRUC_=0, FONT_CP_STRUC_=0, WRITE_DATA_STRUC_=0, FONT_DATA_STRUC_=0
+{
+.HDWR_CP_STRUC   DW      HDWR_CP_STRUC_ ;
+.DESG_CP_STRUC   DW      DESG_CP_STRUC_ ;
+.FONT_CP_STRUC   DW      FONT_CP_STRUC_ ;
+.WRITE_DATA_STRUC DW     WRITE_DATA_STRUC_ ;
+.FONT_DATA_STRUC DW      FONT_DATA_STRUC_ ;
+}
+match =CP_PNTER_STRUC_LAID_OUT, CP_PNTER_STRUC_LAID_OUT
+{
+    CP_PNTER_STRUC_LAID_OUT equ 1
+    virtual at 0
+      CP_PNTER_STRUC CP_PNTER_STRUC 0, 0, 0, 0, 0
+      sizeof.CP_PNTER_STRUC = $ - CP_PNTER_STRUC
+    end virtual
+}
+STRUC BUF_DATA DEV_HDRO_=-1, DEV_HDRS_=-1, CON_STRAO_=-1, CON_STRAS_=-1, CON_INTRO_=-1, CON_INTRS_=-1, RH_PTRO_=-1, RH_PTRS_=-1, STATE_=0, STATUS_=0
+{
+.DEV_HDRO DW     DEV_HDRO_ ; device driver header offset
+.DEV_HDRS DW     DEV_HDRS_ ;
+.CON_STRAO DW    CON_STRAO_ ; dos CON strategy offset
+.CON_STRAS DW    CON_STRAS_ ;
+.CON_INTRO DW    CON_INTRO_ ; dos CON strategy offset
+.CON_INTRS DW    CON_INTRS_ ;
+.RH_PTRO DW      RH_PTRO_ ; request header offset
+.RH_PTRS DW      RH_PTRS_ ; segment
+.STATE   DW       STATE_ ;
+.STATUS  DW       STATUS_ ;
+}
+match =BUF_DATA_LAID_OUT, BUF_DATA_LAID_OUT
+{
+    BUF_DATA_LAID_OUT equ 1
+    virtual at 0
+      BUF_DATA BUF_DATA 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+      sizeof.BUF_DATA = $ - BUF_DATA
+    end virtual
+}
+STRUC DA_INFO_PACKET DA_INFO_LEVEL_=0, DA_SETMODE_FLAG_=0, DA_OPTION_L_STATE_=0
+{
+.DA_INFO_LEVEL       db      DA_INFO_LEVEL_ ; 0 for DA_SETMODE_FLAG,  1 for DA_OPTION_L_STATE query (for OS2 compat. box).
+.DA_SETMODE_FLAG     db      DA_SETMODE_FLAG_ ; 1: DISPLAY.SYS is calling INT 10h call, SET MODE. 0= finished.
+.DA_OPTION_L_STATE   db      DA_OPTION_L_STATE_ ; on return from ANSI, 1 = ANSI /L option active, 0 = inactive.
+}
+match =DA_INFO_PACKET_LAID_OUT, DA_INFO_PACKET_LAID_OUT
+{
+    DA_INFO_PACKET_LAID_OUT equ 1
+    virtual at 0
+      DA_INFO_PACKET DA_INFO_PACKET 0, 0, 0
+      sizeof.DA_INFO_PACKET = $ - DA_INFO_PACKET
+    end virtual
+}
+STRUC INFO_BLOCK STATIC_ADDRESS_=0, ACTIVE_DISPLAY_=0, ALT_DISPLAY_=0, CURRENT_SCANS_=0, MISC_INFO_=0
+{
+.STATIC_ADDRESS  DD   STATIC_ADDRESS_ ; address of static functionality table;AN000;
+                Rb   33
+.ACTIVE_DISPLAY  DB   ACTIVE_DISPLAY_ ; active display code                  ;AN000;
+.ALT_DISPLAY     DB   ALT_DISPLAY_ ; alternate display code               ;AN000;
+                Rb   3
+.CURRENT_SCANS   DB   CURRENT_SCANS_ ; current number of scan lines         ;AN000;
+                Rb   2
+.MISC_INFO       DB   MISC_INFO_ ; miscellaneous state information      ;AN000;
+                Rb   18
+}
+match =INFO_BLOCK_LAID_OUT, INFO_BLOCK_LAID_OUT
+{
+    INFO_BLOCK_LAID_OUT equ 1
+    virtual at 0
+      INFO_BLOCK INFO_BLOCK 0, 0, 0, 0, 0
+      sizeof.INFO_BLOCK = $ - INFO_BLOCK
+    end virtual
+}
+STRUC SYS_ID SYS_ID_1_=0, MODEL_BYTE_=0
+{
+                DW   SYS_ID_1_ ; don't care                           ;AN000;
+.MODEL_BYTE      DB   MODEL_BYTE_ ; model byte                           ;AN000;
+}
+match =SYS_ID_LAID_OUT, SYS_ID_LAID_OUT
+{
+    SYS_ID_LAID_OUT equ 1
+    virtual at 0
+      SYS_ID SYS_ID 0, 0
+      sizeof.SYS_ID = $ - SYS_ID
+    end virtual
+}
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; *** DEF-EQU *** DEF-EQU *** DEF-EQU ***
 ;
@@ -9,9 +254,9 @@
 ;AN002; D493  Undo D358                                           02/24/88 J.K.
 ;AN003; D4934 Change ANSI 2F function number to 1Ah               05/20/88 F.G.
 ;******************************************************************************
-IF1                                     ;
-        %OUT .               ®DEF-EQU .INC¯
-ENDIF                                   ;
+;IF1                                     ;
+;        %OUT .               ®DEF-EQU .INC¯
+;ENDIF                                   ;
 ZERO    EQU     0H                      ;
 ONE     EQU     1H                      ;
 TWO     EQU     2H                      ;
@@ -33,15 +278,8 @@ CY      EQU     ONE                     ;
                                         ;
 ID_IOCTL       EQU     5                ; MAJOR FNCT # FOR 'other' DEVICE
                                         ;
-RH      EQU     ES:[DI]                 ; addressability to Request Header
+RH      equ     es:DI	; addressability to Request Header
                                         ;
-RHC      STRUC                          ; fields common to all request types
-         DB      ?                      ; length of Request Header
-         DB      ?                      ; unit code (subunit)
-RHC_CMD  DB      ?                      ; command code
-RHC_STA  DW      ?                      ; status
-         DQ      ?                      ; reserved for DOS
-RHC      ENDS                           ; end of common portion
                                         ;
 CMD_INPUT EQU   4                       ; RHC_CMD is INPUT request
                                         ;
@@ -54,154 +292,74 @@ STAT_CMDERR EQU 8000H                   ; Error code
 ;      NEXT device header ES:[DI]
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-HP      EQU     DS:[SI]                 ;
-NHD     EQU     ES:[DI]                 ;
+HP      equ     ds:SI	;
+NHD     equ     es:DI	;
                                         ;
 NAME_LEN EQU    8                       ;
                                         ;
-DHS     STRUC                           ;
-DH_NEXTO DW     ?                       ; offset of pointer to next header
-DH_NEXTS DW     ?                       ; segment of pointer to next header
-        DW      ?                       ; attribute
-DH_STRAO DW     ?                       ; offset to strategy routine
-DH_INTRO DW     ?                       ; offset to interrupt routine
-DH_NAME DB      NAME_LEN DUP(0)         ; device name in this header
-DHS     ENDS                            ; end of common portion
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;      Request Header for INIT
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-RH0     STRUC                           ;
-        DB      (TYPE RHC) DUP (?)      ;
-                                        ;
-RH0_UNIT DB     ?                       ; not used for CHAR devices
-RH0_ENDO DW     ?                       ; offset  of ending address
-RH0_ENDS DW     ?                       ; segment of ending address
-RH0_BPBA DD     ?                       ; POINTER TO BPB FOR CHAR DEVICES
-         db     ?                       ;
-RH0     ENDS                            ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;      Request Header for IOCTL
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-RH3     STRUC                           ;
-        DB      (TYPE RHC) DUP (?)      ; common portion
-                                        ;
-                                        ;
-        DB      ?                       ; media descriptor
-RH3_DTAO DW     ?                       ; offset  of transfer address
-RH3_DTAS DW     ?                       ; segment of transfer address
-RH3_CNT DW      ?                       ; byte count
-RH3     ENDS                            ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;       IOCTL header format
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-RH_IOCTL STRUC                          ;
-STATIC_RH       DB 13 DUP(?)            ; STANDARD STATIC REQUEST HEADER
-MAJOR_F         DB      ?               ; MAJOR FUNCTION CALL (SEE DOS 3.30)
-MINOR_F         DB      ?               ; MINOR FUNCTION CALL (SEE DOS 3.30)
-CONTENT_SI      DW      ?               ; CONTENTS OF SI
-CONTENT_DI      DW      ?               ; CONTENTS OF DI
-REQUEST_PACKET  DD      ?               ; POINTER TO GENERIC IOCTL REQ. PACKET
-RH_IOCTL ENDS                           ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;       DESIGNATE BUFFER FORMAT
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-DESG_BUFFER     STRUC                   ;
-DESG_CARTRIDGE  DW      ?               ; 0=NO CARTRIDGE, 1=CARTRIDGE
-DESG_LENGTH     DW      ?               ; LENGTH OF REMAINING HEADER
-DESG_N          DW      ?               ; NUMBER OF CP's DESIGNATED
-DESG_CP         DW      ?               ; FIRST CP DESIGNATED
-DESG_BUFFER     ENDS                    ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;       INVOKE BUFFER FORMAT
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-INVK_BUFFER     STRUC                   ;
-INVK_LENGTH     DW      ?               ; LENGTH OF REMAINING HEADER
-INVK_CP         DW      ?               ; CP TO INVOKE
-INVK_BUFFER     ENDS                    ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;       QUERY LIST BUFFER FORMAT
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-QLST_BUFFER     STRUC                   ;
-QLST_LENGTH     DW      ?               ; LENGTH OF REMAINING HEADER
-QLST_N_HDWR     DW      ?               ; NUMBER OF HARDWARE CP's
-QLST_HDWR_CP    DW      ?               ; FIRST HDWR CODE PAGE
-QLST_N_DESG     DW      ?               ; NUMBER OF DESIGNATED CP's
-QLST_DESG_CP    DW      ?               ; DESINATED CODE PAGES
-                                        ; ...there is more data to be
-                                        ;    filled in by the DRIVER
-QLST_BUFFER     ENDS                    ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;       PARSER STRUC STATEMENTS
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-PARSE_TABLE1    STRUC                   ; [[[ TABLE 1 ]]]
-NUM_DEVICES     DW      ?               ; NUMBER OF DEVICES TO SUPPORT
-DEVICE1_OFFSET  DW      ?               ; (hopefully) CON!!!
-PARSE_TABLE1    ENDS                    ;
                                         ;
-PARSE_TABLE2    STRUC                   ; [[[ TABLE 2 ]]]
-NUM_ITEMS       DW      ?               ; NUMBER OF ITEMS CREATED BY THE
-OFFSET_LIST     DW      ?               ; THE 1ST OFFSET OF [ TABLE 2 ]
-PARSE_TABLE2    ENDS                    ; PARSER!
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;       CODE PAGE POINTER STRUCTURE
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-CP_PNTER_STRUC  STRUC                   ;
-HDWR_CP_STRUC   DW      ?               ;
-DESG_CP_STRUC   DW      ?               ;
-FONT_CP_STRUC   DW      ?               ;
-WRITE_DATA_STRUC DW     ?               ;
-FONT_DATA_STRUC DW      ?               ;
-CP_PNTER_STRUC  ENDS                    ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ; CON data structure  CS:[BX]
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-BUF     EQU     CS:[BX]                 ;
+BUF     equ     cs:BX	;
                                         ; STATES
-BUF_DATA STRUC                          ;
-DEV_HDRO DW     -1                      ; device driver header offset
-DEV_HDRS DW     -1                      ;
-CON_STRAO DW    -1                      ; dos CON strategy offset
-CON_STRAS DW    -1                      ;
-CON_INTRO DW    -1                      ; dos CON strategy offset
-CON_INTRS DW    -1                      ;
-RH_PTRO DW      -1                      ; request header offset
-RH_PTRS DW      -1                      ; segment
-STATE   DW       ?                      ;
-STATUS  DW       ?                      ;
-BUF_DATA ENDS                           ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;       General  Constants
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-INT_2F_LOW EQU  (4*2FH)                 ; INTERRUPT 2FH CON/KEYB COMMUNICATION
-INT_2F_HI EQU    (4*2FH)+2              ;
-INT_43_LOW EQU  (4*43H)                 ; INTERRUPT 43H 0-255 CHARACTER VECTOR
-INT_43_HI EQU    (4*43H)+2              ;
-INT_44_LOW EQU  (4*44H)                 ; INTERRUPT 44H 0-255 CHARACTER VECTOR
-INT_44_HI EQU    (4*44H)+2              ;
-INT_1F_LOW EQU  (4*1FH)                 ; INTERRUPT 1FH EXTENDED CHARACTER SUPPORT
-INT_1F_HI EQU    (4*1FH)+2              ;
-INT_10_LOW EQU  (4*10H)                 ; INTERRUPT 10H fix FOR PALACE
-INT_10_HI EQU    (4*10H)+2              ;
+INT_2F_LOW equ  ((4*2FH))	; INTERRUPT 2FH CON/KEYB COMMUNICATION
+INT_2F_HI equ    ((4*2FH)+2)	;
+INT_43_LOW equ  ((4*43H))	; INTERRUPT 43H 0-255 CHARACTER VECTOR
+INT_43_HI equ    ((4*43H)+2)	;
+INT_44_LOW equ  ((4*44H))	; INTERRUPT 44H 0-255 CHARACTER VECTOR
+INT_44_HI equ    ((4*44H)+2)	;
+INT_1F_LOW equ  ((4*1FH))	; INTERRUPT 1FH EXTENDED CHARACTER SUPPORT
+INT_1F_HI equ    ((4*1FH)+2)	;
+INT_10_LOW equ  ((4*10H))	; INTERRUPT 10H fix FOR PALACE
+INT_10_HI equ    ((4*10H)+2)	;
 GET_MODE      EQU    0FH                ; WGR                                  ;AN000;
 ON            EQU    1                  ; WGR                                  ;AN000;
 OFF           EQU    0                  ; WGR                                  ;AN000;
@@ -212,7 +370,7 @@ DEFAULT_LEN   EQU    25                 ; WGR                                  ;
 NUMBER        EQU    1                  ; WGR                                  ;AN000;
 STRING        EQU    3                  ; WGR                                  ;AN000;
 COMPLEX       EQU    4                  ; WGR                                  ;AN000;
-RC_EOL        EQU    -1                 ; WGR                                  ;AN000;
+RC_EOL        equ    (-1)	; WGR                                  ;AN000;
 RC_NO_ERROR   EQU    0                  ; WGR                                  ;AN000;
 FUNC_CALL     EQU    1BH                ; WGR                                  ;AN000;
 VGA_FOUND     EQU    00000001B          ; WGR                                  ;AN000;
@@ -252,11 +410,6 @@ GET_SUBFUNC   EQU    7FH                ; WGR Same structure as GET_IOCTL(ANSI);
 ;For DA_SETMODE_FLAG, DISPLAY.SYS should be extremely careful that when it calls
 ;with DA_SETMODE_FLAG =1, then it should calls with DA_SETMODE_FLAG=0
 ;when it finished INT 10h function call. Otherwise, the system goes .....
-DA_INFO_PACKET   struc
-DA_INFO_LEVEL       db      0           ; 0 for DA_SETMODE_FLAG,  1 for DA_OPTION_L_STATE query (for OS2 compat. box).
-DA_SETMODE_FLAG     db      0           ; 1: DISPLAY.SYS is calling INT 10h call, SET MODE. 0= finished.
-DA_OPTION_L_STATE   db      0           ; on return from ANSI, 1 = ANSI /L option active, 0 = inactive.
-DA_INFO_PACKET   ends
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
@@ -267,24 +420,9 @@ DA_INFO_PACKET   ends
 ;    (for functionality call)
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-INFO_BLOCK      STRUC                   ; info block for functionality call    ;AN000;
-STATIC_ADDRESS  DD   ?                  ; address of static functionality table;AN000;
-                DB   33 DUP(?)          ; don't care                           ;AN000;
-ACTIVE_DISPLAY  DB   ?                  ; active display code                  ;AN000;
-ALT_DISPLAY     DB   ?                  ; alternate display code               ;AN000;
-                DB   3  DUP(?)          ; don't care                           ;AN000;
-CURRENT_SCANS   DB   ?                  ; current number of scan lines         ;AN000;
-                DB   2  DUP(?)          ; don't care                           ;AN000;
-MISC_INFO       DB   ?                  ; miscellaneous state information      ;AN000;
-                DB   18 DUP(?)          ; don't care                           ;AN000;
-INFO_BLOCK      ENDS                    ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ; Structure of System ID call return block
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-SYS_ID          STRUC                   ; format of return system config data  ;AN000;
-                DW   ?                  ; don't care                           ;AN000;
-MODEL_BYTE      DB   ?                  ; model byte                           ;AN000;
-SYS_ID          ENDS                    ;                                      ;AN000;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

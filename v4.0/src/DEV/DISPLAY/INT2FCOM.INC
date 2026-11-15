@@ -6,27 +6,29 @@
 ;
 ;   1) not yet defined
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-IF1					       ;
-	%OUT .		     ®INT2FCOM.INC¯
-ENDIF					       ;
-	PUBLIC	ROM_INT_2F		       ;
-	PUBLIC	INT_2F_COM		       ;
-	PUBLIC	ABORT			       ;
+;IF1					       ;
+;	%OUT .		     ®INT2FCOM.INC¯
+;ENDIF					       ;
+;	PUBLIC	ROM_INT_2F		       ;
+;	PUBLIC	INT_2F_COM		       ;
+;	PUBLIC	ABORT			       ;
 					       ;
-CON_REQ LABEL WORD			       ; THESE CALLS START AT '00H'
-	DW	OFFSET CON_INSTALL	       ;
-	DW	OFFSET CON_INVOKE	       ;
-	DW	OFFSET CON_QUERY_CP	       ;
-	DW	OFFSET CON_QUERY_PARAMETER     ;
-CON_MAX EQU	($-CON_REQ)/2		       ;
+label CON_REQ word          ; THESE CALLS START AT '00H'
+	DW	CON_INSTALL               ;
+	DW	CON_INVOKE               ;
+	DW	CON_QUERY_CP               ;
+	DW	CON_QUERY_PARAMETER            ;
+; = and not equ: fasm's equ is text put in where the name is used, so a $
+; in it would be the address of the use and not of this line.
+CON_MAX =	(($-CON_REQ)/2)	;
 					       ;
-QPARM_TABLE LABEL WORD			       ;
-	DW	OFFSET CPD_DESG_N	       ;
-	DW	OFFSET CPD_FONTS_N	       ;
-	DW	OFFSET CPD_HDWR_N	       ;
-QPARM_ENTRY EQU  ($-QPARM_TABLE)/2	       ;
+label QPARM_TABLE word          ;
+	DW	CPD_DESG_N               ;
+	DW	CPD_FONTS_N               ;
+	DW	CPD_HDWR_N               ;
+QPARM_ENTRY =  (($-QPARM_TABLE)/2)	;
 					       ;
-ROM_INT_2F	 DW   ? 		       ; Int 2FH vector offset
+ROM_INT_2F	 rw      1       ; Int 2FH vector offset
 		 DW   ? 		       ; Int 2FH vector segment
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
@@ -36,7 +38,7 @@ ROM_INT_2F	 DW   ? 		       ; Int 2FH vector offset
 ;	CON Device Driver.
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-INT_2F_COM	PROC  FAR		;
+INT_2F_COM:           ;
 	STI				;
 	CMP	AH,0ADH 		; TEST THE SUBFUNCTION CALL
 	JNE	I2C_6			; RESERVED FOR THE COM PATH!
@@ -56,21 +58,21 @@ I2C_0:					; WGR
 	MOV	SI,AX			;
 	POP	AX			;
 	ADD	SI,SI			;
-	CALL	CS:CON_REQ[SI]		; call routine to handle the command
+	CALL	[cs:CON_REQ+SI] ; call routine to handle the command
 I2C_1:					;
 	PUSH	AX			; SAVE AX REGISTER TO PLAY WITH STACK
 	MOV	SI,SP			;
-	MOV	AX,SS:[SI+8]		; ACCOUNT FOR SI & AX ON STACK
+	MOV	AX,[ss:SI+8]		; ACCOUNT FOR SI & AX ON STACK
 	JC	I2C_2			;
 	AND	AX,NOT_CY		;
 	JUMP	I2C_3			;
 I2C_2:	OR	AX,CY			;
-I2C_3:	MOV	SS:[SI+8],AX		;
+I2C_3:	MOV	[ss:SI+8],AX		;
 	POP	AX			;
 	POP	SI			;
 ABORT:	IRET				;
-I2C_6:	JMP    DWORD PTR CS:ROM_INT_2F	;
-INT_2F_COM   ENDP			;
+I2C_6:	JMP    dword [cs:ROM_INT_2F]   ;
+;INT_2F_COM   ENDP			;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;	CON_INSTALL
@@ -90,12 +92,12 @@ INT_2F_COM   ENDP			;
 ;		     release number.
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-CON_INSTALL	PROC			;
+CON_INSTALL:       ;
 	MOV	AX,-1			; CHANGE AX TO '0FFFFH' AND BX TO
 	MOV	BX,0100H		; MAJOR - MINOR VERSION #
 	CLC				; NO ERROR TO INDICATE....
 	RET				;
-CON_INSTALL	ENDP			;
+;CON_INSTALL	ENDP			;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;	CHECK_VALID
@@ -114,8 +116,8 @@ CON_INSTALL	ENDP			;
 ;	AUTHOR: WGR
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-CHECK_VALID	PROC			;				       ;AN000;
-	CMP	CS:CPD_ACTIVE,-1	; see if a code page has been..        ;AN000;
+CHECK_VALID:       ;				       ;AN000;
+	CMP	word [cs:CPD_ACTIVE],-1 ; see if a code page has been..        ;AN000;
 	JNE	CV_1			; selected?			       ;AN000;
 	CLC				; no..therefore hardware code page..   ;AN000;
 	JMP	CV_4			; okay...exit with carry clear.        ;AN000;
@@ -129,7 +131,7 @@ CV_1:					;				       ;AN000;
 	PUSH	ES			;	  g			       ;AN000;
 	PUSH	CS			;	   s.			       ;AN000;
 	POP	DS			; establish addressibility to data     ;AN000;
-	MOV	CX,CPD_ACTIVE		; use active code page...	       ;AN000;
+	MOV	CX,[cs:CPD_ACTIVE] ; use active code page...	       ;AN000;
 	CALL	FIND_CP 		; is the code page prepared?	       ;AN000;
 	JC	CV_3			; no....problem..exit with carry set.  ;AN000;
 	CMP	CX,0			; okay...check if hardware code page?  ;AN000;
@@ -137,12 +139,12 @@ CV_1:					;				       ;AN000;
 	CLC				; yes...so okay...exit with carry clear;AN000;
 	JMP	CV_3			;				       ;AN000;
 CV_2:					;				       ;AN000;
-	MOV	DL,CS:BYTES_PER_CHAR	; save current box size..	       ;AN000;
+	MOV	DL,[cs:BYTES_PER_CHAR] ; save current box size..	       ;AN000;
 	PUSH	DX			;				       ;AN000;
-	MOV	CS:BYTES_PER_CHAR,8	; check for 8x8 box (>25 line support) ;AN000;
+	MOV	byte [cs:BYTES_PER_CHAR],8 ; check for 8x8 box (>25 line support) ;AN000;
 	CALL	FIND_FONT		; is font size there??		       ;AN000;
 	POP	DX			;				       ;AN000;
-	MOV	CS:BYTES_PER_CHAR,DL	; restore old box size...FIND_FONT...  ;AN000;
+	MOV	[cs:BYTES_PER_CHAR],DL ; restore old box size...FIND_FONT...  ;AN000;
 CV_3:					; will have returned..		       ;AN000;
 	POP	ES			; with carry set appropriately	       ;AN000;
 	POP	DS			;				       ;AN000;
@@ -153,7 +155,7 @@ CV_3:					; will have returned..		       ;AN000;
 	POP	BX			;				       ;AN000;
 CV_4:					;				       ;AN000;
 	RET				; return.			       ;AN000;
-CHECK_VALID	ENDP			;				       ;AN000;
+;CHECK_VALID	ENDP			;				       ;AN000;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;	CON_INVOKE
@@ -172,24 +174,24 @@ CHECK_VALID	ENDP			;				       ;AN000;
 ;		     1 if an error occurred during activation
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-CON_INVOKE	PROC			;
+CON_INVOKE:       ;
 	PUSH	DS			;
 	PUSH	ES			;
-	CMP	CS:G_IOCTL_SEMA,ONE	; ARE GENERIC IOCTL ROUTINES ACTIVE???
+	CMP	byte [cs:G_IOCTL_SEMA],ONE ; ARE GENERIC IOCTL ROUTINES ACTIVE???
 	JE	CI_3			; IF SO, THEN EXIT WITH ERROR...
 					;
 	PUSH	CS			;
 	POP	DS			;
 	PUSH	CS			;
 	POP	ES			;
-	PUSH	CPD_ACTIVE		;
-	MOV	CPD_ACTIVE,BX		; SET THE ACTIVE CP = REQUESTED
+	PUSH	word [cs:CPD_ACTIVE] ;
+	MOV	[cs:CPD_ACTIVE],BX ; SET THE ACTIVE CP = REQUESTED
 	CALL	TEST_CP 		; FIND OUT IF CP IS THERE....
-	POP	CPD_ACTIVE		;
+	POP	word [cs:CPD_ACTIVE] ;
 	JC	CI_3			; IF CY=1, THEN LEAVE OLD CP ALONE!
 	CALL	INVOKE_DATA		; LOAD THE DATA....
 	JC	CI_3			; IF ERROR, THEN FONT NOT AVAILABLE
-	MOV	CPD_ACTIVE,BX		;
+	MOV	[cs:CPD_ACTIVE],BX ;
 	PUSH	DX			;
 	MOV	DX,BX			;
 	CALL	SIGNAL_KBD_INVK 	;
@@ -203,7 +205,7 @@ CI_3:	STC				;
 	POP	ES			;
 	POP	DS			;
 	RET				;
-CON_INVOKE	ENDP			;
+;CON_INVOKE	ENDP			;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;	CON_QUERY_CP
@@ -219,8 +221,8 @@ CON_INVOKE	ENDP			;
 ;		     0 IF CP VALID
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-CON_QUERY_CP	PROC			;
-	MOV	BX,CS:CPD_ACTIVE	;
+CON_QUERY_CP:       ;
+	MOV	BX,[cs:CPD_ACTIVE] ;
 	CMP	BX,-1			;
 	JNE	CQCP_0			;
 	MOV	AX,ONE			; SET ERROR CONDITION TO (non-active)
@@ -228,7 +230,7 @@ CON_QUERY_CP	PROC			;
 	RET				;
 CQCP_0: CLC				;
 	RET				;
-CON_QUERY_CP	ENDP			;
+;CON_QUERY_CP	ENDP			;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;	QUERY PARAMETER INFORMATION
@@ -239,7 +241,7 @@ CON_QUERY_CP	ENDP			;
 ;		CY = 1 if problem with table creation
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-CON_QUERY_PARAMETER PROC		;
+CON_QUERY_PARAMETER:      ;
 	PUSH	DS			;
 	PUSH	AX			;
 	PUSH	BX			;
@@ -250,17 +252,17 @@ CON_QUERY_PARAMETER PROC		;
 	POP	DS			;
 					; PERFORM CHECK ON LGTH OF BUFFER
 	MOV	BX,THREE		; MANDATORY THREE WORD-STARTER
-	ADD	BX,CPD_HDWR_N		; ADD # CP's IN HARDWARE
-	ADD	BX,CPD_DESG_N		; ADD # CP's IN DESIGNATION
+	ADD	BX,[cs:CPD_HDWR_N] ; ADD # CP's IN HARDWARE
+	ADD	BX,[cs:CPD_DESG_N] ; ADD # CP's IN DESIGNATION
 	SHL	BX,1			; CONVERT TO BYTES
 	CMP	BX,CX			; VERIFY THAT TABLE WILL FIT...
 	JG	CQP_3			; SET ERROR CONDITION!
 					;
-	LEA	BX,QPARM_TABLE		;
+	LEA	BX,[QPARM_TABLE];
 	MOV	CX,QPARM_ENTRY		;
 CQP_0:	MOV	SI,[BX] 		;
 	MOV	AX,[SI] 		;
-	MOV	ES:[DI],AX		;
+	MOV	[es:DI],AX		;
 	INC	BX			;
 	INC	BX			;
 	INC	DI			;
@@ -298,7 +300,7 @@ CQP_3:	POP	DI			;
 	POP	DS			;
 	STC				; TELL CALLER THAT ERROR OCCURRED!
 	RET				;
-CON_QUERY_PARAMETER ENDP		;
+;CON_QUERY_PARAMETER ENDP		;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;	SIGNAL KEYBOARD THAT INVOKE JUST OCCURRED!
@@ -309,7 +311,7 @@ CON_QUERY_PARAMETER ENDP		;
 ;		none
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-SIGNAL_KBD_INVK PROC			;
+SIGNAL_KBD_INVK:       ;
 	PUSH	AX			;
 	PUSH	BX			;
 	MOV	AX,0AD81H		;
@@ -319,5 +321,5 @@ SIGNAL_KBD_INVK PROC			;
 	POP	BX			;
 	POP	AX			;
 	RET				;
-SIGNAL_KBD_INVK ENDP			;
+;SIGNAL_KBD_INVK ENDP			;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

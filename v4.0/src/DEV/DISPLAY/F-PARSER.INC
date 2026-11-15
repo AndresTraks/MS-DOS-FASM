@@ -1,9 +1,53 @@
+STRUC FTBLK FTB_LENGTH_=sizeof.FTBLK, FTB_STATUS_=0FFFFH, FTB_TYPE_=0, FTB_TID_='........', FTB_CP_=0FFFFH, FTB_MOD_=0, FTB_FONTS_=0, FTB_ROWS_=0, FTB_COLS_=0, FTB_X_=0, FTB_Y_=0, FTB_COUNT_=0, FTB_DLEFT_=0, FTB_DLEN_=0, FTB_DALO_=0, FTB_DAHI_=0, TARGET_LO_=0, TARGET_HI_=0
+{
+.FTB_LENGTH DW	FTB_LENGTH_ ; (NOT TO BE CHANGED)
+.FTB_STATUS DW	FTB_STATUS_ ; (O) parsing compelte
+.FTB_TYPE DW	FTB_TYPE_ ; (O)
+.FTB_TID DB	FTB_TID_ ; (I)
+.FTB_CP	DW	FTB_CP_ ; (I)
+.FTB_MOD DW	FTB_MOD_ ; (O)
+.FTB_FONTS DW	FTB_FONTS_ ; (O)
+.FTB_ROWS  DB	FTB_ROWS_ ;; (O) DISPLAY TYPE DEVICE
+.FTB_COLS  DB	FTB_COLS_ ;; (O) DISPLAY TYPE DEVICE
+.FTB_X	  DB	FTB_X_ ;; (O) DISPLAY TYPE DEVICE
+.FTB_Y	  DB	FTB_Y_ ;; (O) DISPLAY TYPE DEVICE
+.FTB_COUNT DW	FTB_COUNT_ ;; (O) DISPLAY TYPE DEVICE
+.FTB_DLEFT DW	FTB_DLEFT_ ; (O)  =0, none to come
+.FTB_DLEN DW	FTB_DLEN_ ; (O)  =0, not in this packet
+.FTB_DALO DW	FTB_DALO_ ; (O)  in the DOS "packet" buffer
+.FTB_DAHI DW	FTB_DAHI_ ; (O)  "  "   "    "       "
+.TARGET_LO DW	TARGET_LO_ ;  internal registers
+.TARGET_HI DW	TARGET_HI_ ;  internal registers
+}
+match =FTBLK_LAID_OUT, FTBLK_LAID_OUT
+{
+    FTBLK_LAID_OUT equ 1
+    virtual at 0
+      FTBLK FTBLK 0, 0, 0, '........', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+      sizeof.FTBLK = $ - FTBLK
+    end virtual
+}
+STRUC FBUFS FLAG_=0, BUFFER_LEN_=0, BUFFER_ADDR_=0, NUM_FTBLK_=0
+{
+.FLAG	DW	FLAG_ ;
+.BUFFER_LEN DW	BUFFER_LEN_ ;
+.BUFFER_ADDR DD	BUFFER_ADDR_ ;
+.NUM_FTBLK DW	NUM_FTBLK_ ; no. of FTBKL entries
+}
+match =FBUFS_LAID_OUT, FBUFS_LAID_OUT
+{
+    FBUFS_LAID_OUT equ 1
+    virtual at 0
+      FBUFS FBUFS 0, 0, 0, 0
+      sizeof.FBUFS = $ - FBUFS
+    end virtual
+}
 
 	PAGE	,132
 
-IF1
-	%OUT .		     ®F-PARSER.SRC¯
-ENDIF
+;IF1
+;	%OUT .		     ®F-PARSER.SRC¯
+;ENDIF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;  FILENAME:	  CPS Device Driver -- Font Parser
@@ -52,41 +96,15 @@ STAT_NOCPIV EQU 08007H			; no codepage designated/invoked
 STAT_NOCP EQU	08007H			; no codepage designated/invoked
 					; (IVK, QIV, QLS)
 TYPE_DISPLAY EQU 01H			;; display type device
-FLAG_RESTART EQU 000001H		;; bit 1 = restart the parsing
+FLAG_RESTART = 000001H		;; bit 1 = restart the parsing
 
-FPKT	EQU	DS:[SI] 		;
-FTP	EQU	ES:[BX] 		;
+FPKT	equ	ds:SI	;
+FTP	equ	es:BX	;
 					; ( I=Input  O=Output )
-FTBLK	STRUC				;
-FTB_LENGTH DW	TYPE FTBLK		; (NOT TO BE CHANGED)
-FTB_STATUS DW	0FFFFH			; (O) parsing compelte
-FTB_TYPE DW	0			; (O)
-FTB_TID DB	'........'              ; (I)
-FTB_CP	DW	0FFFFH			; (I)
-FTB_MOD DW	0			; (O)
-FTB_FONTS DW	0			; (O)
-FTB_ROWS  DB	0			;; (O) DISPLAY TYPE DEVICE
-FTB_COLS  DB	0			;; (O) DISPLAY TYPE DEVICE
-FTB_X	  DB	0			;; (O) DISPLAY TYPE DEVICE
-FTB_Y	  DB	0			;; (O) DISPLAY TYPE DEVICE
-FTB_COUNT DW	0			;; (O) DISPLAY TYPE DEVICE
-FTB_DLEFT DW	0			; (O)  =0, none to come
-FTB_DLEN DW	0			; (O)  =0, not in this packet
-FTB_DALO DW	0			; (O)  in the DOS "packet" buffer
-FTB_DAHI DW	0			; (O)  "  "   "    "       "
-TARGET_LO DW	0			;  internal registers
-TARGET_HI DW	0			;  internal registers
-FTBLK	ENDS				;
 					;
-FBUFS	STRUC				;
-FLAG	DW	0			;
-BUFFER_LEN DW	0			;
-BUFFER_ADDR DD	0			;
-NUM_FTBLK DW	0			; no. of FTBKL entries
-FBUFS	ENDS				;
 					; STATUS : (in FTB_STATUS)
-FSTAT_COMPLETE EQU 0FFFFH		; parsing compeleted. (good status)
-FSTAT_FONT  EQU 0FFFEH			; font data is defined and returned
+FSTAT_COMPLETE = 0FFFFH		; parsing compeleted. (good status)
+FSTAT_FONT  = 0FFFEH			; font data is defined and returned
 FSTAT_FOUND EQU 0FFFDH			; informations including font-length
 FSTAT_MATCH EQU 0FFFCH			; font header matches  FTBLK
 FSTAT_SEARCH EQU 0FFFBH 		; seraching for header & font
@@ -95,7 +113,7 @@ FSTAT_BOTTOM EQU 0FFF0H 		; below this are the DOS_STATUS.
 ;; the FSTAT with value lower than 0FFF0H is to be returned to the DOS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					;;
-PUBLIC	FTABLE,FONT_PARSER		;;
+;PUBLIC	FTABLE,FONT_PARSER		;;
 					;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -114,19 +132,19 @@ PUBLIC	FTABLE,FONT_PARSER		;;
 ;;	-- Interface table : FTABLE
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-FTABLE: FBUFS	<0FFFFH,,,>		;; for temporary testing
-FTB1	FTBLK	<,,,,,,,,,,,,>		;; -- at most 12 entries
-FTB2	FTBLK	<,,,,,,,,,,,,>		;;
-FTB3	FTBLK	<,,,,,,,,,,,,>		;;
-FTB4	FTBLK	<,,,,,,,,,,,,>		;;
-FTB5	FTBLK	<,,,,,,,,,,,,>		;;
-FTB6	FTBLK	<,,,,,,,,,,,,>		;;
-FTB7	FTBLK	<,,,,,,,,,,,,>		;;
-FTB8	FTBLK	<,,,,,,,,,,,,>		;;
-FTB9	FTBLK	<,,,,,,,,,,,,>		;;
-FTBa	FTBLK	<,,,,,,,,,,,,>		;;
-FTBb	FTBLK	<,,,,,,,,,,,,>		;;
-FTBc	FTBLK	<,,,,,,,,,,,,>		;;
+FTABLE  FBUFS 0FFFFH,,,    ;; for temporary testing
+FTB1	FTBLK ,,,,,,,,,,,,    ;; -- at most 12 entries
+FTB2	FTBLK ,,,,,,,,,,,,    ;;
+FTB3	FTBLK ,,,,,,,,,,,,    ;;
+FTB4	FTBLK ,,,,,,,,,,,,    ;;
+FTB5	FTBLK ,,,,,,,,,,,,    ;;
+FTB6	FTBLK ,,,,,,,,,,,,    ;;
+FTB7	FTBLK ,,,,,,,,,,,,    ;;
+FTB8	FTBLK ,,,,,,,,,,,,    ;;
+FTB9	FTBLK ,,,,,,,,,,,,    ;;
+FTBa	FTBLK ,,,,,,,,,,,,    ;;
+FTBb	FTBLK ,,,,,,,,,,,,    ;;
+FTBc	FTBLK ,,,,,,,,,,,,    ;;
 					;;
 FP_ERROR	DW   0000H		;; internal error register
 					;;
@@ -136,55 +154,57 @@ FP_ERROR	DW   0000H		;; internal error register
 FTAG_LEN	EQU	8		;; FILE TAGE in the font file header
 FTAG_COUNT	DW	0000H		;;
 					;;
-FTAG_PATTERN	LABEL	BYTE		;;
+label FTAG_PATTERN byte  ;;
 	DB	0FFH			;;
 	DB	'FONT   '               ;;
 					;;
 					;;
 					;; POINTER in the font file header
-fptr_LOW LABEL	WORD			;;
+label fptr_LOW word   ;;
 fptr_LOL DB	00H			;; NEXT
 fptr_LOH DB	00H			;;
-fptr_HIGH LABEL WORD			;;
+label fptr_HIGH word   ;;
 fptr_HIL DB	00H			;;
 fptr_HIH DB	00H			;;
 					;;
 					;;
 					;;
-ENTRY_WORD LABEL WORD			;;
+label ENTRY_WORD word   ;;
 ENTRY_LOB DB	00H			;; ENTRY COUNT
 ENTRY_HIB DB	00H			;;
-NEXT_LOW LABEL	WORD			;;
+label NEXT_LOW word   ;;
 NEXT_LOL DB	00H			;; NEXT
 NEXT_LOH DB	00H			;;
-NEXT_HIGH LABEL WORD			;;
+label NEXT_HIGH word   ;;
 NEXT_HIL DB	00H			;;
 NEXT_HIH DB	00H			;;
-TYPE_WORD LABEL WORD			;;
+label TYPE_WORD word   ;;
 TYPE_LOB DB	00H			;; TYPE
 TYPE_HIB DB	00H			;;
 TID_CNT DW	00000H			;; TYPEID COUNT(0 to 8)
 TYPE_ID :	DB '        '           ;; TYPEID
-CPG_WORD LABEL	WORD			;;
+label CPG_WORD word   ;;
 CPG_LOB DB	00H			;; CODE PAGE
 CPG_HIB DB	00H			;;
-FONT_LOW LABEL	WORD			;;
+label FONT_LOW word   ;;
 FONT_LOL DB	00H			;; FONT ADDRESS
 FONT_LOH DB	00H			;;
-FONT_HIGH LABEL WORD			;;
+label FONT_HIGH word   ;;
 FONT_HIL DB	00H			;;
 FONT_HIH DB	00H			;;
 ;; the followings are contained in the font-block in the exact order & length
-MOD_WORD LABEL	WORD			;;
+label MOD_WORD word   ;;
 MOD_LOB DB	00H			;; MODIFIER
 MOD_HIB DB	00H			;;
-FONTS_WORD LABEL WORD			;;
+label FONTS_WORD word   ;;
 FONTS_LOB DB	00H			;; FONTS
 FONTS_HIB DB	00H			;;
-FDLEN_WORD LABEL WORD			;;
+label FDLEN_WORD word   ;;
 FDLEN_LOB DB	00H			;; FONT DATA LENGTH
 FDLEN_HIB DB	00H			;;
-PRE_FONT_ND	EQU ($-MOD_WORD)	;; used to update target for font data
+; = and not equ: fasm's equ is text put in where the name is used, so a $
+; in it would be the address of the use and not of this line.
+PRE_FONT_ND	= (($-MOD_WORD))	;; used to update target for font data
 					;; to follow. -- for NON-DISPLAY
 ;DISP_ROWS DB	 00H			 ;; DISPLAY's parameters :
 ;DISP_COLS DB	 00H			 ;; BOX SIZE
@@ -216,55 +236,55 @@ PRE_FONT_ND	EQU ($-MOD_WORD)	;; used to update target for font data
 					;; the stage the parsing is in :  ;;;;;
 					;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					;;
-STAGE_CASES LABEL WORD			;; the stage the parsing is in :
+label STAGE_CASES word   ;; the stage the parsing is in :
 					;;
 					;; *** INDEXED BY  STAGE-INDEX
 					;;
-	DW	OFFSET ENTRYLO		;; 0
-	DW	OFFSET ENTRYHI		;; 1
-	DW	OFFSET NEXTLOL		;; 2
-	DW	OFFSET NEXTLOH		;; 3
-	DW	OFFSET NEXTHIL		;; 4
-	DW	OFFSET NEXTHIH		;; 5
-	DW	OFFSET TYPELO		;; 6
-	DW	OFFSET TYPEHI		;; 7
-	DW	OFFSET TYPEIDS		;; 8
-	DW	OFFSET CPGLO		;; 9
-	DW	OFFSET CPGHI		;; A
-	DW	OFFSET FONTLOL		;; B
-	DW	OFFSET FONTLOH		;; C
-	DW	OFFSET FONTHIL		;; D
-	DW	OFFSET FONTHIH		;; E
+	DW	ENTRYLO         ;; 0
+	DW	ENTRYHI         ;; 1
+	DW	NEXTLOL         ;; 2
+	DW	NEXTLOH         ;; 3
+	DW	NEXTHIL         ;; 4
+	DW	NEXTHIH         ;; 5
+	DW	TYPELO         ;; 6
+	DW	TYPEHI         ;; 7
+	DW	TYPEIDS         ;; 8
+	DW	CPGLO         ;; 9
+	DW	CPGHI         ;; A
+	DW	FONTLOL         ;; B
+	DW	FONTLOH         ;; C
+	DW	FONTHIL         ;; D
+	DW	FONTHIH         ;; E
 	DW	00H			;; MATCH case -- end of SEARCH stages
 	DW	00H			;; SCAN  case -- before PRE-FOUND stage
-	DW	OFFSET MODLO		;; 11
-	DW	OFFSET MODHI		;; 12
-	DW	OFFSET FONTSLO		;; 13
-	DW	OFFSET FONTSHI		;; 14
-	DW	OFFSET FDLENLO		;; 15
-	DW	OFFSET FDLENHI		;; 16 -- lead to FONT case,NON- DISPLAY
-	DW	OFFSET DSPROWS		;; 17 -- DISPLAY only
-	DW	OFFSET DSPCOLS		;; 18
-	DW	OFFSET DSPX		;; 19
-	DW	OFFSET DSPY		;; 1A
-	DW	OFFSET DSPCOUNTLO	;; 1B
-	DW	OFFSET DSPCOUNTHI	;; 1C -- lead to FONT case, DISPLAY
-	DW	OFFSET PTRSELLO        ;;  1D -- PRINTER only
-	DW	OFFSET PTRSELHI        ;;  1E
-	DW	OFFSET PTRLENLO        ;;  1F
-	DW	OFFSET PTRLENHI        ;;  20 -- lead to FONT case, PRINTER
+	DW	MODLO         ;; 11
+	DW	MODHI         ;; 12
+	DW	FONTSLO         ;; 13
+	DW	FONTSHI         ;; 14
+	DW	FDLENLO         ;; 15
+	DW	FDLENHI         ;; 16 -- lead to FONT case,NON- DISPLAY
+	DW	DSPROWS         ;; 17 -- DISPLAY only
+	DW	DSPCOLS         ;; 18
+	DW	DSPX         ;; 19
+	DW	DSPY         ;; 1A
+	DW	DSPCOUNTLO        ;; 1B
+	DW	DSPCOUNTHI        ;; 1C -- lead to FONT case, DISPLAY
+	DW	PTRSELLO               ;;  1D -- PRINTER only
+	DW	PTRSELHI               ;;  1E
+	DW	PTRLENLO               ;;  1F
+	DW	PTRLENHI               ;;  20 -- lead to FONT case, PRINTER
 	DW	00H			;; FOUND    case
 	DW	00H			;; GET_FONT case
 	DW	00H			;; PASS special stage
-	DW	OFFSET FILETAG		;; 24
-	DW	OFFSET fptrLOL		;; 25
-	DW	OFFSET fptrLOH		;; 26
-	DW	OFFSET fptrHIL		;; 27
-	DW	OFFSET fptrHIH		;; 28
+	DW	filetag         ;; 24
+	DW	fptrLOL         ;; 25
+	DW	fptrLOH         ;; 26
+	DW	fptrHIL         ;; 27
+	DW	fptrHIH         ;; 28
 	DW	00H			;; FPTR_SKIP_CASE
 					;;
 					;; The followings are individual stage
-STAGE_MAX EQU	($-STAGE_CASES)/2	;;  number of stages
+STAGE_MAX =	(($-STAGE_CASES)/2)	;;  number of stages
 					;;
 					;; STAGE-INDEX
 					;;
@@ -336,12 +356,12 @@ FILE_OFFSET    EQU     0BH	       ;; spaces to be skipped in font file :
 					;; ( after TAG, before POINTER)
 					;;
 PASS_CNT DW	0			;;
-PASS_BRK LABEL	WORD			;;
+label PASS_BRK word   ;;
 	DW	FILE_OFFSET		;; skip in the font file header
 	DW	FILE_OFFSET+2		;; pass header-length, needs to reset
 					;; PASS_CNT for each of the font_header
 	DW	FILE_OFFSET+8		;; pass header-reserved bytes
-PASS_INDX EQU	($-PASS_BRK)/2		;;
+PASS_INDX =	(($-PASS_BRK)/2)	;;
 					;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					;; the control variables :  ;;;;;;;;
 					;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -372,7 +392,7 @@ NUM_FTB DW	00000H			;; as defined in the FP_BUFFER
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					;;
-FONT_PARSER PROC			;;
+FONT_PARSER:       ;;
 	PUSH	DS			;; save all registers Revised
 	PUSH	ES			;;
 	PUSH	AX			;;
@@ -382,63 +402,63 @@ FONT_PARSER PROC			;;
 	PUSH	DI			;;
 	PUSH	SI			;;
 					;; BP isn't used, so it isn't saved
-	LEA	BX,FTABLE		;;
+	LEA	BX,[FTABLE];;
 	PUSH	CS			;;
 	POP	ES			;; ES:[BX]
-	LDS	SI,FTP.BUFFER_ADDR	;; DS:[SI]
-	MOV	CX,FTP.BUFFER_LEN	;; CX = length of packet
-	MOV	DX,FTP.NUM_FTBLK	;; DX = number of FTB
-	MOV	cs:num_ftb,DX		   ;;
+	LDS	SI,dword [FTP+FBUFS.BUFFER_ADDR] ;; DS:[SI]
+	MOV	CX,word [FTP+FBUFS.BUFFER_LEN] ;; CX = length of packet
+	MOV	DX,word [FTP+FBUFS.NUM_FTBLK] ;; DX = number of FTB
+	MOV	[cs:NUM_FTB],DX   ;;
 	AND	DX,DX			;;
 	JNZ	VALID_BUFFER		;;
-	MOV	cs:fp_error,0020H	   ;; ERROR 0020H
+	MOV	word [cs:FP_ERROR],0020H ;; ERROR 0020H
 	JMP	FP_RET			;;
 VALID_BUFFER :				;;
-	MOV	AX,FTP.FLAG		;;
+	MOV	AX,word [FTP+FBUFS.FLAG] ;;
 	AND	AX,FLAG_RESTART 	;;
-	Jnz	has_RESTART		;;
+	Jnz	has_restart		;;
 	JMP	NO_RESTART		;;
 					;;
 					;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 has_restart :				;;
 	PUSH	BX			;; reset all the output fields
-	ADD	BX,TYPE FBUFS		;; FTP = FONT BLOCK
+	ADD	BX,sizeof.FBUFS ;; FTP = FONT BLOCK
 	XOR	AX,AX			;;
 					;;
-	MOV	cs:ftag_count,AX	   ;;
-	MOV	cs:fptr_low,AX		   ;;
-	MOV	cs:fptr_high,AX 	   ;;
-	MOV	cs:pre_font_len,AX	  ;;
-	MOV	cs:count_lo,AX		   ;;
-	MOV	cs:count_hi,AX		   ;;
-	MOV	cs:next_low,AX		   ;;
-	MOV	cs:next_high,AX 	   ;;
-	MOV	cs:hit_lo,AX		   ;;
-	MOV	cs:hit_hi,AX		   ;;
-	MOV	cs:hit_flag,AX		   ;;
-	MOV	cs:pass_cnt,AX		   ;;
-	MOV	cs:pass_postx,STAGE_MAX    ;;
+	MOV	[cs:FTAG_COUNT],AX  ;;
+	MOV	[cs:fptr_LOW],AX   ;;
+	MOV	[cs:fptr_HIGH],AX   ;;
+	MOV	[cs:Pre_font_len],AX ;;
+	MOV	[cs:COUNT_LO],AX   ;;
+	MOV	[cs:COUNT_hI],AX   ;;
+	MOV	[cs:NEXT_LOW],AX   ;;
+	MOV	[cs:NEXT_HIGH],AX   ;;
+	MOV	[cs:HIT_LO],AX   ;;
+	MOV	[cs:HIT_HI],AX   ;;
+	MOV	[cs:HIT_FLAG],AX   ;;
+	MOV	[cs:PASS_CNT],AX   ;;
+	MOV	word [cs:PASS_POSTX],STAGE_MAX ;;
 					;;
-	MOV	cs:stage,STAGE_MAX	   ;;
+	MOV	word [cs:STAGE],STAGE_MAX ;;
 					;;
 RESET_FTB :				;;
-	MOV	FTP.FTB_STATUS,FSTAT_SEARCH
-	MOV	FTP.FTB_TYPE,AX 	;;
-	MOV	FTP.FTB_MOD,AX		;;
-	MOV	FTP.FTB_FONTS,AX	;;
-	MOV	FTP.FTB_ROWS,AL 	;;
-	MOV	FTP.FTB_COLS,AL 	;;
-	MOV	FTP.FTB_X,AL		;;
-	MOV	FTP.FTB_Y,AL		;;
-	MOV	FTP.FTB_COUNT,AX	;;
-	MOV	FTP.FTB_DLEFT,AX	;;
-	MOV	FTP.FTB_DLEN,AX 	;;
-	MOV	FTP.FTB_DALO,AX 	;;
-	MOV	FTP.FTB_DAHI,AX 	;;
-	MOV	FTP.TARGET_LO,AX	;;
-	MOV	FTP.TARGET_HI,AX	;;
+	MOV	word [FTP+FTBLK.FTB_STATUS],FSTAT_SEARCH
+	MOV	word [FTP+FTBLK.FTB_TYPE],AX ;;
+	MOV	word [FTP+FTBLK.FTB_MOD],AX ;;
+	MOV	word [FTP+FTBLK.FTB_FONTS],AX ;;
+	MOV	byte [FTP+FTBLK.FTB_ROWS],AL ;;
+	MOV	byte [FTP+FTBLK.FTB_COLS],AL ;;
+	MOV	byte [FTP+FTBLK.FTB_X],AL ;;
+	MOV	byte [FTP+FTBLK.FTB_Y],AL ;;
+	MOV	word [FTP+FTBLK.FTB_COUNT],AX ;;
+	MOV	word [FTP+FTBLK.FTB_DLEFT],AX ;;
+	MOV	word [FTP+FTBLK.FTB_DLEN],AX ;;
+	MOV	word [FTP+FTBLK.FTB_DALO],AX ;;
+	MOV	word [FTP+FTBLK.FTB_DAHI],AX ;;
+	MOV	word [FTP+FTBLK.TARGET_LO],AX ;;
+	MOV	word [FTP+FTBLK.TARGET_HI],AX ;;
 					;;
-	ADD	BX, TYPE FTBLK		;;
+	ADD	BX, sizeof.FTBLK ;;
 					;;
 	DEC	DX			;;
 	AND	DX,DX			;;
@@ -450,24 +470,24 @@ NO_RESTART :				;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					;; returned ? if so set their status
 					;; from FOUND to COMPLETE
 	PUSH	BX			;;
-	ADD	BX,TYPE FBUFS		;; FTP = FONT BLOCK
+	ADD	BX,sizeof.FBUFS ;; FTP = FONT BLOCK
 					;;
-	MOV	DX,cs:num_ftb		   ;;
+	MOV	DX,[cs:NUM_FTB]   ;;
 					;;
 SET_COMPLETE :				;;
-	MOV	AX,FTP.FTB_STATUS	;;
+	MOV	AX,word [FTP+FTBLK.FTB_STATUS] ;;
 	CMP	AX,FSTAT_FONT		;;
 	JNE	SET_NEXT		;;
 					;;
-	MOV	AX,FTP.FTB_DLEFT	;;
+	MOV	AX,word [FTP+FTBLK.FTB_DLEFT] ;;
 	AND	AX,AX			;;
 	JNZ	SET_NEXT		;;
 					;;
-	MOV	FTP.FTB_STATUS,FSTAT_COMPLETE
+	MOV	word [FTP+FTBLK.FTB_STATUS],FSTAT_COMPLETE
 					;;
 SET_NEXT :				;;
 					;;
-	ADD	BX,TYPE FTBLK		;;
+	ADD	BX,sizeof.FTBLK ;;
 					;;
 	DEC	DX			;;
 	AND	DX,DX			;;
@@ -475,7 +495,7 @@ SET_NEXT :				;;
 					;;
 	POP	BX			;;
 					;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	ADD	BX,TYPE FBUFS		;; FTP = FONT BLOCK
+	ADD	BX,sizeof.FBUFS ;; FTP = FONT BLOCK
 					;;
 	PUSH	CX			;; STACK 1 = CX
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -490,9 +510,9 @@ SET_NEXT :				;;
 FTB_LOOP :				;;
 	POP	AX			;; STACK -1
 	SUB	AX,CX			;;
-	ADD	cs:count_lo,AX		   ;;
+	ADD	[cs:COUNT_LO],AX   ;;
 	JNC	NO_CARRY		;;
-	ADD	cs:count_hi,1000H	   ;;
+	ADD	word [cs:COUNT_hI],1000H ;;
 NO_CARRY :				;;
 	PUSH	CX			;; STACK 1 = CX
 	AND	CX,CX			;;
@@ -501,7 +521,7 @@ NO_CARRY :				;;
 					;; DO CASES :
 FTB_CONT :				;; ==========
 					;;
-	MOV	AX,cs:stage		   ;;
+	MOV	AX,[cs:STAGE]   ;;
 					;;
 	CMP	AX,STAGE_MAX		;;
 	JNE	FTB_010 		;;
@@ -543,17 +563,17 @@ FTB_070 :				;;
 	JMP	PASS			;; ** PASS **
 					;;
 FTB_080 :				;;
-	CMP	AX,FPTR_SKIPX		;;
+	CMP	AX,fptr_SKIPX		;;
 	JAE	FTB_090 		;;
 	JMP	SEARCH_CASE		;; ** SEARCH **
 					;;
 FTB_090 :				;;
-	CMP	AX,FPTR_SKIPX		;;
+	CMP	AX,fptr_SKIPX		;;
 	JNE	FTB_FFF 		;;
 	JMP	FPTR_SKIP_CASE		;; ** SEARCH **
 					;;
 FTB_FFF :				;;
-	MOV	FTP.FTB_STATUS,STAT_DEVERR
+	MOV	word [FTP+FTBLK.FTB_STATUS],STAT_DEVERR
 	JMP	FTB_LPEND		;; ** DEVICE ERROR **
 					;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -571,8 +591,8 @@ FTB_FFF :				;;
 ;============================================================================
 START_CASE :				;; pass the FILE leading bytes
 					;;
-	MOV	cs:ftag_count,0 	   ;;
-	MOV	cs:stage,ftagx		   ;;
+	MOV	word [cs:FTAG_COUNT],0 ;;
+	MOV	word [cs:STAGE],FTAGX ;;
 	JMP	FTB_LOOP		;;
 					;;
 ;=============================================================================
@@ -580,18 +600,18 @@ FPTR_SKIP_CASE :			;; skip until the ENTRY pointed by
 					;; POINTER (in FPTR) is reached.
 					;;
 					;; **************
-	MOV	AX,cs:fptr_low		   ;; * HIT = FPTR *
-	MOV	cs:hit_lo,AX		   ;; **************
-	MOV	DX,cs:fptr_high 	   ;;
-	MOV	cs:hit_hi,DX		   ;;
+	MOV	AX,[cs:fptr_LOW]   ;; * HIT = FPTR *
+	MOV	[cs:HIT_LO],AX   ;; **************
+	MOV	DX,[cs:fptr_HIGH]   ;;
+	MOV	[cs:HIT_HI],DX   ;;
 					;;
 	CMP	AX,0FFFFH		;;
 	JNE	FPTR_SKIP_VALID 	;;
 	CMP	DX,0FFFFH		;;
 	JNE	FPTR_SKIP_VALID 	;;
 					;;
-	MOV	FTP.FTB_STATUS,STAT_BADATA ;; returned at the first FTBLK
-	JMP	FPTR_SKIP_MORE		;;
+	MOV	word [FTP+FTBLK.FTB_STATUS],STAT_BADATA ;; returned at the first FTBLK
+	JMP	fptr_skip_more		;;
 					;;
 FPTR_SKIP_VALID :			;;
 					;; normalised HIT_HI, HIT_LO
@@ -602,25 +622,25 @@ FPTR_SKIP_VALID :			;;
 	SHL	AX,CL			;;
 	POP	CX			;;
 	AND	DX,0F000H		;;
-	ADD	AX,cs:hit_lo		   ;;
+	ADD	AX,[cs:HIT_LO]   ;;
 	JNC	NO_CARRY10		;;
 	ADD	DX,01000H		;;
 NO_CARRY10:				;;
-	MOV	cs:hit_lo,AX		   ;;
-	MOV	cs:hit_hi,DX		   ;;
+	MOV	[cs:HIT_LO],AX   ;;
+	MOV	[cs:HIT_HI],DX   ;;
 					;; **************************
 					;; * compare FPTR and COUNT *
 					;; **************************
 					;; DX:AX = HIT_HI:HIT_LO (normalised)
 					;;
-	SUB	AX,cs:count_lo		   ;;
+	SUB	AX,[cs:COUNT_LO]   ;;
 	Jnc	more_fptrlo		;;
 	sub	dx,01000h		;;
 	jc	fptr_bad		;;
 					;;
 more_fptrlo :				;;
-	SUB	DX,cs:count_hi		   ;;
-	JC	fptr_BAD		;;
+	SUB	DX,[cs:COUNT_hI]   ;;
+	JC	fptr_bad		;;
 					;;
 	INC	AX			;; COUNT can be at the HIT, then AX=0
 	JNC	NO_CARRY11		;; INC AX to make AX comparable to CX
@@ -648,13 +668,13 @@ NO_CARRY13:				;;
 	SUB	AX,CX			;;
 	JNC	NO_BORROW11		;;
 	SUB	DX,1000H		;;
-	JC	fptr_MORE_CXp		;; dx:ax < cx
+	JC	fptr_MORE_CXP		;; dx:ax < cx
 NO_BORROW11:				;;
 					;; dx:ax >= cx
 	AND	AX,AX			;;
-	JNE	fptr_skip_MOREP 	;;
+	JNE	fptr_skip_morep 	;;
 	AND	DX,DX			;;
-	JNE	fptr_skip_MOREP 	;;
+	JNE	fptr_skip_morep 	;;
 					;; dx:ax = cx, or
 					;; offset + 1 = CX
 					;;
@@ -670,7 +690,7 @@ fptr_MORE_CX :				;; DX = 0,to have more CX than offset+1
 	SUB	CX,AX			;;
 	ADD	SI,AX			;; where the first byte is
 					;;
-	MOV	cs:stage,entry_lox	   ;; ENTRIES in the font file
+	MOV	word [cs:STAGE],ENTRY_LOX ;; ENTRIES in the font file
 					;;
 	JMP	FTB_LOOP		;;  ******  RETURN  *******
 					;;
@@ -691,41 +711,41 @@ fptr_skip_more :			;;
 					;; ***********************************
 					;;
 fptr_bad :				;;
-	MOV	cs:fptr_low,0FFFFH	   ;;
-	MOV	cs:fptr_high,0FFFFH	   ;;
+	MOV	word [cs:fptr_LOW],0FFFFH ;;
+	MOV	word [cs:fptr_HIGH],0FFFFH ;;
 					;;
-	MOV	FTP.FTB_STATUS,STAT_BADATA ;; returned at the first FTBLK
+	MOV	word [FTP+FTBLK.FTB_STATUS],STAT_BADATA ;; returned at the first FTBLK
 					;;
-	JMP	FPTR_SKIP_MORE		;;
+	JMP	fptr_skip_more		;;
 					;;
 ;=============================================================================
 SEARCH_CASE :				;;
 					;; still looking for header to match
 					;; the input : codepage and typeid
 					;;
-	MOV	DI,cs:stage		   ;;
+	MOV	DI,[cs:STAGE]   ;;
 					;;
 	ADD	DI,DI			;; double to index to WORD-offset
 					;;
-	JMP	CS:STAGE_CASES[DI]	;; call routine to process the stage
+	JMP	[cs:STAGE_CASES+DI] ;; call routine to process the stage
 					;;
 					;;
 ;===========================================================================
 MATCH_CASE :				;;
 					;;
 	PUSH	BX			;;
-	MOV	DX,cs:num_ftb		   ;;
+	MOV	DX,[cs:NUM_FTB]   ;;
 					;;
 					;;
 MATCH_LOOP :				;;
-	MOV	AX,FTP.FTB_STATUS	;;
+	MOV	AX,word [FTP+FTBLK.FTB_STATUS] ;;
 	CMP	AX,FSTAT_SEARCH 	;;
 	JE	MATCH_SEARCH		;;
 	JMP	MATCH_NEXT		;;
 					;;
 MATCH_SEARCH :				;;
-	MOV	AX,FTP.FTB_CP		;; check the FTB with SEARCH status
-	CMP	AX,cs:cpg_word		   ;;
+	MOV	AX,word [FTP+FTBLK.FTB_CP] ;; check the FTB with SEARCH status
+	CMP	AX,[cs:CPG_WORD]   ;;
 	JNE	MATCH_MORE		;;
 	PUSH	DS			;; code page matched
 	PUSH	SI			;;
@@ -733,8 +753,8 @@ MATCH_SEARCH :				;;
 					;;
 	PUSH	CS			;;
 	POP	DS			;;
-	MOV	SI,OFFSET TYPE_ID	;;
-	LEA	DI,[BX].FTB_TID 	;;
+	MOV	SI,TYPE_ID        ;;
+	LEA	DI,[BX+FTBLK.FTB_TID] ;;
 	MOV	CX,8			;;
 	REPE	CMPSB			;;
 					;;
@@ -744,37 +764,37 @@ MATCH_SEARCH :				;;
 					;;
 	JNE	MATCH_MORE		;;
 					;; MATCH !!!!!	(type_id matched)
-	MOV	FTP.FTB_STATUS,FSTAT_MATCH
-	MOV	AX,cs:type_word 	   ;;
-	MOV	FTP.FTB_TYPE,AX 	;;
-	MOV	AX,cs:font_low		   ;;
-	MOV	FTP.TARGET_LO,AX	;;
-	MOV	AX,cs:font_high 	   ;;
-	MOV	FTP.TARGET_HI,AX	;;
+	MOV	word [FTP+FTBLK.FTB_STATUS],FSTAT_MATCH
+	MOV	AX,[cs:TYPE_WORD]   ;;
+	MOV	word [FTP+FTBLK.FTB_TYPE],AX ;;
+	MOV	AX,[cs:FONT_LOW]   ;;
+	MOV	word [FTP+FTBLK.TARGET_LO],AX ;;
+	MOV	AX,[cs:FONT_HIGH]   ;;
+	MOV	word [FTP+FTBLK.TARGET_HI],AX ;;
 					;;
 	JMP	MATCH_NEXT		;;
 					;;
 MATCH_MORE :				;; if this is the last rounf ?
 					;;
-	MOV	AX,cs:next_low		   ;; NEXT = FFFF:FFFF means no more
+	MOV	AX,[cs:NEXT_LOW]   ;; NEXT = FFFF:FFFF means no more
 	CMP	AX,-1			;;	  header to come.
 	JNE	MATCH_NEXT		;;
 					;;
-	MOV	AX,cs:next_high 	   ;;
+	MOV	AX,[cs:NEXT_HIGH]   ;;
 	CMP	AX,-1			;;
 	JNE	MATCH_NEXT		;;
 					;;
-	MOV	FTP.FTB_STATUS,STAT_NOFIND ;; ERROR : no match
+	MOV	word [FTP+FTBLK.FTB_STATUS],STAT_NOFIND ;; ERROR : no match
 					;;
 MATCH_NEXT :				;;
-	ADD	BX,FTP.FTB_LENGTH	;;
+	ADD	BX,word [FTP+FTBLK.FTB_LENGTH] ;;
 	DEC	DX			;;
 	AND	DX,DX			;;
 	JZ	MATCH_ALL		;;
 	JMP	MATCH_LOOP		;;
 					;;
 MATCH_ALL :				;;
-	MOV	cs:stage,SCANX		   ;;
+	MOV	word [cs:STAGE],SCANX ;;
 					;;
 MATCH_DONE :				;;
 	POP	BX			;;
@@ -788,14 +808,14 @@ SCAN_CASE :				;;
 					;; * header(NEXT) that is approaching
 					;; **********************************
 					;;
-	MOV	AX,cs:next_low		   ;;
-	MOV	cs:hit_lo,AX		   ;;
-	MOV	AX,cs:next_high 	   ;;
-	MOV	cs:hit_hi,AX		   ;;
+	MOV	AX,[cs:NEXT_LOW]   ;;
+	MOV	[cs:HIT_LO],AX   ;;
+	MOV	AX,[cs:NEXT_HIGH]   ;;
+	MOV	[cs:HIT_HI],AX   ;;
 	XOR	AX,AX			;;
-	MOV	cs:hit_flag,AX		   ;;
+	MOV	[cs:HIT_FLAG],AX   ;;
 					;;
-	MOV	DI,cs:hit_hi		   ;; normalised HIT_HI, HIT_LO
+	MOV	DI,[cs:HIT_HI]   ;; normalised HIT_HI, HIT_LO
 	MOV	AX,DI			;;
 	AND	AX,00FFFH		;;
 	PUSH	CX			;;
@@ -803,23 +823,23 @@ SCAN_CASE :				;;
 	SHL	AX,CL			;;
 	POP	CX			;;
 	AND	DI,0F000H		;;
-	ADD	AX,cs:hit_lo		   ;;
+	ADD	AX,[cs:HIT_LO]   ;;
 	JNC	NO_CARRY2		;;
 	ADD	DI,01000H		;;
 NO_CARRY2 :				;;
-	MOV	cs:hit_lo,AX		   ;;
-	MOV	cs:hit_hi,DI		   ;;
+	MOV	[cs:HIT_LO],AX   ;;
+	MOV	[cs:HIT_HI],DI   ;;
 					;;
-	MOV	DX,cs:num_ftb		   ;;
+	MOV	DX,[cs:NUM_FTB]   ;;
 					;;
 	PUSH	BX			;;
 SCAN_LOOP :				;;
-	MOV	AX,FTP.FTB_STATUS	;;
+	MOV	AX,word [FTP+FTBLK.FTB_STATUS] ;;
 	CMP	AX,FSTAT_MATCH		;;
 	JNE	SCAN_NEXT		;;
 					;;
 					;;
-	MOV	DI,FTP.TARGET_HI	;; NORMALISED TARGET
+	MOV	DI,word [FTP+FTBLK.TARGET_HI] ;; NORMALISED TARGET
 	MOV	AX,DI			;;
 	AND	AX,00FFFH		;;
 	PUSH	CX			;;
@@ -827,41 +847,41 @@ SCAN_LOOP :				;;
 	SHL	AX,CL			;;
 	POP	CX			;;
 	AND	DI,0F000H		;;
-	ADD	AX,FTP.TARGET_LO	;;
+	ADD	AX,word [FTP+FTBLK.TARGET_LO] ;;
 	JNC	NO_CARRY1		;;
 	ADD	DI,01000H		;;
 NO_CARRY1 :				;; DI:AX = NORMALISED TARGET
 					;;
 					;; ** compare the TARGET and the NEXT
 					;;
-	CMP	DI,cs:hit_hi		   ;;
+	CMP	DI,[cs:HIT_HI]   ;;
 	JA	SCAN_NEXT		;;
 					;;
 	JE	SCAN_EQU		;;
 	JMP	NEAR_FONT		;;
 					;;
 SCAN_EQU :				;;
-	CMP	AX,cs:hit_lo		   ;;
+	CMP	AX,[cs:HIT_LO]   ;;
 	JA	SCAN_NEXT		;;
 	JE	SCAN_ERROR_CHK		;;
 					;; **********************************
 					;; * the font data is approaching   *
 					;; **********************************
 NEAR_FONT :				;;
-	MOV	cs:hit_flag,-1		   ;;
-	MOV	cs:hit_lo,AX		   ;;
-	MOV	cs:hit_hi,DI		   ;;
-	MOV	cs:hit_bx,BX		   ;; used for BAD_BX and in FOUND_CASE
+	MOV	word [cs:HIT_FLAG],-1 ;;
+	MOV	[cs:HIT_LO],AX   ;;
+	MOV	[cs:HIT_HI],DI   ;;
+	MOV	[cs:HIT_BX],BX   ;; used for BAD_BX and in FOUND_CASE
 	JMP	SCAN_NEXT		;;
 					;;
 					;; **********************************
 					;; * the NEXT header is approaching *
 					;; **********************************
 SCAN_ERROR_CHK :			;;
-	MOV	AX,cs:hit_flag		   ;;
+	MOV	AX,[cs:HIT_FLAG]   ;;
 	AND	AX,AX			;;
 	JNZ	SCAN_NEXT		;;
-	MOV	FTP.FTB_STATUS,STAT_BADATA ;; next header and font cannot be the
+	MOV	word [FTP+FTBLK.FTB_STATUS],STAT_BADATA ;; next header and font cannot be the
 					;; same
 					;;
 SCAN_NEXT :				;;
@@ -869,7 +889,7 @@ SCAN_NEXT :				;;
 	AND	DX,DX			;;
 	JZ	SCAN_DONE		;;
 					;;
-	ADD	BX,FTP.FTB_LENGTH	;;
+	ADD	BX,word [FTP+FTBLK.FTB_LENGTH] ;;
 	JMP	SCAN_LOOP		;; ** is there any closer font data ?
 					;;
 					;; ************************************
@@ -879,8 +899,8 @@ SCAN_NEXT :				;;
 SCAN_DONE :				;;
 	POP	BX			;;
 					;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	MOV	DX,cs:hit_hi		   ;; HIT_FLAG, HIT_LO, HIT_HI defined
-	MOV	AX,cs:hit_lo		   ;;
+	MOV	DX,[cs:HIT_HI]   ;; HIT_FLAG, HIT_LO, HIT_HI defined
+	MOV	AX,[cs:HIT_LO]   ;;
 					;;
 	CMP	AX,0FFFFH		;;
 	JNE	NOT_FFFF_HIT		;;
@@ -890,12 +910,12 @@ SCAN_DONE :				;;
 					;;
 NOT_FFFF_HIT :				;;
 					;; DX:AX = HIT_HI:HIT_LO (normalised)
-	SUB	AX,cs:count_lo		   ;;
+	SUB	AX,[cs:COUNT_LO]   ;;
 	JNC	NO_BORROW		;;
 	SUB	DX,01000H		;;
 	JC	SCAN_BAD		;;
 NO_BORROW:				;;
-	SUB	DX,cs:count_hi		   ;;
+	SUB	DX,[cs:COUNT_hI]   ;;
 	JC	SCAN_BAD		;;
 					;;
 	INC	AX			;; COUNT can be at the HIT, then AX=0
@@ -925,7 +945,7 @@ NO_CARRY3 :				;;
 	SUB	AX,CX			;;
 	JNC	NO_BORROW1		;;
 	SUB	DX,1000H		;;
-	JC	MORE_CXp		;;
+	JC	MORE_CXP		;;
 NO_BORROW1 :				;;
 					;; dx:ax >= cx
 	AND	AX,AX			;;
@@ -943,18 +963,18 @@ MORE_CX :				;; DX = 0,to have more CX than offset+1
 	DEC	AX			;; = offset : 0 and above
 	SUB	CX,AX			;;
 	ADD	SI,AX			;; where the first byte is
-	MOV	AX,cs:hit_flag		   ;;
+	MOV	AX,[cs:HIT_FLAG]   ;;
 	AND	AX,AX			;;
 	JE	NEXT_REACHED		;;
 					;;
-	MOV	cs:stage,MOD_LOBX	   ;; font-data reached,
+	MOV	word [cs:STAGE],MOD_LOBX ;; font-data reached,
 					;;
 	JMP	FTB_LOOP		;;  ****** RETURN   *******
 					;;
 NEXT_REACHED :				;;
-	MOV	cs:stage,PASSX		   ;;
-	MOV	cs:pass_postx,next_lolX    ;;
-	MOV	cs:pass_cnt,FILE_OFFSET    ;;
+	MOV	word [cs:STAGE],PASSX ;;
+	MOV	word [cs:PASS_POSTX],NEXT_LOLX ;;
+	MOV	word [cs:PASS_CNT],FILE_OFFSET ;;
 					;;
 					;;
 	JMP	FTB_LOOP		;; ******  RETURN   *******
@@ -972,19 +992,19 @@ SCAN_MORE :				;;
 	JMP	FTB_LOOP		;; more SCAN stage
 					;;
 SCAN_BAD:				;; *************************
-	MOV	AX,cs:hit_flag		   ;; * scan is bad	      *
+	MOV	AX,[cs:HIT_FLAG]   ;; * scan is bad	      *
 	AND	AX,AX			;; *************************
 	JNZ	BAD_BX			;;
 	MOV	AX,-1			;; NEXT is pointing backwards
-	MOV	cs:next_low,AX		   ;;
-	MOV	cs:next_high,AX 	   ;; no more NEXT
-	MOV	FTP.FTB_STATUS,STAT_BADATA ;; returned at the first FTBLK
+	MOV	[cs:NEXT_LOW],AX   ;;
+	MOV	[cs:NEXT_HIGH],AX   ;; no more NEXT
+	MOV	word [FTP+FTBLK.FTB_STATUS],STAT_BADATA ;; returned at the first FTBLK
 	JMP	FTB_LOOP		;;
 					;;
 BAD_BX	:				;;
 	PUSH	BX			;; FONT is pointing backwards
-	MOV	BX,cs:hit_bx		   ;;
-	MOV	FTP.FTB_STATUS,STAT_BADATA
+	MOV	BX,[cs:HIT_BX]   ;;
+	MOV	word [FTP+FTBLK.FTB_STATUS],STAT_BADATA
 	POP	BX			;;
 	JMP	FTB_LOOP		;;
 					;;
@@ -993,35 +1013,35 @@ PRE_FOUND_CASE :			;;
 					;; extract informations from the font
 					;; block until font_length is defined
 					;;
-	MOV	DI,cs:stage		   ;;
+	MOV	DI,[cs:STAGE]   ;;
 					;;
 	ADD	DI,DI			;; double to index to WORD-offset
 					;;
-	JMP	CS:STAGE_CASES[DI]	;; call routine to process the stage
+	JMP	[cs:STAGE_CASES+DI] ;; call routine to process the stage
 					;;
 ;===========================================================================
 FOUND_CASE :				;;
-	MOV	DI,OFFSET FTB_LOOP	;; as FOUND has two places to return to
+	MOV	DI,FTB_LOOP        ;; as FOUND has two places to return to
 	PUSH	DI			;;
 ;===========================================================================
 FOUND_DO :				;;
 					;; define informations into FTBLK of
 					;; HIT_BX defined in the SCAN case
 	PUSH	BX			;;
-	MOV	BX,cs:hit_bx		   ;;
+	MOV	BX,[cs:HIT_BX]   ;;
 					;; FTBLK :
-	MOV	AX,cs:mod_word		   ;;
-	MOV	FTP.FTB_MOD,AX		;;
-	MOV	AX,cs:fonts_word	   ;;
-	MOV	FTP.FTB_FONTS,AX	;;
+	MOV	AX,[cs:MOD_WORD]   ;;
+	MOV	word [FTP+FTBLK.FTB_MOD],AX ;;
+	MOV	AX,[cs:FONTS_WORD]  ;;
+	MOV	word [FTP+FTBLK.FTB_FONTS],AX ;;
 					;;
-	MOV	AX,cs:fdlen_word	   ;;
-	MOV	FTP.FTB_DLEFT,AX	;;
-	MOV	FTP.FTB_DLEN,0		;;
-	MOV	FTP.FTB_DALO,0		;;
-	MOV	FTP.FTB_DAHI,0		;;
+	MOV	AX,[cs:FDLEN_WORD]  ;;
+	MOV	word [FTP+FTBLK.FTB_DLEFT],AX ;;
+	MOV	word [FTP+FTBLK.FTB_DLEN],0 ;;
+	MOV	word [FTP+FTBLK.FTB_DALO],0 ;;
+	MOV	word [FTP+FTBLK.FTB_DAHI],0 ;;
 					;;
-	MOV	FTP.FTB_STATUS,FSTAT_FOUND
+	MOV	word [FTP+FTBLK.FTB_STATUS],FSTAT_FOUND
 					;;
 ;	CMP	FTP.FTB_TYPE,TYPE_DISPLAY;
 ;	JNE	CHECK_PTR_TYPE		;;
@@ -1071,18 +1091,18 @@ FOUND_DO :				;;
 ;	 MOV	 FTP.FTB_SELLEN,AX	 ;;
 ;					 ;;
 ;SET_STAGE :				 ;; STAGE :
-	MOV	AX,cs:fdlen_word	   ;; if no font data to follow
+	MOV	AX,[cs:FDLEN_WORD]  ;; if no font data to follow
 	AND	AX,AX			;;
 	JNZ	GET_FDATA		;;
-	MOV	cs:stage,SCANX		   ;; then scan for next header or font
+	MOV	word [cs:STAGE],SCANX ;; then scan for next header or font
 	JMP	FONT_RET		;;
 					;;
 GET_FDATA :				;; update the moving target
-	MOV	cs:stage,GET_FX 	   ;;
-	MOV	AX,cs:pre_font_len	   ;;
-	ADD	FTP.TARGET_LO,AX	;;
+	MOV	word [cs:STAGE],GET_FX ;;
+	MOV	AX,[cs:Pre_font_len]  ;;
+	ADD	word [FTP+FTBLK.TARGET_LO],AX ;;
 	JNC	FONT_RET		;;
-	ADD	FTP.TARGET_HI,01000H	;;
+	ADD	word [FTP+FTBLK.TARGET_HI],01000H ;;
 					;;
 FONT_RET :				;;
 	POP	BX			;;
@@ -1091,13 +1111,13 @@ FONT_RET :				;;
 ;===========================================================================
 GETFONT_CASE :				;; as ES:[SI], at COUNT, there is font
 					;; data
-	MOV	DX,cs:num_ftb		   ;;
+	MOV	DX,[cs:NUM_FTB]   ;;
 	PUSH	BX			;;
 					;;
-	MOV	cs:hit_hi,0		   ;; temp. register
-	MOV	cs:hit_flag,0		   ;; assumed can be changed to SCAN stage
+	MOV	word [cs:HIT_HI],0 ;; temp. register
+	MOV	word [cs:HIT_FLAG],0 ;; assumed can be changed to SCAN stage
 					;;
-	MOV	DI,cs:count_hi		   ;; normalised COUNT_HI,COUNT_LO
+	MOV	DI,[cs:COUNT_hI]   ;; normalised COUNT_HI,COUNT_LO
 	MOV	AX,DI			;;
 	AND	AX,00FFFH		;;
 	PUSH	CX			;;
@@ -1105,16 +1125,16 @@ GETFONT_CASE :				;; as ES:[SI], at COUNT, there is font
 	SHL	AX,CL			;;
 	POP	CX			;;
 	AND	DI,0F000H		;;
-	ADD	AX,cs:count_lo		   ;;
+	ADD	AX,[cs:COUNT_LO]   ;;
 	JNC	NO_CARRY4		;;
 	ADD	DI,01000H		;;
 NO_CARRY4 :				;;
-	MOV	cs:count_lo,AX		   ;;
-	MOV	cs:count_hi,DI		   ;;
+	MOV	[cs:COUNT_LO],AX   ;;
+	MOV	[cs:COUNT_hI],DI   ;;
 					;;
 					;;
 GETFONT_LOOP :				;;
-	MOV	AX,FTP.FTB_STATUS	;;
+	MOV	AX,word [FTP+FTBLK.FTB_STATUS] ;;
 	CMP	AX,FSTAT_FONT		;;
 	JE	GETFONT_CONT		;;
 					;;
@@ -1124,22 +1144,22 @@ GETFONT_LOOP :				;;
 	JMP	NEXT_GETFONT		;;
 					;;
 GETFONT_FOUND : 			;;
-	MOV	AX,FTP.FTB_DLEFT	;;
+	MOV	AX,word [FTP+FTBLK.FTB_DLEFT] ;;
 	AND	AX,AX			;;
 	JZ	NEXT_GF 		;;
-	MOV	FTP.FTB_STATUS,FSTAT_FONT;
+	MOV	word [FTP+FTBLK.FTB_STATUS],FSTAT_FONT ;
 	JMP	GETFONT_CONT1		;;
 					;;
 					;;
 GETFONT_CONT :				;;
-	MOV	AX,FTP.FTB_DLEFT	;;
+	MOV	AX,word [FTP+FTBLK.FTB_DLEFT] ;;
 	AND	AX,AX			;;
 	JNZ	GETFONT_CONT1		;;
 NEXT_GF :				;;
 	JMP	NEXT_GETFONT		;;
 					;; only on FOUND and DLEFT <> 0
 GETFONT_CONT1:				;;
-	MOV	DI,FTP.TARGET_HI	;; normalised TARGET
+	MOV	DI,word [FTP+FTBLK.TARGET_HI] ;; normalised TARGET
 	MOV	AX,DI			;;
 	AND	AX,00FFFH		;;
 	PUSH	CX			;;
@@ -1147,69 +1167,69 @@ GETFONT_CONT1:				;;
 	SHL	AX,CL			;;
 	POP	CX			;;
 	AND	DI,0F000H		;;
-	ADD	AX,FTP.TARGET_LO	;;
+	ADD	AX,word [FTP+FTBLK.TARGET_LO] ;;
 	JNC	NO_CARRY5		;;
 	ADD	DI,01000H		;;
 NO_CARRY5 :				;; DI:AX = TARGET (normalised)
 					;;
-	CMP	DI,cs:count_hi		   ;;
+	CMP	DI,[cs:COUNT_hI]   ;;
 	JB	GETFONT_BAD		;;
 	JNE	NEXT_GETFONT		;;
-	CMP	AX,cs:count_lo		   ;;
+	CMP	AX,[cs:COUNT_LO]   ;;
 	JB	GETFONT_BAD		;;
 	JNE	NEXT_GETFONT		;;
 					;;
-	MOV	FTP.FTB_DALO,SI 	;; where the font data is in the packet
-	MOV	FTP.FTB_DAHI,DS 	;;
+	MOV	word [FTP+FTBLK.FTB_DALO],SI ;; where the font data is in the packet
+	MOV	word [FTP+FTBLK.FTB_DAHI],DS ;;
 					;;
-	MOV	AX,FTP.FTB_DLEFT	;;
+	MOV	AX,word [FTP+FTBLK.FTB_DLEFT] ;;
 	CMP	AX,CX			;;
 	JAE	UPTO_CX 		;;
 					;; upto FDLEFT
-	MOV	FTP.FTB_DLEFT,0 	;;
-	MOV	FTP.FTB_DLEN,AX 	;;
-	CMP	cs:hit_hi,AX		   ;;
+	MOV	word [FTP+FTBLK.FTB_DLEFT],0 ;;
+	MOV	word [FTP+FTBLK.FTB_DLEN],AX ;;
+	CMP	[cs:HIT_HI],AX   ;;
 	JNB	NOT_HIGHER0		;;
-	MOV	cs:hit_hi,AX		   ;;
+	MOV	[cs:HIT_HI],AX   ;;
 NOT_HIGHER0 :				;;
-	ADD	FTP.TARGET_LO,AX	;;
+	ADD	word [FTP+FTBLK.TARGET_LO],AX ;;
 	JNC	NEXT_GETFONT		;;
-	ADD	FTP.TARGET_HI,01000H	;;
+	ADD	word [FTP+FTBLK.TARGET_HI],01000H ;;
 	JMP	NEXT_GETFONT		;;
 					;;
 GETFONT_BAD :				;;
-	MOV	FTP.FTB_STATUS,STAT_BADATA ;; pointing backwards
+	MOV	word [FTP+FTBLK.FTB_STATUS],STAT_BADATA ;; pointing backwards
 	JMP	NEXT_GETFONT		;;
 					;;
 UPTO_CX :				;;
 	SUB	AX,CX			;;
-	MOV	FTP.FTB_DLEFT,AX	;;
-	MOV	FTP.FTB_DLEN,CX 	;;
-	MOV	cs:hit_hi,CX		   ;;
-	ADD	FTP.TARGET_LO,CX	;;
+	MOV	word [FTP+FTBLK.FTB_DLEFT],AX ;;
+	MOV	word [FTP+FTBLK.FTB_DLEN],CX ;;
+	MOV	[cs:HIT_HI],CX   ;;
+	ADD	word [FTP+FTBLK.TARGET_LO],CX ;;
 	JNC	NO_CARRYOVER		;;
-	ADD	FTP.TARGET_HI,01000H	;;
+	ADD	word [FTP+FTBLK.TARGET_HI],01000H ;;
 NO_CARRYOVER :				;;
 	AND	AX,AX			;; all data have been returned ?
 	JZ	NEXT_GETFONT		;;
 					;;
-	MOV	cs:hit_flag,-1		   ;; no ! stay in the GET_FONT stage
+	MOV	word [cs:HIT_FLAG],-1 ;; no ! stay in the GET_FONT stage
 					;;
 NEXT_GETFONT :				;;
-	ADD	BX,FTP.FTB_LENGTH	;;
+	ADD	BX,word [FTP+FTBLK.FTB_LENGTH] ;;
 	DEC	DX			;;
 	AND	DX,DX			;;
 	JZ	GETFONT_END		;;
 	JMP	GETFONT_LOOP		;;
 					;;
 GETFONT_END :				;;
-	MOV	AX,cs:hit_hi		   ;;
+	MOV	AX,[cs:HIT_HI]   ;;
 	ADD	SI,AX			;;
 	SUB	CX,AX			;;
 					;;
-	CMP	cs:hit_flag,0		   ;;
+	CMP	word [cs:HIT_FLAG],0 ;;
 	Jne	GETFONT_DONE		;;
-	MOV	cs:stage,SCANX		   ;; no more in the GET_FONT stage
+	MOV	word [cs:STAGE],SCANX ;; no more in the GET_FONT stage
 					;;
 					;;
 GETFONT_DONE :				;;
@@ -1231,12 +1251,12 @@ GETFONT_DONE :				;;
 filetag :				;;
 					;;
 ;	mov	ax,ftag_len		;;
-	cmp	cs:ftag_count,ftag_len	   ;;
-	jB	valid_ftag		;;
+	cmp	word [cs:FTAG_COUNT],FTAG_LEN ;;
+	jB	VALID_FTAG		;;
 	JE	FTAG_FAILED		;;
 					;;
-	mov	ftp.ftb_status,stat_deverr
-	mov	cs:fp_error,00022H	   ;; ERROR 0022H
+	mov	word [FTP+FTBLK.FTB_STATUS],STAT_DEVERR
+	mov	word [cs:FP_ERROR],00022H ;; ERROR 0022H
 					;;
 FTAG_FAILED :				;; discard all the bytes, while
 	ADD	SI,CX			;; stage stays as FTAGX
@@ -1244,211 +1264,211 @@ FTAG_FAILED :				;; discard all the bytes, while
 	JMP	FTB_LOOP		;; **** RETURN (bytes discarded) ****
 					;;
 VALID_FTAG :				;;
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;;
 	DEC	CX			;;
 					;;
-	MOV	DI,cs:ftag_count	   ;;
-	CMP	AL,cs:ftag_pattern[DI]	   ;;
+	MOV	DI,[cs:FTAG_COUNT]  ;;
+	CMP	AL,[cs:FTAG_PATTERN+DI]   ;;
 	JE	FTAG_NEXTB		;;
 					;;
-	mov	ftp.ftb_status,stat_badata
-	MOV	ax,ftag_len		;; stays in FTAGX to consume all bytes
-	MOV	cs:ftag_count,ax	   ;; stays in FTAGX to consume all bytes
+	mov	word [FTP+FTBLK.FTB_STATUS],STAT_BADATA
+	MOV	ax,FTAG_LEN		;; stays in FTAGX to consume all bytes
+	MOV	[cs:FTAG_COUNT],ax  ;; stays in FTAGX to consume all bytes
 	JMP	FTB_LOOP		;; **** RETURN (FAILED !)  ****
 					;;
 FTAG_NEXTB :				;;
 	INC	DI			;;
-	MOV	cs:ftag_count,DI	   ;;
+	MOV	[cs:FTAG_COUNT],DI  ;;
 					;;
-	CMP	DI,ftag_len		;;
+	CMP	DI,FTAG_LEN		;;
 	JE	FTAG_DONE		;;
 					;;
 	JMP	FTB_LOOP		;; **** RETURN ( MORE TO COME) ****
 					;;
 FTAG_DONE :				;;
-	MOV	cs:pass_cnt,0		   ;;
-	MOV	cs:stage,PASSX		   ;;
-	MOV	cs:pass_postx,fptr_lolx    ;;
+	MOV	word [cs:PASS_CNT],0 ;;
+	MOV	word [cs:STAGE],PASSX ;;
+	MOV	word [cs:PASS_POSTX],fptr_LOLX ;;
 					;;
 	JMP	FTB_LOOP		;; **** NEXT STAGE ****
 					;;
 					;;+++++++++++++++++++++++++++++++++
 fptrLOL :				;; STAGE the low byte of the low fptr
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
 	AND	CX,CX			;;
 	JNZ	WORD_fptrLO		;;
-	MOV	cs:fptr_lol,AL		   ;;
-	MOV	cs:stage,fptr_lohX	   ;;
+	MOV	[cs:fptr_LOL],AL   ;;
+	MOV	word [cs:STAGE],fptr_LOHX ;;
 	JMP	FTB_LOOP		;;
 WORD_fptrLO :				;;
 	INC	SI			;;
 	DEC	CX			;;
-	MOV	cs:fptr_low,AX		   ;;
-	MOV	cs:stage,fptr_HILX	   ;;
+	MOV	[cs:fptr_LOW],AX   ;;
+	MOV	word [cs:STAGE],fptr_HILX ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 fptrLOH :				;; STAGE the high byte of the low fptr
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
-	MOV	cs:fptr_loh,AL		   ;;
-	MOV	cs:stage,fptr_HILX	   ;;
+	MOV	[cs:fptr_LOH],AL   ;;
+	MOV	word [cs:STAGE],fptr_HILX ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 fptrHIL :				;; STAGE the low byte of the high fptr
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
 	AND	CX,CX			;;
 	JNZ	WORD_fptrHI		;;
-	MOV	cs:fptr_hil,AL		   ;;
-	MOV	cs:stage,fptr_hihX	   ;;
+	MOV	[cs:fptr_HIL],AL   ;;
+	MOV	word [cs:STAGE],fptr_HIHX ;;
 	JMP	FTB_LOOP		;;
 WORD_fptrHI :				;;
 	INC	SI			;;
 	DEC	CX			;;
-	MOV	cs:fptr_high,AX 	   ;;
-	MOV	cs:stage,FPTR_SKIPX	   ;;
+	MOV	[cs:fptr_HIGH],AX   ;;
+	MOV	word [cs:STAGE],fptr_SKIPX ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 fptrHIH :				;; STAGE the high byte of the high fptr
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
-	MOV	cs:fptr_hih,AL		   ;;
-	MOV	cs:stage,FPTR_SKIPX	   ;;
+	MOV	[cs:fptr_HIH],AL   ;;
+	MOV	word [cs:STAGE],fptr_SKIPX ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 ENTRYLO :				;; STAGE - ENTRY LOW BYTE
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
 	AND	CX,CX			;;
 	JNZ	WORD_ENTRY		;;
-	MOV	cs:entry_lob,AL 	   ;;
-	MOV	cs:stage,ENTRY_HIX	   ;;
+	MOV	[cs:ENTRY_LOB],AL   ;;
+	MOV	word [cs:STAGE],ENTRY_HIX ;;
 	JMP	FTB_LOOP		;;
 WORD_ENTRY :				;;
 	INC	SI			;;
 	DEC	CX			;;
-	MOV	cs:entry_word,AX	   ;;
-	MOV	cs:stage,PASSX		   ;; 2 bytes to be passed
-	MOV	cs:pass_postx,NEXT_LOLX    ;;
+	MOV	[cs:ENTRY_WORD],AX  ;;
+	MOV	word [cs:STAGE],PASSX ;; 2 bytes to be passed
+	MOV	word [cs:PASS_POSTX],NEXT_LOLX ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 ENTRYHI :				;; stage - ENTRY HIGN BYTE
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
-	MOV	cs:entry_hib,AL 	   ;;
-	MOV	cs:stage,PASSX		   ;; 2 bytes to be passed
-	MOV	cs:pass_postx,NEXT_LOLX    ;;
+	MOV	[cs:ENTRY_HIB],AL   ;;
+	MOV	word [cs:STAGE],PASSX ;; 2 bytes to be passed
+	MOV	word [cs:PASS_POSTX],NEXT_LOLX ;;
 	AND	CX,CX			;;
 	JNZ	ENTHI_PASS1		;;
 	JMP	FTB_LOOP		;;
 ENTHI_PASS1 :				;;
 	INC	SI			;;
-	INC	cs:pass_cnt		   ;;
+	INC	word [cs:PASS_CNT] ;;
 	DEC	CX			;;
 	AND	CX,CX			;;
 	JNZ	ENTHI_PASS2		;;
 	JMP	FTB_LOOP		;;
 ENTHI_PASS2 :				;;
 	INC	SI			;;
-	INC	cs:pass_cnt		   ;;
+	INC	word [cs:PASS_CNT] ;;
 	DEC	CX			;;
-	MOV	cs:stage,NEXT_LOLX	   ;;
+	MOV	word [cs:STAGE],NEXT_LOLX ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 NEXTLOL :				;; STAGE the low byte of the low NEXT
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
 	AND	CX,CX			;;
 	JNZ	WORD_NEXTLO		;;
-	MOV	cs:next_lol,AL		   ;;
-	MOV	cs:stage,NEXT_LOHX	   ;;
+	MOV	[cs:NEXT_LOL],AL   ;;
+	MOV	word [cs:STAGE],NEXT_LOHX ;;
 	JMP	FTB_LOOP		;;
 WORD_NEXTLO :				;;
 	INC	SI			;;
 	DEC	CX			;;
-	MOV	cs:next_low,AX		   ;;
-	MOV	cs:stage,next_hilX	   ;;
+	MOV	[cs:NEXT_LOW],AX   ;;
+	MOV	word [cs:STAGE],NEXT_HILX ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 NEXTLOH :				;; STAGE the high byte of the low NEXT
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
-	MOV	cs:next_loh,AL		   ;;
-	MOV	cs:stage,next_hilX	   ;;
+	MOV	[cs:NEXT_LOH],AL   ;;
+	MOV	word [cs:STAGE],NEXT_HILX ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 NEXTHIL :				;; STAGE the low byte of the high NEXT
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
 	AND	CX,CX			;;
 	JNZ	WORD_NEXTHI		;;
-	MOV	cs:next_hil,AL		   ;;
-	MOV	cs:stage,NEXT_HIHX	   ;;
+	MOV	[cs:NEXT_HIL],AL   ;;
+	MOV	word [cs:STAGE],NEXT_HIHX ;;
 	JMP	FTB_LOOP		;;
 WORD_NEXTHI :				;;
 	INC	SI			;;
 	DEC	CX			;;
-	MOV	cs:next_high,AX 	   ;;
-	MOV	cs:stage,type_lobX	   ;;
+	MOV	[cs:NEXT_HIGH],AX   ;;
+	MOV	word [cs:STAGE],TYPE_LOBX ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 NEXTHIH :				;; STAGE the high byte of the high NEXT
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
-	MOV	cs:next_hih,AL		   ;;
-	MOV	cs:stage,type_lobX	   ;;
+	MOV	[cs:NEXT_HIH],AL   ;;
+	MOV	word [cs:STAGE],TYPE_LOBX ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 TYPELO	:				;; STAGE the low byte of the TYPE
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
 	AND	CX,CX			;;
 	JNZ	WORD_TYPE		;;
-	MOV	cs:type_lob,AL		   ;;
-	MOV	cs:stage,type_hibX	   ;;
+	MOV	[cs:TYPE_LOB],AL   ;;
+	MOV	word [cs:STAGE],TYPE_HIBX ;;
 	JMP	FTB_LOOP		;;
 WORD_TYPE :				;;
 	INC	SI			;;
 	DEC	CX			;;
-	MOV	cs:type_word,AX 	   ;;
-	MOV	cs:stage,type_idX	   ;;
-	MOV	cs:tid_cnt,0		   ;;
+	MOV	[cs:TYPE_WORD],AX   ;;
+	MOV	word [cs:STAGE],TYPE_IDX ;;
+	MOV	word [cs:TID_CNT],0 ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 TYPEHI	:				;; STAGE the high byte of the TYPE
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
-	MOV	cs:type_hib,AL		   ;;
-	MOV	cs:stage,TYPE_IDX	   ;;
-	MOV	cs:tid_cnt,0		   ;;
+	MOV	[cs:TYPE_HIB],AL   ;;
+	MOV	word [cs:STAGE],TYPE_IDX ;;
+	MOV	word [cs:TID_CNT],0 ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 TYPEIDS :				;; STAGE the type id
-	CMP	cs:tid_cnt,8		   ;;
+	CMP	word [cs:TID_CNT],8 ;;
 	JNA	VALID_TID		;;
-	MOV	FTP.FTB_STATUS,STAT_DEVERR
-	MOV	cs:fp_error,00021H	   ;; ERROR 0021H
+	MOV	word [FTP+FTBLK.FTB_STATUS],STAT_DEVERR
+	MOV	word [cs:FP_ERROR],00021H ;; ERROR 0021H
 	ADD	SI,CX			;;
 	SUB	CX,CX			;;
 	JMP	FTB_LOOP		;;
 					;;
 VALID_TID :				;;
 	MOV	AX,8			;;
-	SUB	AX,cs:tid_cnt		   ;;
+	SUB	AX,[cs:TID_CNT]   ;;
 	CMP	CX,AX			;;
 	JNB	TID_ALL 		;;
 					;; all data in FPKT are stored
@@ -1456,9 +1476,9 @@ VALID_TID :				;;
 	PUSH	CS			;;
 	POP	ES			;;
 					;;
-	MOV	DI,OFFSET TYPE_ID	;;
-	ADD	DI,cs:tid_cnt		   ;;
-	ADD	cs:tid_cnt,CX		   ;;
+	MOV	DI,TYPE_ID        ;;
+	ADD	DI,[cs:TID_CNT]   ;;
+	ADD	[cs:TID_CNT],CX   ;;
 	REP	MOVSB			;; SI is incremented accordingly
 	POP	ES			;;
 					;;
@@ -1471,209 +1491,209 @@ TID_ALL :				;;
 	PUSH	CS			;;
 	POP	ES			;;
 					;;
-	MOV	DI,OFFSET TYPE_ID	;;
-	ADD	DI,cs:tid_cnt		   ;;
+	MOV	DI,TYPE_ID        ;;
+	ADD	DI,[cs:TID_CNT]   ;;
 	MOV	CX,AX			;;
 	REP	MOVSB			;; SI is incremented accordingly
 	POP	ES			;;
 					;;
-	ADD	cs:tid_cnt,AX		   ;;
+	ADD	[cs:TID_CNT],AX   ;;
 	POP	CX			;;
 	SUB	CX,AX			;;
 					;;
-	MOV	cs:stage,CPG_LOBX	   ;;
+	MOV	word [cs:STAGE],CPG_LOBX ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 CPGLO	:				;; STAGE the low byte of the CODE PAGE
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
 	AND	CX,CX			;;
 	JNZ	WORD_CPG		;;
-	MOV	cs:cpg_lob,AL		   ;;
-	MOV	cs:stage,CPG_HIBX	   ;;
+	MOV	[cs:CPG_LOB],AL   ;;
+	MOV	word [cs:STAGE],CPG_HIBX ;;
 	JMP	FTB_LOOP		;;
 WORD_CPG :				;;
 	INC	SI			;;
 	DEC	CX			;;
-	MOV	cs:cpg_word,AX		   ;;
-	MOV	cs:stage,PASSX		   ;;
-	MOV	cs:pass_postx,font_lolX    ;;
+	MOV	[cs:CPG_WORD],AX   ;;
+	MOV	word [cs:STAGE],PASSX ;;
+	MOV	word [cs:PASS_POSTX],FONT_LOLX ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 CPGHI	:				;; STAGE the high byte of the CODE PAGE
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
-	MOV	cs:cpg_hib,AL		   ;;
-	MOV	cs:stage,PASSX		   ;;
-	MOV	cs:pass_postx,font_lolX    ;;
+	MOV	[cs:CPG_HIB],AL   ;;
+	MOV	word [cs:STAGE],PASSX ;;
+	MOV	word [cs:PASS_POSTX],FONT_LOLX ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 FONTLOL :				;; STAGE the low byte of the low FONT
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
 	AND	CX,CX			;;
 	JNZ	WORD_FONTLO		;;
-	MOV	cs:font_lol,AL		   ;;
-	MOV	cs:stage,FONT_LOHX	   ;;
+	MOV	[cs:FONT_LOL],AL   ;;
+	MOV	word [cs:STAGE],FONT_LOHX ;;
 	JMP	FTB_LOOP		;;
 WORD_FONTLO :				;;
 	INC	SI			;;
 	DEC	CX			;;
-	MOV	cs:font_low,AX		   ;;
-	MOV	cs:stage,FONT_HILX	   ;;
+	MOV	[cs:FONT_LOW],AX   ;;
+	MOV	word [cs:STAGE],FONT_HILX ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 FONTLOH :				;; STAGE the high byte of the low FONT
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
-	MOV	cs:font_loh,AL		   ;;
-	MOV	cs:stage,FONT_HILX	   ;;
+	MOV	[cs:FONT_LOH],AL   ;;
+	MOV	word [cs:STAGE],FONT_HILX ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 FONTHIL :				;; STAGE the low byte of the high FONT
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
 	AND	CX,CX			;;
 	JNZ	WORD_FONTHI		;;
-	MOV	cs:font_hil,AL		   ;;
-	MOV	cs:stage,FONT_HIHX	   ;;
+	MOV	[cs:FONT_HIL],AL   ;;
+	MOV	word [cs:STAGE],FONT_HIHX ;;
 	JMP	FTB_LOOP		;;
 WORD_FONTHI :				;;
 	INC	SI			;;
 	DEC	CX			;;
-	MOV	cs:font_high,AX 	   ;;
+	MOV	[cs:FONT_HIGH],AX   ;;
 ;;;;;;	MOV	cs:stage,MOD_LOBX	   ;; end of SCAN
 					;; anymore headers to be processed ?
-	MOV	cs:stage,MATCHX 	   ;;
-	MOV	AX,cs:entry_word	   ;;
+	MOV	word [cs:STAGE],MATCHX ;;
+	MOV	AX,[cs:ENTRY_WORD]  ;;
 	DEC	AX			;;
-	MOV	cs:entry_word,AX	   ;;
+	MOV	[cs:ENTRY_WORD],AX  ;;
 	AND	AX,AX			;;
 	JNZ	CHECK_NEXT		;;
 					;; no more header to be processed !
 	MOV	AX,-1			;;
-	MOV	cs:next_low,AX		   ;;
-	MOV	cs:next_high,AX 	   ;; as ENTRY has been consumed
+	MOV	[cs:NEXT_LOW],AX   ;;
+	MOV	[cs:NEXT_HIGH],AX   ;; as ENTRY has been consumed
 	JMP	FTB_LOOP		;;
 					;;
 CHECK_NEXT :				;;
-	MOV	AX,cs:next_low		   ;;
+	MOV	AX,[cs:NEXT_LOW]   ;;
 	AND	AX,AX			;;
 	JNZ	MORE_HEADER		;;
-	MOV	AX,cs:next_high 	   ;;
+	MOV	AX,[cs:NEXT_HIGH]   ;;
 	AND	AX,AX			;;
 	JNZ	MORE_HEADER		;;
 					;; no more header to be processed !
 	MOV	AX,-1			;;
-	MOV	cs:next_low,AX		   ;; as NEXT is nil
-	MOV	cs:next_high,AX 	   ;;
+	MOV	[cs:NEXT_LOW],AX   ;; as NEXT is nil
+	MOV	[cs:NEXT_HIGH],AX   ;;
 					;;
 MORE_HEADER :				;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 FONTHIH :				;; STAGE the high byte of the high FONT
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
-	MOV	cs:font_hih,AL		   ;;
+	MOV	[cs:FONT_HIH],AL   ;;
 ;;;;;	MOV	cs:stage,MOD_LOBX	   ;; end of SCAN
 					;;
-	MOV	cs:stage,MATCHX 	   ;;
+	MOV	word [cs:STAGE],MATCHX ;;
 					;; anymore headers to be processed ?
-	MOV	AX,cs:entry_word	   ;;
+	MOV	AX,[cs:ENTRY_WORD]  ;;
 	DEC	AX			;;
-	MOV	cs:entry_word,AX	   ;;
+	MOV	[cs:ENTRY_WORD],AX  ;;
 	AND	AX,AX			;;
 	JNZ	CHECK_NEXT0		;;
 					;; no more header to be processed !
 	MOV	AX,-1			;;
-	MOV	cs:next_low,AX		   ;;
-	MOV	cs:next_high,AX 	   ;; as ENTRY has been consumed
+	MOV	[cs:NEXT_LOW],AX   ;;
+	MOV	[cs:NEXT_HIGH],AX   ;; as ENTRY has been consumed
 	JMP	FTB_LOOP		;;
 					;;
 CHECK_NEXT0 :				;;
-	MOV	AX,cs:next_low		   ;;
+	MOV	AX,[cs:NEXT_LOW]   ;;
 	AND	AX,AX			;;
 	JNZ	MORE_HEADER0		;;
-	MOV	AX,cs:next_high 	   ;;
+	MOV	AX,[cs:NEXT_HIGH]   ;;
 	AND	AX,AX			;;
 	JNZ	MORE_HEADER0		;;
 					;; no more header to be processed !
 	MOV	AX,-1			;;
-	MOV	cs:next_low,AX		   ;; as NEXT is nil
-	MOV	cs:next_high,AX 	   ;;
+	MOV	[cs:NEXT_LOW],AX   ;; as NEXT is nil
+	MOV	[cs:NEXT_HIGH],AX   ;;
 					;;
 MORE_HEADER0 :				;;
 	JMP	FTB_LOOP		;;
 					;;
 					;;+++++++++++++++++++++++++++++++++
 MODLO	:				;; STAGE the low byte of the MODIFIER
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
 	AND	CX,CX			;;
 	JNZ	WORD_MOD		;;
-	MOV	MOD_LOB,AL		;;
-	MOV	cs:stage,MOD_HIBX	   ;;
+	MOV	[MOD_LOB],AL ;;
+	MOV	word [cs:STAGE],MOD_HIBX ;;
 	JMP	FTB_LOOP		;;
 WORD_MOD :				;;
 	INC	SI			;;
 	DEC	CX			;;
-	MOV	cs:mod_word,AX		   ;;
-	MOV	cs:stage,fonts_lobX	   ;;
+	MOV	[cs:MOD_WORD],AX   ;;
+	MOV	word [cs:STAGE],FONTS_LOBX ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 MODHI	:				;; STAGE the high byte of the MODIFIER
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
-	MOV	cs:mod_hib,AL		   ;;
-	MOV	cs:stage,FONTS_LOBX	   ;;
+	MOV	[cs:MOD_HIB],AL   ;;
+	MOV	word [cs:STAGE],FONTS_LOBX ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 FONTSLO :				;; STAGE the low byte of the FONTS
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
 	AND	CX,CX			;;
 	JNZ	WORD_FONTS		;;
-	MOV	cs:fonts_lob,AL 	   ;;
-	MOV	cs:stage,FONTS_HIBX	   ;;
+	MOV	[cs:FONTS_LOB],AL   ;;
+	MOV	word [cs:STAGE],FONTS_HIBX ;;
 	JMP	FTB_LOOP		;;
 WORD_FONTS :				;;
 	INC	SI			;;
 	DEC	CX			;;
-	MOV	cs:fonts_word,AX	   ;;
-	MOV	cs:stage,FDLEN_LOBX	   ;;
+	MOV	[cs:FONTS_WORD],AX  ;;
+	MOV	word [cs:STAGE],FDLEN_LOBX ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 FONTSHI :				;; STAGE the high byte of the FONTS
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
-	MOV	cs:fonts_hib,AL 	   ;;
-	MOV	cs:stage,FDLEN_LOBX	   ;;
+	MOV	[cs:FONTS_HIB],AL   ;;
+	MOV	word [cs:STAGE],FDLEN_LOBX ;;
 	JMP	FTB_LOOP		;;
 					;;+++++++++++++++++++++++++++++++++
 FDLENLO :				;; the low byte of the FONT-LENGTH
-	MOV	AX,FPKT 		;;
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
 	AND	CX,CX			;;
 	JNZ	WORD_FDLEN		;;
-	MOV	cs:fdlen_lob,AL 	   ;;
-	MOV	cs:stage,FDLEN_HIBX	   ;;
+	MOV	[cs:FDLEN_LOB],AL   ;;
+	MOV	word [cs:STAGE],FDLEN_HIBX ;;
 	JMP	FTB_LOOP		;;
 WORD_FDLEN :				;;
 	INC	SI			;;
 	DEC	CX			;;
-	MOV	cs:pre_font_len,PRE_FONT_ND;;
-	MOV	cs:fdlen_word,AX	   ;;
+	MOV	word [cs:Pre_font_len],PRE_FONT_ND ;;
+	MOV	[cs:FDLEN_WORD],AX  ;;
 ;	AND	AX,AX			;;
 ;	JZ	NO_DISP_PTR		;;
 ;	CMP	cs:type_word,TYPE_DISPLAY  ;;
@@ -1682,7 +1702,7 @@ WORD_FDLEN :				;;
 ;	JE	PRINTER_TYPE1		;;
 					;;
 ;NO_DISP_PTR :				 ;;
-	MOV	cs:stage,FOUNDX 	   ;; FSTAT is to be changed
+	MOV	word [cs:STAGE],FOUNDX ;; FSTAT is to be changed
 	JMP	FTB_LOOP		;;
 ;DISPLAY_TYPE1 :			 ;;
 ;	MOV	cs:stage,DISP_ROWSX	   ;;
@@ -1693,12 +1713,12 @@ WORD_FDLEN :				;;
 					;;
 					;;+++++++++++++++++++++++++++++++++
 FDLENHI :				;; STAGE the high byte of the F-LENGTH
-	MOV	cs:pre_font_len,PRE_FONT_ND
-	MOV	AX,FPKT 		;;
+	MOV	word [cs:Pre_font_len],PRE_FONT_ND
+	MOV	AX,[FPKT] ;;
 	INC	SI			;; byte by byte
 	DEC	CX			;;
-	MOV	cs:fdlen_hib,AL 	   ;;
-	MOV	AX,cs:fdlen_word	   ;;
+	MOV	[cs:FDLEN_HIB],AL   ;;
+	MOV	AX,[cs:FDLEN_WORD]  ;;
 ;	AND	AX,AX			;;
 ;	JZ	NO_DISP_PTR2		;;
 ;	CMP	cs:type_word,TYPE_DISPLAY  ;;
@@ -1706,7 +1726,7 @@ FDLENHI :				;; STAGE the high byte of the F-LENGTH
 ;	 CMP	 cs:type_word,TYPE_PRINTER  ;;
 ;	 JE	 PRINTER_TYPE2		 ;;
 ;NO_DISP_PTR2:				 ;;
-	MOV	cs:stage,FOUNDX 	   ;; FSTAT is to be changed
+	MOV	word [cs:STAGE],FOUNDX ;; FSTAT is to be changed
 	JMP	FTB_LOOP		;;
 ;DISPLAY_TYPE2 :			 ;;
 ;	MOV	cs:stage,DISP_ROWSX	   ;;
@@ -1924,7 +1944,7 @@ PTRLENLO :				;; the low byte of SELECTION_LENGTH
  PTRLENHI :				 ;; STAGE the high byte of SELECT_LENGTH
 					 ;;
 	SUB	CX,CX			 ;D; added for DISPLAY.SYS version
-	MOV	CS:STAGE,STAGE_MAX+1	 ;D; added for DISPLAY.SYS version
+	MOV	word [cs:STAGE],STAGE_MAX+1 ;D; added for DISPLAY.SYS version
 	JMP	FTB_LOOP		 ;D; added for DISPLAY.SYS version
 					 ;;
 					 ;;
@@ -1952,12 +1972,12 @@ PASS	:				;; STAGE - PASS DUMMY BYTES
 					;;
 	PUSH	CS			;;
 	POP	ES			;;
-	MOV	DI,OFFSET PASS_BRK	;;
+	MOV	DI,PASS_BRK        ;;
 	MOV	DX,PASS_INDX		;;
-	MOV	AX,cs:pass_cnt		   ;;
+	MOV	AX,[cs:PASS_CNT]   ;;
 					;;
 NEXT_BRK:				;; find the next pass-break
-	CMP	AX,ES:[DI]		;;
+	CMP	AX,[es:DI]		;;
 					;;
 	JB	UPTO_BRK		;;
 					;;
@@ -1968,23 +1988,23 @@ NEXT_BRK:				;; find the next pass-break
 	JMP	NEXT_BRK		;;
 					;;
 UPTO_BRK :				;; next break point found
-	MOV	DX,ES:[DI]		;;
+	MOV	DX,[es:DI]		;;
 	SUB	DX,AX			;; bytes to be skipped
 	CMP	CX,DX			;; all to be skipped ?
 	JAE	PASS_ALL		;;
 					;;
-	ADD	cs:pass_cnt,CX		   ;;
+	ADD	[cs:PASS_CNT],CX   ;;
 	ADD	SI,CX			;;
 	SUB	CX,CX			;;
 	JMP	PASS_END		;;
 					;;
 PASS_ALL :				;;
-	ADD	cs:pass_cnt,DX		   ;;
+	ADD	[cs:PASS_CNT],DX   ;;
 	ADD	SI,DX			;;
 	SUB	CX,DX			;;
 					;;
-	MOV	AX,cs:pass_postx	   ;;
-	MOV	cs:stage,AX		   ;;
+	MOV	AX,[cs:PASS_POSTX]  ;;
+	MOV	[cs:STAGE],AX   ;;
 					;;
 ;	cmp	ax,passx		;; is the next stage a pass-stage ?
 ;	jne	not_passx		;;
@@ -2000,7 +2020,7 @@ PASS_ERR :				;; DEVICE ERROR, wrong stage
 	POP	DI			;;
 	POP	ES			;;
 	POP	DX			;;
-	MOV	FTP.FTB_STATUS,STAT_DEVERR
+	MOV	word [FTP+FTBLK.FTB_STATUS],STAT_DEVERR
 	SUB	CX,CX			;; ignore all the input string
 	JMP	PASS_DONE		;;
 					;;
@@ -2015,7 +2035,7 @@ PASS_DONE :				;;
 					;;
 FTB_LPEND :				;;
 					;;
-	CMP	cs:stage,FOUNDX 	   ;;
+	CMP	word [cs:STAGE],FOUNDX ;;
 	JNE	NOT_FOUNDX		;;
 					;;
 	CALL	FOUND_DO		;;
@@ -2035,6 +2055,6 @@ FP_RET	:				;;
 	POP	DS			;;
 					;;
 	RET				;;
-FONT_PARSER ENDP			;;
+;FONT_PARSER ENDP			;;
 					;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

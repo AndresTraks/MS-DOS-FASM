@@ -356,3 +356,13 @@ device ANSI ANSLNK ANSI.SYS
 # and all, so a drive it has made is one DOS can read without FORMAT.  The
 # release links the one object and runs EXE2BIN over the result.
 device VDISK VDSKLNK VDISK.SYS
+
+# DISPLAY.SYS, the code page driver for the screen: three modules in one
+# segment, which DISPLNK.ASM reads in the order DISPLAY.LNK names them.  It
+# takes CON over the way ANSI.SYS does -- the last driver to claim the name
+# is the one DOS uses -- and what it adds is the code pages: MODE CP
+# PREPARE hands it a .CPI file through the generic IOCTL call, it keeps the
+# fonts, and INT 10H and INT 2FH are hooked so that a mode change puts the
+# prepared font back.  The release links the three and runs EXE2BIN over the
+# result.
+device DISPLAY DISPLNK DISPLAY.SYS

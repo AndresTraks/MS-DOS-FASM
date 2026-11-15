@@ -3,17 +3,19 @@
 ;       CODE PAGE DRIVER FUNCTIONS
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-IF1                                     ;
-        %OUT .               ®CPS-FUNC.INC¯
-ENDIF                                   ;
+;IF1                                     ;
+;        %OUT .               ®CPS-FUNC.INC¯
+;ENDIF                                   ;
                                         ;
-CP_FUNCTION     LABEL   BYTE            ;
-        DW   4CH,OFFSET DESIGNATE_BEGIN ;
-        DW   4DH,OFFSET DESIGNATE_END   ;
-        DW   4AH,OFFSET INVOKE_CP       ;
-        DW   6AH,OFFSET QUERY_CP        ;
-        DW   6BH,OFFSET QUERY_CP_LIST   ;
-NUM_CP_FUNCTION  EQU ($-CP_FUNCTION)/4  ;
+label CP_FUNCTION byte                  ;
+        DW   4CH,DESIGNATE_BEGIN        ;
+        DW   4DH,DESIGNATE_END          ;
+        DW   4AH,INVOKE_CP              ;
+        DW   6AH,QUERY_CP               ;
+        DW   6BH,QUERY_CP_LIST          ;
+; = and not equ: fasm's equ is text put in where the name is used, so a $
+; in it would be the address of the use and not of this line.
+NUM_CP_FUNCTION  = (($-CP_FUNCTION)/4)	;
                                         ;
 DESG_SEMAPHORE  DB      0               ; TEMPORARY
 G_IOCTL_SEMA    DB      0               ; SEMAPHORE TO INDICATE IF CPS IS BUSY!
@@ -26,16 +28,16 @@ CHAR_HEIGHT     DB      8               ;
                 DB      0               ;
                 DB      0               ;
                 DB      0               ;
-NUM_CHAR_HEIGHT EQU ($-CHAR_HEIGHT)     ;
+NUM_CHAR_HEIGHT = (($-CHAR_HEIGHT))	;
                                         ;
                                         ;
-GENERIC_IOCTL PROC                      ; CON OUTPUT
+GENERIC_IOCTL:                          ; CON OUTPUT
         CLI                           ;S;
         MOV     SI,SP                 ;S;
-        MOV     CS:OLD_STACK_O,SI     ;S;
+        MOV     [cs:OLD_STACK_O],SI   ;S;
         MOV     SI,SS                 ;S;
-        MOV     CS:OLD_STACK_S,SI     ;S;
-        MOV     AX,OFFSET STACK_START ;S;
+        MOV     [cs:OLD_STACK_S],SI   ;S;
+        MOV     AX,STACK_START        ;S;
         MOV     SI,CS                 ;S;
         MOV     SS,SI                 ;S;
         MOV     SP,AX                 ;S;
@@ -45,9 +47,9 @@ GENERIC_IOCTL PROC                      ; CON OUTPUT
         PUSH    CS                      ;
         POP     DS                      ; FROM HERE IN, DS=CS
                                         ;
-        LES     DI,DWORD PTR BUF.RH_PTRO; GET RH
+        LES     DI,dword [BUF+BUF_DATA.RH_PTRO] ; GET RH
                                         ;
-GI_1:   MOV     AL,RH.MINOR_F           ; PUT MINOR VERSION IN AL
+GI_1:   MOV     AL,byte [RH+RH_IOCTL.MINOR_F] ; PUT MINOR VERSION IN AL
         XOR     AH,AH                   ; CLEAR OUT HIGH BYTE FOR COMPARES
                                         ;
         PUSH    DI                      ; SAVE POINTER!!!
@@ -55,7 +57,7 @@ GI_1:   MOV     AL,RH.MINOR_F           ; PUT MINOR VERSION IN AL
         PUSH    CS                      ;
         POP     ES                      ;
         MOV     CX,NUM_CP_FUNCTION      ;
-        MOV     DI,OFFSET CP_FUNCTION   ;
+        MOV     DI,CP_FUNCTION          ;
 GI_1A:  SCASW                           ; SEARCH THROUGH THE LIST OF VALID FN's
         JE      GI_2                    ;
         INC     DI                      ;
@@ -68,53 +70,53 @@ GI_2:   POP     ES                      ;
         MOV     SI,DI                   ;
         POP     DI                      ;
                                         ;
-        MOV     G_IOCTL_SEMA,ONE        ; SEMAPHORE TO INDICATE CALLS ARE BUSY!
-        CALL    [SI]                    ; JMP OFF TO THE APPROPRIATE CALL!
-        MOV     G_IOCTL_SEMA,ZERO       ; SEMAPHORE TO INDICATE CALLS ARE DONE!
+        MOV     byte [G_IOCTL_SEMA],ONE ; SEMAPHORE TO INDICATE CALLS ARE BUSY!
+        CALL    word [SI]               ; JMP OFF TO THE APPROPRIATE CALL!
+        MOV     byte [G_IOCTL_SEMA],ZERO ; SEMAPHORE TO INDICATE CALLS ARE DONE!
         STC                             ; SET CY not TO TRY ATTACHED CON!
         JUMP    GI_4                    ;
 GI_3:   CLC                             ; CLEAR CY TO TRY ATTACHED CON!
 GI_4:   POP     DS                      ;
         CLI                           ;S;
-        MOV     AX,CS:OLD_STACK_O     ;S;
-        MOV     SI,CS:OLD_STACK_S     ;S;
+        MOV     AX,[cs:OLD_STACK_O]   ;S;
+        MOV     SI,[cs:OLD_STACK_S]   ;S;
         MOV     SS,SI                 ;S;
         MOV     SP,AX                 ;S;
         STI                           ;S;
         RET                             ;
-GENERIC_IOCTL ENDP                      ;
+;GENERIC_IOCTL ENDP                      ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;       DESIGNATE BEGIN
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-DESIGNATE_BEGIN PROC                    ;
-        LES     DI,RH.REQUEST_PACKET    ; AND DI TO POINT TO REQUEST PACKET
-        MOV     CX,RH.DESG_N            ; MOVE THE NUMBER OF CODE PAGES DESIG'ed
+DESIGNATE_BEGIN:                        ;
+        LES     DI,dword [RH+RH_IOCTL.REQUEST_PACKET] ; AND DI TO POINT TO REQUEST PACKET
+        MOV     CX,word [RH+DESG_BUFFER.DESG_N] ; MOVE THE NUMBER OF CODE PAGES DESIG'ed
                                         ;
         OR      CX,CX                   ;
         JZ      DB_0C                   ; CHECK IF ZERO CP's DESIGNATED
                                         ; IF SO, THEN THIS IS THE REFRESH CALL
-DB_0:   CMP     CX,CPD_DESG_N           ; CHECK IF NUMBER > # CONFIGed
+DB_0:   CMP     CX,[cs:CPD_DESG_N]      ; CHECK IF NUMBER > # CONFIGed
         JA      DB_0B                   ;
         JUMP    DB_1B                   ;
                                         ;
-DB_0D:  OR      BUF.STATUS,EIGHT        ; Error>> KEYBOARD ERROR!!
+DB_0D:  OR      word [BUF+BUF_DATA.STATUS],EIGHT ; Error>> KEYBOARD ERROR!!
         RET                             ;
 DB_2D:  POP     CX                      ; RESTORE STACK ELEMENTS
         POP     BX                      ;
         POP     CX                      ; RESTORE STACK ELEMENTS
         POP     BX                      ;
-DB_0B:  OR      BUF.STATUS,TEN          ; Error>> DEVICE ERROR!!
+DB_0B:  OR      word [BUF+BUF_DATA.STATUS],TEN ; Error>> DEVICE ERROR!!
         RET                             ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;       REFRESH ACTIVE CODE PAGE TO DISPLAY
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-DB_0C:  MOV     DESG_SEMAPHORE,TWO      ; SET REFRESH COMMENCED
-        MOV     CPD_REQ_DESG,CX         ; SAVE NUMBER OF REQUESTED CP'S (0)
-        MOV     DX,CPD_ACTIVE           ; THIS IS THE REFRESH CALL
+DB_0C:  MOV     byte [DESG_SEMAPHORE],TWO ; SET REFRESH COMMENCED
+        MOV     [cs:CPD_REQ_DESG],CX    ; SAVE NUMBER OF REQUESTED CP'S (0)
+        MOV     DX,[cs:CPD_ACTIVE]      ; THIS IS THE REFRESH CALL
         CMP     DX,-1                   ; CHECK IF THE ACTIVE_CP = INVALID
         JE      DB_0B                   ;
         CLC                             ; CLEAR OUT THE CARRY FLAG
@@ -140,10 +142,10 @@ DB_1B:  CLD                             ; SET DIRECTION FORWARD
         PUSH    DI                      ;
         PUSH    CS                      ;
         POP     ES                      ;
-        MOV     CX,CPD_DESG_N           ;
+        MOV     CX,[cs:CPD_DESG_N]      ;
         INC     CX                      ; ACCOUNT FOR NUMBER OF CPS
-        LEA     SI,CPD_DESG_N           ; COPY PREPARED CP LIST TO TEMP BUFFER
-        LEA     DI,CPD_TEMP_DESG        ;
+        LEA     SI,[CPD_DESG_N]         ; COPY PREPARED CP LIST TO TEMP BUFFER
+        LEA     DI,[CPD_TEMP_DESG]      ;
         REP     MOVSW                   ;
         POP     DI                      ;
         POP     CX                      ;
@@ -152,15 +154,15 @@ DB_1B:  CLD                             ; SET DIRECTION FORWARD
         XOR     DX,DX                   ; SET COUNT OF CP's TO PREPARE = 0
         PUSH    CX                      ;
         PUSH    BX                      ;
-        MOV     CPD_REQ_DESG,CX         ; SAVE NUMBER OF REQUESTED CP'S
+        MOV     [cs:CPD_REQ_DESG],CX    ; SAVE NUMBER OF REQUESTED CP'S
         MOV     SI,2                    ;
         MOV     BX,SI                   ;
-DB_1:   MOV     AX,RH.DESG_N[BX]        ; GET REQUESTED CP
+DB_1:   MOV     AX,word [RH+DESG_BUFFER.DESG_N+BX] ; GET REQUESTED CP
         CMP     AX,-1                   ; TEST IF REQUESTED IS PLACE HOLDER..
         JE      DB_1A                   ;
         INC     DX                      ; ADD ONE TO THE # VALID DESG
-        MOV     CPD_TEMP_DESG[SI],AX    ; OVERLAY THE NEWER CP INTO TEMP BUFFER
-DB_1A:  MOV     CPD_REQ_DESG[SI],AX     ; COPY TO THE REQ DESG LIST
+        MOV     [cs:SI+CPD_TEMP_DESG],AX ; OVERLAY THE NEWER CP INTO TEMP BUFFER
+DB_1A:  MOV     [cs:SI+CPD_REQ_DESG],AX ; COPY TO THE REQ DESG LIST
         INC     SI                      ;
         INC     SI                      ;
         INC     BX                      ;
@@ -179,21 +181,21 @@ DB_1A:  MOV     CPD_REQ_DESG[SI],AX     ; COPY TO THE REQ DESG LIST
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 DB_2:   PUSH    BX                      ; CHECK THE DESIGNATE LIST FOR DUP's
         PUSH    CX                      ; AND FOR INVALIDS
-        MOV     CX,CPD_TEMP_DESG        ;
+        MOV     CX,[cs:CPD_TEMP_DESG]   ;
         DEC     CX                      ; NORMALIZE
         JZ      DB_3                    ; IF ZERO, THEN NONE TO COMPARE
         MOV     BX,2                    ; SET BX TO START OF LIST....
         MOV     SI,2                    ; SETUP SI READY TO MOVE DESG LIST IN!
 DB_2A:  PUSH    BX                      ;
         PUSH    CX                      ;
-        MOV     AX,CPD_TEMP_DESG[BX]    ; GET CP DESGINATED
+        MOV     AX,[cs:BX+CPD_TEMP_DESG] ; GET CP DESGINATED
         CMP     AX,-1                   ; TEST IF ENTRY = -1
         JE      DB_2E                   ; IF SO, THEN SKIP
 DB_2B:  CMP     CX,1                    ; TEST IF IT IS THE ONLY ONE TO COMPARE
         JE      DB_2E                   ; AGAINST!
         INC     BX                      ; ADVANCE POINTER TO NEXT CP DESIGNATED
         INC     BX                      ;
-        CMP     AX,CPD_TEMP_DESG[BX]    ; CHECK IF NEXT CP's = ONE TESTED
+        CMP     AX,[cs:BX+CPD_TEMP_DESG] ; CHECK IF NEXT CP's = ONE TESTED
         JNE     DB_2C                   ; IF error, THEN GET OUT
         JUMP    DB_2D                   ;
                                         ;
@@ -220,10 +222,10 @@ DB_3:   POP     CX                      ;
         PUSH    DI                      ;
         PUSH    CS                      ;
         POP     ES                      ;
-        MOV     CX,CPD_DESG_N           ;
+        MOV     CX,[cs:CPD_DESG_N]      ;
         INC     CX                      ; ACCOUNT FOR NUMBER OF CPS
-        LEA     SI,CPD_TEMP_DESG        ; COPY TEMP BUFFER INTO NEW CP LIST
-        LEA     DI,CPD_DESG_N           ;
+        LEA     SI,[CPD_TEMP_DESG]      ; COPY TEMP BUFFER INTO NEW CP LIST
+        LEA     DI,[CPD_DESG_N]         ;
         REP     MOVSW                   ;
         POP     DI                      ;
         POP     CX                      ;
@@ -242,31 +244,31 @@ DB_3:   POP     CX                      ;
         PUSH    DI                      ;
                                         ; CX=#DESGed, BX=pnter DESG LIST
         MOV     BX,2                    ; SET BX TO POINT TO FIRST CP DESGed
-        LEA     DI,FTABLE               ; SET DI TO POINT TO MAIN PARSER TABLE
+        LEA     DI,[FTABLE]             ; SET DI TO POINT TO MAIN PARSER TABLE
         PUSH    CS                      ;
         POP     ES                      ; INITIALIZE ES=CS
-        MOV     [DI].FLAG,FLAG_RESTART  ; SETUP UP MAIN TABLE FOR F-PARSER.SRC
-        MOV     [DI].BUFFER_LEN,0       ; PREPARING FOR START OF DESIGNATION
-        MOV     [DI].NUM_FTBLK,DX       ; DX=#DESG TO PARSE OUT
+        MOV     [DI+FBUFS.FLAG],FLAG_RESTART ; SETUP UP MAIN TABLE FOR F-PARSER.SRC
+        MOV     [DI+FBUFS.BUFFER_LEN],0 ; PREPARING FOR START OF DESIGNATION
+        MOV     [DI+FBUFS.NUM_FTBLK],DX ; DX=#DESG TO PARSE OUT
                                         ;
-        LEA     SI,CPD_CLASS            ; SET DI TO POINT TO (EGA,LCD) CLASSES
-        LEA     DI,FTB1                 ; SET DI TO POINT TO FIRST PARSING TABLE
+        LEA     SI,[CPD_CLASS]          ; SET DI TO POINT TO (EGA,LCD) CLASSES
+        LEA     DI,[FTB1]               ; SET DI TO POINT TO FIRST PARSING TABLE
                                         ;
-DB_4:   MOV     AX,CPD_REQ_DESG[BX]     ;
+DB_4:   MOV     AX,[cs:BX+CPD_REQ_DESG] ;
         CMP     AX,-1                   ; CHECK FOR PLACE HOLDER
         JE      DB_5                    ;
-        MOV     [DI].FTB_CP,AX          ; COPY THE DESG CP VALUE INTO THE TABLE
+        MOV     [DI+FTBLK.FTB_CP],AX    ; COPY THE DESG CP VALUE INTO THE TABLE
         PUSH    CX                      ; AND ALSO THE CPD_CLASS
         PUSH    SI                      ;
         PUSH    DI                      ;
-        LEA     DI,[DI].FTB_TID         ;
+        LEA     DI,[DI+FTBLK.FTB_TID]   ;
         MOV     CX,8                    ;
         REP     MOVSB                   ;
         POP     DI                      ;
         POP     SI                      ;
         POP     CX                      ;
                                         ;
-        ADD     DI,TYPE FTBLK           ; MOVE POINTERS TO NEXT PARSING TABLE
+        ADD     DI,sizeof.FTBLK         ; MOVE POINTERS TO NEXT PARSING TABLE
 DB_5:   INC     BX                      ;
         INC     BX                      ; ADVANCE BX TO NEXT DESG CP
         LOOP    DB_4                    ;
@@ -287,14 +289,14 @@ DB_5:   INC     BX                      ;
         PUSH    ES                      ;
         PUSH    CS                      ;
         POP     ES                      ; SET EXTRA SEG ES = CS
-        LEA     SI,CPD_FONT_PNTER       ;
-        LEA     DI,CPD_FONT_WRITE       ;
-        MOV     CX,CPD_DESG_N           ; GET NUMBER OF DESIGNATES
+        LEA     SI,[CPD_FONT_PNTER]     ;
+        LEA     DI,[CPD_FONT_WRITE]     ;
+        MOV     CX,[cs:CPD_DESG_N]      ; GET NUMBER OF DESIGNATES
         ADD     CX,CX                   ; DOUBLE FOR SEG:OFFSET
         REP     MOVSW                   ; COPY FONT START LOC's TO START WRITE
         XOR     DI,DI                   ;
-        LEA     SI,CPD_FONT_DATA        ; SET THE FONT_DATA COUNTERS BACK TO 0
-        MOV     CX,CPD_DESG_N           ;
+        LEA     SI,[CPD_FONT_DATA]      ; SET THE FONT_DATA COUNTERS BACK TO 0
+        MOV     CX,[cs:CPD_DESG_N]      ;
 DB_6:   MOV     [SI],DI                 ;
         INC     SI                      ;
         INC     SI                      ;
@@ -322,8 +324,8 @@ DB_6:   MOV     [SI],DI                 ;
         PUSH    SI                      ;
         PUSH    DI                      ;
                                         ;
-        LEA     DI,FONT_PRIORITY        ;
-        MOV     CX,CPD_FONTS_N          ; GET THE NUMBER OF SPECIFIED FONTS
+        LEA     DI,[FONT_PRIORITY]      ;
+        MOV     CX,[cs:CPD_FONTS_N]     ; GET THE NUMBER OF SPECIFIED FONTS
                                         ;
         PUSH    ES                      ;
         PUSH    DI                      ;
@@ -337,13 +339,13 @@ DB_6:   MOV     [SI],DI                 ;
         POP     ES                      ;
                                         ;
         XOR     AH,AH                   ; AH=0 FOR MODE SET, AL=MODE_TYPE
-        MOV     AL,MODE_VALUE           ;
+        MOV     AL,[cs:MODE_VALUE]      ;
         MOV     SI,AX                   ; ESTABLISH INDEX INTO LOAD_MECH table
-        MOV     AL,[SI].FONT_SIZE       ; GET FONT_SIZE FOR THIS MODE_VALUE
+        MOV     AL,[cs:SI+FONT_SIZE]    ; GET FONT_SIZE FOR THIS MODE_VALUE
         OR      AL,AL                   ; TEST FOR FONT_VALUE=0
         JNZ     DB_8                    ;
         CALL    ASK_BIOS_FONT_SIZE      ; GET BIOS TO INDICATE FONT_SIZE
-DB_8:   MOV     CS:[DI],AL              ; PUT ACTIVE FONT RESOLUTION INTO 1ST!
+DB_8:   MOV     [cs:DI],AL              ; PUT ACTIVE FONT RESOLUTION INTO 1ST!
         INC     DI                      ; ADVANCE POINTER TO NEXT POSITION
         DEC     CX                      ; SUBTRACT ONE FONT RESOLUTION...
         JZ      DB_A                    ; IF THERE WAS ONLY 1 FONT...THEN DONE
@@ -352,8 +354,8 @@ DB_8:   MOV     CS:[DI],AL              ; PUT ACTIVE FONT RESOLUTION INTO 1ST!
 DB_8A:  PUSH    CX                      ;
         PUSH    DI                      ;
         MOV     CX,NUM_FONT_PRIORITY    ;
-        LEA     DI,FONT_PRIORITY        ; SET DI TO START OF TABLE
-        MOV     AL,[SI].FONT_SIZE       ; GET FONT SIZE FOR THIS MODE
+        LEA     DI,[FONT_PRIORITY]      ; SET DI TO START OF TABLE
+        MOV     AL,[cs:SI+FONT_SIZE]    ; GET FONT SIZE FOR THIS MODE
         CMP     AL,-1                   ; TEST FOR INVALID FONT SIZE
         JE      DB_9                    ; IF SO, THEN TRY NEXT VALUE
         OR      AL,AL                   ; TEST FOR FONT_VALUE=0
@@ -370,16 +372,16 @@ DB_8A:  PUSH    CX                      ;
         SAR     AL,CL                   ;
         POP     CX                      ;
         JNC     DB_9                    ;
-        MOV     AL,CS:CHAR_HEIGHT[SI]   ;
+        MOV     AL,[cs:CHAR_HEIGHT+SI]  ;
                                         ;
-DB_8C:  CMP     AL,CS:[DI]              ;
+DB_8C:  CMP     AL,[cs:DI]              ;
         JE      DB_9                    ; IF EQUAL, THEN ALREADY IN TABLE
         INC     DI                      ; OTHERWISE, TAKE THIS MODES FONT RES
         LOOP    DB_8C                   ; AND COMPARE AGAINST NEXT PRIOR.VALUE
                                         ;
         POP     DI                      ; NEW RESOLUTION FOUND...ADD TO LIST
         POP     CX                      ;
-        MOV     CS:[DI],AL              ; PUT NEW VALUE IN THE TABLE
+        MOV     [cs:DI],AL              ; PUT NEW VALUE IN THE TABLE
         INC     DI                      ; AND ADVANCE FOR NEXT FONT RESOLUTION
         JUMP    DB_9A                   ; LOOP WILL DECREMENT #FONTS TO FIND
 DB_9:   POP     DI                      ;
@@ -400,19 +402,19 @@ DB_A:   POP     DI                      ; ARE CHECKED OUT!
 ;
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        MOV     DESG_SEMAPHORE,ONE      ; SET DESIGNATION TO COMMENCE...
+        MOV     byte [DESG_SEMAPHORE],ONE ; SET DESIGNATION TO COMMENCE...
         RET                             ;
-DESIGNATE_BEGIN ENDP                    ;
+;DESIGNATE_BEGIN ENDP                    ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;       DESIGNATE END
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-DESIGNATE_END   PROC                    ;
-        CMP     DESG_SEMAPHORE,ZERO     ; TEST IF DESG_SEMAPHORE = DATA WRITTEN
+DESIGNATE_END:                          ;
+        CMP     byte [DESG_SEMAPHORE],ZERO ; TEST IF DESG_SEMAPHORE = DATA WRITTEN
         JE      DE_1                    ;
                                         ;
-        CMP     CPD_REQ_DESG,ZERO       ; TEST IF ZERO CP's REQUESTED (REFRESH)
+        CMP     word [cs:CPD_REQ_DESG],ZERO ; TEST IF ZERO CP's REQUESTED (REFRESH)
         JE      DE_0                    ;
                                         ;
         CALL    VERIFY_FPARSER          ; CALL ROUTINE TO VERIFY THAT THE
@@ -420,46 +422,46 @@ DESIGNATE_END   PROC                    ;
                                         ;
         PUSH    ES                      ; NOW THE DESIGNATE IS OVER...
         PUSH    DI                      ;
-        MOV     CX,CPD_ACTIVE           ; CHECK IF ACTIVE_CP IS STILL VALID!
+        MOV     CX,[cs:CPD_ACTIVE]      ; CHECK IF ACTIVE_CP IS STILL VALID!
         CALL    FIND_CP                 ; TRY AND FIND CPD_ACTIVE?
         POP     DI                      ;
         POP     ES                      ;
         JNC     DE_0                    ;
         MOV     CX,-1                   ;
-        MOV     CPD_ACTIVE,CX           ;
-DE_0:   MOV     DESG_SEMAPHORE,ZERO     ;
+        MOV     [cs:CPD_ACTIVE],CX      ;
+DE_0:   MOV     byte [DESG_SEMAPHORE],ZERO ;
         RET                             ;
                                         ;
-DE_1:   OR      BUF.STATUS,TWELVE       ; Error>> NO DESGINATE START
+DE_1:   OR      word [BUF+BUF_DATA.STATUS],TWELVE ; Error>> NO DESGINATE START
         JUMP    DE_0                    ;
 DE_2:   CALL    HANDLE_WRITE_ERROR      ; RESET ALL DESIGNATED INFORMATION
-        OR      BUF.STATUS,FAIL         ; Error>> FONT DATA IS BAD
+        OR      word [BUF+BUF_DATA.STATUS],FAIL ; Error>> FONT DATA IS BAD
         JUMP    DE_0                    ;
-DESIGNATE_END   ENDP                    ;
+;DESIGNATE_END   ENDP                    ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;       INVOKE
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-INVOKE_CP       PROC                    ;
-        LES     DI,RH.REQUEST_PACKET    ; AND DI TO POINT TO REQUEST PACKET
-        MOV     CX,RH.INVK_LENGTH       ; GET LENGTH OF REMAINING HEADER
+INVOKE_CP:                              ;
+        LES     DI,dword [RH+RH_IOCTL.REQUEST_PACKET] ; AND DI TO POINT TO REQUEST PACKET
+        MOV     CX,word [RH+INVK_BUFFER.INVK_LENGTH] ; GET LENGTH OF REMAINING HEADER
                                         ;
         CMP     CX,TWO                  ; TEST IF LENGTH OF TABLE IS GREATER
         JNE     ICP_2                   ; THAN ONE CP!
                                         ;
-        MOV     CX,RH.INVK_CP           ; GET THE CODE PAGE TO INVOKE
+        MOV     CX,word [RH+INVK_BUFFER.INVK_CP] ; GET THE CODE PAGE TO INVOKE
         MOV     DX,CX                   ; SAVE CP VALUE
         CMP     CX,-1                   ; TEST FOR INVALID CODE PAGE!
         JE      ICP_1A                  ;
                                         ;
-        PUSH    CPD_ACTIVE              ; SAVE ACTIVE_CP, FOR POSSIBLE USE...
-        MOV     CPD_ACTIVE,CX           ;
+        PUSH    word [cs:CPD_ACTIVE]    ; SAVE ACTIVE_CP, FOR POSSIBLE USE...
+        MOV     [cs:CPD_ACTIVE],CX      ;
         CALL    TEST_CP                 ; TRY AND LOAD THE REQUESTED CP
         POP     CX                      ;
         JC      ICP_1AA                 ; IF ERROR, THEN RESTORE OLD CP
                                         ;
-        CMP     CX,CPD_ACTIVE           ; TEST IF OLD CP=ACTIVE!!!
+        CMP     CX,[cs:CPD_ACTIVE]      ; TEST IF OLD CP=ACTIVE!!!
         JE      ICP_0A                  ;
                                         ;
         CALL    INVOKE_DATA             ; IF EVERYTHING OK, THEN LOAD DATA
@@ -469,77 +471,77 @@ ICP_0A: CALL    SIGNAL_KBD_INVK         ; DX CONTAINS CODEPAGE
         JC      ICP_1                   ; IF CY THEN ERROR
         RET                             ;
                                         ;
-ICP_1:  OR      BUF.STATUS,EIGHT        ; Error>> KEYB ERROR
+ICP_1:  OR      word [BUF+BUF_DATA.STATUS],EIGHT ; Error>> KEYB ERROR
         RET                             ;
-ICP_1AA:MOV     CPD_ACTIVE,CX           ; PUT OLD CP BACK ACTIVE
-ICP_1A: OR      BUF.STATUS,SEVEN        ; Error>> CODE PAGE NOT FOUND
+ICP_1AA:MOV     [cs:CPD_ACTIVE],CX      ; PUT OLD CP BACK ACTIVE
+ICP_1A: OR      word [BUF+BUF_DATA.STATUS],SEVEN ; Error>> CODE PAGE NOT FOUND
         RET                             ;
-ICP_2A: MOV     CPD_ACTIVE,CX           ;
-ICP_2:  OR      BUF.STATUS,TEN          ; Error>> DEVICE ERROR
+ICP_2A: MOV     [cs:CPD_ACTIVE],CX      ;
+ICP_2:  OR      word [BUF+BUF_DATA.STATUS],TEN ; Error>> DEVICE ERROR
         RET                             ;
-INVOKE_CP       ENDP                    ;
+;INVOKE_CP       ENDP                    ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;       QUERY
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-QUERY_CP        PROC                    ;
-        LES     DI,RH.REQUEST_PACKET    ; SETUP ADDRESSING TO HEADER
+QUERY_CP:                               ;
+        LES     DI,dword [RH+RH_IOCTL.REQUEST_PACKET] ; SETUP ADDRESSING TO HEADER
                                         ;
         MOV     CX,TWO                  ;
-        MOV     RH.INVK_LENGTH,CX       ; CREATE RETURN 'N' VALUE
+        MOV     word [RH+INVK_BUFFER.INVK_LENGTH],CX ; CREATE RETURN 'N' VALUE
                                         ;
         CALL    TEST_CP                 ; FIND OUT IF CP DATA IS OK!
-        MOV     CX,CPD_ACTIVE           ;
+        MOV     CX,[cs:CPD_ACTIVE]      ;
         JNC     QCP_A                   ;
         MOV     CX,-1                   ; MAKE THE ACTIVE REPONSE AS INVALID
                                         ;
-QCP_A:  MOV     RH.INVK_CP,CX           ; SET THE CODE PAGE IN HEADER
+QCP_A:  MOV     word [RH+INVK_BUFFER.INVK_CP],CX ; SET THE CODE PAGE IN HEADER
         CMP     CX,-1                   ; TEST IF NO CP SPECIFIED?
         JE      QCP_0                   ;
         RET                             ;
                                         ;
-QCP_0:  OR      BUF.STATUS,SEVEN        ; Error>> NOT CODE PAGE SPECIFIED
+QCP_0:  OR      word [BUF+BUF_DATA.STATUS],SEVEN ; Error>> NOT CODE PAGE SPECIFIED
         RET                             ;
-QUERY_CP        ENDP                    ;
+;QUERY_CP        ENDP                    ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;       QUERY LIST
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-QUERY_CP_LIST   PROC                    ;
-        LES     DI,RH.REQUEST_PACKET    ; AND DI TO POINT TO REQUEST PACKET
+QUERY_CP_LIST:                          ;
+        LES     DI,dword [RH+RH_IOCTL.REQUEST_PACKET] ; AND DI TO POINT TO REQUEST PACKET
                                         ;
-        MOV     CX,CPD_HDWR_N           ;
-        MOV     RH.QLST_N_HDWR,CX       ;
-        ADD     CX,CPD_DESG_N           ;
+        MOV     CX,[cs:CPD_HDWR_N]      ;
+        MOV     word [RH+QLST_BUFFER.QLST_N_HDWR],CX ;
+        ADD     CX,[cs:CPD_DESG_N]      ;
         ADD     CX,TWO                  ; ACCOUNT FOR LENGTH OF 'N's
         ADD     CX,CX                   ;
-        MOV     RH.QLST_LENGTH,CX       ; CREATE RETURN TABLE LENGTH
+        MOV     word [RH+QLST_BUFFER.QLST_LENGTH],CX ; CREATE RETURN TABLE LENGTH
                                         ;
         PUSH    AX                      ;
         PUSH    BX                      ;
         PUSH    SI                      ;
-        MOV     CX,CPD_HDWR_N           ;
+        MOV     CX,[cs:CPD_HDWR_N]      ;
         MOV     BX,2                    ;
         OR      CX,CX                   ;
         JE      QCP_3                   ;
-QCP_2:  MOV     AX,CPD_HDWR_N[BX]       ;
-        MOV     RH.QLST_N_HDWR[BX],AX   ;
+QCP_2:  MOV     AX,[cs:BX+CPD_HDWR_N]   ;
+        MOV     word [RH+QLST_BUFFER.QLST_N_HDWR+BX],AX ;
         INC     BX                      ;
         INC     BX                      ;
         LOOP    QCP_2                   ;
                                         ;
-QCP_3:  MOV     CX,CPD_DESG_N           ; SET TABLE ENTRY FOR DESIGNATE
-        MOV     RH.QLST_N_HDWR[BX],CX   ;
+QCP_3:  MOV     CX,[cs:CPD_DESG_N]      ; SET TABLE ENTRY FOR DESIGNATE
+        MOV     word [RH+QLST_BUFFER.QLST_N_HDWR+BX],CX ;
         INC     BX                      ;
         INC     BX                      ;
                                         ;
         OR      CX,CX                   ;
         JE      QCP_4A                  ;
         MOV     SI,2                    ;
-QCP_4:  MOV     AX,CPD_DESG_N[SI]       ;
-        MOV     RH.QLST_N_HDWR[BX],AX   ;
+QCP_4:  MOV     AX,[cs:SI+CPD_DESG_N]   ;
+        MOV     word [RH+QLST_BUFFER.QLST_N_HDWR+BX],AX ;
         INC     BX                      ;
         INC     BX                      ;
         INC     SI                      ;
@@ -549,11 +551,11 @@ QCP_4A: POP     SI                      ;
         POP     BX                      ;
         POP     AX                      ;
         RET                             ;
-QCP_5:  OR      BUF.STATUS,SEVEN        ; Error>> NO CODE PAGE INVOKED
+QCP_5:  OR      word [BUF+BUF_DATA.STATUS],SEVEN ; Error>> NO CODE PAGE INVOKED
         RET                             ;
-QCP_6:  OR      BUF.STATUS,TEN          ; Error>> DEVICE ERROR
+QCP_6:  OR      word [BUF+BUF_DATA.STATUS],TEN ; Error>> DEVICE ERROR
         RET                             ;
-QUERY_CP_LIST   ENDP                    ;
+;QUERY_CP_LIST   ENDP                    ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;       GET HARDWARE CODE PAGE TABLE
@@ -564,11 +566,11 @@ QUERY_CP_LIST   ENDP                    ;
 ;               SI = pointer to HARDWARE table (n,h_cp1,h_cp2,...)
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-GET_HDWR_CP     PROC                    ;
-        LEA     SI,CP_PNTER_TABLE       ;
-        MOV     SI,[SI].HDWR_CP_STRUC   ;
+GET_HDWR_CP:                            ;
+        LEA     SI,[CP_PNTER_TABLE]     ;
+        MOV     SI,[SI+CP_PNTER_STRUC.HDWR_CP_STRUC] ;
         RET                             ;
-GET_HDWR_CP     ENDP                    ;
+;GET_HDWR_CP     ENDP                    ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;       GET DESIGNATE CODE PAGE TABLE
@@ -577,11 +579,11 @@ GET_HDWR_CP     ENDP                    ;
 ;       OUTPUT: SI = pointer to DESIGNATE table (n,d_cp1,d_cp2,...)
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-GET_DESG_CP     PROC                    ;
-        LEA     SI,CP_PNTER_TABLE       ;
-        MOV     SI,[SI].DESG_CP_STRUC   ;
+GET_DESG_CP:                            ;
+        LEA     SI,[CP_PNTER_TABLE]     ;
+        MOV     SI,[SI+CP_PNTER_STRUC.DESG_CP_STRUC] ;
         RET                             ;
-GET_DESG_CP     ENDP                    ;
+;GET_DESG_CP     ENDP                    ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;       GET FONT POINTER TABLE
@@ -592,11 +594,11 @@ GET_DESG_CP     ENDP                    ;
 ;               SI = pointer to FONTS table (pnter_cp1,pnter_cp2,...)
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-GET_FONT_CP     PROC                    ;
-        LEA     SI,CP_PNTER_TABLE       ;
-        MOV     SI,[SI].FONT_CP_STRUC   ;
+GET_FONT_CP:                            ;
+        LEA     SI,[CP_PNTER_TABLE]     ;
+        MOV     SI,[SI+CP_PNTER_STRUC.FONT_CP_STRUC] ;
         RET                             ;
-GET_FONT_CP     ENDP                    ;
+;GET_FONT_CP     ENDP                    ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;       GET WRITE POINTER
@@ -607,11 +609,11 @@ GET_FONT_CP     ENDP                    ;
 ;               SI = pointer to WRITE pointers
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-GET_WRITE_PNTR  PROC                    ;
-        LEA     SI,CP_PNTER_TABLE       ;
-        MOV     SI,[SI].WRITE_DATA_STRUC;
+GET_WRITE_PNTR:                         ;
+        LEA     SI,[CP_PNTER_TABLE]     ;
+        MOV     SI,[SI+CP_PNTER_STRUC.WRITE_DATA_STRUC] ;
         RET                             ;
-GET_WRITE_PNTR  ENDP                    ;
+;GET_WRITE_PNTR  ENDP                    ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;       FIND ACTIVE CODE PAGE
@@ -624,7 +626,7 @@ GET_WRITE_PNTR  ENDP                    ;
 ;               ES : DI = pointer to FONT data table
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-FIND_CP         PROC                    ;
+FIND_CP:                                ;
         PUSH    AX                      ;
         PUSH    BX                      ;
         PUSH    SI                      ;
@@ -677,7 +679,7 @@ FCP_5:  XOR     CX,CX                   ; ®®HARDWARE CODE PAGE FOUND¯¯
         POP     AX                      ;
         CLC                             ;
         RET                             ; EXIT
-FIND_CP         ENDP                    ;
+;FIND_CP         ENDP                    ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;       VERIFY_FPARSER A ROUTINE THAT CHECKS THE
@@ -692,7 +694,7 @@ FIND_CP         ENDP                    ;
 ;                    1 if one or more designates are incomplete
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-VERIFY_FPARSER  PROC                    ;
+VERIFY_FPARSER:                         ;
         PUSH    AX                      ;
         PUSH    CX                      ;
         PUSH    ES                      ;
@@ -701,18 +703,18 @@ VERIFY_FPARSER  PROC                    ;
         PUSH    CS                      ;
         POP     ES                      ;
                                         ;
-        MOV     CX,CPD_REQ_DESG         ; CX = REQUESTED DESG CP's
-        LEA     DI,FTB1                 ; SET DI TO POINT TO FIRST PARSING TABLE
+        MOV     CX,[cs:CPD_REQ_DESG]    ; CX = REQUESTED DESG CP's
+        LEA     DI,[FTB1]               ; SET DI TO POINT TO FIRST PARSING TABLE
                                         ;
-VFP_4:  MOV     AX,[DI].FTB_STATUS      ; GET STATUS OF PARSING TABLE #n
+VFP_4:  MOV     AX,[DI+FTBLK.FTB_STATUS] ; GET STATUS OF PARSING TABLE #n
         CMP     AX,FSTAT_COMPLETE       ; FIND OUT IF THIS CP COMPLETED?
         JE      VFP_6                   ;
                                         ;
         CMP     AX,FSTAT_FONT           ; CHECK IF AT LEAST THE FONT DATA FOUND
         JNE     VFP_8                   ; IF NOT, THEN AN ERROR OCCURRED....
-        CMP     [DI].FTB_DLEFT,ZERO     ; IF SO, THEN NO DATA CAN BE LEFT....
+        CMP     [DI+FTBLK.FTB_DLEFT],ZERO ; IF SO, THEN NO DATA CAN BE LEFT....
         JNE     VFP_8                   ; OTHERWISE ANOTHER ERROR ?
-VFP_6:  ADD     DI,TYPE FTBLK           ; MOVE POINTERS TO NEXT PARSING TABLE
+VFP_6:  ADD     DI,sizeof.FTBLK         ; MOVE POINTERS TO NEXT PARSING TABLE
         LOOP    VFP_4                   ;
         CLC                             ;
         JUMP    VFP_9                   ;
@@ -723,6 +725,6 @@ VFP_9:  POP     DI                      ;
         POP     CX                      ;
         POP     AX                      ;
         RET                             ;
-VERIFY_FPARSER  ENDP                    ;
+;VERIFY_FPARSER  ENDP                    ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

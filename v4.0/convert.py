@@ -1362,6 +1362,67 @@ UTILITIES = {
         # uses are in capitals already.
         SPELLING={'false': 'FALSE'},
     ),
+    # DISPLAY.SYS, the code page driver for the screen: the three modules
+    # DISPLAY.LNK names and the eight headers they read between them.  One
+    # segment and no group.  DISPLAY.ASM is the driver -- the device header,
+    # the request dispatcher and the INT 2FH and INT 10H handlers it hooks
+    # -- INIT.ASM the initialisation and the device tables, and PARSER.ASM
+    # the switches the DEVICE= line carries, which say which adapter is
+    # there and how many code pages to make room for.  DISPMES.ASM in the
+    # same directory is the driver's text before the retriever took it over
+    # and nothing links it.  The release links the three and runs EXE2BIN
+    # over the result, as it does for the other drivers.
+    'DISPLAY': dict(
+        DIR='src/DEV/DISPLAY',
+        MODULES=('DISPLAY.ASM', 'INIT.ASM', 'PARSER.ASM',
+                 'MACROS.INC', 'DEF-EQU.INC', 'INT2FCOM.INC',
+                 'INT10COM.INC', 'CPS-FUNC.INC', 'WRITE.INC',
+                 'F-PARSER.INC', 'TABLES.INC'),
+        ONESEG=True,
+        SHARED=('SYSMSG.INC', 'VERSIONA.INC', 'MSGSERV.ASM', 'MSGDCL.INC',
+                'COPYRIGH.INC', 'STRUC.INC', 'PARSE.ASM', 'PSDATA.INC'),
+        # DISPLAY.ASM's and INIT.ASM's ASSUME, which both write at the head
+        # of the segment: the driver keeps its data in its own segment and
+        # reads it through DS, which it sets as it is entered.
+        START={'cs': 'CODE', 'ds': 'CODE', 'es': None, 'ss': None},
+        # PARSER says CS:CODE and nothing else where its segment opens,
+        # and CS:CODE,DS:CODE two thirds of the way down it.
+        #
+        # The five headers DISPLAY.ASM reads at the foot of its segment are
+        # read where it has said ASSUME DS:NOTHING, two hundred lines
+        # above them: what is in them is the interrupt side of the driver
+        # -- the INT 2FH and INT 10H handlers and the font writer -- which
+        # is entered with the interrupted program's DS, so every reference
+        # to the driver's own data is one MASM put a CS: on.  Twenty-two of
+        # them lost it when these were read with DS on the segment.
+        STARTS={'PARSER.ASM': {'cs': 'CODE', 'ds': None,
+                               'es': None, 'ss': None},
+                'INT2FCOM.INC': {'cs': 'CODE', 'ds': None,
+                                 'es': None, 'ss': None},
+                'INT10COM.INC': {'cs': 'CODE', 'ds': None,
+                                 'es': None, 'ss': None},
+                'CPS-FUNC.INC': {'cs': 'CODE', 'ds': None,
+                                 'es': None, 'ss': None},
+                'WRITE.INC': {'cs': 'CODE', 'ds': None,
+                              'es': None, 'ss': None},
+                'F-PARSER.INC': {'cs': 'CODE', 'ds': None,
+                                 'es': None, 'ss': None}},
+        # Four names the modules read above the line that declares each:
+        # the bit that says INT 1FH wants doing, in INT10COM.INC, and three
+        # of F-PARSER.INC's own in the states of its font loader.  MASM
+        # resolved them on its second pass, and fasm wants a number it can
+        # resolve wherever it stands rather than an EQU it has not read yet.
+        FORWARD=('INTER_1FH', 'FLAG_RESTART', 'FSTAT_COMPLETE',
+                 'FSTAT_FONT'),
+        # WRITE.INC indexes a table with a dot in front of the index --
+        # CS:CPD_FONT_DATA.[SI] -- which to MASM was the name plus what is
+        # in SI, the same thing its [BX].field is.  It is the one line in
+        # the release written that way, and the ordinary form of it is the
+        # same reference.
+        EARLY={'WRITE.INC': [(
+            "        MOV     CS:CPD_FONT_DATA.[SI],AX;\n",
+            "        MOV     CS:CPD_FONT_DATA[SI],AX ;\n")]},
+    ),
 }
 
 NAME = sys.argv[1].upper() if len(sys.argv) > 1 else ''
@@ -2038,7 +2099,10 @@ def segment_values(text):
     def seg(m):
         name = m.group(2).upper()
         where = name if name in SEGMAP else SEGOF.get(m.group(2).lower())
-        return SEGMAP[space(where)] if where else m.group(0)
+        # segvalue, and not SEGMAP itself, because a one-segment program
+        # lays no fasm segment down: DISPLAY's DW SEG CODE is the number
+        # the link file gives the name.
+        return segvalue(space(where)) if where else m.group(0)
 
     return re.sub(r"(?i)\b(seg[ \t]+)(" + N + r")\b", seg, text)
 
@@ -2607,6 +2671,18 @@ def relations(text):
         if re.match(r"(?i)^[ \t]*(?:ELSE)?IF[ \t]", code):
             code = re.sub(r"(?i)(?<=\s)(" + '|'.join(MASMREL) + r")(?=\s)",
                           lambda m: MASMREL[m.group(1).upper()], code)
+            # A connective between two comparisons is a logical one, which
+            # fasm writes | and & where it writes OR and AND for the bits
+            # of a number: DISPLAY's JUMP macro asks whether the label it
+            # was given is ahead of here or further back than a short jump
+            # reaches, IF (LBL&_J GE $) OR ($-LBL&_J GT 126), and fasm will
+            # not have the one applied to the other.  Where both sides are
+            # numbers the words are fasm's own and stand, which is what the
+            # kernel's IF (NOT IBM) OR (debug) wants.
+            if re.search(r"(?:>=|<=|<>|>|<|=)", code):
+                code = re.sub(r"(?i)(?<=\s)(OR|AND)(?=\s)",
+                              lambda m: '|' if m.group(1).upper() == 'OR'
+                              else '&', code)
         out.append(code + note)
     return '\n'.join(out)
 
@@ -3381,7 +3457,17 @@ SEGPAT = "|".join(sorted(set(SEGMAP) | set(SEGAT), key=len, reverse=True))
 def segvalue(name):
     """What a segment's name stands for where it is read as a value: the
     fasm segment of the address space it is in, or the address itself where
-    the segment is one of the places the program does not lay down."""
+    the segment is one of the places the program does not lay down.
+
+    A one-segment program lays no fasm segment down at all, so the name
+    stands for the number the link file gives it, which is nought: DISPLAY
+    writes DW SEG CODE for the segment of its own code twice, and INIT
+    fills both of those words in with CS before anything reads them, as the
+    loader would have done for a program that had a header to be relocated
+    from.
+    """
+    if ONESEG and name.upper() in SEGMAP:
+        return SEGNAME.get(name.upper(), name)
     return SEGMAP[name.upper()] if name.upper() in SEGMAP \
         else SEGAT[name.upper()]
 
@@ -4393,14 +4479,24 @@ for stem in MODULES:
         # fasm asks with DEFINED.  The eleven here all ask after fsexec, the
         # name that would have built RECOVER for an installable file system,
         # and nothing in the release gives it one.
-        m = re.match(r"(?i)^([ \t]*)IFDEF\b[ \t]*(" + N + r")", bare)
+        # The name can be one a macro pastes together: DISPLAY's JUMP
+        # macro asks IFNDEF LBL&_J, whether the label it was given has been
+        # jumped to already, and fasm pastes with # where MASM pasted with
+        # &.  Read as a plain name the paste was dropped, and the macro
+        # then asked after the label itself -- which is defined -- so every
+        # jump took the branch for one it had seen before and measured its
+        # distance from a symbol that did not exist.
+        PASTED = N + r"(?:[&#]" + N + r")*"
+        m = re.match(r"(?i)^([ \t]*)IFDEF\b[ \t]*(" + PASTED + r")", bare)
         if m:
-            out.append(pad('%sif defined %s' % (m.group(1), m.group(2)),
+            out.append(pad('%sif defined %s'
+                           % (m.group(1), m.group(2).replace('&', '#')),
                            was_len, comment))
             continue
-        m = re.match(r"(?i)^([ \t]*)IFNDEF\b[ \t]*(" + N + r")", bare)
+        m = re.match(r"(?i)^([ \t]*)IFNDEF\b[ \t]*(" + PASTED + r")", bare)
         if m:
-            out.append(pad('%sif ~ defined %s' % (m.group(1), m.group(2)),
+            out.append(pad('%sif ~ defined %s'
+                           % (m.group(1), m.group(2).replace('&', '#')),
                            was_len, comment))
             continue
 
@@ -4772,7 +4868,11 @@ for stem in MODULES:
 # INC/SYSCALL.INC's Get_In_Vars, the number of that DOS call, then took its
 # spelling from a name that is not it.  The other arms keep \b, which is
 # what every utility converted so far was read with.
-DECL = re.compile(r"(?i)^\s*(?:(" + N + r"):|(" + N + r")\s+(?:(?:db|dw|dd|"
+# A label can have white space in front of its colon -- DISPLAY's
+# F-PARSER.INC writes "filetag :" and PRINTER's CPSPI07 three dozen of
+# them -- and what reads it writes the name in capitals, which was one
+# name to MASM.
+DECL = re.compile(r"(?i)^\s*(?:(" + N + r")\s*:|(" + N + r")\s+(?:(?:db|dw|dd|"
                   r"rb|rw|rd|equ)\b|=)|label\s+(" + N + r")\b|macro\s+(" + N
                   + r")\b|Define_Msg\s+(" + N + r")\b|Procedure\s+("
                   + N + r")\b|STRUC\s+(" + N + r")\b|I_am\s+("

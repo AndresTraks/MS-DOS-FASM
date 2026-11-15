@@ -56,41 +56,43 @@
 ;	SUBSET OF THE EGA MODES.
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-IF1
-	%OUT .		     ®TABLES  .INC¯
-ENDIF
+;IF1
+;	%OUT .		     ®TABLES  .INC¯
+;ENDIF
 						;
-DISPLAY_CONFIG	LABEL	BYTE			;
+label DISPLAY_CONFIG byte   ;
 	DB	"EGA     "                      ; EGA SUPPORT
 DC_FONT DB	00000111b			;
-	DW	OFFSET EGA_MODES		;
-	DW	OFFSET EGA_FONT_SIZE		;
-DC_ENTRY	EQU ($-DISPLAY_CONFIG)		;
+	DW	EGA_MODES         ;
+	DW	EGA_FONT_SIZE         ;
+; = and not equ: fasm's equ is text put in where the name is used, so a $
+; in it would be the address of the use and not of this line.
+DC_ENTRY	= (($-DISPLAY_CONFIG))	;
 	DB	"EGA 8   "                      ; EGA (5153)
 	DB	00000001b			;
-	DW	OFFSET EGA_MODES		;
-	DW	OFFSET EGA8_FONT_SIZE		;
+	DW	EGA_MODES         ;
+	DW	EGA8_FONT_SIZE         ;
 	DB	"EGA 14  "                      ; EGA (5154)
 	DB	00000011b			;
-	DW	OFFSET EGA_MODES		;
-	DW	OFFSET EGA14_FONT_SIZE		;
+	DW	EGA_MODES         ;
+	DW	EGA14_FONT_SIZE         ;
 	DB	"EGA 14M "                      ; EGA (5151)
 	DB	00000011b			; WGR load 8x8 for > 25.       ;AN000;
-	DW	OFFSET EGAM_MODES		;
-	DW	OFFSET EGA14_FONT_SIZE		;
+	DW	EGAM_MODES         ;
+	DW	EGA14_FONT_SIZE         ;
 	DB	"LCD     "                      ; CONVERTIBLE
 	DB	00000001b			;
-	DW	OFFSET LCD_MODES		;
-	DW	OFFSET LCD_FONT_SIZE		;
+	DW	LCD_MODES         ;
+	DW	LCD_FONT_SIZE         ;
 	DB	"MONO    "                      ; MONOCHROME ADAPTER
 	DB	00000000b			;
-	DW	OFFSET MONO_MODES		;
-	DW	OFFSET MONO_FONT_SIZE		;
+	DW	MONO_MODES         ;
+	DW	MONO_FONT_SIZE         ;
 	DB	"CGA     "                      ; COLOUR GRAPHICS ADAPTER
 	DB	00000000b			;
-	DW	OFFSET MONO_MODES		;
-	DW	OFFSET MONO_FONT_SIZE		;
-NUM_DISPLAY_CONFIG EQU ($-DISPLAY_CONFIG)/DC_ENTRY
+	DW	MONO_MODES         ;
+	DW	MONO_FONT_SIZE         ;
+NUM_DISPLAY_CONFIG = (($-DISPLAY_CONFIG)/DC_ENTRY)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 EGA_MODES:			;
 	DB	00000001b	;0
@@ -125,7 +127,7 @@ EGA_MODES:			;
 	DB	00110000b	;1D
 	DB	00110000b	;1E
 	DB	00110000b	;1F
-NUM_MODES    EQU ($-EGA_MODES)	;
+NUM_MODES    = (($-EGA_MODES))	;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 EGAM_MODES:			;
 	DB	11111111b	;0
