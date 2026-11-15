@@ -1,13 +1,38 @@
+STRUC SYSDEV SDEVNEXT_=0, SDEVATT_=0, SDEVSTRAT_=0, SDEVINT_=0
+{
+.SDEVNEXT	DD	SDEVNEXT_ ;Pointer to next device header
+.SDEVATT 	DW	SDEVATT_ ;Attributes of the device
+.SDEVSTRAT	DW	SDEVSTRAT_ ;Strategy entry point
+.SDEVINT 	DW	SDEVINT_ ;Interrupt entry point
+.SDEVNAME	rb      8    ;Name of device (only first byte used for block)
+}
+match =SYSDEV_LAID_OUT, SYSDEV_LAID_OUT
+{
+    SYSDEV_LAID_OUT equ 1
+    virtual at 0
+      SYSDEV SYSDEV 0, 0, 0, 0
+      sizeof.SYSDEV = $ - SYSDEV
+    end virtual
+}
+STRUC SRHEAD REQLEN_=0, REQUNIT_=0, REQFUNC_=0, REQSTAT_=0
+{
+.REQLEN	DB	REQLEN_ ;Length in bytes of request block
+.REQUNIT DB	REQUNIT_ ;Device unit number
+.REQFUNC DB	REQFUNC_ ;Type of request
+.REQSTAT DW	REQSTAT_ ;Status Word
+	Rb	8
+}
+match =SRHEAD_LAID_OUT, SRHEAD_LAID_OUT
+{
+    SRHEAD_LAID_OUT equ 1
+    virtual at 0
+      SRHEAD SRHEAD 0, 0, 0, 0
+      sizeof.SRHEAD = $ - SRHEAD
+    end virtual
+}
 BREAK <Device table and SRH definition>
 
 ; The device table list has the form:
-SYSDEV	STRUC
-SDEVNEXT	DD	?	;Pointer to next device header
-SDEVATT 	DW	?	;Attributes of the device
-SDEVSTRAT	DW	?	;Strategy entry point
-SDEVINT 	DW	?	;Interrupt entry point
-SDEVNAME	DB	8 DUP (?) ;Name of device (only first byte used for block)
-SYSDEV	ENDS
 
 ;
 ; Attribute bit masks
@@ -81,13 +106,6 @@ ISCOUT	    EQU     0002H		      ;Bit 1 - This device is the console output.
 ISCIN	    EQU     0001H		      ;Bit 0 - This device is the console input.
 
 ;Static Request Header
-SRHEAD	STRUC
-REQLEN	DB	?		;Length in bytes of request block
-REQUNIT DB	?		;Device unit number
-REQFUNC DB	?		;Type of request
-REQSTAT DW	?		;Status Word
-	DB	8 DUP(?)	;Reserved for queue links
-SRHEAD	ENDS
 
 ;Status word masks
 STERR	EQU	8000H		;Bit 15 - Error
@@ -123,6 +141,6 @@ DEVRMD	EQU	15		;Removable media
 REMHL	EQU	13		;Size of Removable media header
 
 DevOUT	EQU	16			; output until busy.
-DevOutL EQU	DevWrt			; length of output until busy
+DevOutL EQU	DEVWRT			; length of output until busy
 
 SUBTTL

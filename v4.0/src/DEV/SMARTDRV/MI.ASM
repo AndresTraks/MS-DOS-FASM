@@ -1,4 +1,4 @@
-BREAK <Machine instruction, flag definitions and character types>
+BREAK <Machine instruction, REGIONt.FLAG definitions and character types>
 
 mi_INT		EQU	0CDh
 mi_Long_JMP	EQU	0EAh

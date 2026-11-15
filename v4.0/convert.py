@@ -1477,6 +1477,37 @@ UTILITIES = {
         STARTS={'MESSAGES.ASM': {'cs': 'RAMCODE', 'ds': 'RAMCODE',
                                  'es': None, 'ss': None}},
     ),
+    # SMARTDRV.SYS, the disk cache, and RAMDRIVE's sibling: one module in
+    # one segment, with seven headers of its own beside it -- the same
+    # seven RAMDRIVE keeps, written as .ASM here.  SMARTDRV.LNK links the
+    # one object and the release runs EXE2BIN over it.  FLUSH13.C, FL13.ASM
+    # and FLMES.ASM in the same directory build FLUSH13.EXE, a utility of
+    # its own that empties the cache, and none of the three is part of the
+    # driver.
+    #
+    # Where RAMDRIVE keeps a disk in memory, this one keeps the sectors of
+    # a real disk there: it hooks INT 13H under the BIOS, so the kernel's
+    # own reads go through the cache without knowing it, and the memory it
+    # caches into can be above the first megabyte or in expanded memory,
+    # which is why it carries the same protected-mode block mover.
+    'SMARTDRV': dict(
+        DIR='src/DEV/SMARTDRV',
+        MODULES=('SMARTDRV.ASM', 'DEVSYM.ASM', 'SYSCALL.ASM', 'MI.ASM',
+                 'EMM.ASM', 'LOADALL.ASM', 'ABOVE.ASM', 'AB_MACRO.ASM'),
+        ONESEG=True,
+        SHARED=(),
+        # The segment's own ASSUME, which names CS and nothing else: the
+        # driver is entered on an interrupt, with the interrupted program's
+        # DS, and says where DS is itself as it goes.
+        START={'cs': 'INT13CODE', 'ds': None, 'es': None, 'ss': None},
+        # The two halves of the 24-bit address where extended memory
+        # starts, which the driver lays down in its EMM control block
+        # twenty-seven hundred lines above the EQUs that declare them:
+        # MASM resolved them on its second pass, and fasm wants a number it
+        # can resolve wherever it stands rather than an EQU it has not read
+        # yet.
+        FORWARD=('EXTMEM_LOW', 'EXTMEM_HIGH'),
+    ),
 }
 
 NAME = sys.argv[1].upper() if len(sys.argv) > 1 else ''
@@ -3874,6 +3905,12 @@ def structures(code):
                                 else size + ' ',
                                 reg, '+'.join(parts),
                                 tail.replace(' ', ''))
+    # What follows the dot can be a number rather than a field, and the
+    # dot is still the addition it is: SMARTDRV reads the second byte of a
+    # sector's signature as ES:[DI.1], which is ES:[DI+1].
+    code = re.sub(r"(?i)\[[ \t]*((?:(?:cs|ds|es|ss):)?(?:" + BASEPAT + r"))"
+                  r"[ \t]*\.[ \t]*(\d+)[ \t]*\]",
+                  lambda m: '[%s+%s]' % (m.group(1), m.group(2)), code)
     # SYS2 writes the register and the field inside the one pair of
     # brackets: [BX.dpb_first_FAT] says what [BX].dpb_first_FAT does.  This
     # goes first because what the rule below writes -- the structure's name
@@ -3882,12 +3919,12 @@ def structures(code):
     code = re.sub(r"(?i)\[\s*((?:(?:cs|ds|es|ss):)?(?:" + BASEPAT + r")"
                   r"(?:\s*\+\s*(?:" + BASEPAT + r"))?"
                   r"(?:\s*[-+]\s*\w+(?!\.))?)\s*\.(" + N
-                  + r"(?:\." + N + r")*)"
+                  + r"(?:\.(?:" + N + r"|\d+))*)"
                   r"((?:\s*[-+]\s*[\w.$@?]+)?)\s*\]", one, code)
     code = re.sub(r"(?i)\[\s*((?:(?:cs|ds|es|ss):)?(?:" + BASEPAT + r")"
                   r"(?:\s*\+\s*(?:" + BASEPAT + r"))?"
                   r"(?:\s*[-+]\s*\w+(?!\.))?)\s*\]\s*\.(" + N
-                  + r"(?:\." + N + r")*)"
+                  + r"(?:\.(?:" + N + r"|\d+))*)"
                   r"((?:\s*[-+]\s*[\w.$@?]+)?)", one, code)
     # The index with no brackets at all, which MASM read as a reference
     # just the same: MODEVID passes video_info_DI.active_display to a macro
@@ -5060,6 +5097,22 @@ for stem in MODULES:
         code = pushed(code)
         code = jumped(code)
         code = tenbytes(code)
+        # The source wrote brackets of its own round a reference whose
+        # field the rules have since taken apart: SMARTDRV writes
+        # TEST [REGION.FLAG],REG1_P, and what the rules make of the inside
+        # of it is a width and brackets again.  The outer pair says no more
+        # than the inner one, and a width belongs outside them both.
+        code = re.sub(r"\[[ \t]*(" + PTRSIZES + r")?[ \t]*"
+                      r"(\[[^\[\]]*\])[ \t]*\]",
+                      lambda m: (m.group(1) + ' ' if m.group(1) else '')
+                      + m.group(2), code, flags=re.I)
+        # And where the source said the width itself in front of its own
+        # brackets -- MOV BYTE PTR [REGION.FLAG],0 -- the rules inside them
+        # said it again.  One width is what MASM assembled.
+        code = re.sub(r"(?i)\b(" + PTRSIZES + r")[ \t]+(?:" + PTRSIZES
+                      + r")[ \t]*(\[)", lambda m: '%s %s' % (m.group(1),
+                                                             m.group(2)),
+                      code)
 
         if held:
             m2 = re.match(r"(?i)^\s*cmp\s+(.*?)\s*,\s*(.*?)\s*$", code)

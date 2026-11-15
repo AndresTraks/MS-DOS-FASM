@@ -7,7 +7,8 @@
 ;	1. MACRO to save mapping context in case somebody else has
 ;	   mapped the page registers.
 ;
-save_mapping_context	macro
+macro save_mapping_context 
+{
 local	save_agn_m,save_err_m,save_ok_m,save_exit_m
 ;	
 ;	the save mapping call for the above board -->
@@ -25,15 +26,15 @@ local	save_agn_m,save_err_m,save_ok_m,save_exit_m
 ;	set up emm registers and execute call to save mapping context
 ;
 save_agn_m:
-	mov	dx,cs:[above_pid]		; get emm handle
-	mov	ah,above_save_map_pid	; save map call
+	mov	dx,[cs:ABOVE_PID]		; get emm handle
+	mov	ah,ABOVE_SAVE_MAP_PID	; save map call
 	int	67h			; call the manager
 	or	ah,ah			; is there an error?
 	jz	save_ok_m			; if not we are done
 ;
 ;	error in saving mapping context, check for error
 ;
-	cmp	ah,above_error_busy	; if the emm manager was busy
+	cmp	ah,ABOVE_ERROR_BUSY	; if the emm manager was busy
 	jz	save_agn_m		; we would like to try again
 ;
 ;	unrecoverable error, indicate error type in al
@@ -42,9 +43,9 @@ save_agn_m:
 	pop	dx			; pop the regs off the stack
 ;
 	mov	al,0aah			; drive not ready
-	cmp	ah,above_error_cntxt_no_stack	;
+	cmp	ah,ABOVE_ERROR_CNTXT_NO_STACK	;
 	jz	save_err_m
-	cmp	ah,above_error_second_save	;
+	cmp	ah,ABOVE_ERROR_SECOND_SAVE	;
 	ja	save_err_m
 	mov	al,0bbh			; general failure
 save_err_m:
@@ -55,13 +56,14 @@ save_ok_m:
 	pop	dx
 	pop	ax			; restore registers
 save_exit_m:
-	endm
+}
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;	2. MACRO to restore the mapping context saved earlier
 ;
-restore_mapping_context	macro
+macro restore_mapping_context 
+{
 local	rest_agn_m, rest_ok_m, rest_exit_m
 ;
 ;	the restore above map call -->
@@ -76,17 +78,17 @@ local	rest_agn_m, rest_ok_m, rest_exit_m
 	pushf
 ;
 rest_agn_m:
-	mov	dx,cs:[above_pid]	; get emm handle
-	mov	ah,above_restore_map_pid ; restore map call
+	mov	dx,[cs:ABOVE_PID]	; get emm handle
+	mov	ah,ABOVE_RESTORE_MAP_PID ; restore map call
 	int	67h			; call manager
 	or	ah,ah			; is there any error
 	jz	rest_ok_m			; if not go to finish up
 ;
 ;	error condition, check for recoverable error
 ;
-	cmp	ah,above_error_busy	; if manager was busy
+	cmp	ah,ABOVE_ERROR_BUSY	; if manager was busy
 	jz	rest_agn_m		; we sure can try again
-	cmp	ah,above_error_no_cntxt	;
+	cmp	ah,ABOVE_ERROR_NO_CNTXT	;
 	jz	rest_ok_m			; ignore invalid pid error
 ;
 ;	unrecoverable error
@@ -102,7 +104,7 @@ rest_ok_m:
 	pop	ax
 rest_exit_m:
 ;
-	endm
+}
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
@@ -117,11 +119,12 @@ rest_exit_m:
 ;		int	67H
 ;	ah = 0 success and this routine zaps ax,dx and bx
 ;
-map_page	macro
+macro map_page 
+{
 local	map_agn_m,map_exit_m,map_fin_m
 ;
-	mov	ah,above_map	; function map page
-	mov	dx,cs:[above_pid]	; get emm handle
+	mov	ah,ABOVE_MAP	; function map page
+	mov	dx,[cs:ABOVE_PID]	; get emm handle
 ;
 	push	ax
 ;
@@ -140,7 +143,7 @@ map_agn_m:
 ;
 ;	error condition - check for recoverable error
 ;
-	cmp	ah,above_error_busy	; if manager was busy
+	cmp	ah,ABOVE_ERROR_BUSY	; if manager was busy
 	jz	map_agn_m			; we sure can try again
 ;
 ;	unrecoverable error
@@ -157,7 +160,7 @@ map_fin_m:
 	pop	ax
 map_exit_m:
 ;
-	endm
+}
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;			OTHER MACROS
@@ -166,7 +169,8 @@ map_exit_m:
 ;
 ;	1) MACRO to switch es:di with ds:si
 ;
-src_dest_switch	macro	
+macro src_dest_switch 
+{
 ;
 	push	ds
 	push	es
@@ -176,5 +180,5 @@ src_dest_switch	macro
 	pop	ds
 	pop	es
 ;
-	endm
+}
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

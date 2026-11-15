@@ -778,7 +778,7 @@ USERDEV:
 	    XOR     AL,AL		; KWC 12/10/86
 
 ;	    LDS     SI,DWORD PTR [CONFCB.FCB_FIRCLUS]		; KWC 12/10/86
-	    LDS     SI,dword [[CONFCB+fcb_nsld_drvptr]]   ; KWC 12/10/86
+	    LDS     SI,dword [CONFCB+fcb_nsld_drvptr]     ; KWC 12/10/86
 	    MOV     word [cs:CIN],SI
 	    MOV     word [cs:CIN+2],DS
 

@@ -391,3 +391,12 @@ device PRINTER PRTLNK PRINTER.SYS
 # reads is a copy of its own, in its own directory.  The release links the
 # two and runs EXE2BIN over the result.
 device RAMDRIVE RAMLNK RAMDRIVE.SYS
+
+# SMARTDRV.SYS, the disk cache: one module in one segment, which
+# SMRTLNK.ASM reads on its own.  It hooks INT 13H under the BIOS and keeps
+# the sectors it has seen in memory -- below the first megabyte, above it,
+# or in expanded memory -- so the kernel's own reads come back without the
+# disk being touched.  FLUSH13.C beside it builds a utility that empties
+# the cache, which is not part of the driver and is not built here.  The
+# release links the one object and runs EXE2BIN over the result.
+device SMARTDRV SMRTLNK SMARTDRV.SYS
