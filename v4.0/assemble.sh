@@ -313,9 +313,14 @@ utility IFSFUNC IFSLNK IFSFUNC.EXE
 # same message retriever, the same INCLUDE path, its own directory after
 # src/INC -- and the only difference is where it is read from, so this is
 # the same function with that one change.
+# A driver with no messages of its own has no skeleton either: RAMDRIVE
+# holds its text in a module, as the drivers did before the retriever took
+# that over.
 # device <directory> <source> <output> [<skeleton>]
 device() {
-    python3 buildmsg.py "src/DEV/$1/${4:-$1}.SKL" >/dev/null
+    if [ -f "src/DEV/$1/${4:-$1}.SKL" ]; then
+        python3 buildmsg.py "src/DEV/$1/${4:-$1}.SKL" >/dev/null
+    fi
     if [ "$FASM" = fasm ]; then
         INCLUDE="$PWD/src/INC:$PWD/src/DEV/$1"
     else
@@ -375,3 +380,14 @@ device DISPLAY DISPLNK DISPLAY.SYS
 # comes out of the prepared font instead.  The release links the five and
 # runs EXE2BIN over the result with ZERO.DAT on its input.
 device PRINTER PRTLNK PRINTER.SYS
+
+# RAMDRIVE.SYS, the RAM disk DOS 4 shipped: two modules in one segment,
+# which RAMLNK.ASM reads in the order RAMDRIVE.LNK names them.  Where VDISK
+# can take what is left of the first megabyte or extended memory through
+# INT 15H, this one can also take expanded memory through the LIM 4.0 calls
+# -- /E for extended, /A for expanded -- and the code that reaches above
+# the first megabyte runs in protected mode for the length of a block move,
+# which is what the .286p and the LOADALL in it are for.  Every header it
+# reads is a copy of its own, in its own directory.  The release links the
+# two and runs EXE2BIN over the result.
+device RAMDRIVE RAMLNK RAMDRIVE.SYS

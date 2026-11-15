@@ -1,4 +1,23 @@
-Break <Directory entry>
+STRUC dir_entry dir_attr_=0, dir_time_=0, dir_date_=0, dir_first_=0, dir_size_l_=0, dir_size_h_=0
+{
+.dir_name    rb      11         ; file name
+.dir_attr    DB	    dir_attr_ ; attribute bits
+.dir_pad     rb      10         ; reserved for expansion
+.dir_time    DW	    dir_time_ ; time of last write
+.dir_date    DW	    dir_date_ ; date of last write
+.dir_first   DW	    dir_first_ ; first allocation unit of file
+.dir_size_l  DW	    dir_size_l_ ; low 16 bits of file size
+.dir_size_h  DW	    dir_size_h_ ; high 16 bits of file size
+}
+match =dir_entry_LAID_OUT, dir_entry_LAID_OUT
+{
+    dir_entry_LAID_OUT equ 1
+    virtual at 0
+      dir_entry dir_entry 0, 0, 0, 0, 0, 0
+      sizeof.dir_entry = $ - dir_entry
+    end virtual
+}
+BREAK <Directory entry>
 
 ;
 ;	+---------------------------+
@@ -23,16 +42,6 @@ Break <Directory entry>
 ;   Date:   Bits 0-4=day, bits 5-8=month, bits 9-15=year-1980
 ;
 
-dir_entry   STRUC
-dir_name    DB	    11 DUP (?)		; file name
-dir_attr    DB	    ?			; attribute bits
-dir_pad     DB	    10 DUP (?)		; reserved for expansion
-dir_time    DW	    ?			; time of last write
-dir_date    DW	    ?			; date of last write
-dir_first   DW	    ?			; first allocation unit of file
-dir_size_l  DW	    ?			; low 16 bits of file size
-dir_size_h  DW	    ?			; high 16 bits of file size
-dir_entry   ENDS
 
 attr_read_only	    EQU      1h
 attr_hidden	    EQU      2h
@@ -45,12 +54,12 @@ attr_device	    EQU     40h 	; This is a VERY special bit.
 					;   has this bit set. It is set non-zero
 					;   when a device is found by GETPATH
 
-attr_all	    EQU     attr_hidden+attr_system+attr_directory
+attr_all	    equ     (attr_hidden+attr_system+attr_directory)
 					; OR of hard attributes for FINDENTRY
 
-attr_ignore	    EQU     attr_read_only+attr_archive+attr_device
+attr_ignore	    equ     (attr_read_only+attr_archive+attr_device)
 					; ignore this(ese) attribute(s) during
 					; search first/next
 
-attr_changeable     EQU     attr_read_only+attr_hidden+attr_system+attr_archive
+attr_changeable     equ     (attr_read_only+attr_hidden+attr_system+attr_archive)
 					; changeable via CHMOD

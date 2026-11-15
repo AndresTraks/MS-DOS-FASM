@@ -1447,6 +1447,36 @@ UTILITIES = {
         # caller had, so what it reads of its own it reads through CS.
         START={'cs': 'CSEG', 'ds': None, 'es': None, 'ss': None},
     ),
+    # RAMDRIVE.SYS, the other RAM disk: two modules in one segment, which
+    # RAMDRIVE.LNK names in that order, and the eight headers RAMDRIVE.ASM
+    # reads -- every one of them a copy of its own, kept in the driver's
+    # directory, which is the copy both MASM and fasm read before the one
+    # in src/INC.  Four of the eight have a namesake there and all four
+    # differ from it: this driver was written against the kernel's headers
+    # as they were, and kept them.
+    #
+    # Where VDISK takes what is left of the first megabyte or extended
+    # memory through INT 15H, this one can also take expanded memory
+    # through the LIM 4.0 calls EMM.INC describes, and it is the one DOS 4
+    # shipped for it.  The release links the two and runs EXE2BIN over the
+    # result.
+    'RAMDRIVE': dict(
+        DIR='src/DEV/RAMDRIVE',
+        MODULES=('RAMDRIVE.ASM', 'MESSAGES.ASM',
+                 'DEVSYM.INC', 'SYSCALL.INC', 'DIRENT.INC', 'MI.INC',
+                 'EMM.INC', 'LOADALL.INC', 'ABOVE.INC', 'AB_MACRO.INC'),
+        ONESEG=True,
+        # It reads nothing out of src/INC: the message retriever is not in
+        # it either -- MESSAGES.ASM holds the text itself, as the drivers
+        # did before the retriever took that over.
+        SHARED=(),
+        # RAMDRIVE.ASM's own, at the head of the segment: the driver is
+        # entered with the caller's DS and says where DS is as it goes.
+        START={'cs': 'RAMCODE', 'ds': None, 'es': None, 'ss': None},
+        # MESSAGES.ASM is the data, and says DS is on the segment.
+        STARTS={'MESSAGES.ASM': {'cs': 'RAMCODE', 'ds': 'RAMCODE',
+                                 'es': None, 'ss': None}},
+    ),
 }
 
 NAME = sys.argv[1].upper() if len(sys.argv) > 1 else ''
@@ -2706,7 +2736,10 @@ def relations(text):
     for line in text.split('\n'):
         j = comment_at(line)
         code, note = (line, '') if j < 0 else (line[:j], line[j:])
-        if re.match(r"(?i)^[ \t]*(?:ELSE)?IF[ \t]", code):
+        # RAMDRIVE writes its two assertions as IF((a - b) NE (c - d)),
+        # with the bracket against the word, so the line is recognised by
+        # either a space or a bracket after the IF.
+        if re.match(r"(?i)^[ \t]*(?:ELSE)?IF[ \t(]", code):
             code = re.sub(r"(?i)(?<=\s)(" + '|'.join(MASMREL) + r")(?=\s)",
                           lambda m: MASMREL[m.group(1).upper()], code)
             # A connective between two comparisons is a logical one, which
@@ -2806,6 +2839,16 @@ def offsets(text):
                   lambda m: '%s %s' % (m.group(1), m.group(2)), text)
     text = re.sub(r"(?i)\b(offset[ \t]+)(?:cs|ds|es|ss)[ \t]*:[ \t]*",
                   lambda m: m.group(1), text)
+    # The override can stand outside brackets that hold the OFFSET, and
+    # the whole of it is still a number: RAMDRIVE loads the address it
+    # wants the BIOS to come back to with
+    #     mov word ptr [RealLoc1],cs:[offset ReturnBack]
+    # where neither the brackets nor the CS: says anything about an
+    # immediate.  Read as a reference it would be a move from one place in
+    # memory to another, which no instruction of this processor does, and
+    # fasm says so.  SMARTDRV writes the same line.
+    text = re.sub(r"(?i)\b(?:cs|ds|es|ss):[ \t]*\[[ \t]*offset[ \t]+("
+                  + N + r")[ \t]*\]", lambda m: 'offset ' + m.group(1), text)
     # MASM let the name stand in brackets after OFFSET as well, and the
     # brackets said no more there than the segment did: IFSUTIL asks twice
     # for OFFSET CS:[PHONEY_NAME], the name it hands the interrupt 24H
@@ -3551,6 +3594,16 @@ def declared_in(code, here):
                  code)
     if m and here:
         SEGOF.setdefault(m.group(1).lower(), here)
+    # A name an EQU gives a place rather than a number, which stands in a
+    # segment like any other: RAMDRIVE says ABOVE_PID EQU WORD PTR $ - 2
+    # for the immediate of the instruction it has just laid down, and reads
+    # it three times with DS on nothing -- where MASM reached it through
+    # CS, and this conversion reached it through whatever the block mover
+    # had left in DS.
+    m = re.match(r"(?i)^[ \t]*(" + N + r")\s+EQU\s+"
+                 r"(?:byte|word|dword|qword|fword|tbyte)\s+ptr\b", code)
+    if m and here:
+        SEGOF.setdefault(m.group(1).lower(), here)
     # A name declared FAR, by a PROC, by a LABEL, or by the procedure
     # macro of INC/DOSMAC.INC.
     m = re.match(r"(?i)^[ \t]*(?:(" + N + r")\s+(?:proc|label)|"
@@ -4046,7 +4099,7 @@ def parenthesised(code):
             place = place[1:-1]
         return '%s [%s:%s]' % (size.lower(), seg.lower(), place)
 
-    return re.sub(r"(?i)\b(cs|ds|es|ss):\(\s*(byte|word|dword)\s+ptr\s+"
+    return re.sub(r"(?i)\b(cs|ds|es|ss):\(\s*(" + PTRSIZES + r")\s+ptr\s+"
                   r"([^)]+?)\s*\)", one, code)
 
 
@@ -4088,17 +4141,17 @@ def refs(code):
     # MASM let a size stand between OFFSET and the name -- CHKMSG.INC asks
     # for "offset word ptr sernum+2" -- and an address has no size, so the
     # word here says nothing and goes.
-    code = re.sub(r"(?i)\boffset\s+(?:byte|word|dword)\s+ptr\s+",
+    code = re.sub(r"(?i)\boffset\s+(?:" + PTRSIZES + r")\s+ptr\s+",
                   'offset ', code)
     # The same override written twice, once before the size and once on the
     # operand: PRINT_R has one, "CMP ES:BYTE PTR ES:[DI],0", and MASM laid
     # down the one prefix either says.  The outer one goes, the operand
     # carrying its own.
-    code = re.sub(r"(?i)\b(cs|ds|es|ss):(\s*(?:byte|word|dword)\s+ptr\s*"
+    code = re.sub(r"(?i)\b(cs|ds|es|ss):(\s*(?:" + PTRSIZES + r")\s+ptr\s*"
                   r"(?:cs|ds|es|ss):)", lambda m: m.group(2), code)
     # the override before the size, which two of RECOVER's lines write:
     # LDS DX,CS:DWORD PTR [int_24_old_off]
-    code = re.sub(r"(?i)\b(cs|ds|es|ss):\s*(byte|word|dword)\s+ptr\s*"
+    code = re.sub(r"(?i)\b(cs|ds|es|ss):\s*(" + PTRSIZES + r")\s+ptr\s*"
                   r"(\[[^\]]*\]|" + PLACE + r")",
                   lambda m: '%s [%s:%s]' % (
                       m.group(2).lower(), m.group(1).lower(),
@@ -4107,7 +4160,7 @@ def refs(code):
                   code)
     # the place may be a number rather than a name: RESCODE writes
     # MOV BYTE PTR CS:1,27H to put a RET into the prefix
-    code = re.sub(r"\b(byte|word|dword)\s+ptr\s*((?:[A-Za-z]{2}:)?)\s*"
+    code = re.sub(r"\b(" + PTRSIZES + r")\s+ptr\s*((?:[A-Za-z]{2}:)?)\s*"
                   r"(\[[^\]]*\]|" + PLACE + r"|\d[0-9A-Fa-f]*[hH]?)"
                   r"((?:\s*[-+]\s*[\w.$]+)*)",
                   ptr, code, flags=re.I)
@@ -4165,6 +4218,18 @@ def bracket(code):
         if m2:
             base, field = m2.group(1), m2.group(2)
             if inmacro[0] and base.lower() in PARAMS:
+                out.append(part)
+                continue
+            # The difference of two places is a number, not a place:
+            # RAMDRIVE loads the selector of its data descriptor with
+            # MOV AX,ds_des - start_gdt, the two labels standing at the
+            # ends of the piece of the GDT it wants the length of.  A
+            # displacement that is a number -- TABLE-2 -- still names a
+            # place, so this is only where what is taken away is itself
+            # one of the program's own.
+            other = re.match(r"^[-+]\s*(" + N + r")$",
+                             (m2.group(3) or '').strip())
+            if other and other.group(1).lower() in DATA:
                 out.append(part)
                 continue
             if transfer and SIZE.get(base.lower()) == 'byte':
@@ -4253,6 +4318,22 @@ def sized(code):
     ref = re.match(r"^\[(?:(?:cs|ds|es|ss):)?(" + N + r")\]$",
                    parts[0].strip(), re.I)
     if not ref:
+        # A reference with nothing in it to take a width from, against an
+        # immediate of more than a byte: MASM sized the one from the other,
+        # as it does inside a condition.  RAMDRIVE looks for the two
+        # characters of 'LO' at FC00:50 with CMP ES:[0050H],'LO', which is
+        # how it knows an AT&T 6300 PLUS when it sees one.
+        other = parts[1].strip() if len(parts) > 1 else ''
+        wide = (len(other) == 4 and other[0] in '\'"' and other[-1] == other[0])
+        if not wide and re.match(r"(?i)^[0-9][0-9A-F]*H$", other):
+            wide = int(other[:-1], 16) > 0xFF
+        inner = parts[0].strip()
+        left = re.sub(r"(?i)\b(?:cs|ds|es|ss|[abcd]x|[abcd][lh]|si|di|bp|sp)"
+                      r"\b", '', inner)
+        left = re.sub(r"(?i)\b[0-9][0-9A-F]*H?\b", '', left)
+        if wide and inner.startswith('[') and inner.endswith(']') \
+                and not re.search(N, left):
+            return head + 'word ' + rest
         return code
     size = SIZE.get(ref.group(1).lower())
     if size is None:
@@ -4361,6 +4442,63 @@ IF1CLOSE = re.compile(r"(?i)^[ \t]*ENDIF\b")
 IF1QUIET = re.compile(r"(?i)^[ \t]*(?:%OUT\b|;|ELSE\b)|^[ \t]*$")
 
 
+IF2OPEN = re.compile(r"(?i)^[ \t]*IF2\b")
+# MASM's processor directives, which said which instructions it would take.
+# The widths MASM wrote with PTR.  FWORD is the six bytes SIDT and LGDT
+# want -- RAMDRIVE reads the interrupt descriptor table with
+# SIDT FWORD PTR [IDTDES] for the code it runs above the first
+# megabyte -- and TBYTE the ten of a packed decimal.
+PTRSIZES = r"byte|word|dword|qword|fword|tbyte"
+PROCESSOR = re.compile(r"(?i)^[ \t]*\.(?:8086|186|286|386|486|586|287|387"
+                       r"|8087)p?[ \t]*(?:;.*)?$")
+
+
+def pass_two(text):
+    """MASM's IF2, which held what only its second pass assembled.
+
+    MASM made two passes and the second was the one whose output counted,
+    so what stands inside such a block stands in the program and the block
+    itself says nothing here: fasm reads the source as many times as it
+    needs to settle the addresses and has no first pass to tell from a
+    second.  Both the IF2 and the ENDIF that closes it are commented out
+    and what is between them is left where it is.
+
+    RAMDRIVE writes one at the top of its segment, round two assertions
+    over the code it swaps in above the first megabyte: each prints a %OUT
+    where the offset of the swapped-in copy does not line up with the
+    offset of the code it replaces.  The %OUTs are comments by now, so what
+    is left is the two IFs with nothing in them, which is what MASM
+    assembled when the offsets did line up.  KEYB's KEYBMAC.INC has six
+    more inside macros that nothing calls.
+    """
+    lines = text.split('\n')
+    out, i = [], 0
+    while i < len(lines):
+        if not IF2OPEN.match(code_of(lines[i])):
+            out.append(lines[i])
+            i += 1
+            continue
+        depth, j = 1, i + 1
+        while j < len(lines) and depth:
+            code = code_of(lines[j])
+            if IF1DEEPER.match(code):
+                depth += 1
+            elif IF1CLOSE.match(code):
+                depth -= 1
+                if not depth:
+                    break
+            j += 1
+        if j >= len(lines) or depth:    # nothing closes it: leave it alone
+            out.append(lines[i])
+            i += 1
+            continue
+        out.append(';' + lines[i])
+        out.extend(lines[i + 1:j])
+        out.append(';' + lines[j])
+        i = j + 1
+    return '\n'.join(out)
+
+
 def quiet_if1(text):
     """An IF1 block that says nothing but %OUT, commented out whole."""
     lines = text.split('\n')
@@ -4413,6 +4551,7 @@ done = {}
 for stem in MODULES:
     text = source[stem]
     text = quiet_if1(text)
+    text = pass_two(text)
     text = HEADING.sub(heading, text)
     for was, now in MACROS.items():
         text = text.replace(was, now)
@@ -4556,6 +4695,15 @@ for stem in MODULES:
             out.append(pad('%sif ~ defined %s'
                            % (m.group(1), m.group(2).replace('&', '#')),
                            was_len, comment))
+            continue
+
+        # MASM's processor directives said which instructions it would
+        # accept, and fasm accepts them all in sixteen-bit mode: the line
+        # says nothing here.  RAMDRIVE writes .286p for the code it swaps
+        # in above the first megabyte, which uses LOADALL and the other
+        # instructions a 286 added.
+        if PROCESSOR.match(bare):
+            out.append(';' + line)
             continue
 
         # MASM's EVEN put the location counter on the next even address,

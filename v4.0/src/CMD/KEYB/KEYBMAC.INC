@@ -164,9 +164,9 @@ macro FLAG FLAG_MASK
 {
        FIND_FLAG FLAG_MASK
        IF (FLAG_ID = UNKNOWN)
-          IF2
+;          IF2
 ;              %OUT Unknown parameter FLAG_MASK on FLAG MACRO
-          end if
+;          ENDIF
        ELSE
           DB FLAG_ID
           DB FLAG_MASK
@@ -185,17 +185,17 @@ macro IFF FLAG_MASK,MASK_TYPE
              NOT_BIT = 00001000B
          ELSE
              MAC_OK = 0
-             IF2
+;             IF2
 ;                 %OUT Unknown parameter MASK_TYPE on IFF MACRO
-             \\}
-         \}
-    end if
+;             ENDIF
+         \\}
+    \}
     IF MAC_OK
        FIND_FLAG FLAG_MASK
        IF (FLAG_ID = UNKNOWN)
-          IF2
+;          IF2
 ;              %OUT Unknown parameter FLAG_MASK on IFF MACRO
-          end if
+;          ENDIF
        ELSE
           DB IFF_COMMAND+NOT_BIT+FLAG_ID
           DB FLAG_MASK
@@ -222,17 +222,17 @@ macro ANDF FLAG_MASK,MASK_TYPE
              NOT_BIT = 00001000B
          ELSE
              MAC_OK = 0
-             IF2
+;             IF2
 ;                 %OUT Unknown parameter MASK_TYPE on ANDF MACRO
-             \\}
-         \}
-    end if
+;             ENDIF
+         \\}
+    \}
     IF MAC_OK
        FIND_FLAG FLAG_MASK
        IF (FLAG_ID = UNKNOWN)
-          IF2
+;          IF2
 ;              %OUT Unknown parameter FLAG_MASK on ANDF MACRO
-          end if
+;          ENDIF
        ELSE
           DB ANDF_COMMAND+NOT_BIT+FLAG_ID
           DB FLAG_MASK
@@ -278,11 +278,11 @@ macro OPTION MASK,MASK_TYPE
              NOT_BIT = 00001000B
          ELSE
              MAC_OK = 0
-             IF2
+;             IF2
 ;                 %OUT Unknown parameter MASK_TYPE on OPTION MACRO
-             \\}
-         \}
-    end if
+;             ENDIF
+         \\}
+    \}
     IF MAC_OK
        DB  OPTION_COMMAND+NOT_BIT
        DB  MASK

@@ -1,3 +1,39 @@
+STRUC EMM_REC EMM_FLAGS_=0, EMM_SYSTEM_=0, EMM_BASE_=0, EMM_KSIZE_=0
+{
+.EMM_FLAGS	DW	EMM_FLAGS_
+.EMM_SYSTEM	DW	EMM_SYSTEM_
+.EMM_BASE	DD	EMM_BASE_ ; 24 bit address of start of region
+.EMM_KSIZE	DW	EMM_KSIZE_ ; Size of region in kbytes
+}
+match =EMM_REC_LAID_OUT, EMM_REC_LAID_OUT
+{
+    EMM_REC_LAID_OUT equ 1
+    virtual at 0
+      EMM_REC EMM_REC 0, 0, 0, 0
+      sizeof.EMM_REC = $ - EMM_REC
+    end virtual
+}
+STRUC EMM_CTRL EMM_TOTALK_=0, EMM_AVAILK_=0
+{
+.EMM_VER 	rb      50
+.EMM_TOTALK	DW	EMM_TOTALK_ ; EXCLUDING the 1k of this record
+.EMM_AVAILK	DW	EMM_AVAILK_ ; Amount of above NOT allocated
+; MASM worked LENGTH out as the number of elements a variable was
+; declared with and SIZE as the bytes they take up.  The arrays these
+; ask about are all of bytes, so the two come to the same number.
+		rb      sizeof.EMM_REC ; NULL (0th) RECORD
+.EMM_RECORD	rb      (1024 - 50 - 4 - 10 - (sizeof.EMM_REC))
+					  ; EMM_REC structures
+.EMM_TAIL_SIG	rb      10
+}
+match =EMM_CTRL_LAID_OUT, EMM_CTRL_LAID_OUT
+{
+    EMM_CTRL_LAID_OUT equ 1
+    virtual at 0
+      EMM_CTRL EMM_CTRL 0, 0
+      sizeof.EMM_CTRL = $ - EMM_CTRL
+    end virtual
+}
 BREAK	<EMM control sector layout>
 
 ;
@@ -18,12 +54,6 @@ BREAK	<EMM control sector layout>
 
 ; Layout of each EMM record.
 
-EMM_REC 	STRUC
-EMM_FLAGS	DW	0
-EMM_SYSTEM	DW	0
-EMM_BASE	DD	?		; 24 bit address of start of region
-EMM_KSIZE	DW	?		; Size of region in kbytes
-EMM_REC 	ENDS
 
 ; EMM_FLAGS Bits
 EMM_ALLOC	EQU	0000000000000001B	; Zero -> record is free
@@ -38,17 +68,8 @@ EMM_APPLICATION EQU	3
 
 ; Layout of EMM control 1024 byte record
 
-EMM_CTRL	STRUC
-EMM_VER 	DB	50 DUP(?)
-EMM_TOTALK	DW	?		; EXCLUDING the 1k of this record
-EMM_AVAILK	DW	?		; Amount of above NOT allocated
-		DB	SIZE EMM_REC DUP(?) ; NULL (0th) RECORD
-EMM_RECORD	DB	(1024 - 50 - 4 - 10 - (SIZE EMM_REC)) DUP(?)
-					  ; EMM_REC structures
-EMM_TAIL_SIG	DB	10 DUP(?)
-EMM_CTRL	ENDS
 
-EMM_NUMREC	EQU	(1024 - 50 - 4 - 10 - (SIZE EMM_REC)) / (SIZE EMM_REC)
+EMM_NUMREC	equ	((1024 - 50 - 4 - 10 - (sizeof.EMM_REC)) / (sizeof.EMM_REC))
 
 
 ;

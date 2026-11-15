@@ -91,6 +91,23 @@ N = r"[A-Za-z_@?$][A-Za-z0-9_@?$]*"
 DEFINES = re.compile(r"^\s*(" + N + r")\s+(?:DB|DW|DD|DQ|DT)\s", re.I)
 DEFLABEL = re.compile(r"^(" + N + r"):")
 DEFFASM = re.compile(r"^\s*label\s+(" + N + r")\s", re.I)
+# A name the conversion gave a width and a number rather than a place:
+# MASM wrote RW_COUNT EQU WORD PTR (SIZE SRHEAD)+5 for an offset into the
+# request packet, and the conversion writes that as
+# "label RW_COUNT word at (sizeof.SRHEAD) + 5".  What such a name is added
+# to is a register holding somebody else's packet, so it is no place of the
+# program's own and a reference through it carries whatever override the
+# source wrote.  Where the address is reckoned from $ -- GRTABHAN's
+# PATCH_OFF EQU WORD PTR $-2, the immediate of the instruction just laid
+# down -- it is a place here after all, and stands.
+OFFSETNAME = re.compile(r"(?i)^\s*label\s+" + N + r"\s+\w+\s+at\s+"
+                        r"(?![^;\n]*\$)")
+
+
+def deffasm(code):
+    """A fasm LABEL declaration, unless what it names is an offset."""
+    m = DEFFASM.match(code)
+    return None if m and OFFSETNAME.match(code) else m
 DECLARES = re.compile(r"(?i)^\s*I_am\s+(" + N + r")\s*,")
 STRUCT = re.compile(r"(?i)^\s*(" + N + r")\s+(" + N + r")\s*$")
 # The offset may be written with spaces round it -- [FOOSTRNG + 2] -- and a
@@ -226,7 +243,7 @@ def kernel_labels(paths, default=None):
                 continue
             code = line.split(";")[0]
             m = (DECLARES.match(code) or DEFINES.match(code)
-                 or DEFFASM.match(code) or DEFLABEL.match(line))
+                 or deffasm(code) or DEFLABEL.match(line))
             if not m:
                 m = STRUCT.match(code)         # "DEVCALL SRHEAD", a structure
                 if m and m.group(2).upper() in REGISTERS:
@@ -273,7 +290,7 @@ def bios_labels(where):
                     continue
                 if virtual:
                     continue
-                m = (DEFINES.match(code) or DEFFASM.match(code)
+                m = (DEFINES.match(code) or deffasm(code)
                      or DEFLABEL.match(line))
                 if not m:
                     m = STRUCT.match(code)
