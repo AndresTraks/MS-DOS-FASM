@@ -1,3 +1,17 @@
+STRUC ppm_struct phys_page_offset_=0, ppm_handle_offset_=0, ppm_log_page_offset_=0
+{
+.phys_page_offset	dw	phys_page_offset_ ; offsets into PPM entry
+.ppm_handle_offset	dw	ppm_handle_offset_
+.ppm_log_page_offset	dw	ppm_log_page_offset_
+}
+match =ppm_struct_LAID_OUT, ppm_struct_LAID_OUT
+{
+    ppm_struct_LAID_OUT equ 1
+    virtual at 0
+      ppm_struct ppm_struct 0, 0, 0
+      sizeof.ppm_struct = $ - ppm_struct
+    end virtual
+}
 	page
 ;-------------------------------------------------------------------
 ;
@@ -54,11 +68,6 @@ read_clock	equ	2ch		; function code to read clock
 dos_int 	equ	21h		; interrupt 21
 xor_mask	equ	0ffffh		; mask used to confuse the random numbers a little
 
-ppm_struct	STRUC			; define the structure
-phys_page_offset	dw	?	; offsets into PPM entry
-ppm_handle_offset	dw	?
-ppm_log_page_offset	dw	?
-ppm_struct	ENDS
 
 	page
 ;-------------------------------------------------------------------
@@ -74,7 +83,7 @@ ppm_struct	ENDS
 ;		See individual function headers
 ;
 ;-------------------------------------------------------------------
-partial_map	proc
+partial_map:
 
 ;	use AL value to select sub-function
 
@@ -92,7 +101,7 @@ partial_map	proc
 ;	invalid sub-function, report the error
 
 pm_invalid_sfcn:
-	mov	ah,ems_code8F		; invalid sub-function code
+	mov	ah,EMS_CODE8F		; invalid sub-function code
 	ret
 
 	page
@@ -143,32 +152,32 @@ pm_get:
 	push	si
 	push	ds
 
-	mov	di,cs:[bp].IE_Saved_DI_Reg ; restore caller's DI, pointer to mapping control structure
+	mov	di,[cs:bp+Instance_Entry_Struc.IE_Saved_DI_Reg] ; restore caller's DI, pointer to mapping control structure
 
 
 ;-------------------------------------------------------------------
 
 ;	get count from caller's control structure
 
-	mov	cx,ds:[si]		; the first word of the control
+	mov	cx,[ds:si]		; the first word of the control
 					; structure holds the # of entries
 
 	cmp	cx,0			; 0 pages requested?			;an000; dms;
 	je	PM_Get_Error_A3 	; yes - flag an error			;an000; dms;
 
-	cmp	cx,cs:Map_Count 	; do some sanity checking
+	cmp	cx,[cs:map_count] ; do some sanity checking
 	jbe	pm_phys_ok		; requested number is ok, do the copies
 
 ; They asked for more than we can possibly have.  Sounds like trouble.
 
 PM_Get_Error_A3:
 
-	mov	ah,ems_codea3		; bad stuff in the control structure
+	mov	ah,EMS_CODEA3		; bad stuff in the control structure
 	jmp	pm_exit00		; return the error code
 
 pm_phys_ok:
-	mov	cx,DS:word ptr [si]	; get count from control structure
-	mov	ES:word ptr [di],cx	; save count in save area
+	mov	cx,word [ds:si]     ; get count from control structure
+	mov	word [es:di],cx     ; save count in save area
 	add	di,2			; increment save area pointer
 
 ;-------------------------------------------------------------------
@@ -180,7 +189,7 @@ pm_phys_ok:
 ppm_copies:
 
 	add	si,2			; point to next segment number
-	mov	ax,DS:word ptr [si]	; get segment value from control structure
+	mov	ax,word [ds:si]     ; get segment value from control structure
 
 	push	si			; save user's si
 	push	ds			; save user's ds
@@ -190,12 +199,12 @@ ppm_copies:
 
 	push	cs			; make DS:SI point to internal data area
 	pop	ds
-	lea	si,map_table
+	lea	si,[map_table]
 
-	mov	cx,map_count		; number of mappable segments
+	mov	cx,[cs:map_count] ; number of mappable segments
 
 ppm_inner_copy_loop:
-	cmp	ax,ds:word ptr [si+phys_page_segment]	; is this entry the requested?
+	cmp	ax,word [ds:si+mappable_phys_page_struct.phys_page_segment]     ; is this entry the requested?
 	jne	ppm_not_yet		; no, try again
 
 	mov	cx,ppm_size		; number of bytes to copy
@@ -209,14 +218,14 @@ ppm_inner_copy_loop:
 	jmp	ppm_entry_done		; done with this copy, go on
 
 ppm_not_yet:
-	add	si,type mappable_phys_page_struct	; point to next entry
+	add	si,sizeof.mappable_phys_page_struct ; point to next entry
 	loop	ppm_inner_copy_loop	; try some more
 
 	pop	cx			; restore counter for outer loop
 	pop	ds			; restore user's ds
 	pop	si			; restore user's si
-	mov	ah,EMS_Code8B		; we have an invalid segment specified	;an000; dms;
-	jmp	PM_Exit00		; exit the program
+	mov	ah,EMS_CODE8B		; we have an invalid segment specified	;an000; dms;
+	jmp	pm_exit00		; exit the program
 
 ppm_entry_done:
 
@@ -279,12 +288,12 @@ pm_set:
 	push	si
 	push	ds
 
-	mov	cx,DS:word ptr [si]	; get number of entries in save area
+	mov	cx,word [ds:si]     ; get number of entries in save area
 
 	cmp	cx,0			; is the count zero?
 	je	pm_set_error_A3 	; yes - error				;an000; dms;
 
-	cmp	cx,cs:Map_Count 	; greater than phys pages avail?	;an000; dms;
+	cmp	cx,[cs:map_count] ; greater than phys pages avail?	;an000; dms;
 	jbe	count_ok		; no - data not corrupted		;an000; dms;
 
 pm_set_error_A3:
@@ -297,18 +306,18 @@ count_ok:
 
 pm01_loop:
 
-	mov	ax,DS:word ptr [si+phys_page_offset]	; set up regs for map_l_to_p
+	mov	ax,word [ds:si+ppm_struct.phys_page_offset]     ; set up regs for map_l_to_p
 	mov	ah,map_pages_fcn
-	mov	dx,DS:word ptr [si+ppm_handle_offset]
-	mov	bx,DS:word ptr [si+ppm_log_page_offset]
+	mov	dx,word [ds:si+ppm_struct.ppm_handle_offset]
+	mov	bx,word [ds:si+ppm_struct.ppm_log_page_offset]
 
 	cmp	dx,0ffffh		; is there a real entry?
 	je	no_map			; no, skip the call to map_l_to_p
 
-	call	map_l_to_p		; make the mapping call
+	call	MAP_L_TO_P		; make the mapping call
 
 no_map:
-	add	si,type ppm_struct	; point to next entry
+	add	si,sizeof.ppm_struct ; point to next entry
 
 	loop	pm01_loop		;
 
@@ -354,13 +363,13 @@ pm_size:
 	cmp	bx,0			; 0 pages requested?			;an000; dms;
 	je	PM_Size_Error_8B	; yes flag an error			;an000; dms;
 
-	cmp	bx,cs:Map_Count 	; page count > phys pages?		;an000; dms;
+	cmp	bx,[cs:map_count] ; page count > phys pages?		;an000; dms;
 	jbe	PM_Size_Return		; no - continue 			;an000; dms;
 
 PM_Size_Error_8B:
 
-	mov	ah,EMS_Code8B		; signal page count exceeded		;an000; dms;
-	jmp	PM_Exit02		; exit routine				;an000; dms;
+	mov	ah,EMS_CODE8B		; signal page count exceeded		;an000; dms;
+	jmp	pm_exit02		; exit routine				;an000; dms;
 
 PM_Size_Return:
 
@@ -376,7 +385,7 @@ pm_exit02:
 
 	ret				; return to caller
 
-partial_map	endp
+;partial_map	endp
 
 
 	page
@@ -389,7 +398,7 @@ partial_map	endp
 ;				01	segment numbers
 ;
 ;-------------------------------------------------------------------
-map_mult	proc
+map_mult:
 
 	cmp	al,mu_ppn		; is this a map request?
 	je	mu_ppn_fcn		; yes, go do it
@@ -398,7 +407,7 @@ map_mult	proc
 	je	mu_seg_fcn		; yes, go do it
 
 	xor	al,al			; clear al, why not?
-	mov	ah,ems_code8f		; no, return invalid sub-function code
+	mov	ah,EMS_CODE8F		; no, return invalid sub-function code
 	ret				; return to caller
 
 ;-------------------------------------------------------------------
@@ -445,12 +454,12 @@ mu_ppn_fcn:
 	je	mu_ppn_exit
 
 mu_ppn_loop:
-	mov	bx,ds:word ptr[si+0]	; get logical page number
-	mov	ax,ds:word ptr[si+2]	; get physical page number
+	mov	bx,word [ds:si+0]    ; get logical page number
+	mov	ax,word [ds:si+2]    ; get physical page number
 	mov	ah,map_pages_fcn	; fcn code for mapping
 
 	push	cx
-	call	map_l_to_p		; call the mapping routine
+	call	MAP_L_TO_P		; call the mapping routine
 	pop	cx
 
 	cmp	ah,0			; was return code OK
@@ -517,10 +526,10 @@ mu_seg_fcn:
 	je	mu_seg_exit
 
 mu_seg_loop:
-	mov	bx,ds:word ptr[si+0]	; get logical page number
+	mov	bx,word [ds:si+0]    ; get logical page number
 
 	push	dx			; save handle
-	mov	dx,ds:word ptr[si+2]	; get physical page number
+	mov	dx,word [ds:si+2]    ; get physical page number
 	call	Get_Phys_Seg_Page	; convert to logical page circle
 	mov	ax,dx			; must be in AX
 	pop	dx			; restore handle
@@ -528,7 +537,7 @@ mu_seg_loop:
 	mov	ah,map_pages_fcn	; fcn code for mapping
 
 	push	cx
-	call	map_l_to_p		; call the mapping routine
+	call	MAP_L_TO_P		; call the mapping routine
 	pop	cx
 
 	cmp	ah,0			; was return code OK
@@ -550,10 +559,10 @@ mu_seg_exit:
 
 	ret				; return to caller
 
-map_mult	endp
+;map_mult	endp
 
 ;-------------------------------------------------------------------
-include lim40b.inc
+include 'LIM40B.INC'
 ;-------------------------------------------------------------------
 
 	page
@@ -569,23 +578,23 @@ include lim40b.inc
 ;	DMS	4/29/88
 ;
 ;-------------------------------------------------------------------
-handle_attrib	proc
+handle_attrib:
 
 
 	cmp	al,Hn_Attr_Max_Fcn	;maximum subfunction number		;an000; dms;
 	jbe	Handle_Attrib_Cont	;continue routine			;an000; dms;
-		mov	ah,EMS_Code8F	;we have an invalid subfunction 	;an000; dms;
+		mov	ah,EMS_CODE8F	;we have an invalid subfunction 	;an000; dms;
 		jmp	Handle_Attrib_Exit ; exit the routine			;an000; dms;
 
 Handle_Attrib_Cont:
 
-	mov	ah,EMS_Code91		;this function is not supported 	;an000; dms;
+	mov	ah,EMS_CODE91		;this function is not supported 	;an000; dms;
 
 Handle_Attrib_Exit:
 
 	RET				; return to caller
 
-handle_attrib	endp
+;handle_attrib	endp
 
 	page
 ;-------------------------------------------------------------------
@@ -637,7 +646,7 @@ handle_attrib	endp
 
 	Null_Handle_Name     db  8 dup(0)    ;null handle value 		;an000; dms;
 
-handle_name	proc
+handle_name:
 
 	push	bx			; save some regs
 	push	cx
@@ -654,17 +663,17 @@ handle_name	proc
 
 ;	invalid sub-function, report the error
 
-	mov	ah,ems_code8F		; invalid sub-function code
+	mov	ah,EMS_CODE8F		; invalid sub-function code
 	jmp	hn_exit 		; exit
 
 ;	check the handle for valid range
 
 hn_val_sf:
 
-	cmp	dx,num_handles-1	; handle within range ?
+	cmp	dx,NUM_HANDLES-1	; handle within range ?
 	jnae	hn_range_ok		; yes, get down to business
 
-	mov	ah,ems_code83		; handle not found
+	mov	ah,EMS_CODE83		; handle not found
 	jmp	hn_exit 		; exit
 
 ;------------------------
@@ -676,32 +685,32 @@ hn_range_ok:
 	push	dx			; save handle
 
 	MOV	AX,DX			;DX = handle id
-	MOV	DX,TYPE H_LOOKUP_STRUC	;DI = entry's offset into
+	MOV	DX,sizeof.H_LOOKUP_STRUC ;DI = entry's offset into
 	MUL	DX			; the handle lookup table
 	MOV	DI,AX			;
 	POP	DX			; restore handle
 	POP	AX			; restore fcn code
 
-	CMP	HANDLE_LOOKUP_TABLE.H_PAGES[DI],REUSABLE_HANDLE
+	CMP	[cs:DI+HANDLE_LOOKUP_TABLE.H_PAGES],REUSABLE_HANDLE
 	JNE	HN_IN_USE		;Is this handle valid (in use)?
 					; No...error
-	mov	ah,ems_code83		; handle not found
+	mov	ah,EMS_CODE83		; handle not found
 	jmp	hn_exit 		; return the error code
 
 HN_IN_USE:				;Check bank ID if in virutal mode
 
 	mov	bx,ax			;save ax				;an000; dms;
-	TEST	MEMCARD_MODE,WSP_VIRT	;If using a card in virtual mode   @RH6
-	JZ	HN_VALID		; (i.e. bank swapping), then read  @RH6
+	TEST	byte [cs:MEMCARD_MODE],WSP_VIRT ;If using a card in virtual mode   @RH6
+	JZ	hn_valid		; (i.e. bank swapping), then read  @RH6
 	MOV	DX,IDREG		; the current bank ID.		   @RH6
 	IN	AL,DX			;				   @RH6
-	CMP	HANDLE_LOOKUP_TABLE.H_BANK[DI],AL  ;If handle's bank ID    @RH6
-	JE	HN_VALID			   ; is 0 (resident) or    @RH6
-	CMP	HANDLE_LOOKUP_TABLE.H_BANK[DI],0   ; = requesters bank	   @RH6
-	JE	HN_VALID			   ; then OK		   @RH6
+	CMP	[cs:DI+HANDLE_LOOKUP_TABLE.H_BANK],AL ;If handle's bank ID    @RH6
+	JE	hn_valid			   ; is 0 (resident) or    @RH6
+	CMP	[cs:DI+HANDLE_LOOKUP_TABLE.H_BANK],0 ; = requesters bank	   @RH6
+	JE	hn_valid			   ; then OK		   @RH6
 					;Else invalid requester bank	   @RH6
 	MOV	AH,EMS_CODE83		;Indicate handle not found	   @RH6
-	JMP	HN_EXIT
+	JMP	hn_exit
 
 ;------------------------
 ;	find out if get or set operation
@@ -716,7 +725,7 @@ hn_valid:
 
 ;	invalid sub-function, report the error
 
-	mov	ah,ems_code8F		; invalid sub-function code
+	mov	ah,EMS_CODE8F		; invalid sub-function code
 	jmp	hn_exit 		; exit
 
 
@@ -729,11 +738,11 @@ hn_valid:
 ;-------------------------------------------------------------------
 hn_get:
 					;Here DI = offset into h lookup
-	LEA	SI,HANDLE_LOOKUP_TABLE	;Set the source SI to the handle's
+	LEA	SI,[HANDLE_LOOKUP_TABLE] ;Set the source SI to the handle's
 	ADD	SI,DI			; name field in the handle lookup
-	ADD	SI,H_NAME		; lookup table
+	ADD	SI,H_LOOKUP_STRUC.H_NAME		; lookup table
 
-	MOV	DI,cs:[bp].IE_Saved_DI_Reg  ;Restore the user's dest where
+	MOV	DI,[cs:bp+Instance_Entry_Struc.IE_Saved_DI_Reg] ;Restore the user's dest where
 					; the handle name will be stored
 
 	MOV	CX,8			; want to copy 8 characters
@@ -741,7 +750,7 @@ hn_get:
 	REP	MOVSB			; copy the string
 
 	XOR	AH,AH			; set good return code
-	JMP	HN_EXIT 		; exit
+	JMP	hn_exit 		; exit
 
 
 	page
@@ -767,7 +776,7 @@ hn_set:
 	push	cs			;swap segs for compare			;an000; dms;
 	pop	es			;					;an000; dms;
 
-	mov	di,offset cs:Null_Handle_Name	;point to null handle name	;an000; dms;
+	mov	di,Null_Handle_Name        ;point to null handle name	;an000; dms;
 	mov	cx,8			;8 bytes to compare			;an000; dms;
 	cld
 	cli				;ints off				;an000; dms;
@@ -791,8 +800,8 @@ HN_Set_Null_Entered:
 
 ;------------------------
 					;Here DI = offset into h lookup
-	ADD	DI,OFFSET HANDLE_LOOKUP_TABLE  ;Set the dest. DI to the    @RH6
-	ADD	DI,OFFSET H_NAME	       ; handle's name field in    @RH6
+	ADD	DI,HANDLE_LOOKUP_TABLE         ;Set the dest. DI to the    @RH6
+	ADD	DI,H_LOOKUP_STRUC.H_NAME               ; handle's name field in    @RH6
 					       ; the handle lookup table   @RH6
 
 	PUSH	ES			;Make ES:DI -> destination in
@@ -812,7 +821,7 @@ HN_Set_Null_Entered:
 
 ;------------------------
 name_in_use:
-	mov	ah,ems_codea1		; name is use error
+	mov	ah,EMS_CODEA1		; name is use error
 
 
 hn_exit:
@@ -825,7 +834,7 @@ hn_exit:
 
 	ret
 
-handle_name	endp
+;handle_name	endp
 
 
 
@@ -840,7 +849,7 @@ handle_name	endp
 ;				02, get total handles		hd_total_handles
 ;
 ;-------------------------------------------------------------------
-handle_dir	proc
+handle_dir:
 
 	cmp	al,sf_hd_get		; 00 get handle dir
 	je	hd_directory
@@ -857,7 +866,7 @@ handle_dir	proc
 ;	invalid sub-function, report the error
 
 hd_invalid_sfcn:
-	mov	ah,ems_code8F		; invalid sub-function code
+	mov	ah,EMS_CODE8F		; invalid sub-function code
 
 ;	invalid sub-function, fall through to exit
 
@@ -901,16 +910,16 @@ hd_directory:
 	push	si
 	push	ds
 
-	TEST	MEMCARD_MODE,WSP_VIRT	;If using a card in virtual mode   @RH6
+	TEST	byte [cs:MEMCARD_MODE],WSP_VIRT ;If using a card in virtual mode   @RH6
 	JZ	HD_LOOP_INIT		; (i.e. bank swapping), then read  @RH6
 	MOV	DX,IDREG		; the current bank ID and save it. @RH6
 	IN	AL,DX			;				   @RH6
-	MOV	cs:BANKID,AL
+	MOV	[cs:BANKID],AL
 
 
 ;	initialize some things for the loop
 HD_LOOP_INIT:
-	mov	di,cs:[bp].IE_Saved_DI_Reg ;restore users DI			;an000; dms;
+	mov	di,[cs:bp+Instance_Entry_Struc.IE_Saved_DI_Reg] ;restore users DI			;an000; dms;
 	xor	al,al			; al = num entries
 	xor	dx,dx			; dx = handle index
 	mov	cx,NUM_HANDLES		; loop enough for all handles
@@ -921,27 +930,27 @@ HD_LOOP_INIT:
 	XOR	SI,SI			; SI = offset into handle lookup   @RH6
 					;  table
 hd_loop:
-	CMP	HANDLE_LOOKUP_TABLE.h_pages[SI],REUSABLE_HANDLE
+	CMP	[cs:SI+HANDLE_LOOKUP_TABLE.H_PAGES],REUSABLE_HANDLE
 					; If handle not active, then	   @RH6
 	je	hd_next_hndl		; loop and look again
 ;-------------------------
 ;    Active handle...if in virtual mode check bank ID			   @RH6
 ;-------------------------
 
-	TEST	MEMCARD_MODE,WSP_VIRT	;If using a card in virtual mode   @RH6
-	JZ	HD_ACTIVE		; (i.e. bank swapping), then check @RH6
-	MOV	BL,cs:BANKID		; handle's bank id                 @RH6
-	CMP	HANDLE_LOOKUP_TABLE.H_BANK[SI],BL  ;If handle's bank ID    @RH6
-	JE	HD_Active			   ; is 0 (resident) or    @RH6
-	CMP	HANDLE_LOOKUP_TABLE.H_BANK[SI],0   ; = requesters bank	   @RH6
-	JE	HD_Active			   ; then OK		   @RH6
-	jmp	HD_Next_Hndl			   ;Else skip to next one  @RH6
+	TEST	byte [cs:MEMCARD_MODE],WSP_VIRT ;If using a card in virtual mode   @RH6
+	JZ	hd_active		; (i.e. bank swapping), then check @RH6
+	MOV	BL,[cs:BANKID] ; handle's bank id                 @RH6
+	CMP	[cs:SI+HANDLE_LOOKUP_TABLE.H_BANK],BL ;If handle's bank ID    @RH6
+	JE	hd_active			   ; is 0 (resident) or    @RH6
+	CMP	[cs:SI+HANDLE_LOOKUP_TABLE.H_BANK],0 ; = requesters bank	   @RH6
+	JE	hd_active			   ; then OK		   @RH6
+	jmp	hd_next_hndl			   ;Else skip to next one  @RH6
 
 ;------------------------
 ;	found an active handle, copy info to directory
 ;------------------------
 hd_active:
-	mov	es:word ptr[di],dx	; put handle number in directory
+	mov	word [es:di],dx    ; put handle number in directory
 	add	di,2			; move directory table pointer along,
 					; must point to area for handle name now
 
@@ -949,8 +958,8 @@ hd_active:
 	push	si			; save si for outer loop
 
 	mov	cx,8			; need to copy 8 chars
-	add	si,offset Handle_LookUp_Table	;point to entry 		;an000; dms;
-	add	si,h_name		; make DS:SI -> handle name in lookup table
+	add	si,HANDLE_LOOKUP_TABLE        ;point to entry 		;an000; dms;
+	add	si,H_LOOKUP_STRUC.H_NAME		; make DS:SI -> handle name in lookup table
 
 rep	movsb				; copy the string
 
@@ -964,7 +973,7 @@ rep	movsb				; copy the string
 
 hd_next_hndl:
 	inc	dx			; update handle index
-	add	si,type h_lookup_struc	; point to next entry in lookup table
+	add	si,sizeof.H_LOOKUP_STRUC ; point to next entry in lookup table
 	loop	hd_loop 		; look for more
 
 	xor	ah,ah			; good return code
@@ -1019,11 +1028,11 @@ hd_named_handle:
 	push	ds
 	push	es								;an000; dms;
 
-	TEST	MEMCARD_MODE,WSP_VIRT	;If using a card in virtual mode   @RH6
+	TEST	byte [cs:MEMCARD_MODE],WSP_VIRT ;If using a card in virtual mode   @RH6
 	JZ	HD1_LOOP_INIT		; (i.e. bank swapping), then read  @RH6
 	MOV	DX,IDREG		; the current bank ID and save it. @RH6
 	IN	AL,DX			;				   @RH6
-	MOV	cs:BANKID,AL
+	MOV	[cs:BANKID],AL
 
 
 ;	initialize some things for the loop
@@ -1038,21 +1047,21 @@ HD1_LOOP_INIT:
 	XOR	DI,DI			; DI = offset into handle lookup   @RH6
 					;  table			   @RH6
 hd1_loop:
-	CMP	ES:HANDLE_LOOKUP_TABLE.h_pages[DI],REUSABLE_HANDLE
+	CMP	[es:HANDLE_LOOKUP_TABLE.H_PAGES+DI],REUSABLE_HANDLE
 					; If handle not active, then	   @RH6
 	je	hd1_next_hndl		; loop and look again
 ;-------------------------
 ;    Active handle...if in virtual mode check bank ID			   @RH6
 ;-------------------------
 
-	TEST	MEMCARD_MODE,WSP_VIRT	;If using a card in virtual mode   @RH6
+	TEST	byte [cs:MEMCARD_MODE],WSP_VIRT ;If using a card in virtual mode   @RH6
 	JZ	HD1_ACTIVE		; (i.e. bank swapping), then check @RH6
-	MOV	BL,cs:BANKID		; handle's bank id                 @RH6
-	CMP	ES:HANDLE_LOOKUP_TABLE.H_BANK[DI],BL ;If handle's bank ID  @RH6
-	JE	HD1_Active			     ; is 0 (resident) or  @RH6
-	CMP	ES:HANDLE_LOOKUP_TABLE.H_BANK[DI],0  ; = requesters bank   @RH6
-	JE	HD1_Active			   ; then OK		   @RH6
-	jmp	HD1_Next_Hndl			   ;Else skip to next one  @RH6
+	MOV	BL,[cs:BANKID] ; handle's bank id                 @RH6
+	CMP	[es:HANDLE_LOOKUP_TABLE.H_BANK+DI],BL ;If handle's bank ID  @RH6
+	JE	HD1_ACTIVE			     ; is 0 (resident) or  @RH6
+	CMP	[es:HANDLE_LOOKUP_TABLE.H_BANK+DI],0 ; = requesters bank   @RH6
+	JE	HD1_ACTIVE			   ; then OK		   @RH6
+	jmp	hd1_next_hndl			   ;Else skip to next one  @RH6
 ;------------------------
 ;	found an active handle, check the name
 ;------------------------
@@ -1063,8 +1072,8 @@ HD1_ACTIVE:
 	push	di			; save di for outer loop
 
 	mov	cx,8			; need to compare 8 chars
-	add	di,offset Handle_LookUp_Table	;point to entry 		;an000; dms;
-	add	di,offset H_Name	; must point to area for handle name now;an000; dms;
+	add	di,HANDLE_LOOKUP_TABLE        ;point to entry 		;an000; dms;
+	add	di,H_LOOKUP_STRUC.H_NAME        ; must point to area for handle name now;an000; dms;
 
 rep	cmpsb				; compare the strings
 
@@ -1079,7 +1088,7 @@ rep	cmpsb				; compare the strings
 
 hd1_next_hndl:
 	inc	dx			; update handle index
-	add	di,type h_lookup_struc	; point to next entry in lookup table
+	add	di,sizeof.H_LOOKUP_STRUC ; point to next entry in lookup table
 	loop	hd1_loop		; look for more
 
 
@@ -1087,7 +1096,7 @@ hd1_next_hndl:
 ;	all done, if we fall through loop without finding a match,
 ;	must report the error
 
-	mov	ah,ems_codea0		; no matching handle
+	mov	ah,EMS_CODEA0		; no matching handle
 	xor	dx,dx			; invalid handle
 
 hd_exit01:
@@ -1135,7 +1144,7 @@ hd_exit02:
 
 	ret				; return to caller
 
-handle_dir	endp
+;handle_dir	endp
 
 	page
 ;-------------------------------------------------------------------
@@ -1163,7 +1172,7 @@ handle_dir	endp
 ;				:		; repeats CX times
 ;
 ;-------------------------------------------------------------------
-address_array	proc
+address_array:
 
 	cmp	al,Add_Get_Array	; subfunction 00 Get Mappable Physical	;an000; dms;
 					;    Address Array
@@ -1173,7 +1182,7 @@ address_array	proc
 					;    Address Array Entries
 	je	Address_Get_Size_Entries
 
-	mov	ah,EMS_Code8F		; none of the above - invalid sub parm	;an000; dms;
+	mov	ah,EMS_CODE8F		; none of the above - invalid sub parm	;an000; dms;
 
 	ret
 
@@ -1187,31 +1196,31 @@ Address_Get_Physical_Address:
 
 ;	set up some things for the loop
 
-	mov	di,cs:[bp].IE_Saved_DI_Reg ; restore caller's DI, pointer to handle area
+	mov	di,[cs:bp+Instance_Entry_Struc.IE_Saved_DI_Reg] ; restore caller's DI, pointer to handle area
 
-	mov	cx,map_count		; number of entries in table
+	mov	cx,[cs:map_count] ; number of entries in table
 
 	push	cs			; make DS:SI -> array
 	pop	ds
 
-	lea	si,map_table
+	lea	si,[map_table]
 
 	cld				; make sure direction flag is right
 
 copy_address_array:
 
-	mov	ax,DS:[si+phys_page_segment]
-	mov	ES:[di],ax
+	mov	ax,[ds:si+mappable_phys_page_struct.phys_page_segment]
+	mov	[es:di],ax
 	add	di,2			; increment destination pointer
-	mov	ax,DS:[si+phys_page_number]
-	mov	ES:[di],ax
+	mov	ax,[ds:si+mappable_phys_page_struct.phys_page_number]
+	mov	[es:di],ax
 
-	add	si,type mappable_phys_page_struct ; increment pointer
+	add	si,sizeof.mappable_phys_page_struct ; increment pointer
 	add	di,2			; increment destination pointer
 
 	loop	copy_address_array
 
-	mov	cx,map_count		; number of entries
+	mov	cx,[cs:map_count] ; number of entries
 	xor	ah,ah			; good return code
 
 	pop	ds			; restore DS
@@ -1222,12 +1231,12 @@ copy_address_array:
 
 Address_Get_Size_Entries:
 
-	mov	cx,cs:Map_Count 	; return the number of pages allocated	;an000; dms;
+	mov	cx,[cs:map_count] ; return the number of pages allocated	;an000; dms;
 	xor	ax,ax			; clear error flag			;an000; dms;
 	ret				; return to caller			;an000; dms;
 
 
-address_array	endp
+;address_array	endp
 
 
 
@@ -1237,9 +1246,9 @@ address_array	endp
 ;	59 - Get extended momory hardware information
 ;
 ;-------------------------------------------------------------------
-hardware_info	proc
+hardware_info:
 
-	cmp	ose_functions,ose_enabled	; first, check for fcns enabled
+	cmp	word [cs:ose_functions],ose_enabled ; first, check for fcns enabled
 	je	hi_enabled		;
 
 
@@ -1268,13 +1277,13 @@ hi_exit:
 
 hi_info_fcn:
 
-	mov	di,cs:[bp].IE_Saved_DI_Reg ; get di register
+	mov	di,[cs:bp+Instance_Entry_Struc.IE_Saved_DI_Reg] ; get di register
 
-	mov	es:word ptr[di+0],1024	; raw page size = 16KB
-	mov	es:word ptr[di+2],0	; number of alternate register sets
-	mov	es:word ptr[di+4],type H_SAVE_STRUC ; size of save array
-	mov	es:word ptr[di+6],0	; number of DMA register sets
-	mov	es:word ptr[di+8],1	; 1 = no special DMA register sets
+	mov	word [es:di+0],1024    ; raw page size = 16KB
+	mov	word [es:di+2],0    ; number of alternate register sets
+	mov	word [es:di+4],sizeof.H_SAVE_STRUC  ; size of save array
+	mov	word [es:di+6],0    ; number of DMA register sets
+	mov	word [es:di+8],1    ; 1 = no special DMA register sets
 
 	xor	ah,ah			; good return code
 	ret				; return to caller
@@ -1290,14 +1299,14 @@ hi_raw_fcn:
 
 	mov	ah,get_free_pages	; function code to get free pages
 
-	call	q_pages 		; pass this one through, since our
+	call	Q_PAGES 		; pass this one through, since our
 					; raw pages = 16 KB
 					; this fcn returns exacly the same
 					; regs as are needed here
 
 	ret				; return to caller
 
-hardware_info	endp
+;hardware_info	endp
 
 	page
 ;-------------------------------------------------------------------
@@ -1310,9 +1319,9 @@ hardware_info	endp
 	AM_DI_Save	dw	0		;DI save variable		;an000; dms;
 	AM_Set_Flag	db	0		;set called flag		;an000; dms;
 
-alternate_map	proc
+alternate_map:
 
-	cmp	ose_functions,ose_enabled	; first, check for fcns enabled
+	cmp	word [cs:ose_functions],ose_enabled ; first, check for fcns enabled
 	je	am_enabled		;
 
 
@@ -1361,7 +1370,7 @@ am_exit:
 ;-------------------------------------------------------------------
 _am_get:
 
-	cmp	cs:AM_Set_Flag,0	;flag set?				;an000; dms;
+	cmp	byte [cs:AM_Set_Flag],0 ;flag set?				;an000; dms;
 	jne	AM_Get_Continue 	;yes					;an000; dms;
 		xor	di,di		;signal set has not			;an000; dms;
 		mov	es,di		;  been performed			;an000; dms;
@@ -1370,9 +1379,9 @@ _am_get:
 
 AM_Get_Continue:
 
-	mov	di,cs:AM_DI_Save
-	mov	es,cs:AM_ES_Save
-	mov	cs:[bp].IE_Saved_DI_Reg,di;set instance table entry		;an000; dms;
+	mov	di,[cs:AM_DI_Save]
+	mov	es,[cs:AM_ES_Save]
+	mov	[cs:bp+Instance_Entry_Struc.IE_Saved_DI_Reg],di ;set instance table entry		;an000; dms;
 
 	call	GET_SUBFCN		; copy the save area info to user's buffer
 
@@ -1398,11 +1407,11 @@ _am_set:
 	cmp	bl,null 		; bl must be 0 for us
 	jne	_am_set_error		; set error code and exit
 
-	mov	di,cs:[bp].IE_Saved_DI_Reg ; restore caller's DI, pointer to mapping control structure
+	mov	di,[cs:bp+Instance_Entry_Struc.IE_Saved_DI_Reg] ; restore caller's DI, pointer to mapping control structure
 
-	mov	cs:AM_ES_Save,es	; save es value 			;an000; dms;
-	mov	cs:AM_DI_Save,di	; save di value 			;an000; dms;
-	mov	cs:AM_Set_Flag,01	; flag indicates set performed		;an000; dms;
+	mov	[cs:AM_ES_Save],es ; save es value 			;an000; dms;
+	mov	[cs:AM_DI_Save],di ; save di value 			;an000; dms;
+	mov	byte [cs:AM_Set_Flag],01 ; flag indicates set performed		;an000; dms;
 	mov	si,di			; restore_pgfrm_map expects DS:SI to point to save area
 	push	es
 	pop	ds
@@ -1431,7 +1440,7 @@ _am_set_exit:
 ;-------------------------------------------------------------------
 _am_size:
 
-	mov	dx,type h_save_struc	; get size requirements for save area
+	mov	dx,sizeof.H_SAVE_STRUC ; get size requirements for save area
 
 	xor	ah,ah			; good return code
 
@@ -1532,7 +1541,7 @@ _am_dma_de_exit:
 	ret
 
 
-alternate_map	endp
+;alternate_map	endp
 
 	page
 ;-------------------------------------------------------------------
@@ -1540,7 +1549,7 @@ alternate_map	endp
 ;	5D - enable/disable OS/E functions set functions
 ;
 ;-------------------------------------------------------------------
-enable_os	proc
+enable_os:
 
 	cmp	al,os_enable		; fcn code for enable
 	je	os_enable_fcn
@@ -1578,10 +1587,10 @@ os_enable_fcn:
 
 ;	find out if this is the first time
 
-	cmp	word ptr access_code[0],0 ; access_code = 0, means enabled
+	cmp	word [cs:access_code+0],0 ; access_code = 0, means enabled
 	jne	ose_check_code		; not 0, must check access code
 
-	cmp	word ptr access_code[2],0 ; access_code = 0, means enabled
+	cmp	word [cs:access_code+2],0 ; access_code = 0, means enabled
 	jne	ose_check_code		; not 0, must check access code
 
 	call	get_code		; get access code to return
@@ -1593,15 +1602,15 @@ os_enable_fcn:
 
 ose_check_code:
 
-	cmp	word ptr access_code[0],bx	; does it match?
+	cmp	word [cs:access_code+0],bx	; does it match?
 	jne	ose_bad 		; no, return access denied error
 
-	cmp	word ptr access_code[2],cx	; get second word of access code
+	cmp	word [cs:access_code+2],cx	; get second word of access code
 	jne	ose_bad 		; no, return access denied error
 
 ;	access code was OK, enable functions and return no error condition
 
-	mov	word ptr ose_functions,ose_enabled	; reset enabled flag
+	mov	word [cs:ose_functions],ose_enabled ; reset enabled flag
 
 	xor	ah,ah			; good return code
 	jmp	ose_exit		; all done, exit
@@ -1636,17 +1645,17 @@ os_disable_fcn:
 
 ;	find out if this is the first time
 
-	cmp	word ptr access_code[0],0 ; access_code = 0, means enabled
+	cmp	word [cs:access_code+0],0 ; access_code = 0, means enabled
 	jne	osd_check_code		; not 0, must check access code
 
-	cmp	word ptr access_code[2],0 ; access_code = 0, means enabled
+	cmp	word [cs:access_code+2],0 ; access_code = 0, means enabled
 	jne	osd_check_code		; not 0, must check access code
 
 ;	yes, first time, must set access code and disable fcns
 
 	call	get_code		; get access code to return
 
-	mov	word ptr ose_functions,ose_disabled	; disable fcns
+	mov	word [cs:ose_functions],ose_disabled ; disable fcns
 
 	xor	ah,ah			; good return code
 	jmp	osd_exit
@@ -1655,15 +1664,15 @@ os_disable_fcn:
 
 osd_check_code:
 
-	cmp	word ptr access_code[0],bx	; does it match?
+	cmp	word [cs:access_code+0],bx	; does it match?
 	jne	osd_bad 		; no, return access denied error
 
-	cmp	word ptr access_code[2],cx	; get second word of access code
+	cmp	word [cs:access_code+2],cx	; get second word of access code
 	jne	osd_bad 		; no, return access denied error
 
 ;	access code was OK, enable functions and return no error condition
 
-	mov	word ptr ose_functions,ose_disabled	; disable functions
+	mov	word [cs:ose_functions],ose_disabled ; disable functions
 
 	xor	ah,ah			; good return code
 	jmp	osd_exit		; all done, exit
@@ -1698,22 +1707,22 @@ os_access_fcn:
 ;	check access code
 
 
-	cmp	word ptr access_code[0],bx	; does it match?
+	cmp	word [cs:access_code+0],bx	; does it match?
 	jne	osa_bad 		; no, return access denied error
 
-	cmp	word ptr access_code[2],cx	; get second word of access code
+	cmp	word [cs:access_code+2],cx	; get second word of access code
 	jne	osa_bad 		; no, return access denied error
 
 ;	clear access code and return "no error" return code (AH = 00)
 
 	xor	ax,ax			; clear ax
-	mov	word ptr access_code[0],ax	; clear access code
-	mov	word ptr access_code[2],ax	; clear access code
+	mov	word [cs:access_code+0],ax	; clear access code
+	mov	word [cs:access_code+2],ax	; clear access code
 
 	jmp	osa_exit
 
 osa_bad:
-	mov	ah,ems_codeA4		; access denied error code
+	mov	ah,EMS_CODEA4		; access denied error code
 
 osa_exit:
 	ret				; return to caller
@@ -1744,7 +1753,7 @@ redo1:
 	cmp	dx,0			; make sure we didn't end up w/0
 	je	redo1
 
-	mov	word ptr access_code[0],dx ; save it away
+	mov	word [cs:access_code+0],dx ; save it away
 	mov	bx,dx
 
 ;	get another one for second word of access code
@@ -1757,7 +1766,7 @@ redo2:
 	cmp	dx,0			; make sure we didn't end up w/0
 	je	redo2
 
-	mov	word ptr access_code[2],dx ; save it away
+	mov	word [cs:access_code+2],dx ; save it away
 	mov	cx,dx			; put second word in cx
 
 	pop	dx			; restore
@@ -1788,5 +1797,5 @@ redo:
 
 	ret				; return to caller
 
-enable_os	endp
+;enable_os	endp
 

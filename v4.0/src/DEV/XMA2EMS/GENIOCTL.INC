@@ -1,5 +1,19 @@
+STRUC GEN_IOCTL_PARM GIO_PLEN_=0, GIO_FCNRC_=0, GIO_WSPP_=0
+{
+.GIO_PLEN   DW      GIO_PLEN_ ; Length of the parameter list       @RH6
+.GIO_FCNRC  DW      GIO_FCNRC_ ; Function code on call, ret code on ret
+.GIO_WSPP   DW      GIO_WSPP_ ; Number of pages to reserve for WSP @RH6
+}
+match =GEN_IOCTL_PARM_LAID_OUT, GEN_IOCTL_PARM_LAID_OUT
+{
+    GEN_IOCTL_PARM_LAID_OUT equ 1
+    virtual at 0
+      GEN_IOCTL_PARM GEN_IOCTL_PARM 0, 0, 0
+      sizeof.GEN_IOCTL_PARM = $ - GEN_IOCTL_PARM
+    end virtual
+}
 
-GENERIC_IOCTL_P PROC
+GENERIC_IOCTL_P:
 ;ีออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออธ
 ;ณ This routine handles the Generic IOCTL call.  The EMS device driver        ณ
 ;ณ provides an interface through the Generic IOCTL call to allocate pages     ณ
@@ -50,18 +64,13 @@ GENERIC_IOCTL_P PROC
 ;ณ                                                                            ณ
 ;ิออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออพ
 
-GIP     EQU     ES:[DI]               ;Pointer to the Generic IOCTL packet @RH6
+GIP     equ     es:DI	;Pointer to the Generic IOCTL packet @RH6
 
-GEN_IOCTL_PARM  STRUC                 ;                                    @RH6
-GIO_PLEN   DW      ?                  ; Length of the parameter list       @RH6
-GIO_FCNRC  DW      ?                  ; Function code on call, ret code on ret
-GIO_WSPP   DW      ?                  ; Number of pages to reserve for WSP @RH6
-GEN_IOCTL_PARM  ENDS                  ;
 
 GENERIC_IOCTL:                        ;                                    @RH6
         PUSH    ES                    ;Save pointer to the request header
         PUSH    BX
-        LES     DI,RH.RH19_RQPK       ;Point ES:DI to the Generic IOCTL    @RH6
+        LES     DI,dword [RH+RH19.RH19_RQPK] ;Point ES:DI to the Generic IOCTL    @RH6
                                       ; request packet                     @RH6
         PUSH    CS                    ;Set addressability to our data      @RH6
         POP     DS                    ;                                    @RH6
@@ -70,28 +79,28 @@ GENERIC_IOCTL:                        ;                                    @RH6
                         ;ณ First insure the parameter list is long enough     ณ
                         ;ณ  to input the number of pages needed by WSP        ณ
                         ;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
-        CMP     GIP.GIO_PLEN,4          ;If the length is 4 bytes then OK  @RH6
+        CMP     word [GIP+GEN_IOCTL_PARM.GIO_PLEN],4 ;If the length is 4 bytes then OK  @RH6
         JE      GIO_FCN_CHK             ;Else give invalid len ret code    @RH6
         MOV     AL,90h                  ; and error exit                   @RH6
         JMP     GIP_EXIT                ;                                  @RH6
                         ;ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ
                         ;ณ Check for function code 0 (only one available)     ณ
 GIO_FCN_CHK:            ;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
-        CMP     GIP.GIO_FCNRC,0         ;                                  @RH6
+        CMP     word [GIP+GEN_IOCTL_PARM.GIO_FCNRC],0 ;                                  @RH6
         JE      GIO_REQNOT0_CHK         ;                                  @RH6
         MOV     AL,EMS_CODE84           ;                                  @RH6
         JMP     GIP_EXIT                ;                                  @RH6
                         ;ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ
                         ;ณ Parm list is OK.  Attempt to reserve WSP pages.    ณ
 GIO_REQNOT0_CHK:        ;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
-        MOV     BX,GIP.GIO_WSPP         ;BX = requested WSP pages          @RH6
+        MOV     BX,word [GIP+GEN_IOCTL_PARM.GIO_WSPP] ;BX = requested WSP pages          @RH6
         CMP     BX,0                    ;Check that request was not 0      @RH6
         JNE     GIO_NOT0                ;                                  @RH6
         MOV     AL,EMS_CODE89           ;                                  @RH6
         JMP     GIP_EXIT                ;                                  @RH6
 
 GIO_NOT0:                               ;                                  @RH6
-        CMP     BX,TOTAL_EMS_PAGES      ;Check for enough total pages      @RH6
+        CMP     BX,[cs:TOTAL_EMS_PAGES] ;Check for enough total pages      @RH6
         JNA     GIO_OKTOTAL             ;                                  @RH6
         MOV     AL,EMS_CODE87           ;                                  @RH6
         JMP     GIP_EXIT                ;                                  @RH6
@@ -103,11 +112,11 @@ GIO_NOT0:                               ;                                  @RH6
                         ; WSP is loading at this point, it is unlikely.     RH8
 GIO_OKTOTAL:
         CLI                             ;Don't allow other alloc or deall  @RH8
-        CMP     BX,FREE_PAGES           ;Check for enough free pages       @RH6
+        CMP     BX,[cs:FREE_PAGES]      ;Check for enough free pages       @RH6
         JNA     GIO_REMOVE_FREE         ; If not enough pages free then    @RH6
-        MOV     AX,FREE_PAGES           ;  return number of free in parm   @RH6
+        MOV     AX,[cs:FREE_PAGES]      ;  return number of free in parm   @RH6
         STI                             ;  list and set ret code           @RH8
-        MOV     GIP.GIO_WSPP,AX         ;                                  @RH6
+        MOV     word [GIP+GEN_IOCTL_PARM.GIO_WSPP],AX ;                                  @RH6
         MOV     AL,EMS_CODE88           ;                                  @RH6
         JMP     GIP_EXIT                ;                                  @RH6
 
@@ -115,15 +124,15 @@ GIO_OKTOTAL:
                         ;ณ Remove WSP pages from the end of the free list     ณ
                         ;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
 GIO_REMOVE_FREE:
-        SUB     FREE_PAGES,BX
-        MOV     CX,FREE_PAGES
-        MOV     SI,PAL_FREE_PTR
+        SUB     [cs:FREE_PAGES],BX
+        MOV     CX,[cs:FREE_PAGES]
+        MOV     SI,[cs:PAL_FREE_PTR]
         STI
         SHL     SI,1
 
         CMP     CX,0                    ;WSP LEAVE NOTHING FREE?
         JNE     GIO_GET_LAST_FREE       ;YES SET FREE PTR TO NULL
-        MOV     PAL_FREE_PTR,PAL_NULL
+        MOV     word [cs:PAL_FREE_PTR],PAL_NULL
         JMP     SHORT GIO_MARK_WSP
 
 
@@ -156,12 +165,12 @@ GIO_WSP_LOOP:
 
 GIP_EXIT:                                                                                 ;GGA
 
-        MOV     GIP.GIO_FCNRC,AX        ;Store ret code in user's req packet
+        MOV     word [GIP+GEN_IOCTL_PARM.GIO_FCNRC],AX ;Store ret code in user's req packet
         POP     BX                      ;Restore for ptr to request header @RH6
         POP     ES                      ;                                  @RH6
-        MOV     RH.RHC_STA,STAT_DONE    ; Store done status and good return@RH6
+        MOV     word [RH+RHC.RHC_STA],STAT_DONE ; Store done status and good return@RH6
                                         ;   code into request header       @RH6
         RET
-GENERIC_IOCTL_P ENDP
+;GENERIC_IOCTL_P ENDP
 
 

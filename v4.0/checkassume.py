@@ -421,6 +421,17 @@ def scan(path, labels, groups, macros=None, carries=None):
         # of a label rather than what is at it, so neither needs a segment.
         if re.match(r"(?i)\s*(TITLE|SUBTTL|PAGE|BREAK|LEA)\b", code):
             continue
+        # An EQU that names a place is text, and the register a reference
+        # goes through is settled where the name is used and not where the
+        # EQU stands.  The release wrote those with an OFFSET inside the
+        # brackets -- XMA2EMS's PAGE_LIST_ENTRY EQU WORD PTR[SI + OFFSET
+        # PAGE_ALLOC_LIST] -- which made the name a number there and asked
+        # MASM for no override at all; the conversion keeps the number and
+        # drops the word, so there is nothing here to judge.  An EQU that
+        # names the register itself is a different thing and is read by
+        # carried() above.
+        if re.match(r"(?i)\s*" + N + r"\s+equ\s", code):
+            continue
         m = re.match(r"\s*Context\s+(DS|ES)\b", code, re.I)
         if m:
             # PUSH SS / POP reg: the data segment, whatever the ASSUMEs say.

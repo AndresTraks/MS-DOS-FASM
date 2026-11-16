@@ -17,38 +17,38 @@ match =Control_LAID_OUT, Control_LAID_OUT
       sizeof.Control = $ - Control
     end virtual
 }
-STRUC Drive_Letter_Return Drive_Type_=0, Drive_Item_Tag_=0, Drive_Pointer_=0, Drive_Number_=0
+STRUC Drive_Letter_Return Drive_Type_=0, Drive_Item_Tag_=0, Drive_Pointer_=0, Drive_Number_=0, Drive_debug_=8 dup(0)
 {
 
 .Drive_Type	db	Drive_Type_ ;				;AN000;
 .Drive_Item_Tag	db	Drive_Item_Tag_ ;				;AN000;
 .Drive_Pointer	dw	Drive_Pointer_ ;				;AN000;
 .Drive_Number	db	Drive_Number_ ;A=1, B=2, C=3			;AN000;
-.Drive_debug	db	8 dup(0)
+.Drive_debug	db	Drive_debug_
 
 }
 match =Drive_Letter_Return_LAID_OUT, Drive_Letter_Return_LAID_OUT
 {
     Drive_Letter_Return_LAID_OUT equ 1
     virtual at 0
-      Drive_Letter_Return Drive_Letter_Return 0, 0, 0, 0
+      Drive_Letter_Return Drive_Letter_Return 0, 0, 0, 0, 8 dup(0)
       sizeof.Drive_Letter_Return = $ - Drive_Letter_Return
     end virtual
 }
-STRUC Switch_Return Switch_Type_=0, Switch_Item_Tag_=0, Switch_Pointer_=0
+STRUC Switch_Return Switch_Type_=0, Switch_Item_Tag_=0, Switch_Pointer_=0, Switch_Debug_=4 dup(0)
 {
 
 .Switch_Type	db	Switch_Type_ ;				;AN000;
 .Switch_Item_Tag db	Switch_Item_Tag_ ;				;AN000;
 .Switch_Pointer	dw	Switch_Pointer_ ;				;AN000;
-.Switch_Debug	db	4 dup(0)
+.Switch_Debug	db	Switch_Debug_
 
 }
 match =Switch_Return_LAID_OUT, Switch_Return_LAID_OUT
 {
     Switch_Return_LAID_OUT equ 1
     virtual at 0
-      Switch_Return Switch_Return 0, 0, 0
+      Switch_Return Switch_Return 0, 0, 0, 4 dup(0)
       sizeof.Switch_Return = $ - Switch_Return
     end virtual
 }

@@ -9,7 +9,7 @@
 
 
 
-romscan proc	near
+romscan:
 
 	push	ax
 	push	dx
@@ -28,21 +28,21 @@ romscan proc	near
 
 ;------------------------
 
-	cmp	map_count,0		; no segments specified, do rom scan
+	cmp	word [cs:map_count],0 ; no segments specified, do rom scan
 	je	no_pages_spec
 
-	mov	cx,map_count		; number of segments to check
+	mov	cx,[cs:map_count] ; number of segments to check
 	xor	di,di			; use di as pointer into table
 
 check_segs:
-	mov	ax,map_table.phys_page_segment[di]
+	mov	ax,[cs:di+map_table.phys_page_segment]
 
 	call	CHK_FREE_SEGMENT	; check a 16K block
 	jnc	segment_ok
 
 ;	display the error
 
-	mov	segment_error,1 	; set segment error flag
+	mov	word [cs:segment_error],1 ; set segment error flag
 
 
 ;	display conflict message
@@ -51,10 +51,10 @@ check_segs:
 	push	dx
 	push	di
 
-	MOV	DI,OFFSET confl_address ; ascii string page frame
+	MOV	DI,Confl_Address        ; ascii string page frame
 	CALL	CNVHEXAT
 
-	MOV	DX,OFFSET conflict_msg	; start of message
+	MOV	DX,Conflict_Msg        ; start of message
 	MOV	AH,9			; dos prt string
 	INT	21H			;
 
@@ -63,18 +63,18 @@ check_segs:
 	pop	ax
 
 segment_ok:
-	add	di,type mappable_phys_page_struct
+	add	di,sizeof.mappable_phys_page_struct
 	loop	check_segs
 
 ;------------------------
 ;	if there were no conflicts, then exit with no error
 
-	cmp	segment_error,0
+	cmp	word [cs:segment_error],0
 	je	rom_scan_no_error	; exit with no error (carry = 0)
 
 ;------------------------
 
-	MOV	DX,OFFSET CRLF		; skip a blank line
+	MOV	DX,CRLF         ; skip a blank line
 	MOV	AH,9			; dos prt string
 	INT	21H			;
 
@@ -83,11 +83,11 @@ segment_ok:
 ;	display no pages message
 
 no_pages_spec:
-	MOV	DX,OFFSET NO_PAGES_MSG	; skip a blank line
+	MOV	DX,No_Pages_Msg        ; skip a blank line
 	MOV	AH,9			; dos prt string
 	INT	21H
 
-	MOV	DX,OFFSET CRLF		; skip a blank line
+	MOV	DX,CRLF         ; skip a blank line
 	MOV	AH,9			; dos prt string
 	INT	21H			;
 
@@ -173,7 +173,7 @@ clean_exit:
 
 	ret
 
-romscan endp
+;romscan endp
 
 
 
@@ -183,7 +183,7 @@ romscan endp
 ;
 ;-------------------------------------------------------------------
 
-FoundBlock	proc	near
+FoundBlock:
 
 	push	ax
 	push	dx
@@ -196,10 +196,10 @@ FoundBlock	proc	near
 	push	cs
 	pop	ds
 
-	MOV	DI,OFFSET hole_address	; ascii string page frame
+	MOV	DI,Hole_Address        ; ascii string page frame
 	CALL	CNVHEXAT
 
-	MOV	DX,OFFSET hole_msg	; start of message
+	MOV	DX,Hole_Msg        ; start of message
 	MOV	AH,9			; dos prt string
 	INT	21H			;
 
@@ -211,7 +211,7 @@ FoundBlock	proc	near
 
 	ret
 
-FoundBlock	endp
+;FoundBlock	endp
 
 ;-------------------------------------------------------------------
 ;
@@ -219,7 +219,7 @@ FoundBlock	endp
 ;
 ;-------------------------------------------------------------------
 
-FoundFrame	proc	near
+FoundFrame:
 
 	push	ax
 	push	dx
@@ -232,10 +232,10 @@ FoundFrame	proc	near
 	push	cs
 	pop	ds
 
-	MOV	DI,OFFSET frame_address  ; ascii string page frame
+	MOV	DI,Frame_Address         ; ascii string page frame
 	CALL	CNVHEXAT
 
-	MOV	DX,OFFSET frame_msg	 ; start of message
+	MOV	DX,Frame_Msg         ; start of message
 	MOV	AH,9			; dos prt string
 	INT	21H			;
 
@@ -247,7 +247,7 @@ FoundFrame	proc	near
 
 	ret
 
-FoundFrame	endp
+;FoundFrame	endp
 
 
 
@@ -285,7 +285,7 @@ ROM_SCAN	EQU	0AA55H
 CARD_SEL_PORT	EQU	091h		; CARD SELECTED LATCH PORT
 
 
-CHK_FREE_SEGMENT    PROC  NEAR
+CHK_FREE_SEGMENT:
 
 	PUSH	AX			; Save work registers
 	PUSH	BX
@@ -306,7 +306,7 @@ CHK_FREE_NEXT:
 
 					;	CHECK FOR ROM BLOCK SIGNATURE
 	MOV	ES,DX			; Change to new ROM segment
-	CMP	ES:WORD PTR [0],ROM_SCAN; Check if a ROM module is present
+	CMP	word [es:0],ROM_SCAN    ; Check if a ROM module is present
 	JE	CHK_FREE_SIZE		; Go check length if ROM SCAN signature
 
 	CMP	BX,DX			; Check if into the target segment yet
@@ -334,7 +334,7 @@ CHK_FREE_NEXT:
 
 CHK_FREE_SIZE:				;	CHECK LENGTH INTO 16K SEGMENT
 	push	cx			; gga
-	MOV	AL,ES:BYTE PTR [2]	; Get ROM module length in 512 bytes
+	MOV	AL,byte [es:2]     ; Get ROM module length in 512 bytes
 	MOV	AH,0			; Clear high byte
 	mov	cl,5			; gga
 	SHL	AX,cl			; gga convert to segment length (16 byte)
@@ -354,7 +354,7 @@ CHK_FREE_OK:
 	POP	AX
 	RET				; EXIT (NC) if segment free to test
 
-CHK_FREE_SEGMENT    ENDP
+;CHK_FREE_SEGMENT    ENDP
 
 
 ;------------------------------------------------------------------------

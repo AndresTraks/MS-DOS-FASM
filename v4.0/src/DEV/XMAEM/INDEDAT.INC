@@ -111,7 +111,7 @@ match =TSS386_LAID_OUT, TSS386_LAID_OUT
       sizeof.TSS386 = $ - TSS386
     end virtual
 }
-STRUC GDT_DEF UNUSED_ENTRY_=0, GDT_PTR_=0, MON_IDT_PTR_=0, RSDA_PTR_=0, HUGE_PTR_=0, LA_PTR_=0, C_BWCRT_PTR_=0, C_CCRT_PTR_=0, E_CCRT_PTR_=0, E_CCRT_PTR2_=0, SYS_ROM_CS_=0, SYS_ROM_DS_=0, SYS_PATCH_CS_=0, SYS_PATCH_DS_=0, V_ROM_CS_=0, V_ROM_DS_=0, V_PATCH_CS_=0, V_PATCH_DS_=0, ES_TEMP_=0, CS_TEMP_=0, SS_TEMP_=0, DS_TEMP_=0, MON_LDTR_=0, MON_DS_=0, MON_ES_=0, MON_SS_=0, MON_CS_=0, MON_TR_SS_=0, MON_TR_BP_=0, MON_TR_HWI_=0, MON_TR_OI_=0, KBD_OWNER_SDA_=0, DISPATCH_TASK_=0, GDT_DEF_34_=0, HWI_LDT_=0, BASICS_SEG_=0, BIOSS_SEG_=0, RSVD_GDT_=0, USER_CS_=0, USER_SS_=0, USER_DS_=0, USER_ES_=0, USER_TSS_=0, USER_TSS_DAT_=0, USER_LDT_=0, USER_LDT_DAT_=0, last_gdt_byte_=0
+STRUC GDT_DEF UNUSED_ENTRY_=0, GDT_PTR_=0, MON_IDT_PTR_=0, RSDA_PTR_=0, HUGE_PTR_=0, LA_PTR_=0, C_BWCRT_PTR_=0, C_CCRT_PTR_=0, E_CCRT_PTR_=0, E_CCRT_PTR2_=0, SYS_ROM_CS_=0, SYS_ROM_DS_=0, SYS_PATCH_CS_=0, SYS_PATCH_DS_=0, V_ROM_CS_=0, V_ROM_DS_=0, V_PATCH_CS_=0, V_PATCH_DS_=0, ES_TEMP_=0, CS_TEMP_=0, SS_TEMP_=0, DS_TEMP_=0, MON_LDTR_=0, MON_DS_=0, MON_ES_=0, MON_SS_=0, MON_CS_=0, MON_TR_SS_=0, MON_TR_BP_=0, MON_TR_HWI_=0, MON_TR_OI_=0, KBD_OWNER_SDA_=0, VTIMER_VECTOR_=16*8 dup (0), SEX_TSS_=32*8 dup (0), HWI_TSS_=16*16 dup (0), DISPATCH_TASK_=0, GDT_DEF_37_=0, HWI_LDT_=0, BASICS_SEG_=0, BIOSS_SEG_=0, RSVD_GDT_=0, PM_VM_=32 DUP (0), USER_CS_=0, USER_SS_=0, USER_DS_=0, USER_ES_=0, USER_TSS_=0, USER_TSS_DAT_=0, USER_LDT_=0, USER_LDT_DAT_=0, USER_VMS_=14*32 dup (0), SCRUBBER_=32 DUP (0), last_gdt_byte_=0
 {
 
 .UNUSED_ENTRY    DQ      UNUSED_ENTRY_ ; Seg reg = 0 illegal - this entry is
@@ -159,23 +159,23 @@ STRUC GDT_DEF UNUSED_ENTRY_=0, GDT_PTR_=0, MON_IDT_PTR_=0, RSDA_PTR_=0, HUGE_PTR
 
 .KBD_OWNER_SDA   DQ      KBD_OWNER_SDA_ ; Fast path to keyboard owner's SDA
 
-.VTIMER_VECTOR   DB     16*8 dup (0)      ; 16 VM timer-related descriptors
+.VTIMER_VECTOR   DB     VTIMER_VECTOR_ ; 16 VM timer-related descriptors
 
 ;       Below are the 32 system exception service routine descriptors.
 
-.SEX_TSS         DB      32*8 dup (0)
+.SEX_TSS         DB      SEX_TSS_
 
 ;       Below are the 16 hardware interrupt service routine TSS descriptor
 ;       pairs.  The first is suitable for TR loading (i.e. target selector
 ;       in the corresponding task gate) and the other is a TSS-as-data
 ;       descriptor.
 
-.HWI_TSS         DB      16*16 dup (0)
+.HWI_TSS         DB      HWI_TSS_
 
 ;       This is the descriptor pair for the dispatcher (same format as HWI).
 
 .DISPATCH_TASK   DQ      DISPATCH_TASK_
-                DQ      GDT_DEF_34_
+                DQ      GDT_DEF_37_
 
 .HWI_LDT         DQ      HWI_LDT_
 
@@ -195,7 +195,7 @@ STRUC GDT_DEF UNUSED_ENTRY_=0, GDT_PTR_=0, MON_IDT_PTR_=0, RSDA_PTR_=0, HUGE_PTR
                                       ; The above leaves space for the
                                       ; descriptors needed for 18 VMs
 
-.PM_VM           DB     32 DUP (0)     ; Program Manager's virtual machine
+.PM_VM           DB     PM_VM_ ; Program Manager's virtual machine
                                       ; entries.  This will function as
                                       ; the highest priority machine.
 .USER_CS         DQ      USER_CS_ ; Debugee's code segment
@@ -207,9 +207,9 @@ STRUC GDT_DEF UNUSED_ENTRY_=0, GDT_PTR_=0, MON_IDT_PTR_=0, RSDA_PTR_=0, HUGE_PTR
 .USER_LDT        DQ      USER_LDT_ ; Debugee's LDT definition
 .USER_LDT_DAT    DQ      USER_LDT_DAT_ ; Debugee's LDT as a data segment
 
-.USER_VMS        DB     14*32 dup (0)     ; 16 user VMs
+.USER_VMS        DB     USER_VMS_ ; 16 user VMs
 
-.SCRUBBER        DB     32 DUP (0)     ; RAM scrubber - dispatched when no other
+.SCRUBBER        DB     SCRUBBER_ ; RAM scrubber - dispatched when no other
                                       ; machine has work to do
 .last_gdt_byte   db     last_gdt_byte_ ; marker for last GDT byte + 1
 }
@@ -217,7 +217,7 @@ match =GDT_DEF_LAID_OUT, GDT_DEF_LAID_OUT
 {
     GDT_DEF_LAID_OUT equ 1
     virtual at 0
-      GDT_DEF GDT_DEF 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+      GDT_DEF GDT_DEF 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16*8 dup (0), 32*8 dup (0), 16*16 dup (0), 0, 0, 0, 0, 0, 0, 32 DUP (0), 0, 0, 0, 0, 0, 0, 0, 0, 14*32 dup (0), 32 DUP (0), 0
       sizeof.GDT_DEF = $ - GDT_DEF
     end virtual
 }

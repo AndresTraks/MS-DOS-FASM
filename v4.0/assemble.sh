@@ -419,3 +419,13 @@ device COUNTRY MKCLNK MKCNTRY.EXE
 # after it, because the driver writes its own segment into the task state
 # segment it builds and only the loader knows that number.
 device XMAEM XMAELNK XMAEM.SYS
+
+# XMA2EMS.SYS, the expanded memory manager: one module and the ten headers
+# it reads, in one segment, which XMA2LNK.ASM reads on its own.  It is the
+# LIM 4.0 side of the pair XMAEM begins -- XMAEM makes a 386 look like the
+# XMA memory card of a 3270 PC, and this hands the card's pages out as
+# expanded memory through INT 67H, which is what the device called EMMXXXX0
+# answers.  It reads the DEVICE= line with the kernel's own parser, runs the
+# card's diagnostics as it comes up, and throws the initialisation away.
+# The release links the one object and runs EXE2BIN over the result.
+device XMA2EMS XMA2LNK XMA2EMS.SYS

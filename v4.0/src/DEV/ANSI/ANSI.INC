@@ -1,20 +1,20 @@
 ; the layouts below read these, and an EQU is read where it stands
 NAME_LEN EQU    8                       ;                                      ;AN000;
 
-STRUC DHS DH_NEXTO_=0, DH_NEXTS_=0, DHS_3_=0, DH_STRAO_=0, DH_INTRO_=0
+STRUC DHS DH_NEXTO_=0, DH_NEXTS_=0, DHS_3_=0, DH_STRAO_=0, DH_INTRO_=0, DH_NAME_=NAME_LEN DUP(0)
 {
 .DH_NEXTO DW     DH_NEXTO_ ; offset of pointer to next header     ;AN000;
 .DH_NEXTS DW     DH_NEXTS_ ; segment of pointer to next header    ;AN000;
         DW      DHS_3_ ; attribute                            ;AN000;
 .DH_STRAO DW     DH_STRAO_ ; offset to strategy routine           ;AN000;
 .DH_INTRO DW     DH_INTRO_ ; offset to interrupt routine          ;AN000;
-.DH_NAME DB      NAME_LEN DUP(0)         ; device name in this header           ;AN000;
+.DH_NAME DB      DH_NAME_ ; device name in this header           ;AN000;
 }
 match =DHS_LAID_OUT, DHS_LAID_OUT
 {
     DHS_LAID_OUT equ 1
     virtual at 0
-      DHS DHS 0, 0, 0, 0, 0
+      DHS DHS 0, 0, 0, 0, 0, NAME_LEN DUP(0)
       sizeof.DHS = $ - DHS
     end virtual
 }

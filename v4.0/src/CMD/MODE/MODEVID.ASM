@@ -1,17 +1,17 @@
-STRUC info_block active_display_="V", alternate_display_="V", misc_state_info_="V"
+STRUC info_block who_cares1_=025H  DUP ("V"), active_display_="V", alternate_display_="V", who_cares2_=6	 DUP ("V"), misc_state_info_="V", who_cares3_=12H	 DUP ("V")
 {
-   .who_cares1	     DB    025H  DUP ("V")
+   .who_cares1	     DB    who_cares1_
    .active_display    DB    active_display_
    .alternate_display DB    alternate_display_
-   .who_cares2	     DB    6	 DUP ("V")
+   .who_cares2	     DB    who_cares2_
    .misc_state_info   DB    misc_state_info_
-   .who_cares3	     DB    12H	 DUP ("V")
+   .who_cares3	     DB    who_cares3_
 }
 match =info_block_LAID_OUT, info_block_LAID_OUT
 {
     info_block_LAID_OUT equ 1
     virtual at 0
-      info_block info_block "V", "V", "V"
+      info_block info_block 025H  DUP ("V"), "V", "V", 6	 DUP ("V"), "V", 12H	 DUP ("V")
       sizeof.info_block = $ - info_block
     end virtual
 }

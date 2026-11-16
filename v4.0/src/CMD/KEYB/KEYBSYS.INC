@@ -1,8 +1,8 @@
-STRUC KEYBSYS_HEADER KH_MAX_COM_SZ_=0, KH_MAX_SPEC_SZ_=0, KH_MAX_LOGIC_SZ_=0, KH_RESV_2_=0, KH_NUM_ID_=0, KH_NUM_LANG_=0, KH_LANG_PTRS_=0
+STRUC KEYBSYS_HEADER KH_RESV_1_=8 DUP(0), KH_MAX_COM_SZ_=0, KH_MAX_SPEC_SZ_=0, KH_MAX_LOGIC_SZ_=0, KH_RESV_2_=0, KH_NUM_ID_=0, KH_NUM_LANG_=0, KH_LANG_PTRS_=0
 {
 				       ;;
 .KH_SIGNATURE	DB   0FFh,'KEYB   '    ;; signature
-.KH_RESV_1	DB   8 DUP(0)	       ;; reserved
+.KH_RESV_1	DB   KH_RESV_1_ ;; reserved
 .KH_MAX_COM_SZ	DW   KH_MAX_COM_SZ_ ;AN000;**chg  ;; maximum size of Common Xlat Sect
 .KH_MAX_SPEC_SZ	DW   KH_MAX_SPEC_SZ_ ;AN000;;**chg   ;; max size of Specific Xlat Sect
 .KH_MAX_LOGIC_SZ DW   KH_MAX_LOGIC_SZ_ ;AN000;;**chg   ;; max size of State Logic
@@ -19,7 +19,7 @@ match =KEYBSYS_HEADER_LAID_OUT, KEYBSYS_HEADER_LAID_OUT
 {
     KEYBSYS_HEADER_LAID_OUT equ 1
     virtual at 0
-      KEYBSYS_HEADER KEYBSYS_HEADER 0, 0, 0, 0, 0, 0, 0
+      KEYBSYS_HEADER KEYBSYS_HEADER 8 DUP(0), 0, 0, 0, 0, 0, 0, 0
       sizeof.KEYBSYS_HEADER = $ - KEYBSYS_HEADER
     end virtual
 }

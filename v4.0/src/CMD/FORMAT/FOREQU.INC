@@ -1,15 +1,15 @@
-STRUC Media_ID Media_ID_Info_Level_=0, Media_ID_Serial_Number_=0
+STRUC Media_ID Media_ID_Info_Level_=0, Media_ID_Serial_Number_=0, Media_ID_Volume_Label_=11 dup(" "), Media_ID_File_System_=8  dup(" ")
 {
 .Media_ID_Info_Level dw Media_ID_Info_Level_
 .Media_ID_Serial_Number dd Media_ID_Serial_Number_
-.Media_ID_Volume_Label db 11 dup(" ")
-.Media_ID_File_System db 8  dup(" ")
+.Media_ID_Volume_Label db Media_ID_Volume_Label_
+.Media_ID_File_System db Media_ID_File_System_
 }
 match =Media_ID_LAID_OUT, Media_ID_LAID_OUT
 {
     Media_ID_LAID_OUT equ 1
     virtual at 0
-      Media_ID Media_ID 0, 0
+      Media_ID Media_ID 0, 0, 11 dup(" "), 8  dup(" ")
       sizeof.Media_ID = $ - Media_ID
     end virtual
 }

@@ -129,20 +129,20 @@ match =GBLS_LAID_OUT, GBLS_LAID_OUT
       sizeof.GBLS = $ - GBLS
     end virtual
 }
-STRUC DHS DH_NEXTO_=0, DH_NEXTS_=0, DHS_3_=0, DH_STRAO_=0, DH_INTRO_=0
+STRUC DHS DH_NEXTO_=0, DH_NEXTS_=0, DHS_3_=0, DH_STRAO_=0, DH_INTRO_=0, DH_NAME_=NAME_LEN DUP(0)
 {
 .DH_NEXTO DW	DH_NEXTO_ ;; offset of pointer to next header
 .DH_NEXTS DW	DH_NEXTS_ ;; segment of pointer to next header
 	DW	DHS_3_ ;; attribute
 .DH_STRAO DW	DH_STRAO_ ;; offset to strategy routine
 .DH_INTRO DW	DH_INTRO_ ;; offset to interrupt routine
-.DH_NAME DB	NAME_LEN DUP(0) 	;; device name in this header
+.DH_NAME DB	DH_NAME_ ;; device name in this header
 }
 match =DHS_LAID_OUT, DHS_LAID_OUT
 {
     DHS_LAID_OUT equ 1
     virtual at 0
-      DHS DHS 0, 0, 0, 0, 0
+      DHS DHS 0, 0, 0, 0, 0, NAME_LEN DUP(0)
       sizeof.DHS = $ - DHS
     end virtual
 }
@@ -288,7 +288,7 @@ match =PAR_PARMT_LAID_OUT, PAR_PARMT_LAID_OUT
       sizeof.PAR_PARMT = $ - PAR_PARMT
     end virtual
 }
-STRUC BUF_DATA BFLAG_=-1, DEV_HDRO_=-1, DEV_HDRS_=-1, LPT_STRAO_=-1, LPT_STRAS_=-1, LPT_INTRO_=-1, LPT_INTRS_=-1, RH_PTRO_=-1, RH_PTRS_=-1, RNORMO_=-1, prn_bufo_=-1, did_prn_=0, PCLASS_=0, STATE_=NORMAL, STATUS_=GOOD, PDESCO_=-1, HSLMX_=0, HARDMX_=0, HARDSO_=-1, HCARMX_=0, HRBUFO_=-1, RSLMX_=0, RAMMX_=0, RAMSO_=-1, RBUFMX_=0, RMBUFO_=-1, FTSZPA_=-1, FTSIZE_=0, FTSTART_=-1, FTSLOTO_=-1, FTDLO_=-1, FSELEN_=0, FSELMAX_=0, SAVED_CP_=-1, BUFEND_=0
+STRUC BUF_DATA BFLAG_=-1, DEV_HDRO_=-1, DEV_HDRS_=-1, LPT_STRAO_=-1, LPT_STRAS_=-1, LPT_INTRO_=-1, LPT_INTRS_=-1, RH_PTRO_=-1, RH_PTRS_=-1, RNORMO_=-1, prn_bufo_=-1, did_prn_=0, PCLASS_=0, STATE_=NORMAL, STATUS_=GOOD, PDESCO_=-1, HSLMX_=0, HARDMX_=0, HARDSO_=-1, HCARMX_=0, HRBUFO_=-1, RSLMX_=0, RAMMX_=0, RAMSO_=-1, RBUFMX_=0, RMBUFO_=-1, FTSZPA_=-1, FTSIZE_=0, FTSTART_=-1, FTSLOTO_=-1, FTDLO_=-1, FSELEN_=0, FSELMAX_=0, PAR_EXTRACTO_=(sizeof.PAR_DEVOT) DUP (-1), SAVED_CP_=-1, BUFEND_=0
 {
 .BFLAG	 DW	BFLAG_ ;; buf flag for initialisation
 					;; -1 = buf not yet initialised
@@ -358,7 +358,7 @@ STRUC BUF_DATA BFLAG_=-1, DEV_HDRO_=-1, DEV_HDRS_=-1, LPT_STRAO_=-1, LPT_STRAS_=
 .FSELMAX DW	FSELMAX_ ;; max. room reserved for selection
 					;; controls.
 					;;
-.PAR_EXTRACTO DB (sizeof.PAR_DEVOT) DUP (-1) ;; Offset to parameter extracts
+.PAR_EXTRACTO DB PAR_EXTRACTO_ ;; Offset to parameter extracts
 .SAVED_CP    DW	SAVED_CP_ ;; WGR saved code page during lock	    ;AN000;
 .BUFEND	DW	BUFEND_ ;; END OF BUFFER, for LPT1 copy.
 }
@@ -366,7 +366,7 @@ match =BUF_DATA_LAID_OUT, BUF_DATA_LAID_OUT
 {
     BUF_DATA_LAID_OUT equ 1
     virtual at 0
-      BUF_DATA BUF_DATA 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+      BUF_DATA BUF_DATA 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (sizeof.PAR_DEVOT) DUP (-1), 0, 0
       sizeof.BUF_DATA = $ - BUF_DATA
     end virtual
 }

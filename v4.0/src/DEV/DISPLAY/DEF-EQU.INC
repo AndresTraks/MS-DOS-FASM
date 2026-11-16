@@ -17,20 +17,20 @@ match =RHC_LAID_OUT, RHC_LAID_OUT
       sizeof.RHC = $ - RHC
     end virtual
 }
-STRUC DHS DH_NEXTO_=0, DH_NEXTS_=0, DHS_3_=0, DH_STRAO_=0, DH_INTRO_=0
+STRUC DHS DH_NEXTO_=0, DH_NEXTS_=0, DHS_3_=0, DH_STRAO_=0, DH_INTRO_=0, DH_NAME_=NAME_LEN DUP(0)
 {
 .DH_NEXTO DW     DH_NEXTO_ ; offset of pointer to next header
 .DH_NEXTS DW     DH_NEXTS_ ; segment of pointer to next header
         DW      DHS_3_ ; attribute
 .DH_STRAO DW     DH_STRAO_ ; offset to strategy routine
 .DH_INTRO DW     DH_INTRO_ ; offset to interrupt routine
-.DH_NAME DB      NAME_LEN DUP(0)         ; device name in this header
+.DH_NAME DB      DH_NAME_ ; device name in this header
 }
 match =DHS_LAID_OUT, DHS_LAID_OUT
 {
     DHS_LAID_OUT equ 1
     virtual at 0
-      DHS DHS 0, 0, 0, 0, 0
+      DHS DHS 0, 0, 0, 0, 0, NAME_LEN DUP(0)
       sizeof.DHS = $ - DHS
     end virtual
 }

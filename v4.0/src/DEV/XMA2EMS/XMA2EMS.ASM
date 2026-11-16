@@ -1,3 +1,187 @@
+; the layouts below read these, and an EQU is read where it stands
+REUSABLE_HANDLE    EQU 'RH'             ;Reusable (free) entry in the      @RH1; the release writes 'HR'
+PAL_NULL	   EQU '--'             ; End of list marker               @RH8
+REUSABLE_SAVEA	   EQU 'RS'             ;Reusable (free) entry in the      @RH1; the release writes 'SR'
+NO_CARD 	EQU   0FFFFh		; No card present		   @RH5
+
+STRUC RHC RHC_1_=0, RHC_2_=0, RHC_CMD_=0, RHC_STA_=0, RHC_5_=0
+{
+	DB	RHC_1_ ;length of Request Header (including data)
+	DB	RHC_2_ ;unit code (subunit)
+.RHC_CMD DB	RHC_CMD_ ;command code
+.RHC_STA DW	RHC_STA_ ;status
+	DQ	RHC_5_ ;reserved for DOS
+}
+match =RHC_LAID_OUT, RHC_LAID_OUT
+{
+    RHC_LAID_OUT equ 1
+    virtual at 0
+      RHC RHC 0, 0, 0, 0, 0
+      sizeof.RHC = $ - RHC
+    end virtual
+}
+STRUC RH0 RH0_NUN_=0, RH0_ENDO_=0, RH0_ENDS_=0, RH0_BPBO_=0, RH0_BPBS_=0, RH0_DRIV_=0, RH0_ERR_=0
+{
+	rb      (sizeof.RHC)  ;common portion
+
+.RH0_NUN DB	RH0_NUN_ ;number of units
+					;set to 1 if installation succeeds,
+					;set to 0 to cause installation failure
+.RH0_ENDO DW	RH0_ENDO_ ;offset  of ending address
+.RH0_ENDS DW	RH0_ENDS_ ;segment of ending address
+.RH0_BPBO DW	RH0_BPBO_ ;offset  of BPB array address
+.RH0_BPBS DW	RH0_BPBS_ ;segment of BPB array address
+.RH0_DRIV DB	RH0_DRIV_ ;drive code (DOS 3 only)
+.RH0_ERR  DW	RH0_ERR_ ; error flag used by DOS - gga
+}
+match =RH0_LAID_OUT, RH0_LAID_OUT
+{
+    RH0_LAID_OUT equ 1
+    virtual at 0
+      RH0 RH0 0, 0, 0, 0, 0, 0, 0
+      sizeof.RH0 = $ - RH0
+    end virtual
+}
+STRUC RH10
+{
+	rb      (sizeof.RHC)  ;common portion
+}
+match =RH10_LAID_OUT, RH10_LAID_OUT
+{
+    RH10_LAID_OUT equ 1
+    virtual at 0
+      RH10 RH10
+      sizeof.RH10 = $ - RH10
+    end virtual
+}
+STRUC RH19 RH19_MAJF_=0, RH19_MINF_=0, RH19_SI_=0, RH19_DI_=0, RH19_RQPK_=0
+{
+	    rb      (sizeof.RHC)   ; Reserve space for the header	   @RH6
+
+.RH19_MAJF   DB	 RH19_MAJF_ ; Major function			   @RH6
+.RH19_MINF   DB	 RH19_MINF_ ; Minor function			   @RH6
+.RH19_SI     DW	 RH19_SI_ ; Contents of SI			   @RH6
+.RH19_DI     DW	 RH19_DI_ ; Contents of DI			   @RH6
+.RH19_RQPK   DD	 RH19_RQPK_ ; Pointer to Generic IOCTL request packet  @RH6
+}
+match =RH19_LAID_OUT, RH19_LAID_OUT
+{
+    RH19_LAID_OUT equ 1
+    virtual at 0
+      RH19 RH19 0, 0, 0, 0, 0
+      sizeof.RH19 = $ - RH19
+    end virtual
+}
+STRUC H_LOOKUP_STRUC H_PAGES_=REUSABLE_HANDLE, H_PAL_PTR_=PAL_NULL, H_NAME_=8 DUP(0), H_BANK_=0, xref_pages_=0, xref_index_=0
+{
+.H_PAGES 	DW	H_PAGES_ ;If handle is active, # of owned   @RH8
+					; pages.  Init to reusable handle   RH8
+.H_PAL_PTR	DW	H_PAL_PTR_ ;Head ptr for owned pages in PAL   @RH8
+.H_NAME		DB	H_NAME_ ;Name - new for LIM 4.0 	   @GGA
+.H_BANK		DB	H_BANK_ ;If virtual, this handle's bank    @RH6
+.xref_pages	dw	xref_pages_ ;temp to compile
+.xref_index	dw	xref_index_ ;temp to compile
+}
+match =H_LOOKUP_STRUC_LAID_OUT, H_LOOKUP_STRUC_LAID_OUT
+{
+    H_LOOKUP_STRUC_LAID_OUT equ 1
+    virtual at 0
+      H_LOOKUP_STRUC H_LOOKUP_STRUC 0, 0, 8 DUP(0), 0, 0, 0
+      sizeof.H_LOOKUP_STRUC = $ - H_LOOKUP_STRUC
+    end virtual
+}
+STRUC H_SAVEA_ENTRY HSA_HNDL_=0, HSA_LP_=0
+{
+.HSA_HNDL	DW    HSA_HNDL_ ; entry in the handle save area.   @RH5
+.HSA_LP		DW    HSA_LP_ ; It is used to clear the save	   @RH5
+}
+match =H_SAVEA_ENTRY_LAID_OUT, H_SAVEA_ENTRY_LAID_OUT
+{
+    H_SAVEA_ENTRY_LAID_OUT equ 1
+    virtual at 0
+      H_SAVEA_ENTRY H_SAVEA_ENTRY 0, 0
+      sizeof.H_SAVEA_ENTRY = $ - H_SAVEA_ENTRY
+    end virtual
+}
+STRUC H_SAVE_STRUC PG0_HNDL_=0, PG0_LP_=REUSABLE_SAVEA, PG1_HNDL_=0, PG1_LP_=REUSABLE_SAVEA, PG2_HNDL_=0, PG2_LP_=REUSABLE_SAVEA, PG3_HNDL_=0, PG3_LP_=REUSABLE_SAVEA, PGFE_HNDL_=0, PGFE_LP_=REUSABLE_SAVEA, PGFF_HNDL_=0, PGFF_LP_=REUSABLE_SAVEA
+{
+.PG0_HNDL	DW    PG0_HNDL_
+.PG0_LP		DW    PG0_LP_
+.PG1_HNDL	DW    PG1_HNDL_
+.PG1_LP		DW    PG1_LP_
+.PG2_HNDL	DW    PG2_HNDL_
+.PG2_LP		DW    PG2_LP_
+.PG3_HNDL	DW    PG3_HNDL_
+.PG3_LP		DW    PG3_LP_
+.PGFE_HNDL	DW    PGFE_HNDL_ ;AN006;
+.PGFE_LP 	DW    PGFE_LP_ ;AN006;
+.PGFF_HNDL	DW    PGFF_HNDL_ ;AN006;
+.PGFF_LP 	DW    PGFF_LP_ ;AN006;
+}
+match =H_SAVE_STRUC_LAID_OUT, H_SAVE_STRUC_LAID_OUT
+{
+    H_SAVE_STRUC_LAID_OUT equ 1
+    virtual at 0
+      H_SAVE_STRUC H_SAVE_STRUC 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+      sizeof.H_SAVE_STRUC = $ - H_SAVE_STRUC
+    end virtual
+}
+STRUC mappable_phys_page_struct phys_page_segment_=0, phys_page_number_=0, ppm_handle_=0, ppm_log_page_=0
+{
+  .phys_page_segment	dw	phys_page_segment_ ; segment
+  .phys_page_number	dw	phys_page_number_ ; page ID
+  .ppm_handle		dw	ppm_handle_ ; handle, -1 means unused
+  .ppm_log_page		dw	ppm_log_page_ ; logical page, -1 means unused
+}
+match =mappable_phys_page_struct_LAID_OUT, mappable_phys_page_struct_LAID_OUT
+{
+    mappable_phys_page_struct_LAID_OUT equ 1
+    virtual at 0
+      mappable_phys_page_struct mappable_phys_page_struct 0, 0, 0, 0
+      sizeof.mappable_phys_page_struct = $ - mappable_phys_page_struct
+    end virtual
+}
+STRUC MEM_CARD_STRUC CARD_ID_=NO_CARD, CARD_SLOT_=0, START_PG_NUM_=0, END_PG_NUM_=0
+{
+.CARD_ID 	DW	CARD_ID_ ;Card ID from ports 100 and 101    @RH5
+.CARD_SLOT	DB	CARD_SLOT_ ;Physical slot of card (0 based)   @RH5
+.START_PG_NUM	DW	START_PG_NUM_ ;Starting and ending #s of the	   @RH5
+.END_PG_NUM	DW	END_PG_NUM_ ; pages this card has within the   @RH5
+}
+match =MEM_CARD_STRUC_LAID_OUT, MEM_CARD_STRUC_LAID_OUT
+{
+    MEM_CARD_STRUC_LAID_OUT equ 1
+    virtual at 0
+      MEM_CARD_STRUC MEM_CARD_STRUC 0, 0, 0, 0
+      sizeof.MEM_CARD_STRUC = $ - MEM_CARD_STRUC
+    end virtual
+}
+STRUC MULTIC_PM_STRUC PG_CARD_=NO_CARD, PG_SLOT_=0
+{
+.PG_CARD 	DW	PG_CARD_ ; and slot of the card currently   @RH5
+.PG_SLOT 	DB	PG_SLOT_ ; mapped to this page of the page  @RH5
+}
+match =MULTIC_PM_STRUC_LAID_OUT, MULTIC_PM_STRUC_LAID_OUT
+{
+    MULTIC_PM_STRUC_LAID_OUT equ 1
+    virtual at 0
+      MULTIC_PM_STRUC MULTIC_PM_STRUC 0, 0
+      sizeof.MULTIC_PM_STRUC = $ - MULTIC_PM_STRUC
+    end virtual
+}
+STRUC Instance_Entry_Struc IE_Alloc_Byte_=0, IE_Saved_DI_Reg_=0
+{
+	.IE_Alloc_Byte	db	IE_Alloc_Byte_ ;instance allocated byte		;an000; dms;
+	.IE_Saved_DI_Reg dw	IE_Saved_DI_Reg_ ;saved di register			;an000; dms;
+}
+match =Instance_Entry_Struc_LAID_OUT, Instance_Entry_Struc_LAID_OUT
+{
+    Instance_Entry_Struc_LAID_OUT equ 1
+    virtual at 0
+      Instance_Entry_Struc Instance_Entry_Struc 0, 0
+      sizeof.Instance_Entry_Struc = $ - Instance_Entry_Struc
+    end virtual
+}
 
 PAGE	85,132				;Set for 5182 Pageprinter
 					;85 lines per page, 132 col per line
@@ -63,15 +247,15 @@ EM_Size_Get EQU 88h			;get EM size				;an000; dms;
 EMM_VERSION EQU 40H			;VERSION 4.0
 PF_HI_LIMIT EQU 0E000H			;highest allowable page frame segment
 PF_LOW_LIMIT EQU 0A000H 		;lowest allowable page frame segment
-OK	EQU	'OK'                    ;card is good
-HW_ERROR EQU	'HW'                    ;card is not functional...HardWare error
-SW_ERROR EQU	'SW'                    ;SoftWare error has been detected
+OK	EQU	'KO'                    ;card is good; the release writes 'OK'
+HW_ERROR EQU	'WH'                    ;card is not functional...HardWare error; the release writes 'HW'
+SW_ERROR EQU	'WS'                    ;SoftWare error has been detected; the release writes 'SW'
 PAGE_INHIBITTED    EQU 0FFFFh		;Entry in the save area indicating
 					; a page is currently inhibitted
-REUSABLE_HANDLE    EQU 'HR'             ;Reusable (free) entry in the      @RH1
+REUSABLE_HANDLE    EQU 'RH'             ;Reusable (free) entry in the      @RH1; the release writes 'HR'
 					; handle lookup table.	Placed in  @RH1
 					; the 'pages' field                @RH1
-REUSABLE_SAVEA	   EQU 'SR'             ;Reusable (free) entry in the      @RH1
+REUSABLE_SAVEA	   EQU 'RS'             ;Reusable (free) entry in the      @RH1; the release writes 'SR'
 					; handle save area. 0 is a valid   @RH1
 					; page #, and 'FFFF' is for saving @RH1
 					; an inhibitted field, so S(ave)   @RH1
@@ -82,22 +266,22 @@ REUSABLE_SAVEA	   EQU 'SR'             ;Reusable (free) entry in the      @RH1
 UNALLOCATED	   EQU 'U'              ; Unused entry
 ALLOCATED	   EQU 'X'              ; Temporary...used by reallocate   @RH4
 PAL_NULL	   EQU '--'             ; End of list marker               @RH8
-EXTENDED	   EQU 'ME'             ; Extended memory (not for EMS use)@RH8
-BACMEM_ALLOC	   EQU 'MB'             ; Allocated to back conventional   @RH8
+EXTENDED	   EQU 'EM'             ; Extended memory (not for EMS use)@RH8; the release writes 'ME'
+BACMEM_ALLOC	   EQU 'BM'             ; Allocated to back conventional   @RH8; the release writes 'MB'
 					;  memory (back disabled planar)
-WSP_ALLOC	   EQU 'SW'             ; Allocated to Workstation Program @RH8
+WSP_ALLOC	   EQU 'WS'             ; Allocated to Workstation Program @RH8; the release writes 'SW'
 					; Pages kept as extended memory by:
-RESR_EXT	   EQU 'ER'             ;  /E parameter
-PREV_EXT	   EQU 'EP'             ;  Previously loaded drivers
+RESR_EXT	   EQU 'RE'             ;  /E parameter; the release writes 'ER'
+PREV_EXT	   EQU 'PE'             ;  Previously loaded drivers; the release writes 'EP'
 					; These values are OK as long as the
 					; # of handles supported (40h) is
 					; not above the ascii 'B' (42h)
 WARM_MASK	   EQU	 1			;ISOLATE WARM START BIT
-OFFSET_IN_XREF	   EQU BYTE PTR[BX+SI]
-LENGTH_IN_XREF	   EQU BYTE PTR[BX+SI+1]
-PAGE_LIST_ENTRY    EQU WORD PTR[SI + OFFSET PAGE_ALLOC_LIST]	    ;	   @RH8
-page_table_entry    EQU byte PTR[SI + OFFSET PAGE_ALLOC_table] ;temp for assembl
-XREF_TABLE_ENTRY   EQU word PTR[DI + OFFSET HANDLE_XREF_TABLE]	    ;	   @RH1
+OFFSET_IN_XREF	   EQU byte [BX+SI]
+LENGTH_IN_XREF	   EQU byte [BX+SI+1]
+PAGE_LIST_ENTRY    EQU word [SI + PAGE_ALLOC_LIST]               ;	   @RH8
+page_table_entry    EQU byte [SI + page_alloc_table]           ;temp for assembl
+XREF_TABLE_ENTRY   EQU word [DI + HANDLE_XREF_TABLE]               ;	   @RH1
 NUM_PHYSICAL_PAGES EQU 4
 STACK_SIZE	   EQU	100H
 Instance_Size	   EQU 150		;instance size				;an000; dms;
@@ -238,15 +422,8 @@ EMS_CODEA4 EQU	0A4h			; Access to this function denied
 ;ณ	 all Request Headers.					       ณ
 ;ณ								       ณ
 ;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
-RH	EQU	DS:[BX] 		;addressability to Request Header structure
+RH	equ	ds:BX	;addressability to Request Header structure
 
-RHC	STRUC				;fields common to all request types
-	DB	?			;length of Request Header (including data)
-	DB	?			;unit code (subunit)
-RHC_CMD DB	?			;command code
-RHC_STA DW	?			;status
-	DQ	?			;reserved for DOS
-RHC	ENDS				;end of common portion
 
 CMD_INPUT EQU	4			;RHC_CMD is INPUT request
 
@@ -268,21 +445,8 @@ BUSY_MASK     EQU 00000010B		;busy bit (9) BUSY mask (high order byte)
 ;ณ	 INIT command						       ณ
 ;ณ								       ณ
 ;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
-RH0	STRUC
-	DB	(TYPE RHC) DUP (?)	;common portion
 
-RH0_NUN DB	?			;number of units
-					;set to 1 if installation succeeds,
-					;set to 0 to cause installation failure
-RH0_ENDO DW	?			;offset  of ending address
-RH0_ENDS DW	?			;segment of ending address
-RH0_BPBO DW	?			;offset  of BPB array address
-RH0_BPBS DW	?			;segment of BPB array address
-RH0_DRIV DB	?			;drive code (DOS 3 only)
-RH0_ERR  DW	0			; error flag used by DOS - gga
-RH0	ENDS
-
-RH0_BPBA EQU	DWORD PTR RH0_BPBO	;OFFSET/SEGMENT OF BPB
+label RH0_BPBA dword at RH0.RH0_BPBO	;OFFSET/SEGMENT OF BPB
 ;note RH0_BPBA at entry to init points to all after DEVICE= on CONFIG.SYS stmt
 
 ;ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ
@@ -291,24 +455,12 @@ RH0_BPBA EQU	DWORD PTR RH0_BPBO	;OFFSET/SEGMENT OF BPB
 ;ณ	 This structure defines the Request Header for the	       ณ
 ;ณ	 Output Status command. 				       ณ
 ;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
-RH10	STRUC
-	DB	(TYPE RHC) DUP (?)	;common portion
-RH10	ENDS
 
 
 ;ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ
 ;ณ	 Request Header for Generic IOCTL Request		       ณ
 ;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
 
-RH19	STRUC
-	    DB	 (TYPE RHC) DUP (?)	; Reserve space for the header	   @RH6
-
-RH19_MAJF   DB	 ?		; Major function			   @RH6
-RH19_MINF   DB	 ?		; Minor function			   @RH6
-RH19_SI     DW	 ?		; Contents of SI			   @RH6
-RH19_DI     DW	 ?		; Contents of DI			   @RH6
-RH19_RQPK   DD	 ?		; Pointer to Generic IOCTL request packet  @RH6
-RH19	ENDS
 
 
 ;ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ
@@ -317,12 +469,12 @@ RH19	ENDS
 ;ณ	 The vector for the interrupt handler for INT 67H	       ณ
 ;ณ	 is defined here.					       ณ
 ;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
-INT_VEC SEGMENT AT 00H
+virtual at 00H
 	ORG	4*EMS_INT
-EMS_VEC LABEL	DWORD
-EMS_VECO DW	?			;offset
-EMS_VECS DW	?			;segment
-INT_VEC ENDS
+label EMS_VEC dword
+EMS_VECO rw      1 ;offset
+EMS_VECS rw      1 ;segment
+end virtual
 
 ;ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ
 ;ณ	 Map EM INT 15H vector in low storage			       ณ
@@ -330,12 +482,12 @@ INT_VEC ENDS
 ;ณ	 The vector for the extended memory interrupt handler INT 15h  ณ
 ;ณ	 is defined here.					       ณ
 ;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
-INT_VEC15 SEGMENT AT 00H							;an000; dms;
+virtual at 00H;an000; dms;
 	ORG	4*EM_INT							;an000; dms;
-EM_VEC LABEL  DWORD								;an000; dms;
-EM_VECO DW    ? 		      ;offset					;an000; dms;
-EM_VECS DW    ? 		      ;segment					;an000; dms;
-INT_VEC15 ENDS									;an000; dms;
+label EM_VEC dword         ;an000; dms;
+EM_VECO rw      1       ;offset					;an000; dms;
+EM_VECS rw      1       ;segment					;an000; dms;
+end virtual ;an000; dms;
 
 
 ;ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ
@@ -344,27 +496,29 @@ INT_VEC15 ENDS									;an000; dms;
 ;ณ	 The vector for the disk access interrupt handler INT 13h      ณ
 ;ณ	 is defined here.					       ณ
 ;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
-INT_VEC13 SEGMENT AT 00H							;an004; dms;
-	ORG	4*DK_INT							;an004; dms;
-DK_VEC LABEL  DWORD								;an004; dms;
-DK_VECO DW    ? 		      ;offset					;an004; dms;
-DK_VECS DW    ? 		      ;segment					;an004; dms;
-INT_VEC13 ENDS									;an004; dms;
+virtual at 00H;an004; dms;
+	ORG	4*DK_Int							;an004; dms;
+label DK_VEC dword         ;an004; dms;
+DK_VECO rw      1       ;offset					;an004; dms;
+DK_VECS rw      1       ;segment					;an004; dms;
+end virtual ;an004; dms;
 
 ;ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
 ;บ	This marks the start of the device driver code segment		บ
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
 
-CSEG	SEGMENT PARA PUBLIC 'CODE'
-	ASSUME	CS:CSEG
+;CSEG	SEGMENT PARA PUBLIC 'CODE'
+;	ASSUME	CS:CSEG
 
-START	EQU	$			;begin resident XMA2EMS data & code
+; = and not equ: fasm's equ is text put in where the name is used, so a $
+; in it would be the address of the use and not of this line.
+START	=	$			;begin resident XMA2EMS data & code
 
 ;DEVICE HEADER - must be at offset zero within device driver
 	DD	-1			;becomes pointer to next device header
 	DW	0C040H			;attribute (character device)
-	DW	OFFSET STRATEGY 	;pointer to device "strategy" routine
-	DW	OFFSET IRPT		;pointer to device "interrupt handler"
+	DW	STRATEGY         ;pointer to device "strategy" routine
+	DW	IRPT         ;pointer to device "interrupt handler"
 	DB	'EMMXXXX0'              ;device name
 
 
@@ -384,9 +538,9 @@ COPYRIGHT DB	'74X9921 (C)COPYRIGHT 1988 Microsoft '
 ;-----------------------------------------------------------------------;
 ;	Request Header (RH) address, saved here by "strategy" routine   ;
 ;-----------------------------------------------------------------------;
-RH_PTRA LABEL	DWORD
-RH_PTRO 	DW	?		;offset
-RH_PTRS 	DW	?		;segment
+label RH_PTRA dword
+RH_PTRO 	rw      1 ;offset
+RH_PTRS 	rw      1 ;segment
 		db	7 dup(0)	;align following tables on seg.
 
 ;ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ
@@ -400,19 +554,15 @@ RH_PTRS 	DW	?		;segment
 ;ณ  pointer to the handle's pages in the linked Page Allocation List.   ณ
 ;ณ									ณ
 ;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
-H_LOOKUP_STRUC	STRUC			;Structure for Handle lookup table @RH1
-H_PAGES 	DW	REUSABLE_HANDLE ;If handle is active, # of owned   @RH8
-					; pages.  Init to reusable handle   RH8
-H_PAL_PTR	DW	PAL_NULL	;Head ptr for owned pages in PAL   @RH8
-H_NAME		DB	8 DUP(0)	;Name - new for LIM 4.0 	   @GGA
-H_BANK		DB	0		;If virtual, this handle's bank    @RH6
-xref_pages	dw	0		;temp to compile
-xref_index	dw	0		;temp to compile
-H_LOOKUP_STRUC	ENDS
 
 NUM_HANDLES	EQU 64					   ;One structure  @RH1
-HANDLE_LOOKUP_TABLE  H_LOOKUP_STRUC  <0,,,,,>		    ; initialize handle 0
-		     H_LOOKUP_STRUC  NUM_HANDLES-1 DUP (<>) ; for OS use - gga
+HANDLE_LOOKUP_TABLE  H_LOOKUP_STRUC 0,,,,,         ; initialize handle 0
+; H_LOOKUP_STRUC declares something other than a zero, so the NUM_HANDLES-1 of them
+; are laid down as instances, each under a name of its own.
+		     rept NUM_HANDLES-1 each ; for OS use - gga
+		     {
+		     	H_LOOKUP_STRUC$a1_#each H_LOOKUP_STRUC
+		     }
 
 ;-----------------------------------------------------------------------;
 ;    HANDLE CROSS REFERENCE (XREF) TABLE				;
@@ -424,7 +574,7 @@ XREF_TABLE_LEN	EQU  2048			;			   @RH1
 
 HANDLE_XREF_TABLE  DW  XREF_TABLE_LEN  DUP(0)	; Changed from byte to	   @RH1
 						;  word table		   @RH1
-XREF_TABLE_END	EQU  ($)	       ;Used for table shift on deallocate @RH1
+XREF_TABLE_END	=  ($)	       ;Used for table shift on deallocate @RH1
 ;ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ
 ;ณ  PAGE ALLOCATION LIST						ณ
 ;ณ									ณ
@@ -445,7 +595,7 @@ EMS_PAGES_SUPPORTED EQU  1024		;Support up to 16 Megabytes of EMS @RH8
 
 PAGE_ALLOC_LIST DW  EMS_PAGES_SUPPORTED DUP(0)
 					;Page Allocation List (PAL)	   @RH8
-page_alloc_table db 1024 dup(unallocated)  ;temp for assemble
+page_alloc_table db 1024 dup(UNALLOCATED)  ;temp for assemble
 ;-----------------------------------------------------------------------;
 ;    HANDLE SAVE AREA							;
 ;	Each handle has 4 entries where the page frame map can		;
@@ -454,33 +604,23 @@ page_alloc_table db 1024 dup(unallocated)  ;temp for assemble
 ;	occurred for a handle, then the logical page field in the	;
 ;	save area will contain a value indicating it's reusable.        ;
 ;-----------------------------------------------------------------------;
-H_SAVEA_ENTRY  STRUC			;This is an overlay for one page's @RH5
-HSA_HNDL	DW    ? 		; entry in the handle save area.   @RH5
-HSA_LP		DW    ? 		; It is used to clear the save	   @RH5
-H_SAVEA_ENTRY  ENDS			; area after a restore.  While not @RH5
 					; directly used by the structure   @RH5
 					; below, its size should match	   @RH5
 					; that for one page entry	   @RH5
 
-H_SAVE_STRUC	STRUC			;Structure for Handle Save Area    @RH1
-PG0_HNDL	DW    0
-PG0_LP		DW    REUSABLE_SAVEA
-PG1_HNDL	DW    0
-PG1_LP		DW    REUSABLE_SAVEA
-PG2_HNDL	DW    0
-PG2_LP		DW    REUSABLE_SAVEA
-PG3_HNDL	DW    0
-PG3_LP		DW    REUSABLE_SAVEA
-PGFE_HNDL	DW    0 							;AN006;
-PGFE_LP 	DW    REUSABLE_SAVEA						;AN006;
-PGFF_HNDL	DW    0 							;AN006;
-PGFF_LP 	DW    REUSABLE_SAVEA						;AN006;
-H_SAVE_STRUC	ENDS
 
-HANDLE_SAVE_AREA  H_SAVE_STRUC	NUM_HANDLES DUP (<>)
+; H_SAVE_STRUC declares something other than a zero, so the NUM_HANDLES of them
+; are laid down as instances.  fasm names an instance, so each
+; takes the array's name and its place in it; what the program
+; asks for is the label.
+label HANDLE_SAVE_AREA byte
+rept NUM_HANDLES each
+{
+	HANDLE_SAVE_AREA_#each H_SAVE_STRUC
+}
 				       ;One structure for each handle	   @RH1
 
-H_SAVE_ENTRY	  EQU	WORD PTR[DI + OFFSET HANDLE_SAVE_AREA]	     ;	   @RH1
+H_SAVE_ENTRY	  EQU	word [DI + HANDLE_SAVE_AREA]                ;	   @RH1
 
 
 ;-------------------------------------------------------------------
@@ -491,25 +631,19 @@ H_SAVE_ENTRY	  EQU	WORD PTR[DI + OFFSET HANDLE_SAVE_AREA]	     ;	   @RH1
 ;
 ;-------------------------------------------------------------------
 
-mappable_phys_page_struct	STRUC	; define the structure
-  phys_page_segment	dw	?	; segment
-  phys_page_number	dw	?	; page ID
-  ppm_handle		dw	?	; handle, -1 means unused
-  ppm_log_page		dw	?	; logical page, -1 means unused
-mappable_phys_page_struct	ENDS
 
 ;	allocate the storage
 
-map_table	mappable_phys_page_struct <-1, -1, -1, -1>  ;p0   no default
-		mappable_phys_page_struct <-1, -1, -1, -1>  ;p1   no default
-		mappable_phys_page_struct <-1, -1, -1, -1>  ;p2   no default
-		mappable_phys_page_struct <-1, -1, -1, -1>  ;p3   no default
-		mappable_phys_page_struct <-1, -1, -1, -1>  ;p254 no default
-		mappable_phys_page_struct <-1, -1, -1, -1>  ;p255 no default
+map_table	mappable_phys_page_struct -1, -1, -1, -1    ;p0   no default
+		mappable_phys_page_struct$1 mappable_phys_page_struct -1, -1, -1, -1 ;p1   no default
+		mappable_phys_page_struct$2 mappable_phys_page_struct -1, -1, -1, -1 ;p2   no default
+		mappable_phys_page_struct$3 mappable_phys_page_struct -1, -1, -1, -1 ;p3   no default
+		mappable_phys_page_struct$4 mappable_phys_page_struct -1, -1, -1, -1 ;p254 no default
+		mappable_phys_page_struct$5 mappable_phys_page_struct -1, -1, -1, -1 ;p255 no default
 
 map_count_def	equ	6		; default 6
 map_count	dw	0		;
-map_size	dw	type mappable_phys_page_struct * map_count_def ; size of default table
+map_size	dw	sizeof.mappable_phys_page_struct * map_count_def ; size of default table
 ppm_size	equ	6		;size of partial page map entry
 
 ;	flags and a word used in setting up map_table stuff, see parmpars.inc
@@ -548,46 +682,48 @@ segment_error	dw	0		; segment error flag = 0 means all OK
 			; Memory Card Descriptor Table			บ
 			;-----------------------------------------------
 
-MEM_CARD_STRUC	STRUC			;Structure for the memory cards    @RH5
-CARD_ID 	DW	NO_CARD 	;Card ID from ports 100 and 101    @RH5
-CARD_SLOT	DB	?		;Physical slot of card (0 based)   @RH5
-START_PG_NUM	DW	?		;Starting and ending #s of the	   @RH5
-END_PG_NUM	DW	?		; pages this card has within the   @RH5
-MEM_CARD_STRUC	ENDS			; total EMS page pool (0 based)    @RH5
 
 					;Memory Card Table - entries are   @RH5
 					; filled in ascending order (from  @RH5
 					; slot 0) for each card found.	   @RH5
 					; MXOs scanned 1st, then XMA/A	   @RH5
 MAX_SLOTS	EQU 8				     ;Max of 8, but most   @RH5
-MEM_CARD_TABLE	MEM_CARD_STRUC	MAX_SLOTS DUP (<>)   ; likely 1 or 2 cards @RH5
+; MEM_CARD_STRUC declares something other than a zero, so the MAX_SLOTS of them
+; are laid down as instances.  fasm names an instance, so each
+; takes the array's name and its place in it; what the program
+; asks for is the label.
+label MEM_CARD_TABLE byte; likely 1 or 2 cards @RH5
+rept MAX_SLOTS each
+{
+	MEM_CARD_TABLE_#each MEM_CARD_STRUC
+}
 
 			;-----------------------------------------------
 			; Multicard Page Frame Descriptor Table 	บ
 			;-----------------------------------------------
-MULTIC_PM_STRUC STRUC			;Structure for storing the card ID @RH5
-PG_CARD 	DW	NO_CARD 	; and slot of the card currently   @RH5
-PG_SLOT 	DB	0		; mapped to this page of the page  @RH5
-MULTIC_PM_STRUC ENDS			; frame 			   @RH5
 
 					;Multicard Page Mapping Table.
 					; Entry for each page of the page
 					; frame (including pages FE & FF)
-MC_PM_TABLE  MULTIC_PM_STRUC   MAP_COUNT_DEF DUP (<>)
+; MULTIC_PM_STRUC declares something other than a zero, so the MAP_COUNT_DEF of them
+; are laid down as instances.  fasm names an instance, so each
+; takes the array's name and its place in it; what the program
+; asks for is the label.
+label MC_PM_TABLE byte
+rept map_count_def each
+{
+	MC_PM_TABLE_#each MULTIC_PM_STRUC
+}
 
 			;-----------------------------------------------
 			; Assorted Multicard declares			บ
 			;-----------------------------------------------
 NUM_MEM_CARDS	DW   0
-NUM_OF_SLOTS	DB	?		;Number of adapter slots RR 8 TB 4 @RH2
-WTT_CARD_SLOT	DB	?		;Slot # of the memory card being   @RH2
+NUM_OF_SLOTS	rb      1 ;Number of adapter slots RR 8 TB 4 @RH2
+WTT_CARD_SLOT	rb      1 ;Slot # of the memory card being   @RH2
 					; used to map a page		   @RH2
 
 
-Instance_Entry_Struc	struc		;required  data in first 2 entries	;an000; dms;
-	IE_Alloc_Byte	db	?	;instance allocated byte		;an000; dms;
-	IE_Saved_DI_Reg dw	?	;saved di register			;an000; dms;
-Instance_Entry_Struc	ends		;end struc				;an000; dms;
 
 ;-----------------------------------------------------------------------;
 ;	Table of DOS command processing routine entry points		;
@@ -596,75 +732,75 @@ Instance_Entry_Struc	ends		;end struc				;an000; dms;
 ;	by meaningful code.  All other commands simply set a good	;
 ;	return code and exit back to DOS.				;
 ;-----------------------------------------------------------------------;
-CMD_TABLE LABEL WORD
-	DW	OFFSET INIT		; 0 - *Initialization
-	DW	OFFSET MEDIA_CHECK	; 1 -  Media check
-	DW	OFFSET BLD_BPB		; 2 -  Build BPB
-	DW	OFFSET INPUT_IOCTL	; 3 -  IOCTL input
-	DW	OFFSET INPUT		; 4 -  Input
-	DW	OFFSET INPUT_NOWAIT	; 5 -  Non destructive input no wait
-	DW	OFFSET INPUT_STATUS	; 6 -  Input status
-	DW	OFFSET INPUT_FLUSH	; 7 -  Input flush
-	DW	OFFSET OUTPUT		; 8 -  Output
-	DW	OFFSET OUTPUT_VERIFY	; 9 -  Output with verify
-	DW	OFFSET OUTPUT_STATUS	;10 - *Output status
-	DW	OFFSET OUTPUT_FLUSH	;11 -  Output flush
-	DW	OFFSET OUTPUT_IOCTL	;12 -  IOCTL output
-	DW	OFFSET DEVICE_OPEN	;13 -  Device OPEN
-	DW	OFFSET DEVICE_CLOSE	;14 -  Device CLOSE
-	DW	OFFSET REMOVABLE_MEDIA	;15 -  Removable media
-	DW	OFFSET INVALID_FCN	;16 -  Invalid IOCTL function	 gga		   ;AN003;
-	DW	OFFSET INVALID_FCN	;17 -  Invalid IOCTL function	 gga		   ;AN003;
-	DW	OFFSET INVALID_FCN	;18 -  Invalid IOCTL function	 gga		   ;AN003;
-	DW	OFFSET GENERIC_IOCTL	;19 - *Generic IOCTL function	 gga		   ;AN003;
-	DW	OFFSET INVALID_FCN	;20 -  Invalid IOCTL function	 gga		   ;AN003;
-	DW	OFFSET INVALID_FCN	;21 -  Invalid IOCTL function	 gga		   ;AN003;
-	DW	OFFSET INVALID_FCN	;22 -  Invalid IOCTL function	 gga		   ;AN003;
-	DW	OFFSET GET_LOG_DEVICE	;23 -  Invalid IOCTL function	 gga		   ;AN003;
-MAX_CMD EQU	($-CMD_TABLE)/2 	;highest valid command follows
-	DW	OFFSET SET_LOG_DEVICE	;24 -  Invalid IOCTL function	 gga		   ;AN003;
+label CMD_TABLE word
+	DW	INIT         ; 0 - *Initialization
+	DW	MEDIA_CHECK        ; 1 -  Media check
+	DW	BLD_BPB         ; 2 -  Build BPB
+	DW	INPUT_IOCTL        ; 3 -  IOCTL input
+	DW	INPUT         ; 4 -  Input
+	DW	INPUT_NOWAIT        ; 5 -  Non destructive input no wait
+	DW	INPUT_STATUS        ; 6 -  Input status
+	DW	INPUT_FLUSH        ; 7 -  Input flush
+	DW	OUTPUT         ; 8 -  Output
+	DW	OUTPUT_VERIFY        ; 9 -  Output with verify
+	DW	OUTPUT_STATUS        ;10 - *Output status
+	DW	OUTPUT_FLUSH        ;11 -  Output flush
+	DW	OUTPUT_IOCTL        ;12 -  IOCTL output
+	DW	DEVICE_OPEN        ;13 -  Device OPEN
+	DW	DEVICE_CLOSE        ;14 -  Device CLOSE
+	DW	REMOVABLE_MEDIA        ;15 -  Removable media
+	DW	INVALID_FCN        ;16 -  Invalid IOCTL function	 gga		   ;AN003;
+	DW	INVALID_FCN        ;17 -  Invalid IOCTL function	 gga		   ;AN003;
+	DW	INVALID_FCN        ;18 -  Invalid IOCTL function	 gga		   ;AN003;
+	DW	GENERIC_IOCTL        ;19 - *Generic IOCTL function	 gga		   ;AN003;
+	DW	INVALID_FCN        ;20 -  Invalid IOCTL function	 gga		   ;AN003;
+	DW	INVALID_FCN        ;21 -  Invalid IOCTL function	 gga		   ;AN003;
+	DW	INVALID_FCN        ;22 -  Invalid IOCTL function	 gga		   ;AN003;
+	DW	GET_LOG_DEVICE        ;23 -  Invalid IOCTL function	 gga		   ;AN003;
+MAX_CMD =	(($-CMD_TABLE)/2)	;highest valid command follows
+	DW	SET_LOG_DEVICE        ;24 -  Invalid IOCTL function	 gga		   ;AN003;
 
 ;-----------------------------------------------------------------------;
 ;	Table of Expanded Memory Manager routine entry points		;
 ;-----------------------------------------------------------------------;
-FCN_TABLE LABEL WORD
-	DW	OFFSET EMM_STATUS	;40 - Get status of memory manager
-	DW	OFFSET Q_PAGE_FRAME	;41 - Get segment of page frame
-	DW	OFFSET Q_PAGES		;42 - Get number of alloc & unalloc pgs
-	DW	OFFSET GET_HANDLE	;43 - Request ID and allocate n pages
-	DW	OFFSET MAP_L_TO_P	;44 - Map logical to physical page
-	DW	OFFSET DE_ALLOCATE	;45 - Deallocate all pages of ID n
-	DW	OFFSET Q_VERSION	;46 - Get version number
-	DW	OFFSET SAVE_MAP 	;47 - Save mapping array
-	DW	OFFSET RESTORE_MAP	;48 - Restore mapping array
-	DW	OFFSET GET_PORT_ARRAY	;49 - Get I/O port array
-	DW	OFFSET GET_L_TO_P	;4A - Get logical to physical array
-	DW	OFFSET Q_OPEN		;4B - Get number of open ID's
-	DW	OFFSET Q_ALLOCATE	;4C - Get pages allocated to ID n
-	DW	OFFSET Q_OPEN_ALL	;4D - Get all ID's and pages allocated
-	DW	OFFSET GET_SET_MAP	;4E - Group of subfunctions that Get
+label FCN_TABLE word
+	DW	EMM_STATUS        ;40 - Get status of memory manager
+	DW	Q_PAGE_FRAME        ;41 - Get segment of page frame
+	DW	Q_PAGES         ;42 - Get number of alloc & unalloc pgs
+	DW	GET_HANDLE        ;43 - Request ID and allocate n pages
+	DW	MAP_L_TO_P        ;44 - Map logical to physical page
+	DW	DE_ALLOCATE        ;45 - Deallocate all pages of ID n
+	DW	Q_VERSION        ;46 - Get version number
+	DW	SAVE_MAP         ;47 - Save mapping array
+	DW	RESTORE_MAP        ;48 - Restore mapping array
+	DW	GET_PORT_ARRAY        ;49 - Get I/O port array
+	DW	GET_L_TO_P        ;4A - Get logical to physical array
+	DW	Q_OPEN         ;4B - Get number of open ID's
+	DW	Q_ALLOCATE        ;4C - Get pages allocated to ID n
+	DW	Q_OPEN_ALL        ;4D - Get all ID's and pages allocated
+	DW	GET_SET_MAP        ;4E - Group of subfunctions that Get
 					;and/or Set the page map
 
 ;-------------------------------------------------------------------			 ;GGA
 ;	these functions were added for LIM 4.0 support					 ;GGA
 ;-------------------------------------------------------------------			 ;GGA
 											 ;GGA
-	dw	offset partial_map	; 4F - get/set partial page map 		 ;GGA
-	dw	offset map_mult 	; 50 - map/unmap multiple handle pages		 ;GGA
-	dw	offset reallocate	; 51 - reallocate pages 			 ;GGA
-	dw	offset handle_attrib	; 52 - get/set handle attributes		 ;GGA
-	dw	offset handle_name	; 53 - get/set handle name			 ;GGA
-	dw	offset handle_dir	; 54 - get handle directory			 ;GGA
-	dw	offset alter_and_jump	; 55 - alter page map and jump			 ;GGA
-	dw	offset alter_and_call	; 56 - alter page map and call			 ;GGA
-	dw	offset exchng_region	; 57 - move/exchange memory region		 ;GGA
-	dw	offset address_array	; 58 - Get mappable physical address array	 ;GGA
-	dw	offset hardware_info	; 59 - Get extended momory hardware information  ;GGA
-	dw	offset alloc_raw	; 5A - allocate raw pages			 ;GGA
-	dw	offset alternate_map	; 5B - alternate map register set		 ;GGA
-	dw	offset prepare_boot	; 5C - Prepare for WarmBoot			 ;GGA
-MAX_FCN EQU	($-FCN_TABLE)/2 	;      highest valid command follows		 ;GGA
-	dw	offset enable_os	; 5D - enable/disable OS/E functions		 ;GGA
+	dw	partial_map        ; 4F - get/set partial page map 		 ;GGA
+	dw	map_mult         ; 50 - map/unmap multiple handle pages		 ;GGA
+	dw	reallocate        ; 51 - reallocate pages 			 ;GGA
+	dw	handle_attrib        ; 52 - get/set handle attributes		 ;GGA
+	dw	handle_name        ; 53 - get/set handle name			 ;GGA
+	dw	handle_dir        ; 54 - get handle directory			 ;GGA
+	dw	Alter_And_Jump        ; 55 - alter page map and jump			 ;GGA
+	dw	Alter_And_Call        ; 56 - alter page map and call			 ;GGA
+	dw	Exchng_Region        ; 57 - move/exchange memory region		 ;GGA
+	dw	address_array        ; 58 - Get mappable physical address array	 ;GGA
+	dw	hardware_info        ; 59 - Get extended momory hardware information  ;GGA
+	dw	Alloc_Raw        ; 5A - allocate raw pages			 ;GGA
+	dw	alternate_map        ; 5B - alternate map register set		 ;GGA
+	dw	Prepare_Boot        ; 5C - Prepare for WarmBoot			 ;GGA
+MAX_FCN =	(($-FCN_TABLE)/2)	;      highest valid command follows		 ;GGA
+	dw	enable_os        ; 5D - enable/disable OS/E functions		 ;GGA
 
 ;-----------------------------------------------------------------------;
 ;	Data variables go here						;
@@ -677,31 +813,31 @@ TOTAL_SYS_PAGES DW	1024/16 	;Total number of 16k pages on the
 TOTAL_EMS_PAGES DW	1024/16 	;Pages left after conventional
 					; memory is backed
 FREE_PAGES	DW	1024/16 	;Total unallocated pages for EMS use
-EM_Ksize	dw	?		;size in Kb of extended memory		;an000; dms;
-CARD_STATUS	DW	'OK'            ;STATUS OF THE HARDWARE
+EM_Ksize	rw      1 ;size in Kb of extended memory		;an000; dms;
+CARD_STATUS	DW	'KO'            ;STATUS OF THE HARDWARE; the release writes 'OK'
 					;  DEFAULT='OK'   FAILURE='HW'
-MANAGER_STATUS	DW	'OK'            ;STATUS OF THE MEMORY MANAGER
+MANAGER_STATUS	DW	'KO'            ;STATUS OF THE MEMORY MANAGER; the release writes 'OK'
 					;  DEFAULT='OK'   FAILURE='SW'
 STARTING_BLOCK	DW	0		;number of 4K blocks reserved by pinta
 OVERFLOW	DB	0
 WARM_START	DB	'N'             ;initially not a warm start
-MULTIPLIER	DW	?		;Used for figuring table offsets   @RH1
+MULTIPLIER	rw      1 ;Used for figuring table offsets   @RH1
 TEN		DW	10		; via multiplication...not the	   @RH1
 SIXTEEN 	DW	16		; most efficient, but flexible	   @RH1
 MEMCARD_MODE	DB	XMA1_VIRT	;Flag indicating the type of memory@RH2
 					; card being used.  Default to	   @RH2
 					; XMA 1 card.
-BANKID		DB	?		;Current XMA Bank ID		   @RH1
+BANKID		rb      1 ;Current XMA Bank ID		   @RH1
 BLOCKS_PER_PAGE DW	4		;XMA blocks per EMS page (multiply)@RH1
 SEG_PER_PAGE	DW	1024		;Segments(16 bytes) per EMS page   @RH1
 
-INTV15	LABEL	DWORD								;an000; dms;
-INTV15O DW	?			;offset 				;an000; dms;
-INTV15S DW	?			;segment				;an000; dms;
+label INTV15 dword        ;an000; dms;
+INTV15O rw      1 ;offset 				;an000; dms;
+INTV15S rw      1 ;segment				;an000; dms;
 
-INTV13	LABEL	DWORD								;an004; dms;
-INTV13O DW	?			;offset 				;an004; dms;
-INTV13S DW	?			;segment				;an004; dms;
+label INTV13 dword        ;an004; dms;
+INTV13O rw      1 ;offset 				;an004; dms;
+INTV13S rw      1 ;segment				;an004; dms;
 
 PAL_FREE_PTR	DW	PAL_NULL
 ;-------------------------------------------------------------------
@@ -735,26 +871,26 @@ where_to_start	dw	0a000h		; start ROM scan at A000
 ;			Returns  : AX - Kbyte size of EM
 ;
 ;=========================================================================
-XMA_INT15   PROC								;an000; dms;
+XMA_INT15:              ;an000; dms;
 
 	cmp	ah,EM_Size_Get							;an000; dms;function 88h?
 	jne	XMA_INT15_Jump							;an000; dms;no - jump to old INT 15h
-		mov	ax,cs:EM_KSize						;an000; dms;return size
+		mov	ax,[cs:EM_Ksize]    ;an000; dms;return size
 		clc								;an000; dms;clear CY
 		jmp	XMA_INT15_Exit						;an000; dms;exit handler
 
 XMA_INT15_Jump: 								;an000; dms;
 
-		jmp	cs:INTV15						;an000; dms;jump to org. vector
+		jmp	[cs:INTV15]    ;an000; dms;jump to org. vector
 
 XMA_INT15_Exit: 								;an000; dms;
 
 
 	iret									;an000; dms;
 
-XMA_INT15   ENDP								;an000; dms;
+;XMA_INT15   ENDP								;an000; dms;
 
-include I13HOOK.INC								;an004; dms;
+include 'I13HOOK.INC'      ;an004; dms;
 
 
 ;ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
@@ -762,17 +898,17 @@ include I13HOOK.INC								;an004; dms;
 ;บ									บ
 ;บ	Retain the Request Header address for use by Interrupt routine	บ
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
-STRATEGY PROC	FAR
-	MOV	CS:RH_PTRO,BX		;offset
-	MOV	CS:RH_PTRS,ES		;segment
-	RET
-STRATEGY ENDP
+STRATEGY:
+	MOV	[cs:RH_PTRO],BX ;offset
+	MOV	[cs:RH_PTRS],ES ;segment
+	RETF
+;STRATEGY ENDP
 
 
 ;ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
 ;บ	DOS Device "interrupt" entry point                              บ
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
-IRPT	PROC	FAR			;device interrupt entry point
+IRPT:           ;device interrupt entry point
 	PUSH	DS			;save all registers Revised
 	PUSH	ES
 	PUSH	AX
@@ -784,19 +920,19 @@ IRPT	PROC	FAR			;device interrupt entry point
 					;BP isn't used, so it isn't saved
 	CLD				;all moves forward
 
-	LDS	BX,CS:RH_PTRA		;get RH address passed to "strategy" into DS:BX
+	LDS	BX,[cs:RH_PTRA] ;get RH address passed to "strategy" into DS:BX
 
-	MOV	AL,RH.RHC_CMD		;command code from Request Header
+	MOV	AL,byte [RH+RHC.RHC_CMD] ;command code from Request Header
 	CBW				;zero AH (if AL > 7FH, next compare will
 					;catch that error)
 
 	CMP	AL,MAX_CMD		;if command code is not too high
 	JNA	IRPT_CMD_OK		; then handle the command
-	MOV	RH.RHC_STA,STAT_CMDERR	;"invalid command" and error
+	MOV	word [RH+RHC.RHC_STA],STAT_CMDERR ;"invalid command" and error
 	JMP	IRPT_CMD_EXIT
 
 IRPT_CMD_OK:
-	MOV	RH.RHC_STA,STAT_GOOD	;initialize return to "no error"
+	MOV	word [RH+RHC.RHC_STA],STAT_GOOD ;initialize return to "no error"
 
 	ADD	AX,AX			;double command code for table offset
 	MOV	DI,AX			;put into index register for JMP
@@ -806,13 +942,13 @@ IRPT_CMD_OK:
 ;	CS	= VDISK code segment address
 ;	AX	= 0
 
-	CALL	CS:CMD_TABLE[DI]	;call routine to handle the command
+	CALL	[cs:CMD_TABLE+DI] ;call routine to handle the command
 
 
 IRPT_CMD_EXIT:				;return from command routine
 					;AX = value to OR into status word
-	LDS	BX,CS:RH_PTRA		;restore DS:BX as Request Header pointer
-	OR	RH.RHC_STA,STAT_DONE	;add "done" bit to status word
+	LDS	BX,[cs:RH_PTRA] ;restore DS:BX as Request Header pointer
+	OR	word [RH+RHC.RHC_STA],STAT_DONE ;add "done" bit to status word
 	POP	SI			;restore registers
 	POP	DI
 	POP	DX
@@ -822,26 +958,26 @@ IRPT_CMD_EXIT:				;return from command routine
 	POP	ES
 	POP	DS
 
-	RET				;far return back to DOS
-IRPT	ENDP
+	RETF   ;far return back to DOS
+;IRPT	ENDP
 
-include genioctl.inc			; include code for genioctl fcn gga
+include 'GENIOCTL.INC' ; include code for genioctl fcn gga
 
 ;ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
 ;บ	Set 'OUTPUT STATUS' entry point                                 บ
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
-OUTPUT_STATUS PROC			;Output status
-	LDS	BX,CS:RH_PTRA		;DS:BX as pointer to request header
-	MOV	AX,RH.RHC_STA		;get status word
+OUTPUT_STATUS:       ;Output status
+	LDS	BX,[cs:RH_PTRA] ;DS:BX as pointer to request header
+	MOV	AX,word [RH+RHC.RHC_STA] ;get status word
 OS1:
 	AND	AH,NOT_BUSY		;turn off busy bit
 OS2:
-	MOV	RH.RHC_STA,AX		;write it back to request header
+	MOV	word [RH+RHC.RHC_STA],AX ;write it back to request header
 	RET
-OUTPUT_STATUS ENDP
+;OUTPUT_STATUS ENDP
 
 
-IGNORED_CMDS  PROC
+IGNORED_CMDS:
 IRPT_CMD_ERROR: 			;CALLed for unsupported character mode commands
 
 MEDIA_CHECK:				;Media check
@@ -862,7 +998,7 @@ INVALID_FCN:				; invalid IOCTL function			  ;AN003;
 GET_LOG_DEVICE: 			; get logical device				  ;AN003;
 SET_LOG_DEVICE: 			; set logical device				  ;AN003;
 	      RET
-IGNORED_CMDS  ENDP
+;IGNORED_CMDS  ENDP
 
 
 
@@ -884,22 +1020,22 @@ IGNORED_CMDS  ENDP
 ;บ		  other register contain information as specified by EMSบ
 ;บ		  otherwise all registers remain unchanged		บ
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
-EMS_INT67 PROC
+EMS_INT67:
 	push	bp			;save instance pointer			;an000; dms;
 	call	Set_Instance		;set BP to proper instance entry	;an000; dms;
 	jc	INT67_Instance_Exit	;not enough instances			;an000; dms;
 
-	mov	cs:[bp].IE_Saved_DI_Reg,di ;save reg in instance table		   ;an000; dms;
+	mov	[cs:bp+Instance_Entry_Struc.IE_Saved_DI_Reg],di ;save reg in instance table		   ;an000; dms;
 
 
 	SUB	AH,40H			;adjust to range of fcn table
 	CMP	AH,0			;too low?
-;	$IF	GE,AND
-	JNGE $$IF1
+;	IF$	GE,AND
+	JNGE IF1$$
 	CMP	AH,MAX_FCN		;too high?
-;	$IF	LE
-	JNLE $$IF1
-	    MOV     DI,OFFSET INT67_EXIT ;get common exit addr
+;	IF$	LE
+	JNLE IF1$$
+	    MOV     DI,INT67_EXIT        ;get common exit addr
 	    PUSH    DI			;put it on stack
 	    PUSH    AX			;save ax...al may contain parms
 	    XCHG    AH,AL		;adjust
@@ -911,16 +1047,16 @@ EMS_INT67 PROC
 ;	CS	= INT67 code segment
 ;	TOP OF STACK is return address, INT67_EXIT
 
-	    JMP     CS:FCN_TABLE[DI]	;call routine handler
-;	$ENDIF
-$$IF1:
+	    JMP     [cs:FCN_TABLE+DI] ;call routine handler
+;	ENDIF$
+IF1$$:
 	MOV	AH,EMS_CODE84		;function call out of range
 
 
 
 INT67_EXIT:
 
-	mov	di,cs:[bp].IE_Saved_DI_Reg ;save reg in instance table		   ;an000; dms;
+	mov	di,[cs:bp+Instance_Entry_Struc.IE_Saved_DI_Reg] ;save reg in instance table		   ;an000; dms;
 	call	Reset_Instance		;deallocte instance entry		;an000; dms;
 
 INT67_Instance_Exit:
@@ -928,7 +1064,7 @@ INT67_Instance_Exit:
 	pop	bp			;restore instance pointer		;an000; dms;
 
 	IRET				;end of interrupt 67
-EMS_INT67 ENDP
+;EMS_INT67 ENDP
 
 
 
@@ -940,25 +1076,25 @@ EMS_INT67 ENDP
 ;บ	on exit:  (AH) = status 					บ
 ;บ		  all other registers preserved 			บ
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
-EMM_STATUS PROC
-	CMP	MANAGER_STATUS,SW_ERROR ;is manager ok?
-;	$IF	E			;if no then
-	JNE $$IF3
+EMM_STATUS:
+	CMP	word [cs:MANAGER_STATUS],SW_ERROR ;is manager ok?
+;	IF$	E			;if no then
+	JNE IF3$$
 	    MOV     AH,EMS_CODE80	;indicate bad status
-	    JMP     ST1 		;exit
-;	$ENDIF
-$$IF3:
-	CMP	CARD_STATUS,HW_ERROR	;is card ok?
-;	$IF	E			;if no then
-	JNE $$IF5
+	    JMP     ST1_ 		;exit
+;	ENDIF$
+IF3$$:
+	CMP	word [cs:CARD_STATUS],HW_ERROR ;is card ok?
+;	IF$	E			;if no then
+	JNE IF5$$
 	    MOV     AH,EMS_CODE81	;indicate bad status
-	    JMP     ST1 		;exit
-;	$ENDIF
-$$IF5:
+	    JMP     ST1_ 		;exit
+;	ENDIF$
+IF5$$:
 	XOR	AH,AH			;set good return status
-ST1:
+ST1_:
 	RET				;return to caller
-EMM_STATUS ENDP
+;EMM_STATUS ENDP
 
 
 ;ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
@@ -970,29 +1106,29 @@ EMM_STATUS ENDP
 ;บ		  (BX) = segment address of page frame			บ
 ;บ		  all other registers preserved 			บ
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
-Q_PAGE_FRAME PROC
+Q_PAGE_FRAME:
 	push	cx				;save regs			;an000; dms;
 	push	dx				;				;an000; dms;
 	push	si				;				;an000; dms;
 
-	cmp	cs:Map_Count,4			;enough frames? 		;an000; dms;
+	cmp	word [cs:map_count],4 ;enough frames? 		;an000; dms;
 	jb	Q_Page_Frame_Error_Exit 	;no - exit with error		;an000; dms;
 
 	mov	cx,4h				;loop only 4 times		;an000; dms;
 	xor	ax,ax				;page number reference		;an000; dms;
-	mov	si,offset cs:Map_Table		;point to map table		;an000; dms;
-	mov	bx,cs:[si].Phys_Page_Segment	;set start segment value	;an000; dms;
+	mov	si,map_table         ;point to map table		;an000; dms;
+	mov	bx,[cs:si+mappable_phys_page_struct.phys_page_segment] ;set start segment value	;an000; dms;
 	mov	dx,bx				;segment reference		;an000; dms;
 
 Q_Page_Frame_Loop:
 
-	cmp	cs:[si].Phys_Page_Number,ax	;page matches reference?	;an000; dms;
+	cmp	[cs:si+mappable_phys_page_struct.phys_page_number],ax ;page matches reference?	;an000; dms;
 	jne	Q_Page_Frame_Error_Exit 	;no - exit with error		;an000; dms;
 
-	cmp	cs:[si].Phys_Page_Segment,dx	;page frame match reference	;an000; dms;
+	cmp	[cs:si+mappable_phys_page_struct.phys_page_segment],dx ;page frame match reference	;an000; dms;
 	jne	Q_Page_Frame_Error_Exit 	;no - exit with error		;an000; dms;
 
-	add	si,Type Mappable_Phys_Page_Struct;adjust pointer		;an000; dms;
+	add	si,sizeof.mappable_phys_page_struct ;adjust pointer		;an000; dms;
 	add	dx,400h 			;next page frame		;an000; dms;
 	inc	ax				;next page			;an000; dms;
 	loop	Q_Page_Frame_Loop		;continue loop			;an000; dms;
@@ -1002,7 +1138,7 @@ Q_Page_Frame_Loop:
 
 Q_Page_Frame_Error_Exit:
 
-	mov	ah,EMS_Code80			;signal software error		;an000; dms;
+	mov	ah,EMS_CODE80			;signal software error		;an000; dms;
 
 Q_Page_Exit:
 
@@ -1011,7 +1147,7 @@ Q_Page_Exit:
 	pop	cx				;				;an000; dms;
 
 	RET
-Q_PAGE_FRAME ENDP
+;Q_PAGE_FRAME ENDP
 
 
 ;ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
@@ -1024,17 +1160,17 @@ Q_PAGE_FRAME ENDP
 ;บ		  (DX) = total number of pages in expanded memory	บ
 ;บ		  all other registers preserved 			บ
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
-Q_PAGES PROC
+Q_PAGES:
 
 	XOR	AH,AH			;Init good return status
-	MOV	BX,CS:FREE_PAGES	;bx gets num unalloc pages
-	MOV	DX,CS:TOTAL_EMS_PAGES	;dx gets num total pages
+	MOV	BX,[cs:FREE_PAGES] ;bx gets num unalloc pages
+	MOV	DX,[cs:TOTAL_EMS_PAGES] ;dx gets num total pages
 	CMP	BX,DX			;If unalloc <= total then OK
 	JNA	Q_PAGES_RET		;Otherwise sumptin's rong
 	    MOV     AH,EMS_CODE81	; set that return code
 Q_PAGES_RET:
 	RET
-Q_PAGES ENDP
+;Q_PAGES ENDP
 
 
 
@@ -1048,7 +1184,7 @@ Q_PAGES ENDP
 ;บ		  (DX) = handle 					บ
 ;บ		  AX,DX Revised...all other registers preserved	บ
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
-GET_HANDLE PROC
+GET_HANDLE:
 	PUSH	BX
 	PUSH	CX
 	PUSH	DI
@@ -1063,19 +1199,19 @@ GET_HANDLE PROC
 
 	cmp	bx,0			;0 page allocate is invalid		;an000; dms;
 	jne	GH_OKCount		;0 pages not requested			;an000; dms;
-		mov	ah,EMS_Code89	;flag 0 pages requested 		;an000; dms;
-		jmp	GH_Exit 	;exit routine				;an000; dms;
+		mov	ah,EMS_CODE89	;flag 0 pages requested 		;an000; dms;
+		jmp	GH_EXIT 	;exit routine				;an000; dms;
 
 GH_OKCount:
 
-	CMP	BX,TOTAL_EMS_PAGES	;Enough total EMS pages?
+	CMP	BX,[cs:TOTAL_EMS_PAGES] ;Enough total EMS pages?
 	JNA	GH_OKTOTAL
 	MOV	AH,EMS_CODE87
 	JMP	GH_EXIT
 
 GH_OKTOTAL:
 	cli				;ints off				;an000; dms;
-	CMP	BX,FREE_PAGES		;Enough unallocated pages?
+	CMP	BX,[cs:FREE_PAGES] ;Enough unallocated pages?
 	sti				;ints on				;an000; dms;
 	JNA	GH_OKFREE
 	MOV	AH,EMS_CODE88
@@ -1087,16 +1223,16 @@ GH_OKFREE:
 	MOV	CX,NUM_HANDLES		;loop counter is #handles
 	DEC	CX			;handle 0 reserved for op. sys.   @RH1
 	MOV	DX,1			;handle assignment set to 1	  @RH1
-	MOV	DI,TYPE H_LOOKUP_STRUC	;init table index to 1st entry	  @RH1
+	MOV	DI,sizeof.H_LOOKUP_STRUC ;init table index to 1st entry	  @RH1
 ;--------------------------------
 	CLI				;interrupts OFF during allocation
 ;--------------------------------
 GH_FREEHSRCH:
-	CMP	HANDLE_LOOKUP_TABLE.H_PAGES[DI],REUSABLE_HANDLE
+	CMP	[cs:DI+HANDLE_LOOKUP_TABLE.H_PAGES],REUSABLE_HANDLE
 					;Is this handle available?	  @RH1
 	JE	GH_HFREE		;yes end search  dx=handle id	  @RH1
 	INC	DX			;next handle assignment
-	ADD	DI,TYPE H_LOOKUP_STRUC	;next entry in handle lookup	  @RH1
+	ADD	DI,sizeof.H_LOOKUP_STRUC ;next entry in handle lookup	  @RH1
 					;repeat for all table entries
 	LOOP GH_FREEHSRCH
 	    MOV     AH,EMS_CODE85	;no available handles
@@ -1110,18 +1246,18 @@ GH_HFREE:
 	MOV	CX,NUM_HANDLES		;loop counter
 	DEC	CX			;handle 0 reserved for op. sys.    @RH1
 					;si = index to hndl lookup tbl	   @RH1
-	MOV	SI,TYPE H_LOOKUP_STRUC	; for adding pages (skip 0 entry)  @RH1
+	MOV	SI,sizeof.H_LOOKUP_STRUC ; for adding pages (skip 0 entry)  @RH1
 	XOR	AX,AX			;clear page counter
 	CLC				;clear carry for addition
 GH_PAGESUM:
-	CMP	HANDLE_LOOKUP_TABLE.H_PAGES[SI],REUSABLE_HANDLE
+	CMP	[cs:SI+HANDLE_LOOKUP_TABLE.H_PAGES],REUSABLE_HANDLE
 	JE	GH_PGSUM_BOT		;If handle is free don't add       @RH4
-	ADD	AX,HANDLE_LOOKUP_TABLE.H_PAGES[SI]
+	ADD	AX,[cs:SI+HANDLE_LOOKUP_TABLE.H_PAGES]
 					;add lengths (pages) of PALs	  @RH1
-	ADD	SI,TYPE H_LOOKUP_STRUC	; next entry in handle lookup	  @RH1
+	ADD	SI,sizeof.H_LOOKUP_STRUC ; next entry in handle lookup	  @RH1
 GH_PGSUM_BOT:
 	LOOP	GH_PAGESUM
-	CMP	AX,TOTAL_EMS_PAGES	;pages in handle lookup > total?  @RH1
+	CMP	AX,[cs:TOTAL_EMS_PAGES] ;pages in handle lookup > total?  @RH1
 	JNA	GH_CALCHLUP		;no OK				  @RH1
 	    MOV     AH,EMS_CODE80	;software error..we screwed up	  @RH1
 	    JMP     GH_EXIT		;go to exit			  @RH1		 ;GGA
@@ -1132,18 +1268,18 @@ GH_CALCHLUP:				;calculate entry in hndl lkup tbl @RH1
 	mov	cx,bx					;alloc count		;an000; dms;
 	call	EMS_Page_Contig_Chk			;do we have contig pgs. ;an001; dms;
 	jnc	GH_Alloc				;yes continue process	;an001; dms;
-		mov	ah,EMS_Code88			;no  signal error	;an001; dms;
+		mov	ah,EMS_CODE88			;no  signal error	;an001; dms;
 		sti					;ints on		;an001; dms;
-		jmp	GH_Exit 			;exit routine		;an001; dms;
+		jmp	GH_EXIT 			;exit routine		;an001; dms;
 
 GH_Alloc:
 
 	call	EMS_Link_Set				;set up links		;an001; dms;
 
 
-	sub	Free_Pages,bx		;free = free - requested pages
-	mov	Handle_LookUp_Table.H_Pages[di],bx	;page count		;an000; dms;
-	mov	Handle_LookUp_Table.H_Pal_Ptr[di],si	;initialize to ptr for	;ac001; dms;
+	sub	[cs:FREE_PAGES],bx ;free = free - requested pages
+	mov	[cs:di+HANDLE_LOOKUP_TABLE.H_PAGES],bx ;page count		;an000; dms;
+	mov	[cs:di+HANDLE_LOOKUP_TABLE.H_PAL_PTR],si ;initialize to ptr for	;ac001; dms;
 							;  pages
 	sti						;ints on		;an001; dms;
 	xor	ah,ah					;clear flag		;an000; dms;
@@ -1158,7 +1294,7 @@ GH_EXIT:										 ;GGA
 	POP	BX
 
 	RET
-GET_HANDLE ENDP
+;GET_HANDLE ENDP
 
 
 ;ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
@@ -1173,7 +1309,7 @@ GET_HANDLE ENDP
 ;บ		  all other registers preserved 			บ
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
 
-MAP_L_TO_P PROC
+MAP_L_TO_P:
 	PUSH	BX
 	PUSH	CX
 	PUSH	DX
@@ -1198,19 +1334,19 @@ MLP_DXINRANGE:
 	push	ax			;save affected regs			;an000; dms;
 	push	dx			;					;an000; dms;
 	MOV	AX,DX			;   (DX:AX used in MUL		   @RH1
-	MOV	DX,TYPE H_LOOKUP_STRUC	;SI = entry's offset into          @RH8
+	MOV	DX,sizeof.H_LOOKUP_STRUC ;SI = entry's offset into          @RH8
 	MUL	DX			; the handle lookup table	   @RH8
 	MOV	SI,AX			;				   @RH1
 	pop	dx			;restore affected regs			;an000; dms;
 	pop	ax			;					;an000; dms;
 
-	MOV	CX,HANDLE_LOOKUP_TABLE.H_PAGES[SI]    ;CX = handle's pages @RH8
+	MOV	CX,[cs:SI+HANDLE_LOOKUP_TABLE.H_PAGES] ;CX = handle's pages @RH8
 	CMP	CX,REUSABLE_HANDLE		      ;Handle have pages?
 	JNE	MLP_DXHASPAGES			      ;Yes next check
 	    MOV     AH,EMS_CODE83		      ;No handle not used
 	    JMP     MLP_EXIT			      ; set error and exit
 MLP_DXHASPAGES:
-	CMP	BX,TOTAL_EMS_PAGES     ;Logical pg requested (0 based)	   @RH1
+	CMP	BX,[cs:TOTAL_EMS_PAGES] ;Logical pg requested (0 based)	   @RH1
 	JB	MLP_BX_LE_TOT	       ; less than or = to total pages?    @RH1
 	    MOV     AH,EMS_CODE8A      ;No... logical page out of range
 	    JMP     MLP_EXIT	       ;exit
@@ -1224,7 +1360,7 @@ MLP_BX_LE_TOT:
 					;ณ  relative page in the EMS pool (SI) ณ
 					;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
 MLP_LP_OK:					      ;Get this handle's   @RH8
-	MOV	DI,HANDLE_LOOKUP_TABLE.H_PAL_PTR[SI]  ; head index to PAL  @RH8
+	MOV	DI,[cs:SI+HANDLE_LOOKUP_TABLE.H_PAL_PTR] ; head index to PAL  @RH8
 	CMP	BX,0				      ;If 1st pg wanted    @RH8
 	JE	MLP_GOT_PHYS_PG 		      ; then we've got it  @RH8
 	MOV	CX,BX				      ;Else scan linked PAL@RH8
@@ -1232,7 +1368,7 @@ MLP_LP_OK:					      ;Get this handle's   @RH8
 MLP_SCAN_PAL:					      ; (log p is 0 based) @RH8
 	SHL	DI,1				      ;2 bytes per PAL ent
 						      ; mult is slow here
-	MOV	DI,PAGE_ALLOC_LIST[DI]		      ; This loop will get @RH8
+	MOV	DI,[cs:DI+PAGE_ALLOC_LIST]    ; This loop will get @RH8
 	LOOP	MLP_SCAN_PAL			      ; the index of the   @RH8
 MLP_GOT_PHYS_PG:				      ; desired page	   @RH8
 	MOV	SI,DI				      ;SI = page on card   @RH8
@@ -1244,34 +1380,34 @@ MLP_GOT_PHYS_PG:				      ; desired page	   @RH8
 					;ณ Get seg addr of the phys page (DI)  ณ
 MLP_GET_SEG:				;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
 	XOR	DI,DI			;Clear offset into mappable phys.  @RH4
-	MOV	CX,MAP_COUNT		; page table.  Loop for # entries. @RH4
+	MOV	CX,[cs:map_count] ; page table.  Loop for # entries. @RH4
 MLP_PP_CHECK:
-	CMP	AL,BYTE PTR MAP_TABLE.PHYS_PAGE_NUMBER[DI]	    ;AX = table pp? @RH4
+	CMP	AL,byte [cs:map_table.phys_page_number+DI]	    ;AX = table pp? @RH4
 	JE	MLP_PP_OK				   ;Yes..get seg   @RH4
-	ADD	DI,TYPE MAPPABLE_PHYS_PAGE_STRUCT	   ;No..check next @RH4
+	ADD	DI,sizeof.mappable_phys_page_struct  ;No..check next @RH4
 	LOOP	MLP_PP_CHECK				   ; table entry   @RH4
 	    MOV     AH,EMS_CODE8B	;If here physical page not found   @RH1
 	    JMP     MLP_EXIT		; in mappable phys pg table..Error @RH1
 MLP_PP_OK:
-	MOV	MAP_TABLE.PPM_LOG_PAGE[DI],BX	   ;Place the logical pg   @RH4
-	MOV	MAP_TABLE.PPM_HANDLE[DI],DX	   ; the mappable pp table @RH4
-	MOV	DI,MAP_TABLE.PHYS_PAGE_SEGMENT[DI] ;DI= page's PC seg addr @RH1
+	MOV	[cs:DI+map_table.ppm_log_page],BX ;Place the logical pg   @RH4
+	MOV	[cs:DI+map_table.ppm_handle],DX ; the mappable pp table @RH4
+	MOV	DI,[cs:DI+map_table.phys_page_segment] ;DI= page's PC seg addr @RH1
 
 					;-------------------------------------
 					; Map L to P depending on memory card บ
 					;-------------------------------------
 MLP_VIRTUAL:
-	TEST	MEMCARD_MODE,WSP_VIRT	;Using either an XMA 1, XMA/A, or  @RH2
+	TEST	byte [cs:MEMCARD_MODE],WSP_VIRT ;Using either an XMA 1, XMA/A, or  @RH2
 	JZ	MLP_MC_TEST		; XMA Emulator in virtual mode?    @RH2
 	CALL	W_EMSPG_XVIRT		;Yes..Map one logical page to
 	JMP	MLP_GOODRC		; physical page using 310X regs
 					;Else not virtual...use real mode
 MLP_MC_TEST:				;If system has multiple cards,	   @RH5
-	CMP	NUM_MEM_CARDS,1 	; then adjust absolute EMS page to @RH5
+	CMP	word [cs:NUM_MEM_CARDS],1 ; then adjust absolute EMS page to @RH5
 	JNA	MLP_REAL		; its corresponding page on the    @RH5
 	CALL	MLP_MCARD_SETUP 	; card to be used		   @RH5
 MLP_REAL:
-	CMP	MEMCARD_MODE,XMAA_REAL	;XMA/A card (on PS/2 mod 50 or 60) @RH3
+	CMP	byte [cs:MEMCARD_MODE],XMAA_REAL ;XMA/A card (on PS/2 mod 50 or 60) @RH3
 	JNE	MLP_HLST		; in real mode (WSP not loaded)?   @RH3
 	CALL	W_EMSPG_XREAL		;Map one logical page to physical  @RH2
 	JMP	MLP_GOODRC
@@ -1290,7 +1426,7 @@ MLP_EXIT:
 	POP	BX
 
 	RET
-MAP_L_TO_P ENDP
+;MAP_L_TO_P ENDP
 
 
 
@@ -1318,26 +1454,26 @@ MAP_L_TO_P ENDP
 ;ณ									       ณ
 ;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
 
-W_EMSPG_XVIRT  PROC
+W_EMSPG_XVIRT:
 	MOV	DX,IDREG		;Save the current bank ID	   @RH1
 	IN	AL,DX			; (bank of the requestor).  Write  @RH1
-	MOV	BANKID,AL		; to the trans. table for this bank@RH1
+	MOV	[cs:BANKID],AL ; to the trans. table for this bank@RH1
 
 	MOV	AX,DI			;Get the PC seg. addr of the page  @RH1
 	XCHG	AL,AH			;Div by 256 (Segments per 4K block)@RH1
-	MOV	AH,BANKID		;Join with the bank ID to get the  @RH1
+	MOV	AH,[cs:BANKID] ;Join with the bank ID to get the  @RH1
 	MOV	DX,TTPOINTER		; ptr to the translate table entry @RH1
 	OUT	DX,AX			;Set TT ptr			   @RH1
 
 	MOV	AX,SI			;Get absolute EMS page number	   @RH4
 	CMP	AX,PAGE_INHIBITTED	;Is TT entry to be inhibitted?	   @RH4
 	JE	VM_TTDATA_OK		;Yes..write the FFFF in AX	   @RH4
-	MUL	BLOCKS_PER_PAGE 	;Else convert page to XMA 4K block @RH1
-	TEST	MEMCARD_MODE,EMUL_VIRT	;If running on the emulator then   @RH7
+	MUL	[cs:BLOCKS_PER_PAGE] ;Else convert page to XMA 4K block @RH1
+	TEST	byte [cs:MEMCARD_MODE],EMUL_VIRT ;If running on the emulator then   @RH7
 	JZ	VM_TTDATA_OK		; turn high order bit of data on   @RH7
 	OR	AX,EMUL_TTDATA_ON	; allowing >8M support on emulator @RH7
 VM_TTDATA_OK:
-	MOV	CX,BLOCKS_PER_PAGE	;Set up one page - loop on blocks  @RH1
+	MOV	CX,[cs:BLOCKS_PER_PAGE] ;Set up one page - loop on blocks  @RH1
 	MOV	DX,AIDATA		; per page using the auto inc reg  @RH1
 VM_WRITE:
 	OUT	DX,AX			;Write TT entry, inc TT ptr	   @RH1
@@ -1348,7 +1484,7 @@ VM_NEXT_TT:
 	LOOP	VM_WRITE		;Loop for all blocks in a page	   @RH1
 
 	RET
-W_EMSPG_XVIRT  ENDP
+;W_EMSPG_XVIRT  ENDP
 
 
 ;ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ
@@ -1362,9 +1498,9 @@ W_EMSPG_XVIRT  ENDP
 ;ณ	  up the XMA translate table.					       ณ
 ;ณ									       ณ
 ;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
-W_EMSPG_XREAL  PROC
+W_EMSPG_XREAL:
 
-	MOV	AL,WTT_CARD_SLOT	;Put the XMA/A card into setup	   @RH2
+	MOV	AL,[cs:WTT_CARD_SLOT] ;Put the XMA/A card into setup	   @RH2
 	OR	AL,SLOT_SETUP		; mode				   @RH2
 	OUT	96h,AL			;				   @RH2
 
@@ -1379,9 +1515,9 @@ W_EMSPG_XREAL  PROC
 	MOV	AX,SI			;Get absolute EMS page number	   @RH4
 	CMP	AX,PAGE_INHIBITTED	;Is TT entry to be inhibitted?	   @RH4
 	JE	RM_TTDATA_OK		;Yes..write the FFFF in AX	   @RH4
-	MUL	BLOCKS_PER_PAGE 	;Else convert page to XMA 4K block @RH1
+	MUL	[cs:BLOCKS_PER_PAGE] ;Else convert page to XMA 4K block @RH1
 RM_TTDATA_OK:
-	MOV	CX,BLOCKS_PER_PAGE	;Set up one page - loop on blocks  @RH2
+	MOV	CX,[cs:BLOCKS_PER_PAGE] ;Set up one page - loop on blocks  @RH2
 					; per page using the auto inc regs @RH2
 RM_WRITE:
 	XCHG	AH,AL			;Write TT data high byte first,    @RH2
@@ -1399,7 +1535,7 @@ RM_NEXT_TT:
 	MOV	AL,0			;Reset the slot ID		   @RH5
 	OUT	96h,AL			;				   @RH5
 	RET
-W_EMSPG_XREAL  ENDP
+;W_EMSPG_XREAL  ENDP
 
 ;ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ
 ;ณ    Subroutine: WRITE TRANSLATE TABLE FOR EMS PAGE			       ณ
@@ -1413,10 +1549,10 @@ W_EMSPG_XREAL  ENDP
 ;ณ	  0 to inhibit translation (where inhibit = 1 on XMA).		       ณ
 ;ณ									       ณ
 ;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
-W_EMSPG_HLST  PROC
+W_EMSPG_HLST:
 	PUSH	CX			;				   @RH3
 
-	MOV	AL,WTT_CARD_SLOT	;Put the MXO card into setup	   @RH3
+	MOV	AL,[cs:WTT_CARD_SLOT] ;Put the MXO card into setup	   @RH3
 	OR	AL,SLOT_SETUP		; mode				   @RH3
 	OUT	96h,AL			;				   @RH3
 
@@ -1445,7 +1581,7 @@ HM_WRITETT:
 
 	POP	CX			;				   @RH3
 	RET
-W_EMSPG_HLST  ENDP
+;W_EMSPG_HLST  ENDP
 
 ;ฺฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฟ
 ;ณ    Subroutine: MULTIPLE MEMORY CARD SETUP				       ณ
@@ -1470,13 +1606,13 @@ W_EMSPG_HLST  ENDP
 ;ณ									       ณ
 ;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
 
-PG_NEW_CARD_ID	   DW	?		;Holders for the ID and the slot # @RH5
-PG_NEW_CARD_SLOT   DB	?		; of the card that will be used    @RH5
+PG_NEW_CARD_ID	   rw      1 ;Holders for the ID and the slot # @RH5
+PG_NEW_CARD_SLOT   rb      1 ; of the card that will be used    @RH5
 					; in the new mapping		   @RH5
-MC_TABLE_OFFSET    DW	?		;Holder for offset into the	   @RH5
+MC_TABLE_OFFSET    rw      1 ;Holder for offset into the	   @RH5
 					; multicard page mapping table	   @RH5
 
-MLP_MCARD_SETUP PROC
+MLP_MCARD_SETUP:
 	PUSH	AX
 	PUSH	CX
 					;-------------------------------------
@@ -1486,11 +1622,11 @@ MLP_MCARD_SETUP PROC
 					;-------------------------------------
 	PUSH	DI				   ;Loop through the mem   @RH5
 	XOR	DI,DI				   ; card table to find    @RH5
-	MOV	CX,NUM_MEM_CARDS		   ; card used to map the  @RH5
+	MOV	CX,[cs:NUM_MEM_CARDS] ; card used to map the  @RH5
 MC_GET_CARD:					   ; absolute page (SI)    @RH5
-	CMP	MEM_CARD_TABLE.END_PG_NUM[DI],SI   ;If the last pg this    @RH5
+	CMP	word [cs:MEM_CARD_TABLE+MEM_CARD_STRUC.END_PG_NUM+DI],SI ;If the last pg this    @RH5
 	JAE	MC_FOUND_CARD			   ; card maps <= SI then  @RH5
-	ADD	DI,TYPE MEM_CARD_STRUC		   ; use this card	   @RH5
+	ADD	DI,sizeof.MEM_CARD_STRUC   ; use this card	   @RH5
 	LOOP	MC_GET_CARD			   ;Else check next card   @RH5
 						   ; Note: if SI = FFFF    @RH5
 						   ;  the last card is	   @RH5
@@ -1498,11 +1634,11 @@ MC_GET_CARD:					   ; absolute page (SI)    @RH5
 						   ;  OK, since it doesn't @RH5
 						   ;  matter which is inh  @RH5
 MC_FOUND_CARD:					   ;			   @RH5
-	MOV	AX,MEM_CARD_TABLE.CARD_ID[DI]	   ;Save the card ID and   @RH5
-	MOV	PG_NEW_CARD_ID,AX		   ; the slot # of the	   @RH5
-	MOV	AL,MEM_CARD_TABLE.CARD_SLOT[DI]    ; card used to map	   @RH5
-	MOV	PG_NEW_CARD_SLOT,AL		   ; the new page.	   @RH5
-	MOV	AX,MEM_CARD_TABLE.START_PG_NUM[DI] ;If SI is not inhibit,  @RH5
+	MOV	AX,word [cs:MEM_CARD_TABLE+MEM_CARD_STRUC.CARD_ID+DI] ;Save the card ID and   @RH5
+	MOV	[cs:PG_NEW_CARD_ID],AX ; the slot # of the	   @RH5
+	MOV	AL,byte [cs:MEM_CARD_TABLE+MEM_CARD_STRUC.CARD_SLOT+DI] ; card used to map	   @RH5
+	MOV	[cs:PG_NEW_CARD_SLOT],AL ; the new page.	   @RH5
+	MOV	AX,word [cs:MEM_CARD_TABLE+MEM_CARD_STRUC.START_PG_NUM+DI] ;If SI is not inhibit,  @RH5
 	CMP	SI,PAGE_INHIBITTED		   ; convert SI from the   @RH5
 	JE	MC_DEACTIVATE			   ; absolute pg number    @RH5
 	SUB	SI,AX				   ; to the offset of the  @RH5
@@ -1518,29 +1654,29 @@ MC_DEACTIVATE:				; Deactivate (inhibit) the translate  บ
 	PUSH	SI			;  multicard page mapping table    @RH5
 	XOR	SI,SI			;SI = offset into map phy pg table @RH5
 	XOR	AX,AX			;AX = offset into multic pm table  @RH5
-	MOV	CX,MAP_COUNT		;Loop on # phys pgs (incl FE & FF) @RH5
+	MOV	CX,[cs:map_count] ;Loop on # phys pgs (incl FE & FF) @RH5
 MC_SRCH_MPP:					      ; 		   @RH5
-	CMP	MAP_TABLE.PHYS_PAGE_SEGMENT[SI],DI    ;If no segment match @RH5
+	CMP	[cs:SI+map_table.phys_page_segment],DI ;If no segment match @RH5
 	JE	MC_CHECK_CUR_PG 		      ; then next entry in @RH5
-	ADD	SI,TYPE MAPPABLE_PHYS_PAGE_STRUCT     ; map phys pg tbl &  @RH5
-	ADD	AX,TYPE MULTIC_PM_STRUC 	      ; multicard pm table @RH5
+	ADD	SI,sizeof.mappable_phys_page_struct   ; map phys pg tbl &  @RH5
+	ADD	AX,sizeof.MULTIC_PM_STRUC      ; multicard pm table @RH5
 	LOOP	MC_SRCH_MPP			      ; 		   @RH5
 
 					;Examine the current card ID and   @RH5
 					; slot used for this page	   @RH5
 MC_CHECK_CUR_PG:
-	MOV	MC_TABLE_OFFSET,AX		       ;Save mc tbl offset @RH5
+	MOV	[cs:MC_TABLE_OFFSET],AX    ;Save mc tbl offset @RH5
 	MOV	SI,AX				       ; and put it in SI  @RH5
-	CMP	MC_PM_TABLE.PG_CARD[SI],NO_CARD        ;If the page is	   @RH5
+	CMP	word [cs:MC_PM_TABLE+MULTIC_PM_STRUC.PG_CARD+SI],NO_CARD ;If the page is	   @RH5
 	JE	MC_MAP_NEW			       ; inhibitted or if  @RH5
-	MOV	AL,MC_PM_TABLE.PG_SLOT[SI]	       ; the new page is   @RH5
-	CMP	AL,PG_NEW_CARD_SLOT		       ; on the same card  @RH5
+	MOV	AL,byte [cs:MC_PM_TABLE+MULTIC_PM_STRUC.PG_SLOT+SI] ; the new page is   @RH5
+	CMP	AL,[cs:PG_NEW_CARD_SLOT]    ; on the same card  @RH5
 	JE	MC_MAP_NEW			       ; as the old page   @RH5
 						       ; then dont inhibit @RH5
 
 					;Inhibit TT entry for current card @RH5
-	MOV	WTT_CARD_SLOT,AL		       ;Save slot # and ID @RH5
-	MOV	AX,MC_PM_TABLE.PG_CARD[SI]	       ; of current card   @RH5
+	MOV	[cs:WTT_CARD_SLOT],AL    ;Save slot # and ID @RH5
+	MOV	AX,word [cs:MC_PM_TABLE+MULTIC_PM_STRUC.PG_CARD+SI] ; of current card   @RH5
 	MOV	SI,PAGE_INHIBITTED		       ;Page = inhibitted  @RH5
 	CMP	AX,XMAA_CARD_ID 		       ;If card = XMA/A    @RH5
 	JNE	MC_INH_HLST			       ; then inh XMA/A TT @RH5
@@ -1557,34 +1693,34 @@ MC_MAP_NEW:				;-------------------------------------
 					    ; table for the new card	   @RH5
 	POP	SI			    ;Restore EMS page		   @RH5
 	PUSH	DI			    ; and save pc seg addr.	   @RH5
-	MOV	DI,MC_TABLE_OFFSET	    ;				   @RH5
-	MOV	AL,PG_NEW_CARD_SLOT	    ;Store slot # of new card in   @RH5
-	MOV	MC_PM_TABLE.PG_SLOT[DI],AL  ; multc pm tbl and in variable @RH5
-	MOV	WTT_CARD_SLOT,AL	    ; used by map log to phys proc @RH5
+	MOV	DI,[cs:MC_TABLE_OFFSET] ;				   @RH5
+	MOV	AL,[cs:PG_NEW_CARD_SLOT] ;Store slot # of new card in   @RH5
+	MOV	byte [cs:MC_PM_TABLE+MULTIC_PM_STRUC.PG_SLOT+DI],AL ; multc pm tbl and in variable @RH5
+	MOV	[cs:WTT_CARD_SLOT],AL ; used by map log to phys proc @RH5
 	CMP	SI,PAGE_INHIBITTED	    ;If new pg is not inhibitted   @RH5
 	JE	MC_NEWID_INH		    ; then set card ID field in    @RH5
-	MOV	AX,PG_NEW_CARD_ID	    ; the multicard page mapping   @RH5
-	MOV	MC_PM_TABLE.PG_CARD[DI],AX  ; table to new card ID	   @RH5
+	MOV	AX,[cs:PG_NEW_CARD_ID] ; the multicard page mapping   @RH5
+	MOV	word [cs:MC_PM_TABLE+MULTIC_PM_STRUC.PG_CARD+DI],AX ; table to new card ID	   @RH5
 	JMP	SHORT MC_SET_FLGS	    ;				   @RH5
 MC_NEWID_INH:				    ;				   @RH5
 	MOV	AX,NO_CARD		    ;Else set card ID as no card   @RH5
-	MOV	MC_PM_TABLE.PG_CARD[DI],AX  ;				   @RH5
+	MOV	word [cs:MC_PM_TABLE+MULTIC_PM_STRUC.PG_CARD+DI],AX ;				   @RH5
 					    ;............................
 					    ;Set flags so main MLP proc    @RH5
 					    ; can map the new page	   @RH5
 MC_SET_FLGS:				    ;............................. @RH5
 	POP	DI			    ;Restore PC seg addr
-	CMP	PG_NEW_CARD_ID,XMAA_CARD_ID ;Set the flag that tells	   @RH5
+	CMP	word [cs:PG_NEW_CARD_ID],XMAA_CARD_ID ;Set the flag that tells	   @RH5
 	JNE	MC_MAP_HLST		    ; the main Map Log to P proc   @RH5
-	MOV	MEMCARD_MODE,XMAA_REAL	   ; which subroutine to call	  @RH5
+	MOV	byte [cs:MEMCARD_MODE],XMAA_REAL ; which subroutine to call	  @RH5
 	JMP	SHORT MC_END_PROC	    ;At this point,		   @RH5
 MC_MAP_HLST:				    ; DI = PC segment addr of page @RH5
-	MOV	MEMCARD_MODE,HOLS_REAL	    ; SI = page's offset into card @RH5
+	MOV	byte [cs:MEMCARD_MODE],HOLS_REAL ; SI = page's offset into card @RH5
 MC_END_PROC:				    ; WTT_CARD_SLOT = card slot #  @RH5
 	POP	CX			    ; MEMCARD_MODE = flag showing  @RH5
 	POP	AX			    ;	if card is XMAA or MXO     @RH5
 	RET				    ;				   @RH5
-MLP_MCARD_SETUP  ENDP
+;MLP_MCARD_SETUP  ENDP
 
 ;ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
 ;บ	Entry point for DEALLOCATE PAGES	      Function 6	บ
@@ -1595,7 +1731,7 @@ MLP_MCARD_SETUP  ENDP
 ;บ	on exit:  (AH) = status 					บ
 ;บ		  AX Revised...all other registers preserved		บ
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
-DE_ALLOCATE PROC
+DE_ALLOCATE:
 	PUSH	BX			;save these registers
 	PUSH	CX
 	PUSH	DX
@@ -1612,8 +1748,8 @@ DE_ALLOCATE PROC
 	cmp	dx,0			;handle zero?				;an000; dms;
 	jne	D_Check_Handle		;no continue				;an000; dms;
 		mov	bx,0		;reallocate to a page count of 0	;an000; dms;
-		call	Reallocate	;					;an000; dms;
-		jmp	DA_Exit 	;exit routine				;an000; dms;
+		call	reallocate	;					;an000; dms;
+		jmp	DA_EXIT 	;exit routine				;an000; dms;
 
 D_Check_Handle:
 
@@ -1624,12 +1760,12 @@ D_Check_Handle:
 D_OKRANGE:				;check if active (valid) handle
 	PUSH	DX			;Save handle id 		   @RH1
 	MOV	AX,DX			;set up indexing into h lookup	   @RH1
-	MOV	DX,TYPE H_LOOKUP_STRUC	;				   @RH8
+	MOV	DX,sizeof.H_LOOKUP_STRUC ;				   @RH8
 	MUL	DX			;get handle lookup entry offset    @RH8
 	POP	DX			;Restore handle id		   @RH1
 	MOV	DI,AX			;Put offset into index reg	   @RH1
 
-	CMP	HANDLE_LOOKUP_TABLE.H_Pages[DI],REUSABLE_HANDLE
+	CMP	[cs:DI+HANDLE_LOOKUP_TABLE.H_PAGES],REUSABLE_HANDLE
 					;Handle has pages?		   @RH1
 	JNE	D_OKHNDL		;Yes  OK handle
 	    MOV     AH,EMS_CODE83	;No handle not in use.	error.
@@ -1640,12 +1776,12 @@ D_OKHNDL:		; Before deallocation can continue, insure the	 @RH1 บ
 			;-----------------------------------------------------
 	PUSH	DX				 ;Save handle id	   @RH1
 	MOV	AX,DX				 ;Get the correct offset   @RH1
-	MOV	DX,TYPE H_SAVE_STRUC		 ; into the handle save    @RH8
+	MOV	DX,sizeof.H_SAVE_STRUC ; into the handle save    @RH8
 	MUL	DX				 ; area for this handle    @RH8
 	POP	DX				 ;Restore handle id	   @RH1
 	MOV	SI,AX				 ;			   @RH1
 D_HSAVECHK:
-	CMP	HANDLE_SAVE_AREA.PG0_LP[SI],REUSABLE_SAVEA
+	CMP	word [cs:HANDLE_SAVE_AREA+H_SAVE_STRUC.PG0_LP+SI],REUSABLE_SAVEA
 	JE	D_PAT_UPDATE		;If the 1st entry for this handle  @RH1
 	   MOV	   AH,EMS_CODE86	; in the save area is not free
 	   JMP	   DA_EXIT		; then in use...exit with error
@@ -1657,8 +1793,8 @@ D_PAT_UPDATE:
 
 
 
-	MOV	CX,HANDLE_LOOKUP_TABLE.H_PAGES[DI]    ;Get the # of pages  @RH1
-	MOV	AX,HANDLE_LOOKUP_TABLE.H_PAL_PTR[DI]  ;Load si with ptr    @RH1
+	MOV	CX,[cs:DI+HANDLE_LOOKUP_TABLE.H_PAGES] ;Get the # of pages  @RH1
+	MOV	AX,[cs:DI+HANDLE_LOOKUP_TABLE.H_PAL_PTR] ;Load si with ptr    @RH1
 	MOV	SI,AX				      ;pass ptr 		;an000; dms;
 
 	push	cx				      ;save loop count		;an000; dms;
@@ -1666,8 +1802,8 @@ D_PAT_UPDATE:
 	cmp	cx,0					;handle has 0 pages?	;an001; dms;
 	je	D_Depat_Exit1				;yes - don't changes ptr;an001; dms;
 
-	mov	ax,cs:PAL_Free_Ptr			;no  - dealloc pages	;an001; dms;
-	mov	cs:PAL_Free_Ptr,si			;set free ptr to root of;an001; dms;
+	mov	ax,[cs:PAL_FREE_PTR] ;no  - dealloc pages	;an001; dms;
+	mov	[cs:PAL_FREE_PTR],si ;set free ptr to root of;an001; dms;
 							;  handle list
 	dec	cx					;don't loop past last pg;an001; dms;
 
@@ -1678,16 +1814,16 @@ D_DEPAT:
 							;chain
 
 	cmp	cx,0					;end of deallocate?	;an000; dms;
-	je	D_Depat_Exit				;yes - exit		;an000; dms;
+	je	D_DEPAT_EXIT				;yes - exit		;an000; dms;
 	shl	si,1					;no - adjust to index	;an001; dms;
-	mov	si,Page_Alloc_List[si]			;get new ptr val	;an001; dms;
+	mov	si,[cs:si+PAGE_ALLOC_LIST] ;get new ptr val	;an001; dms;
 	dec	cx					;dec loop ctr		;an001; dms;
 	jmp	D_DEPAT 				;continue		;an000; dms;
 
 D_DEPAT_EXIT:
 
 	shl	si,1					;adjust to index value	;an001; dms;
-	mov	Page_Alloc_List[si],ax			;pt. last page to orig. ;an001; dms;
+	mov	[cs:si+PAGE_ALLOC_LIST],ax ;pt. last page to orig. ;an001; dms;
 							;  free ptr.
 
 D_Depat_Exit1:
@@ -1700,16 +1836,16 @@ D_Depat_Exit1:
 
 	mov	ax,cs					;swap segs		;an000; dms;
 	mov	ds,ax					;			;an000; dms;
-	mov	si,offset cs:Null_Handle_Name		;point to null handle	;an000; dms;
+	mov	si,Null_Handle_Name         ;point to null handle	;an000; dms;
 	mov	ax,5301h				;set handle name func	;an000; dms;
-	call	Handle_Name				;set the handle name to ;an000; dms;
+	call	handle_name				;set the handle name to ;an000; dms;
 							;  nulls
 	pop	si					;restore regs		;an000; dms;
 	pop	ds					;			;an000; dms;
 
 	cli						;ints off		;an000; dms;
-	add	cs:Free_Pages,cx			;free up page		;an000; dms;
-	mov	Handle_LookUp_Table.H_Pages[di],Reusable_Handle ;deallocate	;an000; dms;
+	add	[cs:FREE_PAGES],cx ;free up page		;an000; dms;
+	mov	[cs:di+HANDLE_LOOKUP_TABLE.H_PAGES],REUSABLE_HANDLE ;deallocate	;an000; dms;
 								;  handle
 	sti						;ints on		;an000; dms;
 
@@ -1726,7 +1862,7 @@ DA_EXIT:
 	POP	BX
 
 	RET
-DE_ALLOCATE ENDP
+;DE_ALLOCATE ENDP
 
 
 ;====================================================================
@@ -1739,7 +1875,7 @@ DE_ALLOCATE ENDP
 ;
 ;====================================================================
 
-Deallocate_Chain	proc				;deallocate page	;an000; dms;
+Deallocate_Chain:        ;deallocate page	;an000; dms;
 
 	push	ax					;save regs		;an000; dms;
 	push	bx					;			;an000; dms;
@@ -1750,16 +1886,16 @@ Deallocate_Chain	proc				;deallocate page	;an000; dms;
 	mov	bx,si					;alloc_ptr		;an000; dms;
 
 	mov	ax,si					;get page_ptr		;an000; dms;
-	mov	dx,Type Page_Alloc_List 		;get entry size 	;an000; dms;
+	mov	dx,2                      ;get entry size 	;an000; dms;
 	mul	dx					;get pointer val	;an000; dms;
 	mov	si,ax					;page_ptr		;an000; dms;
 
-	mov	ax,Page_List_Entry			;page_ptr value 	;an000; dms;
-	mov	cx,cs:PAL_Free_PTR			;free_ptr		;an000; dms;
+	mov	ax,PAGE_LIST_ENTRY			;page_ptr value 	;an000; dms;
+	mov	cx,[cs:PAL_FREE_PTR] ;free_ptr		;an000; dms;
 
 
-	mov	cs:PAL_Free_PTR,bx			;new free_ptr		;an000; dms;
-	mov	Page_List_Entry,cx			;new free_ptr value	;an000; dms;
+	mov	[cs:PAL_FREE_PTR],bx ;new free_ptr		;an000; dms;
+	mov	PAGE_LIST_ENTRY,cx			;new free_ptr value	;an000; dms;
 	mov	si,ax					;next page to deallocate;an000; dms;
 	sti						;ints on		;an000; dms;
 
@@ -1769,7 +1905,7 @@ Deallocate_Chain	proc				;deallocate page	;an000; dms;
 
 	ret						;			;an000; dms;
 
-Deallocate_Chain	endp				;			;an000; dms;
+;Deallocate_Chain	endp				;			;an000; dms;
 
 ;ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
 ;บ	Entry point for QUERY MEMORY MANAGER VERSION  Function 7	บ
@@ -1779,11 +1915,11 @@ Deallocate_Chain	endp				;			;an000; dms;
 ;บ	on exit:  (AH) = status 					บ
 ;บ		  all other registers preserved 			บ
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
-Q_VERSION PROC
+Q_VERSION:
 	MOV	AL,EMM_VERSION		;al get version number
 	XOR	AH,AH			;good return code
 	RET
-Q_VERSION ENDP
+;Q_VERSION ENDP
 
 
 
@@ -1797,7 +1933,7 @@ Q_VERSION ENDP
 ;บ	on exit:  (AH) = status 					บ
 ;บ		  all other registers preserved 			บ
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
-SAVE_MAP PROC
+SAVE_MAP:
 	PUSH	DX
 	PUSH	DI
 	PUSH	SI
@@ -1816,26 +1952,26 @@ SAVE_MAP PROC
 SM_DXINRANGE:
 	PUSH	DX			;Handle destroyed by MUL	   @RH1
 	MOV	AX,DX			;SI = requested handle's           @RH1
-	MOV	DX,TYPE H_LOOKUP_STRUC	; offset into the handle	   @RH8
+	MOV	DX,sizeof.H_LOOKUP_STRUC ; offset into the handle	   @RH8
 	MUL	DX			; lookup table			   @RH8
 	MOV	SI,AX			;				   @RH1
 	POP	DX			;Restore handle ID		   @RH1
 
-	CMP	HANDLE_LOOKUP_TABLE.H_Pages[SI],REUSABLE_HANDLE
+	CMP	[cs:SI+HANDLE_LOOKUP_TABLE.H_PAGES],REUSABLE_HANDLE
 	JNE	SM_HACTIVE		;If handle is in use (active), ok  @RH1
 	    MOV     AH,EMS_CODE83	;else handle not in use; error
 	    JMP     SM_EXIT		;exit
 SM_HACTIVE:
 	MOV	AX,DX			    ;DI = requested handle's       @RH1
-	MOV	DX,TYPE H_SAVE_STRUC	    ; offset into the handle	   @RH1
+	MOV	DX,sizeof.H_SAVE_STRUC   ; offset into the handle	   @RH1
 	MUL	DX			    ; save area 		   @RH1
 	MOV	DI,AX			    ;Add the table base to	   @RH1
-	ADD	DI,OFFSET HANDLE_SAVE_AREA  ; make ES:DI a pointer	   @RH1
+	ADD	DI,HANDLE_SAVE_AREA         ; make ES:DI a pointer	   @RH1
 
 					;-------------------------------------
 					; Insure save area free for this hndl บ
 SM_AREACHECK:				;-------------------------------------
-	CMP	[DI].PG0_LP,REUSABLE_SAVEA
+	CMP	[DI+H_SAVE_STRUC.PG0_LP],REUSABLE_SAVEA
 	JE	SM_SAVE_OK		;If 1st entry free then OK to save @RH1
 	   MOV	   AH,EMS_CODE8D	;Else page map already saved for
 	   JMP	   SM_EXIT		; this handle.	Exit with error
@@ -1849,7 +1985,7 @@ SM_EXIT:
 	POP	DI
 	POP	DX
 	RET				;return to caller
-SAVE_MAP ENDP
+;SAVE_MAP ENDP
 
 ;-----------------------------------------------------------------------;
 ;	Subroutine:  SAVE PAGE FRAME MAP				;
@@ -1868,7 +2004,7 @@ SAVE_MAP ENDP
 ;									;
 ;	on exit:  All registers preserved				;
 ;-----------------------------------------------------------------------;
-SAVE_PGFRM_MAP PROC
+SAVE_PGFRM_MAP:
 	PUSH	AX			;save these registers
 	PUSH	CX
 	PUSH	DI
@@ -1883,13 +2019,13 @@ SAVE_PGFRM_MAP PROC
 					;-------------------------------------
 	CLD				;Set direction for STOSW forward   @RH5
 	XOR	SI,SI			;Clear offset into mappable phys.  @RH5
-	MOV	CX,map_count		; page table.  Loop for # entries  @RH5
+	MOV	CX,[cs:map_count] ; page table.  Loop for # entries  @RH5
 SM_HLP_STORE:					  ;Store the word for the  @RH5
-	MOV	AX,MAP_TABLE.PPM_HANDLE[SI]	  ; currently active handle@RH5
+	MOV	AX,[cs:SI+map_table.ppm_handle] ; currently active handle@RH5
 	STOSW					  ; and logical page into  @RH5
-	MOV	AX,MAP_TABLE.PPM_LOG_PAGE[SI]	  ; the save area at ES:DI @RH5
+	MOV	AX,[cs:SI+map_table.ppm_log_page] ; the save area at ES:DI @RH5
 	STOSW					  ; STOSW moves AX to ES:DI@RH5
-	ADD	SI,TYPE MAPPABLE_PHYS_PAGE_STRUCT ;Next entry in mpp table @RH5
+	ADD	SI,sizeof.mappable_phys_page_struct ;Next entry in mpp table @RH5
 	LOOP	SM_HLP_STORE			  ;			   @RH5
 
 	POP	DS			;Recover these registers
@@ -1898,7 +2034,7 @@ SM_HLP_STORE:					  ;Store the word for the  @RH5
 	POP	CX
 	POP	AX
 	RET				;return to caller
-SAVE_PGFRM_MAP ENDP
+;SAVE_PGFRM_MAP ENDP
 
 
 ;ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
@@ -1911,7 +2047,7 @@ SAVE_PGFRM_MAP ENDP
 ;บ	on exit:  (AH) = status 					บ
 ;บ		  all other registers preserved 			บ
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
-RESTORE_MAP PROC
+RESTORE_MAP:
 	PUSH	BX
 	PUSH	CX
 	PUSH	DX
@@ -1929,26 +2065,26 @@ RESTORE_MAP PROC
 RM_DXINRANGE:
 	PUSH	DX			;Handle destroyed by MUL	   @RH1
 	MOV	AX,DX			;SI = requested handle's           @RH1
-	MOV	DX,TYPE H_LOOKUP_STRUC	; offset into the handle	   @RH1
+	MOV	DX,sizeof.H_LOOKUP_STRUC ; offset into the handle	   @RH1
 	MUL	DX			; lookup table			   @RH1
 	MOV	SI,AX			;				   @RH1
 	POP	DX			;Restore handle ID		   @RH1
 
-	CMP	HANDLE_LOOKUP_TABLE.H_Pages[SI],REUSABLE_HANDLE
+	CMP	[cs:SI+HANDLE_LOOKUP_TABLE.H_PAGES],REUSABLE_HANDLE
 	JNE	RM_HACTIVE		;If handle is in use (active), ok  @RH1
 	    MOV     AH,EMS_CODE83	;else handle not in use; error
 	    JMP     RM_EXIT		;exit
 RM_HACTIVE:
 	MOV	AX,DX				 ;SI = requested handle's  @RH1
-	MOV	DX,TYPE H_SAVE_STRUC		 ; offset into the handle  @RH1
+	MOV	DX,sizeof.H_SAVE_STRUC ; offset into the handle  @RH1
 	MUL	DX				 ; save area		   @RH1
 	MOV	SI,AX				 ;Add the table base to    @RH1
-	ADD	SI,OFFSET HANDLE_SAVE_AREA	 ; make DS:SI a pointer    @RH1
+	ADD	SI,HANDLE_SAVE_AREA         ; make DS:SI a pointer    @RH1
 
 					;-------------------------------------
 					; Insure save area used for this hndl บ
 RM_AREACHECK:				;-------------------------------------
-	CMP	[SI].PG0_LP,REUSABLE_SAVEA	 ;Unused save table entry? @RH1
+	CMP	[SI+H_SAVE_STRUC.PG0_LP],REUSABLE_SAVEA ;Unused save table entry? @RH1
 	JNE	RM_SAVE_OK			 ;No used..OK check next   @RH1
 	   MOV	   AH,EMS_CODE8E		 ;Yes error ..no page map
 	   JMP	   RM_EXIT			 ; saved. Exit.
@@ -1964,10 +2100,10 @@ RM_SAVE_OK:				;-------------------------------------
 					; Clear the save area for the handle  บ
 					;-------------------------------------
 					;DS:SI still ptr to save area  @RH5
-	MOV	CX,map_count		;Clear all saved entries       @RH5
+	MOV	CX,[cs:map_count] ;Clear all saved entries       @RH5
 RM_CLEAR_SA:				    ;Use an overlay to mark the    @RH5
-	MOV	[SI].HSA_LP,REUSABLE_SAVEA  ; save area free - put reusabl @RH5
-	ADD	SI,TYPE H_SAVEA_ENTRY	    ; indicator in the log p field @RH5
+	MOV	[SI+H_SAVEA_ENTRY.HSA_LP],REUSABLE_SAVEA ; save area free - put reusabl @RH5
+	ADD	SI,sizeof.H_SAVEA_ENTRY   ; indicator in the log p field @RH5
 	LOOP	RM_CLEAR_SA		    ;				   @RH5
 
 RM_EXIT:
@@ -1978,7 +2114,7 @@ RM_EXIT:
 	POP	CX
 	POP	BX
 	RET				;return to caller
-RESTORE_MAP ENDP
+;RESTORE_MAP ENDP
 
 ;-----------------------------------------------------------------------;
 ;	Subroutine: RESTORE PAGE FRAME MAP				;
@@ -1999,7 +2135,7 @@ RESTORE_MAP ENDP
 ;			 All other registers preserved			;
 ;									;
 ;-----------------------------------------------------------------------;
-RESTORE_PGFRM_MAP PROC
+RESTORE_PGFRM_MAP:
 	PUSH	BX
 	PUSH	CX
 	PUSH	DX
@@ -2007,22 +2143,22 @@ RESTORE_PGFRM_MAP PROC
 	PUSH	SI
 
 	XOR	DI,DI			;Use for mappable phys page table  @RH5
-	MOV	CX,map_count		;Loop for all pages in page frame  @RH5
+	MOV	CX,[cs:map_count] ;Loop for all pages in page frame  @RH5
 RP_RSTR_LP:				;				   @RH5
 	PUSH	DS				   ;Get the phys page from @RH5
-	MOV	AX,MAP_TABLE.PHYS_PAGE_NUMBER[DI]  ; the map phys pg tbl   @RH5
+	MOV	AX,[cs:DI+map_table.phys_page_number] ; the map phys pg tbl   @RH5
 	POP	DS				   ; (only AL is used)	   @RH5
 	MOV	DX,[SI] 			   ;DX = Handle ID..inc SI @RH5
-	ADD	SI,TYPE PG0_HNDL		   ; by len needed for hnd @RH5
+	ADD	SI,2                 ; by len needed for hnd @RH5
 	MOV	BX,[SI] 			   ;BX = Log. page..inc SI @RH5
-	ADD	SI,TYPE PG0_LP			   ; by len needed for lp  @RH5
+	ADD	SI,2                ; by len needed for lp  @RH5
 	CALL	MAP_L_TO_P			   ;Call main Map module   @RH5
 	CMP	AH,0				   ;If an error occurred   @RH5
 	JE	RP_NEXT 			   ; anywhere set software @RH5
 	MOV	AH,EMS_CODE80			   ; error and exit	   @RH5
 	JMP	SHORT RP_EXIT			   ;Else map next page	   @RH5
 RP_NEXT:					   ;Advance offset into    @RH5
-	ADD	DI,TYPE MAPPABLE_PHYS_PAGE_STRUCT  ; map phys page table   @RH5
+	ADD	DI,sizeof.mappable_phys_page_struct ; map phys page table   @RH5
 	LOOP	RP_RSTR_LP			   ;Loop for 4 EMS pages   @RH5
 
 RP_EXIT:
@@ -2032,7 +2168,7 @@ RP_EXIT:
 	POP	CX
 	POP	BX
 	RET				;return to caller
-RESTORE_PGFRM_MAP ENDP
+;RESTORE_PGFRM_MAP ENDP
 
 
 ;ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
@@ -2044,7 +2180,7 @@ RESTORE_PGFRM_MAP ENDP
 ;บ		  (BX) = number of open (active) EMS handles		บ
 ;บ		  all other registers preserved 			บ
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
-Q_OPEN	PROC
+Q_OPEN:
 	PUSH	CX			;save these registers
 	PUSH	SI
 	PUSH	DS
@@ -2056,12 +2192,12 @@ Q_OPEN	PROC
 	XOR	SI,SI			;SI = offset of handle lookup table@RH1
 	MOV	CX,NUM_HANDLES		;loop counter = number of handles
 QH_CHECKALL:
-	CMP	HANDLE_LOOKUP_TABLE.H_Pages[SI],REUSABLE_HANDLE
+	CMP	[cs:SI+HANDLE_LOOKUP_TABLE.H_PAGES],REUSABLE_HANDLE
 						     ;Handle have pages?   @RH1
 	JE	QH_NEXTH			     ;No..not active..next @RH1
 	INC	BX				     ;Else open handle	   @RH1
 QH_NEXTH:
-	ADD	SI,TYPE H_LOOKUP_STRUC	;Point to next handle lookup entry @RH1
+	ADD	SI,sizeof.H_LOOKUP_STRUC ;Point to next handle lookup entry @RH1
 	LOOP	QH_CHECKALL		; and check it out		   @RH1
 	XOR	AH,AH			;good return status
 
@@ -2069,7 +2205,7 @@ QH_NEXTH:
 	POP	SI
 	POP	CX
 	RET				;return to caller
-Q_OPEN	ENDP
+;Q_OPEN	ENDP
 
 
 ;ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
@@ -2082,7 +2218,7 @@ Q_OPEN	ENDP
 ;บ		  (BX) = number of pages allocated to this handle	บ
 ;บ		  all other registers preserved 			บ
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
-Q_ALLOCATE PROC
+Q_ALLOCATE:
 	PUSH	DX			;save these registers
 	PUSH	SI
 	PUSH	DS
@@ -2096,16 +2232,16 @@ Q_ALLOCATE PROC
 	    JMP     Q_ALLOC_EXIT	;exit				   @RH1
 QP_DXINRANGE:
 	MOV	AX,DX				      ;SI = offset into    @RH1
-	MOV	DX,TYPE H_LOOKUP_STRUC		      ; handle lookup tbl  @RH1
+	MOV	DX,sizeof.H_LOOKUP_STRUC      ; handle lookup tbl  @RH1
 	MUL	DX				      ; for the given	   @RH1
 	MOV	SI,AX				      ; handle		   @RH1
-	MOV	BX,HANDLE_LOOKUP_TABLE.H_Pages[SI] ;Return # of pages	@RH1
+	MOV	BX,[cs:SI+HANDLE_LOOKUP_TABLE.H_PAGES] ;Return # of pages	@RH1
 
 	CMP	BX,REUSABLE_HANDLE	; is this one free				 ;AN004;
 	JNE	QP_GOOD_RC		; no, must be a real number			 ;AN004;
-		mov	ah,EMS_Code83	; this page is not allocated currently		 ;an004; dms;
+		mov	ah,EMS_CODE83	; this page is not allocated currently		 ;an004; dms;
 		XOR	BX,BX		; yes, zero BX (number of pages)		 ;AN004;
-		jmp	Q_Alloc_Exit	; exit the routine				 ;an004; dms;
+		jmp	Q_ALLOC_EXIT	; exit the routine				 ;an004; dms;
 											 ;AN004;
 QP_GOOD_RC:										 ;AN004;
 	XOR	AH,AH			;good return status
@@ -2114,7 +2250,7 @@ Q_ALLOC_EXIT:
 	POP	SI
 	POP	DX
 	RET				;return to caller
-Q_ALLOCATE ENDP
+;Q_ALLOCATE ENDP
 
 
 ;ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
@@ -2132,7 +2268,7 @@ Q_ALLOCATE ENDP
 ;บ		  (BX) = Number of active EMS handles			บ
 ;บ		  all other registers preserved 			บ
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
-Q_OPEN_ALL PROC
+Q_OPEN_ALL:
 	PUSH	CX			;save these registers
 	PUSH	DX
 	PUSH	DI
@@ -2142,7 +2278,7 @@ Q_OPEN_ALL PROC
 	PUSH	CS			;get this segment
 	POP	DS			;into ds
 
-	MOV	DI,cs:[bp].IE_Saved_DI_Reg ;restore di to its value on	- gga P1501 ;an004;
+	MOV	DI,[cs:bp+Instance_Entry_Struc.IE_Saved_DI_Reg] ;restore di to its value on	- gga P1501 ;an004;
 					;entry
 
 	XOR	BX,BX			;Init number of active handles	   @RH1
@@ -2150,15 +2286,15 @@ Q_OPEN_ALL PROC
 	XOR	SI,SI			;SI = offset into handle lup table @RH1
 	MOV	CX,NUM_HANDLES		;Loop for all entries in h lup tbl @RH1
 QHP_CHECKALL:
-	MOV	AX,HANDLE_LOOKUP_TABLE.H_Pages[SI]	   ;		   @RH1
+	MOV	AX,[cs:SI+HANDLE_LOOKUP_TABLE.H_PAGES] ;		   @RH1
 	CMP	AX,REUSABLE_HANDLE	;If entry is reusable (free),	   @RH1
 	JE	QHP_NEXT		; don't count it.  Check next hndl @RH1
 	INC	BX			;Else active handle. Inc hndl cnt  @RH1
-	MOV	ES: WORD PTR [DI],DX	;Write handle # in the user's area @RH1
-	MOV	ES: WORD PTR [DI+2],AX	;Write # of pages in the 2nd word  @RH1
+	MOV	word [es:DI],DX     ;Write handle # in the user's area @RH1
+	MOV	word [es:DI+2],AX     ;Write # of pages in the 2nd word  @RH1
 	ADD	DI,4			;Advance ptr to user's area        @RH1
 QHP_NEXT:				;Check next entry in h lup table   @RH1
-	ADD	SI,TYPE H_LOOKUP_STRUC	;Inc offset into handle lup table  @RH1
+	ADD	SI,sizeof.H_LOOKUP_STRUC ;Inc offset into handle lup table  @RH1
 	INC	DX			;Next handle ID
 	LOOP	QHP_CHECKALL
 
@@ -2170,7 +2306,7 @@ QHP_NEXT:				;Check next entry in h lup table   @RH1
 	POP	DX
 	POP	CX
 	RET				;return to caller
-Q_OPEN_ALL ENDP
+;Q_OPEN_ALL ENDP
 
 
 ;ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
@@ -2184,21 +2320,21 @@ Q_OPEN_ALL ENDP
 ;บ	on exit:  (AH) = status 					บ
 ;บ		  all other registers preserved 			บ
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
-SUBFCN_TABLE LABEL WORD
-	DW	OFFSET GET_SUBFCN	;0 - Put page frame map into ES:DI array
-	DW	OFFSET SET_SUBFCN	;1 - Set page frame map from DS:SI array
-	DW	OFFSET GET_SET_SUBFCN	;2 - Put page frame map into ES:DI array
+label SUBFCN_TABLE word
+	DW	GET_SUBFCN        ;0 - Put page frame map into ES:DI array
+	DW	SET_SUBFCN        ;1 - Set page frame map from DS:SI array
+	DW	GET_SET_SUBFCN        ;2 - Put page frame map into ES:DI array
 					;and Set page frame map from DS:SI array
-MAX_SUBFCN EQU	($-SUBFCN_TABLE)/2	;maximum allowable subfunction number
-	DW	OFFSET SIZE_SUBFCN	;3 - Return storage requirements of the
+MAX_SUBFCN =	(($-SUBFCN_TABLE)/2)	;maximum allowable subfunction number
+	DW	SIZE_SUBFCN        ;3 - Return storage requirements of the
 					;Get and Set subfunctions
-GET_SET_MAP PROC
-	MOV	DI,cs:[bp].IE_Saved_DI_Reg ;restore di to its value on
+GET_SET_MAP:
+	MOV	DI,[cs:bp+Instance_Entry_Struc.IE_Saved_DI_Reg] ;restore di to its value on
 	PUSH	BX			;save bx
 	CMP	AL,MAX_SUBFCN		;is subfunctiion number within range?
-;	$IF	BE			;do if yes...
-	JNBE $$IF86
-	    MOV     BX,OFFSET GET_SET_EXIT ;get return address common to all subfcns
+;	IF$	BE			;do if yes...
+	JNBE IF86$$
+	    MOV     BX,GET_SET_EXIT        ;get return address common to all subfcns
 	    PUSH    BX			;put it on stack for return
 	    XOR     AH,AH		;adjust ax to make it
 	    ADD     AX,AX		;     offset into jump table
@@ -2207,15 +2343,15 @@ GET_SET_MAP PROC
 ;	CS	= INT67 code segment
 ;	TOP OF STACK is return address, GET_SET_EXIT
 
-	    JMP     CS:SUBFCN_TABLE[BX] ;call subfunction handler
-;	$ENDIF
-$$IF86:
+	    JMP     [cs:SUBFCN_TABLE+BX] ;call subfunction handler
+;	ENDIF$
+IF86$$:
 					;if subfcn # is out of range then do...
 	MOV	AH,EMS_CODE8F		;function call out of range
 GET_SET_EXIT:
 	POP	BX			;recover bx
 	RET				;return to caller
-GET_SET_MAP ENDP
+;GET_SET_MAP ENDP
 
 
 	page
@@ -2229,7 +2365,7 @@ GET_SET_MAP ENDP
 ;	on exit:  (AH) = status 					;
 ;		  all other registers preserved 			;
 ;-----------------------------------------------------------------------;
-GET_SUBFCN PROC
+GET_SUBFCN:
 	PUSH	DI			;save
 	PUSH	ES			;save
 
@@ -2239,7 +2375,7 @@ GET_SUBFCN PROC
 	POP	ES			;restore
 	POP	DI			;restore
 	RET				;return to caller
-GET_SUBFCN ENDP
+;GET_SUBFCN ENDP
 
 
 ;-----------------------------------------------------------------------;
@@ -2252,7 +2388,7 @@ GET_SUBFCN ENDP
 ;	on exit:  (AH) = status 					;
 ;		  all other registers preserved 			;
 ;-----------------------------------------------------------------------;
-SET_SUBFCN PROC
+SET_SUBFCN:
 	PUSH	SI			;save
 	PUSH	DS			;save
 	CALL	RESTORE_PGFRM_MAP	;restore page frame map from DS:SI
@@ -2260,7 +2396,7 @@ SET_SUBFCN PROC
 	POP	DS			;restore
 	POP	SI			;restore
 	RET				;return to caller
-SET_SUBFCN ENDP
+;SET_SUBFCN ENDP
 
 
 ;-----------------------------------------------------------------------;
@@ -2274,11 +2410,11 @@ SET_SUBFCN ENDP
 ;	on exit:  (AH) = status 					;
 ;		  all other registers preserved 			;
 ;-----------------------------------------------------------------------;
-GET_SET_SUBFCN PROC
+GET_SET_SUBFCN:
 	PUSH	DI
 	PUSH	SI
 
-	MOV	DI,cs:[bp].IE_Saved_DI_Reg	    ;restore di to its value on
+	MOV	DI,[cs:bp+Instance_Entry_Struc.IE_Saved_DI_Reg] ;restore di to its value on
 					;entry into irpt handler
 
 	CALL	SAVE_PGFRM_MAP		;save page frame map to ES:DI
@@ -2288,7 +2424,7 @@ GET_SET_SUBFCN PROC
 	POP	SI
 	POP	DI
 	RET				;return to caller
-GET_SET_SUBFCN ENDP
+;GET_SET_SUBFCN ENDP
 
 ;-----------------------------------------------------------------------;
 ;	Subfunction 3 to RETURN SIZE OF SAVE ARRAY    Function 15/3	;
@@ -2300,11 +2436,11 @@ GET_SET_SUBFCN ENDP
 ;		  (AL) = Number of bytes needed for a GET or SET	;
 ;		  all other registers preserved 			;
 ;-----------------------------------------------------------------------;
-SIZE_SUBFCN PROC
-	MOV	AL,TYPE H_SAVE_STRUC	;get size requirements for save area
+SIZE_SUBFCN:
+	MOV	AL,sizeof.H_SAVE_STRUC ;get size requirements for save area
 	XOR	AH,AH			;good return status
 	RET				;return to caller
-SIZE_SUBFCN ENDP
+;SIZE_SUBFCN ENDP
 
 ;=========================================================================
 ; Set_Instance		This routine accesses the instance table.
@@ -2317,28 +2453,28 @@ SIZE_SUBFCN ENDP
 ;		  AH - error code on CY
 ;=========================================================================
 
-Set_Instance	proc				;set the instance table 	;an000; dms;
+Set_Instance:        ;set the instance table 	;an000; dms;
 
 	cli					;disable interrupts		;an000; dms;
 	push	cx				;				;an000; dms;
 
-	mov	bp,offset cs:Instance_Table	;get pointer to instance table	;an000; dms;
+	mov	bp,Instance_Table        ;get pointer to instance table	;an000; dms;
 	mov	cx,Instance_Count		;number of instances		;an000; dms;
 
 Set_Instance_Loop:
 
-	cmp	cs:[bp].IE_Alloc_Byte,Unallocated;unallocated entry?		 ;an000; dms;
+	cmp	[cs:bp+Instance_Entry_Struc.IE_Alloc_Byte],UNALLOCATED ;unallocated entry?		 ;an000; dms;
 	je	Set_Instance_Found		;open entry			;an000; dms;
 	add	bp,Instance_Size		;next instance			;an000; dms;
 	loop	Set_Instance_Loop		;continue			;an000; dms;
 
-	mov	ah,EMS_Code80			;not enough instance entries	;an000; dms;
+	mov	ah,EMS_CODE80			;not enough instance entries	;an000; dms;
 	stc					;signal error			;an000; dms;
 	jmp	Set_Instance_Exit		;exit routine			;an000; dms;
 
 Set_Instance_Found:
 
-	mov	cs:[bp].IE_Alloc_Byte,Allocated ;instance allocated		;an000; dms;
+	mov	[cs:bp+Instance_Entry_Struc.IE_Alloc_Byte],ALLOCATED ;instance allocated		;an000; dms;
 	clc					;signal good exit		;an000; dms;
 
 Set_Instance_Exit:
@@ -2348,7 +2484,7 @@ Set_Instance_Exit:
 
 	ret					;return 			;an000; dms;
 
-Set_Instance	endp				;				;an000; dms;
+;Set_Instance	endp				;				;an000; dms;
 
 ;=========================================================================
 ; Reset_Instance	This routine accesses the instance table.
@@ -2358,26 +2494,26 @@ Set_Instance	endp				;				;an000; dms;
 ;	Outputs : Instance_Table - Deactivated instance entry
 ;=========================================================================
 
-Reset_Instance	proc
+Reset_Instance:
 
 	cli					;turn off interrupts		;an000; dms;
-	mov	cs:[bp].IE_Alloc_Byte,Unallocated;deallocate instance		 ;an000; dms;
+	mov	[cs:bp+Instance_Entry_Struc.IE_Alloc_Byte],UNALLOCATED ;deallocate instance		 ;an000; dms;
 	sti					;set interrupts 		;an000; dms;
 
 	ret					;return 			;an000; dms;
 
-Reset_Instance	endp				;				;an000; dms;
+;Reset_Instance	endp				;				;an000; dms;
 
 
 ;ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
 ;บ	Entry point for UNSUPPORTED FUNCTION CALLS			บ
 ;ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
-UNSUPPORTED PROC
+UNSUPPORTED:
 
 GET_PORT_ARRAY:
 GET_L_TO_P:
 	RET
-UNSUPPORTED ENDP
+;UNSUPPORTED ENDP
 
 
 ;=========================================================================
@@ -2399,7 +2535,7 @@ UNSUPPORTED ENDP
 ;		  SI (Pointer to 1st. page of CX contiguous pages)
 ;=========================================================================
 
-EMS_Page_Contig_Chk	proc	near			;determine contiguity	;an001; dms;
+EMS_Page_Contig_Chk:            ;determine contiguity	;an001; dms;
 
 	push	ax					;save regs		;an001; dms;
 	push	bx					;			;an001; dms;
@@ -2408,7 +2544,7 @@ EMS_Page_Contig_Chk	proc	near			;determine contiguity	;an001; dms;
 	push	di					;			;an001; dms;
 
 ;;;;	mov	ax,cs:Free_Pages			;initialize page count	;an001; dms;
-	mov	di,cs:PAL_Free_Ptr			;pointer to free list	;an001; dms;
+	mov	di,[cs:PAL_FREE_PTR] ;pointer to free list	;an001; dms;
 	mov	si,di					;initialize ptr val	;an001; dms;
 ;;;;	mov	bx,di					;initialize base val	;an001; dms;
 ;;;;	mov	dx,1					;initialize count val	;an001; dms;
@@ -2461,7 +2597,7 @@ EMS_Page_Contig_Exit:
 
 	ret						;return to caller	;an001; dms;
 
-EMS_Page_Contig_Chk	endp				;end proc		;an001; dms;
+;EMS_Page_Contig_Chk	endp				;end proc		;an001; dms;
 
 
 
@@ -2478,7 +2614,7 @@ EMS_Page_Contig_Chk	endp				;end proc		;an001; dms;
 ;=========================================================================
 
 
-EMS_Link_Set	proc	near				;set contig links	;an001; dms;
+EMS_Link_Set:             ;set contig links	;an001; dms;
 
 	push	ax					;save regs		;an001; dms;
 	push	bx					;			;an001; dms;
@@ -2535,13 +2671,13 @@ EMS_Link_Set_Up_Root_Loop:
 	je	EMS_Link_Set_Up_Root_Exit		;yes - exit		;an001; dms;
 
 	shl	di,1					;index value		;an001; dms;
-	mov	di,Page_Alloc_List[di]			;next ptr		;an001; dms;
+	mov	di,[cs:di+PAGE_ALLOC_LIST] ;next ptr		;an001; dms;
 	inc	dx					;inc counter		;an001; dms;
 	jmp	EMS_Link_Set_Up_Root_Loop		;continue		;an001; dms;
 
 EMS_Link_Set_Up_Root_Exit:
 
-	mov	cs:PAL_Free_Ptr,di			;new free ptr		;an001; dms;
+	mov	[cs:PAL_FREE_PTR],di ;new free ptr		;an001; dms;
 	jmp	EMS_Link_Set_Up_Exit			;exit routine		;an001; dms;
 
 EMS_Link_Set_Up_Exit:
@@ -2554,7 +2690,7 @@ EMS_Link_Set_Up_Exit:
 
 	ret						;return to caller	;an001; dms;
 
-EMS_Link_Set	endp					;			;an001; dms;
+;EMS_Link_Set	endp					;			;an001; dms;
 
 
 
@@ -2565,27 +2701,27 @@ EMS_Link_Set	endp					;			;an001; dms;
 ;ณ	LIM40.INC						     ณ
 ;ณ								     ณ
 ;ภฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤู
-include lim40.inc
+include 'LIM40.INC'
 
-Instance_Table	db	Instance_Size*Instance_Count dup(Unallocated)  ;instance table	     ;an000; dms;
+Instance_Table	db	Instance_Size*Instance_Count dup(UNALLOCATED)  ;instance table	     ;an000; dms;
 
 RESIDENT:				;last address that must stay resident
 PAGE
 PAGE
 
-INCLUDE EMSINIT.INC			;Main file for throwaway
+include 'EMSINIT.INC' ;Main file for throwaway
 					; initialization code
-INCLUDE XMA1DIAG.INC			;XMA 1 diagnostics and routines
-INCLUDE PS2_5060.INC			;Diagnostics for PS/2 models 50    @RH2
+include 'XMA1DIAG.INC' ;XMA 1 diagnostics and routines
+include 'PS2_5060.INC' ;Diagnostics for PS/2 models 50    @RH2
 					; and 60.  Support for XMA/A and   @RH2
 					; MXO cards	 		   @RH2
-INCLUDE XMA2EMS.CL1
+include 'XMA2EMS.CL1'
 
 
 TEMP_STACK DB	STACK_SIZE DUP(0)	;RESERVE FOR TEMP STACK
-TOP_OF_STACK DB ?			;DURING INITIALIZATION
+TOP_OF_STACK rb      1 ;DURING INITIALIZATION
 
-CSEG	ENDS
-	END	START
+;CSEG	ENDS
+;	END	START
 
 

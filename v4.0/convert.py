@@ -1610,6 +1610,55 @@ UTILITIES = {
         # names no other register.
         START={'cs': 'PROG', 'ds': None, 'es': None, 'ss': None},
     ),
+    # XMA2EMS.SYS, the expanded memory manager: one module and the ten
+    # headers it reads, all of them in the one segment CSEG, which is what
+    # the release's makefile assembles -- LINK over the one object and
+    # EXE2BIN over the result, so this is a flat image like the other
+    # drivers and not the .EXE XMAEM is.
+    #
+    # It is the LIM 4.0 side of the pair: XMAEM makes a 386 look like the
+    # XMA card, and this hands the card's pages out as expanded memory
+    # through INT 67H, which is what the device named EMMXXXX0 answers.
+    # LIM40.INC and LIM40B.INC are the thirty-odd functions of the
+    # specification, EMSINIT and the three diagnostics files are the
+    # initialisation that is thrown away, and PARMPARS reads the DEVICE=
+    # line with the kernel's own parser.
+    #
+    # Three more segments it declares AT 0 and lays nothing down in:
+    # INT_VEC, INT_VEC15 and INT_VEC13 name the vectors for interrupts
+    # 67H, 15H and 13H, which the driver hooks -- 67H for itself, 15H so
+    # that nothing else hands out the extended memory it has taken, and
+    # 13H to put the pages back where a disk read runs through them.
+    #
+    # DIAGS.ASM beside it is the diagnostics as they were before the
+    # message retriever took their text over, with EMS_US.MSG holding that
+    # text; the makefile reads neither.
+    'XMA2EMS': dict(
+        DIR='src/DEV/XMA2EMS',
+        MODULES=('XMA2EMS.ASM', 'I13HOOK.INC', 'GENIOCTL.INC',
+                 'LIM40.INC', 'LIM40B.INC', 'EMSINIT.INC', 'ROMSCAN.INC',
+                 'PARMPARS.INC', 'XMA2EMSP.INC', 'XMA1DIAG.INC',
+                 'PS2_5060.INC'),
+        ONESEG=True,
+        SHARED=('MSBDS.INC', 'SYSVAR.INC', 'PSDATA.INC', 'PARSE.ASM'),
+        # The driver's own ST1 is the way out of its strategy routine, and
+        # fasm reads it as the second register of the 8087's stack; K1 and
+        # K2 in XMA1DIAG are two places in its keyboard wait, and fasm's
+        # are the mask registers of a processor thirty years off.
+        RESERVED=('ST1', 'K1', 'K2'),
+        # Two equates a file read earlier in the module has already used:
+        # XMA1DIAG declares VIRT_MODE, the bit that says the adapter is in
+        # virtual mode, and EMSINIT turns it on; PS2_5060 declares
+        # E_PARM_DEF and PARMPARS reads it.  MASM resolved both on its
+        # second pass.
+        FORWARD=('VIRT_MODE', 'E_PARM_DEF'),
+        # The segment's own ASSUME, which says CS and nothing else: the
+        # driver is entered through the two addresses in its header, with
+        # the caller's DS, and says where DS is itself as it goes -- the
+        # three ASSUME DS:INT_VEC lines in EMSINIT put it on the interrupt
+        # vector table at 0.
+        START={'cs': 'CSEG', 'ds': None, 'es': None, 'ss': None},
+    ),
 }
 
 NAME = sys.argv[1].upper() if len(sys.argv) > 1 else ''
@@ -2003,9 +2052,42 @@ def struct_arrays(text):
                 'rept %s each\n{\n\t%s_#each %s\n}'
                 % (strucname, count, name, comment, count, name, strucname))
 
-    return re.sub(r"(?mi)^(" + N + r")[ \t]+(" + N + r")[ \t]+(\S+)[ \t]+"
+    # The same thing with no name of its own, which MASM laid down where it
+    # stood: XMA2EMS writes the first of its sixty-four handle entries by
+    # name and the other sixty-three on the line below it, indented, as
+    # H_LOOKUP_STRUC NUM_HANDLES-1 DUP (<>).  Nothing reads them by a name
+    # -- the table is indexed from the first -- so the names are this
+    # conversion's own, and the structure's own name is what tells such a
+    # line from a named instance of something else.
+    made = [0]
+
+    def more(m):
+        lead, strucname, count = m.group(1), m.group(2), m.group(3)
+        comment = m.group(4) or ''
+        if STRUCZERO.get(strucname.lower()):
+            return ('; %s declares a zero in every field, so what the %s of'
+                    ' them\n'
+                    '; take up is that many zero bytes.\n'
+                    '%stimes %s*sizeof.%s db 0%s'
+                    % (strucname, count, lead, count, strucname, comment))
+        made[0] += 1
+        name = '%s$a%d' % (strucname, made[0])
+        return ('; %s declares something other than a zero, so the %s of them'
+                '\n'
+                '; are laid down as instances, each under a name of its own.'
+                '\n'
+                '%srept %s each%s\n%s{\n%s\t%s_#each %s\n%s}'
+                % (strucname, count, lead, count,
+                   ' ' + comment if comment else '', lead, lead,
+                   name, strucname, lead))
+
+    text = re.sub(r"(?mi)^(" + N + r")[ \t]+(" + N + r")[ \t]+(\S+)[ \t]+"
                   r"dup[ \t]*\([ \t]*<[ \t]*>[ \t]*\)[ \t]*(;[^\n]*)?$",
                   one, text)
+    return re.sub(r"(?mi)^([ \t]+)(" + '|'.join(sorted(STRUCS))
+                  + r")[ \t]+(\S+)[ \t]+"
+                  r"dup[ \t]*\([ \t]*<[ \t]*>[ \t]*\)[ \t]*(;[^\n]*)?$",
+                  more, text)
 
 
 def literals(text):
@@ -2359,6 +2441,26 @@ def grouped(text):
     return '\n'.join(out)
 
 
+def nested_dup(text):
+    """A DUP inside a DUP, which MASM allowed and fasm does not.
+
+    XMAEM's INDEDAT lays the global descriptor table out as a structure and
+    writes each run of descriptors as the number of them and the eight bytes
+    one of them takes -- DB 16 DUP (8 DUP(0)) -- where fasm reads one DUP and
+    no more.  The two counts are multiplied and the inner list is the one
+    that stands, so both numbers are still in the line.
+    """
+    while True:
+        text, n = re.subn(
+            r"(?i)(\bd[bwdqt][ \t]+)([^;\n]*?)[ \t]*\bdup[ \t]*\([ \t]*"
+            r"([^;\n()]*?)[ \t]*\bdup[ \t]*\(([^()\n]*)\)[ \t]*\)",
+            lambda m: '%s%s*%s dup (%s)' % (m.group(1), m.group(2),
+                                            m.group(3), m.group(4)),
+            text)
+        if not n:
+            return text
+
+
 def declarations(text):
     """A structure a module declares for itself, in the house shape.
 
@@ -2409,8 +2511,13 @@ def declarations(text):
                 # hundred and forty lines further on.  The width comes from
                 # the DB or the DW and not from the value, so the size is
                 # the same; a string is as wide as it is long, and stands.
+                # A field whose default is a run of values is measured
+                # with that run: the room is what the instance is for, and
+                # a nought in its place would make the structure shorter
+                # than it is.
                 measure = ', '.join(
-                    [value if value[:1] in ('\'', '"') else '0'
+                    [value if value[:1] in ('\'', '"')
+                     or re.search(r"(?i)\bdup\b", value) else '0'
                      for value in (f.split('=', 1)[1].strip()
                                    for f in fields)])
                 for s in ('match =%s_LAID_OUT, %s_LAID_OUT' % (here, here),
@@ -2436,6 +2543,25 @@ def declarations(text):
                     and ',' not in m.group(6):
                 name, value = m.group(2), m.group(6).strip()
                 fields.append('%s_=%s' % (name, '0' if value == '?' else value))
+                body.append('%s.%s%s%s%s%s_%s'
+                            % (m.group(1), name, m.group(3), m.group(4),
+                               m.group(5), name, ' ' + note if note else ''))
+                continue
+            # A field whose room is a run of one value rather than a value
+            # of its own.  MASM counted it among the fields an instance
+            # fills in -- the values are positional -- and let an instance
+            # leave it out and take what the release declared, so it takes a
+            # parameter like any other.  XMA2EMS's H_LOOKUP_STRUC gives each
+            # handle an eight-byte name, H_NAME DB 8 DUP(0), and the first
+            # entry of the table is written <0,,,,,>: six slots for six
+            # fields, where five parameters would have left the last value
+            # nowhere to go.  A run of question marks is not one of these --
+            # that one reserves its room and is written as it stands.
+            m = re.match(r"(?i)^([ \t]*)(" + N + r")([ \t]+)(D[BWDQ])([ \t]+)"
+                         r"([^;,\n]*?\bdup\b[^;,\n]*?)[ \t]*$", code)
+            if m and '?' not in m.group(6):
+                name = m.group(2)
+                fields.append('%s_=%s' % (name, m.group(6).strip()))
                 body.append('%s.%s%s%s%s%s_%s'
                             % (m.group(1), name, m.group(3), m.group(4),
                                m.group(5), name, ' ' + note if note else ''))
@@ -2511,7 +2637,7 @@ def declarations(text):
 # because the header reads them to lay itself out, and the tables where they
 # are read is all that moves.
 for stem in MODULES:
-    source[stem] = declarations(source[stem])
+    source[stem] = declarations(nested_dup(source[stem]))
 
 
 
@@ -2808,9 +2934,19 @@ for text in list(source.values()) + SEEN:
         # instance of the program's: CHKEQU.INC's DIRENT DIRENT is that.
         if m and m.group(1).lower() == m.group(2).lower():
             continue
-        if m:
+        # An array of them is not one of them: the rules lay such a run
+        # down under a LABEL and name the instances in it after the array
+        # and their place in it, so a field written on the array's own name
+        # is the offset of that field and has to be added.  XMA2EMS reads
+        # the card a page is on as MEM_CARD_TABLE.END_PG_NUM[DI], where
+        # MEM_CARD_TABLE is MEM_CARD_STRUC MAX_SLOTS DUP (<>).
+        array = bool(m) and bool(
+            re.match(r"(?i)^\S+[ \t]+dup[ \t]*\([ \t]*<[ \t]*>[ \t]*\)"
+                     r"[ \t]*$", code_of(line)[m.end(2):].strip()))
+        if m and not array:
             WRITTEN.add(m.group(1).lower())
             WRITTENAS.setdefault(m.group(1).lower(), m.group(2))
+        if m:
             # one of these is a declaration like any other, so a reference
             # to it takes the spelling written here
             spelling.setdefault(m.group(1).lower(), m.group(1))
@@ -3019,26 +3155,6 @@ def switched(text):
 # prefix as nothing.  The = stays: the modules are read once per segment, and
 # an equate would still stand for the address on the next reading, where the
 # name is given another value.
-def nested_dup(text):
-    """A DUP inside a DUP, which MASM allowed and fasm does not.
-
-    XMAEM's INDEDAT lays the global descriptor table out as a structure and
-    writes each run of descriptors as the number of them and the eight bytes
-    one of them takes -- DB 16 DUP (8 DUP(0)) -- where fasm reads one DUP and
-    no more.  The two counts are multiplied and the inner list is the one
-    that stands, so both numbers are still in the line.
-    """
-    while True:
-        text, n = re.subn(
-            r"(?i)(\bd[bwdqt][ \t]+)([^;\n]*?)[ \t]*\bdup[ \t]*\([ \t]*"
-            r"([^;\n()]*?)[ \t]*\bdup[ \t]*\(([^()\n]*)\)[ \t]*\)",
-            lambda m: '%s%s*%s dup (%s)' % (m.group(1), m.group(2),
-                                            m.group(3), m.group(4)),
-            text)
-        if not n:
-            return text
-
-
 def split_dup(text):
     """A declaration that writes some bytes and then reserves more.
 
@@ -3666,6 +3782,13 @@ def grouped_equ(text):
         body = m.group(3).strip()
         if ',' in body or "'" in body or '"' in body:
             return m.group(0)
+        # A value with brackets in it is a place and not a number, and the
+        # brackets round it are its own: XMA2EMS reads the page allocation
+        # list through PAGE_LIST_ENTRY EQU WORD PTR[SI + OFFSET
+        # PAGE_ALLOC_LIST], and a pair of ours in front of that would make
+        # a memory operand into something fasm cannot read at all.
+        if '[' in body:
+            return m.group(0)
         if not re.search(r"[-+*/]|\b(?:shl|shr|mod|and|or|xor|not)\b",
                          body, re.I):
             return m.group(0)
@@ -3826,9 +3949,18 @@ for text in SEEN:
 # field of a structure can be told from one that is something in its own
 # right.
 DECLARED = set()
+# And the ones it gives a colon, which are MASM's NEAR labels: a label's
+# type is NEAR whatever is laid down under it, so a field written on one is
+# an address and not what is at it.  XMA2EMS builds the parser's switch
+# control block by hand under X_Switch: and compares the pointer the parser
+# gave back with X_Switch.P_KeyorSW, the address of the switch's own name.
+LABELLED = set()
 for text in SEEN:
     for line in text.split('\n'):
         code = code_of(line)
+        m = re.match(r"^[ \t]*(" + N + r")[ \t]*:", code)
+        if m:
+            LABELLED.add(m.group(1).lower())
         for pat in (r"^[ \t]*(" + N + r"):",
                     r"^[ \t]*(" + N + r")[ \t]+(?:d[bwdq]|r[bwd]|equ|=)\b",
                     r"^[ \t]*label[ \t]+(" + N + r")\b",
@@ -4347,7 +4479,15 @@ def overlaid(code):
     def one(m):
         seg, base = m.group(1), m.group(2)
         fields, tail = m.group(3).split('.')[1:], m.group(4)
-        if base.lower() not in DATA and base.lower() not in WRITTEN:
+        # A name the program gave a colon is a NEAR label, whatever is laid
+        # down under it, so the dot adds the field's offset to its address
+        # and the whole of it is a number: XMA2EMS lays the parser's switch
+        # control block down under X_Switch: by hand and compares the
+        # pointer the parser gave back with X_Switch.P_KeyorSW.
+        nearlabel = (base.lower() not in DATA and base.lower() not in WRITTEN
+                     and base.lower() in LABELLED)
+        if not nearlabel \
+                and base.lower() not in DATA and base.lower() not in WRITTEN:
             return m.group(0)
         # already in fasm's own form: a field named with the structure it
         # belongs to, which is what the [BX].FIELD rule above writes and what
@@ -4363,7 +4503,8 @@ def overlaid(code):
         # BYTE PTR, which is where MASM said the width -- which is the size
         # already, and which refs() brackets what follows.
         head = code[:m.start()]
-        plain = re.search(r"(?i)\boffset[ \t]*$", head) is not None \
+        plain = nearlabel \
+            or re.search(r"(?i)\boffset[ \t]*$", head) is not None \
             or re.search(r"(?i)\b(?:byte|word|dword|qword)[ \t]+ptr[ \t]*"
                          r"(?:(?:cs|ds|es|ss):)?[ \t]*$", head) is not None
         # fasm names a field only where the thing holding it was laid down
@@ -4492,8 +4633,12 @@ def indexed(code):
                               and not re.match(r"(?i)^(?:bp|bx|si|di)$",
                                                m2.group(2))
                               else m2.group(0)), rest)
+    # The name can be a field of an instance, which by this point is
+    # written with the instance it belongs to: XMA2EMS reads the pages a
+    # handle owns as HANDLE_LOOKUP_TABLE.H_PAGES[DI], the index being the
+    # handle's place in the table.
     rest = re.sub(r"(?i)(?<![\w.])(?!(?:byte|word|dword|qword|ptr)\b)"
-                  r"(" + N + r"(?:\s*[-+]\s*[\w@?$]+)*)\s*"
+                  r"(" + PLACE + r"(?:\s*[-+]\s*[\w@?$.]+)*)\s*"
                   r"\[\s*(bp|bx|si|di)\s*\]",
                   lambda m2: '[%s+%s]' % (m2.group(2),
                                           re.sub(r"\s+", '', m2.group(1))),
@@ -5020,7 +5165,6 @@ for stem in MODULES:
     text = far_jumps(text)
     text = at_far_jumps(text)
     text = far_names(text)
-    text = nested_dup(text)
     text = split_dup(text)
     text = segment_values(text)
     text = grouped(text)
@@ -5475,9 +5619,15 @@ for stem in MODULES:
                                        m.group(3) or ''), was_len, comment))
             continue
 
-        code = re.sub(r"(?i)^(" + N + r"?\s*)\bdb\s+\?\s*$", r"\1rb      1", code)
-        code = re.sub(r"(?i)^(" + N + r"?\s*)\bdw\s+\?\s*$", r"\1rw      1", code)
-        code = re.sub(r"(?i)^(" + N + r"?\s*)\bdd\s+\?\s*$", r"\1rd      1", code)
+        # The question mark can stand in brackets of its own, which say as
+        # little as it does: XMA2EMS's EMSINIT reserves the model byte with
+        # DB (?), and SELECT three words the same way.
+        code = re.sub(r"(?i)^(" + N + r"?\s*)\bdb\s+\(?\?\)?\s*$",
+                      r"\1rb      1", code)
+        code = re.sub(r"(?i)^(" + N + r"?\s*)\bdw\s+\(?\?\)?\s*$",
+                      r"\1rw      1", code)
+        code = re.sub(r"(?i)^(" + N + r"?\s*)\bdd\s+\(?\?\)?\s*$",
+                      r"\1rd      1", code)
         code = re.sub(r"(?i)\bdb\s+(.+?)\s+dup\s*\(\s*\?\s*\)", r"rb      \1", code)
         code = re.sub(r"(?i)\bdw\s+(.+?)\s+dup\s*\(\s*\?\s*\)", r"rw      \1", code)
 
@@ -5632,7 +5782,16 @@ DECL = re.compile(r"(?i)^\s*(?:(" + N + r")\s*:|(" + N + r")\s+(?:(?:db|dw|dd|"
 # MASM did not mind the case and fasm does, so a reference has to be written
 # the way its declaration was -- INC/SYSCALL.INC calls the function Open and
 # EXE2BIN asks for open.
+# The include file BUILDMSG writes is read as well.  It is no module of the
+# program's -- a module INCLUDEs it by name -- so nothing above has seen it,
+# and the labels in it are the spellings the skeleton gave them: XMA2EMS.SKL
+# names Welcome_Msg and the code asks for WELCOME_MSG, which was one name to
+# MASM.  XMAEM is the same, and the thirty other programs declare their
+# messages in upper case and so never showed it.
 for lines in (list(done.values())
+              + [open(R + n, encoding='cp437').read().split('\n')
+                 for n in sorted(os.listdir(R))
+                 if re.match(r"(?i)^.*\.CL[0-9A-Z]$", n)]
               + [read(h + '.INC', converted=True).split('\n')
                  for h in HEADERS]
               + [shared(h).split('\n') for h in SHARED]):
