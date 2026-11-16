@@ -1,144 +1,165 @@
+STRUC DMACB DMACHN_=0, DMALSB_=0, DMAMSB_=0, DMAPAGE_=0, DMALR_=0, DMAMR_=0, DMAPR_=0, DMAPP_=0
+{
+
+.DMACHN  DB      DMACHN_ ; Channel number
+.DMALSB  DB      DMALSB_ ; Least significant address byte
+.DMAMSB  DB      DMAMSB_ ; Most significant address byte (16 bits)
+.DMAPAGE DB      DMAPAGE_ ; Page - Hi-order of 24-bit address
+.DMALR   DB      DMALR_ ; Real Least significant address byte
+.DMAMR   DB      DMAMR_ ; Real Most significant address byte (16 bits)
+.DMAPR   DB      DMAPR_ ; Real Page - Hi-order of 24-bit address
+.DMAPP   DB      DMAPP_ ; Compatability mode page port
+
+}
+match =DMACB_LAID_OUT, DMACB_LAID_OUT
+{
+    DMACB_LAID_OUT equ 1
+    virtual at 0
+      DMACB DMACB 0, 0, 0, 0, 0, 0, 0, 0
+      sizeof.DMACB = $ - DMACB
+    end virtual
+}
 PAGE    60,132
 TITLE   INDEDMA - 386 XMA Emulator - DMA Emulation
 
-COMMENT #
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-*                                                                             *
-* MODULE NAME     : INDEDMA                                                   *
-*                                                                             *
-*                                                                             *
-*                    5669-196 (C) COPYRIGHT 1988 Microsoft Corporation        *
-*                                                                             *
-* DESCRIPTIVE NAME: DMA handler for the 80386 XMA emulator                    *
-*                                                                             *
-* STATUS (LEVEL)  : Version (0) Level (1.0)                                   *
-*                                                                             *
-* FUNCTION        : This module intercepts any I/O going to the DMA address   *
-*                   ports.  We can't let the DMA requests go to the virtual   *
-*                   addresses.  On the real XMA card the addresses on the     *
-*                   bus lines are translated by the card so that it accesses  *
-*                   the correct memory.  But with our emulation the addresses *
-*                   are translated before they hit the bus lines.  The DMA    *
-*                   addresses go straight to the bus lines without being      *
-*                   translated.  This would result in DMA reading and writing *
-*                   data to the wrong memory location.  Not good.  Therefore  *
-*                   we intercept the I/O that is going to the DMA address     *
-*                   ports.  We run these addresses through our paging mech-   *
-*                   anism and then write the real addresses to the DMA        *
-*                   address ports.                                            *
-*                                                                             *
-* MODULE TYPE     : ASM                                                       *
-*                                                                             *
-* REGISTER USAGE  : 80386 Standard                                            *
-*                                                                             *
-* RESTRICTIONS    : None                                                      *
-*                                                                             *
-* DEPENDENCIES    : None                                                      *
-*                                                                             *
-* ENTRY POINTS    : DMAIN   - Entry point for "IN" instructions               *
-*                   DMAOUT  - Entry point for "OUT" instructions              *
-*                   MANPORT - Entry point to issue an OUT to the manufacturing*
-*                             port to re-IPL the system                       *
-*                                                                             *
-* LINKAGE         : Jumped to by INDEXMA                                      *
-*                                                                             *
-* INPUT PARMS     : None                                                      *
-*                                                                             *
-* RETURN PARMS    : None                                                      *
-*                                                                             *
-* OTHER EFFECTS   : None                                                      *
-*                                                                             *
-* EXIT NORMAL     : Jump to POPIO to return to the V86 task                   *
-*                                                                             *
-* EXIT ERROR      : None                                                      *
-*                                                                             *
-* EXTERNAL                                                                    *
-* REFERENCES      : DISPLAY   - Entry point in INDEEXC to signal an error     *
-*                   POPIO     - Entry point in INDEEMU to return to the V86   *
-*                               task                                          *
-*                   PGTBLOFF  - Word in INDEI15 that contains the offset of   *
-*                               the page tables                               *
-*                   SGTBLOFF  - Word in INDEI15 that contains the offset of   *
-*                               the page directory                            *
-*                   NORMPAGE  - Double Word in INDEI15 that contains the      *
-*                               entry that goes into the first page directory *
-*                               entry so that it points to the normal page    *
-*                               tables                                        *
-*                   BUFF_SIZE - Word in INDEI15 that contains the size of the *
-*                               MOVEBLOCK buffer                              *
-*                   MAXMEM    - Word in INDEI15 that contains the total       *
-*                               number of K in the box                        *
-*                   WORD_FLAG - Byte in INDEXMA that indicates whether the    *
-*                               I/O instruction was for a word or a byte      *
-*                                                                             *
-* SUB-ROUTINES    : XLATE  - Translate the virtual DMA address to a real DMA  *
-*                            address                                          *
-*                                                                             *
-* MACROS          : DATAOV - Add prefix for the next instruction so that it   *
-*                            accesses data as 32 bits wide                    *
-*                   ADDROV - Add prefix for the next instruction so that it   *
-*                            uses addresses that are 32 bits wide             *
-*                   LJB    - Long jump if below                               *
-*                   LJA    - Long jump if above                               *
-*                   LJAE   - Long jump if above or equal                      *
-*                   LJNE   - Long jump if not equal                           *
-*                                                                             *
-* CONTROL BLOCKS  : INDEDAT.INC - System data structures                      *
-*                                                                             *
-* CHANGE ACTIVITY :                                                           *
-*                                                                             *
-* $MOD(INDEDMA) COMP(LOAD) PROD(3270PC) :                                     *
-*                                                                             *
-* $D0=D0004700 410 870101 D : NEW FOR RELEASE 1.1                             *
-* $P1=P0000312 410 870804 D : CLEAN UP WARNING MESSAGES                       *
-*                                                                             *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-#
+;COMMENT #
+;* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;*                                                                             *
+;* MODULE NAME     : INDEDMA                                                   *
+;*                                                                             *
+;*                                                                             *
+;*                    5669-196 (C) COPYRIGHT 1988 Microsoft Corporation        *
+;*                                                                             *
+;* DESCRIPTIVE NAME: DMA handler for the 80386 XMA emulator                    *
+;*                                                                             *
+;* STATUS (LEVEL)  : Version (0) Level (1.0)                                   *
+;*                                                                             *
+;* FUNCTION        : This module intercepts any I/O going to the DMA address   *
+;*                   ports.  We can't let the DMA requests go to the virtual   *
+;*                   addresses.  On the real XMA card the addresses on the     *
+;*                   bus lines are translated by the card so that it accesses  *
+;*                   the correct memory.  But with our emulation the addresses *
+;*                   are translated before they hit the bus lines.  The DMA    *
+;*                   addresses go straight to the bus lines without being      *
+;*                   translated.  This would result in DMA reading and writing *
+;*                   data to the wrong memory location.  Not good.  Therefore  *
+;*                   we intercept the I/O that is going to the DMA address     *
+;*                   ports.  We run these addresses through our paging mech-   *
+;*                   anism and then write the real addresses to the DMA        *
+;*                   address ports.                                            *
+;*                                                                             *
+;* MODULE TYPE     : ASM                                                       *
+;*                                                                             *
+;* REGISTER USAGE  : 80386 Standard                                            *
+;*                                                                             *
+;* RESTRICTIONS    : None                                                      *
+;*                                                                             *
+;* DEPENDENCIES    : None                                                      *
+;*                                                                             *
+;* ENTRY POINTS    : DMAIN   - Entry point for "IN" instructions               *
+;*                   DMAOUT  - Entry point for "OUT" instructions              *
+;*                   MANPORT - Entry point to issue an OUT to the manufacturing*
+;*                             port to re-IPL the system                       *
+;*                                                                             *
+;* LINKAGE         : Jumped to by INDEXMA                                      *
+;*                                                                             *
+;* INPUT PARMS     : None                                                      *
+;*                                                                             *
+;* RETURN PARMS    : None                                                      *
+;*                                                                             *
+;* OTHER EFFECTS   : None                                                      *
+;*                                                                             *
+;* EXIT NORMAL     : Jump to POPIO to return to the V86 task                   *
+;*                                                                             *
+;* EXIT ERROR      : None                                                      *
+;*                                                                             *
+;* EXTERNAL                                                                    *
+;* REFERENCES      : DISPLAY   - Entry point in INDEEXC to signal an error     *
+;*                   POPIO     - Entry point in INDEEMU to return to the V86   *
+;*                               task                                          *
+;*                   PGTBLOFF  - Word in INDEI15 that contains the offset of   *
+;*                               the page tables                               *
+;*                   SGTBLOFF  - Word in INDEI15 that contains the offset of   *
+;*                               the page directory                            *
+;*                   NORMPAGE  - Double Word in INDEI15 that contains the      *
+;*                               entry that goes into the first page directory *
+;*                               entry so that it points to the normal page    *
+;*                               tables                                        *
+;*                   BUFF_SIZE - Word in INDEI15 that contains the size of the *
+;*                               MOVEBLOCK buffer                              *
+;*                   MAXMEM    - Word in INDEI15 that contains the total       *
+;*                               number of K in the box                        *
+;*                   WORD_FLAG - Byte in INDEXMA that indicates whether the    *
+;*                               I/O instruction was for a word or a byte      *
+;*                                                                             *
+;* SUB-ROUTINES    : XLATE  - Translate the virtual DMA address to a real DMA  *
+;*                            address                                          *
+;*                                                                             *
+;* MACROS          : DATAOV - Add prefix for the next instruction so that it   *
+;*                            accesses data as 32 bits wide                    *
+;*                   ADDROV - Add prefix for the next instruction so that it   *
+;*                            uses addresses that are 32 bits wide             *
+;*                   LJB    - Long jump if below                               *
+;*                   LJA    - Long jump if above                               *
+;*                   LJAE   - Long jump if above or equal                      *
+;*                   LJNE   - Long jump if not equal                           *
+;*                                                                             *
+;* CONTROL BLOCKS  : INDEDAT.INC - System data structures                      *
+;*                                                                             *
+;* CHANGE ACTIVITY :                                                           *
+;*                                                                             *
+;* MOD$(INDEDMA) COMP(LOAD) PROD(3270PC) :                                     *
+;*                                                                             *
+;* D0$=D0004700 410 870101 D : NEW FOR RELEASE 1.1                             *
+;* P1$=P0000312 410 870804 D : CLEAN UP WARNING MESSAGES                       *
+;*                                                                             *
+;* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;#
 
-        .286P                 ; Enable recognition of 286 privileged instructs.
+;        .286P                 ; Enable recognition of 286 privileged instructs.
 
         .XLIST                ; Turn off the listing
-        INCLUDE INDEDAT.INC   ; Include system data structures and equates
+        include 'INDEDAT.INC' ; Include system data structures and equates
 
-        IF1                   ; Only include macros on the first pass
-        INCLUDE INDEOVP.MAC   ; Override prefix macros
-        INCLUDE INDEINS.MAC   ; 386 instruction macros
-        ENDIF
+;        IF1                   ; Only include macros on the first pass
+        include 'INDEOVP.MAC' ; Override prefix macros
+        include 'INDEINS.MAC' ; 386 instruction macros
+;        ENDIF
         .LIST                 ; Turn the listing back on
 
-PROG    SEGMENT PARA PUBLIC 'PROG'
+;PROG    SEGMENT PARA PUBLIC 'PROG'
 
-        ASSUME  CS:PROG
-        ASSUME  DS:PROG
-        ASSUME  ES:NOTHING
-        ASSUME  SS:NOTHING
+;        ASSUME  CS:PROG
+;        ASSUME  DS:PROG
+;        ASSUME  ES:NOTHING
+;        ASSUME  SS:NOTHING
 
-INDEDMA LABEL   NEAR
+INDEDMA:
 
-        EXTRN   DISPLAY:NEAR    ; Entry point in INDEEXC to signal an error
-        EXTRN   POPIO:NEAR      ; Entry point in INDEEMU to return to the V86
+;        EXTRN   DISPLAY_:NEAR    ; Entry point in INDEEXC to signal an error
+;        EXTRN   POPIO:NEAR      ; Entry point in INDEEMU to return to the V86
                                 ;   task
-        EXTRN   PGTBLOFF:WORD   ; Word in INDEI15 that contains the offset of
+;        EXTRN   PGTBLOFF:WORD   ; Word in INDEI15 that contains the offset of
                                 ;   the page tables
-        EXTRN   SGTBLOFF:WORD   ; Word in INDEI15 that contains the offset of
+;        EXTRN   SGTBLOFF:WORD   ; Word in INDEI15 that contains the offset of
                                 ;   the page directory
-        EXTRN   NORMPAGE:WORD   ; Double Word in INDEI15 that contains the
+;        EXTRN   NORMPAGE:WORD   ; Double Word in INDEI15 that contains the
                                 ;   entry that goes into the first page direct-
                                 ;   ory entry so that it points to the normal
                                 ;   page tables
-        EXTRN   BUFF_SIZE:WORD  ; Word in INDEI15 that contains the size of the
+;        EXTRN   BUFF_SIZE:WORD  ; Word in INDEI15 that contains the size of the
                                 ;   MOVEBLOCK buffer
-        EXTRN   MAXMEM:WORD     ; Word in INDEI15 that contains the total
+;        EXTRN   MAXMEM:WORD     ; Word in INDEI15 that contains the total
                                 ;   number of K in the box
-        EXTRN   WORD_FLAG:BYTE  ; Byte in INDEXMA that indicates whether the
+;        EXTRN   WORD_FLAG:BYTE  ; Byte in INDEXMA that indicates whether the
                                 ;   I/O instruction was for a word or a byte
 
 ; Let these entry points be known to other modules
 
-        PUBLIC  INDEDMA
-        PUBLIC  DMAIN
-        PUBLIC  DMAOUT
-        PUBLIC  MANPORT
+;        PUBLIC  INDEDMA
+;        PUBLIC  DMAIN
+;        PUBLIC  DMAOUT
+;        PUBLIC  MANPORT
 
 PAGE
 
@@ -148,21 +169,9 @@ PAGE
 ; is an overlay for the control blocks.  After that the actual control
 ; blocks are defined.
 
-DMACB   STRUC                   ; DMA control block
-
-DMACHN  DB      0               ; Channel number
-DMALSB  DB      0               ; Least significant address byte
-DMAMSB  DB      0               ; Most significant address byte (16 bits)
-DMAPAGE DB      0               ; Page - Hi-order of 24-bit address
-DMALR   DB      0               ; Real Least significant address byte
-DMAMR   DB      0               ; Real Most significant address byte (16 bits)
-DMAPR   DB      0               ; Real Page - Hi-order of 24-bit address
-DMAPP   DB      0               ; Compatability mode page port
-
-DMACB   ENDS
 
 DMASTART EQU    0
-DMAENTRYLEN  EQU     DMAPP+1-DMASTART
+DMAENTRYLEN  equ     (DMACB.DMAPP+1-DMASTART)
 
 ; Now, the channel control blocks
 
@@ -218,30 +227,30 @@ PAGE
 
 OUT_TABLE:
         .XLIST
-        REPT    32
-        JMP     DOOUT
-        ENDM
+        repeat 32
+        JMP     near DOOUT
+        end repeat
         .LIST
 OUT_TABLE_END:
 
 ; Set the entries for the ports we want to handle.
 
-        ORG     OUT_TABLE+(00H*3)
-        JMP     CHN_0
-        ORG     OUT_TABLE+(02H*3)
-        JMP     CHN_1
-        ORG     OUT_TABLE+(04H*3)
-        JMP     CHN_2
-        ORG     OUT_TABLE+(06H*3)
-        JMP     CHN_3
-        ORG     OUT_TABLE+(0CH*3)
-        JMP     RESET_BYTE_PTR
-        ORG     OUT_TABLE+(18H*3)
-        JMP     CHK_FUNCTION
-        ORG     OUT_TABLE+(1AH*3)
-        JMP     CHK_BASE_REG
+;        ORG     OUT_TABLE+(00H*3)
+        jmpover$ OUT_TABLE+(00H*3), CHN_0
+;        ORG     OUT_TABLE+(02H*3)
+        jmpover$ OUT_TABLE+(02H*3), CHN_1
+;        ORG     OUT_TABLE+(04H*3)
+        jmpover$ OUT_TABLE+(04H*3), CHN_2
+;        ORG     OUT_TABLE+(06H*3)
+        jmpover$ OUT_TABLE+(06H*3), CHN_3
+;        ORG     OUT_TABLE+(0CH*3)
+        jmpover$ OUT_TABLE+(0CH*3), RESET_BYTE_PTR
+;        ORG     OUT_TABLE+(18H*3)
+        jmpover$ OUT_TABLE+(18H*3), CHK_FUNCTION
+;        ORG     OUT_TABLE+(1AH*3)
+        jmpover$ OUT_TABLE+(1AH*3), CHK_BASE_REG
 
-        ORG     OUT_TABLE_END
+;        ORG     OUT_TABLE_END
 
 PAGE
 
@@ -250,21 +259,21 @@ PAGE
 ; or byte operation.  IP points to next instruction minus 1.  DX has the port
 ; value in it.
 
-DMAIN   PROC    NEAR
-        CMP     WORD_FLAG,0             ; Is this "IN" for a word?
+DMAIN:
+        CMP     byte [WORD_FLAG],0      ; Is this "IN" for a word?
         JNE     GETWORDREAL             ; Yes.  Then go get a word.
 
         IN      AL,DX                   ; Else we'll just get a byte
-        MOV     BYTE PTR SS:[BP+BP_AX],AL ; And put it into the user's AL reg.
-        JMP     INEXIT                  ; Go return to the user
+        MOV     byte [ss:BP+BPSTACK.BP_AX],AL     ; And put it into the user's AL reg.
+        JMP     INEXIT_                  ; Go return to the user
 
 GETWORDREAL:
         IN      AX,DX                   ; Get a word from the port
-        MOV     WORD PTR SS:[BP+BP_AX],AX ; Put it into the user's AX register
-        MOV     WORD_FLAG,0             ; Reset the word flag
+        MOV     word [ss:BP+BPSTACK.BP_AX],AX     ; Put it into the user's AX register
+        MOV     byte [WORD_FLAG],0      ; Reset the word flag
 
-INEXIT:
-        ADD     WORD PTR SS:[BP+BP_IP],1 ; Step IP past the instruction, or past
+INEXIT_:
+        ADD     word [ss:BP+BPSTACK.BP_IP],1     ; Step IP past the instruction, or past
                                         ;   the port value in the case of I/O
                                         ;   with an immediate port value
         JMP     POPIO                   ; Return to the V86 task
@@ -280,13 +289,13 @@ DMAOUT:
 
 ; Check for DMA page registers in compatibility mode
 
-        MOV     AX,SYS_PATCH_DS         ; Load DS with the selector for our data
+        MOV     AX,GDT_DEF.SYS_PATCH_DS         ; Load DS with the selector for our data
         MOV     DS,AX                   ;   segment
-        CMP     WORD_FLAG,0             ; Is this a word operation?
-       LJNE     DISPLAY                 ; No?  Sorry.  We don't support word DMA
+        CMP     byte [WORD_FLAG],0      ; Is this a word operation?
+       LJNE     DISPLAY_                 ; No?  Sorry.  We don't support word DMA
                                         ;   yet.  We'll just have to signal an
                                         ;   error.
-        LEA     BX,DMATABLE             ; Point BX to the base of our channel
+        LEA     BX,[DMATABLE]           ; Point BX to the base of our channel
                                         ;   control blocks
         CMP     DX,0081H                ; Is this out to the channel 2 page port
        LJB      NOT_DMA_PAGE            ; If the port number is less than 81H
@@ -309,7 +318,7 @@ CHK_CHN_0:
         CMP     DX,0083H                ; Is it the page port for channel 1?
         JB      SET_CHN_3               ; No.  It's below that.  Then it must
                                         ;   be the page port for channel 3!
-       LJA      DISPLAY                 ; No.  It's above it.  We don't know any
+       LJA      DISPLAY_                 ; No.  It's above it.  We don't know any
                                         ;   ports between 83H and 87H.  Go
                                         ;   signal an error.
         ADD     BX,DMAENTRYLEN*1        ; Yes.  It's the page port for channel 1
@@ -342,7 +351,7 @@ SET_CHN_3:
 ; we will signal an error.
 
 CHNCOM:
-        MOV     AL,BYTE PTR SS:[BP+BP_AX] ; Get the value that is to be written
+        MOV     AL,byte [ss:BP+BPSTACK.BP_AX]     ; Get the value that is to be written
                                         ;   to the page port
         CMP     AL,10H                  ; Is it 10H or greater?
         JB      CHNCONT                 ; Nope.  We're still OK.
@@ -366,44 +375,44 @@ INVALID_PAGE:
 ; it out to the DMA channel.
 
 CHNCONT:
-        MOV     BYTE PTR [BX+DMAPAGE],AL ; Put the page port value into the
+        MOV     byte [BX+DMACB.DMAPAGE],AL     ; Put the page port value into the
                                         ;   control block
         CALL    XLATE                   ; Create the real address entries in
                                         ;   the control block
-        MOV     DL,BYTE PTR [BX+DMACHN] ; Get the channel number from the c.b.
+        MOV     DL,byte [BX+DMACB.DMACHN]     ; Get the channel number from the c.b.
         SHL     DX,1                    ; Convert it to a port address
-        MOV     AL,BYTE PTR [BX+DMALR]  ; Get the LSB of the real address
+        MOV     AL,byte [BX+DMACB.DMALR]      ; Get the LSB of the real address
         OUT     DX,AL                   ; "OUT" it to the address port
         JMP     $+2                     ; Wait a bit
-        MOV     AL,BYTE PTR [BX+DMAMR]  ; Get the MSB of the real address
+        MOV     AL,byte [BX+DMACB.DMAMR]      ; Get the MSB of the real address
         OUT     DX,AL                   ; "OUT" it to the address port
         JMP     $+2                     ; Wait a bit
-        MOV     DL,BYTE PTR [BX+DMAPP]  ; Get the page port
-        MOV     AL,BYTE PTR [BX+DMAPR]  ; Get the real page number
+        MOV     DL,byte [BX+DMACB.DMAPP]      ; Get the page port
+        MOV     AL,byte [BX+DMACB.DMAPR]      ; Get the real page number
         OUT     DX,AL                   ; Do the "OUT" to the DMA page port
-        JMP     OUTEXITDMA              ; That's it
+        JMP     OUTEXITDMA_              ; That's it
 
 PAGE
 
 ; This is where we come when we want to simply send the "OUT" to the real port.
 
 DOOUT:
-        CMP     WORD_FLAG,0             ; Is this an "OUT" for a word?
+        CMP     byte [WORD_FLAG],0      ; Is this an "OUT" for a word?
         JNE     PUTWORDREAL             ; Aye.  Go put out a word.
 
-        MOV     AL,BYTE PTR SS:[BP+BP_AX] ; Nay.  It is for a byte.  Get the
+        MOV     AL,byte [ss:BP+BPSTACK.BP_AX]     ; Nay.  It is for a byte.  Get the
                                         ;   byte from the user's AL register
         OUT     DX,AL                   ; And send it out to the port
-        JMP     OUTEXITDMA              ; Time to leave
+        JMP     OUTEXITDMA_              ; Time to leave
 
 PUTWORDREAL:
-        MOV     AX,WORD PTR SS:[BP+BP_AX] ; Get the word form the user's AX
+        MOV     AX,word [ss:BP+BPSTACK.BP_AX]     ; Get the word form the user's AX
         OUT     DX,AX                   ; And thrust it out to the port
-        MOV     WORD_FLAG,0             ; Reset the word flag
+        MOV     byte [WORD_FLAG],0      ; Reset the word flag
 
-OUTEXITDMA:
+OUTEXITDMA_:
 
-        ADD     WORD PTR SS:[BP+BP_IP],1 ; Step IP past the instruction, or past
+        ADD     word [ss:BP+BPSTACK.BP_IP],1     ; Step IP past the instruction, or past
                                         ;   the port value in the case of I/O
                                         ;   with an immediate port value
         JMP     POPIO                   ; Return to the V86 task
@@ -422,7 +431,7 @@ NOT_DMA_PAGE:
         MOV     AH,3                    ; Convert the port number to an index
         MUL     AH                      ;   into the jump table by multiplying
                                         ;   by 3.  Jump table entry are 3 bytes.
-        LEA     CX,OUT_TABLE            ; Get the offset of the jump table
+        LEA     CX,[OUT_TABLE]          ; Get the offset of the jump table
         ADD     AX,CX                   ; And add it on to the index
         JMP     AX                      ; Jump to the jump table entry for this
                                         ;   port
@@ -436,8 +445,8 @@ MANPORT:
         MOV     AL,0FEH                 ; It's the IPL port!  Send out a FEH to
         OUT     064H,AL                 ;   reset the system.
 
-HALT:   HLT                             ; In case that trick didn't work    @P1C
-        JMP     HALT                    ;   we'll just wait here until      @P1C
+HALT_:   HLT                             ; In case that trick didn't work    @P1C
+        JMP     HALT_                    ;   we'll just wait here until      @P1C
                                         ;   somebody hits the big red switch.
 
 PAGE
@@ -455,7 +464,7 @@ PAGE
 ; will be for the LSB.  We emulate this by setting our DMABYTE flag to 0.
 
 RESET_BYTE_PTR:
-        MOV     DMABYTE,0               ; Reset the byte flag
+        MOV     byte [DMABYTE],0        ; Reset the byte flag
         JMP     DOOUT                   ; Send the "OUT" to the real port
 
 PAGE
@@ -474,43 +483,43 @@ PAGE
 ; "OUT" is to port 00, the address port for channel 0.
 
 CHN_0:
-        LEA     BX,DMATABLE             ; Point BX to the control block for
+        LEA     BX,[DMATABLE]           ; Point BX to the control block for
                                         ;   channel 0
         JMP     MOVBYTE                 ; Go get the byte
 
 ; "OUT" is to port 02, the address port for channel 1.
 
 CHN_1:
-        LEA     BX,DMATABLE+(1*DMAENTRYLEN) ; Point BX to the control block for
+        LEA     BX,[DMATABLE+(1*DMAENTRYLEN)] ; Point BX to the control block for
                                         ;   channel 1
         JMP     MOVBYTE                 ; Go get the byte
 
 ; "OUT" is to port 04, the address port for channel 2.
 
 CHN_2:
-        LEA     BX,DMATABLE+(2*DMAENTRYLEN) ; Point BX to the control block for
+        LEA     BX,[DMATABLE+(2*DMAENTRYLEN)] ; Point BX to the control block for
                                         ;   channel 2
         JMP     MOVBYTE                 ; Go get the byte
 
 ; "OUT" is to port 06, the address port for channel 3.
 
 CHN_3:
-        LEA     BX,DMATABLE+(3*DMAENTRYLEN) ; Point BX to the control block for
+        LEA     BX,[DMATABLE+(3*DMAENTRYLEN)] ; Point BX to the control block for
                                         ;   channel 3
 
 MOVBYTE:
-        MOV     AL,BYTE PTR SS:[BP+BP_AX] ; Get the byte from the user's AL
-        XOR     DMABYTE,1               ; Toggle the DMABYTE flag
+        MOV     AL,byte [ss:BP+BPSTACK.BP_AX]     ; Get the byte from the user's AL
+        XOR     byte [DMABYTE],1        ; Toggle the DMABYTE flag
         JZ      MOVMSB                  ; Was the flag set to 1?  If so, go
                                         ;   put the byte to the MSB
-        MOV     BYTE PTR [BX+DMALSB],AL ; Else it was 0 so put the byte in the
+        MOV     byte [BX+DMACB.DMALSB],AL     ; Else it was 0 so put the byte in the
                                         ;   LSB for this channel
-        JMP     OUTEXITDMA              ; And exit
+        JMP     OUTEXITDMA_              ; And exit
 
 MOVMSB:
-        MOV     BYTE PTR [BX+DMAMSB],AL ; Put the byte in the MSB for this
+        MOV     byte [BX+DMACB.DMAMSB],AL     ; Put the byte in the MSB for this
                                         ;   channel
-        JMP     OUTEXITDMA              ; And exit
+        JMP     OUTEXITDMA_              ; And exit
 
 PAGE
 
@@ -521,19 +530,19 @@ PAGE
 ; inhibit the setting of the base register.
 
 CHK_FUNCTION:
-        MOV     AL,BYTE PTR SS:[BP+BP_AX] ; Get the value to be "OUT"ed to 18H
+        MOV     AL,byte [ss:BP+BPSTACK.BP_AX]     ; Get the value to be "OUT"ed to 18H
         SHR     AL,4                    ; Shift the function number into AL
         CMP     AL,2                    ; Is this the function to set the base
                                         ;   register?
         JE      SAVE_CHN                ; Yup.  Go save the channel number.
-        MOV     DMABYTE,3               ; Nope.  Inhibit setting the base reg.
+        MOV     byte [DMABYTE],3        ; Nope.  Inhibit setting the base reg.
         JMP     DOOUT                   ; Send the "OUT" to the real port
 
 SAVE_CHN:
-        MOV     AL,BYTE PTR SS:[BP+BP_AX] ; Get the value in AL again
+        MOV     AL,byte [ss:BP+BPSTACK.BP_AX]     ; Get the value in AL again
         AND     AL,07H                  ; Mask off the function number leaving
                                         ;   the channel number
-        MOV     DMA_ADV_CHN,AL          ; And save it
+        MOV     [DMA_ADV_CHN],AL        ; And save it
         JMP     RESET_BYTE_PTR          ; Go reset the byte flag
 
 PAGE
@@ -541,21 +550,21 @@ PAGE
 ; This is the entry for an "OUT" to port 1AH.
 
 CHK_BASE_REG:
-        CMP     DMABYTE,3               ; Are we inhibiting setting the base
+        CMP     byte [DMABYTE],3        ; Are we inhibiting setting the base
                                         ;   register?
        LJAE     DOOUT                   ; Yes.  Then just sent the "OUT" to the
                                         ;   real port
-        LEA     BX,DMATABLE             ; Point BX to the channel control blocks
-        MOV     AL,DMA_ADV_CHN          ; Get the current advanced channel
+        LEA     BX,[DMATABLE]           ; Point BX to the channel control blocks
+        MOV     AL,[DMA_ADV_CHN]        ; Get the current advanced channel
         MOV     AH,DMAENTRYLEN          ;   and multiply by the size of a
         MUL     AH                      ;   control block.  Now AX is the index
                                         ;   for the current control block
         ADD     BX,AX                   ; Add this on to the base and BX points
                                         ;   to the control block
         SUB     AX,AX                   ; Purge AX
-        MOV     AL,DMABYTE              ; Get the byte flag
+        MOV     AL,[DMABYTE]            ; Get the byte flag
         ADD     BX,AX                   ; And add it on to BX
-        MOV     CL,BYTE PTR SS:[BP+BP_AX] ; Get the out value into CL
+        MOV     CL,byte [ss:BP+BPSTACK.BP_AX]     ; Get the out value into CL
 
 ; Now put it in the control block.  Notice that BX is the base of the control
 ; block plus the byte flag.  Now we add on the offset for the LSB entry.  A
@@ -563,10 +572,10 @@ CHK_BASE_REG:
 ; CL goes to the LSB entry, for DMABYTE = 1 it goes to the MSB entry and for
 ; DMABYTE = 2 it goes to the page entry.
 
-        MOV     BYTE PTR [BX+DMALSB],CL ; Save the byte in the control block
-        INC     DMABYTE                 ; Increment our byte counter
-        CMP     DMABYTE,3               ; Was the page entry written?
-       LJNE     OUTEXITDMA              ; Nope.  Let's just exit.
+        MOV     byte [BX+DMACB.DMALSB],CL     ; Save the byte in the control block
+        INC     byte [DMABYTE]          ; Increment our byte counter
+        CMP     byte [DMABYTE],3        ; Was the page entry written?
+       LJNE     OUTEXITDMA_              ; Nope.  Let's just exit.
 
         SUB     BX,AX                   ; The page was written.  Point BX back
                                         ;   to the start of the control block.
@@ -575,15 +584,15 @@ CHK_BASE_REG:
 
         CALL    XLATE                   ; The page is OK.  Translate the virtual
                                         ;   address to the real address
-        MOV     AL,BYTE PTR [BX+DMALR]  ; Get the LSB of the real address
+        MOV     AL,byte [BX+DMACB.DMALR]      ; Get the LSB of the real address
         OUT     1AH,AL                  ; "OUT" it to the port 1AH
         JMP     $+2                     ; Wait a bit
-        MOV     AL,BYTE PTR [BX+DMAMR]  ; Get the MSB of the real address
+        MOV     AL,byte [BX+DMACB.DMAMR]      ; Get the MSB of the real address
         OUT     1AH,AL                  ; "OUT" it to the port 1AH
         JMP     $+2                     ; Wait a bit
-        MOV     AL,BYTE PTR [BX+DMAPR]  ; Get the real page number
+        MOV     AL,byte [BX+DMACB.DMAPR]      ; Get the real page number
         OUT     1AH,AL                  ; Do the "OUT" to port 1AH
-        JMP     OUTEXITDMA              ; That's all
+        JMP     OUTEXITDMA_              ; That's all
 
 PAGE
 
@@ -592,21 +601,21 @@ PAGE
 ; and follows it through the page tables to get the real address.  It puts
 ; the real address into the current channel control block.
 
-XLATE   PROC
+XLATE:
 
 ; Calcuate the page fram offset of the real address,  the lower 12 bits.
 
-        MOV     AX,WORD PTR [BX+DMALSB] ; Get the virtual LSB and MSB
+        MOV     AX,word [BX+DMACB.DMALSB]     ; Get the virtual LSB and MSB
         AND     AH,0FH                  ; Wipe out the top nibble.  This leaves
                                         ;   us with only the offset into the 4K
                                         ;   page frame.  This real address will
                                         ;   have the same offset into the page
                                         ;   frame
-        MOV     WORD PTR [BX+DMALR],AX  ; So save this in the real LSB
+        MOV     word [BX+DMACB.DMALR],AX      ; So save this in the real LSB
 
 ; Pick up page table address.
 
-        MOV     SI,SGTBLOFF             ; Point ST to the first page directory
+        MOV     SI,[SGTBLOFF]           ; Point ST to the first page directory
                                         ;  entry
         DATAOV                          ; Get the address of the current page
         LODSW                           ;   table
@@ -614,7 +623,7 @@ XLATE   PROC
                                         ;   makes it a real offset.
         DATAOV                          ; Point SI to the page table
         MOV     SI,AX
-        MOV     AX,WORD PTR [BX+DMAMSB] ; Get the MSB and page
+        MOV     AX,word [BX+DMACB.DMAMSB]     ; Get the MSB and page
         SHR     AX,4                    ; Shift the top four bits off the end
                                         ;   of the register these four bits are
                                         ;   not used.  We are dealing with a 24
@@ -631,11 +640,11 @@ XLATE   PROC
                                         ;   entry.
         ADD     SI,1                    ; Step over the access rights byte
 
-        MOV     AX,HUGE_PTR             ; Load DS with a selector that accesses
+        MOV     AX,GDT_DEF.HUGE_PTR             ; Load DS with a selector that accesses
         MOV     DS,AX                   ;   all of memory as data
         ADDROV                          ; Load the address of the page frame
         LODSW                           ;   into EAX
-        MOV     CX,SYS_PATCH_DS         ; Point DS back to our data segment
+        MOV     CX,GDT_DEF.SYS_PATCH_DS         ; Point DS back to our data segment
         MOV     DS,CX
 
 ; Now AX contains the address of the page frame shifted right 8 bits.  Remember
@@ -646,15 +655,15 @@ XLATE   PROC
 ; we just OR on the high nibble of the MSB.  Then we set the real page.  Then
 ; we're all done.
 
-        OR      BYTE PTR [BX+DMAMR],AL  ; Turn on high 4 bits of the real MSB
-        MOV     BYTE PTR [BX+DMAPR],AH  ; Set the real page
+        OR      byte [BX+DMACB.DMAMR],AL      ; Turn on high 4 bits of the real MSB
+        MOV     byte [BX+DMACB.DMAPR],AH      ; Set the real page
 
         RET
 
-XLATE   ENDP
+;XLATE   ENDP
 
-DMAIN   ENDP
+;DMAIN   ENDP
 
-PROG    ENDS
+;PROG    ENDS
 
-        END
+;        END

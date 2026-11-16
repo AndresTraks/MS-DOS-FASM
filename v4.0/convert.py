@@ -1542,6 +1542,74 @@ UTILITIES = {
             ";\tendm\n"
             "finalCNT = cntrycnt\t; what the macro's % made of it\n")]},
     ),
+    # XMAEM.SYS, the 80386 XMA emulator: ten modules in one segment, which
+    # XMAEM.LNK names in that order, and the six headers they read between
+    # them -- three of those being .MAC macro libraries, which is what the
+    # release calls a header that holds nothing but macros.
+    #
+    # What it emulates is the XMA memory card of a 3270 PC on a machine
+    # whose processor is a 386: it goes into protected mode, keeps a
+    # descriptor table and an interrupt table of its own, and answers the
+    # card's own interface from them, so that software written for the card
+    # runs on the newer machine.  INDEINS.MAC is there because MASM 3.0 did
+    # not know the 386's instructions and the release hand-assembles the
+    # ones it wants.
+    'XMAEM': dict(
+        DIR='src/DEV/XMAEM',
+        MODULES=('INDEINI.ASM', 'INDEEXC.ASM', 'INDEEMU.ASM', 'INDEXMA.ASM',
+                 'INDEDMA.ASM', 'INDEI15.ASM', 'INDEIDT.ASM', 'INDEGDT.ASM',
+                 'INDEMSG.ASM', 'INDEPAT.ASM',
+                 'INDEACC.INC', 'INDEDAT.INC', 'INDEMSUS.INC',
+                 'INDEDES.MAC', 'INDEINS.MAC', 'INDEOVP.MAC'),
+        ONESEG=True,
+        SHARED=('COPYRIGH.INC',),
+        # INDEINI keeps a word to save BX in and calls it RBX, which is a
+        # register to fasm; INDEEXC's DISPLAY is fasm's directive for
+        # printing a line as it assembles, and INDEEMU's INT3 is the
+        # instruction that breaks into a debugger.
+        RESERVED=('RBX', 'DISPLAY', 'INT3'),
+        # Labels two modules each have one of, MASM having assembled them
+        # apart: INDEDMA and INDEXMA both call the way out of their own
+        # handler INEXIT and OUTEXITDMA, INDEDMA and INDEEXC both halt the
+        # processor at HALT, and INDEEXC and INDEI15 both go on at OK1 and
+        # OK2.  INDEDMA's and INDEEXC's take the underscore.
+        PRIVATE={'INDEDMA.ASM': (('INEXIT', 'INEXIT_'),
+                                 ('OUTEXITDMA', 'OUTEXITDMA_'),
+                                 ('HALT', 'HALT_')),
+                 'INDEEXC.ASM': (('OK1', 'OK1_'), ('OK2', 'OK2_')),
+                 # INDEXMA calls a selector of its own CRT_SELECTOR, where
+                 # the CRT_SELECTOR the other modules read is the word
+                 # INDEI15 declares and nothing in INDEXMA reads either.
+                 'INDEXMA.ASM': (('CRT_SELECTOR', 'CRT_SELECTOR_'),)},
+        # INDEI15's DDL names a place and says how wide it is as a number,
+        # which is a width MASM read and fasm does not: its LABEL takes the
+        # word for the width and not the count of bytes.  The one call is
+        # DDL SP_INIT,2, the top of the monitor's stack.  So the width is
+        # read inside the macro, where the number has arrived.
+        # INDEEXC declares the table it writes the registers on the screen
+        # from with one line per register, and reads the register's own word
+        # of the stack frame as BP_&NAME, pasting the field's name together
+        # out of the register's.  MASM read a field's name wherever it was
+        # declared, where fasm asks for the structure as well, and a pasted
+        # name is not one the rules can look up: all nineteen of them are
+        # fields of BPSTACK, so that is the structure written here.
+        PATCHES={'INDEEXC.ASM': [("DW      BP_#NAME",
+                                  "DW      BPSTACK.BP_#NAME")],
+                 'INDEI15.ASM': [(
+            "NAME   LABEL   SIZE\n",
+            "\tmatch =1, SIZE \\{ label NAME byte \\}\n"
+            "\tmatch =2, SIZE \\{ label NAME word \\}\n"
+            "\tmatch =4, SIZE \\{ label NAME dword \\}\n")]},
+        # The six messages, which XMAEM.SKL names in mixed case and the
+        # modules read in upper: the include file BUILDMSG writes is not one
+        # the rules can see, so the spellings are said here.
+        SPELLING={'welcome': 'Welcome', 'goodload': 'GoodLoad',
+                  'no_80386': 'No_80386', 'was_inst': 'Was_Inst',
+                  'small_parm': 'Small_Parm', 'no_mem': 'No_Mem'},
+        # Every module says ASSUME CS:PROG at the head of the segment and
+        # names no other register.
+        START={'cs': 'PROG', 'ds': None, 'es': None, 'ss': None},
+    ),
 }
 
 NAME = sys.argv[1].upper() if len(sys.argv) > 1 else ''
@@ -1750,7 +1818,39 @@ def seg_patched(stem, text):
     return text
 
 
-source = {m: dollars(parser_names(after_end(seg_patched(m, read(m)))), TAG[m])
+def commented(text):
+    """MASM's COMMENT, which ran from its delimiter to the next one.
+
+    XMAEM opens every module and every macro library of its own with one --
+    the IBM banner, in a box of asterisks, after a COMMENT # -- and nothing
+    else in the release uses the directive.  fasm has no block comment at
+    all, so every line of such a block is given a semicolon of its own.
+    """
+    lines = text.split('\n')
+    out, i = [], 0
+    while i < len(lines):
+        m = re.match(r"(?i)^[ \t]*COMMENT[ \t]+(\S)(.*)$", lines[i])
+        if not m:
+            out.append(lines[i])
+            i += 1
+            continue
+        delim, rest = m.group(1), m.group(2)
+        out.append(';' + lines[i])
+        i += 1
+        if delim in rest:               # it opens and closes on one line
+            continue
+        while i < len(lines):
+            out.append(';' + lines[i])
+            closed = delim in lines[i]
+            i += 1
+            if closed:
+                break
+    return '\n'.join(out)
+
+
+source = {m: dollars(parser_names(after_end(commented(seg_patched(m,
+                                                                  read(m))))),
+                     TAG[m])
           for m in MODULES}
 
 # MASM assembled the modules apart, so each could keep a name of its own
@@ -2276,7 +2376,7 @@ def declarations(text):
     # The value is whatever stands between the DB and the comment, the
     # comment being found with the quotes respected: MODEPARS declares a
     # field as DB ";".
-    SCALAR = re.compile(r"(?i)^([ \t]*)(" + N + r")([ \t]+)(D[BWD])([ \t]+)"
+    SCALAR = re.compile(r"(?i)^([ \t]*)(" + N + r")([ \t]+)(D[BWDQ])([ \t]+)"
                         r"(.*?)[ \t]*$")
     # The structures stand inside segments and the modules are read once
     # per segment, so the MATCH that asks whether the laying out has been
@@ -2340,7 +2440,7 @@ def declarations(text):
                             % (m.group(1), name, m.group(3), m.group(4),
                                m.group(5), name, ' ' + note if note else ''))
                 continue
-            m = re.match(r"(?i)^([ \t]*)(" + N + r")([ \t]+)(D[BWD])\b", code)
+            m = re.match(r"(?i)^([ \t]*)(" + N + r")([ \t]+)(D[BWDQ])\b", code)
             if m:                       # a field with DUP in it
                 body.append(m.group(1) + '.' + line.lstrip())
                 continue
@@ -2361,7 +2461,7 @@ def declarations(text):
             # It takes a parameter like any other field, named after the
             # structure and the place it stands in, and what the release
             # declared is its default.
-            m = re.match(r"(?i)^([ \t]*)(D[BWD])([ \t]+)(.*?)[ \t]*$", code)
+            m = re.match(r"(?i)^([ \t]*)(D[BWDQ])([ \t]+)(.*?)[ \t]*$", code)
             if m and ' dup' not in m.group(4).lower() \
                     and 'dup ' not in m.group(4).lower() \
                     and ',' not in m.group(4):
@@ -2425,6 +2525,11 @@ PLACED = set()
 # And the ones whose value is a place with a width in front of it, which is
 # more than one word wherever the name stands.
 WIDE = set()
+# And the ones whose value names the register that reaches the place as
+# well, which is the override wherever the name stands: XMAEM's INDEINI
+# reads the request header through RH EQU DS:[BX], and a reference that
+# holds such a name wants no second override in front of it.
+CARRIED = set()
 # What each module asked a name it does not declare to be.  MASM took a
 # module at a time and LINK never compared the two, so a program could
 # declare a place one width and read it another: MODESUBS gives pbaud_ptr a
@@ -2463,10 +2568,12 @@ for text in (list(source.values())
         # An EQU that names a place rather than a number is storage as much
         # as a DB is: MODELENG's BIOS_date EQU ES:[DI].
         m = re.match(r"(?i)^[ \t]*(" + N + r")\s+equ\s+"
-                     r"(?:(?:cs|ds|es|ss):)?\s*\[[^\]]+\]\s*$", code)
+                     r"((?:cs|ds|es|ss):)?\s*\[[^\]]+\]\s*$", code)
         if m:
             DATA.add(m.group(1).lower())
             PLACED.add(m.group(1).lower())
+            if m.group(2):
+                CARRIED.add(m.group(1).lower())
         # And an EQU that names a place with its width, which stands for the
         # whole reference and not for an address: NLSFUNC's FILESPEC_PTR EQU
         # BYTE PTR DS:[IN_DEX].  A name like that is more than one word
@@ -2787,6 +2894,63 @@ MASMREL = {'EQ': '=', 'NE': '<>', 'LT': '<', 'GT': '>', 'LE': '<=',
            'GE': '>='}
 
 
+def written_over(text):
+    """MASM's ORG back over what had been laid down, and the jump written
+    over it.
+
+    A table of jumps is read by index, so every entry of it is the same
+    width, and both of XMAEM's are built the way MASM let a program build
+    one: a REPT lays an entry down for every op-code or every port, all of
+    them jumping to the routine that passes the thing through, and then an
+    ORG and a JMP for each one the emulator handles itself -- the ORG moving
+    the counter back into the table and the JMP written over the entry it
+    lands on.  A last ORG at the table's end puts the counter back.
+
+    fasm writes its output as it goes and cannot move back over it: an ORG
+    there moves the address and not the place the output goes, so each of
+    those jumps would be appended to the table instead of written into it,
+    and everything after the table would stand three bytes further on for
+    every one of them.  So the jump is handed to the link file's jmpover$,
+    which assembles it where it belongs in a VIRTUAL block and stores the
+    three bytes of it over the entry.  The call stands on the line the JMP
+    was on, which keeps the module line for line; the ORG in front of it is
+    a comment, and so is the ORG that closes the run, the counter never
+    having moved.
+    """
+    lines = text.split('\n')
+    out, i, inrun = [], 0, False
+    while i < len(lines):
+        code = code_of(lines[i])
+        j = comment_at(lines[i])
+        note = lines[i][j:] if j >= 0 else ''
+        m = re.match(r"(?i)^([ \t]*)ORG[ \t]+(" + N + r"[ \t]*\+[^;\n]*?)"
+                     r"[ \t]*$", code)
+        jump = re.match(r"(?i)^[ \t]*JMP[ \t]+(" + N + r")[ \t]*$",
+                        code_of(lines[i + 1]) if i + 1 < len(lines) else '')
+        if m and jump:
+            # The call stands where the JMP stood, that being the line
+            # whose jump it writes; the ORG above it is a comment.
+            out.append(';' + lines[i])
+            k = comment_at(lines[i + 1])
+            out.append('%sjmpover$ %s, %s%s'
+                       % (re.match(r"^[ \t]*", lines[i + 1]).group(0),
+                          m.group(2).strip(), jump.group(1),
+                          ' ' + lines[i + 1][k:] if k >= 0 else ''))
+            inrun = True
+            i += 2
+            continue
+        # the ORG that closes the run, which put the counter back where the
+        # table ended: nothing moved it, so there is nothing to put back
+        if inrun and re.match(r"(?i)^[ \t]*ORG[ \t]+" + N + r"[ \t]*$", code):
+            out.append(';' + lines[i])
+            inrun = False
+            i += 1
+            continue
+        out.append(lines[i])
+        i += 1
+    return '\n'.join(out)
+
+
 def relations(text):
     """MASM's words for a comparison in a conditional, in fasm's signs.
 
@@ -2804,7 +2968,7 @@ def relations(text):
         # RAMDRIVE writes its two assertions as IF((a - b) NE (c - d)),
         # with the bracket against the word, so the line is recognised by
         # either a space or a bracket after the IF.
-        if re.match(r"(?i)^[ \t]*(?:ELSE)?IF[ \t(]", code):
+        if re.match(r"(?i)^[ \t]*(?:ELSE)?IFE?[ \t(]", code):
             code = re.sub(r"(?i)(?<=\s)(" + '|'.join(MASMREL) + r")(?=\s)",
                           lambda m: MASMREL[m.group(1).upper()], code)
             # A connective between two comparisons is a logical one, which
@@ -2855,6 +3019,26 @@ def switched(text):
 # prefix as nothing.  The = stays: the modules are read once per segment, and
 # an equate would still stand for the address on the next reading, where the
 # name is given another value.
+def nested_dup(text):
+    """A DUP inside a DUP, which MASM allowed and fasm does not.
+
+    XMAEM's INDEDAT lays the global descriptor table out as a structure and
+    writes each run of descriptors as the number of them and the eight bytes
+    one of them takes -- DB 16 DUP (8 DUP(0)) -- where fasm reads one DUP and
+    no more.  The two counts are multiplied and the inner list is the one
+    that stands, so both numbers are still in the line.
+    """
+    while True:
+        text, n = re.subn(
+            r"(?i)(\bd[bwdqt][ \t]+)([^;\n]*?)[ \t]*\bdup[ \t]*\([ \t]*"
+            r"([^;\n()]*?)[ \t]*\bdup[ \t]*\(([^()\n]*)\)[ \t]*\)",
+            lambda m: '%s%s*%s dup (%s)' % (m.group(1), m.group(2),
+                                            m.group(3), m.group(4)),
+            text)
+        if not n:
+            return text
+
+
 def split_dup(text):
     """A declaration that writes some bytes and then reserves more.
 
@@ -2978,34 +3162,94 @@ def distances(text):
                   r"[ \t]*(;[^\n]*)?$", one, text)
 
 
-def blankness(text):
-    """What a macro asked about its own arguments: IFB and IFNB, whether
-    one was given at all, and IFIDN, whether one is a particular word.
+# MASM's conditionals: what opens one, what divides it and what closes it.
+# ELSEIF does neither, so what tells it from the ELSE that divides one is
+# that nothing follows the word.
+CONDOPEN = re.compile(r"(?i)^[ \t]*IF(?:1|2|E|B|NB|DEF|NDEF|IDNI?|DIFI?)?\b")
+CONDELSE = re.compile(r"(?i)^[ \t]*ELSE[ \t]*$")
+CONDEND = re.compile(r"(?i)^[ \t]*ENDIF\b")
 
-    fasm asks both with MATCH: against nothing for IFB, against a name that
-    takes whatever there is for IFNB, and against the word itself, marked
-    with an =, for IFIDN.  The braces are the macro's own, so they are
-    escaped, and the ENDIF that closes one of these is a brace rather than
-    an END IF.  MODE writes five of the first kind, which is what lets SCRN
-    take a mode as well as a function, and APPEND's JUMP is twenty of the
-    third -- one per condition a long conditional jump can carry.
+
+def else_ahead(lines, i):
+    """Whether the conditional opened on line i has an ELSE of its own."""
+    level = 0
+    for line in lines[i + 1:]:
+        code = code_of(line)
+        if CONDOPEN.match(code):
+            level += 1
+        elif CONDEND.match(code):
+            if not level:
+                return False
+            level -= 1
+        elif not level and CONDELSE.match(code):
+            return True
+    return False
+
+
+def blankness(text, stem):
+    """What a macro asked about its own arguments: IFB and IFNB, whether one
+    was given at all, and IFIDN and IFDIF, whether one is a particular word.
+
+    fasm asks all of them with MATCH: against nothing for IFB, against a
+    name that takes whatever there is for IFNB, and against the word itself,
+    marked with an =, for IFIDN.  The braces are the macro's own, so they are
+    escaped -- once for each block they stand inside, which is the macro and
+    any IRP and MATCH around them -- and the ENDIF that closes one of these
+    is a brace rather than an END IF.  MODE writes five of the first kind,
+    which is what lets SCRN take a mode as well as a function, and APPEND's
+    JUMP is twenty of the third -- one per condition a long conditional jump
+    can carry.
 
     MASM's IFIDN reads the same either way round, where fasm's MATCH has a
     pattern and a text to match it against, so the operand that is the
     macro's own parameter is taken for the text.
 
-    IFDIF, the other way round, has no MATCH: fasm can say what a text is
-    and not what it is not.  It is left as it stands, and the only macros
-    that ask it -- SYSMAC.LIB's DISP, and DMSG through it -- are never
-    expanded, so nothing reads the answer.
+    A MATCH is a block and not a conditional, and there is nothing in it to
+    write an ELSE as.  Where one follows, the answer is kept in a flag: a
+    MATCH of one line sets it and each branch is a MATCH that reads it, which
+    is the shape INC/STRUC.INC uses to try one reading of a condition after
+    another.  IFDIF is written that way whatever follows it, fasm having no
+    MATCH for what a text is not -- the flag starts idn$yes and the MATCH
+    that finds the word puts it to idn$no.  The two values carry the same
+    mark as the flag because a program may have names of its own called yes
+    and no, and the spellings those are written at are settled later.  XMAEM's INDEINS.MAC wants both: its macros
+    hand-assemble the 386's instructions, and they read which register they
+    were given by matching its name against a list of them.
+
+    A conditional that is none of these opens no block of its own and is
+    counted all the same, the ENDIF that closes it having to be told from the
+    one that closes a MATCH around it.  F_MOD asks IFB whether it was given a
+    displacement and asks IFE how long the displacement is inside the answer.
     """
-    # What is open: a macro, or one of the REPT and IRP blocks that close
+    mark = stem.split('.')[0].lower()
+    lines = text.split('\n')
+    # What is open: a macro, or one of the IRP and REPT blocks that close
     # with ENDM as a macro does.  NLSFUNC's DOESMAC.INC declares a macro
     # inside a macro and SaveReg closes an IRP and itself with two ENDMs in
     # a row, so counting the ENDMs is the only way to know which one ends
     # the macro the IFNBs are in.
-    out, nest, depth, params = [], [], [], set()
-    for line in text.split('\n'):
+    out, nest, depth, params, flags = [], [], [], set(), [0]
+
+    def braces():
+        """The backslashes a brace of ours wants: one for each block it
+        stands inside.  A REPT is fasm's REPEAT, which closes with two words
+        of its own and not with a brace, so it is not one of them."""
+        return '\\' * (len([n for n in nest if n != 'rept'])
+                       + len([d for d in depth if d]) - 1)
+
+    def flagged(lead, pattern, said, start, note):
+        """The flag, the MATCH that sets it and the MATCH that reads it."""
+        flags[0] += 1
+        flag = 'idn$%s%d' % (mark, flags[0])
+        depth.append(('flag', flag))
+        out.append('%sdefine %s idn$%s' % (lead, flag, start))
+        out.append('%smatch %s, %s %s{ define %s idn$%s %s}'
+                   % (lead, pattern, said, braces(), flag,
+                      'no' if start == 'yes' else 'yes', braces()))
+        out.append('%smatch =idn$yes, %s %s{%s'
+                   % (lead, flag, braces(), note))
+
+    for i, line in enumerate(lines):
         code = code_of(line)
         note = line[len(code):]
         inmacro = 'macro' in nest
@@ -3018,55 +3262,142 @@ def blankness(text):
                       if w.strip()}
             out.append(line)
             continue
-        if re.match(r"(?i)^[ \t]*(?:IRP|IRPC|REPT)\b", code):
-            nest.append('loop')
+        m = re.match(r"(?i)^[ \t]*(IRP|IRPC|REPT)\b[ \t]*([^;]*?)[ \t]*$", code)
+        if m:
+            # A REPT with two words after it is fasm's own, written by the
+            # rules for an array of structures, and carries its braces with
+            # it: it opens nothing here.
+            if m.group(1).upper() == 'REPT' \
+                    and re.match(r"^\S+[ \t]+" + N + r"$", m.group(2)):
+                out.append(line)
+                continue
+            nest.append('rept' if m.group(1).upper() == 'REPT' else 'irp')
             out.append(line)
             continue
         if nest and MACROEND.match(code):
             nest.pop()
             out.append(line)
             continue
-        m = re.match(r"(?i)^([ \t]*)IFIDNI?[ \t]+<(.*?)>[ \t]*,"
+        m = re.match(r"(?i)^([ \t]*)IF(IDN|DIF)I?[ \t]+<(.*?)>[ \t]*,"
                      r"[ \t]*<(.*?)>[ \t]*$", code)
         if inmacro and m:
-            left, right = m.group(2).strip(), m.group(3).strip()
-            text, word = left, right
+            lead, which = m.group(1), m.group(2).upper()
+            left, right = m.group(3).strip(), m.group(4).strip()
+            said, word = left, right
             if left.lower() not in params and right.lower() in params:
-                text, word = right, left
-            # None where IFNB keeps the name it took: an ELSE after this
-            # one has no MATCH to be written as, and is left to say so.
-            depth.append((text, None))
-            out.append('%smatch %s, %s %s{%s'
-                       % (m.group(1), ' '.join('=' + w for w in word.split()),
-                          text, '\\' * len(depth), note))
+                said, word = right, left
+            pattern = ' '.join('=' + w for w in word.split())
+            if which == 'DIF':
+                flagged(lead, pattern, said, 'yes', note)
+            elif else_ahead(lines, i):
+                flagged(lead, pattern, said, 'no', note)
+            else:
+                depth.append(('match',))
+                out.append('%smatch %s, %s %s{%s'
+                           % (lead, pattern, said, braces(), note))
             continue
         m = re.match(r"(?i)^([ \t]*)IF(N?)B[ \t]+<(.*?)>[ \t]*$", code)
         if inmacro and m:
             # The braces are the macro's own, and one inside another wants
             # a backslash for every level it is in: MODECPEQ's DOSCALL asks
             # about its function and then about its subfunction.
-            depth.append((m.group(3), bool(m.group(2))))
+            depth.append(('blank', m.group(3), bool(m.group(2))))
             out.append('%smatch %s, %s %s{%s'
                        % (m.group(1), 'any$' if m.group(2) else '',
-                          m.group(3), '\\' * len(depth), note))
+                          m.group(3), braces(), note))
+            continue
+        # A conditional of the assembler's own, which stands as it is and is
+        # counted so that its ENDIF is not taken for one of ours.
+        if inmacro and CONDOPEN.match(code):
+            depth.append(None)
+            out.append(line)
             continue
         # The other way round: what MASM wrote after an ELSE is what there
         # is to do when the argument is the other thing, which is a MATCH of
         # its own.  MODECPEQ writes one, for a call with no subfunction.
-        m = re.match(r"(?i)^([ \t]*)ELSE[ \t]*$", code)
-        if inmacro and m and depth and depth[-1][1] is not None:
-            name, given = depth[-1]
-            out.append('%s%s}%s' % (m.group(1), '\\' * len(depth), note))
-            out.append('%smatch %s, %s %s{'
-                       % (m.group(1), '' if given else 'any$', name,
-                          '\\' * len(depth)))
+        m = CONDELSE.match(code)
+        if inmacro and m and depth and depth[-1] \
+                and depth[-1][0] in ('blank', 'flag'):
+            lead = re.match(r"^[ \t]*", code).group(0)
+            out.append('%s%s}%s' % (lead, braces(), note))
+            if depth[-1][0] == 'flag':
+                out.append('%smatch =idn$no, %s %s{'
+                           % (lead, depth[-1][1], braces()))
+            else:
+                name, given = depth[-1][1], depth[-1][2]
+                out.append('%smatch %s, %s %s{'
+                           % (lead, '' if given else 'any$', name, braces()))
             continue
         m = re.match(r"(?i)^([ \t]*)ENDIF\b", code)
         if inmacro and m and depth:
-            out.append('%s%s}%s' % (m.group(1), '\\' * len(depth), note))
-            depth.pop()
+            if depth[-1]:
+                out.append('%s%s}%s' % (m.group(1), braces(), note))
+                depth.pop()
+            else:
+                depth.pop()
+                out.append(line)
             continue
         out.append(line)
+    return '\n'.join(out)
+
+
+def quoted_parameters(text):
+    """A macro's parameter inside a quoted string, which MASM substituted
+    there as it did anywhere else.
+
+    fasm does not read inside a string, and has ` instead: it gives the text
+    of the argument a parameter stands for as a string of its own, so a
+    string with a parameter in the middle of it becomes the list of pieces it
+    was made of.  XMAEM's INDEEXC declares one entry of its table of
+    registers per register, and the name it writes on the screen is the name
+    of the register itself -- DB '&NAME:' -- which is the one in the release.
+    """
+    def pieces(m, params):
+        quote, inner, out = m.group(0)[0], m.group(0)[1:-1], []
+        for part in re.split(r"&(" + N + r")", inner):
+            if part == '':
+                continue
+            out.append('`' + part if part.lower() in params
+                       else quote + part + quote)
+        return ', '.join(out) or quote + quote
+
+    out, params = [], set()
+    for line in text.split('\n'):
+        code = code_of(line)
+        note = line[len(code):]
+        m = MACRODEF.match(code)
+        if m:
+            params = {w.strip().lower()
+                      for w in re.split(r"[ \t,]+", m.group(2)) if w.strip()}
+        elif MACROEND.match(code):
+            params = set()
+        if params and re.search(r"['\"][^'\"\n]*&" + N, code):
+            code = re.sub(r"'[^'\n]*'|\"[^\"\n]*\"",
+                          lambda m: pieces(m, params), code)
+        out.append(code + note)
+    return '\n'.join(out)
+
+
+def substituted(text):
+    """MASM's & in front of a macro's parameter, which fasm does not want.
+
+    MASM substituted a parameter where it stood as a word of its own, and an
+    & in front of it said to substitute it here as well -- which is what
+    <&REG1> asked for, the angle brackets otherwise being part of the word.
+    fasm substitutes a parameter wherever its name stands and has nothing to
+    do with the &, which it would read as part of the name.  XMAEM's macros
+    are written this way throughout: IFIDN <&REG1>,<&TREG> asks which
+    register the caller named.
+
+    An & between two names is MASM's paste, and that one stays for pasted()
+    to write as fasm's #.  It is the & that stands before a name and after
+    something which is not one that goes.
+    """
+    out = []
+    for line in text.split('\n'):
+        j = comment_at(line)
+        code, note = (line, '') if j < 0 else (line[:j], line[j:])
+        out.append(re.sub(r"(?<![\w?$@])&(?=[\w?$@])", '', code) + note)
     return '\n'.join(out)
 
 
@@ -3517,22 +3848,33 @@ def bare_fields(text):
     and that is a field of the boot record INC/BOOTFORM.INC lays out, so the
     name takes the structure it belongs to."""
     def one(m):
-        name = m.group(1)
+        path = m.group(1).split('.')
+        name, rest = path[0], path[1:]
         found = FIELD.get(name.upper())
         if found is None or name.lower() in DECLARED:
-            return name
+            return m.group(0)
         # A word the assembler keeps for itself is not a field, whatever a
         # structure calls its own: one of MODE's is called ENDIF.
         if name.upper() in ('ENDIF', 'ENDM', 'IFB', 'IFNB', 'IFE', 'IFDEF',
                             'IFNDEF', 'ELSE', 'IF', 'IF1', 'IF2', 'ENDP',
                             'ENDS', 'PROC', 'MACRO', 'STRUC', 'RECORD'):
-            return name
+            return m.group(0)
         # SIZE, LENGTH and TYPE take the field's own name, and the rules for
         # them work the number out from its declaration: GRTAB says
         # TABSIZE EQU SIZE LANCHAR + SIZE LANID + SIZE LANNAME.
         if re.search(r"(?i)\b(?:size|length|type)[ \t]+$", m.string[:m.start()]):
-            return name
-        return '%s.%s' % (found[0], found[1])
+            return m.group(0)
+        # Two field names joined by a dot, which MASM added the offsets of:
+        # each of them is a number and the dot said nothing more than the
+        # plus does.  XMAEM's INDEINI loads the descriptor of the scrubber's
+        # task with MOV AX,SCRUBBER.TSS_PTR, where SCRUBBER is the room one
+        # virtual machine's entry takes in the descriptor table and TSS_PTR
+        # is a word of such an entry -- two structures, and MASM read a
+        # field's name wherever it was declared.
+        more = [FIELD.get(p.upper()) for p in rest]
+        if rest and all(f is not None for f in more):
+            return '+'.join('%s.%s' % f for f in [found] + more)
+        return '.'.join(['%s.%s' % found] + rest)
 
     out = []
     for line in text.split('\n'):
@@ -3542,7 +3884,8 @@ def bare_fields(text):
             # the quotes are left alone: MODEPARS declares the parser's
             # keyword as DB "COLS=",0, and cols is a field of the structure
             # INVOKE describes an IOCTL 0CH call with
-            code = outside_strings(r"(?<![\w.$])(" + N + r")", one, code)
+            code = outside_strings(r"(?<![\w.$])(" + N + r"(?:\." + N
+                                   + r")*)", one, code)
         out.append(code + comment)
     return '\n'.join(out)
 
@@ -4331,6 +4674,13 @@ def overridden(code):
         # brackets that say which register already reach where they say
         if re.match(r"(?i)^\s*(?:cs|ds|es|ss)\s*:", inner):
             return m.group(0)
+        # and so do brackets holding a name whose own value says which
+        # register reaches it: XMAEM's INDEINI reads the request header
+        # through RH EQU DS:[BX], where the release wrote no override of its
+        # own because the name is one.
+        if any(n.lower() in CARRIED
+               for n in re.findall(r"(?<![\w.@?$])(" + N + r")", inner)):
+            return m.group(0)
         # BP and SP reach through SS, which is the default there the way DS
         # is everywhere else, so a name inside such brackets is a
         # displacement and not the place: MODESUBS writes
@@ -4571,7 +4921,24 @@ def pass_two(text):
 
 
 def quiet_if1(text):
-    """An IF1 block that says nothing but %OUT, commented out whole."""
+    """MASM's IF1, which held what only its first pass assembled.
+
+    What a module put there was what wanted reading once however many passes
+    the assembler made: its macro libraries, and the %OUTs that reported on
+    the build.  fasm reads the source through its preprocessor once and makes
+    as many passes over the result as the addresses need, so the block itself
+    says nothing here: the IF1 and the ENDIF that closes it are commented out
+    and what is between them is left where it is.  Every XMAEM module reads
+    INDEOVP.MAC and INDEINS.MAC inside one.
+
+    A block that says nothing but %OUT is commented out whole, the lines in
+    it having nothing to leave behind.
+
+    An IF1 with an ELSE is a different thing: what follows the ELSE is what
+    the second pass assembled, so the two branches say different things and
+    neither can simply stand.  SHARE writes the one of those, round the room
+    its pool has, and the table says what to do with it.
+    """
     lines = text.split('\n')
     out, i = [], 0
     while i < len(lines):
@@ -4579,23 +4946,38 @@ def quiet_if1(text):
             out.append(lines[i])
             i += 1
             continue
-        depth, j, quiet = 1, i + 1, True
+        depth, j, quiet, branch = 1, i + 1, True, False
         while j < len(lines) and depth:
             code = code_of(lines[j])
             if IF1DEEPER.match(code):
                 depth += 1
             elif IF1CLOSE.match(code):
                 depth -= 1
+                if not depth:
+                    break
+            elif depth == 1 and CONDELSE.match(code):
+                branch = True
             elif not IF1QUIET.match(code):
                 quiet = False
             j += 1
-        if depth or not quiet:
+        if j >= len(lines) or depth:    # nothing closes it: leave it alone
             out.append(lines[i])
             i += 1
             continue
-        out.extend(';' + l for l in lines[i:j])
-        i = j
+        if quiet:
+            out.extend(';' + l for l in lines[i:j + 1])
+        elif branch:
+            out.append(lines[i])
+            i += 1
+            continue
+        else:
+            out.append(';' + lines[i])
+            out.extend(lines[i + 1:j])
+            out.append(';' + lines[j])
+        i = j + 1
     return '\n'.join(out)
+
+
 MACRODEF = re.compile(r"(?i)^(" + N + r")[ \t]+MACRO\b[ \t]*(.*)$")
 MACROEND = re.compile(r"(?i)^[ \t]*ENDM\b")
 SEGMENT = re.compile(r"(?i)^[ \t]*(" + N + r")\s+SEGMENT\b")
@@ -4638,11 +5020,14 @@ for stem in MODULES:
     text = far_jumps(text)
     text = at_far_jumps(text)
     text = far_names(text)
+    text = nested_dup(text)
     text = split_dup(text)
     text = segment_values(text)
     text = grouped(text)
     text = offsets(text)
-    text = blankness(text)
+    text = quoted_parameters(text)
+    text = substituted(text)
+    text = blankness(text, stem)
     text = bare_fields(text)
     text = pasted(text)
     text = counters(text)
@@ -4661,6 +5046,7 @@ for stem in MODULES:
     for was, now in PATCHES.get(stem, ()):
         assert was in text, (stem, was)
         text = text.replace(was, now, 1)
+    text = written_over(text)
     text = relations(text)
     out, infar, noted, measured = [], False, False, False
     # the procedures open at this line, innermost last
@@ -4742,6 +5128,42 @@ for stem in MODULES:
                 deep = '\\' * len([b for b in blocks if b != 'rept'])
                 out.append(deep + '}' + (' ' + comment if comment else ''))
             continue
+
+        # MASM's IFE assembled what follows where its operand came to
+        # nought, which fasm asks the other way round.  Where the operand is
+        # a comparison -- and MASM's comparisons gave a number, so one could
+        # stand inside an expression -- fasm's IF takes the comparison itself
+        # and the question is the negation of it: XMAEM's F_DREG asks
+        # IFE (_DREGNUM LT 8), whether the register it was given was none of
+        # the eight it knows.
+        m = re.match(r"(?i)^([ \t]*)IFE[ \t]+(\S.*?)[ \t]*$", bare)
+        if m:
+            if re.search(r">=|<=|<>|>|<|=", m.group(2)):
+                out.append(pad('%sif ~ %s' % (m.group(1), m.group(2)),
+                               was_len, comment))
+            else:
+                out.append(pad('%sif (%s) = 0' % (m.group(1), m.group(2)),
+                               was_len, comment))
+            continue
+
+        # MASM assembled a JMP to a name it had not read yet as a near
+        # one, three bytes of it; fasm measures the distance and writes a
+        # short jump wherever one reaches.  That says nothing anywhere the
+        # width of a jump is not read -- but a table of jumps is read by
+        # index, and every entry of such a table has to be the same width.
+        # XMAEM has the two in the release: INDEEMU lays an entry down for
+        # each of the 256 op-codes, all of them jumping to the routine for
+        # one the emulator does not expect, and INDEDMA one for each of the
+        # 32 DMA ports.  Left to fasm the last forty of INDEEMU's came out
+        # two bytes, and every entry past them stood at the wrong offset --
+        # the emulator would have jumped into the middle of one.
+        if [b for b in blocks if b in ('irp', 'rept')]:
+            m = re.match(r"(?i)^([ \t]*)JMP([ \t]+)(" + N + r")[ \t]*$", bare)
+            if m:
+                out.append(pad('%sJMP%snear %s'
+                               % (m.group(1), m.group(2), m.group(3)),
+                               was_len, comment))
+                continue
 
         # MASM's IFDEF asked whether a name had been given a value, which
         # fasm asks with DEFINED.  The eleven here all ask after fsexec, the

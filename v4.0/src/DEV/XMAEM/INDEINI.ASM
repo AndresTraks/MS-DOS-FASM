@@ -1,191 +1,262 @@
+STRUC RHC RHC_1_=0, RHC_2_=0, RHC_CMD_=0, RHC_STA_=0, RHC_5_=0
+{
+	   DB	RHC_1_ ; Length of Request Header (including data)
+	   DB	RHC_2_ ; Unit code (subunit)
+.RHC_CMD    DB	RHC_CMD_ ; Command code
+.RHC_STA    DW	RHC_STA_ ; Status
+	   DQ	RHC_5_ ; Reserved for DOS
+}
+match =RHC_LAID_OUT, RHC_LAID_OUT
+{
+    RHC_LAID_OUT equ 1
+    virtual at 0
+      RHC RHC 0, 0, 0, 0, 0
+      sizeof.RHC = $ - RHC
+    end virtual
+}
+STRUC RH0 RH0_NUN_=0, RH0_ENDO_=0, RH0_ENDS_=0, RH0_BPBO_=0, RH0_BPBS_=0, RH0_DRIV_=0
+{
+	   rb      (sizeof.RHC)  ; Reserve space for the header
+
+.RH0_NUN    DB	RH0_NUN_ ; Number of units
+				; Set to 1 if installation succeeds,
+				; Set to 0 to cause installation failure
+.RH0_ENDO   DW	RH0_ENDO_ ; Offset  of ending address
+.RH0_ENDS   DW	RH0_ENDS_ ; Segment of ending address
+.RH0_BPBO   DW	RH0_BPBO_ ; Offset  of BPB array address
+.RH0_BPBS   DW	RH0_BPBS_ ; Segment of BPB array address
+.RH0_DRIV   DB	RH0_DRIV_ ; Drive code (DOS 3 only)
+}
+match =RH0_LAID_OUT, RH0_LAID_OUT
+{
+    RH0_LAID_OUT equ 1
+    virtual at 0
+      RH0 RH0 0, 0, 0, 0, 0, 0
+      sizeof.RH0 = $ - RH0
+    end virtual
+}
+STRUC RH19 RH19_MAJF_=0, RH19_MINF_=0, RH19_SI_=0, RH19_DI_=0, RH19_RQPK_=0
+{
+	    rb      (sizeof.RHC)   ; Reserve space for the header	   @D2A
+
+.RH19_MAJF   DB	 RH19_MAJF_ ; Major function			   @D2A
+.RH19_MINF   DB	 RH19_MINF_ ; Minor function			   @D2A
+.RH19_SI     DW	 RH19_SI_ ; Contents of SI			   @D2A
+.RH19_DI     DW	 RH19_DI_ ; Contents of DI			   @D2A
+.RH19_RQPK   DD	 RH19_RQPK_ ; Pointer to Generic IOCTL request packet  @D2A
+}
+match =RH19_LAID_OUT, RH19_LAID_OUT
+{
+    RH19_LAID_OUT equ 1
+    virtual at 0
+      RH19 RH19 0, 0, 0, 0, 0
+      sizeof.RH19 = $ - RH19
+    end virtual
+}
+STRUC GEN_IOCTL_PARM GIOPLEN_=0, GIOPFCN_=0, GIOPBLK_=0
+{
+
+.GIOPLEN DW	GIOPLEN_ ; Length of the parameter list	    @D2A
+.GIOPFCN DW	GIOPFCN_ ; Function code			    @D2A
+.GIOPBLK DW	GIOPBLK_ ; Number of XMA blocks available	    @D2A
+
+}
+match =GEN_IOCTL_PARM_LAID_OUT, GEN_IOCTL_PARM_LAID_OUT
+{
+    GEN_IOCTL_PARM_LAID_OUT equ 1
+    virtual at 0
+      GEN_IOCTL_PARM GEN_IOCTL_PARM 0, 0, 0
+      sizeof.GEN_IOCTL_PARM = $ - GEN_IOCTL_PARM
+    end virtual
+}
 PAGE	60,132
 TITLE	INDEINI - 386 XMA EMULATOR - Initialization
 
-COMMENT #
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-*									      *
-* MODULE NAME	  : INDEINI						      *
-*                                                                             *
-*                    5669-196 (C) COPYRIGHT 1988 Microsoft Corp.              *
-*                                                                             *
-* DESCRIPTIVE NAME: 80386 XMA EMULATOR INITIALIZATION			      *
-*									      *
-* STATUS (LEVEL)  : VERSION (0) LEVEL (2.0)				      *
-*									      *
-* FUNCTION	  : Do all the initialization needed for the 386 XMA emulator.*
-*									      *
-*		    The 386 XMA emulator is installed by putting the follow-  *
-*		    ing command in the CONFIG.SYS file: 		      *
-*									      *
-*			      DEVICE=\386XMAEM.SYS bbb			      *
-*									      *
-*		    where "bbb" is the number of K reserved for the MOVEBLOCK *
-*		    function.  If EMS is used, this command must appear       *
-*		    before the command to load EMS.			      *
-*									      *
-*		    This module first of all does all the stuff to set up     *
-*		    the device driver linkage to DOS.  The driver is a	      *
-*		    character device.  The only command it recognizes is   P3C*
-*		    "initialize".  When it receives the initialize command    *
-*		    it does all the set up for the emulator.  For information *
-*		    on device drivers see the DOS Technical Reference.	      *
-*									      *
-*		    Then it checks to see if we're on a model_80 and the      *
-*		    emulator has not been previously installed.  If this is   *
-*		    the case, then it procedes to do the following:	      *
-*			Get the MOVEBLOCK buffer size from the parameter list *
-*			Save the maximum XMA block number in the header       *
-*			Relocate to high memory 			      *
-*			Initialize the page directory and page tables	      *
-*			Call INDEIDT to initialize the IDT		      *
-*			Call INDEGDT to initialize the GDT		      *
-*			Switch to virtual mode				      *
-*			Initialize the TSS for the virtual 8086 task	      *
-*			Initialize the XMA page tables			      *
-*			Enable paging					      *
-*									      *
-*		    This module also contains code to handle the Generic   D2A*
-*		    IOCTL call which is used to query the highest valid    D2A*
-*		    XMA block number.  This code is left resident.	   D2A*
-*									      *
-* MODULE TYPE	  : ASM 						      *
-*									      *
-* REGISTER USAGE  : 80386 STANDARD					      *
-*									      *
-* RESTRICTIONS	  : None						      *
-*									      *
-* DEPENDENCIES	  : None						      *
-*									      *
-* LINKAGE	  : Invoked as a DOS device driver			      *
-*									      *
-* INPUT PARMS	  : The number of 1K blocks reserved for the MOVE BLOCK       *
-*		    service can be specified after the DEVICE command in the  *
-*		    CONFIG.SYS file.  0K is the default.		      *
-*									      *
-* RETURN PARMS	  : A return code is returned to DOS in the device header     *
-*		    at offset 3.					      *
-*									      *
-* OTHER EFFECTS   : None						      *
-*									      *
-* EXIT NORMAL	  : Return to DOS after device driver is loaded 	      *
-*									      *
-* EXIT ERROR	  : Return to DOS after putting up error messages	      *
-*									      *
-* EXTERNAL								      *
-* REFERENCES	  : SIDT_BLD - Entry point for INDEIDT to build the IDT       *
-*		    GDT_BLD  - Entry point for INDEGDT to build the GDT       *
-*		    WELCOME  - The welcome message			      *
-*		    GOODLOAD - Message saying we loaded OK		      *
-*		    NO_80386 - Error message for not running on a model_80    *
-*		    WAS_INST - Error message for protect mode in use	      *
-*		    SP_INIT  - Initial protect mode SP			      *
-*		    REAL_CS  - Place to save our real mode CS		      *
-*		    REAL_SS  - Place to save our real mode SS		      *
-*		    REAL_SP  - Place to save our real mode SP		      *
-*		    PGTBLOFF - Offset of the page tables		      *
-*		    SGTBLOFF - Offest of the page directory		      *
-*		    NORMPAGE - Normal page directory entry		      *
-*		    XMAPAGE  - Page directory entry for the first XMA page D1A*
-*		    BUFF_SIZE- Size of the MOVEBLOCK buffer		      *
-*		    MAXMEM   - Maximum amount of memory on the box	      *
-*		    CRT_SELECTOR - Selector for the display buffer	      *
-*									      *
-* SUB-ROUTINES	  : GATE_A20  - Gate on or off address bit 20		      *
-*		    GET_PARMS - Get the MOVEBLOCK buffer size specified on    *
-*				the command in CONFIG.SYS and convert to      *
-*				binary. 				      *
-*									      *
-* MACROS	  : DATAOV  - Add prefix for the next instruction so that it  *
-*			      accesses data as 32 bits wide		      *
-*		    ADDROV  - Add prefix for the next instruction so that it  *
-*			      uses addresses that are 32 bits wide	      *
-*		    CMOV    - Move to and from control registers	      *
-*		    JUMPFAR - Build an instruction that will jump to the      *
-*			      offset and segment specified		      *
-*									      *
-* CONTROL BLOCKS  : INDEDAT.INC 					      *
-*									      *
-* CHANGE ACTIVITY :							      *
-*									      *
-* $MOD(INDEINI) COMP(LOAD) PROD(3270PC) :				      *
-*									      *
-* $D0=D0004700 410 870521 D : NEW FOR RELEASE 1.1.  CHANGES TO THE ORIGINAL   *
-*			      CODE ARE MARKED WITH D0A. 		      *
-* $P1=P0000281 410 870730 D : SAVE 32 BIT REGISTERS ON model_80 	      *
-* $P2=P0000312 410 870804 D : CHANGE COMPONENT FROM MISC TO LOAD	      *
-* $P3=P0000335 410 870811 D : HEADER INFORMATION ALL SCREWED UP 	      *
-* $D1=D0007100 410 870810 D : CHANGE TO EMULATE XMA 2			      *
-*			      CHANGE ID STRING TO "386XMAEMULATOR10"          *
-* $P4=P0000649 411 880125 D : A20 NOT ENABLED WHEN PASSWORD SET 	      *
-* $P5=P0000650 411 880128 D : COPROCESSOR APPLICATIONS FAIL		      *
-* $P6=P0000740 411 880129 D : IDSS CAPTURED DCR 87 CODE.  REMOVE IT.	      *
-* $D2=D0008700 120 880206 D : SUPPORT DOS 3.4 IOCTL CALL		      *
-* $P7=P0000xxx 120 880331 D : FIX INT 15.  LOAD AS V86 MODE HANDLER.	      *
-*									      *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-#
+;COMMENT #
+;* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;*									      *
+;* MODULE NAME	  : INDEINI						      *
+;*                                                                             *
+;*                    5669-196 (C) COPYRIGHT 1988 Microsoft Corp.              *
+;*                                                                             *
+;* DESCRIPTIVE NAME: 80386 XMA EMULATOR INITIALIZATION			      *
+;*									      *
+;* STATUS (LEVEL)  : VERSION (0) LEVEL (2.0)				      *
+;*									      *
+;* FUNCTION	  : Do all the initialization needed for the 386 XMA emulator.*
+;*									      *
+;*		    The 386 XMA emulator is installed by putting the follow-  *
+;*		    ing command in the CONFIG.SYS file: 		      *
+;*									      *
+;*			      DEVICE=\386XMAEM.SYS bbb			      *
+;*									      *
+;*		    where "bbb" is the number of K reserved for the MOVEBLOCK *
+;*		    function.  If EMS is used, this command must appear       *
+;*		    before the command to load EMS.			      *
+;*									      *
+;*		    This module first of all does all the stuff to set up     *
+;*		    the device driver linkage to DOS.  The driver is a	      *
+;*		    character device.  The only command it recognizes is   P3C*
+;*		    "initialize".  When it receives the initialize command    *
+;*		    it does all the set up for the emulator.  For information *
+;*		    on device drivers see the DOS Technical Reference.	      *
+;*									      *
+;*		    Then it checks to see if we're on a model_80 and the      *
+;*		    emulator has not been previously installed.  If this is   *
+;*		    the case, then it procedes to do the following:	      *
+;*			Get the MOVEBLOCK buffer size from the parameter list *
+;*			Save the maximum XMA block number in the header       *
+;*			Relocate to high memory 			      *
+;*			Initialize the page directory and page tables	      *
+;*			Call INDEIDT to initialize the IDT		      *
+;*			Call INDEGDT to initialize the GDT		      *
+;*			Switch to virtual mode				      *
+;*			Initialize the TSS for the virtual 8086 task	      *
+;*			Initialize the XMA page tables			      *
+;*			Enable paging					      *
+;*									      *
+;*		    This module also contains code to handle the Generic   D2A*
+;*		    IOCTL call which is used to query the highest valid    D2A*
+;*		    XMA block number.  This code is left resident.	   D2A*
+;*									      *
+;* MODULE TYPE	  : ASM 						      *
+;*									      *
+;* REGISTER USAGE  : 80386 STANDARD					      *
+;*									      *
+;* RESTRICTIONS	  : None						      *
+;*									      *
+;* DEPENDENCIES	  : None						      *
+;*									      *
+;* LINKAGE	  : Invoked as a DOS device driver			      *
+;*									      *
+;* INPUT PARMS	  : The number of 1K blocks reserved for the MOVE BLOCK       *
+;*		    service can be specified after the DEVICE command in the  *
+;*		    CONFIG.SYS file.  0K is the default.		      *
+;*									      *
+;* RETURN PARMS	  : A return code is returned to DOS in the device header     *
+;*		    at offset 3.					      *
+;*									      *
+;* OTHER EFFECTS   : None						      *
+;*									      *
+;* EXIT NORMAL	  : Return to DOS after device driver is loaded 	      *
+;*									      *
+;* EXIT ERROR	  : Return to DOS after putting up error messages	      *
+;*									      *
+;* EXTERNAL								      *
+;* REFERENCES	  : SIDT_BLD - Entry point for INDEIDT to build the IDT       *
+;*		    GDT_BLD  - Entry point for INDEGDT to build the GDT       *
+;*		    WELCOME  - The welcome message			      *
+;*		    GOODLOAD - Message saying we loaded OK		      *
+;*		    NO_80386 - Error message for not running on a model_80    *
+;*		    WAS_INST - Error message for protect mode in use	      *
+;*		    SP_INIT  - Initial protect mode SP			      *
+;*		    REAL_CS  - Place to save our real mode CS		      *
+;*		    REAL_SS  - Place to save our real mode SS		      *
+;*		    REAL_SP  - Place to save our real mode SP		      *
+;*		    PGTBLOFF - Offset of the page tables		      *
+;*		    SGTBLOFF - Offest of the page directory		      *
+;*		    NORMPAGE - Normal page directory entry		      *
+;*		    XMAPAGE  - Page directory entry for the first XMA page D1A*
+;*		    BUFF_SIZE- Size of the MOVEBLOCK buffer		      *
+;*		    MAXMEM   - Maximum amount of memory on the box	      *
+;*		    CRT_SELECTOR - Selector for the display buffer	      *
+;*									      *
+;* SUB-ROUTINES	  : GATE_A20  - Gate on or off address bit 20		      *
+;*		    GET_PARMS - Get the MOVEBLOCK buffer size specified on    *
+;*				the command in CONFIG.SYS and convert to      *
+;*				binary. 				      *
+;*									      *
+;* MACROS	  : DATAOV  - Add prefix for the next instruction so that it  *
+;*			      accesses data as 32 bits wide		      *
+;*		    ADDROV  - Add prefix for the next instruction so that it  *
+;*			      uses addresses that are 32 bits wide	      *
+;*		    CMOV    - Move to and from control registers	      *
+;*		    JUMPFAR - Build an instruction that will jump to the      *
+;*			      offset and segment specified		      *
+;*									      *
+;* CONTROL BLOCKS  : INDEDAT.INC 					      *
+;*									      *
+;* CHANGE ACTIVITY :							      *
+;*									      *
+;* MOD$(INDEINI) COMP(LOAD) PROD(3270PC) :				      *
+;*									      *
+;* D0$=D0004700 410 870521 D : NEW FOR RELEASE 1.1.  CHANGES TO THE ORIGINAL   *
+;*			      CODE ARE MARKED WITH D0A. 		      *
+;* P1$=P0000281 410 870730 D : SAVE 32 BIT REGISTERS ON model_80 	      *
+;* P2$=P0000312 410 870804 D : CHANGE COMPONENT FROM MISC TO LOAD	      *
+;* P3$=P0000335 410 870811 D : HEADER INFORMATION ALL SCREWED UP 	      *
+;* D1$=D0007100 410 870810 D : CHANGE TO EMULATE XMA 2			      *
+;*			      CHANGE ID STRING TO "386XMAEMULATOR10"          *
+;* P4$=P0000649 411 880125 D : A20 NOT ENABLED WHEN PASSWORD SET 	      *
+;* P5$=P0000650 411 880128 D : COPROCESSOR APPLICATIONS FAIL		      *
+;* P6$=P0000740 411 880129 D : IDSS CAPTURED DCR 87 CODE.  REMOVE IT.	      *
+;* D2$=D0008700 120 880206 D : SUPPORT DOS 3.4 IOCTL CALL		      *
+;* P7$=P0000xxx 120 880331 D : FIX INT 15.  LOAD AS V86 MODE HANDLER.	      *
+;*									      *
+;* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;#
 
-	.286P		      ; Enable recognition of 286 privileged instructs.
+;	.286P		      ; Enable recognition of 286 privileged instructs.
 
 	.XLIST		      ; Turn off the listing
-	INCLUDE INDEDAT.INC
+	include 'INDEDAT.INC'
 
-	IF1		      ; Only include the macros in the first pass
-	INCLUDE INDEOVP.MAC   ;   of the assembler
-	INCLUDE INDEINS.MAC
-	ENDIF
+;	IF1		      ; Only include the macros in the first pass
+	include 'INDEOVP.MAC' ;   of the assembler
+	include 'INDEINS.MAC'
+;	ENDIF
 	.LIST		      ; Turn on the listing
 
 	; Let these variables be known to external procedures
 
-	PUBLIC	POST
-	PUBLIC	INDEINI
+;	PUBLIC	POST
+;	PUBLIC	INDEINI
 
-PROG	SEGMENT PARA PUBLIC  'PROG'
+;PROG	SEGMENT PARA PUBLIC  'PROG'
 
-	ASSUME	CS:PROG
-	ASSUME	SS:NOTHING
-	ASSUME	DS:PROG
-	ASSUME	ES:NOTHING
+;	ASSUME	CS:PROG
+;	ASSUME	SS:NOTHING
+;	ASSUME	DS:PROG
+;	ASSUME	ES:NOTHING
 
-INDEINI LABEL	NEAR
+INDEINI:
 
 	; These variables are located in INDEI15
 
-	EXTRN	SP_INIT:WORD	  ; Initial protect mode SP
-	EXTRN	REAL_CS:WORD	  ; Place to save our real mode CS
-	EXTRN	REAL_SS:WORD	  ; Place to save our real mode SS
-	EXTRN	REAL_SP:WORD	  ; Place to save our real mode SP
-	EXTRN	PGTBLOFF:WORD	  ; Offset of the page tables
-	EXTRN	SGTBLOFF:WORD	  ; Offest of the page directory
-	EXTRN	NORMPAGE:WORD	  ; Normal page directory entry.  Points to the
+;	EXTRN	SP_INIT:WORD	  ; Initial protect mode SP
+;	EXTRN	REAL_CS:WORD	  ; Place to save our real mode CS
+;	EXTRN	REAL_SS:WORD	  ; Place to save our real mode SS
+;	EXTRN	REAL_SP:WORD	  ; Place to save our real mode SP
+;	EXTRN	PGTBLOFF:WORD	  ; Offset of the page tables
+;	EXTRN	SGTBLOFF:WORD	  ; Offest of the page directory
+;	EXTRN	NORMPAGE:WORD	  ; Normal page directory entry.  Points to the
 				  ;   page table that maps the real 0 to 4M.
-	EXTRN	XMAPAGE:WORD	  ; Page directory entry for the first XMA
+;	EXTRN	XMAPAGE:WORD	  ; Page directory entry for the first XMA
 				  ;   page table (page table for bank 0)    @D1A
-	EXTRN	BUFF_SIZE:WORD	  ; Size of the MOVEBLOCK buffer
-	EXTRN	MAXMEM:WORD	  ; Maximum amount of memory on the box
-	EXTRN	CRT_SELECTOR:WORD ; Selector for the display buffer
+;	EXTRN	BUFF_SIZE:WORD	  ; Size of the MOVEBLOCK buffer
+;	EXTRN	MAXMEM:WORD	  ; Maximum amount of memory on the box
+;	EXTRN	CRT_SELECTOR:WORD ; Selector for the display buffer
 
 	; These are the messages
 
-	EXTRN	WELCOME:BYTE	  ; The welcome message
-	EXTRN	GOODLOAD:BYTE	  ; Message saying we loaded OK
-	EXTRN	NO_80386:BYTE	  ; Error message for not running on a model_80
-	EXTRN	WAS_INST:BYTE	  ; Error message for protect mode in use
-	Extrn	Small_Parm:Byte   ; Parm value < 64 and > 0			;an000; dms;
-	Extrn	No_Mem:Byte	  ; Parm value > memory available		;an000; dms;
+;	EXTRN	WELCOME:BYTE	  ; The welcome message
+;	EXTRN	GOODLOAD:BYTE	  ; Message saying we loaded OK
+;	EXTRN	NO_80386:BYTE	  ; Error message for not running on a model_80
+;	EXTRN	WAS_INST:BYTE	  ; Error message for protect mode in use
+;	Extrn	Small_Parm:Byte   ; Parm value < 64 and > 0			;an000; dms;
+;	Extrn	No_Mem:Byte	  ; Parm value > memory available		;an000; dms;
 
 	; These entries are located in external procedures
 
-	EXTRN	SIDT_BLD:NEAR	  ; Build the interrupt descriptor table (IDT)
-	EXTRN	GDT_BLD:NEAR	  ; Build the global descriptor table (GDT)
+;	EXTRN	SIDT_BLD:NEAR	  ; Build the interrupt descriptor table (IDT)
+;	EXTRN	GDT_BLD:NEAR	  ; Build the global descriptor table (GDT)
 
 ; General equates
 
 DDSIZE		EQU	GDT_LOC 	; Size of the device driver
 HIGH_SEG	EQU	0FFF0H		; The segment we relocate to
 MEG_SUPPORTED	EQU	24		; Must be a multiple of 4
-XMA_PAGES_SEL	EQU	RSDA_PTR	; Selector for XMA pages
+XMA_PAGES_SEL	EQU	GDT_DEF.RSDA_PTR	; Selector for XMA pages
 DISPSTRG	EQU	09H		; DOS display string function number D0A
 GET_VECT	EQU	35H		; DOS get vector function number     P7A
 SET_VECT	EQU	25H		; DOS set vector function number     P7A
@@ -205,16 +276,9 @@ PAGE
 ;	Request Header (Common portion) 				       ;
 ;------------------------------------------------------------------------------;
 
-RH	EQU	DS:[BX] 	; The Request Header structure is based off
+RH	equ	ds:BX	; The Request Header structure is based off
 				;   of DS:[BX]
 
-RHC	STRUC			; Fields common to all request types
-	   DB	?		; Length of Request Header (including data)
-	   DB	?		; Unit code (subunit)
-RHC_CMD    DB	?		; Command code
-RHC_STA    DW	?		; Status
-	   DQ	?		; Reserved for DOS
-RHC	ENDS			; End of common portion
 
 ; Status values for RHC_STA
 
@@ -226,20 +290,8 @@ STAT_GEN    EQU 800CH		; General error code			     D0A
 ;	Request Header for INIT command 				       ;
 ;------------------------------------------------------------------------------;
 
-RH0	STRUC
-	   DB	(TYPE RHC) DUP (?)	; Reserve space for the header
 
-RH0_NUN    DB	?		; Number of units
-				; Set to 1 if installation succeeds,
-				; Set to 0 to cause installation failure
-RH0_ENDO   DW	?		; Offset  of ending address
-RH0_ENDS   DW	?		; Segment of ending address
-RH0_BPBO   DW	?		; Offset  of BPB array address
-RH0_BPBS   DW	?		; Segment of BPB array address
-RH0_DRIV   DB	?		; Drive code (DOS 3 only)
-RH0	ENDS
-
-RH0_BPBA   EQU	DWORD PTR RH0_BPBO  ; Offset & segment of BPB array address.
+label RH0_BPBA dword at RH0.RH0_BPBO	; Offset & segment of BPB array address.
 				    ; On the INIT command the BPB points to
 				    ; the characters following the "DEVICE="
 				    ; in the CONFIG.SYS file.
@@ -248,19 +300,10 @@ RH0_BPBA   EQU	DWORD PTR RH0_BPBO  ; Offset & segment of BPB array address.
 ;	Request Header for Generic IOCTL Request			    D2A;
 ;---------------------------------------------------------------------------D2A;
 
-RH19	STRUC
-	    DB	 (TYPE RHC) DUP (?)	; Reserve space for the header	   @D2A
-
-RH19_MAJF   DB	 ?		; Major function			   @D2A
-RH19_MINF   DB	 ?		; Minor function			   @D2A
-RH19_SI     DW	 ?		; Contents of SI			   @D2A
-RH19_DI     DW	 ?		; Contents of DI			   @D2A
-RH19_RQPK   DD	 ?		; Pointer to Generic IOCTL request packet  @D2A
-RH19	ENDS
 
 SUBTTL	Device Driver Header
 PAGE
-POST	PROC	NEAR
+POST:
 
 	; Declare the device driver header
 
@@ -268,8 +311,8 @@ POST	PROC	NEAR
 			      ;   device driver
 	DD   -1 	      ; Becomes pointer to next device header
 	DW   0C040H	      ; Character device, does IOCTL	       @P3C @D2C
-	DW   OFFSET STRATEGY  ; Pointer to device "strategy" routine
-	DW   OFFSET IRPT      ; Pointer to device "interrupt handler"
+	DW   STRATEGY         ; Pointer to device "strategy" routine
+	DW   IRPT             ; Pointer to device "interrupt handler"
 	DB   "386XMAEM"       ; Device name                                 @D0C
 
 	; End of device driver header
@@ -278,14 +321,14 @@ POST	PROC	NEAR
 ;	Request Header (RH) address, saved here by "strategy" routine          ;
 ;------------------------------------------------------------------------------;
 
-RH_PTRA    LABEL DWORD
-RH_PTRO    DW	?	      ; Offset of the request header
-RH_PTRS    DW	?	      ; Segment of the request header
+label RH_PTRA dword
+RH_PTRO    rw      1  ; Offset of the request header
+RH_PTRS    rw      1  ; Segment of the request header
 			      ; Character ID "386XMAEMULATOR10" deleted   2@D2D
-HI_XMA_BLK DW	?	      ; The highest XMA block number		   @D0A
-EXT_MEM    DW	?	      ; Number of K of extended memory		   @P7A
+HI_XMA_BLK rw      1  ; The highest XMA block number		   @D0A
+EXT_MEM    rw      1  ; Number of K of extended memory		   @P7A
 			      ; 					    D0A
-RBX	   DW	?	      ; Temporary save area for register BX	   @P1A
+RBX_	   rw      1  ; Temporary save area for register BX	   @P1A
 ISmodel_80 DB	-1	      ; model_80 flag.	Set to 1 if on a model_80  @P1A
 			      ;   Set to 0 if not on a model_80 	   @D1C
 
@@ -297,13 +340,13 @@ PAGE
 ;	Retain the Request Header address for use by Interrupt routine	       ;
 ;------------------------------------------------------------------------------;
 
-STRATEGY PROC	FAR
+STRATEGY:
 
-	MOV	CS:RH_PTRO,BX ; Save the offset of the request header
-	MOV	CS:RH_PTRS,ES ; Save the segment of the request header
-	RET
+	MOV	[cs:RH_PTRO],BX ; Save the offset of the request header
+	MOV	[cs:RH_PTRS],ES ; Save the segment of the request header
+	RETF
 
-STRATEGY ENDP
+;STRATEGY ENDP
 
 SUBTTL	Device Interrupt Intry Point
 PAGE
@@ -311,38 +354,40 @@ PAGE
 ;------------------------------------------------------------------------------;
 ;	Table of command processing routine entry points		       ;
 ;------------------------------------------------------------------------------;
-CMD_TABLE LABEL WORD
-	   DW	OFFSET INIT_P1		; 0 - Initialization
-	   DW	OFFSET MEDIA_CHECK	; 1 - Media check
-	   DW	OFFSET BLD_BPB		; 2 - Build BPB
-	   DW	OFFSET INPUT_IOCTL	; 3 - IOCTL input
-	   DW	OFFSET INPUT		; 4 - Input
-	   DW	OFFSET INPUT_NOWAIT	; 5 - Non destructive input no wait
-	   DW	OFFSET INPUT_STATUS	; 6 - Input status
-	   DW	OFFSET INPUT_FLUSH	; 7 - Input flush
-	   DW	OFFSET OUTPUT		; 8 - Output
-	   DW	OFFSET OUTPUT_VERIFY	; 9 - Output with verify
-	   DW	OFFSET OUTPUT_STATUS	;10 - Output status
-	   DW	OFFSET OUTPUT_FLUSH	;11 - Output flush
-	   DW	OFFSET OUTPUT_IOCTL	;12 - IOCTL output
-	   DW	OFFSET DEVICE_OPEN	;13 - Device OPEN
-	   DW	OFFSET DEVICE_CLOSE	;14 - Device CLOSE
-	   DW	OFFSET REMOVABLE_MEDIA	;15 - Removable media
-	   DW	OFFSET INVALID_FCN	;16 - Invalid IOCTL function	    @D2A
-	   DW	OFFSET INVALID_FCN	;17 - Invalid IOCTL function	    @D2A
-	   DW	OFFSET INVALID_FCN	;18 - Invalid IOCTL function	    @D2A
-	   DW	OFFSET GENERIC_IOCTL	;19 - Generic IOCTL function	    @D2A
-	   DW	OFFSET INVALID_FCN	;20 - Invalid IOCTL function	    @D2A
-	   DW	OFFSET INVALID_FCN	;21 - Invalid IOCTL function	    @D2A
-	   DW	OFFSET INVALID_FCN	;22 - Invalid IOCTL function	    @D2A
-	   DW	OFFSET GET_LOG_DEVICE	;23 - Get Logical Device	    @D2A
-MAX_CMD    EQU	($-CMD_TABLE)/2 	; Highest valid command follows
-	   DW	OFFSET SET_LOG_DEVICE	;24 - Set Logical Device	    @D2A
+label CMD_TABLE word
+	   DW	INIT_P1         ; 0 - Initialization
+	   DW	MEDIA_CHECK        ; 1 - Media check
+	   DW	BLD_BPB         ; 2 - Build BPB
+	   DW	INPUT_IOCTL        ; 3 - IOCTL input
+	   DW	INPUT         ; 4 - Input
+	   DW	INPUT_NOWAIT        ; 5 - Non destructive input no wait
+	   DW	INPUT_STATUS        ; 6 - Input status
+	   DW	INPUT_FLUSH        ; 7 - Input flush
+	   DW	OUTPUT         ; 8 - Output
+	   DW	OUTPUT_VERIFY        ; 9 - Output with verify
+	   DW	OUTPUT_STATUS        ;10 - Output status
+	   DW	OUTPUT_FLUSH        ;11 - Output flush
+	   DW	OUTPUT_IOCTL        ;12 - IOCTL output
+	   DW	DEVICE_OPEN        ;13 - Device OPEN
+	   DW	DEVICE_CLOSE        ;14 - Device CLOSE
+	   DW	REMOVABLE_MEDIA        ;15 - Removable media
+	   DW	INVALID_FCN        ;16 - Invalid IOCTL function	    @D2A
+	   DW	INVALID_FCN        ;17 - Invalid IOCTL function	    @D2A
+	   DW	INVALID_FCN        ;18 - Invalid IOCTL function	    @D2A
+	   DW	GENERIC_IOCTL        ;19 - Generic IOCTL function	    @D2A
+	   DW	INVALID_FCN        ;20 - Invalid IOCTL function	    @D2A
+	   DW	INVALID_FCN        ;21 - Invalid IOCTL function	    @D2A
+	   DW	INVALID_FCN        ;22 - Invalid IOCTL function	    @D2A
+	   DW	GET_LOG_DEVICE        ;23 - Get Logical Device	    @D2A
+; = and not equ: fasm's equ is text put in where the name is used, so a $
+; in it would be the address of the use and not of this line.
+MAX_CMD    =	(($-CMD_TABLE)/2)	; Highest valid command follows
+	   DW	SET_LOG_DEVICE        ;24 - Set Logical Device	    @D2A
 
 ;------------------------------------------------------------------------------;
 ;	Device "interrupt" entry point                                         ;
 ;------------------------------------------------------------------------------;
-IRPT	PROC	FAR		; Device interrupt entry point
+IRPT:          ; Device interrupt entry point
 
 ; First we must save all the registers that we use so that when we return to
 ; DOS the registers are not changed.
@@ -350,26 +395,26 @@ IRPT	PROC	FAR		; Device interrupt entry point
 	PUSH	DS		; Save the segment registers modified
 	PUSH	ES
 
-	CMP	CS:ISmodel_80,-1; Did we already check what machine we are  @D2A
+	CMP	byte [cs:ISmodel_80],-1 ; Did we already check what machine we are  @D2A
 	JNE	DID_CHECK	;   running on? 			    @D2A
 
-	MOV	CS:RBX,BX	; Save BX				    @P1A
+	MOV	[cs:RBX_],BX ; Save BX				    @P1A
 	MOV	BX,0FFFFH	; Check the model byte at FFFF:000E    @D0A @P1M
 	MOV	ES,BX		;   to see if we're running on a       @D0A @P1M
 	MOV	BX,0EH		;   model_80 (PS/2 model 80).	       @D0A @P1M
-	CMP	BYTE PTR ES:[BX],model_80 ;				    @P1A
-	MOV	BX,CS:RBX	; Restore BX			       @P1A @D2M
+	CMP	byte [es:BX],model_80     ;				    @P1A
+	MOV	BX,[cs:RBX_] ; Restore BX			       @P1A @D2M
 	JNE	NO_model_80
 
-	MOV	CS:ISmodel_80,1 ; Set the flag saying we're on a       @P1A @D2M
+	MOV	byte [cs:ISmodel_80],1 ; Set the flag saying we're on a       @P1A @D2M
 	JMP	DID_CHECK	;   model_80				    @D2A
 
 NO_model_80:
-	MOV	CS:ISmodel_80,0 ; Set the flag saying we're not on a        @D2M
+	MOV	byte [cs:ISmodel_80],0 ; Set the flag saying we're not on a        @D2M
 				;   model_80
 
 DID_CHECK:			;					     D2A
-	CMP	ISmodel_80,1	; Are we on a model_80? 		    @D2A
+	CMP	byte [ISmodel_80],1 ; Are we on a model_80? 		    @D2A
 	JE	PUSH32		; If so, go save the 32 bit registers	    @P1A
 
 ; Push 16 bit registers onto the stack.
@@ -393,10 +438,10 @@ PUSH32: DATAOV			; Save all the 32 bit registers.  The	    @P1A
 
 PUSHED: CLD			; All moves go forward
 
-	LDS	BX,CS:RH_PTRA	; Get the request header address passed to the
+	LDS	BX,[cs:RH_PTRA] ; Get the request header address passed to the
 				;   "strategy" routine into DS:BX
 
-	MOV	AL,RH.RHC_CMD	; Get the command code from the Request Header
+	MOV	AL,byte [RH+RHC.RHC_CMD] ; Get the command code from the Request Header
 	CBW			; Zero AH (if AL > 7FH, next compare will
 				;   catch that error)
 
@@ -414,20 +459,20 @@ PUSHED: CLD			; All moves go forward
 ;	CS	= 386XMAEM code segment address
 ;	AX	= 0
 ;
-	CALL	CS:CMD_TABLE[DI]	; Call routine to handle the command
+	CALL	[cs:CMD_TABLE+DI] ; Call routine to handle the command
 	JMP	IRPT_CMD_EXIT
 
 
 IRPT_CMD_HIGH:			; JMPed to if RHC_CMD > MAX_CMD
 	MOV	AX,STAT_CMDERR	; Return "Invalid Command" error code
 	OR	AX,STAT_DONE	; Add "done" bit to status word             @P3C
-	MOV	RH.RHC_STA,AX	; Store status into request header
+	MOV	word [RH+RHC.RHC_STA],AX ; Store status into request header
 
 IRPT_CMD_EXIT:			; Return from command routine
 
 ; Restore the registers before returning to DOS.
 
-	CMP	CS:ISmodel_80,1 ; Are we on a model_80? 		    @P1A
+	CMP	byte [cs:ISmodel_80],1 ; Are we on a model_80? 		    @P1A
 	JE	POP32		; Yes.	Then pop the 32 bit registers.	    @P1A
 
 ; Pop 16 bit registers off of the stack.
@@ -452,8 +497,8 @@ POP32:	DATAOV			;					    @P1A
 POPPED: POP	ES
 	POP	DS
 
-	RET
-IRPT	ENDP
+	RETF
+;IRPT	ENDP
 
 SUBTTL	Command Routines
 PAGE
@@ -479,7 +524,7 @@ SET_LOG_DEVICE: 		;					    @D2A
 
 	MOV	AX,STAT_GEN	; Return general error code		    @D2A
 	OR	AX,STAT_DONE	; Add "done" bit to status word             @D2A
-	MOV	RH.RHC_STA,AX	; Store status into request header	    @D2A
+	MOV	word [RH+RHC.RHC_STA],AX ; Store status into request header	    @D2A
 
 	RET
 
@@ -494,15 +539,8 @@ PAGE
 ; other functions uspported at this time.				    D2A;
 ;------------------------------------------------------------------------------;
 
-GIP	EQU	ES:[DI] 	      ; 				    @D2A
+GIP	equ	es:DI	; 				    @D2A
 
-GEN_IOCTL_PARM	STRUC		      ; 				    @D2A
-
-GIOPLEN DW	?		      ; Length of the parameter list	    @D2A
-GIOPFCN DW	?		      ; Function code			    @D2A
-GIOPBLK DW	?		      ; Number of XMA blocks available	    @D2A
-
-GEN_IOCTL_PARM	ENDS		      ; 				    @D2A
 
 MAXFCN	EQU	0		      ; Highest function number allowed     @D2A
 
@@ -514,42 +552,42 @@ BADFCN	EQU	2		      ; Bad function number		    @D2A
 
 GENERIC_IOCTL:			      ; 				     D2A
 
-	LES	DI,RH.RH19_RQPK       ; Point ES:DI to the Generic IOCTL    @D2A
+	LES	DI,dword [RH+RH19.RH19_RQPK] ; Point ES:DI to the Generic IOCTL    @D2A
 				      ;   request packet		     D2A
 
 ; First check to make sure the parameter list is long enough to return the   D2A
 ; number of XMA blocks. 						     D2A
 
-	CMP	GIP.GIOPLEN,4	      ; Do we have at least four bytes?     @D2A
+	CMP	word [GIP+GEN_IOCTL_PARM.GIOPLEN],4 ; Do we have at least four bytes?     @D2A
 	JAE	GIP_CHKFCN	      ; Yup.  Go to check function number.  @D2A
 
-	MOV	GIP.GIOPFCN,BADLEN    ; Nope.  Sorry.  Return the error     @D2A
+	MOV	word [GIP+GEN_IOCTL_PARM.GIOPFCN],BADLEN ; Nope.  Sorry.  Return the error     @D2A
 	JMP	GIP_DONE	      ;   code and go to the end.	    @D2A
 
 ; Check if the function number in the parameter list is a valid function.    D2A
 
 GIP_CHKFCN:			      ; 				     D2A
-	CMP	GIP.GIOPFCN,MAXFCN    ; Is the function code less than or   @D2A
+	CMP	word [GIP+GEN_IOCTL_PARM.GIOPFCN],MAXFCN ; Is the function code less than or   @D2A
 				      ;   equal to the maximum supported?    D2A
 	JLE	GIP_CONT	      ; Yes. Good boy. You get to continue. @D2A
 
-	MOV	GIP.GIOPFCN,BADFCN    ; No.  Shamey, shamey.  Set the bad   @D2A
+	MOV	word [GIP+GEN_IOCTL_PARM.GIOPFCN],BADFCN ; No.  Shamey, shamey.  Set the bad   @D2A
 	JMP	GIP_DONE	      ;   return code and go to the end.    @D2A
 
 ; Parameter list is OK.  Let's return the number of XMA blocks.              D2A
 
 GIP_CONT:			      ; 				     D2A
-	MOV	GIP.GIOPFCN,GOODRET   ; Set a good return code		    @D2A
-	MOV	AX,CS:HI_XMA_BLK      ; Get the number of XMA blox	    @D2A
-	MOV	GIP.GIOPBLK,AX	      ; Put it in the paramter list	    @D2A
+	MOV	word [GIP+GEN_IOCTL_PARM.GIOPFCN],GOODRET ; Set a good return code		    @D2A
+	MOV	AX,[cs:HI_XMA_BLK]    ; Get the number of XMA blox	    @D2A
+	MOV	word [GIP+GEN_IOCTL_PARM.GIOPBLK],AX ; Put it in the paramter list	    @D2A
 
 
 GIP_DONE:			      ; 				     D2A
-	MOV	RH.RHC_STA,STAT_DONE  ; Store done status and good return   @D2A
+	MOV	word [RH+RHC.RHC_STA],STAT_DONE ; Store done status and good return   @D2A
 				      ;   code into request header	     D2A
 	RET			      ; 				    @D2A
 
-INT15F88   PROC    FAR		      ; 				     P7A
+INT15F88:                     ; 				     P7A
 
 ; The following is the interrupt chaining structure specified in the PC AT   P7A
 ; Technical Reference.							     P7A
@@ -573,20 +611,20 @@ RESERVED   DB	   7 DUP (0)	      ; 				    @P7A
 BEGIN:	   CMP	   AH,88H	       ; Is it function 88H?		    @P7A
 	   JNE	   NOT_MINE	       ; It's not ours to handle            @P7A
 
-	   MOV	   AX,CS:EXT_MEM       ; Put the number of K into AX	    @P7A
+	   MOV	   AX,[cs:EXT_MEM]     ; Put the number of K into AX	    @P7A
 	   IRET 		       ; Return to the caller		    @P7A
 
-NOT_MINE:  JMP	   CS:DWORD PTR CHAINOFF
+NOT_MINE:  JMP	   dword [cs:CHAINOFF]
 				       ; Pass the interrupt on to the	    @P7A
 				       ;   previously installed vector	    @P7A
 
-RESET:	   RET			       ; This, too, is part of the interrupt@P7A
+RESET:	   RETF         ; This, too, is part of the interrupt@P7A
 				       ;   chaining structure.	We will just@P7A
 				       ;   return on a call to reset.  Note @P7A
 				       ;   that this is a far return.	    @P7A
-INT15F88   ENDP 		       ;				    @P7A
+;INT15F88   ENDP 		       ;				    @P7A
 
-LEAVE_RES  LABEL NEAR		      ; Leave code up to here resident.@D0A @D2M
+LEAVE_RES:                   ; Leave code up to here resident.@D0A @D2M
 
 SUBTTL	Initialize Routine
 PAGE
@@ -596,30 +634,30 @@ INIT_P1:
 	MOV	DI,0			;   fixed location 0:4F4.  This     @P3C
 	MOV	ES,DI			;   gives us a quick way to find CS @P3C
 	MOV	DI,4F4H 		;   and also enables us to break on @P3C
-	MOV	ES:[DI],CS		;   a write to 0:4F4 which helps us @P3C
+	MOV	[es:DI],CS		;   a write to 0:4F4 which helps us @P3C
 	POP	ES			;   find the code on the ICE386.    @D0A
 	MOV	AH,DISPSTRG		; Display the welcome message.	    @D0A
-	MOV	DX,OFFSET WELCOME	;				    @D0A
+	MOV	DX,Welcome        ;				    @D0A
 	PUSH	DS			; Save DS since DS:BX points to the @D0A
 	PUSH	CS			;   request header		    @D0A
 	POP	DS			; DS:DX points to the message	    @D0A
 	INT	21H			; Display the message		    @D0A
 	POP	DS			; Restore DS			    @D0A
 					;				    @P3D
-	MOV	RH.RH0_ENDS,CS		; Set the segment and offset of the end
-	MOV	RH.RH0_ENDO,OFFSET LEAVE_RES ; of code to leave resident
-	MOV	RH.RHC_STA,STAT_DONE	; Store "done" status into request
+	MOV	word [RH+RH0.RH0_ENDS],CS ; Set the segment and offset of the end
+	MOV	word [RH+RH0.RH0_ENDO],LEAVE_RES ; of code to leave resident
+	MOV	word [RH+RHC.RHC_STA],STAT_DONE ; Store "done" status into request
 					;   header
-	CMP	CS:ISmodel_80,1 	; Check if we're on a model_80 @D0A @P1C
+	CMP	byte [cs:ISmodel_80],1 ; Check if we're on a model_80 @D0A @P1C
 	JE	CONT			; If so, then continue		    @D0A
 					;				     D0A
-	MOV	RH.RH0_ENDO,0		; Leave nothing resident	    @D0A
+	MOV	word [RH+RH0.RH0_ENDO],0 ; Leave nothing resident	    @D0A
 	MOV	AX,STAT_GEN		; Return general error code	    @D0A
 	OR	AX,STAT_DONE		; Add "done" bit to status word@D0A @P3C
-	MOV	RH.RHC_STA,AX		; Store status into request header  @D0A
+	MOV	word [RH+RHC.RHC_STA],AX ; Store status into request header  @D0A
 					;				     D0A
 	MOV	AH,DISPSTRG		; Display the message that we are   @D0A
-	MOV	DX,OFFSET NO_80386	;   not on a model_80		    @D0A
+	MOV	DX,No_80386        ;   not on a model_80		    @D0A
 	PUSH	CS			;				    @D0A
 	POP	DS			;				    @D0A
 	INT	21H			;				    @D0A
@@ -634,13 +672,13 @@ CONT:					;				    @D0M
 					;   over protect mode.
 	JZ	STILLOK 		; If not, keep going		    @D0C
 
-	MOV	RH.RH0_ENDO,0		; Leave nothing resident	    @D0A
+	MOV	word [RH+RH0.RH0_ENDO],0 ; Leave nothing resident	    @D0A
 	MOV	AX,STAT_GEN		; Return general error code	    @D0A
 	OR	AX,STAT_DONE		; Add "done" bit to status word@D0A @P3C
-	MOV	RH.RHC_STA,AX		; Store status into request header  @D0A
+	MOV	word [RH+RHC.RHC_STA],AX ; Store status into request header  @D0A
 					;				     D0A
 	MOV	AH,DISPSTRG		; Display the message that protect  @D0A
-	MOV	DX,OFFSET WAS_INST	;   mode is taken.		    @D0A
+	MOV	DX,Was_Inst        ;   mode is taken.		    @D0A
 	PUSH	CS			; DS:DX points to the message	    @D0A
 	POP	DS			;				    @D0A
 	INT	21H			;				    @D0A
@@ -651,10 +689,10 @@ STILLOK:			       ;				     D0A
 				      ; Don't have to set character ID      @D2D
 	CALL	GET_PARMS	      ; Get the MOVEBLOCK buffer size if
 	jnc	StillOK1
-		MOV	RH.RH0_ENDO,0		; Leave nothing resident	    @D0A
+		MOV	word [RH+RH0.RH0_ENDO],0 ; Leave nothing resident	    @D0A
 		MOV	AX,STAT_GEN		; Return general error code	    @D0A
 		OR	AX,STAT_DONE		; Add "done" bit to status word@D0A @P3C
-		MOV	RH.RHC_STA,AX		; Store status into request header  @D0A
+		MOV	word [RH+RHC.RHC_STA],AX ; Store status into request header  @D0A
 					;				     D0A
 		pop	ax
 		ret		      ; exit program
@@ -667,11 +705,11 @@ StillOK1:
 	POP	DS		      ;   code segment			    @P3A
 				      ; 				   2@D2D
 	MOV	AX,CS
-	MOV	REAL_CS,AX	      ; Save real CS for when we	    @P3C
+	MOV	[REAL_CS],AX     ; Save real CS for when we	    @P3C
 	MOV	AX,SS		      ;   switch to protect mode
-	MOV	REAL_SS,AX	      ; Save real SS			    @P3C
+	MOV	[REAL_SS],AX     ; Save real SS			    @P3C
 	MOV	AX,SP
-	MOV	REAL_SP,AX	      ; Save real SP			    @P3C
+	MOV	[REAL_SP],AX     ; Save real SP			    @P3C
 
 ;------------------------------------------------------------------------------;
 ;	Enable address line A20 					       ;
@@ -684,17 +722,17 @@ StillOK1:
 	AND	AL,30H		      ; Bits 5 and 6 on means it's a mono
 	CMP	AL,30H
 	JE	LEAVEBW
-	MOV	CRT_SELECTOR,C_CCRT_PTR ; Set the CRT selector to color display
+	MOV	word [CRT_SELECTOR],GDT_DEF.C_CCRT_PTR ; Set the CRT selector to color display
 LEAVEBW:
 	MOV	AH,88H		      ; Get number of 1k blocks above 1M
 	INT	15H
 	ADD	AX,1024 	      ; Add 640K for the memory below 640K  @P7C
-	MOV	MAXMEM,AX	      ; Save for later
+	MOV	[MAXMEM],AX     ; Save for later
 
 ; Get the maximum XMA block number and save it in the header up front	     D0A
 ; All memory is treated as XMA memory.					     D1C
 				      ; 				     D0A
-	SUB	AX,BUFF_SIZE	      ; Can't use the MOVEBLOCK buffer for  @D0A
+	SUB	AX,[BUFF_SIZE]     ; Can't use the MOVEBLOCK buffer for  @D0A
 				      ;   XMA memory.  AX = number of K      D0A
 				      ;   available.			     D0A
 	SUB	AX,(1024-640) +128    ; Subtract 128k for the Emulator code	;an000; dms;
@@ -704,7 +742,7 @@ LEAVEBW:
 				      ;   number of blocks available to the  P3A
 				      ;   highest block number available.    P3A
 				      ;   Block numbers are zero based.      P3A
-	MOV	HI_XMA_BLK,AX	      ; Save it in the header		     D0A
+	MOV	[HI_XMA_BLK],AX     ; Save it in the header		     D0A
 
 ;------------------------------------------------------------------------------;
 ;     Now lets relocate ourselves to high memory.			       ;
@@ -773,7 +811,7 @@ NEXT:
 	SUB	AX,BX		      ; Subtract from the address of the page
 				      ;   directory to get the offset of the
 				      ;   directory in our code segment
-	MOV	SGTBLOFF,AX	      ; Save for later
+	MOV	[SGTBLOFF],AX     ; Save for later
 
 ; Now let's clear the page directory
 
@@ -789,7 +827,7 @@ NEXT:
 
 	CMOV	EAX,CR3 	; Get back CR3 - the address of the page dir.
 	DATAOV
-	MOV	DI,SGTBLOFF	; Point ES:EDI to first entry in directory
+	MOV	DI,[SGTBLOFF] ; Point ES:EDI to first entry in directory
 	DATAOV
 	SUB	BX,BX		; Clear EBX
 	MOV	BX,MEG_SUPPORTED/4*4096 ; Load the size of the page tables.
@@ -805,7 +843,7 @@ NEXT:
 				;   This converts the address to a valid entry
 				;   for the page directory.
 	DATAOV
-	MOV	NORMPAGE,AX	; Save for later
+	MOV	[NORMPAGE],AX ; Save for later
 	MOV	CX,MEG_SUPPORTED/4 ; Load the number of page tables into CX
 	DATAOV
 	SUB	BX,BX		; Clear EBX
@@ -837,17 +875,17 @@ LPT:
 	DATAOV
 	SHL	BX,4		; Convert paragraphs to bytes
 	DATAOV			; Load EAX with the address of the first
-	MOV	AX,NORMPAGE	;   page table
+	MOV	AX,[NORMPAGE] ;   page table
 	DATAOV
 	SUB	AX,BX		; Convert EAX to an offset
 	AND	AL,0F8H 	; AND off the access rights
-	MOV	PGTBLOFF,AX	; Save for later
+	MOV	[PGTBLOFF],AX ; Save for later
 
 ;------------------------------------------------------------------------------;
 ;   Initialize the page tables						       ;
 ;------------------------------------------------------------------------------;
 
-	MOV	DI,PGTBLOFF	      ; ES:DI points to the first page table
+	MOV	DI,[PGTBLOFF]     ; ES:DI points to the first page table
 	DATAOV
 	SUB	AX,AX		      ; Zero EAX
 	ADD	AX,7		      ; Set the present and access rights
@@ -888,7 +926,7 @@ BPT:
 ;------------------------------------------------------------------------------;
 
 	MOV	DI,1024 	      ; 1M offset into page table
-	ADD	DI,PGTBLOFF	      ; Page table offset
+	ADD	DI,[PGTBLOFF]     ; Page table offset
 	MOV	AX,10H		      ; Set EAX to contain 1M address by loading
 	DATAOV			      ;   it with 10H and shifting it 16 bits to
 	SHL	AX,16		      ;   get 00100000.  (Same as 10000:0)
@@ -907,10 +945,10 @@ PAGE
 ;------------------------------------------------------------------------------;
 	CALL	GDT_BLD
 
-	MOV	DI,GDT_PTR	      ; Get the offset of the GDT descriptor
+	MOV	DI,GDT_DEF.GDT_PTR	      ; Get the offset of the GDT descriptor
 	ADD	DI,GDT_LOC	      ;   located in the GDT
 	MOV	BP,DI		      ; Transfer the offset to BP
-	LGDT	ES:FWORD PTR[BP]      ; Put the descriptor for the GDT into
+	LGDT	fword [es:BP]         ; Put the descriptor for the GDT into
 				      ;   the GDT register
 
 PAGE
@@ -920,11 +958,11 @@ PAGE
 ;------------------------------------------------------------------------------;
 	CALL	SIDT_BLD
 
-	MOV	DI,MON_IDT_PTR	      ; Get the offset of the IDT descriptor
+	MOV	DI,GDT_DEF.MON_IDT_PTR	      ; Get the offset of the IDT descriptor
 	ADD	DI,GDT_LOC	      ;   located in the GDT
 	MOV	BP,DI		      ; Transfer the offset to BP
 
-	LIDT	ES:FWORD PTR[BP]      ; Put the descriptor for the IDT into
+	LIDT	fword [es:BP]         ; Put the descriptor for the IDT into
 				      ;   the IDT register
 
 PAGE
@@ -937,7 +975,7 @@ PAGE
 	MOV	AX,VIRTUAL_ENABLE     ; Machine status word needed to
 	LMSW	AX		      ;  switch to virtual mode
 
-	JUMPFAR DONE,SYS_PATCH_CS     ; Must purge pre-fetch queue
+	JUMPFAR DONE,GDT_DEF.SYS_PATCH_CS     ; Must purge pre-fetch queue
 				      ;   and set selector into CS
 DONE:
 PAGE
@@ -945,12 +983,12 @@ PAGE
 ; Initialize all the segment registers					       ;
 ;------------------------------------------------------------------------------;
 
-	MOV	AX,SYS_PATCH_DS       ; Load DS, ES, and SS with the selector
+	MOV	AX,GDT_DEF.SYS_PATCH_DS       ; Load DS, ES, and SS with the selector
 	MOV	DS,AX		      ;   for our data area.  This is the same
 	MOV	ES,AX		      ;   as our code area but has read/write
 				      ;   access.
 	MOV	SS,AX
-	MOV	SP,OFFSET SP_INIT
+	MOV	SP,SP_INIT
 
 	PUSH	0002H		      ; Clean up our flags.  Turn off all bits
 	POPF			      ;   except the one that is always on.
@@ -959,15 +997,15 @@ PAGE
 ; Load the LDTR to avoid faults 					       ;
 ;------------------------------------------------------------------------------;
 
-	MOV	AX,SCRUBBER.TSS_PTR   ; Load DS with the data descriptor for
+	MOV	AX,GDT_DEF.SCRUBBER+VM_GDT_ENTRY.TSS_PTR   ; Load DS with the data descriptor for
 	MOV	DS,AX		      ;   the virtual machine's TSS
-	MOV	AX,SCRUBBER.VM_LDTR   ; Get the LDTR for virtual machine
-	MOV	DS:VM_LDT,AX	      ; Set LDTR in TSS
+	MOV	AX,GDT_DEF.SCRUBBER+VM_GDT_ENTRY.VM_LDTR   ; Get the LDTR for virtual machine
+	MOV	[ds:TASK_STATE_286.VM_LDT],AX     ; Set LDTR in TSS
 	LLDT	AX		      ; Set the LDTR.  Temporary for now.
 
 ; Have to always have space allocated for the dispatch task TSS
 
-	MOV AX,SCRUBBER.VM_TR	      ; Low mem gets clobbered without this @P5C
+	MOV AX,GDT_DEF.SCRUBBER+VM_GDT_ENTRY.VM_TR	      ; Low mem gets clobbered without this @P5C
 	LTR AX			      ; Set current Task Register
 				      ; This TSS is located right after the IDT
 
@@ -981,7 +1019,7 @@ PAGE
 ;	as we got on entry.  IP is set to point to TEST_EXIT.		       ;
 ;------------------------------------------------------------------------------;
 
-	MOV	AX,SCRUBBER.TSS_PTR   ; Load ES and DS with the descriptor
+	MOV	AX,GDT_DEF.SCRUBBER+VM_GDT_ENTRY.TSS_PTR   ; Load ES and DS with the descriptor
 	MOV	DS,AX		      ;   for the VM's TSS with read/write
 	MOV	ES,AX		      ;   access rights
 	CLD
@@ -1021,51 +1059,51 @@ PAGE
 	MOV	AL,0FFH
 	STOSB
 
-	MOV	WORD PTR [BX].ETSS_BM_OFFSET,TSS_386_LEN
+	MOV	word [BX+TSS386.ETSS_BM_OFFSET],TSS_386_LEN
 				      ; Put the bit map offset in the TSS
-	MOV	WORD PTR [BX].ETSS_SP0,OFFSET SP_INIT
+	MOV	word [BX+TSS386.ETSS_SP0],SP_INIT
 				      ; Put our SP as the SP for privilege
 				      ;   level 0
-	MOV	WORD PTR [BX].ETSS_SS0,SYS_PATCH_DS
+	MOV	word [BX+TSS386.ETSS_SS0],GDT_DEF.SYS_PATCH_DS
 				      ; Put our SS as the SS for privilege
 				      ;   level 0
 
 ; Next we set up the segment registers
 
-	MOV  WORD PTR [BX].ETSS_GS,SEG PROG	    ; GS - our code segment
-	MOV  WORD PTR [BX].ETSS_FS,SEG PROG	    ; FS - our code segment
-	MOV  WORD PTR [BX].ETSS_DS,SEG PROG	    ; DS - our code segment
-	MOV  WORD PTR [BX].ETSS_ES,SEG PROG	    ; ES - our code segment
+	MOV  word [BX+TSS386.ETSS_GS],PROG  ; GS - our code segment
+	MOV  word [BX+TSS386.ETSS_FS],PROG  ; FS - our code segment
+	MOV  word [BX+TSS386.ETSS_DS],PROG  ; DS - our code segment
+	MOV  word [BX+TSS386.ETSS_ES],PROG  ; ES - our code segment
 
 ; Next the SS,SP
 
-	MOV  AX,CS:REAL_SS	; Set the real mode SS as the SS for the task
-	MOV  WORD PTR [BX].ETSS_SS,AX
-	MOV  AX,CS:REAL_SP	; Set the real mode SP as the SP for the task
-	MOV  WORD PTR [BX].ETSS_SP,AX
+	MOV  AX,[cs:REAL_SS] ; Set the real mode SS as the SS for the task
+	MOV  word [BX+TSS386.ETSS_SS],AX
+	MOV  AX,[cs:REAL_SP] ; Set the real mode SP as the SP for the task
+	MOV  word [BX+TSS386.ETSS_SP],AX
 
 ; The flags register
 
-	MOV  WORD PTR [BX].ETSS_FL2,2	 ; Set the VM flag.  Task is a V86 task.
-	MOV  WORD PTR [BX].ETSS_FL,0202H ; Set interrupts enabled
+	MOV  word [BX+TSS386.ETSS_FL2],2 ; Set the VM flag.  Task is a V86 task.
+	MOV  word [BX+TSS386.ETSS_FL],0202H ; Set interrupts enabled
 
 ; Set up CS and IP
 
-	MOV  AX,CS:REAL_CS	; Set the real mode CS as the CS for the task
-	MOV  WORD PTR [BX].ETSS_CS,AX ; This is the CS we got when we loaded
+	MOV  AX,[cs:REAL_CS] ; Set the real mode CS as the CS for the task
+	MOV  word [BX+TSS386.ETSS_CS],AX ; This is the CS we got when we loaded
 				;   in low memory, before relocating
-	MOV  AX,OFFSET PROG:TEST_EXIT ; Set IP to the label TEST_EXIT below.
-	MOV  WORD PTR [BX].ETSS_IP,AX
+	MOV  AX,TEST_EXIT        ; Set IP to the label TEST_EXIT below.
+	MOV  word [BX+TSS386.ETSS_IP],AX
 
 ; The LDTR
 
-	MOV  WORD PTR [BX].ETSS_LDT,SCRUBBER.VM_LDTR
+	MOV  word [BX+TSS386.ETSS_LDT],GDT_DEF.SCRUBBER+VM_GDT_ENTRY.VM_LDTR
 
 ; And finally, CR3, the page directory base register
 
 	CMOV	EAX,CR3 	; Get CR3
 	DATAOV
-	MOV  WORD PTR [BX].ETSS_CR3,AX ; Save it in the TSS
+	MOV  word [BX+TSS386.ETSS_CR3],AX ; Save it in the TSS
 
 PAGE
 ;------------------------------------------------------------------------------;
@@ -1076,9 +1114,9 @@ PAGE
 ;	table entry for 0 to 4M that was initialized above.		       ;
 ;------------------------------------------------------------------------------;
 
-	MOV	AX,SYS_PATCH_DS    ; Load DS with the selector for our data
+	MOV	AX,GDT_DEF.SYS_PATCH_DS    ; Load DS with the selector for our data
 	MOV	DS,AX
-	MOV	SI,PGTBLOFF	   ; DS:SI point to the real page table for 0-4M
+	MOV	SI,[PGTBLOFF]  ; DS:SI point to the real page table for 0-4M
 	MOV	AX,XMA_PAGES_SEL   ; Load ES with the selector for the XMA pages
 	MOV	ES,AX
 	SUB	DI,DI		   ; ES:DI point to the first XMA page table
@@ -1105,13 +1143,13 @@ PAGE
 ; card enabled and set to bank 0.  Therefore, we must do the same.	     D1A
 ;									     D1A
 				   ;					     D1A
-	MOV	AX,SYS_PATCH_DS    ; Load DS and ES with our data segment   @D1A
+	MOV	AX,GDT_DEF.SYS_PATCH_DS    ; Load DS and ES with our data segment   @D1A
 	MOV	DS,AX		   ;   selector 			    @D1A
 	MOV	ES,AX		   ;					    @D1A
-	MOV	DI,SGTBLOFF	   ; Point ES:DI to the first page	    @D1A
+	MOV	DI,[SGTBLOFF]  ; Point ES:DI to the first page	    @D1A
 				   ;   directory entry			     D1A
 	DATAOV			   ; Load AX with the page directory entry  @D1A
-	MOV	AX,XMAPAGE	   ;   for the first XMA page table	    @D1A
+	MOV	AX,[XMAPAGE]  ;   for the first XMA page table	    @D1A
 	DATAOV			   ; Stuff the address of the page table    @D1A
 	STOSW			   ;   for bank 0 into the page directory   @D1A
 
@@ -1158,7 +1196,7 @@ PAGE
 ;------------------------------------------------------------------------------;
 
 
-	MOV	AX,SCRUBBER.TSS_PTR   ; Load DS with the descriptor for the @P5A
+	MOV	AX,GDT_DEF.SCRUBBER+VM_GDT_ENTRY.TSS_PTR   ; Load DS with the descriptor for the @P5A
 	MOV	DS,AX		      ;   VM's TSS with read/write access   @P5A
 	MOV	BX,0		      ;   VM's TSS with read/write access   @P5A
 ;									     P5A
@@ -1167,23 +1205,23 @@ PAGE
 ; as well as his EFLAGS, EIP and CS.					     P5A
 ;									     P5A
 	DATAOV			      ; 				    @P5A
-	PUSH	WORD PTR [BX].ETSS_GS ; Put V86 task's GS on the stack      @P5A
+	PUSH	word [BX+TSS386.ETSS_GS] ; Put V86 task's GS on the stack      @P5A
 	DATAOV			      ; 				    @P5A
-	PUSH	WORD PTR [BX].ETSS_FS ; Put V86 task's FS on the stack      @P5A
+	PUSH	word [BX+TSS386.ETSS_FS] ; Put V86 task's FS on the stack      @P5A
 	DATAOV			      ; 				    @P5A
-	PUSH	WORD PTR [BX].ETSS_DS ; Put V86 task's DS on the stack      @P5A
+	PUSH	word [BX+TSS386.ETSS_DS] ; Put V86 task's DS on the stack      @P5A
 	DATAOV			      ; 				    @P5A
-	PUSH	WORD PTR [BX].ETSS_ES ; Put V86 task's ES on the stack      @P5A
+	PUSH	word [BX+TSS386.ETSS_ES] ; Put V86 task's ES on the stack      @P5A
 	DATAOV			      ; 				    @P5A
-	PUSH	WORD PTR [BX].ETSS_SS ; Put V86 task's SS on the stack      @P5A
+	PUSH	word [BX+TSS386.ETSS_SS] ; Put V86 task's SS on the stack      @P5A
 	DATAOV			      ; 				    @P5A
-	PUSH	WORD PTR [BX].ETSS_SP ; Put V86 task's ESP on the stack     @P5A
+	PUSH	word [BX+TSS386.ETSS_SP] ; Put V86 task's ESP on the stack     @P5A
 	DATAOV			      ; 				    @P5A
-	PUSH	WORD PTR [BX].ETSS_FL ; Put V86 task's EFLAGS on the stack  @P5A
+	PUSH	word [BX+TSS386.ETSS_FL] ; Put V86 task's EFLAGS on the stack  @P5A
 	DATAOV			      ; 				    @P5A
-	PUSH	WORD PTR [BX].ETSS_CS ; Put V86 task's CS on the stack      @P5A
+	PUSH	word [BX+TSS386.ETSS_CS] ; Put V86 task's CS on the stack      @P5A
 	DATAOV			      ; 				    @P5A
-	PUSH	WORD PTR [BX].ETSS_IP ; Put V86 task's EIP on the stack     @P5A
+	PUSH	word [BX+TSS386.ETSS_IP] ; Put V86 task's EIP on the stack     @P5A
 	DATAOV			      ; 				    @P5A
 	IRET			      ; 				    @P5A
 				      ; 				    @P5D
@@ -1199,26 +1237,26 @@ TEST_EXIT:			; We are now running in V86 mode
 	MOV	AL,15H		;					    @P7A
 	INT	21H		;					    @P7A
 
-	MOV	CS:CHAINSEG,ES	; Save it in the chaining header in	    @P7A
-	MOV	CS:CHAINOFF,BX	;   INT15F88				    @P7A
+	MOV	[cs:CHAINSEG],ES ; Save it in the chaining header in	    @P7A
+	MOV	[cs:CHAINOFF],BX ;   INT15F88				    @P7A
 
 	MOV	AH,SET_VECT	; Set the entry point of INT15F88 as the    @P7A
 	MOV	AL,15H		;   new interrupt 15 vector		    @P7A
 	PUSH	CS		;					    @P7A
 	POP	DS		;					    @P7A
-	MOV	DX,OFFSET INT15F88 ;					    @P7A
+	MOV	DX,INT15F88        ;					    @P7A
 	INT	21H		;					    @P7A
 
 ; Copy the number of K for extended memory from BUFF_SIZE to EXT_MEM.  This  P7A
 ; is needed because BUFF_SIZE does not stay resident, EXT_MEM does.	     P7A
 
-	MOV	AX,BUFF_SIZE	;					    @P7A
-	MOV	EXT_MEM,AX	;					    @P7A
+	MOV	AX,[BUFF_SIZE] ;					    @P7A
+	MOV	[EXT_MEM],AX ;					    @P7A
 
 ; Issue the message that says we installed successfully
 
 	MOV	AH,DISPSTRG	; Set AH to DOS display string function     @D0A
-	MOV	DX,OFFSET GOODLOAD ;					    @D0A
+	MOV	DX,GoodLoad        ;					    @D0A
 	PUSH	CS		;					    @D0A
 	POP	DS		; DS:DX points to the message		    @D0A
 	INT	21H		; Display the message			    @D0A
@@ -1239,14 +1277,14 @@ PAGE
 
 ENABLE_A20	EQU	02H	; Bit 2 of port 92H turns on A20	    @P4C
 
-GATE_A20    PROC
+GATE_A20:
 
 	IN	AL,92H		; Get the current value of port 92	    @P4A
 	OR	AL,ENABLE_A20	; Turn on the bit to enable A20 	    @P4A
 	OUT	92H,AL		; Send it back out to port 92		    @P4A
 	RET
 				;					  15@P4D
-GATE_A20	ENDP
+;GATE_A20	ENDP
 
 SUBTTL	GET_PARMS parameter line scan
 PAGE
@@ -1263,14 +1301,14 @@ PAGE
 ;									       ;
 ;------------------------------------------------------------------------------;
 
-	ASSUME	DS:NOTHING	; DS:BX point to Request Header
+;	ASSUME	DS:NOTHING	; DS:BX point to Request Header
 
-GET_PARMS PROC
+GET_PARMS:
 
 	PUSH	DS		; Save DS
 	push	bx		; save bx					;an000; dms;
 
-	LDS	SI,RH.RH0_BPBA	; DS:SI point to all text after "DEVICE="
+	LDS	SI,[RH+RH0_BPBA] ; DS:SI point to all text after "DEVICE="
 				;   in CONFIG.SYS
 	XOR	AL,AL		; Start with a null character in AL.
 
@@ -1306,7 +1344,7 @@ GET_PARMS_A:
 
 GET_PARMS_B:			; Now pointing to first delimiter
 	CALL	SKIP_TO_DIGIT	; Skip to first digit
-	JZ	Get_Parms_C	; Found EOL, no digits remain
+	JZ	GET_PARMS_C	; Found EOL, no digits remain
 
 	CALL	GET_NUMBER	; Extract the digits and convert to binary
 	jmp	Get_Parms_Found ; Parm found
@@ -1321,22 +1359,22 @@ Get_Parms_Found:
 
 	cmp	cx,0		; 0 pages requested?				;an000; dms;
 	jne	Get_Parm_Max	; allocate maximum number			;an000; dms;
-		MOV	CS:BUFF_SIZE,0; Store buffer size
-		jmp	Get_Parms_C
+		MOV	word [cs:BUFF_SIZE],0 ; Store buffer size
+		jmp	GET_PARMS_C
 
 Get_Parm_Max:
 
 	cmp	bx,64		; >= 64 pages requested?			;an000; dms;
 	jnb	Get_Parms_64_Pg ; yes - continue				;an000; dms;
-		mov	dx,offset Small_Parm	; Parm < 64 and > 0		;an000; dms;
-		mov	ah,Dispstrg		; Display the welcome message.	;an000; dms;
+		mov	dx,Small_Parm        ; Parm < 64 and > 0		;an000; dms;
+		mov	ah,DISPSTRG		; Display the welcome message.	;an000; dms;
 		push	ds			; Save DS			;an000; dms;
 		push	cs			;				;an000; dms;
 		pop	ds			; DS:DX points to the message	;an000; dms;
 		int	21h			; Display the message		;an000; dms;
 		pop	ds			; Restore DS			;an000; dms;
 		stc				; flag an error occurred	;an000; dms;
-		jmp	Get_Parms_C		; exit routine			;an000; dms;
+		jmp	GET_PARMS_C		; exit routine			;an000; dms;
 
 Get_Parms_64_Pg:
 
@@ -1353,19 +1391,19 @@ Get_Parms_64_Pg:
 
 	sub	ax,bx		; get number of blocks to allocate for extended ;an000; dms;
 	jnc	Get_Parms_Ext	; set extended memory value in buff size	;an000; dms;
-		mov	dx,offset No_Mem	; not enough memory for parm
-		mov	ah,Dispstrg		; Display the welcome message.	;an000; dms;
+		mov	dx,No_Mem        ; not enough memory for parm
+		mov	ah,DISPSTRG		; Display the welcome message.	;an000; dms;
 		push	ds			; Save DS			;an000; dms;
 		push	cs			;				;an000; dms;
 		pop	ds			; DS:DX points to the message	;an000; dms;
 		int	21h			; Display the message		;an000; dms;
 		pop	ds			; Restore DS			;an000; dms;
 		stc				; flag an error 		;an000; dms;
-		jmp	Get_Parms_C		; exit routine			;an000; dms;
+		jmp	GET_PARMS_C		; exit routine			;an000; dms;
 
 Get_Parms_Ext:
 
-	MOV	CS:BUFF_SIZE,ax ; Store buffer size
+	MOV	[cs:BUFF_SIZE],ax ; Store buffer size
 	clc
 
 GET_PARMS_C:
@@ -1378,7 +1416,7 @@ GET_PARMS_C:
 ; GET_PCHAR -- Get a character from the parameter string into AL	       ;
 ;------------------------------------------------------------------------------;
 
-GET_PCHAR PROC
+GET_PCHAR:
 	CMP	AL,CR		; Carriage return already encountered?
 	JE	GET_PCHAR_X	; Don't read past end of line
 	LODSB			; Get character from DS:SI, increment SI
@@ -1390,7 +1428,7 @@ GET_PCHAR PROC
 GET_PCHAR_X:
 	RET
 
-GET_PCHAR ENDP
+;GET_PCHAR ENDP
 
 ;------------------------------------------------------------------------------;
 ; CHECK_NUM -- Check if the character in AL is a numeric digit, ASCII for      ;
@@ -1398,7 +1436,7 @@ GET_PCHAR ENDP
 ;	       otherwise it is reset.					       ;
 ;------------------------------------------------------------------------------;
 
-CHECK_NUM PROC
+CHECK_NUM:
 	CMP	AL,'0'          ; If character is less than a "0" then it is not
 	JB	CHECK_NUM_X	;   a number, so exit
 
@@ -1408,7 +1446,7 @@ CHECK_NUM PROC
 	CMP	AL,AL		; Set the zero flag to show it is a number
 CHECK_NUM_X:
 	RET			; Zero flag is left reset if character is not
-CHECK_NUM ENDP			;   a number
+;CHECK_NUM ENDP			;   a number
 
 ;------------------------------------------------------------------------------;
 ; SKIP_TO_DIGIT -- Scan the parameter string until a numeric character is      ;
@@ -1417,7 +1455,7 @@ CHECK_NUM ENDP			;   a number
 ;		   a character was found then the zero flag is reset.	       ;
 ;------------------------------------------------------------------------------;
 
-SKIP_TO_DIGIT PROC
+SKIP_TO_DIGIT:
 	CALL	CHECK_NUM	; Is the current character a digit?
 	JZ	SKIP_TO_DIGIT_X ; If zero flag is set then it is a number
 
@@ -1428,7 +1466,7 @@ SKIP_TO_DIGIT PROC
 SKIP_TO_DIGIT_X:
 	CMP	AL,0		; Digit found, reset the zero flag to show digit
 	RET			;   was found
-SKIP_TO_DIGIT ENDP
+;SKIP_TO_DIGIT ENDP
 
 ;------------------------------------------------------------------------------;
 ; GET_NUMBER -- Convert the character digits in the parameter string to a      ;
@@ -1438,18 +1476,18 @@ SKIP_TO_DIGIT ENDP
 ;------------------------------------------------------------------------------;
 
 C10	   DW	10
-GN_ERR	   DB	?		; Zero if no overflow in accumulation
+GN_ERR	   rb      1 ; Zero if no overflow in accumulation
 
-GET_NUMBER PROC 		; Convert string of digits to binary value
+GET_NUMBER:       ; Convert string of digits to binary value
 	XOR	CX,CX		; Clear CX, the resulting number
-	MOV	CS:GN_ERR,CL	; No overflow yet
+	MOV	[cs:GN_ERR],CL ; No overflow yet
 
 GET_NUMBER_A:
 	SUB	AL,'0'          ; Convert the ASCII character in AL to binary
 	CBW			; Clear AH
 	XCHG	AX,CX		; Previous accumulation in AX, new digit in CL
-	MUL	CS:C10		; DX:AX = AX*10
-	OR	CS:GN_ERR,DL	; Any overflow from AX goes into DX.  Any non-
+	MUL	[cs:C10] ; DX:AX = AX*10
+	OR	[cs:GN_ERR],DL ; Any overflow from AX goes into DX.  Any non-
 				;   zero value in DL will signal an error
 	ADD	AX,CX		; Add the new digit to ten times the previous
 				;   digits
@@ -1458,17 +1496,17 @@ GET_NUMBER_A:
 	CALL	CHECK_NUM	; Check if it is numeric
 	JZ	GET_NUMBER_A	; If so, then go back and add this digit to the
 				;   result
-	CMP	CS:GN_ERR,0	; Did we overflow?
+	CMP	byte [cs:GN_ERR],0 ; Did we overflow?
 	JE	GET_NUMBER_B	; If not, we're done
 	XOR	CX,CX		; Return a zero result if overflow
 GET_NUMBER_B:
 	RET
-GET_NUMBER ENDP
+;GET_NUMBER ENDP
 
-GET_PARMS ENDP
+;GET_PARMS ENDP
 
-POST	ENDP
+;POST	ENDP
 
-PROG	ENDS
-	END
+;PROG	ENDS
+;	END
 

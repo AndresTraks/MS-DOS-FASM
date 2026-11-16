@@ -20,10 +20,13 @@ BREAK			<TRANSIENT Messages>
 macro addr sym,name
 {
 ;			public name
-			match , name \{
+			define idn$print_tm1 idn$no
+			match , name \{ define idn$print_tm1 idn$yes \}
+			match =idn$yes, idn$print_tm1 \{
 
 			    dw	 sym
-			else
+			\}
+			match =idn$no, idn$print_tm1 \{
 
 name			    dw	 sym
 			\}

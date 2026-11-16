@@ -1,92 +1,92 @@
 PAGE    60,132
 TITLE   INDEGDT - 386 XMA Emulator - Build Global Descriptor Table
 
-COMMENT #
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-*                                                                             *
-* MODULE NAME     : INDEGDT                                                   *
-*                                                                             *
-*                                                                             *
-*                    5669-196 (C) COPYRIGHT 1988 Microsoft Corp.              *
-*                                                                             *
-* DESCRIPTIVE NAME: Build the Global Descriptor Table (GDT)                   *
-*                                                                             *
-* STATUS (LEVEL)  : Version (0) Level (1.0)                                   *
-*                                                                             *
-* FUNCTION        : Build the Global Descriptor Table (GDT) for the 80386     *
-*                   XMA emulator                                              *
-*                                                                             *
-* MODULE TYPE     : ASM                                                       *
-*                                                                             *
-* REGISTER USAGE  : 80386 Standard                                            *
-*                                                                             *
-* RESTRICTIONS    : None                                                      *
-*                                                                             *
-* DEPENDENCIES    : None                                                      *
-*                                                                             *
-* ENTRY POINT     : GDT_BLD                                                   *
-*                                                                             *
-* LINKAGE         : Called NEAR from INDEINI                                  *
-*                                                                             *
-* INPUT PARMS     : None                                                      *
-*                                                                             *
-* RETURN PARMS    : None                                                      *
-*                                                                             *
-* OTHER EFFECTS   : None                                                      *
-*                                                                             *
-* EXIT NORMAL     : Return to INDEINI                                         *
-*                                                                             *
-* EXIT ERROR      : None                                                      *
-*                                                                             *
-* EXTERNAL                                                                    *
-* REFERENCES      : None                                                      *
-*                                                                             *
-* SUB-ROUTINES    : SREG_2_24BITS - Convert the 16 bit value in AX to a 24    *
-*                                   bit value in DH and AX.                   *
-*                   ADDOFF - Add the 16 bit offset in AX to the 24 bit value  *
-*                            in DH and BX.                                    *
-*                                                                             *
-* MACROS          : DESCR_DEF  - Declare a descriptor entry                   *
-*                   DESCR_INIT - Initialize a descriptor                      *
-*                                                                             *
-* CONTROL BLOCKS  : INDEDAT - System data structures                          *
-*                                                                             *
-* CHANGE ACTIVITY :                                                           *
-*                                                                             *
-* $MOD(INDEGDT) COMP(LOAD) PROD(3270PC) :                                     *
-*                                                                             *
-* $D0=D0004700 410 870530 D : NEW FOR RELEASE 1.1                             *
-* $P1=P0000293 410 870731 D : LIMIT LINES TO 80 CHARACTERS                    *
-* $P2=P0000312 410 870804 D : CHANGE COMPONENT FROM MISC TO LOAD              *
-* $P3=P0000410 410 870918 D : RELOCATE DATA AREAS TO MAKE ROOM FOR BIT MAP    *
-*                                                                             *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-#
+;COMMENT #
+;* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;*                                                                             *
+;* MODULE NAME     : INDEGDT                                                   *
+;*                                                                             *
+;*                                                                             *
+;*                    5669-196 (C) COPYRIGHT 1988 Microsoft Corp.              *
+;*                                                                             *
+;* DESCRIPTIVE NAME: Build the Global Descriptor Table (GDT)                   *
+;*                                                                             *
+;* STATUS (LEVEL)  : Version (0) Level (1.0)                                   *
+;*                                                                             *
+;* FUNCTION        : Build the Global Descriptor Table (GDT) for the 80386     *
+;*                   XMA emulator                                              *
+;*                                                                             *
+;* MODULE TYPE     : ASM                                                       *
+;*                                                                             *
+;* REGISTER USAGE  : 80386 Standard                                            *
+;*                                                                             *
+;* RESTRICTIONS    : None                                                      *
+;*                                                                             *
+;* DEPENDENCIES    : None                                                      *
+;*                                                                             *
+;* ENTRY POINT     : GDT_BLD                                                   *
+;*                                                                             *
+;* LINKAGE         : Called NEAR from INDEINI                                  *
+;*                                                                             *
+;* INPUT PARMS     : None                                                      *
+;*                                                                             *
+;* RETURN PARMS    : None                                                      *
+;*                                                                             *
+;* OTHER EFFECTS   : None                                                      *
+;*                                                                             *
+;* EXIT NORMAL     : Return to INDEINI                                         *
+;*                                                                             *
+;* EXIT ERROR      : None                                                      *
+;*                                                                             *
+;* EXTERNAL                                                                    *
+;* REFERENCES      : None                                                      *
+;*                                                                             *
+;* SUB-ROUTINES    : SREG_2_24BITS - Convert the 16 bit value in AX to a 24    *
+;*                                   bit value in DH and AX.                   *
+;*                   ADDOFF - Add the 16 bit offset in AX to the 24 bit value  *
+;*                            in DH and BX.                                    *
+;*                                                                             *
+;* MACROS          : DESCR_DEF  - Declare a descriptor entry                   *
+;*                   DESCR_INIT - Initialize a descriptor                      *
+;*                                                                             *
+;* CONTROL BLOCKS  : INDEDAT - System data structures                          *
+;*                                                                             *
+;* CHANGE ACTIVITY :                                                           *
+;*                                                                             *
+;* MOD$(INDEGDT) COMP(LOAD) PROD(3270PC) :                                     *
+;*                                                                             *
+;* D0$=D0004700 410 870530 D : NEW FOR RELEASE 1.1                             *
+;* P1$=P0000293 410 870731 D : LIMIT LINES TO 80 CHARACTERS                    *
+;* P2$=P0000312 410 870804 D : CHANGE COMPONENT FROM MISC TO LOAD              *
+;* P3$=P0000410 410 870918 D : RELOCATE DATA AREAS TO MAKE ROOM FOR BIT MAP    *
+;*                                                                             *
+;* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;#
 
-        .286P                 ; Enable recognition of 286 privileged instructs.
+;        .286P                 ; Enable recognition of 286 privileged instructs.
 
         .XLIST                ; Turn off the listing
-        INCLUDE INDEDAT.INC   ; Include system data structures
-        INCLUDE INDEACC.INC   ; Include access byte definitions
+        include 'INDEDAT.INC' ; Include system data structures
+        include 'INDEACC.INC' ; Include access byte definitions
 
-        IF1                   ; Only include macros on the first pass
-        INCLUDE INDEDES.MAC   ; Descriptor macros
-        ENDIF
+;        IF1                   ; Only include macros on the first pass
+        include 'INDEDES.MAC' ; Descriptor macros
+;        ENDIF
         .LIST                 ; Turn on the listing
 
-PROG    SEGMENT PARA    PUBLIC  'PROG'
+;PROG    SEGMENT PARA    PUBLIC  'PROG'
 
-        ASSUME  CS:PROG
-        ASSUME  SS:NOTHING
-        ASSUME  DS:PROG
-        ASSUME  ES:NOTHING
+;        ASSUME  CS:PROG
+;        ASSUME  SS:NOTHING
+;        ASSUME  DS:PROG
+;        ASSUME  ES:NOTHING
 
-INDEGDT LABEL   NEAR
+INDEGDT:
 
-        PUBLIC  INDEGDT
-        PUBLIC  GDT_BLD
-        PUBLIC  GDT_DATA_START
-        PUBLIC  SREG_2_24BITS
+;        PUBLIC  INDEGDT
+;        PUBLIC  GDT_BLD
+;        PUBLIC  GDT_DATA_START
+;        PUBLIC  SREG_2_24BITS
 
 ;       The following data define a pre-initialized GDT.  They represent
 ;       all structures which will exist when the emulator comes up.
@@ -95,7 +95,7 @@ INDEGDT LABEL   NEAR
 ;       area will be copied from the code segment to the final GDT resting
 ;       place during initialization.
 
-GDT_DATA_START  LABEL   WORD
+label GDT_DATA_START word
 
 ;               First entry is unusable
 
@@ -207,16 +207,16 @@ PAGE
 
 ; The following 32 descriptors are for exception condition task gates.
 
-       REPT    32
+       repeat 32
        DQ       0
-       ENDM
+       end repeat
 
 ; The following 16 pairs are for the hardware interrupt handling tasks.
 
-       REPT    16
+       repeat 16
        DQ       0
        DQ       0
-       ENDM
+       end repeat
 
 ; The following pair is for the DISPATCH task
 
@@ -246,9 +246,9 @@ PAGE
 
        DESCR_DEF   SEG, GDT_LEN, 0D000H, 0, CPL0_DATA_ACCESS ; LDT as data
 
-GDT_DATA_END    LABEL   WORD
+label GDT_DATA_END word
 
-COPY_LEN        EQU     GDT_DATA_END-GDT_DATA_START
+COPY_LEN        equ     (GDT_DATA_END-GDT_DATA_START)
 
 ;
 ;       End of pre-allocated GDT
@@ -256,13 +256,13 @@ COPY_LEN        EQU     GDT_DATA_END-GDT_DATA_START
 
 PAGE
 
-GDT_BLD         PROC    NEAR
+GDT_BLD:
 
 ; Copy the pre-initialized GDT into its proper location in memory
 
         CLI                             ; All string operations go forward
 
-        MOV     SI,OFFSET GDT_DATA_START ; DS:SI points to the pre-initialized
+        MOV     SI,GDT_DATA_START        ; DS:SI points to the pre-initialized
                                         ;   GDT above
         MOV     CX,COPY_LEN/2           ; CX = number of words to copy
         MOV     DI,GDT_LOC              ; ES:DI points to the GDT location
@@ -277,8 +277,8 @@ GDT_BLD         PROC    NEAR
         MOV     BX,AX                   ; Get the monitor offset
 
 ALLSET:
-        DESCR_INIT  SEG, SYS_PATCH_CS, 07FFFH, BX, DH, CPL0_CODE_ACCESS
-        DESCR_INIT  SEG, SYS_PATCH_DS, 0FFFFH, BX, DH, CPL0_DATA_ACCESS
+        DESCR_INIT  SEG, GDT_DEF.SYS_PATCH_CS, 07FFFH, BX, DH, CPL0_CODE_ACCESS
+        DESCR_INIT  SEG, GDT_DEF.SYS_PATCH_DS, 0FFFFH, BX, DH, CPL0_DATA_ACCESS
 
 ; Initialize the descriptor for the GDT
 
@@ -288,7 +288,7 @@ ALLSET:
         MOV     BX,GDT_LOC              ; Add on the offset of the GDT
         CALL    ADDOFF
 
-        DESCR_INIT  SEG, GDT_PTR, GDT_LEN, BX, DH, CPL0_DATA_ACCESS
+        DESCR_INIT  SEG, GDT_DEF.GDT_PTR, GDT_LEN, BX, DH, CPL0_DATA_ACCESS
 
 ; Initialize the descriptor for the IDT
 
@@ -296,31 +296,31 @@ ALLSET:
                                         ;   converted to 24 bits so all we
         CALL    ADDOFF                  ;   have to do is add on the offset
 
-        DESCR_INIT  SEG, MON_IDT_PTR, SIDT_LEN, BX, DH, CPL0_DATA_ACCESS
+        DESCR_INIT  SEG, GDT_DEF.MON_IDT_PTR, SIDT_LEN, BX, DH, CPL0_DATA_ACCESS
 
 ; Initialize the descriptor that accesses all of memory as data
 
-        DESCR_INIT  BSEG, HUGE_PTR, 0FFFFH, 0, 0, CPL0_DATA_ACCESS
+        DESCR_INIT  BSEG, GDT_DEF.HUGE_PTR, 0FFFFH, 0, 0, CPL0_DATA_ACCESS
 
 ; Initialize the descriptors for the V86 task's LDT
 
         MOV     BX,DISPATCH_LOC                                           ; @P3C
         CALL    ADDOFF
 
-        DESCR_INIT  SEG,SCRUBBER.VM_LDTR,00FFFH,BX,DH,LDT_DESC
-        DESCR_INIT  SEG,SCRUBBER.LDT_PTR,00FFFH,BX,DH,CPL0_DATA_ACCESS
+        DESCR_INIT  SEG,GDT_DEF.SCRUBBER+VM_GDT_ENTRY.VM_LDTR,00FFFH,BX,DH,LDT_DESC
+        DESCR_INIT  SEG,GDT_DEF.SCRUBBER+VM_GDT_ENTRY.LDT_PTR,00FFFH,BX,DH,CPL0_DATA_ACCESS
 
 ; Initialize the descriptors for the V86 task's TR
 
         MOV     BX,DISPATCH_LOC                                           ; @P3C
         CALL    ADDOFF
 
-        DESCR_INIT  SEG,SCRUBBER.VM_TR,TSS_LEN,BX,DH,FREE_TSS_386         ; @P3C
-        DESCR_INIT  SEG,SCRUBBER.TSS_PTR,TSS_LEN,BX,DH,CPL0_DATA_ACCESS; @P3C
+        DESCR_INIT  SEG,GDT_DEF.SCRUBBER+VM_GDT_ENTRY.VM_TR,TSS_LEN,BX,DH,FREE_TSS_386         ; @P3C
+        DESCR_INIT  SEG,GDT_DEF.SCRUBBER+VM_GDT_ENTRY.TSS_PTR,TSS_LEN,BX,DH,CPL0_DATA_ACCESS; @P3C
 
         RET
 
-GDT_BLD         ENDP
+;GDT_BLD         ENDP
 
 PAGE
 ; SREG_2_24BITS converts the segment register 16 bit value in the AX register
@@ -332,7 +332,7 @@ PAGE
 ;                  DH = 24 bit high byte
 
 
-SREG_2_24BITS PROC    NEAR
+SREG_2_24BITS:
 
 ; Put the high four bits of AH into the low four bits of DH
 
@@ -350,7 +350,7 @@ SREG_2_24BITS PROC    NEAR
 
         RET
 
-SREG_2_24BITS ENDP
+;SREG_2_24BITS ENDP
 
 PAGE
 ; ADDOFF adds the 16 bit offset in BX to the 24 bit value in DL and AX.  The
@@ -363,7 +363,7 @@ PAGE
 ;       Output:    DH = 24 bit high byte
 ;                  BX = 24 bit low word
 
-ADDOFF  PROC    NEAR
+ADDOFF:
 
         MOV     DH,DL                   ; Restore the high byte that was saved
                                         ;   in DL
@@ -372,8 +372,8 @@ ADDOFF  PROC    NEAR
                                         ;   byte
         RET
 
-ADDOFF  ENDP
+;ADDOFF  ENDP
 
-PROG    ENDS
+;PROG    ENDS
 
-        END
+;        END

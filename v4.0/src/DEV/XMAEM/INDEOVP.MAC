@@ -1,35 +1,35 @@
-COMMENT #
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-*                                                                             *
-* MODULE NAME     : INDEOVP                                                   *
-*                                                                             *
-*                    5669-196 (C) COPYRIGHT 1988 Microsoft Corp.              *
-*                                                                             *
-* DESCRIPTIVE NAME: Override prefix macros                                    *
-*                                                                             *
-* STATUS (LEVEL)  : Version (0) Level (1.0)                                   *
-*                                                                             *
-* FUNCTION        : DATAOV - Creates a prefix so that the next instruction    *
-*                            accesses data twice as wide as it normally would.*
-*                            Bytes go to words, and words go to double words. *
-*                   ADDROV - Creates a prefix so that the next instruction    *
-*                            uses 32 bit addresses instead of 16 bit.         *
-*                   SEGOV  - Creates a segment override prefix for the next   *
-*                            instruction.                                     *
-*                                                                             *
-* MODULE TYPE     : MAC                                                       *
-*                                                                             *
-* REGISTER USAGE  : 80286 Standard                                            *
-*                                                                             *
-* CHANGE ACTIVITY :                                                           *
-*                                                                             *
-* $MAC(INDEOVP) COMP(LOAD) PROD(3270PC) :                                     *
-*                                                                             *
-* $D0=D0004700 410 870604 D : NEW FOR RELEASE 1.1                             *
-* $P1=P0000311 410 870804 D : RENAME MODULE'S LIBRARY FILE TYPE TO "MAC"      *
-*                                                                             *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-#
+;COMMENT #
+;* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;*                                                                             *
+;* MODULE NAME     : INDEOVP                                                   *
+;*                                                                             *
+;*                    5669-196 (C) COPYRIGHT 1988 Microsoft Corp.              *
+;*                                                                             *
+;* DESCRIPTIVE NAME: Override prefix macros                                    *
+;*                                                                             *
+;* STATUS (LEVEL)  : Version (0) Level (1.0)                                   *
+;*                                                                             *
+;* FUNCTION        : DATAOV - Creates a prefix so that the next instruction    *
+;*                            accesses data twice as wide as it normally would.*
+;*                            Bytes go to words, and words go to double words. *
+;*                   ADDROV - Creates a prefix so that the next instruction    *
+;*                            uses 32 bit addresses instead of 16 bit.         *
+;*                   SEGOV  - Creates a segment override prefix for the next   *
+;*                            instruction.                                     *
+;*                                                                             *
+;* MODULE TYPE     : MAC                                                       *
+;*                                                                             *
+;* REGISTER USAGE  : 80286 Standard                                            *
+;*                                                                             *
+;* CHANGE ACTIVITY :                                                           *
+;*                                                                             *
+;* MAC$(INDEOVP) COMP(LOAD) PROD(3270PC) :                                     *
+;*                                                                             *
+;* D0$=D0004700 410 870604 D : NEW FOR RELEASE 1.1                             *
+;* P1$=P0000311 410 870804 D : RENAME MODULE'S LIBRARY FILE TYPE TO "MAC"      *
+;*                                                                             *
+;* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;#
 
 PAGE
 ; DATAOV - Create a prefix for an instruction so that it accesses data twice
@@ -37,17 +37,19 @@ PAGE
 ;          bytes then it will access words.  If it was to access words then it
 ;          will access double words (32 bits).
 
-DATAOV  MACRO
+macro DATAOV 
+{
          DB      066H
-        ENDM
+}
 
 PAGE
 ; ADDROV - Create a prefix for an instruction so that it uses 32 bit addresses
 ;          instead of 16 bit addresses.
 
-ADDROV  MACRO
+macro ADDROV 
+{
          DB      067H
-        ENDM
+}
 
 PAGE
 ; SEGOV - Segment Prefix Overrides
@@ -58,54 +60,55 @@ PAGE
 ; Syntax:  SEGOV   ES | CS | SS | DS | FS | GS | DATA | ADDRESS
 ;
 
-SEGOV   MACRO   SR
-        IFIDN   <&SR>,<ES>
+macro SEGOV SR
+{
+        match =ES, SR \{
          DB      026H
-        ENDIF
-        IFIDN   <&SR>,<es>
+        \}
+        match =es, SR \{
          DB      026H
-        ENDIF
-        IFIDN   <&SR>,<CS>
+        \}
+        match =CS, SR \{
          DB      02EH
-        ENDIF
-        IFIDN   <&SR>,<cs>
+        \}
+        match =cs, SR \{
          DB      02EH
-        ENDIF
-        IFIDN   <&SR>,<SS>
+        \}
+        match =SS, SR \{
          DB      036H
-        ENDIF
-        IFIDN   <&SR>,<ss>
+        \}
+        match =ss, SR \{
          DB      036H
-        ENDIF
-        IFIDN   <&SR>,<DS>
+        \}
+        match =DS, SR \{
          DB      03EH
-        ENDIF
-        IFIDN   <&SR>,<ds>
+        \}
+        match =ds, SR \{
          DB      03EH
-        ENDIF
-        IFIDN   <&SR>,<FS>
+        \}
+        match =FS, SR \{
          DB      064H
-        ENDIF
-        IFIDN   <&SR>,<fs>
+        \}
+        match =fs, SR \{
          DB      064H
-        ENDIF
-        IFIDN   <&SR>,<GS>
+        \}
+        match =GS, SR \{
          DB      065H
-        ENDIF
-        IFIDN   <&SR>,<gs>
+        \}
+        match =gs, SR \{
          DB      065H
-        ENDIF
-        IFIDN   <&SR>,<DATA>
+        \}
+        match =DATA, SR \{
          DB      066H
-        ENDIF
-        IFIDN   <&SR>,<data>
+        \}
+        match =data, SR \{
          DB      066H
-        ENDIF
-        IFIDN   <&SR>,<ADDRESS>
+        \}
+        match =ADDRESS, SR \{
          DB      067H
-        ENDIF
-        IFIDN   <&SR>,<address>
+        \}
+        match =address, SR \{
          DB      067H
-        ENDIF
-        ENDM
+        \}
+}
 

@@ -22,15 +22,13 @@ with & and fasm with #; MSBOOT.ASM has one NOP that MASM generated and the
 conversion writes out; and MSEXTRN.INC asks IFNDEF about a block whose body
 is commented out.
 
-COMMAND.COM accounts for twenty more.  NAME told the linker what to call the
-module and END told it where to start, which COMLNK.ASM says instead; an ORG 0
-at the top of a segment says the segment starts at its own beginning, which
-the flat image is already at; IFEQU.ASM's and INIT.ASM's IF1, IF2 and IFNDEF
-blocks spoke to the listing and to nothing else; TBATCH2.ASM names a label
-MATCH, which fasm reads as its own directive unless LABEL names it; TCODE.ASM
-reserves the transient's parameter area where MASM moved the origin over it;
-and TDATA.ASM's inner ENDM closed an IRP, which is a block in its own braces
-here.
+COMMAND.COM accounts for seven more.  NAME told the linker what to call the
+module and END told it where to start, which COMLNK.ASM says instead;
+IFEQU.ASM's and INIT.ASM's IF1, IF2 and IFNDEF blocks spoke to the listing and
+to nothing else; TBATCH2.ASM names a label MATCH, which fasm reads as its own
+directive unless LABEL names it; TCODE.ASM reserves the transient's parameter
+area where MASM moved the origin over it; and TDATA.ASM's inner ENDM closed an
+IRP, which is a block in its own braces here.
 
 It also reads each far procedure's RET, and every address the release asked
 for with OFFSET.  The mnemonic on the line is still
@@ -71,7 +69,11 @@ SAME = {
     "IFNB": {"MATCH"},
     "IFB": {"MATCH"},
     "ELSE": {"ELSE", None},         # or the block spoke to the listing
-    "ORG": {"ORG", "TIMES", "STORE", "VIRTUAL"},
+    # an ORG that moved the counter back over a table of jumps is the link
+    # file's jmpover$ on the line of the jump it wrote there, so the ORG
+    # itself says nothing and the JMP is the call
+    "ORG": {"ORG", "TIMES", "STORE", "VIRTUAL", None},
+    "JMP": {"JMP", "JMPOVER$"},
     # storage with nothing in it -- DB ? and DB n DUP(?) -- is reserved
     "DB": {"DB", "TIMES", "RB"},
     "DW": {"DW", "TIMES", "RW"},
@@ -84,7 +86,10 @@ SAME = {
     "EQU": {"EQU", "=", "LABEL"},
     "=": {"=", "EQU"},
     "MACRO": {"MACRO"},
-    "ENDM": {"}"},
+    # an ENDM closes a macro, which is a brace, or a REPT, which is fasm's
+    # REPEAT and closes with END REPEAT
+    "ENDM": {"}", "END"},
+    "REPT": {"REPEAT", "REPT"},
     "STRUC": {"STRUC"},
     "ENDS": {"}", "END", None},     # a segment's ENDS became "end if"
     "PUBLIC": {None},               # kept as comments
@@ -103,6 +108,13 @@ SAME = {
     ".XLIST": {None}, ".LIST": {None}, ".XCREF": {None}, ".CREF": {None},
     ".SALL": {None}, ".LALL": {None}, ".XALL": {None}, ".RADIX": {None},
     "%OUT": {None},
+    # MASM's processor directives said which instructions it would take,
+    # and fasm takes them all: XMAEM writes .286P above the modules whose
+    # macros hand-assemble the 386's, RAMDRIVE above the code it swaps in
+    # over the first megabyte.
+    ".8086": {None}, ".186": {None}, ".286": {None}, ".286P": {None},
+    ".386": {None}, ".386P": {None}, ".486": {None}, ".486P": {None},
+    ".8087": {None}, ".287": {None}, ".387": {None},
 }
 WORD = re.compile(r"[A-Za-z_@?$.%][A-Za-z0-9_@?$.]*")
 
@@ -283,14 +295,50 @@ def addresses(rel, was, now):
     return bad
 
 
+def commented(text):
+    """MASM's COMMENT, which ran from its delimiter to the next one.
+
+    fasm has no block comment, so the conversion gives every line of such a
+    block a semicolon of its own; read as code the block is a page of English
+    with a mnemonic at the front of every other line.  XMAEM opens each of
+    its modules with one -- the IBM banner, in a box of asterisks, after a
+    COMMENT # -- and nothing else in the release writes the directive.
+
+    Both sides are read this way: a file that has not been converted still
+    has the directive, and would otherwise be held against a commented copy
+    of itself.
+    """
+    lines = text.split("\n")
+    out, i = [], 0
+    while i < len(lines):
+        m = re.match(r"(?i)^[ \t]*COMMENT[ \t]+(\S)(.*)$", lines[i])
+        if not m:
+            out.append(lines[i])
+            i += 1
+            continue
+        delim, rest = m.group(1), m.group(2)
+        out.append(";" + lines[i])
+        i += 1
+        if delim in rest:               # it opens and closes on one line
+            continue
+        while i < len(lines):
+            out.append(";" + lines[i])
+            closed = delim in lines[i]
+            i += 1
+            if closed:
+                break
+    return "\n".join(out)
+
+
 def origin(rel):
     adds = subprocess.run(["git", "-C", REPO, "log", "--diff-filter=A",
                            "--format=%H", "--", rel],
                           capture_output=True, text=True).stdout.split()
     if not adds:
         return None
-    return subprocess.run(["git", "-C", REPO, "show", "%s:%s" % (adds[-1], rel)],
-                          capture_output=True).stdout.decode("cp437")
+    out = subprocess.run(["git", "-C", REPO, "show", "%s:%s" % (adds[-1], rel)],
+                         capture_output=True).stdout.decode("cp437")
+    return commented(out)
 
 
 CANON = {}
@@ -400,7 +448,8 @@ def main():
             continue
         whole = orig.replace("\r\n", "\n").split("\n")
         was = before_end(whole)
-        now = open(os.path.join(HERE, rel), encoding="cp437").read().split("\n")
+        now = commented(open(os.path.join(HERE, rel),
+                             encoding="cp437").read()).split("\n")
         if len(was) != len(now):
             lengths += 1
             total += compare_aligned(rel, was, now)
@@ -431,7 +480,8 @@ def main():
         if orig is None:
             continue
         was = before_end(orig.replace("\r\n", "\n").split("\n"))
-        now = open(os.path.join(HERE, rel), encoding="cp437").read().split("\n")
+        now = commented(open(os.path.join(HERE, rel),
+                             encoding="cp437").read()).split("\n")
         if was != now:
             total += addresses(rel, was, now)
     print("\n%d lines carry a different instruction; %d files are a different "

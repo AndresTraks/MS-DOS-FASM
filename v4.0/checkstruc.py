@@ -104,18 +104,33 @@ def items(operand):
     return [i.strip() for i in out if i.strip()]
 
 
-def size(unit, operand):
-    """What a field reserves, as a count of units: 11 for 11 DUP (?)."""
+def units(operand):
+    """How many units of its width an operand writes: 11 for 11 DUP (?).
+
+    A DUP inside a DUP counts both: XMAEM's INDEDAT writes a run of
+    descriptors as DB 16 DUP (8 DUP(0)), sixteen of them and eight bytes
+    each, where fasm takes one DUP and the conversion multiplies the two.
+    Read as the outer count alone the field measured sixteen bytes here and
+    a hundred and twenty-eight there, and every field after it would have
+    looked as though it had moved.
+    """
     terms = []
     for item in items(operand):
-        m = re.match(r"^(.*?)\bDUP\b\s*\(.*\)$", item, re.I | re.S)
+        m = re.match(r"^(.*?)\bDUP\b\s*\((.*)\)$", item, re.I | re.S)
         if m:
-            terms.append(norm(m.group(1)))
+            inner = units(m.group(2))
+            terms.append(norm(m.group(1)) if inner == "1"
+                         else "%s*%s" % (norm(m.group(1)), inner))
         elif re.match(r"^[\"'].*[\"']$", item, re.S):
             terms.append(str(len(item[1:-1])))
         else:
             terms.append("1")
-    return "%s*%d" % ("+".join(terms) or "1", UNIT[unit.upper()])
+    return "+".join(terms) or "1"
+
+
+def size(unit, operand):
+    """What a field reserves, as a count of bytes."""
+    return "%s*%d" % (units(operand), UNIT[unit.upper()])
 
 
 def norm(expr):
@@ -130,6 +145,13 @@ def norm(expr):
     # tables with TYPE XLAT_STR, and the conversion writes sizeof. for
     # both.
     expr = re.sub(r"\bTYPE(?!OF\.)([A-Z_]\w*)", r"SIZEOF.\1", expr)
+    # A field named with the structure it belongs to, where MASM read the
+    # name on its own.  XMAEM's INDEDAT reserves whatever is left of the
+    # descriptor table after the entries it names -- DB (GDT_LEN -
+    # (RSVD_GDT + 8) - (18 * 32)) DUP (0) -- and RSVD_GDT is a field of the
+    # structure that line is in, which the conversion writes as
+    # GDT_DEF.RSVD_GDT.
+    expr = re.sub(r"\b(?!SIZEOF\.)[A-Z_]\w*\.([A-Z_]\w*)", r"\1", expr)
     return expr.strip("()") or "1"
 
 

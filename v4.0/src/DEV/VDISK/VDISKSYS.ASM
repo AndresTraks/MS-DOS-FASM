@@ -1,17 +1,17 @@
-STRUC RHC RHC_1_=0, RHC_2_=0, RHC_CMD_=0, RHC_STA_=0
+STRUC RHC RHC_1_=0, RHC_2_=0, RHC_CMD_=0, RHC_STA_=0, RHC_5_=0
 {
 	DB	RHC_1_ ;length of Request Header (including data)
 	DB	RHC_2_ ;unit code (subunit)
 .RHC_CMD DB	RHC_CMD_ ;command code
 .RHC_STA DW	RHC_STA_ ;status
-	DQ	?			;reserved for DOS
+	DQ	RHC_5_ ;reserved for DOS
 ;;;;;	DW	?			;reserved for BIOS message flag 	;an006; dms;
 }
 match =RHC_LAID_OUT, RHC_LAID_OUT
 {
     RHC_LAID_OUT equ 1
     virtual at 0
-      RHC RHC 0, 0, 0, 0
+      RHC RHC 0, 0, 0, 0, 0
       sizeof.RHC = $ - RHC
     end virtual
 }

@@ -1,32 +1,32 @@
-COMMENT #
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-*                                                                             *
-* MODULE NAME     : INDEINS                                                   *
-*                                                                             *
-*                    5669-196 (C) COPYRIGHT 1988 Microsoft Corp.              *
-*                                                                             *
-* DESCRIPTIVE NAME: Instructions for the 80386                                *
-*                                                                             *
-* STATUS (LEVEL)  : Version (0) Level (1.0)                                   *
-*                                                                             *
-* FUNCTION        : These macros define instructions that are recognized by   *
-*                   the 80386 but that are not recognized by MASM 3.0.  We    *
-*                   have to create these instructions ourselves because the   *
-*                   Macro Assembler won't.                                    *
-*                                                                             *
-* MODULE TYPE     : MAC                                                       *
-*                                                                             *
-* REGISTER USAGE  : 80286 Standard                                            *
-*                                                                             *
-* CHANGE ACTIVITY :                                                           *
-*                                                                             *
-* $MAC(INDEINS) COMP(LOAD) PROD(3270PC) :                                     *
-*                                                                             *
-* $D0=D0004700 410 870604 D : NEW FOR RELEASE 1.1                             *
-* $P1=P0000311 410 870804 D : RENAME MODULE'S LIBRARY FILE TYPE TO "MAC"      *
-*                                                                             *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-#
+;COMMENT #
+;* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;*                                                                             *
+;* MODULE NAME     : INDEINS                                                   *
+;*                                                                             *
+;*                    5669-196 (C) COPYRIGHT 1988 Microsoft Corp.              *
+;*                                                                             *
+;* DESCRIPTIVE NAME: Instructions for the 80386                                *
+;*                                                                             *
+;* STATUS (LEVEL)  : Version (0) Level (1.0)                                   *
+;*                                                                             *
+;* FUNCTION        : These macros define instructions that are recognized by   *
+;*                   the 80386 but that are not recognized by MASM 3.0.  We    *
+;*                   have to create these instructions ourselves because the   *
+;*                   Macro Assembler won't.                                    *
+;*                                                                             *
+;* MODULE TYPE     : MAC                                                       *
+;*                                                                             *
+;* REGISTER USAGE  : 80286 Standard                                            *
+;*                                                                             *
+;* CHANGE ACTIVITY :                                                           *
+;*                                                                             *
+;* MAC$(INDEINS) COMP(LOAD) PROD(3270PC) :                                     *
+;*                                                                             *
+;* D0$=D0004700 410 870604 D : NEW FOR RELEASE 1.1                             *
+;* P1$=P0000311 410 870804 D : RENAME MODULE'S LIBRARY FILE TYPE TO "MAC"      *
+;*                                                                             *
+;* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;#
 
 ; Some information about creating instructions
 
@@ -82,52 +82,59 @@ PAGE
 ;       CMOV    EREG,CRx
 ;
 
-CMOV    MACRO   REG1,REG2
+macro CMOV REG1,REG2
+{
 
         _CREGFD = 0
         _CRCNT = 0
-        IRP     TREG,<CR3,CR2,CR1,CR0>
-         IFIDN  <&REG1>,<&TREG>
+        irp TREG, CR3,CR2,CR1,CR0 \{
+         define idn$indeins1 idn$no
+         match =TREG, REG1 \\{ define idn$indeins1 idn$yes \\}
+         match =idn$yes, idn$indeins1 \\{
           _CREGFD = 1
           _CRCNT = 0
-         ELSE
+         \\}
+         match =idn$no, idn$indeins1 \\{
           _CRCNT = _CRCNT + 1
-         ENDIF
-        ENDM
-        IFE _CREGFD-1
-         F_DREG <&REG2>
-         IF _DREGNUM LT 8
+         \\}
+        \}
+        if (_CREGFD-1) = 0
+         F_DREG <REG2>
+         IF _DREGNUM < 8
            DB    0FH
            DB    22H
            DB    0C0H + _CRCNT*8 + _DREGNUM
          ELSE
           SYNTAX ERROR - EXTENDED REGISTER EXPECTED
-         ENDIF
+         end if
         ELSE
          _CREGFD = 0
          _CRCNT = 0
-         IRP     TREG,<CR3,CR2,CR1,CR0>
-          IFIDN  <&REG2>,<&TREG>
+         irp TREG, CR3,CR2,CR1,CR0 \{
+          define idn$indeins2 idn$no
+          match =TREG, REG2 \\{ define idn$indeins2 idn$yes \\}
+          match =idn$yes, idn$indeins2 \\{
            _CREGFD = 1
            _CRCNT = 0
-          ELSE
+          \\}
+          match =idn$no, idn$indeins2 \\{
            _CRCNT = _CRCNT + 1
-          ENDIF
-         ENDM
-         IFE _CREGFD-1
-          F_DREG <&REG1>
-          IF _DREGNUM LT 8
+          \\}
+         \}
+         if (_CREGFD-1) = 0
+          F_DREG <REG1>
+          IF _DREGNUM < 8
            DB    0FH
            DB    20H
            DB    0C0H + _CRCNT*8 + _DREGNUM
           ELSE
            SYNTAX ERROR - EXTENDED REGISTER EXPECTED
-          ENDIF
+          end if
          ELSE
           SYNTAX ERROR - CONTROL REGISTER EXPECTED
-         ENDIF
-        ENDIF
-        ENDM
+         end if
+        end if
+}
 
 
 ;  DMOV - Move to and From Debug Registers
@@ -138,52 +145,59 @@ CMOV    MACRO   REG1,REG2
 ;       DMOV    EREG,DRx
 ;
 
-DMOV    MACRO   REG1,REG2
+macro DMOV REG1,REG2
+{
 
         _DREGFD = 0
         _DRCNT = 0
-        IRP     TREG,<DR7,DR6,DRX,DRX,DR3,DR2,DR1,DR0>
-         IFIDN  <&REG1>,<&TREG>
+        irp TREG, DR7,DR6,DRX,DRX,DR3,DR2,DR1,DR0 \{
+         define idn$indeins3 idn$no
+         match =TREG, REG1 \\{ define idn$indeins3 idn$yes \\}
+         match =idn$yes, idn$indeins3 \\{
           _DREGFD = 1
           _DRCNT = 0
-         ELSE
+         \\}
+         match =idn$no, idn$indeins3 \\{
           _DRCNT = _DRCNT + 1
-         ENDIF
-        ENDM
-        IFE _DREGFD-1
-         F_DREG <&REG2>
-         IF _DREGNUM LT 8
+         \\}
+        \}
+        if (_DREGFD-1) = 0
+         F_DREG <REG2>
+         IF _DREGNUM < 8
           DB    0FH
           DB    23H
           DB    0C0H + _DRCNT*8 + _DREGNUM
          ELSE
           SYNTAX ERROR - EXTENDED REGISTER EXPECTED
-         ENDIF
+         end if
         ELSE
          _DREGFD = 0
          _DRCNT = 0
-         IRP     TREG,<DR7,DR6,DRX,DRX,DR3,DR2,DR1,DR0>
-          IFIDN  <&REG2>,<&TREG>
+         irp TREG, DR7,DR6,DRX,DRX,DR3,DR2,DR1,DR0 \{
+          define idn$indeins4 idn$no
+          match =TREG, REG2 \\{ define idn$indeins4 idn$yes \\}
+          match =idn$yes, idn$indeins4 \\{
            _DREGFD = 1
            _DRCNT = 0
-          ELSE
+          \\}
+          match =idn$no, idn$indeins4 \\{
            _DRCNT = _DRCNT + 1
-          ENDIF
-         ENDM
-         IFE _DREGFD-1
-          F_DREG <&REG1>
-          IF _DREGNUM LT 8
+          \\}
+         \}
+         if (_DREGFD-1) = 0
+          F_DREG <REG1>
+          IF _DREGNUM < 8
            DB    0FH
            DB    21H
            DB    0C0H + _DRCNT*8 + _DREGNUM
           ELSE
            SYNTAX ERROR - EXTENDED REGISTER EXPECTED
-          ENDIF
+          end if
          ELSE
           SYNTAX ERROR - DEBUG REGISTER EXPECTED
-         ENDIF
-        ENDIF
-        ENDM
+         end if
+        end if
+}
 
 ;  TMOV - Move to and From Test Registers
 ;
@@ -193,54 +207,61 @@ DMOV    MACRO   REG1,REG2
 ;       TMOV    EREG,TRx
 ;
 
-TMOV    MACRO   REG1,REG2
+macro TMOV REG1,REG2
+{
 
         _TREGFD = 0
         _TRCNT = 0
-        IRP     TREG,<TR7,TR6>
-         IFIDN  <&REG1>,<&TREG>
+        irp TREG, TR7,TR6 \{
+         define idn$indeins5 idn$no
+         match =TREG, REG1 \\{ define idn$indeins5 idn$yes \\}
+         match =idn$yes, idn$indeins5 \\{
           _TREGFD = 1
           _TRCNT = 0
-         ELSE
+         \\}
+         match =idn$no, idn$indeins5 \\{
           _TRCNT = _TRCNT + 1
-         ENDIF
-        ENDM
+         \\}
+        \}
         _TRCNT = _TRCNT + 6
-        IFE _TREGFD-1
-         F_DREG <&REG2>
-         IF _DREGNUM LT 8
+        if (_TREGFD-1) = 0
+         F_DREG <REG2>
+         IF _DREGNUM < 8
           DB    0FH
           DB    26H
           DB    0C0H + _TRCNT*8 + _DREGNUM
          ELSE
           SYNTAX ERROR - EXTENDED REGISTER EXPECTED
-         ENDIF
+         end if
         ELSE
          _TREGFD = 0
          _TRCNT = 0
-         IRP     TREG,<TR7,TR6>
-          IFIDN  <&REG2>,<&TREG>
+         irp TREG, TR7,TR6 \{
+          define idn$indeins6 idn$no
+          match =TREG, REG2 \\{ define idn$indeins6 idn$yes \\}
+          match =idn$yes, idn$indeins6 \\{
            _TREGFD = 1
            _TRCNT = 0
-          ELSE
+          \\}
+          match =idn$no, idn$indeins6 \\{
            _TRCNT = _TRCNT + 1
-          ENDIF
-         ENDM
+          \\}
+         \}
          _TRCNT = _TRCNT + 6
-         IFE _TREGFD-1
-          F_DREG <&REG1>
-          IF _DREGNUM LT 8
+         if (_TREGFD-1) = 0
+          F_DREG <REG1>
+          IF _DREGNUM < 8
            DB    0FH
            DB    24H
            DB    0C0H + _TRCNT*8 + _DREGNUM
           ELSE
            SYNTAX ERROR - EXTENDED REGISTER EXPECTED
-          ENDIF
+          end if
          ELSE
           SYNTAX ERROR - TEST REGISTER EXPECTED
-         ENDIF
-        ENDIF
-        ENDM
+         end if
+        end if
+}
 
 ;  SMOV - Move to/from FS/GS segment registers from/to general registers
 ;
@@ -250,254 +271,322 @@ TMOV    MACRO   REG1,REG2
 ;       SMOV    REG16, SReg
 ;
 
-SMOV    MACRO   REG1,REG2
+macro SMOV REG1,REG2
+{
         _SREGNUM = 8
         _SREG1 = 1
-        IFIDN <&REG1>,<FS>
+        define idn$indeins7 idn$no
+        match =FS, REG1 \{ define idn$indeins7 idn$yes \}
+        match =idn$yes, idn$indeins7 \{
          _SREGNUM = 4
-        ELSE
-         IFIDN  <&REG1>,<FS>
+        \}
+        match =idn$no, idn$indeins7 \{
+         match =FS, REG1 \\{
           _SREGNUM = 4
-         ENDIF
-        ENDIF
-        IF _SREGNUM GT 7
-         IFIDN <&REG1>,<GS>
+         \\}
+        \}
+        IF _SREGNUM > 7
+         define idn$indeins8 idn$no
+         match =GS, REG1 \{ define idn$indeins8 idn$yes \}
+         match =idn$yes, idn$indeins8 \{
           _SREGNUM = 5
-         ELSE
-          IFIDN  <&REG1>,<GS>
+         \}
+         match =idn$no, idn$indeins8 \{
+          match =GS, REG1 \\{
            _SREGNUM = 5
-          ENDIF
-         ENDIF
-        ENDIF
-        IF _SREGNUM GT 7
+          \\}
+         \}
+        end if
+        IF _SREGNUM > 7
          _SREG1 = 0
-         IFIDN <&REG2>,<FS>
+         define idn$indeins9 idn$no
+         match =FS, REG2 \{ define idn$indeins9 idn$yes \}
+         match =idn$yes, idn$indeins9 \{
           _SREGNUM = 4
-         ELSE
-          IFIDN  <&REG2>,<FS>
+         \}
+         match =idn$no, idn$indeins9 \{
+          match =FS, REG2 \\{
            _SREGNUM = 4
-          ENDIF
-         ENDIF
-         IF _SREGNUM GT 7
-          IFIDN <&REG2>,<GS>
+          \\}
+         \}
+         IF _SREGNUM > 7
+          define idn$indeins10 idn$no
+          match =GS, REG2 \{ define idn$indeins10 idn$yes \}
+          match =idn$yes, idn$indeins10 \{
            _SREGNUM = 5
-          ELSE
-           IFIDN  <&REG2>,<GS>
+          \}
+          match =idn$no, idn$indeins10 \{
+           match =GS, REG2 \\{
             _SREGNUM = 5
-           ENDIF
-          ENDIF
-         ENDIF
-        ENDIF
-        IF _SREGNUM GT 7
+           \\}
+          \}
+         end if
+        end if
+        IF _SREGNUM > 7
          SYNTAX ERROR - FS OR GS SEGMENT REGISTER EXPECTED
         ELSE
-         IF _SREG1 EQ 1
+         IF _SREG1 = 1
           DB    8EH
-          F_WREG <&REG2>
+          F_WREG <REG2>
          ELSE
           DB    8CH
-          F_WREG <&REG1>
-         ENDIF
-         IF _WREGNUM GT 7
-          SYNTAX ERROR -  WORD REGISTER EXPECTED
+          F_WREG <REG1>
+         end if
+         IF _WREGNUM > 7
+; MASM read a type name in an expression as the number of bytes it
+; takes up, so BYTE on its own is 1 and WORD is 2.
+          SYNTAX ERROR -  2 REGISTER EXPECTED
          ELSE
           DB    0C0H + _SREGNUM*8 + _WREGNUM
-         ENDIF
-        ENDIF
-        ENDM
+         end if
+        end if
+}
 
-F_MOD   MACRO   TYPE,DISP1,DISP2
+macro F_MOD TYPE,DISP1,DISP2
+{
         _DISP = 2
 ;;                         1      0
-        IRP     _TEST_,<DISP32, DISP8>
-         IFIDN  <&TYPE>,<&_TEST_>
+        irp _TEST_, DISP32, DISP8 \{
+         define idn$indeins11 idn$no
+         match =_TEST_, TYPE \\{ define idn$indeins11 idn$yes \\}
+         match =idn$yes, idn$indeins11 \\{
           _DISP = 0
-         ELSE
+         \\}
+         match =idn$no, idn$indeins11 \\{
           _DISP = _DISP + 1
-         ENDIF
-        ENDM
-        IFE (_DISP LT 2)
+         \\}
+        \}
+        if ~ (_DISP < 2)
 ;;                          1      0
-         IRP     _TEST_,<DISP32, DISP8>
-          IFIDN  <&TYPE>,<&_TEST_>
+         irp _TEST_, DISP32, DISP8 \{
+          define idn$indeins12 idn$no
+          match =_TEST_, TYPE \\{ define idn$indeins12 idn$yes \\}
+          match =idn$yes, idn$indeins12 \\{
            _DISP = 0
-          ELSE
+          \\}
+          match =idn$no, idn$indeins12 \\{
            _DISP = _DISP + 1
-          ENDIF
-         ENDM
-        ENDIF
-        IF _DISP LT 2
-         IFB    <&DISP1>
+          \\}
+         \}
+        end if
+        IF _DISP < 2
+         match , DISP1 \{
           SYNTAX ERROR - IMMEDIATE OPERAND EXPECTED
-         ELSE
-          IFE _DISP-1
+         \}
+         match any$, DISP1 \{
+          if (_DISP-1) = 0
            _MOD = 2
           ELSE
            _MOD = 1
-          ENDIF
-         ENDIF
+          end if
+         \}
         ELSE
          _MOD = 0
-        ENDIF
-        ENDM
+        end if
+}
 
-MK_DISP MACRO   P3,P4
-        IFE _DISP
-            DB     &P3
+macro MK_DISP P3,P4
+{
+        if (_DISP) = 0
+            DB     P3
         ELSE
-            DW     &P3
-         IFNB  <&P4>
-          IFDIF <&P4>,<IMMD>
-            DW     &P4
-          ENDIF
-         ELSE
+            DW     P3
+         match any$, P4 \{
+          define idn$indeins13 idn$yes
+          match =IMMD, P4 \\{ define idn$indeins13 idn$no \\}
+          match =idn$yes, idn$indeins13 \\{
+            DW     P4
+          \\}
+         \}
+         match , P4 \{
             DW     0H
-         ENDIF
-        ENDIF
-        ENDM
+         \}
+        end if
+}
 
-MK_IMMD MACRO   P2,P3,P4,P5
+macro MK_IMMD P2,P3,P4,P5
+{
         _IMMDCNT = 3
-        IRP     _PARM,<&P2,&P3,&P4,&P5>
-         IFE _IMMDCNT
-          IF _SIZE EQ 1
-            DB     &_PARM
+        irp _PARM, P2,P3,P4,P5 \{
+         if (_IMMDCNT) = 0
+          IF _SIZE = 1
+            DB     _PARM
           ELSE
-            DW     &_PARM
-          ENDIF
+            DW     _PARM
+          end if
          ELSE
-          IFE _IMMDCNT-1
-           IF _SIZE EQ 4
-            IFNB <&_PARM>
-            DW     &_PARM
-            ELSE
+          if (_IMMDCNT-1) = 0
+           IF _SIZE = 4
+            match any$, _PARM \\{
+            DW     _PARM
+            \\}
+            match , _PARM \\{
             DW     0H
-            ENDIF
-           ENDIF
-          ENDIF
-         ENDIF
+            \\}
+           end if
+          end if
+         end if
          _IMMDCNT = _IMMDCNT + 1
-         IFIDN  <&_PARM>,<IMMD>
+         match =IMMD, _PARM \\{
          _IMMDCNT = 0
-         ENDIF
-        ENDM
-        ENDM
+         \\}
+        \}
+}
 
-F_BREG  MACRO   TBREG
+macro F_BREG TBREG
+{
         _BREGNUM = 0
-         IRP     TREG,<BH,DH,CH,AH,BL,DL,CL,AL>
-          IFIDN   <&TBREG>,<&TREG>
+         irp TREG, BH,DH,CH,AH,BL,DL,CL,AL \{
+          define idn$indeins14 idn$no
+          match =TREG, TBREG \\{ define idn$indeins14 idn$yes \\}
+          match =idn$yes, idn$indeins14 \\{
             _BREGNUM = 0
-          ELSE
+          \\}
+          match =idn$no, idn$indeins14 \\{
             _BREGNUM = _BREGNUM + 1
-          ENDIF
-         ENDM
-         IFE (_BREGNUM LT 8)
-          IRP     TREG,<BH,DH,CH,AH,BL,DL,CL,AL>
-           IFIDN   <&TDREG>,<&TREG>
+          \\}
+         \}
+         if ~ (_BREGNUM < 8)
+          irp TREG, BH,DH,CH,AH,BL,DL,CL,AL \{
+           define idn$indeins15 idn$no
+           match =TREG, TDREG \\{ define idn$indeins15 idn$yes \\}
+           match =idn$yes, idn$indeins15 \\{
              _BREGNUM = 0
-           ELSE
+           \\}
+           match =idn$no, idn$indeins15 \\{
              _BREGNUM = _BREGNUM + 1
-           ENDIF
-          ENDM
-         ENDIF
-        ENDM
+           \\}
+          \}
+         end if
+}
 
-F_WREG  MACRO   TWREG
+macro F_WREG TWREG
+{
         _WREGNUM = 0
-         IRP     TREG,<DI,SI,BP,SP,BX,DX,CX,AX>
-          IFIDN   <&TWREG>,<&TREG>
+         irp TREG, DI,SI,BP,SP,BX,DX,CX,AX \{
+          define idn$indeins16 idn$no
+          match =TREG, TWREG \\{ define idn$indeins16 idn$yes \\}
+          match =idn$yes, idn$indeins16 \\{
             _WREGNUM = 0
-          ELSE
+          \\}
+          match =idn$no, idn$indeins16 \\{
             _WREGNUM = _WREGNUM + 1
-          ENDIF
-         ENDM
-         IFE (_WREGNUM LT 8)
-          IRP     TREG,<DI,SI,BP,SP,BX,DX,CX,AX>
-           IFIDN   <&TWREG>,<&TREG>
+          \\}
+         \}
+         if ~ (_WREGNUM < 8)
+          irp TREG, DI,SI,BP,SP,BX,DX,CX,AX \{
+           define idn$indeins17 idn$no
+           match =TREG, TWREG \\{ define idn$indeins17 idn$yes \\}
+           match =idn$yes, idn$indeins17 \\{
              _WREGNUM = 0
-           ELSE
+           \\}
+           match =idn$no, idn$indeins17 \\{
              _WREGNUM = _WREGNUM + 1
-           ENDIF
-          ENDM
-         ENDIF
-        ENDM
+           \\}
+          \}
+         end if
+}
 
-F_DREG  MACRO   TDREG
+macro F_DREG TDREG
+{
         _DREGNUM = 0
-         IRP     TREG,<EDI,ESI,EBP,ESP,EBX,EDX,ECX,EAX>
-          IFIDN   <&TDREG>,<&TREG>
+         irp TREG, EDI,ESI,EBP,ESP,EBX,EDX,ECX,EAX \{
+          define idn$indeins18 idn$no
+          match =TREG, TDREG \\{ define idn$indeins18 idn$yes \\}
+          match =idn$yes, idn$indeins18 \\{
             _DREGNUM = 0
-          ELSE
+          \\}
+          match =idn$no, idn$indeins18 \\{
             _DREGNUM = _DREGNUM + 1
-          ENDIF
-         ENDM
-         IFE (_DREGNUM LT 8)
-          IRP     TREG,<EDI,ESI,EBP,ESP,EBX,EDX,ECX,EAX>
-           IFIDN   <&TDREG>,<&TREG>
+          \\}
+         \}
+         if ~ (_DREGNUM < 8)
+          irp TREG, EDI,ESI,EBP,ESP,EBX,EDX,ECX,EAX \{
+           define idn$indeins19 idn$no
+           match =TREG, TDREG \\{ define idn$indeins19 idn$yes \\}
+           match =idn$yes, idn$indeins19 \\{
              _DREGNUM = 0
-           ELSE
+           \\}
+           match =idn$no, idn$indeins19 \\{
              _DREGNUM = _DREGNUM + 1
-           ENDIF
-          ENDM
-         ENDIF
-        ENDM
+           \\}
+          \}
+         end if
+}
 
-F_BASE  MACRO   TBASE
+macro F_BASE TBASE
+{
         _BASE = 0
 ;;                      7     6     5     4     3     2     1     0
-        IRP     TREG,<[EDI],[ESI],[EBP],[ESP],[EBX],[EDX],[ECX],[EAX]>
-         IFIDN  <&TBASE>,<&TREG>
+        irp TREG, [EDI],[ESI],[EBP],[ESP],[EBX],[EDX],[ECX],[EAX] \{
+         define idn$indeins20 idn$no
+         match =TREG, TBASE \\{ define idn$indeins20 idn$yes \\}
+         match =idn$yes, idn$indeins20 \\{
           _BASE = 0
-         ELSE
+         \\}
+         match =idn$no, idn$indeins20 \\{
           _BASE = _BASE + 1
-         ENDIF
-        ENDM
-        IFE (_BASE LT 8)
+         \\}
+        \}
+        if ~ (_BASE < 8)
 ;;                      7     6     5     4     3     2     1     0
-         IRP     TREG,<[EDI],[ESI],[EBP],[ESP],[EBX],[EDX],[ECX],[EAX]>
-          IFIDN  <&TBASE>,<&TREG>
+         irp TREG, [EDI],[ESI],[EBP],[ESP],[EBX],[EDX],[ECX],[EAX] \{
+          define idn$indeins21 idn$no
+          match =TREG, TBASE \\{ define idn$indeins21 idn$yes \\}
+          match =idn$yes, idn$indeins21 \\{
            _BASE = 0
-          ELSE
+          \\}
+          match =idn$no, idn$indeins21 \\{
            _BASE = _BASE + 1
-          ENDIF
-         ENDM
-        ENDIF
-        ENDM
+          \\}
+         \}
+        end if
+}
 
-F_INDEX MACRO   INDX
+macro F_INDEX INDX
+{
         _INDEX = 0
 ;;                      7    6    5    4    3    2    1    0
-        IRP     TREG,<[EDI,[ESI,[EBP,_XX_,[EBX,[EDX,[ECX,[EAX>
-         IFIDN  <&INDX>,<&TREG>
+        irp TREG, [EDI,[ESI,[EBP,_XX_,[EBX,[EDX,[ECX,[EAX \{
+         define idn$indeins22 idn$no
+         match =TREG, INDX \\{ define idn$indeins22 idn$yes \\}
+         match =idn$yes, idn$indeins22 \\{
           _INDEX = 0
-         ELSE
+         \\}
+         match =idn$no, idn$indeins22 \\{
           _INDEX = _INDEX + 1
-         ENDIF
-        ENDM
-        IFE (_INDEX LT 8)
+         \\}
+        \}
+        if ~ (_INDEX < 8)
 ;;                       7    6    5    4    3    2    1    0
-         IRP     TREG,<[EDI,[ESI,[EBP,_XX_,[EBX,[EDX,[ECX,[EAX>
-          IFIDN  <&INDX>,<&TREG>
+         irp TREG, [EDI,[ESI,[EBP,_XX_,[EBX,[EDX,[ECX,[EAX \{
+          define idn$indeins23 idn$no
+          match =TREG, INDX \\{ define idn$indeins23 idn$yes \\}
+          match =idn$yes, idn$indeins23 \\{
            _INDEX = 0
-          ELSE
+          \\}
+          match =idn$no, idn$indeins23 \\{
            _INDEX = _INDEX + 1
-          ENDIF
-         ENDM
-        ENDIF
-        ENDM
+          \\}
+         \}
+        end if
+}
 
-F_SCALE MACRO   TSCALE
+macro F_SCALE TSCALE
+{
         _SCALE = 0
 ;;                     3    2    1    0
-        IRP     TREG,<*8], *4], *2], *1]>
-         IFIDN  <&TSCALE>,<&TREG>
+        irp TREG, *8], *4], *2], *1] \{
+         define idn$indeins24 idn$no
+         match =TREG, TSCALE \\{ define idn$indeins24 idn$yes \\}
+         match =idn$yes, idn$indeins24 \\{
           _SCALE = 0
-         ELSE
+         \\}
+         match =idn$no, idn$indeins24 \\{
           _SCALE = _SCALE + 1
-         ENDIF
-        ENDM
-        ENDM
+         \\}
+        \}
+}
 
 PAGE
 
@@ -506,34 +595,38 @@ PAGE
 
 ; PUSH_FS - PUSH FS segment register
 
-PUSH_FS MACRO
+macro PUSH_FS 
+{
           DB    00FH
           DB    0A0H
-        ENDM
+}
 
 
 ; PUSH_GS - PUSH GS segment register
 
-PUSH_GS MACRO
+macro PUSH_GS 
+{
           DB    00FH
           DB    0A8H
-        ENDM
+}
 
 
 ; POP_FS - POP FS segment register
 
-POP_FS  MACRO
+macro POP_FS 
+{
           DB    00FH
           DB    0A1H
-        ENDM
+}
 
 
 ; POP_GS - POP GS segment register
 
-POP_GS  MACRO
+macro POP_GS 
+{
           DB    00FH
           DB    0A9H
-        ENDM
+}
 
 PAGE
 
@@ -542,94 +635,103 @@ PAGE
 ; RIMUL - Uncharacterized Signed Multiply (16-bit)
 ; Syntax: RIMUL   REG,REG/MEM
 
-RIMUL   MACRO   REG,OPND
-        LOCAL   L1,L2
+macro RIMUL REG,OPND
+{
+        local   L1,L2
         _2BYTEOP = 1
         DB      0FH
         .XLIST
-L1       LABEL   BYTE
+label L1 byte
         .LIST
-        CMP    &REG,&OPND
+        CMP    REG,OPND
         .XLIST
-L2      LABEL  BYTE
-        ORG    OFFSET CS:L1
+label L2 byte
+        ORG    L1
         .LIST
         DB     0AFH
         .XLIST
-        ORG    OFFSET CS:L2
+        ORG    L2
         .LIST
-        ENDM
+}
 
 ; ERIMUL - 32 bit Uncharacterized Signed Multiply
 ; Systax: ERIMUL  REG,REG/MEM
 
-ERIMUL  MACRO   REG,OPND
+macro ERIMUL REG,OPND
+{
         DB      66H
-        RIMUL   &REG,<&OPND>
-        ENDM
+        RIMUL   REG,<OPND>
+}
 
 PAGE
 
 ; Macros to load pointers with the segment in FS, GS or SS.  That is, these are
 ; just like the instructions LDS and LES but for the FS, GS and SS registers.
 
-NEWLS   MACRO   OP,REG,OPND
-        LOCAL   L1,L2
+macro NEWLS OP,REG,OPND
+{
+        local   L1,L2
          DB      0FH
         .XLIST
-L1      LABEL   BYTE
+label L1 byte
         .LIST
-         LDS     &REG,DWORD PTR &OPND
+         LDS     REG,dword [OPND]
         .XLIST
-L2      LABEL   BYTE
-        ORG     OFFSET CS:L1
+label L2 byte
+        ORG     L1
         .LIST
-         DB      &OP
+         DB      OP
         .XLIST
-        ORG     OFFSET CS:L2
+        ORG     L2
         .LIST
-        ENDM
+}
 
 ;       LFS     REG,OPND
 
-LFS     MACRO   REG,OPND
-        NEWLS   0B4H,&REG,<&OPND>
-        ENDM
+macro LFS REG,OPND
+{
+        NEWLS   0B4H,REG,<OPND>
+}
 
 ;       LGS     REG,OPND
 
-LGS     MACRO   REG,OPND
-        NEWLS   0B5H,&REG,<&OPND>
-        ENDM
+macro LGS REG,OPND
+{
+        NEWLS   0B5H,REG,<OPND>
+}
 
 ;       LSS     REG,OPND
 
-LSS     MACRO   REG,OPND
-        NEWLS   0B2H,&REG,<&OPND>
-        ENDM
+macro LSS REG,OPND
+{
+        NEWLS   0B2H,REG,<OPND>
+}
 
 ; Now we do 32 bit versions of the above
 
 ;       ELFS    REG,OPND
 
-ELFS    MACRO   REG,OPND
+macro ELFS REG,OPND
+{
          DB      66H
-        NEWLS   0B4H,&REG,<&OPND>
-        ENDM
+        NEWLS   0B4H,REG,<OPND>
+}
 
 ;       ELGS    REG,OPND
 
-ELGS    MACRO   REG,OPND
+macro ELGS REG,OPND
+{
          DB      66H
-        NEWLS   0B5H,&REG,<&OPND>
-        ENDM
+        NEWLS   0B5H,REG,<OPND>
+}
 
 ;       ELSS    REG,OPND
 
-ELSS    MACRO   REG,OPND
+macro ELSS REG,OPND
+{
          DB      66H
-        NEWLS   0B2H,&REG,<&OPND>
-        ENDM
+        NEWLS   0B2H,REG,<OPND>
+}
 
 PAGE
 
@@ -638,93 +740,102 @@ PAGE
 ; Shift Left Double     R/M, Reg [CL = COUNT] [16-bit Operand]
 ;       SHLD    OPND,REG      (Double left shift) [CL = COUNT]
 
-SHLD    MACRO   OPND,REG
-        SHDOP   0A5H,<&OPND>,&REG
-        ENDM
+macro SHLD OPND,REG
+{
+        SHDOP   0A5H,<OPND>,REG
+}
 
 
 ; Shift Right Double    R/M, Reg [CL = COUNT] [16-bit Operand]
 ;       SHRD    OPND,REG      (Double right shift) [CL = COUNT]
 
-SHRD    MACRO   OPND,REG
-        SHDOP   0ADH,<&OPND>,&REG
-        ENDM
+macro SHRD OPND,REG
+{
+        SHDOP   0ADH,<OPND>,REG
+}
 
 
 ; Shift Left Double     R/M, Reg, Immd (8-bit) [16-bit Operand]
 ;       SHLDI   OPND,REG,IMMD-8
 
-SHLDI   MACRO   OPND,REG,IMMD
-        SHDOP   0A4H,<&OPND>,&REG
-        DB      &IMMD
-        ENDM
+macro SHLDI OPND,REG,IMMD
+{
+        SHDOP   0A4H,<OPND>,REG
+        DB      IMMD
+}
 
 
 ; Shift Right Double    R/M, Reg, Immd (8-bit) [16-bit Operand]
 ;       SHRDI   OPND,REG,IMMD-8
 
-SHRDI   MACRO   OPND,REG,IMMD
-        SHDOP   0ACH,<&OPND>,&REG
-        DB      &IMMD
-        ENDM
+macro SHRDI OPND,REG,IMMD
+{
+        SHDOP   0ACH,<OPND>,REG
+        DB      IMMD
+}
 
 ; Now 32 bit versions of the above
 
 ; Shift Left Double     R/M, Reg [CL = COUNT]  [32-bit Operand]
 ;       ESHLD   OPND,REG        (Double left shift) [CL = COUNT]
 
-ESHLD   MACRO   OPND,REG
+macro ESHLD OPND,REG
+{
          DB      66H
-        SHDOP   0A5H,<&OPND>,&REG
-        ENDM
+        SHDOP   0A5H,<OPND>,REG
+}
 
 
 ; Shift Right Double    R/M, Reg [CL = COUNT]  [32-bit Operand]
 ;       ESHRD   OPND,REG        (Double right shift) [CL = COUNT]
 
-ESHRD   MACRO   OPND,REG
+macro ESHRD OPND,REG
+{
          DB      66H
-        SHDOP   0ADH,<&OPND>,&REG
-        ENDM
+        SHDOP   0ADH,<OPND>,REG
+}
 
 
 ; Shift Left Double     R/M, Reg, Immd (8-bit) [32-bit Operand]
 ;       ESHLDI  OPND,REG,IMMD-8 (Double left shift)
 
-ESHLDI  MACRO   OPND,REG,IMMD
+macro ESHLDI OPND,REG,IMMD
+{
          DB      66H
-        SHDOP   0A4H,<&OPND>,&REG
-         DB      &IMMD
-        ENDM
+        SHDOP   0A4H,<OPND>,REG
+         DB      IMMD
+}
 
 
 ; Shift Right Double    R/M, Reg, Immd (8-bit) [32-bit Operand]
 ;      ESHRDI  OPND,REG,IMMD-8 (Double right shift)
 
-ESHRDI  MACRO   OPND,REG,IMMD
+macro ESHRDI OPND,REG,IMMD
+{
          DB      66H
-        SHDOP   0ACH,<&OPND>,&REG
-         DB      &IMMD
-        ENDM
+        SHDOP   0ACH,<OPND>,REG
+         DB      IMMD
+}
 
 
-SHDOP   MACRO   OP,OPND,REG
-        LOCAL   L1,L2
+macro SHDOP OP,OPND,REG
+{
+        local   L1,L2
         _2BYTEOP = 1
          DB      0FH
         .XLIST
-L1      LABEL   BYTE
+label L1 byte
         .LIST
-         OR      &REG,&OPND
+         OR      REG,OPND
         .XLIST
-L2      LABEL   BYTE
-        ORG     OFFSET CS:L1
+label L2 byte
+        ORG     L1
         .LIST
-         DB      &OP
+         DB      OP
         .XLIST
-        ORG     OFFSET CS:L2
+        ORG     L2
         .LIST
-        ENDM
+}
 
 PAGE
 
@@ -735,189 +846,223 @@ PAGE
 ;       jump and call far indirect, since you go pick up the offset and
 ;       segment at execution time.
 
-CALLFAR MACRO   DISP,SEGMENT
+macro CALLFAR DISP,SEGMENT
+{
 
         DB      09AH                    ; Call far direct
-        DW      (OFFSET &DISP)          ;   to this offset
-        DW      &SEGMENT                ;     in this segment
+        DW      (DISP)                 ;   to this offset
+;        DW      SEGMENT                ;     in this segment
 
-        ENDM
+}
 
 
-JUMPFAR MACRO   DISP,SEGMENT
+macro JUMPFAR DISP,SEGMENT
+{
 
         DB      0EAH                    ; Jump far direct
-        DW      (OFFSET &DISP)          ;   to this offset
-        DW      &SEGMENT                ;     in this segment
+        DW      (DISP)                 ;   to this offset
+;        DW      SEGMENT                ;     in this segment
 
-        ENDM
+}
 
 PAGE
 
 ; Macros for extended jump instructions
 
-LJCOND  MACRO   OP,DISPL
+macro LJCOND OP,DISPL
+{
         _2BYTEOP = 1
 TEMP    =       $ + 4
          DB      0FH
-         DB      &OP
-         DW      (OFFSET &DISPL)-(&TEMP)
-        ENDM
+         DB      OP
+         DW      (DISPL)-(TEMP)
+}
 
 ;       LJO     DISPL  (Long Jump on Overflow)
-LJO     MACRO   DISPL
-        LJCOND  80H,<&DISPL>
-        ENDM
+macro LJO DISPL
+{
+        LJCOND  80H,<DISPL>
+}
 
 
 ;       LJNO    DISPL  (Long Jump on NO Overflow)
-LJNO    MACRO   DISPL
-        LJCOND  81H,<&DISPL>
-        ENDM
+macro LJNO DISPL
+{
+        LJCOND  81H,<DISPL>
+}
 
 ;       LJB     DISPL  (Long Jump on Below)
-LJB     MACRO   DISPL
-        LJCOND  82H,<&DISPL>
-        ENDM
+macro LJB DISPL
+{
+        LJCOND  82H,<DISPL>
+}
 
 ;       LJC     DISPL  (Long Jump on Carry)
-LJC     MACRO   DISPL
-        LJCOND  82H,<&DISPL>
-        ENDM
+macro LJC DISPL
+{
+        LJCOND  82H,<DISPL>
+}
 
 ;       LNAE    DISPL  (Long Jump on Not Above or Equal)
-LNAE    MACRO   DISPL
-        LJCOND  82H,<&DISPL>
-        ENDM
+macro LNAE DISPL
+{
+        LJCOND  82H,<DISPL>
+}
 
 ;       LJNB    DISPL  (Long Jump on Not Below)
-LJNB    MACRO   DISPL
-        LJCOND  83H,<&DISPL>
-        ENDM
+macro LJNB DISPL
+{
+        LJCOND  83H,<DISPL>
+}
 
 ;       LJNC    DISPL  (Long Jump on No Carry)
-LJNC    MACRO   DISPL
-        LJCOND  83H,<&DISPL>
-        ENDM
+macro LJNC DISPL
+{
+        LJCOND  83H,<DISPL>
+}
 
 ;       LJAE    DISPL  (Long Jump on Above or Equal)
-LJAE    MACRO   DISPL
-        LJCOND  83H,<&DISPL>
-        ENDM
+macro LJAE DISPL
+{
+        LJCOND  83H,<DISPL>
+}
 
 ;       LJE     DISPL  (Long Jump on Equal)
-LJE     MACRO   DISPL
-        LJCOND  84H,<&DISPL>
-        ENDM
+macro LJE DISPL
+{
+        LJCOND  84H,<DISPL>
+}
 
 ;       LJZ     DISPL  (Long Jump on Zero)
-LJZ     MACRO   DISPL
-        LJCOND  84H,<&DISPL>
-        ENDM
+macro LJZ DISPL
+{
+        LJCOND  84H,<DISPL>
+}
 
 ;       LJNE    DISPL  (Long Jump on Not Equal)
-LJNE    MACRO   DISPL
-        LJCOND  85H,<&DISPL>
-        ENDM
+macro LJNE DISPL
+{
+        LJCOND  85H,<DISPL>
+}
 
 ;       LJNZ    DISPL  (Long Jump on Not Zero)
-LJNZ    MACRO   DISPL
-        LJCOND  85H,<&DISPL>
-        ENDM
+macro LJNZ DISPL
+{
+        LJCOND  85H,<DISPL>
+}
 
 ;       LJBE    DISPL  (Long Jump on Below or Equal)
-LJBE    MACRO   DISPL
-        LJCOND  86H,<&DISPL>
-        ENDM
+macro LJBE DISPL
+{
+        LJCOND  86H,<DISPL>
+}
 
 ;       LJNA    DISPL  (Long Jump on Not Above)
-LJNA    MACRO   DISPL
-        LJCOND  86H,<&DISPL>
-        ENDM
+macro LJNA DISPL
+{
+        LJCOND  86H,<DISPL>
+}
 
 ;       LJNBE   DISPL  (Long Jump on Not Below or Equal)
-LJNBE   MACRO   DISPL
-        LJCOND  87H,<&DISPL>
-        ENDM
+macro LJNBE DISPL
+{
+        LJCOND  87H,<DISPL>
+}
 
 ;       LJA     DISPL  (Long Jump on Above)
-LJA     MACRO   DISPL
-        LJCOND  87H,<&DISPL>
-        ENDM
+macro LJA DISPL
+{
+        LJCOND  87H,<DISPL>
+}
 
 ;       LJS     DISPL  (Long Jump on Sign)
-LJS     MACRO   DISPL
-        LJCOND  88H,<&DISPL>
-        ENDM
+macro LJS DISPL
+{
+        LJCOND  88H,<DISPL>
+}
 
 ;       LJNS    DISPL  (Long Jump on No Sign)
-LJNS    MACRO   DISPL
-        LJCOND  89H,<&DISPL>
-        ENDM
+macro LJNS DISPL
+{
+        LJCOND  89H,<DISPL>
+}
 
 ;       LJP     DISPL  (Long Jump on Parity)
-LJP     MACRO   DISPL
-        LJCOND  8AH,<&DISPL>
-        ENDM
+macro LJP DISPL
+{
+        LJCOND  8AH,<DISPL>
+}
 
 ;       LJPE    DISPL  (Long Jump on Parity Even)
-LJPE    MACRO   DISPL
-        LJCOND  8AH,<&DISPL>
-        ENDM
+macro LJPE DISPL
+{
+        LJCOND  8AH,<DISPL>
+}
 
 ;       LJNP    DISPL  (Long Jump on No Parity)
-LJNP    MACRO   DISPL
-        LJCOND  8BH,<&DISPL>
-        ENDM
+macro LJNP DISPL
+{
+        LJCOND  8BH,<DISPL>
+}
 
 ;       LJPO    DISPL  (Long Jump on Parity Odd)
-LJPO    MACRO   DISPL
-        LJCOND  8BH,<&DISPL>
-        ENDM
+macro LJPO DISPL
+{
+        LJCOND  8BH,<DISPL>
+}
 
 ;       LJL     DISPL  (Long Jump on Less)
-LJL     MACRO   DISPL
-        LJCOND  8CH,<&DISPL>
-        ENDM
+macro LJL DISPL
+{
+        LJCOND  8CH,<DISPL>
+}
 
 ;       LJNGE   DISPL  (Long Jump on Not Greater or Equal)
-LJNGE   MACRO   DISPL
-        LJCOND  8CH,<&DISPL>
-        ENDM
+macro LJNGE DISPL
+{
+        LJCOND  8CH,<DISPL>
+}
 
 ;       LJNL    DISPL  (Long Jump on Not Less)
-LJNL    MACRO   DISPL
-        LJCOND  8DH,<&DISPL>
-        ENDM
+macro LJNL DISPL
+{
+        LJCOND  8DH,<DISPL>
+}
 
 ;       LJGE    DISPL  (Long Jump on Greater than or Equal)
-LJGE    MACRO   DISPL
-        LJCOND  8DH,<&DISPL>
-        ENDM
+macro LJGE DISPL
+{
+        LJCOND  8DH,<DISPL>
+}
 
 ;       LJLE    DISPL  (Long Jump on Less than or Equal)
-LJLE    MACRO   DISPL
-        LJCOND  8EH,<&DISPL>
-        ENDM
+macro LJLE DISPL
+{
+        LJCOND  8EH,<DISPL>
+}
 
 ;       LJNG    DISPL  (Long Jump on Not Greater than)
-LJNG    MACRO   DISPL
-        LJCOND  8EH,<&DISPL>
-        ENDM
+macro LJNG DISPL
+{
+        LJCOND  8EH,<DISPL>
+}
 
 ;       LJNLE   DISPL  (Long Jump on Not Less than or Equal)
-LJNLE   MACRO   DISPL
-        LJCOND  8FH,<&DISPL>
-        ENDM
+macro LJNLE DISPL
+{
+        LJCOND  8FH,<DISPL>
+}
 
 ;       LJG     DISPL  (Long Jump on Greater than)
-LJG     MACRO   DISPL
-        LJCOND  8FH,<&DISPL>
-        ENDM
+macro LJG DISPL
+{
+        LJCOND  8FH,<DISPL>
+}
 
 ;       JECXZ   DISPL  (Jump short on ECX Zero)
-JECEXZ  MACRO   DISPL
+macro JECEXZ DISPL
+{
          DB      66H
-         JCXZ    &DISPL
-        ENDM
+         JCXZ    DISPL
+}
 

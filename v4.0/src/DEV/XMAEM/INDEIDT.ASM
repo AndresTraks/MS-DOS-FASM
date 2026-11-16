@@ -1,94 +1,137 @@
+STRUC SPSTACK SP_SI_=0, SPSTACK_2_=0, SP_DI_=0, SPSTACK_4_=0, SP_AX_=0, SPSTACK_6_=0, SP_BP_=0, SP_EX_=0, SP_IP_=0, SP_IP2_=0, SP_CS_=0, SP_CS2_=0, SP_FL_=0, SP_FL2_=0, SP_SP_=0, SP_SP2_=0, SP_SS_=0, SP_SS2_=0, SP_VMES_=0, SPSTACK_20_=0, SP_VMDS_=0, SPSTACK_22_=0, SP_VMFS_=0, SPSTACK_24_=0, SP_VMGS_=0, SPSTACK_26_=0, SP_STK_=0
+{
+
+.SP_SI   DW      SP_SI_ ; Saved ESI (32 bit SI)
+        DW      SPSTACK_2_
+.SP_DI   DW      SP_DI_ ; Saved EDI (32 bit DI)
+        DW      SPSTACK_4_
+.SP_AX   DW      SP_AX_ ; Saved EAX
+        DW      SPSTACK_6_
+.SP_BP   DW      SP_BP_ ; Saved BP (only 16 bits)
+.SP_EX   DW      SP_EX_ ; Interrupt vector offset (interrupt number * 4)
+
+; The following information is saved by the 80386
+
+.SP_IP   DW      SP_IP_ ; Interruptee's EIP (32 bit IP)
+.SP_IP2  DW      SP_IP2_
+.SP_CS   DW      SP_CS_ ; Interruptee's CS (16 bit CS and 16 bit junk)
+.SP_CS2  DW      SP_CS2_
+.SP_FL   DW      SP_FL_ ; Interruptee's Eflags (32 bit flags)
+.SP_FL2  DW      SP_FL2_
+.SP_SP   DW      SP_SP_ ; Interruptee's ESP
+.SP_SP2  DW      SP_SP2_
+.SP_SS   DW      SP_SS_ ; Interruptee's SS
+.SP_SS2  DW      SP_SS2_
+.SP_VMES DW      SP_VMES_ ; Interruptee's ES
+        DW      SPSTACK_20_
+.SP_VMDS DW      SP_VMDS_ ; Interruptee's DS
+        DW      SPSTACK_22_
+.SP_VMFS DW      SP_VMFS_ ; Interruptee's FS
+        DW      SPSTACK_24_
+.SP_VMGS DW      SP_VMGS_ ; Interruptee's GS
+        DW      SPSTACK_26_
+.SP_STK  DW      SP_STK_ ; The rest of the stack
+
+}
+match =SPSTACK_LAID_OUT, SPSTACK_LAID_OUT
+{
+    SPSTACK_LAID_OUT equ 1
+    virtual at 0
+      SPSTACK SPSTACK 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+      sizeof.SPSTACK = $ - SPSTACK
+    end virtual
+}
 PAGE    60,132
 TITLE   INDEIDT - 386 XMA Emulator - Build Interrupt Descriptor Table
 
-COMMENT #
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-*                                                                             *
-* MODULE NAME     : INDEIDT                                                   *
-*                                                                             *
-*                                                                             *
-*                    5669-196 (C) COPYRIGHT 1988 Microsoft Corp.              *
-*	                                                                      *
-* DESCRIPTIVE NAME: Build the Interrupt Descriptor Table (IDT)                *
-*                                                                             *
-* STATUS (LEVEL)  : Version (0) Level (2.0)                                   *
-*                                                                             *
-* FUNCTION        : Build the Interrupt Descriptor Table for the 80386 XMA    *
-*                   emulator.                                                 *
-*                                                                             *
-* MODULE TYPE     : ASM                                                       *
-*                                                                             *
-* REGISTER USAGE  : 80386 Standard                                            *
-*                                                                             *
-* RESTRICTIONS    : None                                                      *
-*                                                                             *
-* DEPENDENCIES    : None                                                      *
-*                                                                             *
-* ENTRY POINT     : SIDT_BLD (not to be confused with SIDTBLD)                *
-*                                                                             *
-* LINKAGE         : Called by INDEINI                                         *
-*                                                                             *
-* INPUT PARMS     : None                                                      *
-*                                                                             *
-* RETURN PARMS    : None                                                      *
-*                                                                             *
-* OTHER EFFECTS   : None                                                      *
-*                                                                             *
-* EXIT NORMAL     : Return to INDEINI                                         *
-*                                                                             *
-* EXIT ERROR      : None                                                      *
-*                                                                             *
-* EXTERNAL                                                                    *
-* REFERENCES      : VEXCP13 - Entry point for INDEEXC                         *
-*                                                                             *
-* SUB-ROUTINES    : BLD_IDT - Put the entries into the IDT                    *
-*                                                                             *
-* MACROS          : DATAOV - Create a prefix for the following instruction    *
-*                            so that it accesses data 32 bits wide            *
-*                   ADDROV - Create a prefix for the following instruction    *
-*                            so that it uses addresses that are 32 bits wide  *
-*                                                                             *
-* CONTROL BLOCKS  : INDEDAT                                                   *
-*                                                                             *
-* CHANGE ACTIVITY :                                                           *
-*                                                                             *
-* $MOD(INDEIDT) COMP(LOAD) PROD(3270PC) :                                     *
-*                                                                             *
-* $D0=D0004700 410 870530 D : NEW FOR RELEASE 1.1                             *
-* $P1=P0000312 410 870803 D : CHANGE COMPONENT FROM MISC TO LOAD              *
-* $P2=P0000xxx 120 880517 D : HANDLE INT 0D FROM V86 TASK, I.E., OPTICAL DISK *
-*                                                                             *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-#
+;COMMENT #
+;* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;*                                                                             *
+;* MODULE NAME     : INDEIDT                                                   *
+;*                                                                             *
+;*                                                                             *
+;*                    5669-196 (C) COPYRIGHT 1988 Microsoft Corp.              *
+;*	                                                                      *
+;* DESCRIPTIVE NAME: Build the Interrupt Descriptor Table (IDT)                *
+;*                                                                             *
+;* STATUS (LEVEL)  : Version (0) Level (2.0)                                   *
+;*                                                                             *
+;* FUNCTION        : Build the Interrupt Descriptor Table for the 80386 XMA    *
+;*                   emulator.                                                 *
+;*                                                                             *
+;* MODULE TYPE     : ASM                                                       *
+;*                                                                             *
+;* REGISTER USAGE  : 80386 Standard                                            *
+;*                                                                             *
+;* RESTRICTIONS    : None                                                      *
+;*                                                                             *
+;* DEPENDENCIES    : None                                                      *
+;*                                                                             *
+;* ENTRY POINT     : SIDT_BLD (not to be confused with SIDTBLD)                *
+;*                                                                             *
+;* LINKAGE         : Called by INDEINI                                         *
+;*                                                                             *
+;* INPUT PARMS     : None                                                      *
+;*                                                                             *
+;* RETURN PARMS    : None                                                      *
+;*                                                                             *
+;* OTHER EFFECTS   : None                                                      *
+;*                                                                             *
+;* EXIT NORMAL     : Return to INDEINI                                         *
+;*                                                                             *
+;* EXIT ERROR      : None                                                      *
+;*                                                                             *
+;* EXTERNAL                                                                    *
+;* REFERENCES      : VEXCP13 - Entry point for INDEEXC                         *
+;*                                                                             *
+;* SUB-ROUTINES    : BLD_IDT - Put the entries into the IDT                    *
+;*                                                                             *
+;* MACROS          : DATAOV - Create a prefix for the following instruction    *
+;*                            so that it accesses data 32 bits wide            *
+;*                   ADDROV - Create a prefix for the following instruction    *
+;*                            so that it uses addresses that are 32 bits wide  *
+;*                                                                             *
+;* CONTROL BLOCKS  : INDEDAT                                                   *
+;*                                                                             *
+;* CHANGE ACTIVITY :                                                           *
+;*                                                                             *
+;* MOD$(INDEIDT) COMP(LOAD) PROD(3270PC) :                                     *
+;*                                                                             *
+;* D0$=D0004700 410 870530 D : NEW FOR RELEASE 1.1                             *
+;* P1$=P0000312 410 870803 D : CHANGE COMPONENT FROM MISC TO LOAD              *
+;* P2$=P0000xxx 120 880517 D : HANDLE INT 0D FROM V86 TASK, I.E., OPTICAL DISK *
+;*                                                                             *
+;* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;#
 
-        .286P                 ; Enable recognition of 286 privileged instructs.
+;        .286P                 ; Enable recognition of 286 privileged instructs.
 
         .XLIST                ; Turn off the listing
-        INCLUDE INDEDAT.INC   ; System data structures and equates
+        include 'INDEDAT.INC' ; System data structures and equates
 
-        IF1                   ; Only include macros on the first pass
-        INCLUDE INDEOVP.MAC
-        ENDIF
+;        IF1                   ; Only include macros on the first pass
+        include 'INDEOVP.MAC'
+;        ENDIF
         .LIST                 ; Turn on the listing
 PAGE
 
-PROG    SEGMENT PARA    PUBLIC  'PROG'
+;PROG    SEGMENT PARA    PUBLIC  'PROG'
 
-        ASSUME  CS:PROG
-        ASSUME  SS:NOTHING
-        ASSUME  DS:NOTHING
-        ASSUME  ES:NOTHING
+;        ASSUME  CS:PROG
+;        ASSUME  SS:NOTHING
+;        ASSUME  DS:NOTHING
+;        ASSUME  ES:NOTHING
 
-INDEIDT LABEL   NEAR
+INDEIDT:
 
 ; Let these entry points be known to other modules.
 
-        PUBLIC  INDEIDT
-        PUBLIC  SIDT_BLD
+;        PUBLIC  INDEIDT
+;        PUBLIC  SIDT_BLD
 
 ; This is the entry point to INDEEXC.
 
-        EXTRN   VEXCPT13:NEAR
+;        EXTRN   VEXCPT13:NEAR
 
 PAGE
 ; Define the stack structure for our fast path.  For all the interrupts that we
@@ -99,47 +142,13 @@ PAGE
 ; stack.  The following structure is a map of the stack after these registers
 ; are pushed.  This structure allows us to access info on the stack.
 
-SPSTACK STRUC
-
-SP_SI   DW      0             ; Saved ESI (32 bit SI)
-        DW      0
-SP_DI   DW      0             ; Saved EDI (32 bit DI)
-        DW      0
-SP_AX   DW      0             ; Saved EAX
-        DW      0
-SP_BP   DW      0             ; Saved BP (only 16 bits)
-SP_EX   DW      0             ; Interrupt vector offset (interrupt number * 4)
-
-; The following information is saved by the 80386
-
-SP_IP   DW      0             ; Interruptee's EIP (32 bit IP)
-SP_IP2  DW      0
-SP_CS   DW      0             ; Interruptee's CS (16 bit CS and 16 bit junk)
-SP_CS2  DW      0
-SP_FL   DW      0             ; Interruptee's Eflags (32 bit flags)
-SP_FL2  DW      0
-SP_SP   DW      0             ; Interruptee's ESP
-SP_SP2  DW      0
-SP_SS   DW      0             ; Interruptee's SS
-SP_SS2  DW      0
-SP_VMES DW      0             ; Interruptee's ES
-        DW      0
-SP_VMDS DW      0             ; Interruptee's DS
-        DW      0
-SP_VMFS DW      0             ; Interruptee's FS
-        DW      0
-SP_VMGS DW      0             ; Interruptee's GS
-        DW      0
-SP_STK  DW      0             ; The rest of the stack
-
-SPSTACK ENDS
 
 SP_START EQU    0             ; Offset from BP of the start of the save area
                               ; BP is set ot point to the start of the save area
 
 PAGE
 
-SIDTBLD         PROC    NEAR
+SIDTBLD:
 
 ; Generate the entry points for all (yes, ALL) 256 interrupt vectors.  For
 ; interrupt 0D (general Protection exception) we will check if it was the V86
@@ -162,9 +171,9 @@ SIDTBLD         PROC    NEAR
 
 ; Interrupt 0D
 
-                IRP     V,<0D>
-VEC&V:
-                PUSH    0&V&H           ; Push the interrupt number (0D)
+                irp V, 0D {
+VEC#V:
+                PUSH    0#V#H           ; Push the interrupt number (0D)
                 PUSH    BP              ; Save BP
                 DATAOV                  ;                                   @P2A
                 PUSH    AX              ; Save EAX, all 32bits of it.       @P2A
@@ -191,25 +200,25 @@ VEC&V:
                 ; code is on the stack and then go to our exception          P2A
                 ; handler.                                                   P2A
 
-                MOV     AX,SCRUBBER.TSS_PTR ; Load DS with the selector     @P2A
+                MOV     AX,GDT_DEF.SCRUBBER+VM_GDT_ENTRY.TSS_PTR ; Load DS with the selector     @P2A
                 MOV     DS,AX           ;   that accesses the TSS as data   @P2A
                 MOV     SI,0            ; Base for reading the TSS          @P2A
                 DATAOV                  ;                                   @P2A
-                MOV     AX,[SI].ETSS_SP0 ; Get the original SP before the   @P2A
+                MOV     AX,[SI+TSS386.ETSS_SP0] ; Get the original SP before the   @P2A
                 DATAOV                  ;   interrupt                       @P2A
                 SUB     AX,SP           ; Subtract the current stack        @P2A
                                         ;   pointer                         @P2A
-                CMP     AX,SP_STK       ; Check for an error code           @P2A
+                CMP     AX,SPSTACK.SP_STK       ; Check for an error code           @P2A
                                         ;                                   @P2D
-                JG      SKIP&V          ; If there's an error code, go      @P2C
+                JG      SKIP#V          ; If there's an error code, go      @P2C
                                         ; handle the exception               P2C
-                MOV     WORD PTR [BP+SP_EX],0&V&H*4 ; If there is no error  @P2A
+                MOV     word [BP+SPSTACK.SP_EX],0#V#H*4     ; If there is no error  @P2A
                                         ; code then multiply the vector      P2A
                                         ; number by four for the FASTPATH    P2A
                                         ; code.                              P2A
-                JMP     PASS_ON         ; Give the interrupt back to the    @P2C
+                JMP     near PASS_ON    ; Give the interrupt back to the    @P2C
                                         ;   V86 task.
-SKIP&V:         DATAOV                  ;                                   @P2A
+SKIP#V:         DATAOV                  ;                                   @P2A
                 POP     SI              ; Restore ESI from off our stack    @P2A
                 DATAOV                  ;                                   @P2A
                 POP     DI              ; Restore EDI                       @P2A
@@ -219,23 +228,23 @@ SKIP&V:         DATAOV                  ;                                   @P2A
                                         ;   the interrupt number that we pushed
                                         ;   above and the error code that was
                                         ;   pushed by the 386 on the INT 0D.
-                JMP     VEXCPT13        ; Go to the exception handler.
+                JMP     near VEXCPT13   ; Go to the exception handler.
 
-                ENDM
+                }
 
 PAGE
 ; For interrupts 00, 01, 02, 03, 04, 05, 06, 07, 09, 0A, 0B, 0C, 0E and 15
 ; push a dummy error code of 0 and then the interrupt number.  Then go to the
 ; exception handler.
 
-                IRP     V,<00,01,02,03,04,05,06,07,09,0A,0B,0C,0E,15>
-VEC&V:
+                irp V, 00,01,02,03,04,05,06,07,09,0A,0B,0C,0E,15 {
+VEC#V:
                 PUSH    0               ; Push a dummy error code of 0
                 PUSH    0               ; 32 bits wide
-SKIP&V:
-                PUSH    0&V&H           ; Push the interrupt number
-                JMP     VEXCPT13        ; Go to the exception handler
-                ENDM
+SKIP#V:
+                PUSH    0#V#H           ; Push the interrupt number
+                JMP     near VEXCPT13   ; Go to the exception handler
+                }
 
 PAGE
 ; For the rest of the interrupts push the interrupt vector offset (interrupt
@@ -247,81 +256,81 @@ PAGE
 ; INT 10H, BIOS video calls, is given the fastest code path by putting it just
 ; before the FASTPATH routine.
 
-                IRP     V,<08,0F,11,12,13,14,16,17,18,19,1A,1B,1C,1D,1E,1F>
-VEC&V:
-                PUSH    0&V&H*4         ; Push the interrupt vector offset
-                JMP     FASTPATH        ; Go to the fastpath routine
-                ENDM
-                IRP     V,<20,21,22,23,24,25,26,27,28,29,2A,2B,2C,2D,2E,2F>
-VEC&V:
-                PUSH    0&V&H*4         ; Push the interrupt vector offset
-                JMP     FASTPATH        ; Go to the fastpath routine
-                ENDM
-                IRP     V,<30,31,32,33,34,35,36,37,38,39,3A,3B,3C,3D,3E,3F>
-VEC&V:
-                PUSH    0&V&H*4         ; Push the interrupt vector offset
-                JMP     FASTPATH        ; Go to the fastpath routine
-                ENDM
-                IRP     V,<40,41,42,43,44,45,46,47,48,49,4A,4B,4C,4D,4E,4F>
-VEC&V:
-                PUSH    0&V&H*4         ; Push the interrupt vector offset
-                JMP     FASTPATH        ; Go to the fastpath routine
-                ENDM
-                IRP     V,<50,51,52,53,54,55,56,57,58,59,5A,5B,5C,5D,5E,5F>
-VEC&V:
-                PUSH    0&V&H*4         ; Push the interrupt vector offset
-                JMP     FASTPATH        ; Go to the fastpath routine
-                ENDM
-                IRP     V,<60,61,62,63,64,65,66,67,68,69,6A,6B,6C,6D,6E,6F>
-VEC&V:
-                PUSH    0&V&H*4         ; Push the interrupt vector offset
-                JMP     FASTPATH        ; Go to the fastpath routine
-                ENDM
-                IRP     V,<70,71,72,73,74,75,76,77,78,79,7A,7B,7C,7D,7E,7F>
-VEC&V:
-                PUSH    0&V&H*4         ; Push the interrupt vector offset
-                JMP     FASTPATH        ; Go to the fastpath routine
-                ENDM
-                IRP     V,<80,81,82,83,84,85,86,87,88,89,8A,8B,8C,8D,8E,8F>
-VEC&V:
-                PUSH    0&V&H*4         ; Push the interrupt vector offset
-                JMP     FASTPATH        ; Go to the fastpath routine
-                ENDM
-                IRP     V,<90,91,92,93,94,95,96,97,98,99,9A,9B,9C,9D,9E,9F>
-VEC&V:
-                PUSH    0&V&H*4         ; Push the interrupt vector offset
-                JMP     FASTPATH        ; Go to the fastpath routine
-                ENDM
-                IRP     V,<A0,A1,A2,A3,A4,A5,A6,A7,A8,A9,AA,AB,AC,AD,AE,AF>
-VEC&V:
-                PUSH    0&V&H*4         ; Push the interrupt vector offset
-                JMP     FASTPATH        ; Go to the fastpath routine
-                ENDM
-                IRP     V,<B0,B1,B2,B3,B4,B5,B6,B7,B8,B9,BA,BB,BC,BD,BE,BF>
-VEC&V:
-                PUSH    0&V&H*4         ; Push the interrupt vector offset
-                JMP     FASTPATH        ; Go to the fastpath routine
-                ENDM
-                IRP     V,<C0,C1,C2,C3,C4,C5,C6,C7,C8,C9,CA,CB,CC,CD,CE,CF>
-VEC&V:
-                PUSH    0&V&H*4         ; Push the interrupt vector offset
-                JMP     FASTPATH        ; Go to the fastpath routine
-                ENDM
-                IRP     V,<D0,D1,D2,D3,D4,D5,D6,D7,D8,D9,DA,DB,DC,DD,DE,DF>
-VEC&V:
-                PUSH    0&V&H*4         ; Push the interrupt vector offset
-                JMP     FASTPATH        ; Go to the fastpath routine
-                ENDM
-                IRP     V,<E0,E1,E2,E3,E4,E5,E6,E7,E8,E9,EA,EB,EC,ED,EE,EF>
-VEC&V:
-                PUSH    0&V&H*4         ; Push the interrupt vector offset
-                JMP     FASTPATH        ; Go to the fastpath routine
-                ENDM
-                IRP     V,<F0,F1,F2,F3,F4,F5,F6,F7,F8,F9,FA,FB,FC,FD,FE,FF>
-VEC&V:
-                PUSH    0&V&H*4         ; Push the interrupt vector offset
-                JMP     FASTPATH        ; Go to the fastpath routine
-                ENDM
+                irp V, 08,0F,11,12,13,14,16,17,18,19,1A,1B,1C,1D,1E,1F {
+VEC#V:
+                PUSH    0#V#H*4         ; Push the interrupt vector offset
+                JMP     near FASTPATH   ; Go to the fastpath routine
+                }
+                irp V, 20,21,22,23,24,25,26,27,28,29,2A,2B,2C,2D,2E,2F {
+VEC#V:
+                PUSH    0#V#H*4         ; Push the interrupt vector offset
+                JMP     near FASTPATH   ; Go to the fastpath routine
+                }
+                irp V, 30,31,32,33,34,35,36,37,38,39,3A,3B,3C,3D,3E,3F {
+VEC#V:
+                PUSH    0#V#H*4         ; Push the interrupt vector offset
+                JMP     near FASTPATH   ; Go to the fastpath routine
+                }
+                irp V, 40,41,42,43,44,45,46,47,48,49,4A,4B,4C,4D,4E,4F {
+VEC#V:
+                PUSH    0#V#H*4         ; Push the interrupt vector offset
+                JMP     near FASTPATH   ; Go to the fastpath routine
+                }
+                irp V, 50,51,52,53,54,55,56,57,58,59,5A,5B,5C,5D,5E,5F {
+VEC#V:
+                PUSH    0#V#H*4         ; Push the interrupt vector offset
+                JMP     near FASTPATH   ; Go to the fastpath routine
+                }
+                irp V, 60,61,62,63,64,65,66,67,68,69,6A,6B,6C,6D,6E,6F {
+VEC#V:
+                PUSH    0#V#H*4         ; Push the interrupt vector offset
+                JMP     near FASTPATH   ; Go to the fastpath routine
+                }
+                irp V, 70,71,72,73,74,75,76,77,78,79,7A,7B,7C,7D,7E,7F {
+VEC#V:
+                PUSH    0#V#H*4         ; Push the interrupt vector offset
+                JMP     near FASTPATH   ; Go to the fastpath routine
+                }
+                irp V, 80,81,82,83,84,85,86,87,88,89,8A,8B,8C,8D,8E,8F {
+VEC#V:
+                PUSH    0#V#H*4         ; Push the interrupt vector offset
+                JMP     near FASTPATH   ; Go to the fastpath routine
+                }
+                irp V, 90,91,92,93,94,95,96,97,98,99,9A,9B,9C,9D,9E,9F {
+VEC#V:
+                PUSH    0#V#H*4         ; Push the interrupt vector offset
+                JMP     near FASTPATH   ; Go to the fastpath routine
+                }
+                irp V, A0,A1,A2,A3,A4,A5,A6,A7,A8,A9,AA,AB,AC,AD,AE,AF {
+VEC#V:
+                PUSH    0#V#H*4         ; Push the interrupt vector offset
+                JMP     near FASTPATH   ; Go to the fastpath routine
+                }
+                irp V, B0,B1,B2,B3,B4,B5,B6,B7,B8,B9,BA,BB,BC,BD,BE,BF {
+VEC#V:
+                PUSH    0#V#H*4         ; Push the interrupt vector offset
+                JMP     near FASTPATH   ; Go to the fastpath routine
+                }
+                irp V, C0,C1,C2,C3,C4,C5,C6,C7,C8,C9,CA,CB,CC,CD,CE,CF {
+VEC#V:
+                PUSH    0#V#H*4         ; Push the interrupt vector offset
+                JMP     near FASTPATH   ; Go to the fastpath routine
+                }
+                irp V, D0,D1,D2,D3,D4,D5,D6,D7,D8,D9,DA,DB,DC,DD,DE,DF {
+VEC#V:
+                PUSH    0#V#H*4         ; Push the interrupt vector offset
+                JMP     near FASTPATH   ; Go to the fastpath routine
+                }
+                irp V, E0,E1,E2,E3,E4,E5,E6,E7,E8,E9,EA,EB,EC,ED,EE,EF {
+VEC#V:
+                PUSH    0#V#H*4         ; Push the interrupt vector offset
+                JMP     near FASTPATH   ; Go to the fastpath routine
+                }
+                irp V, F0,F1,F2,F3,F4,F5,F6,F7,F8,F9,FA,FB,FC,FD,FE,FF {
+VEC#V:
+                PUSH    0#V#H*4         ; Push the interrupt vector offset
+                JMP     near FASTPATH   ; Go to the fastpath routine
+                }
 
 VEC10:
                 PUSH    010H*4          ; Push the interrupt vector offset
@@ -340,19 +349,19 @@ FASTPATH:
 PASS_ON:                                ;                                  @P2C
         CLD                             ; All string operations go forward
 
-        MOV     AX,HUGE_PTR             ; Load DS and ES with a selector that
+        MOV     AX,GDT_DEF.HUGE_PTR             ; Load DS and ES with a selector that
         MOV     DS,AX                   ;   accesses all of memory as data
         MOV     ES,AX
         DATAOV
         SUB     DI,DI                   ; Clear EDI
-        MOV     DI,SS:[BP+SP_SP]        ; Load DI with the interruptee's SP
+        MOV     DI,[ss:BP+SPSTACK.SP_SP]        ; Load DI with the interruptee's SP
         SUB     DI,6                    ; Decrement "SP" to simulate the pushing
                                         ;   of the flags, CS and IP on an INT.
-        MOV     SS:WORD PTR [BP+SP_SP],DI ; Replace the user's SP
+        MOV     word [ss:BP+SPSTACK.SP_SP],DI     ; Replace the user's SP
 
         DATAOV
         SUB     AX,AX                   ; Clear EAX
-        MOV     AX,SS:[BP+SP_SS]        ; Load AX with the user's SS register
+        MOV     AX,[ss:BP+SPSTACK.SP_SS]        ; Load AX with the user's SS register
         DATAOV                          ; Shift "SS" left four bits to convert
         SHL     AX,4                    ;   it to an offset
         DATAOV                          ; Add on "SP" to get a 32 bit offset
@@ -361,35 +370,35 @@ PASS_ON:                                ;                                  @P2C
 ; Put the user's IP, CS and flags onto his stack.  This is done in reverse
 ; order because we are moving forward in memory whereas stacks grow backward.
 
-        MOV     AX,SS:[BP+SP_IP]        ; Get the user's IP
+        MOV     AX,[ss:BP+SPSTACK.SP_IP]        ; Get the user's IP
         ADDROV
         STOSW                           ; And put it on the stack
         ADDROV                          ; Intel bug # A0-119
         NOP                             ; Intel bug # A0-119
 
-        MOV     AX,SS:[BP+SP_CS]        ; Get the user's CS
+        MOV     AX,[ss:BP+SPSTACK.SP_CS]        ; Get the user's CS
         ADDROV
         STOSW                           ; And put it on the stack
         ADDROV                          ; Intel bug # A0-119
         NOP                             ; Intel bug # A0-119
 
-        MOV     AX,SS:[BP+SP_FL]        ; Get the user's flags
+        MOV     AX,[ss:BP+SPSTACK.SP_FL]        ; Get the user's flags
         ADDROV
         STOSW                           ; And put them on the stack
         ADDROV                          ; Intel bug # A0-119
         NOP                             ; Intel bug # A0-119
 
         AND     AX,3CFFH                ; Clean up the flags for our IRET by
-        MOV     WORD PTR SS:[BP+SP_FL],AX  ; setting IOPL to 3
+        MOV     word [ss:BP+SPSTACK.SP_FL],AX      ; setting IOPL to 3
 
 ; Replace the interruptee's CS:IP with the CS:IP of the interrupt vector.  When
 ; we IRET back to the V86 task control will go to the interrupt routine.
 
-        MOV     SI,SS:[BP+SP_EX]        ; Get the interrupt vector offset
+        MOV     SI,[ss:BP+SPSTACK.SP_EX]        ; Get the interrupt vector offset
         LODSW                           ; Get the IP of the interrupt vector
-        MOV     WORD PTR SS:[BP+SP_IP],AX ; Replace the user's IP
+        MOV     word [ss:BP+SPSTACK.SP_IP],AX     ; Replace the user's IP
         LODSW                           ; Get the CS of the interrupt vector
-        MOV     WORD PTR SS:[BP+SP_CS],AX ; Replace the user's CS
+        MOV     word [ss:BP+SPSTACK.SP_CS],AX     ; Replace the user's CS
 
         DATAOV
         POP     SI                      ; Restore ESI from off our stack
@@ -398,7 +407,7 @@ PASS_ON:                                ;                                  @P2C
         DATAOV
         POP     AX                      ; Restore EAX
         POP     BP                      ; Restore BP
-        ADD     SP,(SP_IP-SP_EX)        ; Step SP past the interrupt vector
+        ADD     SP,(SPSTACK.SP_IP-SPSTACK.SP_EX)        ; Step SP past the interrupt vector
                                         ;   offset
         DATAOV
         IRET                            ; Give control back to the interruptee
@@ -408,56 +417,56 @@ PAGE
 ; Build a talbe of the offsets of all the interrupt entry points.  This table
 ; is used as input to the procedure that builds the IDT.
 
-SIDT_OFFSETS            LABEL   WORD
+label SIDT_OFFSETS word
 
-                IRP     V,<00,01,02,03,04,05,06,07,08,09,0A,0B,0C,0D,0E,0F>
-                DW      OFFSET VEC&V
-                ENDM
-                IRP     V,<10,11,12,13,14,15,16,17,18,19,1A,1B,1C,1D,1E,1F>
-                DW      OFFSET VEC&V
-                ENDM
-                IRP     V,<20,21,22,23,24,25,26,27,28,29,2A,2B,2C,2D,2E,2F>
-                DW      OFFSET VEC&V
-                ENDM
-                IRP     V,<30,31,32,33,34,35,36,37,38,39,3A,3B,3C,3D,3E,3F>
-                DW      OFFSET VEC&V
-                ENDM
-                IRP     V,<40,41,42,43,44,45,46,47,48,49,4A,4B,4C,4D,4E,4F>
-                DW      OFFSET VEC&V
-                ENDM
-                IRP     V,<50,51,52,53,54,55,56,57,58,59,5A,5B,5C,5D,5E,5F>
-                DW      OFFSET VEC&V
-                ENDM
-                IRP     V,<60,61,62,63,64,65,66,67,68,69,6A,6B,6C,6D,6E,6F>
-                DW      OFFSET VEC&V
-                ENDM
-                IRP     V,<70,71,72,73,74,75,76,77,78,79,7A,7B,7C,7D,7E,7F>
-                DW      OFFSET VEC&V
-                ENDM
-                IRP     V,<80,81,82,83,84,85,86,87,88,89,8A,8B,8C,8D,8E,8F>
-                DW      OFFSET VEC&V
-                ENDM
-                IRP     V,<90,91,92,93,94,95,96,97,98,99,9A,9B,9C,9D,9E,9F>
-                DW      OFFSET VEC&V
-                ENDM
-                IRP     V,<A0,A1,A2,A3,A4,A5,A6,A7,A8,A9,AA,AB,AC,AD,AE,AF>
-                DW      OFFSET VEC&V
-                ENDM
-                IRP     V,<B0,B1,B2,B3,B4,B5,B6,B7,B8,B9,BA,BB,BC,BD,BE,BF>
-                DW      OFFSET VEC&V
-                ENDM
-                IRP     V,<C0,C1,C2,C3,C4,C5,C6,C7,C8,C9,CA,CB,CC,CD,CE,CF>
-                DW      OFFSET VEC&V
-                ENDM
-                IRP     V,<D0,D1,D2,D3,D4,D5,D6,D7,D8,D9,DA,DB,DC,DD,DE,DF>
-                DW      OFFSET VEC&V
-                ENDM
-                IRP     V,<E0,E1,E2,E3,E4,E5,E6,E7,E8,E9,EA,EB,EC,ED,EE,EF>
-                DW      OFFSET VEC&V
-                ENDM
-                IRP     V,<F0,F1,F2,F3,F4,F5,F6,F7,F8,F9,FA,FB,FC,FD,FE,FF>
-                DW      OFFSET VEC&V
-                ENDM
+                irp V, 00,01,02,03,04,05,06,07,08,09,0A,0B,0C,0D,0E,0F {
+                DW      VEC#V
+                }
+                irp V, 10,11,12,13,14,15,16,17,18,19,1A,1B,1C,1D,1E,1F {
+                DW      VEC#V
+                }
+                irp V, 20,21,22,23,24,25,26,27,28,29,2A,2B,2C,2D,2E,2F {
+                DW      VEC#V
+                }
+                irp V, 30,31,32,33,34,35,36,37,38,39,3A,3B,3C,3D,3E,3F {
+                DW      VEC#V
+                }
+                irp V, 40,41,42,43,44,45,46,47,48,49,4A,4B,4C,4D,4E,4F {
+                DW      VEC#V
+                }
+                irp V, 50,51,52,53,54,55,56,57,58,59,5A,5B,5C,5D,5E,5F {
+                DW      VEC#V
+                }
+                irp V, 60,61,62,63,64,65,66,67,68,69,6A,6B,6C,6D,6E,6F {
+                DW      VEC#V
+                }
+                irp V, 70,71,72,73,74,75,76,77,78,79,7A,7B,7C,7D,7E,7F {
+                DW      VEC#V
+                }
+                irp V, 80,81,82,83,84,85,86,87,88,89,8A,8B,8C,8D,8E,8F {
+                DW      VEC#V
+                }
+                irp V, 90,91,92,93,94,95,96,97,98,99,9A,9B,9C,9D,9E,9F {
+                DW      VEC#V
+                }
+                irp V, A0,A1,A2,A3,A4,A5,A6,A7,A8,A9,AA,AB,AC,AD,AE,AF {
+                DW      VEC#V
+                }
+                irp V, B0,B1,B2,B3,B4,B5,B6,B7,B8,B9,BA,BB,BC,BD,BE,BF {
+                DW      VEC#V
+                }
+                irp V, C0,C1,C2,C3,C4,C5,C6,C7,C8,C9,CA,CB,CC,CD,CE,CF {
+                DW      VEC#V
+                }
+                irp V, D0,D1,D2,D3,D4,D5,D6,D7,D8,D9,DA,DB,DC,DD,DE,DF {
+                DW      VEC#V
+                }
+                irp V, E0,E1,E2,E3,E4,E5,E6,E7,E8,E9,EA,EB,EC,ED,EE,EF {
+                DW      VEC#V
+                }
+                irp V, F0,F1,F2,F3,F4,F5,F6,F7,F8,F9,FA,FB,FC,FD,FE,FF {
+                DW      VEC#V
+                }
 PAGE
 SIDT_BLD:
 
@@ -465,11 +474,11 @@ SIDT_BLD:
 
         MOV     AX,CS                   ; Set DS:SI to point to the table of
         MOV     DS,AX                   ;   interrupt entry points
-        MOV     SI,OFFSET SIDT_OFFSETS
+        MOV     SI,SIDT_OFFSETS
 
         MOV     DI,SIDT_LOC             ; Set ES:DI to point to the beginning
                                         ;   of the IDT
-        MOV     BX,SYS_PATCH_CS         ; Load BX with the selector for the
+        MOV     BX,GDT_DEF.SYS_PATCH_CS         ; Load BX with the selector for the
                                         ;   segment of the interrupt routines.
                                         ;   It's our code segment.
 
@@ -505,8 +514,8 @@ BLD_IDT:
 
         RET
 
-SIDTBLD ENDP
+;SIDTBLD ENDP
 
-PROG    ENDS
+;PROG    ENDS
 
-        END
+;        END

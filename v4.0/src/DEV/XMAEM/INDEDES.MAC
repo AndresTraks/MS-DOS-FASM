@@ -1,32 +1,32 @@
-COMMENT #
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-*                                                                             *
-* MODULE NAME     : INDEDES                                                   *
-*                                                                             *
-*                                                                             *
-*                    5669-196 (C) COPYRIGHT 1988 Microsoft		      *
-*                                                                             *
-* DESCRIPTIVE NAME: Macros for setting up 80386 descriptors                   *
-*                                                                             *
-* STATUS (LEVEL)  : Version (0) Level (1.0)                                   *
-*                                                                             *
-* FUNCTION        : DESCR_DEF  - Define storage for a descriptor              *
-*                   DESCR_INIT - Initialize a descriptor that has already     *
-*                                been defined                                 *
-*                                                                             *
-* MODULE TYPE     : MAC                                                       *
-*                                                                             *
-* REGISTER USAGE  : 80286 Standard                                            *
-*                                                                             *
-* CHANGE ACTIVITY :                                                           *
-*                                                                             *
-* $MAC(INDEDES) COMP(LOAD) PROD(3270PC) :                                     *
-*                                                                             *
-* $D0=D0004700 410 870604 D : NEW FOR RELEASE 1.1                             *
-* $P1=P0000311 410 870804 D : RENAME MODULE'S LIBRARY FILE TYPE TO "MAC"      *
-*                                                                             *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-#
+;COMMENT #
+;* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;*                                                                             *
+;* MODULE NAME     : INDEDES                                                   *
+;*                                                                             *
+;*                                                                             *
+;*                    5669-196 (C) COPYRIGHT 1988 Microsoft		      *
+;*                                                                             *
+;* DESCRIPTIVE NAME: Macros for setting up 80386 descriptors                   *
+;*                                                                             *
+;* STATUS (LEVEL)  : Version (0) Level (1.0)                                   *
+;*                                                                             *
+;* FUNCTION        : DESCR_DEF  - Define storage for a descriptor              *
+;*                   DESCR_INIT - Initialize a descriptor that has already     *
+;*                                been defined                                 *
+;*                                                                             *
+;* MODULE TYPE     : MAC                                                       *
+;*                                                                             *
+;* REGISTER USAGE  : 80286 Standard                                            *
+;*                                                                             *
+;* CHANGE ACTIVITY :                                                           *
+;*                                                                             *
+;* MAC$(INDEDES) COMP(LOAD) PROD(3270PC) :                                     *
+;*                                                                             *
+;* D0$=D0004700 410 870604 D : NEW FOR RELEASE 1.1                             *
+;* P1$=P0000311 410 870804 D : RENAME MODULE'S LIBRARY FILE TYPE TO "MAC"      *
+;*                                                                             *
+;* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;#
 
 ; DESCR_DEF:  Define a descriptor in-line using DWs and DBs.
 ;
@@ -46,34 +46,35 @@ COMMENT #
 ;             is 0.
 
 
-DESCR_DEF       MACRO   TYPE,PARM1,PARM2,PARM3,ARB
+macro DESCR_DEF TYPE,PARM1,PARM2,PARM3,ARB
+{
 
-     IFIDN   <&TYPE>,<SEG>
+     match =SEG, TYPE \{
 ;
 ;       Segment descriptor definition
 ;
-        DW      &PARM1        ; Segment limit
-        DW      &PARM2        ; Segment base address - low word
-        DB      &PARM3        ; Segment base address - high byte
-        DB      &ARB          ; Access rights byte
+        DW      PARM1        ; Segment limit
+        DW      PARM2        ; Segment base address - low word
+        DB      PARM3        ; Segment base address - high byte
+        DB      ARB          ; Access rights byte
         DW      0             ; Intel reserved
 
-     ENDIF
+     \}
 
-     IFIDN   <&TYPE>,<GATE>
+     match =GATE, TYPE \{
 ;
 ;       Gate descriptor definition
 ;
-        DW      &PARM1        ; Destination offset
-        DW      &PARM2        ; Destination segment selector
-        DB      &PARM3        ; Word count for stack-to-stack copy
+        DW      PARM1        ; Destination offset
+        DW      PARM2        ; Destination segment selector
+        DB      PARM3        ; Word count for stack-to-stack copy
                               ;   (only for call gates when PL changes)
-        DB      &ARB          ; Access rights byte
+        DB      ARB          ; Access rights byte
         DW      0             ; Intel reserved
 
-     ENDIF
+     \}
 
-                ENDM
+}
 
 PAGE
 
@@ -106,68 +107,69 @@ PAGE
 ;             INT13_PTR.
 
 
-DESCR_INIT      MACRO   TYPE,FIELD,PARM1,PARM2,PARM3,ARB
+macro DESCR_INIT TYPE,FIELD,PARM1,PARM2,PARM3,ARB
+{
 
         PUSH    AX            ; Save the utility register
 
-     IFNB    <&FIELD>
+     match any$, FIELD \{
 
-        MOV     DI,&FIELD     ; Set up index value to proper descriptor
+        MOV     DI,FIELD     ; Set up index value to proper descriptor
         ADD     DI,GDT_LOC
 
-     ENDIF
+     \}
 
 
-     IFIDN   <&TYPE>,<SEG>
+     match =SEG, TYPE \{
 ;
 ;       Segment descriptor initialization
 ;
-        MOV     AX,&PARM1       ; PARM1 = Segment Limit; load into AX
+        MOV     AX,PARM1       ; PARM1 = Segment Limit; load into AX
         STOSW                   ;   and store
-        MOV     AX,&PARM2       ; PARM2 = BASE_LO_W; load into AX
+        MOV     AX,PARM2       ; PARM2 = BASE_LO_W; load into AX
         STOSW                   ;   and store
-        MOV     AL,&PARM3       ; PARM3 = BASE_HI_B; load into AL, and
-        MOV     AH,&ARB         ;   ARB = Access Rights Byte; load into AH
+        MOV     AL,PARM3       ; PARM3 = BASE_HI_B; load into AL, and
+        MOV     AH,ARB         ;   ARB = Access Rights Byte; load into AH
         STOSW                   ;     and store both
         MOV     AX,0            ; Make sure the Intel
         STOSW                   ;   reserved word is zero
 
-     ENDIF
+     \}
 
 
-     IFIDN   <&TYPE>,<BSEG>
+     match =BSEG, TYPE \{
 ;
 ;       Big (4k granularity) segment descriptor initialization
 ;
-        MOV     AX,&PARM1       ; PARM1 = Segment Limit; load into AX
+        MOV     AX,PARM1       ; PARM1 = Segment Limit; load into AX
         STOSW                   ;   and store
-        MOV     AX,&PARM2       ; PARM2 = BASE_LO_W; load into AX
+        MOV     AX,PARM2       ; PARM2 = BASE_LO_W; load into AX
         STOSW                   ;   and store
-        MOV     AL,&PARM3       ; PARM3 = BASE_HI_B; load into AL, and
-        MOV     AH,&ARB         ;   ARB = Access Rights Byte; load into AH
+        MOV     AL,PARM3       ; PARM3 = BASE_HI_B; load into AL, and
+        MOV     AH,ARB         ;   ARB = Access Rights Byte; load into AH
         STOSW                   ;     and store both
         MOV     AX,0080H        ; 4k granularity bit
         STOSW
 
-     ENDIF
+     \}
 
 
-     IFIDN   <&TYPE>,<GATE>
+     match =GATE, TYPE \{
 ;
 ;       Gate descriptor initialization
 ;
-        MOV     AX,&PARM1       ; PARM1 = Destination offset; load into AX
+        MOV     AX,PARM1       ; PARM1 = Destination offset; load into AX
         STOSW                   ;   and store
-        MOV     AX,&PARM2       ; PARM2 = Destination Selector;load into AX
+        MOV     AX,PARM2       ; PARM2 = Destination Selector;load into AX
         STOSW                   ;   and store
-        MOV     AL,&PARM3       ; PARM3 = Word Count; load into AL, and
-        MOV     AH,&ARB         ;   ARB = Access Rights Byte; load into AH
+        MOV     AL,PARM3       ; PARM3 = Word Count; load into AL, and
+        MOV     AH,ARB         ;   ARB = Access Rights Byte; load into AH
         STOSW                   ;     and store both
         MOV     AX,0            ; Make sure the Intel
         STOSW                   ;   reserved word is zero
 
-     ENDIF
+     \}
 
         POP     AX              ; Restore AX
 
-        ENDM
+}

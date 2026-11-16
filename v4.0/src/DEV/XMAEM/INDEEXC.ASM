@@ -1,101 +1,101 @@
 PAGE    60,132
 TITLE   INDEEXC - 386 XMA EMULATOR - System Exception Handler
 
-COMMENT #
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-*                                                                             *
-* MODULE NAME     : INDEEXC                                                   *
-*                                                                             *
-*                                                                             *
-*                    5669-196 (C) COPYRIGHT 1988 Microsoft Corp.              *
-*                                                                             *
-* DESCRIPTIVE NAME: 80386 XMA Emulator System Exception Handler               *
-*                                                                             *
-* STATUS (LEVEL)  : VERSION (0) LEVEL (1.0)                                   *
-*                                                                             *
-* FUNCTION        : This module gets control whenever an interrupt 00 - 07,   *
-*                   09 - 0E or 15 occurs.  This is because this module's      *
-*                   entry point was placed in the IDT entries for these       *
-*                   interrupts.  It determines what course of action to take  *
-*                   on the interrupt/exception.                               *
-*                                                                             *
-*                   First thing it does is is to check to see who caused the  *
-*                   exception.  If the exception came from the virtual 8086   *
-*                   (V86) task then it will try to emulate the interrupt if   *
-*                   necessary.  If the exception came from the emulator it-   *
-*                   self then we may have problems.  If it was a general      *
-*                   protection exception (INT 0D) then it just ignores it and *
-*                   passes control back to the V86 task.  If it was a page    *
-*                   fault (INT 14) then it assumes that whatever is running in*
-*                   the V86 task came up with a bad address so it terminates  *
-*                   the application since it is obviously bad.  If it is      *
-*                   neither of these two errors then something has gone bad   *
-*                   in the emulator.  When this happens it signals the error  *
-*                   handler to prompt the user to take a dump or reIPL the    *
-*                   system.                                                   *
-*                                                                             *
-*                   The old error routine used to display a panel with the    *
-*                   contents of the registers and the stack.  The new error   *
-*                   routine just forces the V86 task to run the NMI code.     *
-*                   The old routine was left in place for debugging purposes. *
-*                                                                             *
-* MODULE TYPE     : ASM                                                       *
-*                                                                             *
-* REGISTER USAGE  : 80386 Standard                                            *
-*                                                                             *
-* RESTRICTIONS    : None                                                      *
-*                                                                             *
-* DEPENDENCIES    : None                                                      *
-*                                                                             *
-* ENTRY POINT     : VEXCPT13                                                  *
-*                                                                             *
-* LINKAGE         : This entry point is placed in the IDT for each interrupt  *
-*                   we want to handle.  Whenever one of those interrupts is   *
-*                   execupted, control comes here.                            *
-*                                                                             *
-* INPUT PARMS     : None                                                      *
-*                                                                             *
-* RETURN PARMS    : None                                                      *
-*                                                                             *
-* OTHER EFFECTS   : None                                                      *
-*                                                                             *
-* EXIT NORMAL     : IRET to the virtual 8086 task                             *
-*                                                                             *
-* EXIT ERROR      : Force the V86 task to execute an NMI                      *
-*                                                                             *
-* EXTERNAL                                                                    *
-* REFERENCES      : EMULATE - Entry point for INDEEMU                         *
-*                   INT15   - Entry point for INDEI15                         *
-*                                                                             *
-* SUB-ROUTINES    : HEXD - Display the double word in EAX                     *
-*                   HEXW - Display the word in AX                             *
-*                   HEXB - Display the byte in AL                             *
-*                                                                             *
-* MACROS          : DATAOV - Create a prefix for the following instruction    *
-*                            so that it accesses data 32 bits wide            *
-*                   ADDROV - Create a prefix for the following instruction    *
-*                            so that it uses addresses that are 32 bits wide  *
-*                                                                             *
-* CONTROL BLOCKS  : INDEDAT.INC                                               *
-*                                                                             *
-* CHANGE ACTIVITY :                                                           *
-*                                                                             *
-* $MOD(INDEEXC) COMP(LOAD) PROD(3270PC) :                                     *
-*                                                                             *
-* $D0=D0004700 410 870523 D : NEW FOR RELEASE 1.1                             *
-* $P1=P0000312 410 870804 D : CLEAN UP WARNING MESSAGES                       *
-*                                                                             *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-#
+;COMMENT #
+;* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;*                                                                             *
+;* MODULE NAME     : INDEEXC                                                   *
+;*                                                                             *
+;*                                                                             *
+;*                    5669-196 (C) COPYRIGHT 1988 Microsoft Corp.              *
+;*                                                                             *
+;* DESCRIPTIVE NAME: 80386 XMA Emulator System Exception Handler               *
+;*                                                                             *
+;* STATUS (LEVEL)  : VERSION (0) LEVEL (1.0)                                   *
+;*                                                                             *
+;* FUNCTION        : This module gets control whenever an interrupt 00 - 07,   *
+;*                   09 - 0E or 15 occurs.  This is because this module's      *
+;*                   entry point was placed in the IDT entries for these       *
+;*                   interrupts.  It determines what course of action to take  *
+;*                   on the interrupt/exception.                               *
+;*                                                                             *
+;*                   First thing it does is is to check to see who caused the  *
+;*                   exception.  If the exception came from the virtual 8086   *
+;*                   (V86) task then it will try to emulate the interrupt if   *
+;*                   necessary.  If the exception came from the emulator it-   *
+;*                   self then we may have problems.  If it was a general      *
+;*                   protection exception (INT 0D) then it just ignores it and *
+;*                   passes control back to the V86 task.  If it was a page    *
+;*                   fault (INT 14) then it assumes that whatever is running in*
+;*                   the V86 task came up with a bad address so it terminates  *
+;*                   the application since it is obviously bad.  If it is      *
+;*                   neither of these two errors then something has gone bad   *
+;*                   in the emulator.  When this happens it signals the error  *
+;*                   handler to prompt the user to take a dump or reIPL the    *
+;*                   system.                                                   *
+;*                                                                             *
+;*                   The old error routine used to display a panel with the    *
+;*                   contents of the registers and the stack.  The new error   *
+;*                   routine just forces the V86 task to run the NMI code.     *
+;*                   The old routine was left in place for debugging purposes. *
+;*                                                                             *
+;* MODULE TYPE     : ASM                                                       *
+;*                                                                             *
+;* REGISTER USAGE  : 80386 Standard                                            *
+;*                                                                             *
+;* RESTRICTIONS    : None                                                      *
+;*                                                                             *
+;* DEPENDENCIES    : None                                                      *
+;*                                                                             *
+;* ENTRY POINT     : VEXCPT13                                                  *
+;*                                                                             *
+;* LINKAGE         : This entry point is placed in the IDT for each interrupt  *
+;*                   we want to handle.  Whenever one of those interrupts is   *
+;*                   execupted, control comes here.                            *
+;*                                                                             *
+;* INPUT PARMS     : None                                                      *
+;*                                                                             *
+;* RETURN PARMS    : None                                                      *
+;*                                                                             *
+;* OTHER EFFECTS   : None                                                      *
+;*                                                                             *
+;* EXIT NORMAL     : IRET to the virtual 8086 task                             *
+;*                                                                             *
+;* EXIT ERROR      : Force the V86 task to execute an NMI                      *
+;*                                                                             *
+;* EXTERNAL                                                                    *
+;* REFERENCES      : EMULATE - Entry point for INDEEMU                         *
+;*                   INT15   - Entry point for INDEI15                         *
+;*                                                                             *
+;* SUB-ROUTINES    : HEXD - Display the double word in EAX                     *
+;*                   HEXW - Display the word in AX                             *
+;*                   HEXB - Display the byte in AL                             *
+;*                                                                             *
+;* MACROS          : DATAOV - Create a prefix for the following instruction    *
+;*                            so that it accesses data 32 bits wide            *
+;*                   ADDROV - Create a prefix for the following instruction    *
+;*                            so that it uses addresses that are 32 bits wide  *
+;*                                                                             *
+;* CONTROL BLOCKS  : INDEDAT.INC                                               *
+;*                                                                             *
+;* CHANGE ACTIVITY :                                                           *
+;*                                                                             *
+;* MOD$(INDEEXC) COMP(LOAD) PROD(3270PC) :                                     *
+;*                                                                             *
+;* D0$=D0004700 410 870523 D : NEW FOR RELEASE 1.1                             *
+;* P1$=P0000312 410 870804 D : CLEAN UP WARNING MESSAGES                       *
+;*                                                                             *
+;* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;#
 
-        .286P                 ; Enable recognition of 286 privileged instructs.
+;        .286P                 ; Enable recognition of 286 privileged instructs.
 
         .XLIST                ; Turn off the listing
-        INCLUDE INDEDAT.INC   ; Include system data
+        include 'INDEDAT.INC' ; Include system data
 
-        IF1                   ; Only include macros on the first pass of
-        INCLUDE INDEOVP.MAC   ;   of the assembler
-        ENDIF
+;        IF1                   ; Only include macros on the first pass of
+        include 'INDEOVP.MAC' ;   of the assembler
+;        ENDIF
         .LIST                 ; Turn on the listing
 
 SEX_ATTR        EQU     04B00H
@@ -103,40 +103,40 @@ STACK_ATTR      EQU     00700H
 BLANK           EQU     00020H
 BP_START EQU    0
 
-        PUBLIC  INDEEXC
+;        PUBLIC  INDEEXC
 
-PROG    SEGMENT PARA PUBLIC 'PROG'
+;PROG    SEGMENT PARA PUBLIC 'PROG'
 
-        ASSUME  CS:PROG
-        ASSUME  DS:NOTHING
-        ASSUME  ES:NOTHING
-        ASSUME  SS:NOTHING
+;        ASSUME  CS:PROG
+;        ASSUME  DS:NOTHING
+;        ASSUME  ES:NOTHING
+;        ASSUME  SS:NOTHING
 
-INDEEXC LABEL   NEAR
+INDEEXC:
 
         ; External entry points
 
-        EXTRN   EMULATE:NEAR       ; Entry point to INDEEMU
-        EXTRN   INT15:NEAR         ; Entry point to INDEI15
+;        EXTRN   EMULATE:NEAR       ; Entry point to INDEEMU
+;        EXTRN   INT15:NEAR         ; Entry point to INDEI15
 
         ; External variables
 
-        EXTRN   CRT_SELECTOR:WORD  ; Selector for the display buffer (INDEI15)
-        EXTRN   XMATID:BYTE        ; Current bank ID                 (INDEXMA)
+;        EXTRN   CRT_SELECTOR:WORD  ; Selector for the display buffer (INDEI15)
+;        EXTRN   XMATID:BYTE        ; Current bank ID                 (INDEXMA)
 
 PAGE
 
-VEXCPT13        LABEL NEAR
+VEXCPT13:
 
-        PUBLIC  SEX
-        PUBLIC  POPREGS       ;                                              P1C
-        PUBLIC  HEXD
-        PUBLIC  HEXW
-        PUBLIC  HEXB
-        PUBLIC  VEXCPT13
-        PUBLIC  DISPLAY
+;        PUBLIC  SEX
+;        PUBLIC  POPREGS       ;                                              P1C
+;        PUBLIC  HEXD
+;        PUBLIC  HEXW
+;        PUBLIC  HEXB
+;        PUBLIC  VEXCPT13
+;        PUBLIC  DISPLAY_
 
-SEX     PROC    NEAR
+SEX:
 
         CLD                   ; All moves go forward
 
@@ -161,16 +161,16 @@ PAGE
 ; has the VM bit set when it is running, the emulator does not.  So we can read
 ; this bit to determine who was interrupted.
 
-        MOV     AX,SS:WORD PTR [BP+BP_FL2]    ; Get hi-order word of the flags
+        MOV     AX,word [ss:BP+BPSTACK.BP_FL2]        ; Get hi-order word of the flags
         TEST    AL,02H                        ; Check the VM bit
-        JZ      DISPLAY                       ; Uh oh!  It's us.
+        JZ      DISPLAY_                       ; Uh oh!  It's us.
         JMP     LONGWAY                       ; It's the V86 task
 
 PAGE
 ; The following entry point, DISPLAY, is know to other modules.  They jump here
 ; when they encounter a severe error and want to call the error handler.
 
-DISPLAY:
+DISPLAY_:
 ;       JMP     DODISP                        ; Just display the registers.
                                               ; Comment out for final product.
 
@@ -178,7 +178,7 @@ DISPLAY:
 ; control back to the V86 task and let it worry about it.
 
         MOV     BP,SP                         ; Point BP to the saved registers
-        CMP     SS:WORD PTR [BP+BP_EX],0DH    ; Was it a general protection
+        CMP     word [ss:BP+BPSTACK.BP_EX],0DH        ; Was it a general protection
                                               ;   exception
         JNE     DISPCONT                      ; If not, the continue
         JMP     POPREGS                       ; Else just return to the V86 @P1C
@@ -194,7 +194,7 @@ DISPLAY:
 ; to be terminated.
 
 DISPCONT:
-        CMP     SS:WORD PTR [BP+BP_EX],0EH    ; Was it a page fault?
+        CMP     word [ss:BP+BPSTACK.BP_EX],0EH        ; Was it a page fault?
         JNE     CHKVM                         ; Nope.  Continue checking.
         JMP     PAGE_FAULT                    ; Yup.  Assume application had bad
                                               ;   addresses.  Therefore, termin-
@@ -210,7 +210,7 @@ DISPCONT:
 ; rest of the system will die soon anyway.
 
 CHKVM:
-        MOV     AX,SS:WORD PTR [BP+BP_FL2]    ; Check the VM bit in the flags
+        MOV     AX,word [ss:BP+BPSTACK.BP_FL2]        ; Check the VM bit in the flags
         TEST    AL,02H                        ;   to see who was running
         JZ      ERROR                         ; It was us.  Better Force an NMI.
         JMP     TERM_APP                      ; It was them.  Terminate whatever
@@ -232,12 +232,12 @@ ERROR:
 ; debugging but will not be executed when the new code is in place.          D1A
 ;----------------------------------------------------------------------------D1A
                                         ;                                    D1A
-        MOV     AX,HUGE_PTR             ; Load ES with a selector that      @D1A
+        MOV     AX,GDT_DEF.HUGE_PTR             ; Load ES with a selector that      @D1A
         MOV     ES,AX                   ;   accesses all of memory as data  @D1A
                                         ;                                    D1A
         MOV     DI,4F2H                 ; Put our 0DEADH marker at the      @D1A
-        MOV     WORD PTR ES:[DI],0DEADH ;   fixed location 0:4F2.            D1A
-        MOV     WORD PTR SS:[BP+BP_EX],2; Put a 2, the NMI interrupt number,@D1A
+        MOV     word [es:DI],0DEADH     ;   fixed location 0:4F2.            D1A
+        MOV     word [ss:BP+BPSTACK.BP_EX],2    ; Put a 2, the NMI interrupt number,@D1A
                                         ;   in the exception field.  The     D1A
                                         ;   code after LONGWAY4 will use     D1A
                                         ;   this number to get the interrupt D1A
@@ -249,7 +249,7 @@ PAGE
 
 DODISP:
 ; Blank the display screen
-        MOV     DI,CRT_SELECTOR         ; Load ES with the selector for the
+        MOV     DI,[cs:CRT_SELECTOR]    ; Load ES with the selector for the
         MOV     ES,DI                   ;   display buffer
         XOR     DI,DI                   ; DI points to the start of the buffer
         MOV     CX,80*15                ; Only clear 15 lines
@@ -268,12 +268,12 @@ DODISP:
 ; Display the registers one at at time
 
         MOV     CX,21             ; 18 regs + excpt id + task id + error code
-        MOV     SI,SYS_PATCH_DS   ; Load DS with the selector for our data
+        MOV     SI,GDT_DEF.SYS_PATCH_DS   ; Load DS with the selector for our data
         MOV     DS,SI             ;   area
-        MOV     SI,OFFSET REG_TABLE ; DS:SI now points to the reg table
+        MOV     SI,REG_TABLE        ; DS:SI now points to the reg table
         SUB     AX,AX             ; Clear AH
-        MOV     AL,XMATID         ; Load AL with the current XMA bank ID
-        MOV     WORD PTR SS:[BP+BP_PSP2],AX  ; The bank ID gets displayed as
+        MOV     AL,[cs:XMATID]    ; Load AL with the current XMA bank ID
+        MOV     word [ss:BP+BPSTACK.BP_PSP2],AX      ; The bank ID gets displayed as
                                              ;   the task ID
 
 ; Display one register
@@ -285,9 +285,9 @@ DO_REG:
         LODSB                           ; Get the row coordinate
         MOV     AH,160                  ; Multiply by 160 byte to a row
         MUL     AH                      ;   (80 bytes of character, attribute)
-        ADD     AL,DS:BYTE PTR [SI]     ; Add on the number of columns
+        ADD     AL,byte [ds:SI]         ; Add on the number of columns
         ADC     AH,0                    ; Don't forget the carry
-        ADD     AL,DS:BYTE PTR [SI]     ; Add the columns again (remember -
+        ADD     AL,byte [ds:SI]         ; Add the columns again (remember -
         ADC     AH,0                    ;   character, attribute)
         INC     SI                      ; Point to next entry in the reg table
         MOV     DI,AX                   ; Load DI with the offset into the
@@ -323,13 +323,13 @@ DID_ID:
         JNE     MORE                    ; Then go to the one word code
 
         DATAOV                          ; Grab all 32 bits of the register
-        MOV     AX,SS:WORD PTR [BP]
+        MOV     AX,word [ss:BP]
         ADD     BP,4                    ; Point BP past the register value
         CALL    HEXD                    ; Display the 32 bit value
         JMP     LOOPREG                 ; Jump over the one word code
 
 MORE:
-        MOV     AX,SS:WORD PTR [BP]     ; Get the word value into AX
+        MOV     AX,word [ss:BP]         ; Get the word value into AX
         ADD     BP,2                    ; Step BP past the register value
         CALL    HEXW                    ; Display the 16 bit value
 
@@ -345,20 +345,20 @@ PAGE
 
 ; If the V86 task faulted, display its stack.  Else display our stack.
 
-        MOV     AX,SS:WORD PTR [BP+BP_FL2] ; Alright, whose fault was it?
+        MOV     AX,word [ss:BP+BPSTACK.BP_FL2]     ; Alright, whose fault was it?
         TEST    AL,02H                     ; Check the VM flag
         JZ      NOTVM86                    ; Gulp!  It's us.
 
 ; It was the V86 task that faulted.  Set DS:SI to point to their stack.
 
-        MOV     AX,HUGE_PTR             ; Load DS with a slector that accesses
+        MOV     AX,GDT_DEF.HUGE_PTR             ; Load DS with a slector that accesses
         MOV     DS,AX                   ;   all of memory as data
         DATAOV
         SUB     SI,SI                   ; Clear all 32 bits of ESI
-        MOV     SI,SS:[BP+BP_SP]        ; Load SI wiht the V86 task's SP
+        MOV     SI,[ss:BP+BPSTACK.BP_SP]        ; Load SI wiht the V86 task's SP
         DATAOV
         SUB     AX,AX                   ; Clear all 32 bits of EAX
-        MOV     AX,SS:[BP+BP_SS]        ; Get the V86 task's SS
+        MOV     AX,[ss:BP+BPSTACK.BP_SS]        ; Get the V86 task's SS
         DATAOV                          ; Shift it left 4 bits to convert it
         SHL     AX,4                    ;   to an offset
         DATAOV                          ; Add it on to SP.  Now SI contains
@@ -412,7 +412,7 @@ WAIT_HERE:
         CMP     AL,054H                 ; System request key?
         JNE     CHK_ESC                 ; No.  Check for Esc key.
 
-        CMP     SS:WORD PTR [BP+BP_EX],0EH ; It was system request key.  Now
+        CMP     word [ss:BP+BPSTACK.BP_EX],0EH     ; It was system request key.  Now
                                            ;   check for a page fault.
         JE      PAGE_FAULT              ; If so, go remove the extra return code
                                         ;   from the stack and terminate the
@@ -424,18 +424,18 @@ CHK_ESC:
         JNE     CHKPRT                  ; Nope.  Go check for Print Screen and
                                         ;   Ctrl-Alt-Del.
         MOV     BP,SP                   ; Point BP to the register save area
-        CMP     SS:WORD PTR [BP+BP_EX],0EH ; Check for a page fault
+        CMP     word [ss:BP+BPSTACK.BP_EX],0EH     ; Check for a page fault
         JE      PAGE_FAULT                 ; If so, go remove the extra return
                                            ;   code from the stack and terminate
                                            ;   the application running in the
                                            ;   V86 task.
-        MOV     AX,SS:WORD PTR [BP+BP_FL2] ; Else, Esc key hit and no page fault
+        MOV     AX,word [ss:BP+BPSTACK.BP_FL2]     ; Else, Esc key hit and no page fault
         TEST    AL,02H                     ; Check who faulted, them or us
         JZ      DO_RESET                   ; If it's us, then reIPL.
 
 TERM_APP:
-        MOV     SS:WORD PTR [BP+BP_EX],21H   ; If it's them, termintate whatever
-        MOV     SS:WORD PTR [BP+BP_AX],4CFFH ;   is running by forcing a DOS
+        MOV     word [ss:BP+BPSTACK.BP_EX],21H       ; If it's them, termintate whatever
+        MOV     word [ss:BP+BPSTACK.BP_AX],4CFFH     ;   is running by forcing a DOS
                                              ;   termintate.  Return code is FF.
         JMP     DO_MONITOR                   ; Go pass the interrupt to the V86
                                              ;   task
@@ -451,10 +451,10 @@ PAGE_FAULT:
 
         STD                             ; Shift into reverse, 'cause stacks
                                         ;   grow down
-        MOV     CX,(BP_EC-BP_START)/2   ; Load CX with the number of words
-        MOV     DI,(BP_EC+2-BP_START)   ; Point DI to the last word of the
+        MOV     CX,(BPSTACK.BP_EC-BP_START)/2   ; Load CX with the number of words
+        MOV     DI,(BPSTACK.BP_EC+2-BP_START)   ; Point DI to the last word of the
         ADD     DI,BP                   ;   extra error code
-        MOV     SI,(BP_EC-2-BP_START)   ; Point SI to the last word of the
+        MOV     SI,(BPSTACK.BP_EC-2-BP_START)   ; Point SI to the last word of the
         ADD     SI,BP                   ;   exception code
         MOV     AX,SS                   ; Set up the selectors
         MOV     ES,AX
@@ -481,12 +481,12 @@ CHKPRT:
 
         MOV     BP,SP                   ; It was a print screen.  Reset BP to
                                         ;   point to our register save area.
-        MOV     AX,SS:WORD PTR [BP+BP_FL2] ; If is was us that had the problem
+        MOV     AX,word [ss:BP+BPSTACK.BP_FL2]     ; If is was us that had the problem
         TEST    AL,02H                     ;   then we don't allow print screen
                                            ;   because the system is not healthy
         JZ      WAIT_HERE                  ; Go get another key
 
-        MOV     SS:WORD PTR [BP+BP_EX],05H ; If it was them then we can do a
+        MOV     word [ss:BP+BPSTACK.BP_EX],05H     ; If it was them then we can do a
         JMP     DO_MONITOR                 ;   print screen.  Force the V86
                                            ;   task to do an INT 5 (Prt Sc).
 
@@ -496,7 +496,7 @@ CHKPRT:
 ;
 
 DO_RESET:
-        MOV     AX,HUGE_PTR     ; Load ES with a selector that accesses all
+        MOV     AX,GDT_DEF.HUGE_PTR     ; Load ES with a selector that accesses all
         MOV     ES,AX           ;   of memory as data
         DATAOV
         SUB     DI,DI           ; Clear EDI (32 bit DI)
@@ -522,7 +522,7 @@ DO_MONITOR:
 
          MOV     BP,SP          ; Reset BP to point to our register save area
                                 ;   on the stack
-         MOV     AX,SS:WORD PTR [BP+BP_FL2] ; Check if it was the V86 task that
+         MOV     AX,word [ss:BP+BPSTACK.BP_FL2]     ; Check if it was the V86 task that
          TEST    AL,02H                     ;   faulted
          JNZ     LONGWAY        ; If so, pass the interrupt on
          JMP     POPREGS        ; Otherwise just return                     @P1C
@@ -532,29 +532,29 @@ PAGE
 ; We come here if the check up front said it was the V86 task that faulted.
 
 LONGWAY:
-        MOV     SS:WORD PTR [BP+BP_SP2],0 ;Purify high-order words of SP, SS
-        MOV     SS:WORD PTR [BP+BP_SS2],0 ;   and IP
-        MOV     SS:WORD PTR [BP+BP_IP2],0
+        MOV     word [ss:BP+BPSTACK.BP_SP2],0     ;Purify high-order words of SP, SS
+        MOV     word [ss:BP+BPSTACK.BP_SS2],0     ;   and IP
+        MOV     word [ss:BP+BPSTACK.BP_IP2],0
 
 ; Test for interrupt versus exception.
 
-        CMP     SS:WORD PTR [BP+BP_EX],13     ; Check if it was a general
+        CMP     word [ss:BP+BPSTACK.BP_EX],13         ; Check if it was a general
                                               ;   protection exception
         JNE     LONGWAY2                      ; If not, continue checking
         JMP     EMULATE                       ; If so, then go to INDEEMU to
                                               ;   emulate the instruction
 LONGWAY2:
-        CMP     SS:WORD PTR [BP+BP_EX],6      ; Was it an invalid op-code
+        CMP     word [ss:BP+BPSTACK.BP_EX],6          ; Was it an invalid op-code
                                               ;   exception?
         JB      LONGWAY4                      ; If lower, then pass the
                                               ;   interrupt back to the V86 task
-        CMP     SS:WORD PTR [BP+BP_EX],7      ; Was it a coprocessor not avail-
+        CMP     word [ss:BP+BPSTACK.BP_EX],7          ; Was it a coprocessor not avail-
                                               ;   able exception?
         JA      LONGWAY3                      ; If greater then do more checking
         JMP     EMULATE                       ; Emulation needed for interrupts
                                               ;   6 and 7
 LONGWAY3:
-        CMP     SS:WORD PTR [BP+BP_EX],15H    ; Check if it was INT 15
+        CMP     word [ss:BP+BPSTACK.BP_EX],15H        ; Check if it was INT 15
         JNE     LONGWAY4                      ; Nope, pass interrupt back to
                                               ;   the V86 task
         JMP     INT15                         ; Emulation needed for INT 15
@@ -563,20 +563,20 @@ LONGWAY4:
 
 ; Pass the interrupt back to the V86 task.
 
-        MOV     AX,HUGE_PTR             ; Load ES with a selector that accesses
+        MOV     AX,GDT_DEF.HUGE_PTR             ; Load ES with a selector that accesses
         MOV     ES,AX                   ;   all of memory as data
         DATAOV
         SUB     DI,DI                   ; Clear all 32 bits of EDI
-        MOV     DI,SS:[BP+BP_SP]        ; Load DI with the V86 task's SP
+        MOV     DI,[ss:BP+BPSTACK.BP_SP]        ; Load DI with the V86 task's SP
         SUB     DI,6                    ; Decrement "SP" to make room for the
                                         ;   push of IP, CS and the flags.
                                         ; Note that this assumes there are at
                                         ;   least 6 bytes keft on the stack.
-        MOV     SS:WORD PTR [BP+BP_SP],DI ; Put the new SP into the V86 register
+        MOV     word [ss:BP+BPSTACK.BP_SP],DI     ; Put the new SP into the V86 register
                                           ;   save area
         DATAOV
         SUB     AX,AX                   ; Clear all 32 bits of EAX
-        MOV     AX,SS:[BP+BP_SS]        ; Load AX with the V86 task's SS
+        MOV     AX,[ss:BP+BPSTACK.BP_SS]        ; Load AX with the V86 task's SS
         DATAOV                          ; Shift it left four bits to convert
         SHL     AX,4                    ;   it to an offset
         DATAOV                          ; Add it on to SP.  Now DI contains
@@ -586,35 +586,35 @@ LONGWAY4:
 ; reverse order because the stack grows down, but we are going up as we put
 ; the stuff on the stack.
 
-        MOV     AX,SS:[BP+BP_IP]        ; Get the V86 task's IP
+        MOV     AX,[ss:BP+BPSTACK.BP_IP]        ; Get the V86 task's IP
         ADDROV
         STOSW                           ; Put it on his stack
         ADDROV                          ; Intel bug # A0-119
         NOP                             ; Intel bug # A0-119
 
-        MOV     AX,SS:[BP+BP_CS]        ; Get the V86 task's CS
+        MOV     AX,[ss:BP+BPSTACK.BP_CS]        ; Get the V86 task's CS
         ADDROV
         STOSW                           ; Put it on his stack
         ADDROV                          ; Intel bug # A0-119
         NOP                             ; Intel bug # A0-119
 
-        MOV     AX,SS:[BP+BP_FL]        ; Get the V86 task's flags
+        MOV     AX,[ss:BP+BPSTACK.BP_FL]        ; Get the V86 task's flags
         ADDROV
         STOSW                           ; Put them on his stack
         ADDROV                          ; Intel bug # A0-119
         NOP                             ; Intel bug # A0-119
         AND     AX,3CFFH                ; Clean up the flags for our IRET
-        MOV     WORD PTR SS:[BP+BP_FL],AX
+        MOV     word [ss:BP+BPSTACK.BP_FL],AX
 
-        MOV     SI,SS:[BP+BP_EX]        ; Get the interrupt vector
+        MOV     SI,[ss:BP+BPSTACK.BP_EX]        ; Get the interrupt vector
         SHL     SI,2                    ; Multiply by four because interrupt
                                         ;   vectorsare four bytes long
-        MOV     AX,HUGE_PTR             ; Load DS with a selector that accesses
+        MOV     AX,GDT_DEF.HUGE_PTR             ; Load DS with a selector that accesses
         MOV     DS,AX                   ;   all of memory as data
         LODSW                           ; Get the IP for the interrupt
-        MOV     WORD PTR SS:[BP+BP_IP],AX ; Store it in the V86 task's IP
+        MOV     word [ss:BP+BPSTACK.BP_IP],AX     ; Store it in the V86 task's IP
         LODSW                           ; Get the CS for the interrupt
-        MOV     WORD PTR SS:[BP+BP_CS],AX ; Store it in the V86 task's CS
+        MOV     word [ss:BP+BPSTACK.BP_CS],AX     ; Store it in the V86 task's CS
 
 PAGE
 POPREGS:                                ;                                   @P1C
@@ -625,14 +625,14 @@ POPREGS:                                ;                                   @P1C
         DATAOV                          ; Restore all the registers
         POPA                            ;   (32 bit registers)
         POP     DS                      ; Restore DS
-        ADD     SP,(BP_IP-BP_EX)        ; Step SP past the error code placed
+        ADD     SP,(BPSTACK.BP_IP-BPSTACK.BP_EX)        ; Step SP past the error code placed
                                         ;   on our stack by the 80386
         DATAOV
         IRET                            ; IRET to the V86 task
 
-SEX     ENDP
+;SEX     ENDP
 
-SUBTTL  HEXD - Convert DWORD in EAX to ASCII string at ES:DI
+SUBTTL  HEXD - Convert DWORD in EAX to ASCII string at [es:DI]
 PAGE
 ;
 ;       INPUT:   EAX   = hex double word to display
@@ -644,7 +644,7 @@ PAGE
 ;                Characters are placed on the screen
 ;
 
-HEXD    PROC    NEAR
+HEXD:
         DATAOV
         PUSH    AX            ; Save EAX on the stack
         DATAOV
@@ -664,9 +664,9 @@ HEXD    PROC    NEAR
         CALL    HEXB          ; And conver the last byte to ASCII at ES:DI
         RET
 
-HEXD    ENDP
+;HEXD    ENDP
 
-SUBTTL  HEXW - Convert WORD in AX to ASCII string at ES:DI
+SUBTTL  HEXW - Convert WORD in AX to ASCII string at [es:DI]
 PAGE
 ;
 ;       INPUT:   AX    = hex word to display
@@ -678,7 +678,7 @@ PAGE
 ;                Characters are placed on the screen
 ;
 
-HEXW    PROC    NEAR
+HEXW:
 
         PUSH    AX            ; Save the value in AX on the stack
         XCHG    AH,AL         ; Move the high byte into AL
@@ -687,9 +687,9 @@ HEXW    PROC    NEAR
         CALL    HEXB          ; Convert the low byte to ASCII at ES:DI
         RET
 
-HEXW    ENDP
+;HEXW    ENDP
 
-SUBTTL  HEXD - Convert BYTE in AL to ASCII string at ES:DI
+SUBTTL  HEXD - Convert BYTE in AL to ASCII string at [es:DI]
 PAGE
 ;
 ;       INPUT:   AL    = hex byte to display
@@ -701,7 +701,7 @@ PAGE
 ;                Characters are placed on the screen
 ;
 
-HEXB    PROC    NEAR
+HEXB:
 
         PUSH    AX            ; Save the value in AX
         AND     AL,0F0H       ; Clear the low nibble of AL
@@ -711,38 +711,39 @@ HEXB    PROC    NEAR
         SHR     AL,1
         ADD     AL,030H       ; Add '0' to convert to ASCII
         CMP     AL,03AH       ; Was this hex digit greater than 9?
-        JC      OK1           ; Nope.  It's OK, so go display it.
+        JC      OK1_           ; Nope.  It's OK, so go display it.
         ADD     AL,7          ; Yup.  Then convert to 'A' to 'F'.
-OK1:    MOV     AH,BH         ; Move the attribute into AH
+OK1_:    MOV     AH,BH         ; Move the attribute into AH
         STOSW                 ; Put the character & attribute into the display
                               ;   buffer at ES:DI
         POP     AX            ; Restore AX
         AND     AL,00FH       ; Clear the high nibble of AL
         ADD     AL,030H       ; Convert the low nibble to ASCII as before
         CMP     AL,03AH       ; Hex digit greater than 9?
-        JC      OK2           ; Nope.  It's OK, so go display it.
+        JC      OK2_           ; Nope.  It's OK, so go display it.
         ADD     AL,7          ; Yup.  Then convert to 'A' to 'F'.
-OK2:    MOV     AH,BH
+OK2_:    MOV     AH,BH
         STOSW
         RET
 
-HEXB    ENDP
+;HEXB    ENDP
 
         PAGE
 
-REG     MACRO   NAME,ROW,COL,L
-        DB      &ROW                    ; Display of register &NAME starts in
-        DB      &COL                    ;   row &ROW and column &COL
-        DB      '&NAME:'                ; Name to display for register &NAME
+macro REG NAME,ROW,COL,L
+{
+        DB      ROW                    ; Display of register &NAME starts in
+        DB      COL                    ;   row &ROW and column &COL
+        DB      `NAME, ':'                ; Name to display for register &NAME
         DB      0                       ; End of string marker
-        DW      BP_&NAME                ; Offset of value of register &NAME
+        DW      BPSTACK.BP_#NAME                ; Offset of value of register &NAME
                                         ;   that we saved on our stack
-        DW      &L                      ; Number of words in the register
-        ENDM
+        DW      L                      ; Number of words in the register
+}
 
 SUBTTL  Register table
 PAGE
-REG_TABLE LABEL NEAR
+REG_TABLE:
 ;
 ; Declare data used for displaying the registers on the screen.  For each
 ; register there is a structure that contains the row and column of where the
@@ -757,7 +758,7 @@ REG_TABLE LABEL NEAR
         DB      10                      ; Column 10
         DB      'System Exception - '   ; Text
         DB      0                       ; End of text
-        DW      BP_EX                   ; Offset to hex value on the stack
+        DW      BPSTACK.BP_EX                   ; Offset to hex value on the stack
         DW      1                       ; Number of words of data
 
 ; Now, fake one to put the task id (bank ID) on the screen.
@@ -766,7 +767,7 @@ REG_TABLE LABEL NEAR
         DB      50                      ; Column 50
         DB      'Task ID - '            ; Text
         DB      0                       ; End of text
-        DW      BP_PSP2                 ; Offset to hex value on the stack
+        DW      BPSTACK.BP_PSP2                 ; Offset to hex value on the stack
         DW      1                       ; Number of words of data
 
 ; Now, lets do the registers
@@ -793,7 +794,7 @@ REG_TABLE LABEL NEAR
         REG     VMFS,5,48,1
         REG     VMGS,5,63,1
 
-PROG    ENDS
+;PROG    ENDS
 
-        END
+;        END
 

@@ -1,38 +1,38 @@
-COMMENT #
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-*                                                                             *
-* MODULE NAME     : INDEACC                                                   *
-*                                                                             *
-*                                                                             *
-*                    5669-196 (C) COPYRIGHT 1988 Microsoft Corporation 	      *
-*                                                                             *
-* DESCRIPTIVE NAME: Access rights byte definitions for 80386 XMA emulator     *
-*                                                                             *
-* STATUS (LEVEL)  : Version (0) Level (1.0)                                   *
-*                                                                             *
-* FUNCTION        : This file defines the access rights bytes used in         *
-*                   descriptors that define the code and data segments.       *
-*                                                                             *
-* MODULE TYPE     : INC                                                       *
-*                                                                             *
-* REGISTER USAGE  : 80386 Standard                                            *
-*                                                                             *
-* RESTRICTIONS    : None                                                      *
-*                                                                             *
-* DEPENDENCIES    : None                                                      *
-*                                                                             *
-* EXTERNAL                                                                    *
-* REFERENCES      : None                                                      *
-*                                                                             *
-* CHANGE ACTIVITY :                                                           *
-*                                                                             *
-* $MAC(INDEACC) COMP(LOAD) PROD(3270PC) :                                     *
-*                                                                             *
-* $D0=D0004700 410 870530 D : NEW FOR WSP RELEASE 1.1                         *
-* $P1=P0000311 410 870804 D : RENAME MODULE'S LIBRARY FILE TYPE TO "INC"      *
-*                                                                             *
-* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-#
+;COMMENT #
+;* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;*                                                                             *
+;* MODULE NAME     : INDEACC                                                   *
+;*                                                                             *
+;*                                                                             *
+;*                    5669-196 (C) COPYRIGHT 1988 Microsoft Corporation 	      *
+;*                                                                             *
+;* DESCRIPTIVE NAME: Access rights byte definitions for 80386 XMA emulator     *
+;*                                                                             *
+;* STATUS (LEVEL)  : Version (0) Level (1.0)                                   *
+;*                                                                             *
+;* FUNCTION        : This file defines the access rights bytes used in         *
+;*                   descriptors that define the code and data segments.       *
+;*                                                                             *
+;* MODULE TYPE     : INC                                                       *
+;*                                                                             *
+;* REGISTER USAGE  : 80386 Standard                                            *
+;*                                                                             *
+;* RESTRICTIONS    : None                                                      *
+;*                                                                             *
+;* DEPENDENCIES    : None                                                      *
+;*                                                                             *
+;* EXTERNAL                                                                    *
+;* REFERENCES      : None                                                      *
+;*                                                                             *
+;* CHANGE ACTIVITY :                                                           *
+;*                                                                             *
+;* MAC$(INDEACC) COMP(LOAD) PROD(3270PC) :                                     *
+;*                                                                             *
+;* D0$=D0004700 410 870530 D : NEW FOR WSP RELEASE 1.1                         *
+;* P1$=P0000311 410 870804 D : RENAME MODULE'S LIBRARY FILE TYPE TO "INC"      *
+;*                                                                             *
+;* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+;#
 
 PAGE
 ;       RECORD DEFINITIONS FOR ACCESS RIGHTS BYTES
@@ -43,7 +43,16 @@ PAGE
 
 ;       Define the bit fields for the access rights byte
 
-DATA_ACC RECORD PRESENT:1,DPL:2,SEG_TYPE:1,XQTBLE:1,EXPDIR:1,WRTBLE:1,ACCESSED:1
+;DATA_ACC	RECORD	PRESENT:1,DPL:2,SEG_TYPE:1,XQTBLE:1,EXPDIR:1,WRTBLE:1,ACCESSED:1
+; MASM packed those into 8 bits from the top down; the name of a field is
+; the shift it stands for, and MASK of it the bits it covers.
+PRESENT = 7
+DPL = 5
+SEG_TYPE = 4
+XQTBLE = 3
+EXPDIR = 2
+WRTBLE = 1
+ACCESSED = 0
 
               ; PRESENT  (1 bit)   0 = segment not present in memory
               ;                    1 = segment present in memory
@@ -103,7 +112,13 @@ PAGE
 ;                       Identical to data segments except for two fields.
 
 
-CODE_ACC        RECORD  DATA_HI:5,CONFORM:1,READABLE:1,DATA_LO:1
+;CODE_ACC	RECORD	DATA_HI:5,CONFORM:1,READABLE:1,DATA_LO:1
+; MASM packed those into 8 bits from the top down; the name of a field is
+; the shift it stands for, and MASK of it the bits it covers.
+DATA_HI = 3
+CONFORM = 2
+READABLE = 1
+DATA_LO = 0
 
               ; DATA_HI  (5 bits)  Same five bits as described for data segments
               ;                    PPRESENT (1), DPL (2), SEG_TYPE (1) and
@@ -164,7 +179,11 @@ PAGE
 ;                         occupies the lowermost 4 bits.
 
 
-SYSTEM_ACC      RECORD  DATA_H:4,DESC_TYPE:4
+;SYSTEM_ACC	RECORD	DATA_H:4,DESC_TYPE:4
+; MASM packed those into 8 bits from the top down; the name of a field is
+; the shift it stands for, and MASK of it the bits it covers.
+DATA_H = 4
+DESC_TYPE = 0
 
               ; DATA_H   (4 bits)  Same four bits as described for data segments
               ;                    PPRESENT (1), DPL (2) and SEG_TYPE (1)
@@ -201,18 +220,18 @@ GATE_ACCESS     EQU     10000000B     ; Present, DPL = 0 for Gates
 ;       These are for the type field.  When "OR"ed with one of the above,
 ;       you have a complete access rights byte.
 
-LDT_DESC        EQU     00000010B OR LDT_ACCESS
+LDT_DESC        equ     (00000010B OR LDT_ACCESS)
 
-FREE_TSS        EQU     00000001B OR TSS_ACCESS
-FREE_TSS_386    EQU     00001001B OR TSS_ACCESS
+FREE_TSS        equ     (00000001B OR TSS_ACCESS)
+FREE_TSS_386    equ     (00001001B OR TSS_ACCESS)
 
-BUSY_TSS        EQU     00000011B OR TSS_ACCESS
+BUSY_TSS        equ     (00000011B OR TSS_ACCESS)
 
-CALL_GATE       EQU     00000100B OR GATE_ACCESS
+CALL_GATE       equ     (00000100B OR GATE_ACCESS)
 
-TASK_GATE       EQU     00000101B OR GATE_ACCESS
+TASK_GATE       equ     (00000101B OR GATE_ACCESS)
 
-INT_GATE        EQU     00000110B OR GATE_ACCESS
+INT_GATE        equ     (00000110B OR GATE_ACCESS)
 
-TRAP_GATE       EQU     00000111B OR GATE_ACCESS
+TRAP_GATE       equ     (00000111B OR GATE_ACCESS)
 

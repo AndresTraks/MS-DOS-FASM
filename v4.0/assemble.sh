@@ -407,3 +407,15 @@ device SMARTDRV SMRTLNK SMARTDRV.SYS
 # three segments and no group, which MKCLNK.ASM lays down in turn.  It is
 # under src/DEV because COUNTRY.SYS is.
 device COUNTRY MKCLNK MKCNTRY.EXE
+
+# XMAEM.SYS, the 80386 XMA emulator: ten modules in one segment, which
+# XMAELNK.ASM reads in turn.  It puts a 386 into protected mode and runs
+# what was there as a virtual 8086 task, answering the interface of the XMA
+# memory card of a 3270 PC out of page tables of its own, so that software
+# written for the card runs on a machine that has none.  INDEINS.MAC
+# hand-assembles the 386's instructions, MASM 3.0 not having known them.
+# Unlike the other drivers this one is an .EXE and not a flat image: the
+# release links the ten objects and keeps what LINK wrote, with no EXE2BIN
+# after it, because the driver writes its own segment into the task state
+# segment it builds and only the loader knows that number.
+device XMAEM XMAELNK XMAEM.SYS
