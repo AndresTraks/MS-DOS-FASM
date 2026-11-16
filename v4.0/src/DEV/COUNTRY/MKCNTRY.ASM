@@ -52,37 +52,37 @@
 ;	create country.sys file
 ;
 ;
-	include mkcntry.inc
+	include 'MKCNTRY.INC'
 ;
-cseg	segment para public 'code'
-	assume	cs:cseg,ds:dseg
-mkcdif	proc	far
-	mov	ax,dseg 		; establish addressability
+if SEGSEL = S_CSEG
+;	assume	cs:cseg,ds:dseg
+mkcdif:
+	mov	ax,dseg_ 		; establish addressability
 	mov	ds,ax			;  for ds
 	mov	es,ax			;  and es
-	lea	dx,cdifname		; address of file name to create
+	lea	dx,[cdifname]; address of file name to create
 	xor	cx,cx			; attrib = normal file
 	mov	ah,3ch			; create function
 	int	21h			; create file
 	jnc	create_ok		; jump if create successful
-	lea	dx,crmsg
+	lea	dx,[crmsg]
 	mov	cx,crmlen
 	jmp	wrt_msg
 create_ok:
 	mov	bx,ax			; save handle
 	mov	ah,40h			; write function
 	mov	cx,cdiend-cdinfo	; length of cdi
-	lea	dx,cdinfo		; address of cdi
+	lea	dx,[cdinfo]; address of cdi
 	int	21h			; write cdi file
 	cmp	ax,cx			; compare bytes written
 	jz	write_ok		; jump if write was successful
-	lea	dx,iomsg
+	lea	dx,[iomsg]
 	mov	cx,iomlen
 	jmp	wrt_msg
 write_ok:
 	mov	ah,3eh			; close function
 	int	21h			; close cdi file
-	lea	dx,succmsg
+	lea	dx,[succmsg]
 	mov	cx,smlen
 wrt_msg:
 	mov	bx,1
@@ -91,8 +91,8 @@ wrt_msg:
 	xor	al,al
 	mov	ah,4ch			; exit function
 	int	21h			; return to exec'ing program
-mkcdif	endp
-cseg	ends
+;mkcdif	endp
+end if
 ;
 	page
 ; -----------------------------------------------------------
@@ -100,595 +100,595 @@ cseg	ends
 ;	Data for COUNTRY.SYS file
 ;
 ; -----------------------------------------------------------
-dseg	segment para
-cdinfo	label	word
+if SEGSEL = S_DSEG
+label cdinfo word
 	db	0ffh,'COUNTRY'          ; signature
 	db	8 dup (0)		; reserved
 	dw	PTRCNT			; number of pointers in header
 	db	CIPTYPE 		; type = country info pointer
-	dd	offset cntryinfo	; pointer to country information
+	dd	cntryinfo        ; pointer to country information
 ;
-cntryinfo label word
-cntrycnt=0
+label cntryinfo word
+CNTRYCNT=0
 	dw	finalCNT		; number of countries
-	ctryent <CENTRYSIZE,CID_US,437,,,us437_data>	    ; United States
-	ctryent <CENTRYSIZE,CID_US,850,,,us850_data>	    ;
-	ctryent <CENTRYSIZE,CID_UK,437,,,uk437_data>	    ; United Kingdom
-	ctryent <CENTRYSIZE,CID_UK,850,,,uk850_data>	    ;
-	ctryent <CENTRYSIZE,CID_FR,437,,,fr437_data>	    ; France
-	ctryent <CENTRYSIZE,CID_FR,850,,,fr850_data>	    ;
-	ctryent <CENTRYSIZE,CID_GR,437,,,gr437_data>	    ; Germany
-	ctryent <CENTRYSIZE,CID_GR,850,,,gr850_data>	    ;
-	ctryent <CENTRYSIZE,CID_SP,850,,,sp850_data>	    ;
-	ctryent <CENTRYSIZE,CID_SP,437,,,sp437_data>	    ; Spain
-	ctryent <CENTRYSIZE,CID_IT,437,,,it437_data>	    ; Italy
-	ctryent <CENTRYSIZE,CID_IT,850,,,it850_data>	    ;
-	ctryent <CENTRYSIZE,CID_SV,437,,,sv437_data>	    ; Sweden
-	ctryent <CENTRYSIZE,CID_SV,850,,,sv850_data>	    ;
-	ctryent <CENTRYSIZE,CID_DK,850,,,dk850_data>	    ; Denmark
-	ctryent <CENTRYSIZE,CID_DK,865,,,dk865_data>	    ; DCR060 CNS ***** ;AN000;
-	ctryent <CENTRYSIZE,CID_SW,850,,,sw850_data>	    ; Switzerland
-	ctryent <CENTRYSIZE,CID_SW,437,,,sw437_data>	    ;
-	ctryent <CENTRYSIZE,CID_NO,850,,,no850_data>	    ; Norway
-	ctryent <CENTRYSIZE,CID_NO,865,,,no865_data>	    ;
-	ctryent <CENTRYSIZE,CID_NL,437,,,nl437_data>	    ; Netherlands
-	ctryent <CENTRYSIZE,CID_NL,850,,,nl850_data>	    ;
-	ctryent <CENTRYSIZE,CID_BE,850,,,be850_data>	    ; Belgium
-	ctryent <CENTRYSIZE,CID_BE,437,,,be437_data>	    ;
-	ctryent <CENTRYSIZE,CID_FI,850,,,fi850_data>	    ; Finland p3811, requested 850 default
-	ctryent <CENTRYSIZE,CID_FI,437,,,fi437_data>	    ; Finland
-	ctryent <CENTRYSIZE,CID_IS,862,,,is862_data>	    ; Israel
-	ctryent <CENTRYSIZE,CID_IS,850,,,is850_data>	    ;
-	ctryent <CENTRYSIZE,CID_CA,863,,,ca863_data>	    ; Canada French
-	ctryent <CENTRYSIZE,CID_CA,850,,,ca850_data>	    ;
-	ctryent <CENTRYSIZE,CID_AS,864,,,as864_data>	    ; Area South (Arab States)
-	ctryent <CENTRYSIZE,CID_AS,850,,,as850_data>	    ;
-	ctryent <CENTRYSIZE,CID_PO,850,,,po850_data>	    ; Portugal
-	ctryent <CENTRYSIZE,CID_PO,860,,,po860_data>	    ;
-	ctryent <CENTRYSIZE,CID_LA,850,,,la850_data>	    ;
-	ctryent <CENTRYSIZE,CID_LA,437,,,la437_data>	    ; Latin America
-	ctryent <CENTRYSIZE,CID_AFE,437,,,afe437_data>	    ; International English
-	ctryent <CENTRYSIZE,CID_AFE,850,,,afe850_data>	    ;
-	ctryent <CENTRYSIZE,CID_JP,932,,,jp932_data>	    ; Japan
-	ctryent <CENTRYSIZE,CID_JP,437,,,jp437_data>	    ;
-	ctryent <CENTRYSIZE,CID_KO,934,,,ko934_data>	    ; Korea
-	ctryent <CENTRYSIZE,CID_KO,437,,,ko437_data>	    ;
-	ctryent <CENTRYSIZE,CID_PR,936,,,pr936_data>	    ; PRC
-	ctryent <CENTRYSIZE,CID_PR,437,,,pr437_data>	    ;
-	ctryent <CENTRYSIZE,CID_TA,938,,,ta938_data>	    ; Taiwan
-	ctryent <CENTRYSIZE,CID_TA,437,,,ta437_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_US,437,,,us437_data>	    ; United States
+	CTRYENT <CENTRYSIZE,CID_US,850,,,us850_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_UK,437,,,uk437_data>	    ; United Kingdom
+	CTRYENT <CENTRYSIZE,CID_UK,850,,,uk850_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_FR,437,,,fr437_data>	    ; France
+	CTRYENT <CENTRYSIZE,CID_FR,850,,,fr850_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_GR,437,,,gr437_data>	    ; Germany
+	CTRYENT <CENTRYSIZE,CID_GR,850,,,gr850_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_SP,850,,,sp850_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_SP,437,,,sp437_data>	    ; Spain
+	CTRYENT <CENTRYSIZE,CID_IT,437,,,it437_data>	    ; Italy
+	CTRYENT <CENTRYSIZE,CID_IT,850,,,it850_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_SV,437,,,sv437_data>	    ; Sweden
+	CTRYENT <CENTRYSIZE,CID_SV,850,,,sv850_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_DK,850,,,dk850_data>	    ; Denmark
+	CTRYENT <CENTRYSIZE,CID_DK,865,,,dk865_data>	    ; DCR060 CNS ***** ;AN000;
+	CTRYENT <CENTRYSIZE,CID_SW,850,,,sw850_data>	    ; Switzerland
+	CTRYENT <CENTRYSIZE,CID_SW,437,,,sw437_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_NO,850,,,no850_data>	    ; Norway
+	CTRYENT <CENTRYSIZE,CID_NO,865,,,no865_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_NL,437,,,nl437_data>	    ; Netherlands
+	CTRYENT <CENTRYSIZE,CID_NL,850,,,nl850_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_BE,850,,,be850_data>	    ; Belgium
+	CTRYENT <CENTRYSIZE,CID_BE,437,,,be437_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_FI,850,,,fi850_data>	    ; Finland p3811, requested 850 default
+	CTRYENT <CENTRYSIZE,CID_FI,437,,,fi437_data>	    ; Finland
+	CTRYENT <CENTRYSIZE,CID_IS,862,,,is862_data>	    ; Israel
+	CTRYENT <CENTRYSIZE,CID_IS,850,,,is850_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_CA,863,,,ca863_data>	    ; Canada French
+	CTRYENT <CENTRYSIZE,CID_CA,850,,,ca850_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_AS,864,,,as864_data>	    ; Area South (Arab States)
+	CTRYENT <CENTRYSIZE,CID_AS,850,,,as850_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_PO,850,,,po850_data>	    ; Portugal
+	CTRYENT <CENTRYSIZE,CID_PO,860,,,po860_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_LA,850,,,la850_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_LA,437,,,la437_data>	    ; Latin America
+	CTRYENT <CENTRYSIZE,CID_AFE,437,,,afe437_data>	    ; International English
+	CTRYENT <CENTRYSIZE,CID_AFE,850,,,afe850_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_JP,932,,,jp932_data>	    ; Japan
+	CTRYENT <CENTRYSIZE,CID_JP,437,,,jp437_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_KO,934,,,ko934_data>	    ; Korea
+	CTRYENT <CENTRYSIZE,CID_KO,437,,,ko437_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_PR,936,,,pr936_data>	    ; PRC
+	CTRYENT <CENTRYSIZE,CID_PR,437,,,pr437_data>	    ;
+	CTRYENT <CENTRYSIZE,CID_TA,938,,,ta938_data>	    ; Taiwan
+	CTRYENT <CENTRYSIZE,CID_TA,437,,,ta437_data>	    ;
 
 
-dummy	macro	p
-finalCNT	equ	p
-	endm
-	dummy	%cntrycnt
+;dummy	macro	p
+;finalCNT	equ	p
+;	endm
+finalCNT = CNTRYCNT	; what the macro's % made of it
 ;
-uk437_data label   word
+label uk437_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,uk437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,uk_collate>
-	ctrydat <CDATASIZE,SETUCASE,,uk_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,uk_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,uk_flist>
-	ctrydat <CDATASIZE,SETDBCS,,uk_dbcs>
+	ctrydat$1 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,uk437_info
+	ctrydat$2 CTRYDAT CDATASIZE,SETCOLLATE,,uk_collate
+	ctrydat$3 CTRYDAT CDATASIZE,SETUCASE,,uk_ucase
+	ctrydat$4 CTRYDAT CDATASIZE,SETUCASEFILE,,uk_ucase
+	ctrydat$5 CTRYDAT CDATASIZE,SETFILELIST,,uk_flist
+	ctrydat$6 CTRYDAT CDATASIZE,SETDBCS,,uk_dbcs
 ;
-uk850_data label   word
+label uk850_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,uk437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,uk850_collate>
-	ctrydat <CDATASIZE,SETUCASE,,uk850_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,uk850_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,uk_flist>
-	ctrydat <CDATASIZE,SETDBCS,,uk_dbcs>
+	ctrydat$7 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,uk437_info
+	ctrydat$8 CTRYDAT CDATASIZE,SETCOLLATE,,uk850_collate
+	ctrydat$9 CTRYDAT CDATASIZE,SETUCASE,,uk850_ucase
+	ctrydat$10 CTRYDAT CDATASIZE,SETUCASEFILE,,uk850_ucase
+	ctrydat$11 CTRYDAT CDATASIZE,SETFILELIST,,uk_flist
+	ctrydat$12 CTRYDAT CDATASIZE,SETDBCS,,uk_dbcs
 ;
-fr437_data label   word
+label fr437_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,fr437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,fr_collate>
-	ctrydat <CDATASIZE,SETUCASE,,fr_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,fr_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,fr_flist>
-	ctrydat <CDATASIZE,SETDBCS,,fr_dbcs>
+	ctrydat$13 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,fr437_info
+	ctrydat$14 CTRYDAT CDATASIZE,SETCOLLATE,,fr_collate
+	ctrydat$15 CTRYDAT CDATASIZE,SETUCASE,,fr_ucase
+	ctrydat$16 CTRYDAT CDATASIZE,SETUCASEFILE,,fr_ucase
+	ctrydat$17 CTRYDAT CDATASIZE,SETFILELIST,,fr_flist
+	ctrydat$18 CTRYDAT CDATASIZE,SETDBCS,,fr_dbcs
 ;
-fr850_data label   word
+label fr850_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,fr437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,fr850_collate>
-	ctrydat <CDATASIZE,SETUCASE,,fr850_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,fr850_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,fr_flist>
-	ctrydat <CDATASIZE,SETDBCS,,fr_dbcs>
+	ctrydat$19 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,fr437_info
+	ctrydat$20 CTRYDAT CDATASIZE,SETCOLLATE,,fr850_collate
+	ctrydat$21 CTRYDAT CDATASIZE,SETUCASE,,fr850_ucase
+	ctrydat$22 CTRYDAT CDATASIZE,SETUCASEFILE,,fr850_ucase
+	ctrydat$23 CTRYDAT CDATASIZE,SETFILELIST,,fr_flist
+	ctrydat$24 CTRYDAT CDATASIZE,SETDBCS,,fr_dbcs
 ;
-gr437_data label   word
+label gr437_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,gr437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,gr_collate>
-	ctrydat <CDATASIZE,SETUCASE,,gr_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,gr_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,gr_flist>
-	ctrydat <CDATASIZE,SETDBCS,,gr_dbcs>
+	ctrydat$25 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,gr437_info
+	ctrydat$26 CTRYDAT CDATASIZE,SETCOLLATE,,gr_collate
+	ctrydat$27 CTRYDAT CDATASIZE,SETUCASE,,gr_ucase
+	ctrydat$28 CTRYDAT CDATASIZE,SETUCASEFILE,,gr_ucase
+	ctrydat$29 CTRYDAT CDATASIZE,SETFILELIST,,gr_flist
+	ctrydat$30 CTRYDAT CDATASIZE,SETDBCS,,gr_dbcs
 ;
-gr850_data label   word
+label gr850_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,gr437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,gr850_collate>
-	ctrydat <CDATASIZE,SETUCASE,,gr850_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,gr850_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,gr_flist>
-	ctrydat <CDATASIZE,SETDBCS,,gr_dbcs>
+	ctrydat$31 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,gr437_info
+	ctrydat$32 CTRYDAT CDATASIZE,SETCOLLATE,,gr850_collate
+	ctrydat$33 CTRYDAT CDATASIZE,SETUCASE,,gr850_ucase
+	ctrydat$34 CTRYDAT CDATASIZE,SETUCASEFILE,,gr850_ucase
+	ctrydat$35 CTRYDAT CDATASIZE,SETFILELIST,,gr_flist
+	ctrydat$36 CTRYDAT CDATASIZE,SETDBCS,,gr_dbcs
 ;
-sp437_data label   word
+label sp437_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,sp437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,sp_collate>
-	ctrydat <CDATASIZE,SETUCASE,,sp_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,sp_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,sp_flist>
-	ctrydat <CDATASIZE,SETDBCS,,sp_dbcs>
+	ctrydat$37 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,sp437_info
+	ctrydat$38 CTRYDAT CDATASIZE,SETCOLLATE,,sp_collate
+	ctrydat$39 CTRYDAT CDATASIZE,SETUCASE,,sp_ucase
+	ctrydat$40 CTRYDAT CDATASIZE,SETUCASEFILE,,sp_ucase
+	ctrydat$41 CTRYDAT CDATASIZE,SETFILELIST,,sp_flist
+	ctrydat$42 CTRYDAT CDATASIZE,SETDBCS,,sp_dbcs
 ;
-sp850_data label   word
+label sp850_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,sp850_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,sp850_collate>
-	ctrydat <CDATASIZE,SETUCASE,,sp850_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,sp850_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,sp_flist>
-	ctrydat <CDATASIZE,SETDBCS,,sp_dbcs>
+	ctrydat$43 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,sp850_info
+	ctrydat$44 CTRYDAT CDATASIZE,SETCOLLATE,,sp850_collate
+	ctrydat$45 CTRYDAT CDATASIZE,SETUCASE,,sp850_ucase
+	ctrydat$46 CTRYDAT CDATASIZE,SETUCASEFILE,,sp850_ucase
+	ctrydat$47 CTRYDAT CDATASIZE,SETFILELIST,,sp_flist
+	ctrydat$48 CTRYDAT CDATASIZE,SETDBCS,,sp_dbcs
 ;
-it437_data label   word
+label it437_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,it437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,it_collate>
-	ctrydat <CDATASIZE,SETUCASE,,it_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,it_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,it_flist>
-	ctrydat <CDATASIZE,SETDBCS,,it_dbcs>
+	ctrydat$49 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,it437_info
+	ctrydat$50 CTRYDAT CDATASIZE,SETCOLLATE,,it_collate
+	ctrydat$51 CTRYDAT CDATASIZE,SETUCASE,,it_ucase
+	ctrydat$52 CTRYDAT CDATASIZE,SETUCASEFILE,,it_ucase
+	ctrydat$53 CTRYDAT CDATASIZE,SETFILELIST,,it_flist
+	ctrydat$54 CTRYDAT CDATASIZE,SETDBCS,,it_dbcs
 ;
-it850_data label   word
+label it850_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,it437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,it850_collate>
-	ctrydat <CDATASIZE,SETUCASE,,it850_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,it850_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,it_flist>
-	ctrydat <CDATASIZE,SETDBCS,,it_dbcs>
+	ctrydat$55 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,it437_info
+	ctrydat$56 CTRYDAT CDATASIZE,SETCOLLATE,,it850_collate
+	ctrydat$57 CTRYDAT CDATASIZE,SETUCASE,,it850_ucase
+	ctrydat$58 CTRYDAT CDATASIZE,SETUCASEFILE,,it850_ucase
+	ctrydat$59 CTRYDAT CDATASIZE,SETFILELIST,,it_flist
+	ctrydat$60 CTRYDAT CDATASIZE,SETDBCS,,it_dbcs
 ;
-sv437_data label   word
+label sv437_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,sv437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,sv_collate>
-	ctrydat <CDATASIZE,SETUCASE,,sv_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,sv_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,sv_flist>
-	ctrydat <CDATASIZE,SETDBCS,,sv_dbcs>
+	ctrydat$61 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,sv437_info
+	ctrydat$62 CTRYDAT CDATASIZE,SETCOLLATE,,sv_collate
+	ctrydat$63 CTRYDAT CDATASIZE,SETUCASE,,sv_ucase
+	ctrydat$64 CTRYDAT CDATASIZE,SETUCASEFILE,,sv_ucase
+	ctrydat$65 CTRYDAT CDATASIZE,SETFILELIST,,sv_flist
+	ctrydat$66 CTRYDAT CDATASIZE,SETDBCS,,sv_dbcs
 ;
-sv850_data label   word
+label sv850_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,sv437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,sv850_collate>
-	ctrydat <CDATASIZE,SETUCASE,,sv850_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,sv850_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,sv_flist>
-	ctrydat <CDATASIZE,SETDBCS,,sv_dbcs>
+	ctrydat$67 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,sv437_info
+	ctrydat$68 CTRYDAT CDATASIZE,SETCOLLATE,,sv850_collate
+	ctrydat$69 CTRYDAT CDATASIZE,SETUCASE,,sv850_ucase
+	ctrydat$70 CTRYDAT CDATASIZE,SETUCASEFILE,,sv850_ucase
+	ctrydat$71 CTRYDAT CDATASIZE,SETFILELIST,,sv_flist
+	ctrydat$72 CTRYDAT CDATASIZE,SETDBCS,,sv_dbcs
 ;
-dk850_data label   word
+label dk850_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,dk865_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,dk850_collate>
-	ctrydat <CDATASIZE,SETUCASE,,dk850_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,dk850_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,dk_flist>
-	ctrydat <CDATASIZE,SETDBCS,,dk_dbcs>
+	ctrydat$73 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,dk865_info
+	ctrydat$74 CTRYDAT CDATASIZE,SETCOLLATE,,dk850_collate
+	ctrydat$75 CTRYDAT CDATASIZE,SETUCASE,,dk850_ucase
+	ctrydat$76 CTRYDAT CDATASIZE,SETUCASEFILE,,dk850_ucase
+	ctrydat$77 CTRYDAT CDATASIZE,SETFILELIST,,dk_flist
+	ctrydat$78 CTRYDAT CDATASIZE,SETDBCS,,dk_dbcs
 ;
-dk865_data label   word
+label dk865_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,dk865_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,dk_collate>
-	ctrydat <CDATASIZE,SETUCASE,,dk_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,dk_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,dk_flist>
-	ctrydat <CDATASIZE,SETDBCS,,dk_dbcs>
+	ctrydat$79 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,dk865_info
+	ctrydat$80 CTRYDAT CDATASIZE,SETCOLLATE,,dk_collate
+	ctrydat$81 CTRYDAT CDATASIZE,SETUCASE,,dk_ucase
+	ctrydat$82 CTRYDAT CDATASIZE,SETUCASEFILE,,dk_ucase
+	ctrydat$83 CTRYDAT CDATASIZE,SETFILELIST,,dk_flist
+	ctrydat$84 CTRYDAT CDATASIZE,SETDBCS,,dk_dbcs
 ;
-sw437_data label   word
+label sw437_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,sw437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,sw_collate>
-	ctrydat <CDATASIZE,SETUCASE,,sw_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,sw_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,sw_flist>
-	ctrydat <CDATASIZE,SETDBCS,,sw_dbcs>
+	ctrydat$85 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,sw437_info
+	ctrydat$86 CTRYDAT CDATASIZE,SETCOLLATE,,sw_collate
+	ctrydat$87 CTRYDAT CDATASIZE,SETUCASE,,sw_ucase
+	ctrydat$88 CTRYDAT CDATASIZE,SETUCASEFILE,,sw_ucase
+	ctrydat$89 CTRYDAT CDATASIZE,SETFILELIST,,sw_flist
+	ctrydat$90 CTRYDAT CDATASIZE,SETDBCS,,sw_dbcs
 ;
-sw850_data label   word
+label sw850_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,sw437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,sw850_collate>
-	ctrydat <CDATASIZE,SETUCASE,,sw850_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,sw850_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,sw_flist>
-	ctrydat <CDATASIZE,SETDBCS,,sw_dbcs>
+	ctrydat$91 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,sw437_info
+	ctrydat$92 CTRYDAT CDATASIZE,SETCOLLATE,,sw850_collate
+	ctrydat$93 CTRYDAT CDATASIZE,SETUCASE,,sw850_ucase
+	ctrydat$94 CTRYDAT CDATASIZE,SETUCASEFILE,,sw850_ucase
+	ctrydat$95 CTRYDAT CDATASIZE,SETFILELIST,,sw_flist
+	ctrydat$96 CTRYDAT CDATASIZE,SETDBCS,,sw_dbcs
 ;
-no865_data label   word
+label no865_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,no865_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,no_collate>
-	ctrydat <CDATASIZE,SETUCASE,,no_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,no_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,no_flist>
-	ctrydat <CDATASIZE,SETDBCS,,no_dbcs>
+	ctrydat$97 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,no865_info
+	ctrydat$98 CTRYDAT CDATASIZE,SETCOLLATE,,no_collate
+	ctrydat$99 CTRYDAT CDATASIZE,SETUCASE,,no_ucase
+	ctrydat$100 CTRYDAT CDATASIZE,SETUCASEFILE,,no_ucase
+	ctrydat$101 CTRYDAT CDATASIZE,SETFILELIST,,no_flist
+	ctrydat$102 CTRYDAT CDATASIZE,SETDBCS,,no_dbcs
 ;
-no850_data label   word
+label no850_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,no865_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,no850_collate>
-	ctrydat <CDATASIZE,SETUCASE,,no850_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,no850_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,no_flist>
-	ctrydat <CDATASIZE,SETDBCS,,no_dbcs>
+	ctrydat$103 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,no865_info
+	ctrydat$104 CTRYDAT CDATASIZE,SETCOLLATE,,no850_collate
+	ctrydat$105 CTRYDAT CDATASIZE,SETUCASE,,no850_ucase
+	ctrydat$106 CTRYDAT CDATASIZE,SETUCASEFILE,,no850_ucase
+	ctrydat$107 CTRYDAT CDATASIZE,SETFILELIST,,no_flist
+	ctrydat$108 CTRYDAT CDATASIZE,SETDBCS,,no_dbcs
 ;
-nl437_data label   word
+label nl437_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,nl437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,nl_collate>
-	ctrydat <CDATASIZE,SETUCASE,,nl_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,nl_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,nl_flist>
-	ctrydat <CDATASIZE,SETDBCS,,nl_dbcs>
+	ctrydat$109 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,nl437_info
+	ctrydat$110 CTRYDAT CDATASIZE,SETCOLLATE,,nl_collate
+	ctrydat$111 CTRYDAT CDATASIZE,SETUCASE,,nl_ucase
+	ctrydat$112 CTRYDAT CDATASIZE,SETUCASEFILE,,nl_ucase
+	ctrydat$113 CTRYDAT CDATASIZE,SETFILELIST,,nl_flist
+	ctrydat$114 CTRYDAT CDATASIZE,SETDBCS,,nl_dbcs
 ;
-nl850_data label   word
+label nl850_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,nl437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,nl850_collate>
-	ctrydat <CDATASIZE,SETUCASE,,nl850_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,nl850_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,nl_flist>
-	ctrydat <CDATASIZE,SETDBCS,,nl_dbcs>
+	ctrydat$115 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,nl437_info
+	ctrydat$116 CTRYDAT CDATASIZE,SETCOLLATE,,nl850_collate
+	ctrydat$117 CTRYDAT CDATASIZE,SETUCASE,,nl850_ucase
+	ctrydat$118 CTRYDAT CDATASIZE,SETUCASEFILE,,nl850_ucase
+	ctrydat$119 CTRYDAT CDATASIZE,SETFILELIST,,nl_flist
+	ctrydat$120 CTRYDAT CDATASIZE,SETDBCS,,nl_dbcs
 ;
-be437_data label   word
+label be437_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,be437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,be_collate>
-	ctrydat <CDATASIZE,SETUCASE,,be_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,be_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,be_flist>
-	ctrydat <CDATASIZE,SETDBCS,,be_dbcs>
+	ctrydat$121 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,be437_info
+	ctrydat$122 CTRYDAT CDATASIZE,SETCOLLATE,,be_collate
+	ctrydat$123 CTRYDAT CDATASIZE,SETUCASE,,be_ucase
+	ctrydat$124 CTRYDAT CDATASIZE,SETUCASEFILE,,be_ucase
+	ctrydat$125 CTRYDAT CDATASIZE,SETFILELIST,,be_flist
+	ctrydat$126 CTRYDAT CDATASIZE,SETDBCS,,be_dbcs
 ;
-be850_data label   word
+label be850_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,be437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,be850_collate>
-	ctrydat <CDATASIZE,SETUCASE,,be850_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,be850_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,be_flist>
-	ctrydat <CDATASIZE,SETDBCS,,be_dbcs>
+	ctrydat$127 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,be437_info
+	ctrydat$128 CTRYDAT CDATASIZE,SETCOLLATE,,be850_collate
+	ctrydat$129 CTRYDAT CDATASIZE,SETUCASE,,be850_ucase
+	ctrydat$130 CTRYDAT CDATASIZE,SETUCASEFILE,,be850_ucase
+	ctrydat$131 CTRYDAT CDATASIZE,SETFILELIST,,be_flist
+	ctrydat$132 CTRYDAT CDATASIZE,SETDBCS,,be_dbcs
 ;
-fi437_data label   word
+label fi437_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,fi437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,fi_collate>
-	ctrydat <CDATASIZE,SETUCASE,,fi_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,fi_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,fi_flist>
-	ctrydat <CDATASIZE,SETDBCS,,fi_dbcs>
+	ctrydat$133 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,fi437_info
+	ctrydat$134 CTRYDAT CDATASIZE,SETCOLLATE,,fi_collate
+	ctrydat$135 CTRYDAT CDATASIZE,SETUCASE,,fi_ucase
+	ctrydat$136 CTRYDAT CDATASIZE,SETUCASEFILE,,fi_ucase
+	ctrydat$137 CTRYDAT CDATASIZE,SETFILELIST,,fi_flist
+	ctrydat$138 CTRYDAT CDATASIZE,SETDBCS,,fi_dbcs
 ;
-fi850_data label   word
+label fi850_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,fi437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,fi850_collate>
-	ctrydat <CDATASIZE,SETUCASE,,fi850_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,fi850_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,fi_flist>
-	ctrydat <CDATASIZE,SETDBCS,,fi_dbcs>
+	ctrydat$139 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,fi437_info
+	ctrydat$140 CTRYDAT CDATASIZE,SETCOLLATE,,fi850_collate
+	ctrydat$141 CTRYDAT CDATASIZE,SETUCASE,,fi850_ucase
+	ctrydat$142 CTRYDAT CDATASIZE,SETUCASEFILE,,fi850_ucase
+	ctrydat$143 CTRYDAT CDATASIZE,SETFILELIST,,fi_flist
+	ctrydat$144 CTRYDAT CDATASIZE,SETDBCS,,fi_dbcs
 ;
-us437_data label   word
+label us437_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,us437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,us_collate>
-	ctrydat <CDATASIZE,SETUCASE,,us_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,us_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,us_flist>
-	ctrydat <CDATASIZE,SETDBCS,,us_dbcs>
+	ctrydat$145 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,us437_info
+	ctrydat$146 CTRYDAT CDATASIZE,SETCOLLATE,,us_collate
+	ctrydat$147 CTRYDAT CDATASIZE,SETUCASE,,us_ucase
+	ctrydat$148 CTRYDAT CDATASIZE,SETUCASEFILE,,us_ucase
+	ctrydat$149 CTRYDAT CDATASIZE,SETFILELIST,,us_flist
+	ctrydat$150 CTRYDAT CDATASIZE,SETDBCS,,us_dbcs
 ;
-us850_data label   word
+label us850_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,us437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,us850_collate>
-	ctrydat <CDATASIZE,SETUCASE,,us850_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,us850_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,us_flist>
-	ctrydat <CDATASIZE,SETDBCS,,us_dbcs>
+	ctrydat$151 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,us437_info
+	ctrydat$152 CTRYDAT CDATASIZE,SETCOLLATE,,us850_collate
+	ctrydat$153 CTRYDAT CDATASIZE,SETUCASE,,us850_ucase
+	ctrydat$154 CTRYDAT CDATASIZE,SETUCASEFILE,,us850_ucase
+	ctrydat$155 CTRYDAT CDATASIZE,SETFILELIST,,us_flist
+	ctrydat$156 CTRYDAT CDATASIZE,SETDBCS,,us_dbcs
 ;
-is862_data label   word
+label is862_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,is862_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,is_collate>
-	ctrydat <CDATASIZE,SETUCASE,,is_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,is_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,is_flist>
-	ctrydat <CDATASIZE,SETDBCS,,is_dbcs>
+	ctrydat$157 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,is862_info
+	ctrydat$158 CTRYDAT CDATASIZE,SETCOLLATE,,is_collate
+	ctrydat$159 CTRYDAT CDATASIZE,SETUCASE,,is_ucase
+	ctrydat$160 CTRYDAT CDATASIZE,SETUCASEFILE,,is_ucase
+	ctrydat$161 CTRYDAT CDATASIZE,SETFILELIST,,is_flist
+	ctrydat$162 CTRYDAT CDATASIZE,SETDBCS,,is_dbcs
 ;
-is850_data label   word
+label is850_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,is862_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,is850_collate>
-	ctrydat <CDATASIZE,SETUCASE,,is850_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,is850_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,is_flist>
-	ctrydat <CDATASIZE,SETDBCS,,is_dbcs>
+	ctrydat$163 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,is862_info
+	ctrydat$164 CTRYDAT CDATASIZE,SETCOLLATE,,is850_collate
+	ctrydat$165 CTRYDAT CDATASIZE,SETUCASE,,is850_ucase
+	ctrydat$166 CTRYDAT CDATASIZE,SETUCASEFILE,,is850_ucase
+	ctrydat$167 CTRYDAT CDATASIZE,SETFILELIST,,is_flist
+	ctrydat$168 CTRYDAT CDATASIZE,SETDBCS,,is_dbcs
 ;
-ca863_data label   word
+label ca863_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,ca863_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,ca_collate>
-	ctrydat <CDATASIZE,SETUCASE,,ca_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,ca_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,ca_flist>
-	ctrydat <CDATASIZE,SETDBCS,,ca_dbcs>
+	ctrydat$169 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,ca863_info
+	ctrydat$170 CTRYDAT CDATASIZE,SETCOLLATE,,ca_collate
+	ctrydat$171 CTRYDAT CDATASIZE,SETUCASE,,ca_ucase
+	ctrydat$172 CTRYDAT CDATASIZE,SETUCASEFILE,,ca_ucase
+	ctrydat$173 CTRYDAT CDATASIZE,SETFILELIST,,ca_flist
+	ctrydat$174 CTRYDAT CDATASIZE,SETDBCS,,ca_dbcs
 ;
-ca850_data label   word
+label ca850_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,ca863_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,ca850_collate>
-	ctrydat <CDATASIZE,SETUCASE,,ca850_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,ca850_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,ca_flist>
-	ctrydat <CDATASIZE,SETDBCS,,ca_dbcs>
+	ctrydat$175 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,ca863_info
+	ctrydat$176 CTRYDAT CDATASIZE,SETCOLLATE,,ca850_collate
+	ctrydat$177 CTRYDAT CDATASIZE,SETUCASE,,ca850_ucase
+	ctrydat$178 CTRYDAT CDATASIZE,SETUCASEFILE,,ca850_ucase
+	ctrydat$179 CTRYDAT CDATASIZE,SETFILELIST,,ca_flist
+	ctrydat$180 CTRYDAT CDATASIZE,SETDBCS,,ca_dbcs
 ;
-as864_data label   word
+label as864_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,as864_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,as_collate>
-	ctrydat <CDATASIZE,SETUCASE,,as_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,as_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,as_flist>
-	ctrydat <CDATASIZE,SETDBCS,,as_dbcs>
+	ctrydat$181 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,as864_info
+	ctrydat$182 CTRYDAT CDATASIZE,SETCOLLATE,,as_collate
+	ctrydat$183 CTRYDAT CDATASIZE,SETUCASE,,as_ucase
+	ctrydat$184 CTRYDAT CDATASIZE,SETUCASEFILE,,as_ucase
+	ctrydat$185 CTRYDAT CDATASIZE,SETFILELIST,,as_flist
+	ctrydat$186 CTRYDAT CDATASIZE,SETDBCS,,as_dbcs
 ;
-as850_data label   word
+label as850_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,as850_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,as850_collate>
-	ctrydat <CDATASIZE,SETUCASE,,as850_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,as850_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,as_flist>
-	ctrydat <CDATASIZE,SETDBCS,,as_dbcs>
+	ctrydat$187 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,as850_info
+	ctrydat$188 CTRYDAT CDATASIZE,SETCOLLATE,,as850_collate
+	ctrydat$189 CTRYDAT CDATASIZE,SETUCASE,,as850_ucase
+	ctrydat$190 CTRYDAT CDATASIZE,SETUCASEFILE,,as850_ucase
+	ctrydat$191 CTRYDAT CDATASIZE,SETFILELIST,,as_flist
+	ctrydat$192 CTRYDAT CDATASIZE,SETDBCS,,as_dbcs
 ;
-po860_data label   word
+label po860_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,po860_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,po_collate>
-	ctrydat <CDATASIZE,SETUCASE,,po_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,po_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,po_flist>
-	ctrydat <CDATASIZE,SETDBCS,,po_dbcs>
+	ctrydat$193 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,po860_info
+	ctrydat$194 CTRYDAT CDATASIZE,SETCOLLATE,,po_collate
+	ctrydat$195 CTRYDAT CDATASIZE,SETUCASE,,po_ucase
+	ctrydat$196 CTRYDAT CDATASIZE,SETUCASEFILE,,po_ucase
+	ctrydat$197 CTRYDAT CDATASIZE,SETFILELIST,,po_flist
+	ctrydat$198 CTRYDAT CDATASIZE,SETDBCS,,po_dbcs
 ;
-po850_data label   word
+label po850_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,po860_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,po850_collate>
-	ctrydat <CDATASIZE,SETUCASE,,po850_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,po850_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,po_flist>
-	ctrydat <CDATASIZE,SETDBCS,,po_dbcs>
+	ctrydat$199 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,po860_info
+	ctrydat$200 CTRYDAT CDATASIZE,SETCOLLATE,,po850_collate
+	ctrydat$201 CTRYDAT CDATASIZE,SETUCASE,,po850_ucase
+	ctrydat$202 CTRYDAT CDATASIZE,SETUCASEFILE,,po850_ucase
+	ctrydat$203 CTRYDAT CDATASIZE,SETFILELIST,,po_flist
+	ctrydat$204 CTRYDAT CDATASIZE,SETDBCS,,po_dbcs
 ;
-la437_data label   word
+label la437_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,la437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,la_collate>
-	ctrydat <CDATASIZE,SETUCASE,,la_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,la_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,la_flist>
-	ctrydat <CDATASIZE,SETDBCS,,la_dbcs>
+	ctrydat$205 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,la437_info
+	ctrydat$206 CTRYDAT CDATASIZE,SETCOLLATE,,la_collate
+	ctrydat$207 CTRYDAT CDATASIZE,SETUCASE,,la_ucase
+	ctrydat$208 CTRYDAT CDATASIZE,SETUCASEFILE,,la_ucase
+	ctrydat$209 CTRYDAT CDATASIZE,SETFILELIST,,la_flist
+	ctrydat$210 CTRYDAT CDATASIZE,SETDBCS,,la_dbcs
 ;
-la850_data label   word
+label la850_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,la437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,la850_collate>
-	ctrydat <CDATASIZE,SETUCASE,,la850_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,la850_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,la_flist>
-	ctrydat <CDATASIZE,SETDBCS,,la_dbcs>
+	ctrydat$211 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,la437_info
+	ctrydat$212 CTRYDAT CDATASIZE,SETCOLLATE,,la850_collate
+	ctrydat$213 CTRYDAT CDATASIZE,SETUCASE,,la850_ucase
+	ctrydat$214 CTRYDAT CDATASIZE,SETUCASEFILE,,la850_ucase
+	ctrydat$215 CTRYDAT CDATASIZE,SETFILELIST,,la_flist
+	ctrydat$216 CTRYDAT CDATASIZE,SETDBCS,,la_dbcs
 ;
-jp932_data label   word
+label jp932_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,jp932_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,jp932_collate>
-	ctrydat <CDATASIZE,SETUCASE,,jp932_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,jp932_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,jp932_flist>
-	ctrydat <CDATASIZE,SETDBCS,,jp932_dbcs>
+	ctrydat$217 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,jp932_info
+	ctrydat$218 CTRYDAT CDATASIZE,SETCOLLATE,,jp932_collate
+	ctrydat$219 CTRYDAT CDATASIZE,SETUCASE,,jp932_ucase
+	ctrydat$220 CTRYDAT CDATASIZE,SETUCASEFILE,,jp932_ucase
+	ctrydat$221 CTRYDAT CDATASIZE,SETFILELIST,,jp932_flist
+	ctrydat$222 CTRYDAT CDATASIZE,SETDBCS,,jp932_dbcs
 ;
-jp437_data label   word
+label jp437_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,jp437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,jp437_collate>
-	ctrydat <CDATASIZE,SETUCASE,,jp437_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,jp437_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,jp437_flist>
-	ctrydat <CDATASIZE,SETDBCS,,jp437_dbcs>
+	ctrydat$223 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,jp437_info
+	ctrydat$224 CTRYDAT CDATASIZE,SETCOLLATE,,jp437_collate
+	ctrydat$225 CTRYDAT CDATASIZE,SETUCASE,,jp437_ucase
+	ctrydat$226 CTRYDAT CDATASIZE,SETUCASEFILE,,jp437_ucase
+	ctrydat$227 CTRYDAT CDATASIZE,SETFILELIST,,jp437_flist
+	ctrydat$228 CTRYDAT CDATASIZE,SETDBCS,,jp437_dbcs
 ;
-ko934_data label   word
+label ko934_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,ko934_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,ko934_collate>
-	ctrydat <CDATASIZE,SETUCASE,,ko934_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,ko934_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,ko934_flist>
-	ctrydat <CDATASIZE,SETDBCS,,ko934_dbcs>
+	ctrydat$229 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,ko934_info
+	ctrydat$230 CTRYDAT CDATASIZE,SETCOLLATE,,ko934_collate
+	ctrydat$231 CTRYDAT CDATASIZE,SETUCASE,,ko934_ucase
+	ctrydat$232 CTRYDAT CDATASIZE,SETUCASEFILE,,ko934_ucase
+	ctrydat$233 CTRYDAT CDATASIZE,SETFILELIST,,ko934_flist
+	ctrydat$234 CTRYDAT CDATASIZE,SETDBCS,,ko934_dbcs
 ;
-ko437_data label   word
+label ko437_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,ko437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,ko437_collate>
-	ctrydat <CDATASIZE,SETUCASE,,ko437_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,ko437_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,ko437_flist>
-	ctrydat <CDATASIZE,SETDBCS,,ko437_dbcs>
+	ctrydat$235 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,ko437_info
+	ctrydat$236 CTRYDAT CDATASIZE,SETCOLLATE,,ko437_collate
+	ctrydat$237 CTRYDAT CDATASIZE,SETUCASE,,ko437_ucase
+	ctrydat$238 CTRYDAT CDATASIZE,SETUCASEFILE,,ko437_ucase
+	ctrydat$239 CTRYDAT CDATASIZE,SETFILELIST,,ko437_flist
+	ctrydat$240 CTRYDAT CDATASIZE,SETDBCS,,ko437_dbcs
 ;
-pr936_data label   word
+label pr936_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,pr936_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,pr936_collate>
-	ctrydat <CDATASIZE,SETUCASE,,pr936_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,pr936_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,pr936_flist>
-	ctrydat <CDATASIZE,SETDBCS,,pr936_dbcs>
+	ctrydat$241 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,pr936_info
+	ctrydat$242 CTRYDAT CDATASIZE,SETCOLLATE,,pr936_collate
+	ctrydat$243 CTRYDAT CDATASIZE,SETUCASE,,pr936_ucase
+	ctrydat$244 CTRYDAT CDATASIZE,SETUCASEFILE,,pr936_ucase
+	ctrydat$245 CTRYDAT CDATASIZE,SETFILELIST,,pr936_flist
+	ctrydat$246 CTRYDAT CDATASIZE,SETDBCS,,pr936_dbcs
 ;
-pr437_data label   word
+label pr437_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,pr437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,pr437_collate>
-	ctrydat <CDATASIZE,SETUCASE,,pr437_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,pr437_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,pr437_flist>
-	ctrydat <CDATASIZE,SETDBCS,,pr437_dbcs>
+	ctrydat$247 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,pr437_info
+	ctrydat$248 CTRYDAT CDATASIZE,SETCOLLATE,,pr437_collate
+	ctrydat$249 CTRYDAT CDATASIZE,SETUCASE,,pr437_ucase
+	ctrydat$250 CTRYDAT CDATASIZE,SETUCASEFILE,,pr437_ucase
+	ctrydat$251 CTRYDAT CDATASIZE,SETFILELIST,,pr437_flist
+	ctrydat$252 CTRYDAT CDATASIZE,SETDBCS,,pr437_dbcs
 ;
-ta938_data label   word
+label ta938_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,ta938_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,ta938_collate>
-	ctrydat <CDATASIZE,SETUCASE,,ta938_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,ta938_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,ta938_flist>
-	ctrydat <CDATASIZE,SETDBCS,,ta938_dbcs>
+	ctrydat$253 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,ta938_info
+	ctrydat$254 CTRYDAT CDATASIZE,SETCOLLATE,,ta938_collate
+	ctrydat$255 CTRYDAT CDATASIZE,SETUCASE,,ta938_ucase
+	ctrydat$256 CTRYDAT CDATASIZE,SETUCASEFILE,,ta938_ucase
+	ctrydat$257 CTRYDAT CDATASIZE,SETFILELIST,,ta938_flist
+	ctrydat$258 CTRYDAT CDATASIZE,SETDBCS,,ta938_dbcs
 ;
-ta437_data label   word
+label ta437_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,ta437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,ta437_collate>
-	ctrydat <CDATASIZE,SETUCASE,,ta437_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,ta437_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,ta437_flist>
-	ctrydat <CDATASIZE,SETDBCS,,ta437_dbcs>
+	ctrydat$259 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,ta437_info
+	ctrydat$260 CTRYDAT CDATASIZE,SETCOLLATE,,ta437_collate
+	ctrydat$261 CTRYDAT CDATASIZE,SETUCASE,,ta437_ucase
+	ctrydat$262 CTRYDAT CDATASIZE,SETUCASEFILE,,ta437_ucase
+	ctrydat$263 CTRYDAT CDATASIZE,SETFILELIST,,ta437_flist
+	ctrydat$264 CTRYDAT CDATASIZE,SETDBCS,,ta437_dbcs
 ;
-afe437_data label   word
+label afe437_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,afe437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,afe_collate>
-	ctrydat <CDATASIZE,SETUCASE,,afe_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,afe_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,afe_flist>
-	ctrydat <CDATASIZE,SETDBCS,,afe_dbcs>
+	ctrydat$265 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,afe437_info
+	ctrydat$266 CTRYDAT CDATASIZE,SETCOLLATE,,afe_collate
+	ctrydat$267 CTRYDAT CDATASIZE,SETUCASE,,afe_ucase
+	ctrydat$268 CTRYDAT CDATASIZE,SETUCASEFILE,,afe_ucase
+	ctrydat$269 CTRYDAT CDATASIZE,SETFILELIST,,afe_flist
+	ctrydat$270 CTRYDAT CDATASIZE,SETDBCS,,afe_dbcs
 ;
-afe850_data label   word
+label afe850_data word
 	dw	CDATAITEMS				; number of entries
-	ctrydat <CDATASIZE,SETCOUNTRYINFO,,afe437_info>
-	ctrydat <CDATASIZE,SETCOLLATE,,afe850_collate>
-	ctrydat <CDATASIZE,SETUCASE,,afe850_ucase>
-	ctrydat <CDATASIZE,SETUCASEFILE,,afe850_ucase>
-	ctrydat <CDATASIZE,SETFILELIST,,afe_flist>
-	ctrydat <CDATASIZE,SETDBCS,,afe_dbcs>
+	ctrydat$271 CTRYDAT CDATASIZE,SETCOUNTRYINFO,,afe437_info
+	ctrydat$272 CTRYDAT CDATASIZE,SETCOLLATE,,afe850_collate
+	ctrydat$273 CTRYDAT CDATASIZE,SETUCASE,,afe850_ucase
+	ctrydat$274 CTRYDAT CDATASIZE,SETUCASEFILE,,afe850_ucase
+	ctrydat$275 CTRYDAT CDATASIZE,SETFILELIST,,afe_flist
+	ctrydat$276 CTRYDAT CDATASIZE,SETDBCS,,afe_dbcs
 	page
 ; ----------------------------------------
 ;
 ;	World Trade Country Info Tables
 ;
 ; ----------------------------------------
-uk437_info	   label   word
-		ctable	<>
-		cinfo	<CID_UK,437,DATE_DMY,156,,,,,',',,'.',,'-',,':',,,2,HR12,,','>
+label uk437_info word
+		ctable$1 CTABLE 
+		cinfo$1 CINFO CID_UK,437,DATE_DMY,156,,,,,',',,'.',,'-',,':',,,2,HR12,,','
 ;
-fr437_info	   label   word
-		ctable	<>
-		cinfo	<CID_FR,437,DATE_DMY,'F',,,,,' ',,',',,'/',,':',,3,2,HR24,,';'>
+label fr437_info word
+		ctable$2 CTABLE 
+		cinfo$2 CINFO CID_FR,437,DATE_DMY,'F',,,,,' ',,',',,'/',,':',,3,2,HR24,,';'
 ;
-gr437_info	   label   word
-		ctable	<>
-		cinfo	<CID_GR,437,DATE_DMY,'D','M',,,,'.',,',',,'.',,'.',,2,2,HR24,,';'>
+label gr437_info word
+		ctable$3 CTABLE 
+		cinfo$3 CINFO CID_GR,437,DATE_DMY,'D','M',,,,'.',,',',,'.',,'.',,2,2,HR24,,';'
 ;
-sp437_info	   label   word
-		ctable	<>
-		cinfo	<CID_SP,437,DATE_DMY,158,,,,,'.',,',',,'/',,':',,3,2,HR24,,';'>
+label sp437_info word
+		ctable$4 CTABLE 
+		cinfo$4 CINFO CID_SP,437,DATE_DMY,158,,,,,'.',,',',,'/',,':',,3,2,HR24,,';'
 ;
-sp850_info	   label   word
-		ctable	<>
-		cinfo	<CID_SP,437,DATE_DMY,'P','t','s',,,'.',,',',,'/',,':',,3,2,HR24,,';'>
+label sp850_info word
+		ctable$5 CTABLE 
+		cinfo$5 CINFO CID_SP,437,DATE_DMY,'P','t','s',,,'.',,',',,'/',,':',,3,2,HR24,,';'
 ;
-it437_info	   label   word
-		ctable	<>
-		cinfo	<CID_IT,437,DATE_DMY,'L','.',,,,'.',,',',,'/',,':',,,,HR24,,';'>
+label it437_info word
+		ctable$6 CTABLE 
+		cinfo$6 CINFO CID_IT,437,DATE_DMY,'L','.',,,,'.',,',',,'/',,':',,,,HR24,,';'
 ;
-sv437_info	   label   word
-		ctable	<>
-		cinfo	<CID_SV,437,DATE_YMD,'S','E','K',,,'.',,',',,'-',,'.',,2,2,HR24,,';'>
+label sv437_info word
+		ctable$7 CTABLE 
+		cinfo$7 CINFO CID_SV,437,DATE_YMD,'S','E','K',,,'.',,',',,'-',,'.',,2,2,HR24,,';'
 ;
-dk865_info	   label   word
-		ctable	<>
-		cinfo	<CID_DK,865,DATE_DMY,'k','r',,,,'.',,',',,'-',,'.',,2,2,HR24,,';'>
+label dk865_info word
+		ctable$8 CTABLE 
+		cinfo$8 CINFO CID_DK,865,DATE_DMY,'k','r',,,,'.',,',',,'-',,'.',,2,2,HR24,,';'
 ;
-sw437_info	   label   word
-		ctable	<>
-		cinfo	<CID_SW,437,DATE_DMY,'F','r',,,,"'",,'.',,'.',,'.',,2,2,HR24,,','>
+label sw437_info word
+		ctable$9 CTABLE 
+		cinfo$9 CINFO CID_SW,437,DATE_DMY,'F','r',,,,"'",,'.',,'.',,'.',,2,2,HR24,,','
 ;
 ;*** CNS Change date separator from slash to period - DCR 357
-no865_info	   label   word
-		ctable	<>
-		cinfo	<CID_NO,865,DATE_DMY,'K','r',,,,'.',,',',,'.',,'.',,2,2,HR24,,';'> ;AN000;
+label no865_info word
+		ctable$10 CTABLE 
+		cinfo$10 CINFO CID_NO,865,DATE_DMY,'K','r',,,,'.',,',',,'.',,'.',,2,2,HR24,,';' ;AN000;
 ;*** CNS Change date separator from slash to period - DCR 357
 ;*** Field #14
 ;
-nl437_info	   label   word
-		ctable	<>
-		cinfo	<CID_NL,437,DATE_DMY,159,,,,,'.',,',',,'-',,':',,2,2,HR24,,';'>
+label nl437_info word
+		ctable$11 CTABLE 
+		cinfo$11 CINFO CID_NL,437,DATE_DMY,159,,,,,'.',,',',,'-',,':',,2,2,HR24,,';'
 ;
-be437_info	   label   word
-		ctable	<>
-		cinfo	<CID_BE,437,DATE_DMY,'B','E','F',,,'.',,',',,'/',,':',,2,2,HR24,,';'>
+label be437_info word
+		ctable$12 CTABLE 
+		cinfo$12 CINFO CID_BE,437,DATE_DMY,'B','E','F',,,'.',,',',,'/',,':',,2,2,HR24,,';'
 ;
-fi437_info	   label   word
-		ctable	<>
-		cinfo	<CID_FI,437,DATE_DMY,'m','k',,,,' ',,',',,'.',,'.',,3,2,HR24,,';'>
+label fi437_info word
+		ctable$13 CTABLE 
+		cinfo$13 CINFO CID_FI,437,DATE_DMY,'m','k',,,,' ',,',',,'.',,'.',,3,2,HR24,,';'
 ;
-jp437_info	   label   word
-ko437_info	   label   word
-pr437_info	   label   word
-ta437_info	   label   word
-us437_info	   label   word
-		ctable	<>
-		cinfo	<CID_US,437,DATE_MDY,'$',,,,,',',,'.',,'-',,':',,,2,HR12,,','>
+label jp437_info word
+label ko437_info word
+label pr437_info word
+label ta437_info word
+label us437_info word
+		ctable$14 CTABLE 
+		cinfo$14 CINFO CID_US,437,DATE_MDY,'$',,,,,',',,'.',,'-',,':',,,2,HR12,,','
 ;
-is862_info	   label   word
-		ctable	<>
-		cinfo	<CID_IS,862,DATE_DMY,153,,,,,',',,'.',,' ',,':',,2,2,HR24,,','>
+label is862_info word
+		ctable$15 CTABLE 
+		cinfo$15 CINFO CID_IS,862,DATE_DMY,153,,,,,',',,'.',,' ',,':',,2,2,HR24,,','
 ;
-ca863_info	   label   word
-		ctable	<>
-		cinfo	<CID_CA,863,DATE_YMD,'$',,,,,' ',,',',,'-',,':',,3,2,HR24,,';'>
+label ca863_info word
+		ctable$16 CTABLE 
+		cinfo$16 CINFO CID_CA,863,DATE_YMD,'$',,,,,' ',,',',,'-',,':',,3,2,HR24,,';'
 ;
-as864_info	   label   word
-		ctable	<>
-		cinfo	<CID_AS,864,DATE_DMY,164,,,,,'.',,',',,'/',,':',,3,3,HR12,,';'>
+label as864_info word
+		ctable$17 CTABLE 
+		cinfo$17 CINFO CID_AS,864,DATE_DMY,164,,,,,'.',,',',,'/',,':',,3,3,HR12,,';'
 ;
-as850_info	   label   word
-		ctable	<>
-		cinfo	<CID_AS,864,DATE_DMY,207,,,,,'.',,',',,'/',,':',,3,3,HR12,,';'>
+label as850_info word
+		ctable$18 CTABLE 
+		cinfo$18 CINFO CID_AS,864,DATE_DMY,207,,,,,'.',,',',,'/',,':',,3,3,HR12,,';'
 ;
-po860_info	   label   word
-		ctable	<>
-		cinfo	<CID_PO,860,DATE_DMY,'$',,,,,'.',,',',,'/',,':',,4,2,HR24,,';'>
+label po860_info word
+		ctable$19 CTABLE 
+		cinfo$19 CINFO CID_PO,860,DATE_DMY,'$',,,,,'.',,',',,'/',,':',,4,2,HR24,,';'
 ;
-la437_info	   label   word
-		ctable	<>
-		cinfo	<CID_LA,437,DATE_DMY,'$',,,,,',',,'.',,'/',,':',,3,2,HR24,,';'>
+label la437_info word
+		ctable$20 CTABLE 
+		cinfo$20 CINFO CID_LA,437,DATE_DMY,'$',,,,,',',,'.',,'/',,':',,3,2,HR24,,';'
 ;
-afe437_info	   label   word
-		ctable	<>
-		cinfo	<CID_AFE,437,DATE_DMY,'$',,,,,',',,'.',,'-',,':',,,2,HR12,,','>
+label afe437_info word
+		ctable$21 CTABLE 
+		cinfo$21 CINFO CID_AFE,437,DATE_DMY,'$',,,,,',',,'.',,'-',,':',,,2,HR12,,','
 ;
-jp932_info	   label   word
-		ctable	<>
-		cinfo	<CID_JP,932,DATE_YMD,'\',,,,,',',,'.',,'-',,':',,,0,HR24,,','>
+label jp932_info word
+		ctable$22 CTABLE 
+		cinfo$22 CINFO CID_JP,932,DATE_YMD,'\',,,,,',',,'.',,'-',,':',,,0,HR24,,','
 ;
-ko934_info	   label   word
-		ctable	<>
-		cinfo	<CID_KO,934,DATE_YMD,'\',,,,,',',,'.',,'-',,':',,,0,HR24,,','>
+label ko934_info word
+		ctable$23 CTABLE 
+		cinfo$23 CINFO CID_KO,934,DATE_YMD,'\',,,,,',',,'.',,'-',,':',,,0,HR24,,','
 ;
-pr936_info	   label   word
-		ctable	<>
-		cinfo	<CID_PR,936,DATE_YMD,'\',,,,,',',,'.',,'-',,':',,,2,HR24,,','>
+label pr936_info word
+		ctable$24 CTABLE 
+		cinfo$24 CINFO CID_PR,936,DATE_YMD,'\',,,,,',',,'.',,'-',,':',,,2,HR24,,','
 ;
-ta938_info	   label   word
-		ctable	<>
-		cinfo	<CID_TA,938,DATE_MDY,'N','T','$',,,',',,'.',,'-',,':',,,2,HR24,,','>
+label ta938_info word
+		ctable$25 CTABLE 
+		cinfo$25 CINFO CID_TA,938,DATE_MDY,'N','T','$',,,',',,'.',,'-',,':',,,2,HR24,,','
 ;
 	page
 ; ------------------------------------------------
@@ -703,26 +703,26 @@ ta938_info	   label   word
 ;			Italy, and International English
 ; --------------------------------------------------------------------------
 ;
-us_collate	label	word
+label us_collate word
 ;
-uk_collate	label	word
+label uk_collate word
 ;
-fr_collate	label	word
+label fr_collate word
 ;
-gr_collate	label	word
+label gr_collate word
 ;
-it_collate	label	word
+label it_collate word
 ;
-jp437_collate	label	word
+label jp437_collate word
 ;
-ko437_collate	label	word
+label ko437_collate word
 ;
-pr437_collate	label	word
+label pr437_collate word
 ;
-ta437_collate	label	word
+label ta437_collate word
 ;
-afe_collate	label	word
-		ctable	<,'COLLATE',256>
+label afe_collate word
+		ctable$26 CTABLE ,'COLLATE',256
 		db	0,1,2,3,4,5,6,7
 		db	8,9,10,11,12,13,14,15
 		db	16,17,18,19,20,21,22,23
@@ -760,8 +760,8 @@ afe_collate	label	word
 	;
 ; Netherland 437 Collate
 ;
-nl_collate	label	word
-		ctable	<,'COLLATE',256>
+label nl_collate word
+		ctable$27 CTABLE ,'COLLATE',256
 		db	000,001,002,003,004,005,006,007
 		db	008,009,010,011,012,013,014,015
 		db	016,017,018,019,020,021,022,023
@@ -832,10 +832,10 @@ nl_collate	label	word
 ;		 db	 240,241,242,243,244,245,246,247
 ;		 db	 248,249,250,251,252,253,254,255
 	page
-la_collate	label	word			  ; new for DOS 4.0, wants same as spain
+label la_collate word     ; new for DOS 4.0, wants same as spain
 ;
-sp_collate	label	word			   ; new for DOS 4.0
-		ctable	<,'COLLATE',256>
+label sp_collate word      ; new for DOS 4.0
+		ctable$28 CTABLE ,'COLLATE',256
 		db 000,150,151,152,153,154,155,156 ;7
 		db 157,158,159,160,161,162,163,164 ;15
 		db 165,166,167,168,169,170,171,172 ;23
@@ -870,8 +870,8 @@ sp_collate	label	word			   ; new for DOS 4.0
 		db 221,222,000,223,224,135,136,225 ;255
 	page
 ;
-dk_collate	label	word		; Denmark (dk) 865
-		ctable	<,'COLLATE',256>
+label dk_collate word  ; Denmark (dk) 865
+		ctable$29 CTABLE ,'COLLATE',256
 		db	000,001,002,003,004,005,006,007
 		db	008,009,010,011,012,013,014,015
 		db	016,017,018,019,020,021,022,023
@@ -906,8 +906,8 @@ dk_collate	label	word		; Denmark (dk) 865
 		db	248,249,250,251,252,253,254,255
 	page
 ;
-no_collate	label	word		; Norway (no) 865
-		ctable	<,'COLLATE',256>
+label no_collate word  ; Norway (no) 865
+		ctable$30 CTABLE ,'COLLATE',256
 		db	000,001,002,003,004,005,006,007
 		db	008,009,010,011,012,013,014,015
 		db	016,017,018,019,020,021,022,023
@@ -944,10 +944,10 @@ no_collate	label	word		; Norway (no) 865
 ;
 ; Finland 437 Collate (same as Sweden)
 ;
-fi_collate	label	word
+label fi_collate word
 ;
-sv_collate	label	word
-		ctable	<,'COLLATE',256>
+label sv_collate word
+		ctable$31 CTABLE ,'COLLATE',256
 		db	000,001,002,003,004,005,006,007
 		db	008,009,010,011,012,013,014,015
 		db	016,017,018,019,020,021,022,023
@@ -984,8 +984,8 @@ sv_collate	label	word
 ;
 ;  Israel 862 collate
 ;
-is_collate	label	word
-		ctable	<,'COLLATE',256>
+label is_collate word
+		ctable$32 CTABLE ,'COLLATE',256
 		db	000,001,002,003,004,005,006,007
 		db	008,009,010,011,012,013,014,015
 		db	016,017,018,019,020,021,022,023
@@ -1022,8 +1022,8 @@ is_collate	label	word
 ;
 ; Canada 863 Collate
 ;
-ca_collate	label	word
-		ctable	<,'COLLATE',256>
+label ca_collate word
+		ctable$33 CTABLE ,'COLLATE',256
 		db	000,001,002,003,004,005,006,007
 		db	008,009,010,011,012,013,014,015
 		db	016,017,018,019,020,021,022,023
@@ -1060,8 +1060,8 @@ ca_collate	label	word
 ;
 ; Portugal 860 collating
 ;
-po_collate	label	word
-		ctable	<,'COLLATE',256>
+label po_collate word
+		ctable$34 CTABLE ,'COLLATE',256
 		db	000,001,002,003,004,005,006,007
 		db	008,009,010,011,012,013,014,015
 		db	016,017,018,019,020,021,022,023
@@ -1096,8 +1096,8 @@ po_collate	label	word
 		db	248,249,250,251,252,253,254,255
 	page
 ;
-sw_collate	label	word
-		ctable	<,'COLLATE',256>
+label sw_collate word
+		ctable$35 CTABLE ,'COLLATE',256
 		db	001,200,201,202,203,204,205,206
 		db	207,208,209,210,211,212,213,214
 		db	215,216,217,218,140,141,219,220
@@ -1132,8 +1132,8 @@ sw_collate	label	word
 		db	143,192,144,193,194,147,148,001
 	page
 ;
-be_collate	label	word
-		ctable	<,'COLLATE',256>
+label be_collate word
+		ctable$36 CTABLE ,'COLLATE',256
 		db	255,255,255,255,255,255,255,255
 		db	255,255,255,255,255,255,255,255
 		db	255,255,255,255,255,255,255,255
@@ -1170,8 +1170,8 @@ be_collate	label	word
 ;
 ; Area South 864 Collate
 ;
-as_collate	label	word
-		ctable	<,'COLLATE',256>
+label as_collate word
+		ctable$37 CTABLE ,'COLLATE',256
 		db	000,001,002,003,004,005,006,007
 		db	008,009,010,011,012,013,014,015
 		db	016,017,018,019,020,021,022,023
@@ -1214,30 +1214,30 @@ as_collate	label	word
 ;
 ; -----------------------------------------
 ;
-fr850_collate	   label   word
+label fr850_collate word
 ;
-ca850_collate	   label   word
+label ca850_collate word
 ;
-us850_collate	   label   word
+label us850_collate word
 ;
-uk850_collate	   label   word
+label uk850_collate word
 ;
-it850_collate	   label   word
+label it850_collate word
 ;
 ;;sp850_collate      label   word  ; spain now has there own
 ;
-is850_collate	   label   word
+label is850_collate word
 ;
-po850_collate	   label   word
+label po850_collate word
 ;
 ;;la850_collate      label   word   ; wants same as spain
 ;
-as850_collate	   label   word
+label as850_collate word
 ;
-gr850_collate	   label   word 	 ;omitted tobe consistent with US DCR
+label gr850_collate word        ;omitted tobe consistent with US DCR
 ;
-afe850_collate	   label   word
-		ctable	<,'COLLATE',256>
+label afe850_collate word
+		ctable$38 CTABLE ,'COLLATE',256
 		db	000,001,002,003,004,005,006,007
 		db	008,009,010,011,012,013,014,015
 		db	016,017,018,019,020,021,022,023
@@ -1308,8 +1308,8 @@ afe850_collate	   label   word
 ;		db	248,249,250,251,252,253,254,255
 	page
 ;
-nl850_collate	  label   word
-		ctable	<,'COLLATE',256>
+label nl850_collate word
+		ctable$39 CTABLE ,'COLLATE',256
 		db	000,001,002,003,004,005,006,007
 		db	008,009,010,011,012,013,014,015
 		db	016,017,018,019,020,021,022,023
@@ -1344,8 +1344,8 @@ nl850_collate	  label   word
 		db	248,249,250,251,252,253,254,255
 	page
 ;
-dk850_collate	   label   word
-		ctable	<,'COLLATE',256>
+label dk850_collate word
+		ctable$40 CTABLE ,'COLLATE',256
 		db	000,001,002,003,004,005,006,007
 		db	008,009,010,011,012,013,014,015
 		db	016,017,018,019,020,021,022,023
@@ -1380,8 +1380,8 @@ dk850_collate	   label   word
 		db	248,249,250,251,252,253,254,255
 	page
 ;
-no850_collate	   label   word
-		ctable	<,'COLLATE',256>
+label no850_collate word
+		ctable$41 CTABLE ,'COLLATE',256
 		db	000,001,002,003,004,005,006,007
 		db	008,009,010,011,012,013,014,015
 		db	016,017,018,019,020,021,022,023
@@ -1416,8 +1416,8 @@ no850_collate	   label   word
 		db	248,249,250,251,252,253,254,255
 	page
 ;
-sv850_collate	  label   word
-		ctable	<,'COLLATE',256>
+label sv850_collate word
+		ctable$42 CTABLE ,'COLLATE',256
 		db	000,001,002,003,004,005,006,007
 		db	008,009,010,011,012,013,014,015
 		db	016,017,018,019,020,021,022,023
@@ -1452,8 +1452,8 @@ sv850_collate	  label   word
 		db	248,249,250,251,252,253,254,255
 	page
 ;
-fi850_collate	   label   word
-		ctable	<,'COLLATE',256>
+label fi850_collate word
+		ctable$43 CTABLE ,'COLLATE',256
 		db	000,001,002,003,004,005,006,007
 		db	008,009,010,011,012,013,014,015
 		db	016,017,018,019,020,021,022,023
@@ -1488,8 +1488,8 @@ fi850_collate	   label   word
 		db	248,249,250,251,252,253,254,255
 	page
 ;
-sw850_collate	   label   word
-		ctable	<,'COLLATE',256>
+label sw850_collate word
+		ctable$44 CTABLE ,'COLLATE',256
 
 		db	224,225,226,227,228,229,230,231
 		db	232,233,234,235,236,237,238,239
@@ -1558,8 +1558,8 @@ sw850_collate	   label   word
 ;		db	143,053,144,145,146,147,148,001
 	page
 ;
-be850_collate	label	word
-		ctable	<,'COLLATE',256>
+label be850_collate word
+		ctable$45 CTABLE ,'COLLATE',256
 		db	255,255,255,255,255,255,255,255
 		db	255,255,255,255,255,255,255,255
 		db	255,255,255,255,255,255,255,255
@@ -1594,10 +1594,10 @@ be850_collate	label	word
 		db	248,249,250,251,252,253,255,255
 	page
 
-la850_collate	   label   word 		   ; wants same as spain
+label la850_collate word           ; wants same as spain
 ;
-sp850_collate	   label   word 		   ; new for DOS 4.0
-		ctable	<,'COLLATE',256>
+label sp850_collate word           ; new for DOS 4.0
+		ctable$46 CTABLE ,'COLLATE',256
 		db 000,150,151,152,153,154,155,156 ;7
 		db 157,158,159,160,161,162,163,164 ;15
 		db 165,166,167,168,169,170,171,172 ;23
@@ -1633,8 +1633,8 @@ sp850_collate	   label   word 		   ; new for DOS 4.0
 
 	page
 ;
-jp932_collate	   label   word
-		ctable	<,'COLLATE',256>
+label jp932_collate word
+		ctable$47 CTABLE ,'COLLATE',256
 		db	0,1,2,3,4,5,6,7
 		db	8,9,10,11,12,13,14,15
 		db	16,17,18,19,20,21,22,23
@@ -1669,8 +1669,8 @@ jp932_collate	   label   word
 		db	248,249,250,251,252,253,254,255
 	page
 ;
-ko934_collate	   label   word
-		ctable	<,'COLLATE',256>
+label ko934_collate word
+		ctable$48 CTABLE ,'COLLATE',256
 		db	0,1,2,3,4,5,6,7
 		db	8,9,10,11,12,13,14,15
 		db	16,17,18,19,20,21,22,23
@@ -1706,10 +1706,10 @@ ko934_collate	   label   word
 
 	page
 ;
-pr936_collate	   label   word
+label pr936_collate word
 ;
-ta938_collate	   label   word
-		ctable	<,'COLLATE',256>
+label ta938_collate word
+		ctable$49 CTABLE ,'COLLATE',256
 		db	0,1,2,3,4,5,6,7
 		db	8,9,10,11,12,13,14,15
 		db	16,17,18,19,20,21,22,23
@@ -1751,32 +1751,32 @@ ta938_collate	   label   word
 ;
 ; ---------------------------------------------------------------
 ;
-us_ucase	label	word
+label us_ucase word
 ;
-uk_ucase	label	word
+label uk_ucase word
 ;
-fr_ucase	label	word
+label fr_ucase word
 ;
-gr_ucase	label	word
+label gr_ucase word
 ;
-sp_ucase	label	word
+label sp_ucase word
 ;
-la_ucase	label	word
+label la_ucase word
 ;
-it_ucase	label	word
+label it_ucase word
 ;
-afe_ucase	label	word
+label afe_ucase word
 ;
-as_ucase	label	word
+label as_ucase word
 ;
-jp437_ucase	label	word
+label jp437_ucase word
 ;
-ko437_ucase	label	word
+label ko437_ucase word
 ;
-pr437_ucase	label	word
+label pr437_ucase word
 ;
-ta437_ucase	label	word
-		ctable	<,'UCASE  ',128>
+label ta437_ucase word
+		ctable$50 CTABLE ,'UCASE  ',128
 ;***CNS PTM2390 table omitted	;AN000;
 ;***CNS restored for PTM 2575 to establish consistent and maintain 3.3 &
 ;under compatibility
@@ -1818,8 +1818,8 @@ ta437_ucase	label	word
 page
 ;	Canadian French Code Page 863
 ;
-ca_ucase	label	word
-		ctable	<,'UCASE  ',128>
+label ca_ucase word
+		ctable$51 CTABLE ,'UCASE  ',128
 		db	067,085,069,065,065,065,134,067
 		db	069,069,069,073,073,141,065,143
 		db	069,069,069,079,069,073,085,085
@@ -1839,12 +1839,12 @@ ca_ucase	label	word
 page
 ;	Denmark (Da) case mapping for 865
 ;
-dk_ucase	label	word
+label dk_ucase word
 ;
 ;	Norway (No) case mapping for 865
 ;
-no_ucase	label	word
-		ctable	<,'UCASE  ',128>
+label no_ucase word
+		ctable$52 CTABLE ,'UCASE  ',128
 		db	128,154,144,065,142,065,143,128
 		db	069,069,069,073,073,073,142,143
 		db	144,146,146,079,153,079,085,085
@@ -1864,16 +1864,16 @@ no_ucase	label	word
 page
 ;	Belgium (Be) case mapping for 437
 ;
-be_ucase	label	word
+label be_ucase word
 ;
 ;	Finland (Fi) case mapping for 437
 ;
-fi_ucase	label	word
+label fi_ucase word
 ;
 ;	Sweden (Sv) case mapping
 ;
-sv_ucase	label	word
-		ctable	<,'UCASE  ',128>
+label sv_ucase word
+		ctable$53 CTABLE ,'UCASE  ',128
 		db	128,154,144,065,142,065,143,128
 		db	069,069,069,073,073,073,142,143
 		db	144,146,146,079,153,079,085,085
@@ -1893,8 +1893,8 @@ sv_ucase	label	word
 page
 ;	Switzerland case mapping for 437
 ;
-sw_ucase	label	word
-		ctable	<,'UCASE  ',128>
+label sw_ucase word
+		ctable$54 CTABLE ,'UCASE  ',128
 		db	128,154,144,065,142,065,143,128
 		db	069,069,069,073,073,073,142,143
 		db	144,146,146,079,153,079,085,085
@@ -1915,8 +1915,8 @@ page
 ;
 ;	Netherlands case mapping for 437
 ;
-nl_ucase	label	word
-		ctable	<,'UCASE  ',128>
+label nl_ucase word
+		ctable$55 CTABLE ,'UCASE  ',128
 		db	128,085,069,065,065,065,143,128
 		db	069,069,069,073,073,073,065,143
 		db	069,146,146,079,079,079,085,085
@@ -1937,8 +1937,8 @@ page
 ;
 ;	Portuguese (Po) case mapping
 ;
-po_ucase	label	word
-		ctable	<,'UCASE  ',128>
+label po_ucase word
+		ctable$56 CTABLE ,'UCASE  ',128
 		db	128,154,144,143,142,145,134,128
 		db	137,137,146,139,140,152,142,143
 		db	144,145,146,140,153,169,150,157
@@ -1959,8 +1959,8 @@ page
 ;
 ;	Is case mapping
 ;
-is_ucase	label	word
-		ctable	<,'UCASE  ',128>
+label is_ucase word
+		ctable$57 CTABLE ,'UCASE  ',128
 		db	128,129,130,131,132,133,134,135
 		db	136,137,138,139,140,141,142,143
 		db	144,145,146,147,148,149,150,151
@@ -1979,24 +1979,24 @@ is_ucase	label	word
 		db	248,249,250,251,252,253,254,255
 page
 ;
-us850_ucase	label	word
+label us850_ucase word
 ;
-afe850_ucase	label	word
+label afe850_ucase word
 ;
-uk850_ucase	label	word
+label uk850_ucase word
 ;
-fr850_ucase	label	word
+label fr850_ucase word
 ;
-it850_ucase	label	word
+label it850_ucase word
 ;
-is850_ucase	label	word
+label is850_ucase word
 ;
-as850_ucase	label	word
+label as850_ucase word
 ;
-po850_ucase	label	word
+label po850_ucase word
 ;
-ca850_ucase	label	word
-		ctable	<,'UCASE  ',128>
+label ca850_ucase word
+		ctable$58 CTABLE ,'UCASE  ',128
 ;**CNS replacement
 	       db      067,085,069,065,065,065,065,067
 	       db      069,069,069,073,073,073,065,065
@@ -2055,8 +2055,8 @@ ca850_ucase	label	word
 ;		db	240,241,242,243,244,245,246,247
 ;		db	248,249,250,251,252,253,254,255
 ;
-gr850_ucase	   label   word
-		ctable	<,'UCASE  ',128>
+label gr850_ucase word
+		ctable$59 CTABLE ,'UCASE  ',128
 		db	067,154,069,065,142,065,065,067
 		db	069,069,069,073,073,073,142,065
 		db	069,146,146,079,153,079,085,085
@@ -2077,32 +2077,32 @@ page
 ;
 ;	LA case mapping for 850, new for DOS 4.0 to be same as Spain
 ;
-la850_ucase	label	word
+label la850_ucase word
 ;
 ;	Spain (sp) case mapping for 850, new for DOS 4.0
 ;
-sp850_ucase	label	word
+label sp850_ucase word
 ;
 ;	Belgium (Be) case mapping for 850
 ;
-be850_ucase	   label   word
+label be850_ucase word
 ;
 ;	Finland (Fi) case mapping for 850
 ;
-fi850_ucase	   label   word
+label fi850_ucase word
 ;
 ;	Sweden (Sv) case mapping for 850
 ;
-sv850_ucase	   label   word
+label sv850_ucase word
 ;
 ;	Denmark (Da) case mapping for 850
 ;
-dk850_ucase	   label   word
+label dk850_ucase word
 ;
 ;	Norway (No) case mapping for 850
 ;
-no850_ucase	   label   word
-		ctable	<,'UCASE  ',128>
+label no850_ucase word
+		ctable$60 CTABLE ,'UCASE  ',128
 		db	128,154,144,182,142,183,143,128
 		db	210,211,212,216,215,222,142,143
 		db	144,146,146,226,153,227,234,235
@@ -2122,8 +2122,8 @@ no850_ucase	   label   word
 page
 ;	Switzerland (Sw) Case mapping (850)
 ;
-sw850_ucase	  label   word
-		ctable	<,'UCASE  ',128>
+label sw850_ucase word
+		ctable$61 CTABLE ,'UCASE  ',128
 		db	128,154,144,182,142,183,143,128
 		db	210,211,212,216,215,222,142,143
 		db	144,146,146,226,153,227,234,235
@@ -2143,8 +2143,8 @@ sw850_ucase	  label   word
 ;
 ;	Netherlands (Nl) case mapping 850
 ;
-nl850_ucase	   label   word
-		ctable	<,'UCASE  ',128>
+label nl850_ucase word
+		ctable$62 CTABLE ,'UCASE  ',128
 		db	128,085,069,065,065,065,143,128
 		db	069,069,069,073,073,073,065,143
 		db	069,146,146,079,079,079,085,085
@@ -2165,14 +2165,14 @@ page
 ;
 ;	Japan case mapping 932
 ;
-jp932_ucase	   label   word
+label jp932_ucase word
 ;
-ko934_ucase	   label   word
+label ko934_ucase word
 ;
-pr936_ucase	   label   word
+label pr936_ucase word
 ;
-ta938_ucase	   label   word
-		ctable	<,'UCASE  ',128>
+label ta938_ucase word
+		ctable$63 CTABLE ,'UCASE  ',128
 		db	128,129,130,131,132,133,134,135
 		db	136,137,138,139,140,141,142,143
 		db	144,145,146,147,148,149,150,151
@@ -2198,26 +2198,26 @@ page
 ;
 ;
 ; ----------------------------------------------------------------------------
-uk_ucfile	label	word
-fr_ucfile	label	word
-gr_ucfile	label	word
-sp_ucfile	label	word
-it_ucfile	label	word
-sv_ucfile	label	word
-dk_ucfile	label	word
-sw_ucfile	label	word
-no_ucfile	label	word
-nl_ucfile	label	word
-be_ucfile	label	word
-fi_ucfile	label	word
-is_ucfile	label	word
-ca_ucfile	label	word
-as_ucfile	label	word
-po_ucfile	label	word
-us_ucfile	label	word
-la_ucfile	label	word
-afe_ucfile	label	word
-		ctable	<,'FUCASE ',128>
+label uk_ucfile word
+label fr_ucfile word
+label gr_ucfile word
+label sp_ucfile word
+label it_ucfile word
+label sv_ucfile word
+label dk_ucfile word
+label sw_ucfile word
+label no_ucfile word
+label nl_ucfile word
+label be_ucfile word
+label fi_ucfile word
+label is_ucfile word
+label ca_ucfile word
+label as_ucfile word
+label po_ucfile word
+label us_ucfile word
+label la_ucfile word
+label afe_ucfile word
+		ctable$64 CTABLE ,'FUCASE ',128
 		db	128,129,130,131,132,133,134,135
 		db	136,137,138,139,140,141,142,143
 		db	144,145,146,147,148,149,150,151
@@ -2243,39 +2243,39 @@ afe_ucfile	label	word
 ;
 ;
 ; ----------------------------------------------------------------------------
-uk_flist	label	word
-fr_flist	label	word
-gr_flist	label	word
-sp_flist	label	word
-it_flist	label	word
-sv_flist	label	word
-dk_flist	label	word
-sw_flist	label	word
-no_flist	label	word
-nl_flist	label	word
-be_flist	label	word
-fi_flist	label	word
-is_flist	label	word
-ca_flist	label	word
-as_flist	label	word
-po_flist	label	word
-us_flist	label	word
-la_flist	label	word
-afe_flist	label	word
-jp437_flist	label	word
-jp932_flist	label	word
-ko437_flist	label	word
-ko934_flist	label	word
-pr437_flist	label	word
-pr936_flist	label	word
-ta437_flist	label	word
-ta938_flist	label	word
-		ctable	<,'FCHAR  ',fclend-fclbegin>
-fclbegin	label	word
+label uk_flist word
+label fr_flist word
+label gr_flist word
+label sp_flist word
+label it_flist word
+label sv_flist word
+label dk_flist word
+label sw_flist word
+label no_flist word
+label nl_flist word
+label be_flist word
+label fi_flist word
+label is_flist word
+label ca_flist word
+label as_flist word
+label po_flist word
+label us_flist word
+label la_flist word
+label afe_flist word
+label jp437_flist word
+label jp932_flist word
+label ko437_flist word
+label ko934_flist word
+label pr437_flist word
+label pr936_flist word
+label ta437_flist word
+label ta938_flist word
+		ctable$65 CTABLE ,'FCHAR  ',fclend-fclbegin
+label fclbegin word
 		db	1,0,255 			; include all
 		db	0,0,20h 			; exclude 0 - 20h
 		db	2,14,'."/\[]:|<>+=;,'           ; exclude 14 special chars
-fclend		label	word
+label fclend word
 	page
 ; ----------------------------------------------------------------------------
 ;
@@ -2286,62 +2286,64 @@ fclend		label	word
 ;
 ; ----------------------------------------------------------------------------
 ;					;***CNS
-uk_dbcs 	label	word		;AN000;
-fr_dbcs 	label	word		;AN000;
-gr_dbcs 	label	word		;AN000;
-sp_dbcs 	label	word		;AN000;
-it_dbcs 	label	word		;AN000;
-sv_dbcs 	label	word		;AN000;
-dk_dbcs 	label	word		;AN000;
-sw_dbcs 	label	word		;AN000;
-no_dbcs 	label	word		;AN000;
-nl_dbcs 	label	word		;AN000;
-be_dbcs 	label	word		;AN000;
-fi_dbcs 	label	word		;AN000;
-is_dbcs 	label	word		;AN000;
-ca_dbcs 	label	word		;AN000;
-as_dbcs 	label	word		;AN000;
-po_dbcs 	label	word		;AN000;
-us_dbcs 	label	word		;AN000;
-la_dbcs 	label	word		;AN000;
-afe_dbcs	label	word		;AN000;
-jp437_dbcs	label	word		;AN000;
-ko437_dbcs	label	word		;AN000;
-pr437_dbcs	label	word		;AN000;
-ta437_dbcs	label	word		;AN000;
-		ctable	<,'DBCS   ',dbcsterm-dbcsbegin>         ;AN000;
-dbcsbegin	label	word					;AN000;
+label uk_dbcs word   ;AN000;
+label fr_dbcs word   ;AN000;
+label gr_dbcs word   ;AN000;
+label sp_dbcs word   ;AN000;
+label it_dbcs word   ;AN000;
+label sv_dbcs word   ;AN000;
+label dk_dbcs word   ;AN000;
+label sw_dbcs word   ;AN000;
+label no_dbcs word   ;AN000;
+label nl_dbcs word   ;AN000;
+label be_dbcs word   ;AN000;
+label fi_dbcs word   ;AN000;
+label is_dbcs word   ;AN000;
+label ca_dbcs word   ;AN000;
+label as_dbcs word   ;AN000;
+label po_dbcs word   ;AN000;
+label us_dbcs word   ;AN000;
+label la_dbcs word   ;AN000;
+label afe_dbcs word  ;AN000;
+label jp437_dbcs word  ;AN000;
+label ko437_dbcs word  ;AN000;
+label pr437_dbcs word  ;AN000;
+label ta437_dbcs word  ;AN000;
+		ctable$66 CTABLE ,'DBCS   ',dbcsterm-dbcsbegin ;AN000;
+label dbcsbegin word     ;AN000;
 dbcsterm	db	0,0					;AN000;
-dbcsend 	label	word					;AN000;
+label dbcsend word      ;AN000;
 ;
 ;    Japan DBCS lead byte table
 ;
-jp932_dbcs	label	word					;AN000;
-		ctable	<,'DBCS   ',db932end-db932bgn>          ;AN000;
-db932bgn	label	word					;AN000;
+label jp932_dbcs word     ;AN000;
+		ctable$67 CTABLE ,'DBCS   ',db932end-db932bgn  ;AN000;
+label db932bgn word     ;AN000;
 		db	081h,09Fh				;AN000;
 		db	0E0h,0FCh				;AN000;
 db932term	db	000h,000h				;AN000;
-db932end	equ	$					;AN000;
+; = and not equ: fasm's equ is text put in where the name is used, so a $
+; in it would be the address of the use and not of this line.
+db932end	=	$					;AN000;
 ;
 ;    Korea DBCS lead byte table
 ;
-ko934_dbcs	label	word					;AN000;
-		ctable	<,'DBCS   ',db934end-db934bgn>          ;AN000;
-db934bgn	label	word					;AN000;
+label ko934_dbcs word     ;AN000;
+		ctable$68 CTABLE ,'DBCS   ',db934end-db934bgn  ;AN000;
+label db934bgn word     ;AN000;
 		db	081h,0BFh				;AN000;
 db934term	db	000h,000h				;AN000;
-db934end	equ	$					;AN000;
+db934end	=	$					;AN000;
 ;
 ;    PRC and Taiwan DBCS lead byte table
 ;
-pr936_dbcs	label	word					;AN000;
-ta938_dbcs	label	word					;AN000;
-		ctable	<,'DBCS   ',db936end-db936bgn>          ;AN000;
-db936bgn	label	word					;AN000;
+label pr936_dbcs word     ;AN000;
+label ta938_dbcs word     ;AN000;
+		ctable$69 CTABLE ,'DBCS   ',db936end-db936bgn  ;AN000;
+label db936bgn word     ;AN000;
 		db	081h,0FCh				;AN000;
 db936term	db	000h,000h				;AN000;
-db936end	equ	$					;AN000;
+db936end	=	$					;AN000;
 
 page
 ; ---------------------------------------------------------------
@@ -2351,27 +2353,27 @@ page
 ; ---------------------------------------------------------------
 
 
-include copyrigh.inc
+include 'COPYRIGH.INC'
 
-cdiend		label	word
+label cdiend word
 ;
-cdifname equ	$
+cdifname =	$
 	db	'COUNTRY.SYS',0
 ;
-crmsg	equ	$
+crmsg	=	$
 	db	'Create failed',13,10
-crmlen	equ	$-crmsg
+crmlen	=	($-crmsg)
 ;
-succmsg equ	$
+succmsg =	$
 	db	'COUNTRY.SYS created',13,10
-smlen	equ	$-succmsg
+smlen	=	($-succmsg)
 ;
-iomsg	equ	$
+iomsg	=	$
 	db	'I/O error writing COUNTRY.SYS',13,10
-iomlen	equ	$-iomsg
-dseg	ends
+iomlen	=	($-iomsg)
+end if
 ;
-sseg	segment stack
+if SEGSEL = S_SSEG
 	db	128 dup(0)
-sseg	ends
-	end	mkcdif
+end if
+;	end	mkcdif

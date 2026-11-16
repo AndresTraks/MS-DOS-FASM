@@ -400,3 +400,10 @@ device RAMDRIVE RAMLNK RAMDRIVE.SYS
 # the cache, which is not part of the driver and is not built here.  The
 # release links the one object and runs EXE2BIN over the result.
 device SMARTDRV SMRTLNK SMARTDRV.SYS
+
+# MKCNTRY.EXE, which is not a driver: COUNTRY.SYS is a file of tables
+# rather than a program, and this is what writes it -- the release's build
+# runs MKCNTRY in the directory and keeps what it lays down.  One module in
+# three segments and no group, which MKCLNK.ASM lays down in turn.  It is
+# under src/DEV because COUNTRY.SYS is.
+device COUNTRY MKCLNK MKCNTRY.EXE

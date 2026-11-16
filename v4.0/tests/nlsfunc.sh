@@ -30,8 +30,10 @@
 # for it.  The file named is COMMAND.COM: NLSFUNC only asks whether the file
 # is there when it installs, and opens it when DOS first wants country
 # information, so naming a file that is certainly on the disk tests the parse
-# and the check without standing a made-up COUNTRY.SYS in for the real one,
-# which this release builds from src/DEV/COUNTRY and which is not converted.
+# and the check without standing a made-up COUNTRY.SYS in for the real one.
+# The real one is built by src/DEV/COUNTRY's MKCNTRY, which is converted now
+# -- tests/country.sh runs it and starts a machine on what it writes -- and
+# nothing here needs it: what this test is about is the parse and the check.
 #
 # NLSFUNC writes its own messages on standard error, which a batch file
 # cannot redirect, so those are read off the screen and the rest off the

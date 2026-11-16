@@ -1508,6 +1508,40 @@ UTILITIES = {
         # yet.
         FORWARD=('EXTMEM_LOW', 'EXTMEM_HIGH'),
     ),
+    # COUNTRY.SYS is not a driver but a file of tables, and MKCNTRY is the
+    # program that writes it: the release's build runs MKCNTRY.EXE and
+    # keeps what it lays down.  One module and the header it reads, in
+    # three segments and no group -- cseg for the program, dseg for the
+    # country tables it writes the file out of, and sseg for a stack of a
+    # hundred and twenty-eight bytes.  It is in src/DEV because COUNTRY.SYS
+    # is, and it is the only thing there that is not a driver.
+    'COUNTRY': dict(
+        DIR='src/DEV/COUNTRY',
+        MODULES=('MKCNTRY.ASM', 'MKCNTRY.INC'),
+        SHARED=('COPYRIGH.INC',),
+        # cseg's own ASSUME, which names the data segment as well: the
+        # program is entered as an .EXE and sets DS itself.
+        START={'cs': 'cseg', 'ds': 'dseg', 'es': None, 'ss': None},
+        # How many countries the table holds, which the release works out
+        # with MASM's %: the count is a counter the CTRYENT macro bumps
+        # once per country, and "dummy %cntrycnt" passes its *value* as
+        # text, so that the EQU inside the macro gives finalCNT the number
+        # -- which the DW at the head of the table, written three dozen
+        # lines above it, then has on the second pass.  fasm's % is not
+        # that, and dropping it would give finalCNT the name rather than
+        # the number: read where the DW stands, the counter is still nought
+        # there.  So the macro goes and the number is taken the way fasm
+        # takes one, as an assembly-time constant that the passes settle.
+        EARLY={'MKCNTRY.ASM': [(
+            "dummy\tmacro\tp\n"
+            "finalCNT\tequ\tp\n"
+            "\tendm\n"
+            "\tdummy\t%cntrycnt\n",
+            ";dummy\tmacro\tp\n"
+            ";finalCNT\tequ\tp\n"
+            ";\tendm\n"
+            "finalCNT = cntrycnt\t; what the macro's % made of it\n")]},
+    ),
 }
 
 NAME = sys.argv[1].upper() if len(sys.argv) > 1 else ''
@@ -4959,6 +4993,18 @@ for stem in MODULES:
         m = NAMELESS.match(bare)
         if m:
             kind = m.group(2)
+            if inmacro[0]:
+                # Inside a macro body the made-up name has to be new on
+                # every expansion, which is what fasm's LOCAL is for:
+                # COUNTRY's CTRYENT macro lays one CTRYSTR down for each
+                # country it is called with, and a name of this
+                # conversion's own would be defined over again on the
+                # second call.
+                args = re.sub(r"(?i)\boffset\s+", '', sizes(m.group(3)))
+                out.append('%slocal anon$' % m.group(1))
+                out.append(pad('%sanon$ %s %s' % (m.group(1), kind, args),
+                               was_len, comment))
+                continue
             nameless[kind.upper()] = nameless.get(kind.upper(), 0) + 1
             args = re.sub(r"(?i)\boffset\s+", '', sizes(m.group(3)))
             out.append(pad('%s%s$%d %s %s'
