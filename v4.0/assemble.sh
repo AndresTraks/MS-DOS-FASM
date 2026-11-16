@@ -429,3 +429,11 @@ device XMAEM XMAELNK XMAEM.SYS
 # card's diagnostics as it comes up, and throws the initialisation away.
 # The release links the one object and runs EXE2BIN over the result.
 device XMA2EMS XMA2LNK XMA2EMS.SYS
+
+# KEYBOARD.SYS, which is neither a driver nor a program: it is the file of
+# keyboard layouts KEYB reads, and the .SYS on the end of it is the release's
+# own naming.  Twenty modules in one segment, all of them data -- KDFNOW is
+# the file header and the two tables of pointers, the eighteen after it are a
+# language apiece, and KDFEOF is the copyright and the 1AH that ends the
+# file.  The release links the twenty and runs EXE2BIN over the result.
+device KEYBOARD KBDLNK KEYBOARD.SYS

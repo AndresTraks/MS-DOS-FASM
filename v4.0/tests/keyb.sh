@@ -15,12 +15,18 @@
 #   KEYB UK         reads the layout, and there is none to read
 #   KEYB ZZ         the same, the file being opened before the code is judged
 #
-# The resident half is out of reach here, and not for want of trying: KEYB
-# will not install without a KEYBOARD.SYS to build its tables from, and that
-# file is built from the twenty-nine modules of src/DEV/KEYBOARD, which are
-# still the release's own text.  What this drives is the whole of the command
-# half -- the parser, both install checks, the search for the file, and the
-# message retriever that prints all three answers.
+# What this drives is the whole of the command half -- the parser, both
+# install checks, the search for the file, and the message retriever that
+# prints all three answers -- with no KEYBOARD.SYS on the disk, so the two
+# reads of it fail.  src/DEV/KEYBOARD is converted now and tests/keyboard.sh
+# gives KEYB the file to read: it installs, reports the layout and switches
+# to another.  What is still out of reach is the *translation*.  The handler
+# is on interrupt 9, its TABLE_OK is set and the tables in it are byte for
+# byte the file's, and a key pressed with the German layout resident still
+# comes out as the BIOS translated it -- the state logic is interpreted and
+# the interpreter reaches GOTO_BIOS without ever entering XLATT_PROC.  That
+# is a defect in this half, not in the file, and it is the next thing to
+# chase here.
 set -e
 cd "$(dirname "$0")/.."
 

@@ -119,7 +119,7 @@ NO_FREEDOM:
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
- db 'SHARED DATA_'                      ;;
+ db 'SHARED DATA'                      ;;
 label SD_DEST_PTR byte        ;;
 				       ;;
 SHARED_DATA   SHARED_DATA_STR          ;;

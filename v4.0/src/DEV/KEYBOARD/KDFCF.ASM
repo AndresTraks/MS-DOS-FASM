@@ -13,22 +13,22 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-	INCLUDE KEYBSHAR.INC	       ;;
-	INCLUDE POSTEQU.INC	       ;;
-	INCLUDE KEYBMAC.INC	       ;;
+	include 'KEYBSHAR.INC'      ;;
+	include 'POSTEQU.INC'      ;;
+	include 'KEYBMAC.INC'      ;;
 				       ;;
-	PUBLIC CF_LOGIC 	       ;;
-	PUBLIC CF_863_XLAT	       ;;
-	PUBLIC CF_850_XLAT	       ;;
+;	PUBLIC CF_LOGIC 	       ;;
+;	PUBLIC CF_863_XLAT	       ;;
+;	PUBLIC CF_850_XLAT	       ;;
 				       ;;
-CODE	SEGMENT PUBLIC 'CODE'          ;;
-	ASSUME CS:CODE,DS:CODE	       ;;
+;CODE	SEGMENT PUBLIC 'CODE'          ;;
+;	ASSUME CS:CODE,DS:CODE	       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Standard translate table options are a liner search table
 ;; (TYPE_2_TAB) and ASCII entries ONLY (ASCII_ONLY)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-STANDARD_TABLE	    EQU   TYPE_2_TAB+ASCII_ONLY
+STANDARD_TABLE_kdfcf	    equ   (TYPE_2_TAB+ASCII_ONLY)
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;***************************************
@@ -38,7 +38,7 @@ STANDARD_TABLE	    EQU   TYPE_2_TAB+ASCII_ONLY
 				       ;;
 CF_LOGIC:			       ;;
 				       ;;
-   DW  LOGIC_END-$		       ;; length
+   DW  LOGIC_END_kdfcf-$		       ;; length
 				       ;;
    DW  JR_HOT_KEY_1_2		     ;; special features
 				       ;;
@@ -64,25 +64,25 @@ CF_LOGIC:			       ;;
       IFF CIRCUMFLEX		       ;;
 	  RESET_NLS		       ;;
 	  XLATT CIRCUMFLEX_CIRCUMFLEX  ;;
-	  GOTO CIRCUMFLEX_ON	       ;;
+	  GOTO CIRCUMFLEX_ON_kdfcf	       ;;
       ENDIFF			       ;;
       IFF GRAVE 		       ;;
 	  RESET_NLS		       ;;
 	  XLATT GRAVE_GRAVE	       ;;
-	  GOTO GRAVE_ON 	       ;;
+	  GOTO GRAVE_ON_kdfcf 	       ;;
       ENDIFF			       ;;
       IFF EITHER_SHIFT		       ;;
 	  IFF DIARESIS		       ;;
 	      RESET_NLS 	       ;;
 	      XLATT DIARESIS_DIARESIS  ;;
-	      GOTO DIARESIS_ON	       ;;
+	      GOTO DIARESIS_ON_kdfcf	       ;;
 	  ENDIFF		       ;;
 	  SET_FLAG DEAD_UPPER	       ;;
       ELSEF			       ;;
 	  IFF CEDILLA		       ;;
 	      RESET_NLS 	       ;;
 	      XLATT CEDILLA_CEDILLA    ;;
-	      GOTO CEDILLA_ON	       ;;
+	      GOTO CEDILLA_ON_kdfcf	       ;;
 	  ENDIFF		       ;;
 	  SET_FLAG DEAD_LOWER	       ;;
       ENDIFF			       ;;
@@ -94,7 +94,7 @@ CF_LOGIC:			       ;;
 	     IFF ACUTE		       ;;
 		RESET_NLS	       ;;
 		XLATT ACUTE_ACUTE      ;;
-		GOTO ACUTE_ON	       ;;
+		GOTO ACUTE_ON_kdfcf	       ;;
 	     ENDIFF		       ;;
 	     SET_FLAG DEAD_THIRD       ;;
 	 ENDIFF 		       ;;
@@ -109,7 +109,7 @@ CF_LOGIC:			       ;;
 	     IFF ACUTE		       ;;
 		 RESET_NLS	       ;;
 		 XLATT ACUTE_ACUTE     ;;
-		 GOTO ACUTE_ON	       ;;
+		 GOTO ACUTE_ON_kdfcf	       ;;
 	     ENDIFF		       ;;
 	     SET_FLAG DEAD_THIRD       ;;
 	 ENDIFF 		       ;;
@@ -119,14 +119,14 @@ CF_LOGIC:			       ;;
 ;; ACUTE ACCENT TRANSLATIONS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-ACUTE_PROC:			       ;;
+ACUTE_PROC_kdfcf:			       ;;
 				       ;;
    IFF ACUTE,NOT		       ;;
-      GOTO GRAVE_PROC		       ;;
+      GOTO GRAVE_PROC_kdfcf		       ;;
       ENDIFF			       ;;
 				       ;;
       RESET_NLS 		       ;;
-ACUTE_ON:			       ;;
+ACUTE_ON_kdfcf:			       ;;
       IFF R_ALT_SHIFT,NOT	       ;;
 	 XLATT ACUTE_SPACE	       ;;
       ENDIFF			       ;;
@@ -147,7 +147,7 @@ ACUTE_ON:			       ;;
 	 ENDIFF 		       ;;
       ENDIFF			       ;;
 				       ;;
-INVALID_ACUTE:			       ;;
+INVALID_ACUTE_kdfcf:			       ;;
 				       ;; If we get here then either the XLATT
       BEEP			       ;; failed or we are ina bad shift state.
       EXIT_INT_9		       ;; Either is invalid so BEEP.
@@ -156,14 +156,14 @@ INVALID_ACUTE:			       ;;
 ;; GRAVE ACCENT TRANSLATIONS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-GRAVE_PROC:			       ;;
+GRAVE_PROC_kdfcf:			       ;;
 				       ;;
    IFF GRAVE,NOT		       ;;
-      GOTO DIARESIS_PROC	       ;;
+      GOTO DIARESIS_PROC_kdfcf	       ;;
       ENDIFF			       ;;
 				       ;;
       RESET_NLS 		       ;;
-GRAVE_ON:			       ;;
+GRAVE_ON_kdfcf:			       ;;
       IFF R_ALT_SHIFT,NOT	       ;;
 	 XLATT GRAVE_SPACE	       ;;
       ENDIFF			       ;;
@@ -184,7 +184,7 @@ GRAVE_ON:			       ;;
 	ENDIFF			       ;;
       ENDIFF			       ;;
 				       ;;
-INVALID_GRAVE:			       ;;
+INVALID_GRAVE_kdfcf:			       ;;
 				       ;; If we get here then either the XLATT
       BEEP			       ;; failed or we are ina bad shift state.
       EXIT_INT_9		       ;; Either is invalid so BEEP.
@@ -193,14 +193,14 @@ INVALID_GRAVE:			       ;;
 ;; DIARESIS ACCENT TRANSLATIONS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-DIARESIS_PROC:			       ;;
+DIARESIS_PROC_kdfcf:			       ;;
 				       ;;
    IFF DIARESIS,NOT		       ;;
-      GOTO CIRCUMFLEX_PROC	       ;;
+      GOTO CIRCUMFLEX_PROC_kdfcf	       ;;
       ENDIFF			       ;;
 				       ;;
       RESET_NLS 		       ;;
-DIARESIS_ON:			       ;;
+DIARESIS_ON_kdfcf:			       ;;
       IFF R_ALT_SHIFT,NOT	       ;;
 	 XLATT DIARESIS_SPACE	       ;;
       ENDIFF			       ;;
@@ -221,7 +221,7 @@ DIARESIS_ON:			       ;;
 	 ENDIFF 		       ;;
       ENDIFF			       ;;
 				       ;;
-INVALID_DIARESIS:		       ;;
+INVALID_DIARESIS_kdfcf:		       ;;
 				       ;; If we get here then either the XLATT
       BEEP			       ;; failed or we are ina bad shift state.
       EXIT_INT_9		       ;; Either is invalid so BEEP.
@@ -230,14 +230,14 @@ INVALID_DIARESIS:		       ;;
 ;; CIRCUMFLEX ACCENT TRANSLATIONS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-CIRCUMFLEX_PROC:		       ;;
+CIRCUMFLEX_PROC_kdfcf:		       ;;
 				       ;;
    IFF CIRCUMFLEX,NOT		       ;;
-      GOTO CEDILLA_PROC 	       ;;
+      GOTO CEDILLA_PROC_kdfcf 	       ;;
       ENDIFF			       ;;
 				       ;;
       RESET_NLS 		       ;;
-CIRCUMFLEX_ON:			       ;;
+CIRCUMFLEX_ON_kdfcf:			       ;;
       IFF R_ALT_SHIFT,NOT	       ;;
 	 XLATT CIRCUMFLEX_SPACE        ;;
       ENDIFF			       ;;
@@ -258,7 +258,7 @@ CIRCUMFLEX_ON:			       ;;
 	ENDIFF			       ;;
       ENDIFF			       ;;
 				       ;;
-INVALID_CIRCUMFLEX:		       ;;
+INVALID_CIRCUMFLEX_kdfcf:		       ;;
 				       ;; If we get here then either the XLATT
       BEEP			       ;; failed or we are ina bad shift state.
       EXIT_INT_9		       ;; Either is invalid so BEEP.
@@ -267,14 +267,14 @@ INVALID_CIRCUMFLEX:		       ;;
 ;; CEDILLA ACCENT TRANSLATIONS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-CEDILLA_PROC:			       ;;
+CEDILLA_PROC_kdfcf:			       ;;
 				       ;;
    IFF CEDILLA,NOT		       ;;
-      GOTO NON_DEAD		       ;;
+      GOTO NON_DEAD_kdfcf		       ;;
       ENDIFF			       ;;
 				       ;;
       RESET_NLS 		       ;;
-CEDILLA_ON:			       ;;
+CEDILLA_ON_kdfcf:			       ;;
       IFF R_ALT_SHIFT,NOT	       ;;
 	 XLATT CEDILLA_SPACE	       ;;
       ENDIFF			       ;;
@@ -295,7 +295,7 @@ CEDILLA_ON:			       ;;
 	ENDIFF			       ;;
       ENDIFF			       ;;
 				       ;;
-INVALID_CEDILLA:		       ;;
+INVALID_CEDILLA_kdfcf:		       ;;
 				       ;; If we get here then either the XLATT
       BEEP			       ;; failed or we are ina bad shift state.
       EXIT_INT_9		       ;; Either is invalid so BEEP.
@@ -304,7 +304,7 @@ INVALID_CEDILLA:		       ;;
 ;; Upper, lower and third shifts
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-NON_DEAD:			       ;;
+NON_DEAD_kdfcf:			       ;;
    IFKBD G_KB+P12_KB		       ;;
    ANDF LC_E0			       ;;
       EXIT_STATE_LOGIC		       ;;
@@ -312,7 +312,7 @@ NON_DEAD:			       ;;
 				       ;;
    IFF	EITHER_ALT,NOT		       ;; Lower and upper case.  Alphabetic
    ANDF EITHER_CTL,NOT		       ;; keys are affected by CAPS LOCK.
-      GOTO NO_THIRD		       ;;
+      GOTO NO_THIRD_kdfcf		       ;;
       ENDIFF			       ;;
 				       ;;
       IFF  R_ALT_SHIFT,NOT	       ;; Third shift is activated by ALT_GR
@@ -341,7 +341,7 @@ NON_DEAD:			       ;;
       EXIT_STATE_LOGIC		       ;;
 				       ;;
 				       ;;
-NO_THIRD:			       ;; Lower and upper case.  Alphabetic
+NO_THIRD_kdfcf:			       ;; Lower and upper case.  Alphabetic
 				       ;; keys are affected by CAPS LOCK.
       IFF EITHER_SHIFT		       ;; Numeric keys are not.
 	  XLATT NON_ALPHA_UPPER        ;;
@@ -361,7 +361,7 @@ NO_THIRD:			       ;; Lower and upper case.  Alphabetic
 				       ;;
       EXIT_STATE_LOGIC		       ;;
 				       ;;
-LOGIC_END:			       ;;
+LOGIC_END_kdfcf:			       ;;
 				       ;;
 				       ;;
 				       ;;
@@ -373,10 +373,10 @@ LOGIC_END:			       ;;
 ;;***************************************
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
- PUBLIC CF_COMMON_XLAT		       ;;
+; PUBLIC CF_COMMON_XLAT		       ;;
 CF_COMMON_XLAT: 		       ;;
 				       ;;
-   DW	   COMMON_XLAT_END-$	       ;; length of Common Tranlate Section
+   DW	   COMMON_XLAT_END_kdfcf-$	       ;; length of Common Tranlate Section
    DW	   -1			       ;; code page
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -385,7 +385,7 @@ CF_COMMON_XLAT: 		       ;;
 ;; KEYBOARD: All
 ;; TABLE TYPE: Set Dead Key Flag
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-   DW	 COM_DE_LO_END-$	       ;;
+   DW	 COM_DE_LO_END_kdfcf-$	       ;;
 				       ;;  label format:
 				       ;;    codepage_state_n_END
 				       ;;	codepage = COMmon
@@ -435,7 +435,7 @@ CF_COMMON_XLAT: 		       ;;
    FLAG  CIRCUMFLEX		       ;;
    DB	 27			       ;;
    FLAG  CEDILLA		       ;;
-COM_DE_LO_END:			       ;;
+COM_DE_LO_END_kdfcf:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -443,7 +443,7 @@ COM_DE_LO_END:			       ;;
 ;; KEYBOARD: ALL
 ;; TABLE TYPE: Set Dead Key Flag
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-   DW	 COM_DE_UP_END-$	       ;;
+   DW	 COM_DE_UP_END_kdfcf-$	       ;;
    DB	 DEAD_UPPER		       ;;
    DW	 ANY_KB 		       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
@@ -455,7 +455,7 @@ COM_DE_LO_END:			       ;;
    FLAG  CIRCUMFLEX		       ;;
    DB	 27			       ;;
    FLAG  DIARESIS		       ;;
-COM_DE_UP_END:			       ;;
+COM_DE_UP_END_kdfcf:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -463,7 +463,7 @@ COM_DE_UP_END:			       ;;
 ;; KEYBOARD: All
 ;; TABLE TYPE: Set Dead Key Flag
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-   DW	 COM_DE_TH_END-$	       ;;
+   DW	 COM_DE_TH_END_kdfcf-$	       ;;
    DB	 DEAD_THIRD		       ;;
    DW	 ANY_KB 		       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
@@ -471,7 +471,7 @@ COM_DE_UP_END:			       ;;
    DW	 1			       ;; number of dead keys
    DB	 53			       ;; scan code
    FLAG  ACUTE			       ;; flag bit assignment
-COM_DE_TH_END:			       ;;
+COM_DE_TH_END_kdfcf:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -480,20 +480,20 @@ COM_DE_TH_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_AL_LO_END-$	       ;; Length of state section
+   DW	 COM_AL_LO_END_kdfcf-$	       ;; Length of state section
    DB	 ALPHA_LOWER		       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_000400-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CF_000400_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf 	       ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 53,'Ç'                        ;;
-CF_000400:			       ;;
+CF_000400_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_AL_LO_END:			       ;;
+COM_AL_LO_END_kdfcf:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -502,20 +502,20 @@ COM_AL_LO_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_AL_UP_END-$	       ;;
+   DW	 COM_AL_UP_END_kdfcf-$	       ;;
    DB	 ALPHA_UPPER		       ;;
    DW	 ANY_KB 		       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_002400-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CF_002400_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf 	       ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 53,'ê'                        ;;
-CF_002400:			       ;;
+CF_002400_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_AL_UP_END:			       ;;
+COM_AL_UP_END_kdfcf:			       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
 ;; STATE: Non-alpha lower Case
@@ -523,22 +523,22 @@ COM_AL_UP_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_NA_LO_1_END-$	       ;; Length of state section
+   DW	 COM_NA_LO_1_END_kdfcf-$	       ;; Length of state section
    DB	 NON_ALPHA_LOWER	       ;;
    DW	 G_KB+P_KB+P12_KB	       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_004300-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CF_004300_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf 	       ;; xlat options:
    DB	 3			       ;; number of scans
    DB	 41,'#'                        ;;
    DB	 43,'<'                        ;;
    DB	 86,'Æ'                        ;;
-CF_004300:			       ;;
+CF_004300_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_NA_LO_1_END:		       ;;
+COM_NA_LO_1_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -547,21 +547,21 @@ COM_NA_LO_1_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_NA_LO_2_END-$	       ;; Length of state section
+   DW	 COM_NA_LO_2_END_kdfcf-$	       ;; Length of state section
    DB	 NON_ALPHA_LOWER	       ;;
    DW	 XT_KB+AT_KB		       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_004400-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CF_004400_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf 	       ;; xlat options:
    DB	 2			       ;; number of scans
    DB	 41,'<'                        ;;
    DB	 43,'\'                        ;;
-CF_004400:			       ;;
+CF_004400_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table : null
 				       ;;
-COM_NA_LO_2_END:		       ;;
+COM_NA_LO_2_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -570,20 +570,20 @@ COM_NA_LO_2_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_NA_LO_3_END-$	       ;; Length of state section
+   DW	 COM_NA_LO_3_END_kdfcf-$	       ;; Length of state section
    DB	 NON_ALPHA_LOWER	       ;;
    DW	 JR_KB			       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_004401-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CF_004401_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf 	       ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 51,','                        ;;
-CF_004401:			       ;;
+CF_004401_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table : null
 				       ;;
-COM_NA_LO_3_END:		       ;;
+COM_NA_LO_3_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -592,13 +592,13 @@ COM_NA_LO_3_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_NA_UP_1_END-$	       ;; Length of state section
+   DW	 COM_NA_UP_1_END_kdfcf-$	       ;; Length of state section
    DB	 NON_ALPHA_UPPER	       ;;
    DW	 G_KB+P_KB+P12_KB	       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_005300-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CF_005300_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf 	       ;; xlat options:
    DB	 8			       ;; number of scans
    DB	 3,'"'                         ;;
    DB	 4,'/'                         ;;
@@ -608,11 +608,11 @@ COM_NA_LO_3_END:		       ;;
    DB	 51,27H 		       ;;    single quote
    DB	 52,'.'                        ;;
    DB	 86,'Ø'                        ;;
-CF_005300:			       ;;
+CF_005300_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_NA_UP_1_END:		       ;;
+COM_NA_UP_1_END_kdfcf:		       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
 ;; STATE: Non-alpha Upper Case
@@ -620,13 +620,13 @@ COM_NA_UP_1_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_NA_UP_2_END-$	       ;; Length of state section
+   DW	 COM_NA_UP_2_END_kdfcf-$	       ;; Length of state section
    DB	 NON_ALPHA_UPPER	       ;;
    DW	 XT_KB+AT_KB		       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_005400-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CF_005400_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf 	       ;; xlat options:
    DB	 7			       ;; number of scans
    DB	 3,'"'                         ;;
    DB	 4,'/'                         ;;
@@ -635,11 +635,11 @@ COM_NA_UP_1_END:		       ;;
    DB	 43,'|'                        ;;
    DB	 51,27H 		       ;;    single quote
    DB	 52,'.'                        ;;    period
-CF_005400:			       ;;
+CF_005400_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table : null
 				       ;;
-COM_NA_UP_2_END:		       ;;
+COM_NA_UP_2_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -648,25 +648,25 @@ COM_NA_UP_2_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_NA_UP_3_END-$	       ;; Length of state section
+   DW	 COM_NA_UP_3_END_kdfcf-$	       ;; Length of state section
    DB	 NON_ALPHA_UPPER	       ;;
    DW	 JR_KB			       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_005100-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CF_005100_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf 	       ;; xlat options:
    DB	 5			       ;;
    DB	 3,'"'                         ;;
    DB	 4,'/'                         ;;
    DB	 7,'?'                         ;;
    DB	 51,27H 		       ;;    single quote
    DB	 52,02EH		       ;;    period
-CF_005100:			       ;;
+CF_005100_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table : null
 				       ;;
 				       ;;
-COM_NA_UP_3_END:		       ;;
+COM_NA_UP_3_END_kdfcf:		       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
 ;; STATE: Non-alpha Third Case
@@ -674,13 +674,13 @@ COM_NA_UP_3_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_NA_TH_1_END-$	       ;; Length of state section
+   DW	 COM_NA_TH_1_END_kdfcf-$	       ;; Length of state section
    DB	 THIRD_SHIFT		       ;;
    DW	 G_KB+P_KB+P12_KB	       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_007760-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CF_007760_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf 	       ;; xlat options:
    DB	 18			       ;; number of scans
    DB	 2,'Ò'                         ;;
    DB	 3,'@'                         ;;
@@ -700,11 +700,11 @@ COM_NA_UP_3_END:		       ;;
    DB	 49,'¯'                        ;;
    DB	 50,'Ê'                        ;;
    DB	 86,'¯'                        ;;
-CF_007760:			       ;;
+CF_007760_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_NA_TH_1_END:		       ;;
+COM_NA_TH_1_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -713,13 +713,13 @@ COM_NA_TH_1_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_NA_TH_2_END-$	       ;; Length of state section
+   DW	 COM_NA_TH_2_END_kdfcf-$	       ;; Length of state section
    DB	 THIRD_SHIFT		       ;;
    DW	 XT_KB			       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_006500-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CF_006500_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf 	       ;; xlat options:
    DB	 17			       ;; number of scans
    DB	 2,'Ò'                         ;;
    DB	 3,'@'                         ;;
@@ -738,11 +738,11 @@ COM_NA_TH_1_END:		       ;;
    DB	 48,'Ø'                        ;;
    DB	 49,'¯'                        ;;
    DB	 50,'Ê'                        ;;
-CF_006500:			       ;;
+CF_006500_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_NA_TH_2_END:		       ;;
+COM_NA_TH_2_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -751,13 +751,13 @@ COM_NA_TH_2_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_NA_TH_3_END-$	       ;; Length of state section
+   DW	 COM_NA_TH_3_END_kdfcf-$	       ;; Length of state section
    DB	 THIRD_SHIFT		       ;;
    DW	 AT_KB			       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_006300-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CF_006300_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf 	       ;; xlat options:
    DB	 17			       ;; number of scans
    DB	 2,'Ò'                         ;;
    DB	 3,'@'                         ;;
@@ -776,11 +776,11 @@ COM_NA_TH_2_END:		       ;;
    DB	 48,'Ø'                        ;;
    DB	 49,'¯'                        ;;
    DB	 50,'Ê'                        ;;
-CF_006300:			       ;;
+CF_006300_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_NA_TH_3_END:		       ;;
+COM_NA_TH_3_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -789,13 +789,13 @@ COM_NA_TH_3_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CF_COM_NA_TH_4_END-$	       ;; Length of state section
+   DW	 CF_COM_NA_TH_4_END_kdfcf-$	       ;; Length of state section
    DB	 THIRD_SHIFT		       ;;
    DW	 JR_KB			       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_007100-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CF_007100_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf 	       ;; xlat options:
    DB	 21			       ;;
    DB	 2,'Ò'                         ;;
    DB	 3,'@'                         ;;
@@ -818,11 +818,11 @@ COM_NA_TH_3_END:		       ;;
    DB	 47,'Æ'                        ;;
    DB	 48,'Ø'                        ;;
    DB	 49,'¯'                        ;;
-CF_007100:			       ;;
+CF_007100_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CF_COM_NA_TH_4_END:		       ;;
+CF_COM_NA_TH_4_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -831,22 +831,22 @@ CF_COM_NA_TH_4_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_AC_LO_END-$	       ;; Length of state section
+   DW	 COM_AC_LO_END_kdfcf-$	       ;; Length of state section
    DB	 ACUTE_LOWER		       ;;
    DW	 ANY_KB 		       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_001100-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_001100_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 3			       ;; number of scans
    DB	 18,'Ç'                        ;;
    DB	 24,'¢'                        ;;
    DB	 22,'£'                        ;;
-CF_001100:			       ;;
+CF_001100_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_AC_LO_END:			       ;;
+COM_AC_LO_END_kdfcf:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -855,20 +855,20 @@ COM_AC_LO_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_AC_UP_END-$	       ;; Length of state section
+   DW	 COM_AC_UP_END_kdfcf-$	       ;; Length of state section
    DB	 ACUTE_UPPER		       ;;
    DW	 ANY_KB 		       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_003100-$			;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_003100_kdfcf-$			;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 18,'ê'                        ;;
-CF_003100:			       ;;
+CF_003100_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_AC_UP_END:			       ;;
+COM_AC_UP_END_kdfcf:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -877,22 +877,22 @@ COM_AC_UP_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_GR_LO_END-$	       ;; Length of state section
+   DW	 COM_GR_LO_END_kdfcf-$	       ;; Length of state section
    DB	 GRAVE_LOWER		       ;;
    DW	 ANY_KB 		       ;;
    DB	 '`',0                        ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_001200-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_001200_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 3			       ;; number of scans
    DB	 30,'Ö'                        ;;
    DB	 18,'ä'                        ;;
    DB	 22,'ó'                        ;;
-CF_001200:			       ;;
+CF_001200_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_GR_LO_END:			       ;;
+COM_GR_LO_END_kdfcf:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -901,20 +901,20 @@ COM_GR_LO_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_GR_SP_END-$	       ;; Length of state section
+   DW	 COM_GR_SP_END_kdfcf-$	       ;; Length of state section
    DB	 GRAVE_SPACE		       ;;
    DW	 ANY_KB 		       ;;
    DB	 '`',0                         ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_004500-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_004500_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 57,'`'                        ;;
-CF_004500:			       ;;
+CF_004500_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_GR_SP_END:			       ;;
+COM_GR_SP_END_kdfcf:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -923,20 +923,20 @@ COM_GR_SP_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_GR_GR_END-$	       ;; Length of state section
+   DW	 COM_GR_GR_END_kdfcf-$	       ;; Length of state section
    DB	 GRAVE_GRAVE		       ;;
    DW	 ANY_KB 		       ;;
    DB	 '`',0                         ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_004501-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_004501_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 40,'`'                        ;;
-CF_004501:			       ;;
+CF_004501_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_GR_GR_END:			       ;;
+COM_GR_GR_END_kdfcf:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -945,22 +945,22 @@ COM_GR_GR_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_DI_LO_END-$	       ;; Length of state section
+   DW	 COM_DI_LO_END_kdfcf-$	       ;; Length of state section
    DB	 DIARESIS_LOWER 	       ;;
    DW	 ANY_KB 		       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_001400-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_001400_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 3			       ;; number of scans
    DB	 18,'â'                        ;;
    DB	 23,'ã'                        ;;
    DB	 22,'Å'                        ;;
-CF_001400:			       ;;
+CF_001400_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_DI_LO_END:			       ;;
+COM_DI_LO_END_kdfcf:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -969,24 +969,24 @@ COM_DI_LO_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_CI_LO_END-$	       ;; Length of state section
+   DW	 COM_CI_LO_END_kdfcf-$	       ;; Length of state section
    DB	 CIRCUMFLEX_LOWER	       ;;
    DW	 ANY_KB 		       ;;
    DB	 '^',0                         ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_001300-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_001300_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 5			       ;; number of scans
    DB	 30,'É'                        ;;
    DB	 18,'à'                        ;;
    DB	 23,'å'                        ;;
    DB	 24,'ì'                        ;;
    DB	 22,'ñ'                        ;;
-CF_001300:			       ;;
+CF_001300_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_CI_LO_END:			       ;;
+COM_CI_LO_END_kdfcf:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -995,20 +995,20 @@ COM_CI_LO_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_CI_SP_END-$	       ;; Length of state section
+   DW	 COM_CI_SP_END_kdfcf-$	       ;; Length of state section
    DB	 CIRCUMFLEX_SPACE	       ;;
    DW	 ANY_KB 		       ;;
    DB	 '^',0                         ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_004555-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_004555_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 57,'^'                        ;;
-CF_004555:			       ;;
+CF_004555_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_CI_SP_END:			       ;;
+COM_CI_SP_END_kdfcf:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -1017,20 +1017,20 @@ COM_CI_SP_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_CI_CI_END-$	       ;; Length of state section
+   DW	 COM_CI_CI_END_kdfcf-$	       ;; Length of state section
    DB	 CIRCUMFLEX_CIRCUMFLEX	       ;;
    DW	 ANY_KB 		       ;;
    DB	 '^',0                         ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_004551-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_004551_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 26,'^'                        ;;
-CF_004551:			       ;;
+CF_004551_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_CI_CI_END:			       ;;
+COM_CI_CI_END_kdfcf:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1040,20 +1040,20 @@ COM_CI_CI_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_DI_UP_END-$	       ;; Length of state section
+   DW	 COM_DI_UP_END_kdfcf-$	       ;; Length of state section
    DB	 DIARESIS_UPPER 	       ;;
    DW	 ANY_KB 		       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_003300-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_003300_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 22,'ö'                        ;;
-CF_003300:			       ;;
+CF_003300_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_DI_UP_END:			       ;;
+COM_DI_UP_END_kdfcf:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -1062,20 +1062,20 @@ COM_DI_UP_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_CE_LO_END-$	       ;; Length of state section
+   DW	 COM_CE_LO_END_kdfcf-$	       ;; Length of state section
    DB	 CEDILLA_LOWER		       ;;
    DW	 ANY_KB 		       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_001500-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_001500_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 46,'á'                        ;;
-CF_001500:			       ;;
+CF_001500_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_CE_LO_END:			       ;;
+COM_CE_LO_END_kdfcf:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -1084,24 +1084,24 @@ COM_CE_LO_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_CE_UP_END-$	       ;; Length of state section
+   DW	 COM_CE_UP_END_kdfcf-$	       ;; Length of state section
    DB	 CEDILLA_UPPER		       ;;
    DW	 ANY_KB 		       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_003400-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_003400_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 46,'Ä'                        ;;
-CF_003400:			       ;;
+CF_003400_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_CE_UP_END:			       ;;
+COM_CE_UP_END_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Last State
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-COMMON_XLAT_END:		       ;;
+COMMON_XLAT_END_kdfcf:		       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;***************************************
@@ -1111,10 +1111,10 @@ COMMON_XLAT_END:		       ;;
 ;;***************************************
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
- PUBLIC CF_863_XLAT		       ;;
+; PUBLIC CF_863_XLAT		       ;;
 CF_863_XLAT:			       ;;
 				       ;;
-   DW	   CP863_XLAT_END-$	       ;; length of 863 Tranlate Section
+   DW	   CP863_XLAT_END_kdfcf-$	       ;; length of 863 Tranlate Section
    DW	   863			       ;; code page id
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1125,13 +1125,13 @@ CF_863_XLAT:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP863_NA_TH_1_END-$	       ;; Length of state section
+   DW	 CP863_NA_TH_1_END_kdfcf-$	       ;; Length of state section
    DB	 THIRD_SHIFT		       ;;
    DW	 G_KB+P_KB+P12_KB+XT_KB+AT_KB  ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_106300-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CF_106300_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf 	       ;; xlat options:
    DB	 8			       ;; number of scan
    DB	 5,'õ'                         ;;
    DB	 6,98H			       ;;    international currency symbol
@@ -1141,11 +1141,11 @@ CF_863_XLAT:			       ;;
    DB	 24,08FH		       ;;    section
    DB	 25,086H		       ;;    paragraph
    DB	 51,0A7H		       ;;    overscore
-CF_106300:			       ;;
+CF_106300_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP863_NA_TH_1_END:		       ;; Length of state section
+CP863_NA_TH_1_END_kdfcf:		       ;; Length of state section
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 863
@@ -1154,13 +1154,13 @@ CP863_NA_TH_1_END:		       ;; Length of state section
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP863_NA_TH_2_END-$	       ;; Length of state section
+   DW	 CP863_NA_TH_2_END_kdfcf-$	       ;; Length of state section
    DB	 THIRD_SHIFT		       ;;
    DW	 JR_KB			       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_106600-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CF_106600_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf 	       ;; xlat options:
    DB	 8			       ;; number of scan
    DB	 5,'õ'                         ;;
    DB	 6,98H			       ;;    international currency symbol
@@ -1170,11 +1170,11 @@ CP863_NA_TH_1_END:		       ;; Length of state section
    DB	 24,08FH		       ;;    section
    DB	 25,086H		       ;;    paragraph
    DB	 51,0A7H		       ;;    overscore
-CF_106600:			       ;;
+CF_106600_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP863_NA_TH_2_END:		       ;;
+CP863_NA_TH_2_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 863
@@ -1183,20 +1183,20 @@ CP863_NA_TH_2_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP863_AC_SP_END-$	       ;; Length of state section
+   DW	 CP863_AC_SP_END_kdfcf-$	       ;; Length of state section
    DB	 ACUTE_SPACE		       ;;
    DW	 ANY_KB 		       ;;
    DB	 0A1H,0 		       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_104500-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_104500_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 57,0A1H		       ;;   acute
-CF_104500:			       ;;
+CF_104500_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP863_AC_SP_END:		       ;;
+CP863_AC_SP_END_kdfcf:		       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 863
 ;; STATE: Acute  INPUT: Acute
@@ -1204,20 +1204,20 @@ CP863_AC_SP_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP863_AC_AC_END-$	       ;; Length of state section
+   DW	 CP863_AC_AC_END_kdfcf-$	       ;; Length of state section
    DB	 ACUTE_ACUTE		       ;;
    DW	 ANY_KB 		       ;;
    DB	 0A1H,0 		       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_104505-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_104505_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 53,0A1H		       ;;   acute
-CF_104505:			       ;;
+CF_104505_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP863_AC_AC_END:		       ;;
+CP863_AC_AC_END_kdfcf:		       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 863
 ;; STATE: Grave Upper Case
@@ -1225,22 +1225,22 @@ CP863_AC_AC_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP863_GR_UP_END-$	       ;; Length of state section
+   DW	 CP863_GR_UP_END_kdfcf-$	       ;; Length of state section
    DB	 GRAVE_UPPER		       ;;
    DW	 ANY_KB 		       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_104700-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_104700_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 3			       ;; number of scans
    DB	 30,8EH 		       ;;    A grave
    DB	 18,91H 		       ;;    E grave
    DB	 22,9DH 		       ;;    U grave
-CF_104700:			       ;;
+CF_104700_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP863_GR_UP_END:		       ;;
+CP863_GR_UP_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 863
@@ -1249,21 +1249,21 @@ CP863_GR_UP_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP863_DI_UP_END-$	       ;; Length of state section
+   DW	 CP863_DI_UP_END_kdfcf-$	       ;; Length of state section
    DB	 DIARESIS_UPPER 	       ;;
    DW	 ANY_KB 		       ;;
    DB	 0A4H,0 		       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_104800-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_104800_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 2			       ;; number of scans
    DB	 18,94H 		       ;;    E diaeresis
    DB	 23,95H 		       ;;    I diaeresis
-CF_104800:			       ;;
+CF_104800_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP863_DI_UP_END:		       ;;
+CP863_DI_UP_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 863
@@ -1272,20 +1272,20 @@ CP863_DI_UP_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP863_DI_SP_END-$	       ;; Length of state section
+   DW	 CP863_DI_SP_END_kdfcf-$	       ;; Length of state section
    DB	 DIARESIS_SPACE 	       ;;
    DW	 ANY_KB 		       ;;
    DB	 0A4H,0 		       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_104550-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_104550_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 57,0A4H		       ;;   diaeresis
-CF_104550:			       ;;
+CF_104550_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP863_DI_SP_END:		       ;;
+CP863_DI_SP_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 863
@@ -1294,20 +1294,20 @@ CP863_DI_SP_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP863_DI_DI_END-$	       ;; Length of state section
+   DW	 CP863_DI_DI_END_kdfcf-$	       ;; Length of state section
    DB	 DIARESIS_DIARESIS	       ;;
    DW	 ANY_KB 		       ;;
    DB	 0A4H,0 		       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_104551-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_104551_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 27,0A4H		       ;;   diaeresis
-CF_104551:			       ;;
+CF_104551_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP863_DI_DI_END:		       ;;
+CP863_DI_DI_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 863
@@ -1316,24 +1316,24 @@ CP863_DI_DI_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP863_CI_UP_END-$	       ;; Length of state section
+   DW	 CP863_CI_UP_END_kdfcf-$	       ;; Length of state section
    DB	 CIRCUMFLEX_UPPER	       ;;
    DW	 ANY_KB 		       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_104750-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_104750_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 5			       ;; number of scans
    DB	 30,84H 		       ;;    A circumflex
    DB	 18,92H 		       ;;    E circumflex
    DB	 23,0A8H		       ;;    I circumflex
    DB	 24,99H 		       ;;    O circumflex
    DB	 22,9EH 		       ;;    U circumflex
-CF_104750:			       ;;
+CF_104750_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP863_CI_UP_END:		       ;;
+CP863_CI_UP_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 863
@@ -1342,20 +1342,20 @@ CP863_CI_UP_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP863_CE_SP_END-$	       ;; Length of state section
+   DW	 CP863_CE_SP_END_kdfcf-$	       ;; Length of state section
    DB	 CEDILLA_SPACE		       ;;
    DW	 ANY_KB 		       ;;
    DB	 0A5H,0 		       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_104600-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_104600_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 57,0A5H		       ;;   cedilla
-CF_104600:			       ;;
+CF_104600_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP863_CE_SP_END:		       ;;
+CP863_CE_SP_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 863
@@ -1364,24 +1364,24 @@ CP863_CE_SP_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP863_CE_CE_END-$	       ;; Length of state section
+   DW	 CP863_CE_CE_END_kdfcf-$	       ;; Length of state section
    DB	 CEDILLA_CEDILLA	       ;;
    DW	 ANY_KB 		       ;;
    DB	 0A5H,0 		       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_104601-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_104601_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 27,0A5H		       ;;   cedilla
-CF_104601:			       ;;
+CF_104601_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP863_CE_CE_END:		       ;;
+CP863_CE_CE_END_kdfcf:		       ;;
 				       ;;
 				       ;;
    DW	 0			       ;; Last State
-CP863_XLAT_END: 		       ;;
+CP863_XLAT_END_kdfcf: 		       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;***************************************
@@ -1391,10 +1391,10 @@ CP863_XLAT_END: 		       ;;
 ;;***************************************
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
- PUBLIC CF_850_XLAT		       ;;
+; PUBLIC CF_850_XLAT		       ;;
 CF_850_XLAT:			       ;;
 				       ;;
-   DW	   CP850_XLAT_END-$	       ;; length of 850 Tranlate Section
+   DW	   CP850_XLAT_END_kdfcf-$	       ;; length of 850 Tranlate Section
    DW	   850			       ;; code page id
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1405,13 +1405,13 @@ CF_850_XLAT:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_NA_TH_1_END-$	       ;; Length of state section
+   DW	 CP850_NA_TH_1_END_kdfcf-$	       ;; Length of state section
    DB	 THIRD_SHIFT		       ;;
    DW	 G_KB+P_KB+P12_KB+XT_KB+AT_KB  ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_206300-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CF_206300_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf 	       ;; xlat options:
    DB	 8			       ;; number of scan
    DB	 5,0BDH 		       ;;    cent
    DB	 6,0CFH 		       ;;    international currency symbol
@@ -1421,11 +1421,11 @@ CF_850_XLAT:			       ;;
    DB	 24,0F5H		       ;;    section
    DB	 25,0F4H		       ;;    paragraph
    DB	 51,0EEH		       ;;    overscore
-CF_206300:			       ;;
+CF_206300_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_NA_TH_1_END:		       ;; Length of state section
+CP850_NA_TH_1_END_kdfcf:		       ;; Length of state section
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
@@ -1434,13 +1434,13 @@ CP850_NA_TH_1_END:		       ;; Length of state section
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_NA_TH_2_END-$	       ;; Length of state section
+   DW	 CP850_NA_TH_2_END_kdfcf-$	       ;; Length of state section
    DB	 THIRD_SHIFT		       ;;
    DW	 JR_KB			       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_206600-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CF_206600_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf 	       ;; xlat options:
    DB	 8			       ;; number of scan
    DB	 5,0BDH 		       ;;    cent
    DB	 6,0CFH 		       ;;    international currency symbol
@@ -1450,11 +1450,11 @@ CP850_NA_TH_1_END:		       ;; Length of state section
    DB	 24,0F5H		       ;;    section
    DB	 25,0F4H		       ;;    paragraph
    DB	 51,0EEH		       ;;    overscore
-CF_206600:			       ;;
+CF_206600_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_NA_TH_2_END:		       ;;
+CP850_NA_TH_2_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
@@ -1463,22 +1463,22 @@ CP850_NA_TH_2_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_AC_LO_END-$	       ;; Length of state section
+   DW	 CP850_AC_LO_END_kdfcf-$	       ;; Length of state section
    DB	 ACUTE_LOWER		       ;;
    DW	 ANY_KB 		       ;;
    DB	 0EFH,0 		       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_201100-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_201100_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 3			       ;; number of scans
    DB	 30,'†'                        ;;
    DB	 23,'°'                        ;;
    DB	 21,0ECH		       ;; y acute
-CF_201100:			       ;;
+CF_201100_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_AC_LO_END:		       ;;
+CP850_AC_LO_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
@@ -1487,24 +1487,24 @@ CP850_AC_LO_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_AC_UP_END-$	       ;; Length of state section
+   DW	 CP850_AC_UP_END_kdfcf-$	       ;; Length of state section
    DB	 ACUTE_UPPER		       ;;
    DW	 ANY_KB 		       ;;
    DB	 0EFH,0 		       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_203100-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_203100_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 5			       ;; number of scans
    DB	 30,0B5H		       ;;    A acute
    DB	 23,0D6H		       ;;    I acute
    DB	 24,0E0H		       ;;    O acute
    DB	 22,0E9H		       ;;    U acute
    DB	 21,0EDH		       ;;    Y acute
-CF_203100:			       ;;
+CF_203100_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_AC_UP_END:		       ;;
+CP850_AC_UP_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
@@ -1513,20 +1513,20 @@ CP850_AC_UP_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_AC_SP_END-$	       ;; Length of state section
+   DW	 CP850_AC_SP_END_kdfcf-$	       ;; Length of state section
    DB	 ACUTE_SPACE		       ;;
    DW	 ANY_KB 		       ;;
    DB	 0EFH,0 		       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_204500-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_204500_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 57,0EFH		       ;;   acute
-CF_204500:			       ;;
+CF_204500_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_AC_SP_END:		       ;;
+CP850_AC_SP_END_kdfcf:		       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
 ;; STATE: Acute  INPUT: Acute
@@ -1534,20 +1534,20 @@ CP850_AC_SP_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_AC_AC_END-$	       ;; Length of state section
+   DW	 CP850_AC_AC_END_kdfcf-$	       ;; Length of state section
    DB	 ACUTE_ACUTE		       ;;
    DW	 ANY_KB 		       ;;
    DB	 0EFH,0 		       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_204501-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_204501_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 53,0EFH		       ;;   acute
-CF_204501:			       ;;
+CF_204501_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_AC_AC_END:		       ;;
+CP850_AC_AC_END_kdfcf:		       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
 ;; STATE: Grave Lower Case
@@ -1555,21 +1555,21 @@ CP850_AC_AC_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_GR_LO_END-$	       ;; Length of state section
+   DW	 CP850_GR_LO_END_kdfcf-$	       ;; Length of state section
    DB	 GRAVE_LOWER		       ;;
    DW	 ANY_KB 		       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_201200-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_201200_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 2			       ;; number of scans
    DB	 23,'ç'                        ;;
    DB	 24,'ï'                        ;;
-CF_201200:			       ;;
+CF_201200_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_GR_LO_END:		       ;;
+CP850_GR_LO_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
@@ -1578,24 +1578,24 @@ CP850_GR_LO_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_GR_UP_END-$	       ;; Length of state section
+   DW	 CP850_GR_UP_END_kdfcf-$	       ;; Length of state section
    DB	 GRAVE_UPPER		       ;;
    DW	 ANY_KB 		       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_203200-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_203200_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 5			       ;; number of scans
    DB	 30,0B7H		       ;;    A grave
    DB	 18,0D4H		       ;;    E grave
    DB	 23,0DEH		       ;;    I grave
    DB	 24,0E3H		       ;;    O grave
    DB	 22,0EBH		       ;;    U grave
-CF_203200:			       ;;
+CF_203200_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_GR_UP_END:		       ;;
+CP850_GR_UP_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
@@ -1604,22 +1604,22 @@ CP850_GR_UP_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_DI_LO_END-$	       ;; Length of state section
+   DW	 CP850_DI_LO_END_kdfcf-$	       ;; Length of state section
    DB	 DIARESIS_LOWER 	       ;;
    DW	 ANY_KB 		       ;;
    DB	 0F9H,0 		       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_201400-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_201400_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 3			       ;; number of scans
    DB	 30,'Ñ'                        ;;
    DB	 24,'î'                        ;;
    DB	 21,'ò'                        ;;
-CF_201400:			       ;;
+CF_201400_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_DI_LO_END:		       ;;
+CP850_DI_LO_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
@@ -1628,23 +1628,23 @@ CP850_DI_LO_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_DI_UP_END-$	       ;; Length of state section
+   DW	 CP850_DI_UP_END_kdfcf-$	       ;; Length of state section
    DB	 DIARESIS_UPPER 	       ;;
    DW	 ANY_KB 		       ;;
    DB	 0F9H,0 		       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_203400-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_203400_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 4			       ;; number of scans
    DB	 30,'é'                        ;;
    DB	 18,0D3H		       ;;    E diaeresis
    DB	 23,0D8H		       ;;    I diaeresis
    DB	 24,'ô'                        ;;
-CF_203400:			       ;;
+CF_203400_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_DI_UP_END:		       ;;
+CP850_DI_UP_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
@@ -1653,20 +1653,20 @@ CP850_DI_UP_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_DI_SP_END-$	       ;; Length of state section
+   DW	 CP850_DI_SP_END_kdfcf-$	       ;; Length of state section
    DB	 DIARESIS_SPACE 	       ;;
    DW	 ANY_KB 		       ;;
    DB	 0F9H,0 		       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_204550-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_204550_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 57,0F9H		       ;;   diaeresis
-CF_204550:			       ;;
+CF_204550_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_DI_SP_END:		       ;;
+CP850_DI_SP_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
@@ -1675,20 +1675,20 @@ CP850_DI_SP_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_DI_DI_END-$	       ;; Length of state section
+   DW	 CP850_DI_DI_END_kdfcf-$	       ;; Length of state section
    DB	 DIARESIS_DIARESIS	       ;;
    DW	 ANY_KB 		       ;;
    DB	 0F9H,0 		       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_204551-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_204551_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 27,0F9H		       ;;   diaeresis
-CF_204551:			       ;;
+CF_204551_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_DI_DI_END:		       ;;
+CP850_DI_DI_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
@@ -1697,24 +1697,24 @@ CP850_DI_DI_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_CI_UP_END-$	       ;; Length of state section
+   DW	 CP850_CI_UP_END_kdfcf-$	       ;; Length of state section
    DB	 CIRCUMFLEX_UPPER	       ;;
    DW	 ANY_KB 		       ;;
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_003305-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_003305_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 5			       ;; number of scans
    DB	 30,0B6H		       ;;    A circumflex
    DB	 18,0D2H		       ;;    E circumflex
    DB	 23,0D7H		       ;;    I circumflex
    DB	 24,0E2H		       ;;    O circumflex
    DB	 22,0EAH		       ;;    U circumflex
-CF_003305:			       ;;
+CF_003305_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_CI_UP_END:		       ;;
+CP850_CI_UP_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
@@ -1723,20 +1723,20 @@ CP850_CI_UP_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_CE_SP_END-$	       ;; Length of state section
+   DW	 CP850_CE_SP_END_kdfcf-$	       ;; Length of state section
    DB	 CEDILLA_SPACE		       ;;
    DW	 ANY_KB 		       ;;
    DB	 0F7H,0 		       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_204600-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_204600_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 57,0F7H		       ;;   cedilla
-CF_204600:			       ;;
+CF_204600_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_CE_SP_END:		       ;;
+CP850_CE_SP_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
@@ -1745,25 +1745,25 @@ CP850_CE_SP_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_CE_CE_END-$	       ;; Length of state section
+   DW	 CP850_CE_CE_END_kdfcf-$	       ;; Length of state section
    DB	 CEDILLA_CEDILLA	       ;;
    DW	 ANY_KB 		       ;;
    DB	 0F7H,0 		       ;; Buffer entry for error character
 				       ;; Set Flag Table
-   DW	 CF_204601-$		       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CF_204601_kdfcf-$		       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfcf+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 27,0F7H		       ;;   cedilla
-CF_204601:			       ;;
+CF_204601_kdfcf:			       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_CE_CE_END:		       ;;
+CP850_CE_CE_END_kdfcf:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    DW	 0			       ;; no more states
 				       ;;
-CP850_XLAT_END: 		       ;;
+CP850_XLAT_END_kdfcf: 		       ;;
 
-CODE   ENDS
-       END
+;CODE   ENDS
+;       END

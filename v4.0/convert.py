@@ -1659,6 +1659,42 @@ UTILITIES = {
         # vector table at 0.
         START={'cs': 'CSEG', 'ds': None, 'es': None, 'ss': None},
     ),
+    # KEYBOARD.SYS, which is neither a driver nor a program: it is the file
+    # of keyboard layouts KEYB reads, and the .SYS on the end of it is the
+    # release's own naming.  Twenty modules in the order KEYBOARD.LNK names
+    # them, all in the one segment CODE and all of them data -- there is not
+    # an instruction in the whole of it.  KDFNOW is the file header and the
+    # two tables of pointers, one by language code and one by keyboard ID;
+    # the eighteen after it are a language apiece, each with its state logic
+    # and its two code pages; KDFEOF is the copyright and the 1AH that ends
+    # the file.  The release links the twenty and runs EXE2BIN over the
+    # result.
+    #
+    # Five more .ASM files in the directory are earlier copies the link file
+    # does not name: KDF.ASM, which the comments in the others still point
+    # at for the linkage instructions, and KDFFR, KDFIT and KDFUK, each of
+    # which was split in two when a second keyboard ID wanted a layout of
+    # its own -- and KDFSU, Finland, which KDFSV serves instead.
+    'KEYBOARD': dict(
+        DIR='src/DEV/KEYBOARD',
+        MODULES=('KDFNOW.ASM', 'KDFSP.ASM', 'KDFPO.ASM', 'KDFFR120.ASM',
+                 'KDFFR189.ASM', 'KDFDK.ASM', 'KDFSG.ASM', 'KDFGE.ASM',
+                 'KDFIT141.ASM', 'KDFIT142.ASM', 'KDFUK166.ASM',
+                 'KDFUK168.ASM', 'KDFSF.ASM', 'KDFBE.ASM', 'KDFNL.ASM',
+                 'KDFNO.ASM', 'KDFCF.ASM', 'KDFSV.ASM', 'KDFLA.ASM',
+                 'KDFEOF.ASM',
+                 'KEYBMAC.INC', 'KEYBSHAR.INC'),
+        ONESEG=True,
+        SHARED=('POSTEQU.INC', 'COPYRIGH.INC'),
+        # Every name a module declares is its own: the twenty were assembled
+        # apart, and what one lets the others have it says with a PUBLIC --
+        # the state logic and the two code page tables, three names a
+        # language, which KDFNOW takes with an EXTRN apiece.
+        LOCALS='all',
+        # Every module says ASSUME CS:CODE,DS:CODE at the head of the
+        # segment, which is the whole of what any of them says.
+        START={'cs': 'CODE', 'ds': 'CODE', 'es': None, 'ss': None},
+    ),
 }
 
 NAME = sys.argv[1].upper() if len(sys.argv) > 1 else ''
@@ -1926,12 +1962,39 @@ for stem, pairs in PRIVATE.items():
 # Labels a module keeps to itself, which MASM let every module have because
 # it assembled them apart: MODE writes endif01 and p0 to p7 by hand in five
 # modules apiece.  Each takes the name of the module it is in.
+#
+# A program whose modules say which of their names the others may have is a
+# different case, and LOCALS='all' is for that one: every name a module
+# declares is its own unless it makes it PUBLIC, or reads it from elsewhere
+# with an EXTRN.  KEYBOARD is twenty keyboard tables assembled apart, with
+# three names apiece made PUBLIC -- the logic table and the two code pages --
+# and a hundred and ninety-two names declared in more than one of them,
+# which is no list to write out.
 LOCALS = U.get('LOCALS', ())
 if LOCALS:
-    localpat = re.compile(r"(?i)^(?:" + "|".join(LOCALS) + r")$")
+    everything = LOCALS == 'all'
+    localpat = (None if everything
+                else re.compile(r"(?i)^(?:" + "|".join(LOCALS) + r")$"))
     for stem in MODULES:
+        # A header every module reads is not one of them: what it declares
+        # is the same name in all of them, so the mark would make twenty
+        # names of one.  KEYBSHAR.INC gives the layouts their shapes and
+        # KEYBMAC.INC the macros that lay them down.
+        if everything and not stem.upper().endswith('.ASM'):
+            continue
         mark = stem.split('.')[0].lower()
         mine = set()
+        # The names the module hands to the others, or takes from them: a
+        # PUBLIC or an EXTRN names one thing across the whole program, and
+        # the mark would hide it.
+        theirs = set()
+        if everything:
+            for line in source[stem].split('\n'):
+                m = re.match(r"(?i)^[ \t]*(?:PUBLIC|EXTRN)[ \t]+(.*)$",
+                             code_of(line))
+                if m:
+                    theirs |= {w.split(':')[0].strip().lower()
+                               for w in m.group(1).split(',') if w.strip()}
         for line in source[stem].split('\n'):
             # MODE writes some of its labels against the margin and some
             # of them indented, and the names it keeps to itself are
@@ -1946,7 +2009,8 @@ if LOCALS:
                 or re.match(r"(?i)^(" + N + r")[ \t]+(?:equ|=)[ \t]", code) \
                 or re.match(r"(?i)^[ \t]*(" + N + r")[ \t]+"
                             r"(?:proc|label|d[bwdq])\b", code)
-            if m and localpat.match(m.group(1)):
+            if m and (localpat.match(m.group(1)) if localpat
+                      else m.group(1).lower() not in theirs):
                 mine.add(m.group(1))
         if not mine:
             continue
@@ -1973,7 +2037,7 @@ if LOCALS:
             # the end of the paste.
             def paste(m2, mark=mark, mine=mine):
                 stem, arg = m2.group(1), m2.group(2)
-                if not localpat.match(stem + '0'):
+                if not localpat or not localpat.match(stem + '0'):
                     return m2.group(0)
                 # in the spelling the module's own labels have, MASM having
                 # read the two alike: MODESCRN writes endcase_&X in the
@@ -1994,15 +2058,19 @@ def renamed(text):
     """The reserved names given their underscore, in the code only.
 
     A comment keeps the word the file wrote: the assembler never reads it,
-    and "load another character" is not the directive.
+    and "load another character" is not the directive.  So does a string:
+    KEYB marks the block it copies its shared data into with
+    db 'SHARED DATA', and DATA is one of the names on its list -- read as
+    code, the marker came out a byte longer than the release wrote it.
     """
     out = []
     for line in text.split('\n'):
         j = comment_at(line)
         code, comment = (line, '') if j < 0 else (line[:j], line[j:])
         for name in RESERVED:
-            code = re.sub(r"(?i)(?<![A-Za-z0-9_@?$.])" + name
-                          + r"(?![A-Za-z0-9_@?$])", name + '_', code)
+            code = outside_strings(r"(?i)(?<![A-Za-z0-9_@?$.])" + name
+                                   + r"(?![A-Za-z0-9_@?$])",
+                                   lambda m, name=name: name + '_', code)
         out.append(code + comment)
     return '\n'.join(out)
 

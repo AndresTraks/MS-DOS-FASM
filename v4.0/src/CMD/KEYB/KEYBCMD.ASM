@@ -2063,7 +2063,7 @@ MSG_SERVICES <KEYB.CLA> 			  ;AN000;;; WGR 			   ;AN000
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
 				       ;;
- db 'TEMP SHARED DATA_'                 ;;
+ db 'TEMP SHARED DATA'                 ;;
 label SD_SOURCE_PTR byte             ;;
 TEMP_SHARED_DATA   SHARED_DATA_STR     ;;
 				       ;;

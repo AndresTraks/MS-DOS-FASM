@@ -15,23 +15,23 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-	INCLUDE KEYBSHAR.INC	       ;;
-	INCLUDE POSTEQU.INC	       ;;
-	INCLUDE KEYBMAC.INC	       ;;
+	include 'KEYBSHAR.INC'      ;;
+	include 'POSTEQU.INC'      ;;
+	include 'KEYBMAC.INC'      ;;
 				       ;;
-	PUBLIC SV_LOGIC 	       ;;
-	PUBLIC SV_437_XLAT	       ;;
-	PUBLIC SV_850_XLAT	       ;;
+;	PUBLIC SV_LOGIC 	       ;;
+;	PUBLIC SV_437_XLAT	       ;;
+;	PUBLIC SV_850_XLAT	       ;;
 				       ;;
-CODE	SEGMENT PUBLIC 'CODE'          ;;
-	ASSUME CS:CODE,DS:CODE	       ;;
+;CODE	SEGMENT PUBLIC 'CODE'          ;;
+;	ASSUME CS:CODE,DS:CODE	       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Standard translate table options are a linear search table
 ;; (TYPE_2_TAB) and ASCII entries ONLY (ASCII_ONLY)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-STANDARD_TABLE	    EQU   TYPE_2_TAB+ASCII_ONLY
+STANDARD_TABLE_kdfsv	    equ   (TYPE_2_TAB+ASCII_ONLY)
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;***************************************
@@ -42,7 +42,7 @@ STANDARD_TABLE	    EQU   TYPE_2_TAB+ASCII_ONLY
 				       ;;
 SV_LOGIC:
 
-   DW  LOGIC_END-$		       ;; length
+   DW  LOGIC_END_kdfsv-$		       ;; length
 				       ;;
    DW  0			       ;; special features
 				       ;;
@@ -84,10 +84,10 @@ SV_LOGIC:
 ;; ACUTE ACCENT TRANSLATIONS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-ACUTE_PROC:			       ;;
+ACUTE_PROC_kdfsv:			       ;;
 				       ;;
    IFF ACUTE,NOT		       ;;
-      GOTO DIARESIS_PROC	       ;;
+      GOTO DIARESIS_PROC_kdfsv	       ;;
       ENDIFF			       ;;
 				       ;;
       RESET_NLS 		       ;;
@@ -111,10 +111,10 @@ ACUTE_PROC:			       ;;
 	 ENDIFF 		       ;;
       ENDIFF			       ;;
 				       ;;
-INVALID_ACUTE:			       ;;
+INVALID_ACUTE_kdfsv:			       ;;
       PUT_ERROR_CHAR ACUTE_LOWER       ;; If we get here then either the XLATT
       BEEP			       ;; failed or we are ina bad shift state.
-      GOTO NON_DEAD		       ;; Either is invalid so BEEP and fall
+      GOTO NON_DEAD_kdfsv		       ;; Either is invalid so BEEP and fall
 				       ;; through to generate the second char.
 				       ;; Note that the dead key flag will be
 				       ;; reset before we get here.
@@ -123,10 +123,10 @@ INVALID_ACUTE:			       ;;
 ;; DIARESIS ACCENT TRANSLATIONS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-DIARESIS_PROC:			       ;;
+DIARESIS_PROC_kdfsv:			       ;;
 				       ;;
    IFF DIARESIS,NOT		       ;;
-      GOTO GRAVE_PROC		       ;;
+      GOTO GRAVE_PROC_kdfsv		       ;;
       ENDIFF			       ;;
 				       ;;
       RESET_NLS 		       ;;
@@ -150,19 +150,19 @@ DIARESIS_PROC:			       ;;
 	 ENDIFF 		       ;;
       ENDIFF			       ;;
 				       ;;
-INVALID_DIARESIS:		       ;;
+INVALID_DIARESIS_kdfsv:		       ;;
       PUT_ERROR_CHAR DIARESIS_LOWER    ;; standalone accent
       BEEP			       ;; Invalid dead key combo.
-      GOTO NON_DEAD		       ;;
+      GOTO NON_DEAD_kdfsv		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; GRAVE ACCENT TRANSLATIONS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-GRAVE_PROC:			       ;;
+GRAVE_PROC_kdfsv:			       ;;
 				       ;;
    IFF GRAVE,NOT		       ;;
-      GOTO TILDE_PROC		       ;;
+      GOTO TILDE_PROC_kdfsv		       ;;
       ENDIFF			       ;;
 				       ;;
       RESET_NLS 		       ;;
@@ -186,18 +186,18 @@ GRAVE_PROC:			       ;;
 	ENDIFF			       ;;
       ENDIFF			       ;;
 				       ;;
-INVALID_GRAVE:			       ;;
+INVALID_GRAVE_kdfsv:			       ;;
       PUT_ERROR_CHAR GRAVE_LOWER       ;; standalone accent
       BEEP			       ;; Invalid dead key combo.
-      GOTO NON_DEAD		       ;;
+      GOTO NON_DEAD_kdfsv		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; TILDE ACCENT TRANSLATIONS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-TILDE_PROC:			       ;;
+TILDE_PROC_kdfsv:			       ;;
 				       ;;
    IFF TILDE,NOT		       ;;
-      GOTO CIRCUMFLEX_PROC	       ;;
+      GOTO CIRCUMFLEX_PROC_kdfsv	       ;;
       ENDIFF			       ;;
 				       ;;
       RESET_NLS 		       ;;
@@ -221,19 +221,19 @@ TILDE_PROC:			       ;;
 	ENDIFF			       ;;
       ENDIFF			       ;;
 				       ;;
-INVALID_TILDE:			       ;;
+INVALID_TILDE_kdfsv:			       ;;
       PUT_ERROR_CHAR TILDE_LOWER       ;; standalone accent
       BEEP			       ;; Invalid dead key combo.
-      GOTO NON_DEAD		       ;;
+      GOTO NON_DEAD_kdfsv		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CIRCUMFLEX ACCENT TRANSLATIONS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-CIRCUMFLEX_PROC:		       ;;
+CIRCUMFLEX_PROC_kdfsv:		       ;;
 				       ;;
    IFF CIRCUMFLEX,NOT		       ;;
-      GOTO NON_DEAD		       ;;
+      GOTO NON_DEAD_kdfsv		       ;;
       ENDIFF			       ;;
 				       ;;
       RESET_NLS 		       ;;
@@ -257,16 +257,16 @@ CIRCUMFLEX_PROC:		       ;;
 	ENDIFF			       ;;
       ENDIFF			       ;;
 				       ;;
-INVALID_CIRCUMFLEX:		       ;;
+INVALID_CIRCUMFLEX_kdfsv:		       ;;
       PUT_ERROR_CHAR CIRCUMFLEX_LOWER  ;; standalone accent
       BEEP			       ;; Invalid dead key combo.
-      GOTO NON_DEAD		       ;;
+      GOTO NON_DEAD_kdfsv		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Upper, lower and third shifts
 ;; ***BD - NON_DEAD THRU LOGIC_END IS UPDATED
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-NON_DEAD:			       ;;
+NON_DEAD_kdfsv:			       ;;
 ;ADDED FOR DIVIDE SIGN		       ;; ***** DIVIDE OMITTED **** CNS
     IFKBD G_KB+P12_KB			;; Avoid accidentally translating
     ANDF LC_E0				;;  the "/" on the numeric pad of the
@@ -365,7 +365,7 @@ NON_DEAD:			       ;;
 				       ;;
  EXIT_STATE_LOGIC		       ;;
 				       ;;
-LOGIC_END:			       ;;
+LOGIC_END_kdfsv:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;**********************************************************************
@@ -377,10 +377,10 @@ LOGIC_END:			       ;;
 ;; dead keys are on the same keytops for all code pages.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
- PUBLIC SV_COMMON_XLAT		       ;;
+; PUBLIC SV_COMMON_XLAT		       ;;
 SV_COMMON_XLAT: 		       ;;
 				       ;;
-   DW	 COMMON_XLAT_END-$	       ;; length of section
+   DW	 COMMON_XLAT_END_kdfsv-$	       ;; length of section
    DW	 -1			       ;; code page
 				       ;;
 				       ;;
@@ -391,7 +391,7 @@ SV_COMMON_XLAT: 		       ;;
 ;; TABLE TYPE: Flag Table
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_DK_LO_END-$	       ;; length of state section
+   DW	 COM_DK_LO_END_kdfsv-$	       ;; length of state section
    DB	 DEAD_LOWER		       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
@@ -403,7 +403,7 @@ SV_COMMON_XLAT: 		       ;;
    FLAG  DIARESIS		       ;;
 				       ;;
 				       ;;
-COM_DK_LO_END:			       ;;
+COM_DK_LO_END_kdfsv:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -412,7 +412,7 @@ COM_DK_LO_END:			       ;;
 ;; TABLE TYPE: Flag Table
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_DK_UP_END-$	       ;; length of state section
+   DW	 COM_DK_UP_END_kdfsv-$	       ;; length of state section
    DB	 DEAD_UPPER		       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
@@ -423,7 +423,7 @@ COM_DK_LO_END:			       ;;
    DB	 27			       ;;
    FLAG  CIRCUMFLEX		       ;;
 				       ;;
-COM_DK_UP_END:			       ;;
+COM_DK_UP_END_kdfsv:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -432,7 +432,7 @@ COM_DK_UP_END:			       ;;
 ;; TABLE TYPE: Flag Table
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_DK_TH_END-$	       ;; length of state section
+   DW	 COM_DK_TH_END_kdfsv-$	       ;; length of state section
    DB	 DEAD_THIRD		       ;; State ID
    DW	 G_KB+P12_KB		       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
@@ -441,7 +441,7 @@ COM_DK_UP_END:			       ;;
    DB	 27			       ;; scan code
    FLAG  TILDE			       ;; flag bit to set
 				       ;;
-COM_DK_TH_END:			       ;;
+COM_DK_TH_END_kdfsv:			       ;;
 				       ;;
 				       ;;
 				       ;;
@@ -456,20 +456,20 @@ COM_DK_TH_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_PAD_K1_END-$	       ;; length of state section
+   DW	 COM_PAD_K1_END_kdfsv-$	       ;; length of state section
    DB	 NUMERIC_PAD		       ;; State ID
    DW	 G_KB+AT_KB+XT_KB	       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 COM_PAD_K1_T1_END-$	       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 COM_PAD_K1_T1_END_kdfsv-$	       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv 	       ;; xlat options:
    DB	 1			       ;; number of entries
    DB	 83,','                        ;; decimal seperator = ,
-COM_PAD_K1_T1_END:		       ;;
+COM_PAD_K1_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_PAD_K1_END: 		       ;;
+COM_PAD_K1_END_kdfsv: 		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;******************************
@@ -482,21 +482,21 @@ COM_PAD_K1_END: 		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_ALT_K1_END-$	       ;; length of state section
+   DW	 COM_ALT_K1_END_kdfsv-$	       ;; length of state section
    DB	 ALT_CASE		       ;; State ID
    DW	 G_KB+P12_KB		       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 COM_ALT_K1_T1_END-$	       ;; Size of xlat table
+   DW	 COM_ALT_K1_T1_END_kdfsv-$	       ;; Size of xlat table
    DB	 TYPE_2_TAB		       ;; xlat options:
    DB	 0			       ;; 2 number of entries
 ;   DB	  12,-1,-1			;;
 ;   DB	  53,0,82H			;;
-COM_ALT_K1_T1_END:		       ;;
+COM_ALT_K1_T1_END_kdfsv:		       ;;
 					;;
     DW	  0				;; Size of xlat table - null table
 				       ;;
-COM_ALT_K1_END: 		       ;;
+COM_ALT_K1_END_kdfsv: 		       ;;
 					;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;******************************
@@ -509,21 +509,21 @@ COM_ALT_K1_END: 		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_CTRL_K1_END-$	       ;; length of state section
+   DW	 COM_CTRL_K1_END_kdfsv-$	       ;; length of state section
    DB	 CTRL_CASE		       ;; State ID
    DW	 XT_KB+JR_KB+AT_KB	       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 COM_CTRL_K1_T1_END-$	       ;; Size of xlat table
+   DW	 COM_CTRL_K1_T1_END_kdfsv-$	       ;; Size of xlat table
    DB	 TYPE_2_TAB		       ;; xlat options:
    DB	 2			       ;; number of entries
    DB	 12,-1,-1		       ;;
    DB	 53,01FH,35h		       ;;
-COM_CTRL_K1_T1_END:		       ;;
+COM_CTRL_K1_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_CTRL_K1_END:		       ;;
+COM_CTRL_K1_END_kdfsv:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -532,12 +532,12 @@ COM_CTRL_K1_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_CTRL_K2_END-$	       ;; length of state section
+   DW	 COM_CTRL_K2_END_kdfsv-$	       ;; length of state section
    DB	 CTRL_CASE		       ;; State ID
    DW	 G_KB+P12_KB		       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 COM_CTRL_K2_T1_END-$	       ;; Size of xlat table
+   DW	 COM_CTRL_K2_T1_END_kdfsv-$	       ;; Size of xlat table
    DB	 TYPE_2_TAB		       ;; xlat options:
    DB	 8			       ;; number of entries
    DB	  9,01BH,09H		       ;;
@@ -548,11 +548,11 @@ COM_CTRL_K1_END:		       ;;
    DB	 43,-1,-1		       ;;
    DB	 53,01FH,35H			;;
    DB	 86,01CH,56H			;;
-COM_CTRL_K2_T1_END:		       ;;
+COM_CTRL_K2_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_CTRL_K2_END:		       ;;
+COM_CTRL_K2_END_kdfsv:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -561,22 +561,22 @@ COM_CTRL_K2_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_AL_LO_END-$	       ;; length of state section
+   DW	 COM_AL_LO_END_kdfsv-$	       ;; length of state section
    DB	 ALPHA_LOWER		       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 COM_AL_LO_T1_END-$	       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 COM_AL_LO_T1_END_kdfsv-$	       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv 	       ;; xlat options:
    DB	 3			       ;; number of entries
    DB	 26,086H		       ;; a-overcircle
    DB	 39,094H		       ;; o-diaeresis
    DB	 40,084H		       ;; a-diaeresis
-COM_AL_LO_T1_END:		       ;;
+COM_AL_LO_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_AL_LO_END:			       ;;
+COM_AL_LO_END_kdfsv:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -585,22 +585,22 @@ COM_AL_LO_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_AL_UP_END-$	       ;; length of state section
+   DW	 COM_AL_UP_END_kdfsv-$	       ;; length of state section
    DB	 ALPHA_UPPER		       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 COM_AL_UP_T1_END-$	       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 COM_AL_UP_T1_END_kdfsv-$	       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv 	       ;; xlat options:
    DB	 3			       ;; number of entries
    DB	 26,08FH		       ;; A-OVERCIRCLE
    DB	 39,099H		       ;; A-DIAERESIS
    DB	 40,08EH		       ;; O-DIAERESIS
-COM_AL_UP_T1_END:		       ;;
+COM_AL_UP_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_AL_UP_END:			       ;;
+COM_AL_UP_END_kdfsv:			       ;;
 				       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -610,23 +610,23 @@ COM_AL_UP_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_NA_LO_K1_END-$	       ;; length of state section
+   DW	 COM_NA_LO_K1_END_kdfsv-$	       ;; length of state section
    DB	 NON_ALPHA_LOWER	       ;; State ID
    DW	 G_KB+P12_KB		       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 COM_NA_LO_K1_T1_END-$	       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 COM_NA_LO_K1_T1_END_kdfsv-$	       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv 	       ;; xlat options:
    DB	 4			       ;; number of entries
    DB	 12,"+"                        ;; + INCLUDED FOR SIMPLIC.
    DB	 43,"'"                        ;; '
    DB	 86,"<"                        ;; <
    DB	 53,"-"                        ;; -
-COM_NA_LO_K1_T1_END:		       ;;
+COM_NA_LO_K1_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_NA_LO_K1_END:			       ;;
+COM_NA_LO_K1_END_kdfsv:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -635,23 +635,23 @@ COM_NA_LO_K1_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_NA_LO_K2_END-$	       ;; length of state section
+   DW	 COM_NA_LO_K2_END_kdfsv-$	       ;; length of state section
    DB	 NON_ALPHA_LOWER	       ;; State ID
    DW	 XT_KB+JR_KB		       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 COM_NA_LO_K2_T1_END-$	       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 COM_NA_LO_K2_T1_END_kdfsv-$	       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv 	       ;; xlat options:
    DB	 4			       ;; number of entries
    DB	 12,"+"                        ;; +
    DB	 41,"'"                        ;; '
    DB	 43,"<"                        ;; <
    DB	 53,"-"                        ;; -
-COM_NA_LO_K2_T1_END:		       ;;
+COM_NA_LO_K2_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_NA_LO_K2_END:			       ;;
+COM_NA_LO_K2_END_kdfsv:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -660,23 +660,23 @@ COM_NA_LO_K2_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_NA_LO_K3_END-$	       ;; length of state section
+   DW	 COM_NA_LO_K3_END_kdfsv-$	       ;; length of state section
    DB	 NON_ALPHA_LOWER	       ;; State ID
    DW	 AT_KB			       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 COM_NA_LO_K3_T1_END-$	       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 COM_NA_LO_K3_T1_END_kdfsv-$	       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv 	       ;; xlat options:
    DB	 4			       ;; number of entries
    DB	 12,"+"                        ;; +
    DB	 41,"<"                        ;; <
    DB	 43,"'"                        ;; '
    DB	 53,"-"                        ;; -
-COM_NA_LO_K3_T1_END:		       ;;
+COM_NA_LO_K3_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_NA_LO_K3_END:		       ;;
+COM_NA_LO_K3_END_kdfsv:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -685,13 +685,13 @@ COM_NA_LO_K3_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_NA_UP_K1_END-$	       ;; length of state section
+   DW	 COM_NA_UP_K1_END_kdfsv-$	       ;; length of state section
    DB	 NON_ALPHA_UPPER	       ;; State ID
    DW	 G_KB + P12_KB		       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 COM_NA_UP_K1_T1_END-$	       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 COM_NA_UP_K1_T1_END_kdfsv-$	       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv 	       ;; xlat options:
    DB	 13			       ;; number of entries
    DB	  3,'"'                        ;;
    DB	  7,'&'                        ;;
@@ -706,11 +706,11 @@ COM_NA_LO_K3_END:		       ;;
    DB	 52,':'                        ;;
    DB	 53,'_'                        ;;
    DB	 86,'>'                        ;;
-COM_NA_UP_K1_T1_END:		       ;;
+COM_NA_UP_K1_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_NA_UP_K1_END:		       ;;
+COM_NA_UP_K1_END_kdfsv:		       ;;
 				       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -720,13 +720,13 @@ COM_NA_UP_K1_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_NA_UP_K2_END-$	       ;; length of state section
+   DW	 COM_NA_UP_K2_END_kdfsv-$	       ;; length of state section
    DB	 NON_ALPHA_UPPER	       ;; State ID
    DW	 XT_KB + JR_KB		       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 COM_NA_UP_K2_T1_END-$	       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 COM_NA_UP_K2_T1_END_kdfsv-$	       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv 	       ;; xlat options:
    DB	 13			       ;; number of entries
    DB	  3,'"'                        ;;
    DB	  4,09CH		       ;; POUND STERLING
@@ -741,11 +741,11 @@ COM_NA_UP_K1_END:		       ;;
    DB	 51,';'                        ;;
    DB	 52,':'                        ;;
    DB	 53,'_'                        ;;
-COM_NA_UP_K2_T1_END:		       ;;
+COM_NA_UP_K2_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_NA_UP_K2_END:			       ;;
+COM_NA_UP_K2_END_kdfsv:			       ;;
 				       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -755,13 +755,13 @@ COM_NA_UP_K2_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_NA_UP_K3_END-$	       ;; length of state section
+   DW	 COM_NA_UP_K3_END_kdfsv-$	       ;; length of state section
    DB	 NON_ALPHA_UPPER	       ;; State ID
    DW	 AT_KB			       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 COM_NA_UP_K3_T1_END-$	       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 COM_NA_UP_K3_T1_END_kdfsv-$	       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv 	       ;; xlat options:
    DB	 13			       ;; number of entries
    DB	  3,'"'                        ;;
    DB	  4,09CH		       ;; POUND STERLING
@@ -776,11 +776,11 @@ COM_NA_UP_K2_END:			       ;;
    DB	 51,';'                        ;;
    DB	 52,':'                        ;;
    DB	 53,'_'                        ;;
-COM_NA_UP_K3_T1_END:		       ;;
+COM_NA_UP_K3_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_NA_UP_K3_END:			       ;;
+COM_NA_UP_K3_END_kdfsv:			       ;;
 				       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -790,13 +790,13 @@ COM_NA_UP_K3_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_THIRD_END-$	       ;; length of state section
+   DW	 COM_THIRD_END_kdfsv-$	       ;; length of state section
    DB	 THIRD_SHIFT		       ;; State ID
    DW	 G_KB+P12_KB		       ;; Keyboard Type FERRARI
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 COM_THIRD_T1_END-$	       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 COM_THIRD_T1_END_kdfsv-$	       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv 	       ;; xlat options:
    DB	 9			       ;; number of entries
    DB	  3,'@'                        ;;
    DB	  4,09CH		       ;; ú
@@ -807,10 +807,10 @@ COM_NA_UP_K3_END:			       ;;
    DB	 11,'}'                        ;;
    DB	 12,'\'                        ;; Broken Vertical Line
    DB	 86,'|'                        ;;
-COM_THIRD_T1_END:		       ;;
+COM_THIRD_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Last xlat table
-COM_THIRD_END:			       ;;
+COM_THIRD_END_kdfsv:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -819,12 +819,12 @@ COM_THIRD_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_THIRD_K1_END-$	       ;; length of state section
+   DW	 COM_THIRD_K1_END_kdfsv-$	       ;; length of state section
    DB	 THIRD_SHIFT		       ;; State ID
    DW	 XT_KB+JR_KB		       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 COM_THIRD_K1_T1_END-$	       ;; Size of xlat table
+   DW	 COM_THIRD_K1_T1_END_kdfsv-$	       ;; Size of xlat table
    DB	 TYPE_2_TAB		       ;; xlat options:
    DB	 9			       ;; number of entries
    DB	 12,'-','-'                    ;;
@@ -836,10 +836,10 @@ COM_THIRD_END:			       ;;
    DB	 41,060H,060H		       ;;
    DB	 43,'\','\'                    ;;
    DB	 53,'/','/'                    ;;
-COM_THIRD_K1_T1_END:		       ;;
+COM_THIRD_K1_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Last xlat table
-COM_THIRD_K1_END:		       ;;
+COM_THIRD_K1_END_kdfsv:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -848,12 +848,12 @@ COM_THIRD_K1_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_THIRD_K2_END-$	       ;; length of state section
+   DW	 COM_THIRD_K2_END_kdfsv-$	       ;; length of state section
    DB	 THIRD_SHIFT		       ;; State ID
    DW	 AT_KB			       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 COM_THIRD_K2_T1_END-$	       ;; Size of xlat table
+   DW	 COM_THIRD_K2_T1_END_kdfsv-$	       ;; Size of xlat table
    DB	 TYPE_2_TAB		       ;; xlat options:
    DB	 9			       ;; number of entries
    DB	 12,'-','-'                    ;;
@@ -865,10 +865,10 @@ COM_THIRD_K1_END:		       ;;
    DB	 41,'\','\'                    ;;
    DB	 43,060H,060H		       ;;
    DB	 53,'/','/'                    ;;
-COM_THIRD_K2_T1_END:		       ;;
+COM_THIRD_K2_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Last xlat table
-COM_THIRD_K2_END:		       ;;
+COM_THIRD_K2_END_kdfsv:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -877,12 +877,12 @@ COM_THIRD_K2_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_FOURTH_END-$	       ;; length of state section
+   DW	 COM_FOURTH_END_kdfsv-$	       ;; length of state section
    DB	 FOURTH_SHIFT		       ;; State ID
    DW	 XT_KB+JR_KB		       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 COM_FOURTH_T1_END-$	       ;; Size of xlat table
+   DW	 COM_FOURTH_T1_END_kdfsv-$	       ;; Size of xlat table
    DB	 TYPE_2_TAB		       ;; xlat options:
    DB	 18			       ;; number of entries
    DB	  3,'@','@'                    ;;
@@ -903,10 +903,10 @@ COM_THIRD_K2_END:		       ;;
    DB	 51,'<','<'                    ;;
    DB	 52,'>','>'                    ;;
    DB	 53,'?','?'                    ;;
-COM_FOURTH_T1_END:		       ;;
+COM_FOURTH_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Last xlat table
-COM_FOURTH_END: 		       ;;
+COM_FOURTH_END_kdfsv: 		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -915,12 +915,12 @@ COM_FOURTH_END: 		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_FOURTH_K1_END-$	       ;; length of state section
+   DW	 COM_FOURTH_K1_END_kdfsv-$	       ;; length of state section
    DB	 FOURTH_SHIFT		       ;; State ID
    DW	 AT_KB			       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 COM_FOURTH_K1_T1_END-$        ;; Size of xlat table
+   DW	 COM_FOURTH_K1_T1_END_kdfsv-$        ;; Size of xlat table
    DB	 TYPE_2_TAB		       ;; xlat options:
    DB	 18			       ;; number of entries
    DB	  3,'@','@'                    ;;
@@ -941,10 +941,10 @@ COM_FOURTH_END: 		       ;;
    DB	 51,'<','<'                    ;;
    DB	 52,'>','>'                    ;;
    DB	 53,'?','?'                    ;;
-COM_FOURTH_K1_T1_END:		       ;;
+COM_FOURTH_K1_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Last xlat table
-COM_FOURTH_K1_END:		       ;;
+COM_FOURTH_K1_END_kdfsv:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -953,24 +953,24 @@ COM_FOURTH_K1_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_GR_LO_END-$	       ;; length of state section
+   DW	 COM_GR_LO_END_kdfsv-$	       ;; length of state section
    DB	 GRAVE_LOWER		       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 96,0			       ;; error character = standalone accent
 				       ;;
-   DW	 COM_GR_LO_T1_END-$	       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 COM_GR_LO_T1_END_kdfsv-$	       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv+ZERO_SCAN      ;; xlat options:
    DB	 5			       ;; number of scans
    DB	 18,'ä'                        ;; scan code,ASCII - e
    DB	 22,'ó'                        ;; scan code,ASCII - u
    DB	 23,'ç'                        ;; scan code,ASCII - i
    DB	 24,'ï'                        ;; scan code,ASCII - o
    DB	 30,'Ö'                        ;; scan code,ASCII - a
-COM_GR_LO_T1_END:		       ;;
+COM_GR_LO_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_GR_LO_END:			       ;; length of state section
+COM_GR_LO_END_kdfsv:			       ;; length of state section
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -979,20 +979,20 @@ COM_GR_LO_END:			       ;; length of state section
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_GR_SP_END-$	       ;; length of state section
+   DW	 COM_GR_SP_END_kdfsv-$	       ;; length of state section
    DB	 GRAVE_SPACE		       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 96,0			       ;; error character = standalone accent
 				       ;;
-   DW	 COM_GR_SP_T1_END-$	       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 COM_GR_SP_T1_END_kdfsv-$	       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 57,96			       ;; STANDALONE GRAVE
-COM_GR_SP_T1_END:		       ;;
+COM_GR_SP_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_GR_SP_END:			       ;; length of state section
+COM_GR_SP_END_kdfsv:			       ;; length of state section
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -1001,24 +1001,24 @@ COM_GR_SP_END:			       ;; length of state section
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_CI_LO_END-$	       ;; length of state section
+   DW	 COM_CI_LO_END_kdfsv-$	       ;; length of state section
    DB	 CIRCUMFLEX_LOWER	       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 94,0			       ;; error character = standalone accent
 				       ;;
-   DW	 COM_CI_LO_T1_END-$	       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 COM_CI_LO_T1_END_kdfsv-$	       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv+ZERO_SCAN      ;; xlat options:
    DB	 5			       ;; number of scans
    DB	 18,'à'                        ;; scan code,ASCII - e
    DB	 22,'ñ'                        ;; scan code,ASCII - u
    DB	 23,'å'                        ;; scan code,ASCII - i
    DB	 24,'ì'                        ;; scan code,ASCII - o
    DB	 30,'É'                        ;; scan code,ASCII - a
-COM_CI_LO_T1_END:		       ;;
+COM_CI_LO_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;;
 				       ;;
-COM_CI_LO_END:			       ;;
+COM_CI_LO_END_kdfsv:			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -1027,20 +1027,20 @@ COM_CI_LO_END:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_CI_SP_END-$	       ;; length of state section
+   DW	 COM_CI_SP_END_kdfsv-$	       ;; length of state section
    DB	 CIRCUMFLEX_SPACE	       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 94,0			       ;; error character = standalone accent
 				       ;;
-   DW	 COM_CI_SP_T1_END-$	       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 COM_CI_SP_T1_END_kdfsv-$	       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 57,94			       ;; STANDALONE CIRCUMFLEX
-COM_CI_SP_T1_END:		       ;;
+COM_CI_SP_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_CI_SP_END:			       ;; length of state section
+COM_CI_SP_END_kdfsv:			       ;; length of state section
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: Common
@@ -1049,20 +1049,20 @@ COM_CI_SP_END:			       ;; length of state section
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					;;
-    DW	  COM_TI_LO_END-$		;; length of state section
+    DW	  COM_TI_LO_END_kdfsv-$		;; length of state section
     DB	  TILDE_LOWER			;; State ID
     DW	  ANY_KB			;; Keyboard Type
     DB	  07EH,0			;; error character = standalone accent
 					;;
-    DW	  COM_TI_LO_T1_END-$		;; Size of xlat table
-    DB	  STANDARD_TABLE+ZERO_SCAN	;; xlat options:
+    DW	  COM_TI_LO_T1_END_kdfsv-$		;; Size of xlat table
+    DB	  STANDARD_TABLE_kdfsv+ZERO_SCAN	;; xlat options:
     DB	  1				;; number of scans
     DB	  49,0A4H			;; scan code,ASCII - §
- COM_TI_LO_T1_END:			;;
+ COM_TI_LO_T1_END_kdfsv:			;;
 					;;
     DW	  0				;;
 					;;
- COM_TI_LO_END: 			;;
+ COM_TI_LO_END_kdfsv: 			;;
 					;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; CODE PAGE: Common
@@ -1071,20 +1071,20 @@ COM_CI_SP_END:			       ;; length of state section
 ;;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					;;
-    DW	  COM_TI_UP_END-$		;; length of state section
+    DW	  COM_TI_UP_END_kdfsv-$		;; length of state section
     DB	  TILDE_UPPER			;; State ID
     DW	  ANY_KB			;; Keyboard Type
     DB	  07EH,0			;; error character = standalone accent
 					;;
-    DW	  COM_TI_UP_T1_END-$		;; Size of xlat table
-    DB	  STANDARD_TABLE+ZERO_SCAN	;; xlat options:
+    DW	  COM_TI_UP_T1_END_kdfsv-$		;; Size of xlat table
+    DB	  STANDARD_TABLE_kdfsv+ZERO_SCAN	;; xlat options:
     DB	  1				;; number of scans
     DB	  49,0A5H			;; scan code,ASCII - •
- COM_TI_UP_T1_END:			;;
+ COM_TI_UP_T1_END_kdfsv:			;;
 					;;
     DW	  0				;; Size of xlat table - null table
 					;;
- COM_TI_UP_END: 			;; length of state section
+ COM_TI_UP_END_kdfsv: 			;; length of state section
 					;;
 					;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1094,24 +1094,24 @@ COM_CI_SP_END:			       ;; length of state section
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 COM_TI_SP_END-$	       ;; length of state section
+   DW	 COM_TI_SP_END_kdfsv-$	       ;; length of state section
    DB	 TILDE_SPACE		       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 07EH,0 		       ;; error character = standalone accent
 				       ;;
-   DW	 COM_TI_SP_T1_END-$	       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 COM_TI_SP_T1_END_kdfsv-$	       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 57,07EH		       ;; STANDALONE TILDE
-COM_TI_SP_T1_END:		       ;;
+COM_TI_SP_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-COM_TI_SP_END:			       ;; length of state section
+COM_TI_SP_END_kdfsv:			       ;; length of state section
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    DW	 0			       ;; Last State
-COMMON_XLAT_END:		       ;;
+COMMON_XLAT_END_kdfsv:		       ;;
 				       ;;
 				       ;;
 				       ;;
@@ -1121,10 +1121,10 @@ COMMON_XLAT_END:		       ;;
 ;;***************************************
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
- PUBLIC SV_437_XLAT		       ;;
+; PUBLIC SV_437_XLAT		       ;;
 SV_437_XLAT:			       ;;
 				       ;;
-   DW	  CP437_XLAT_END-$	       ;; length of section
+   DW	  CP437_XLAT_END_kdfsv-$	       ;; length of section
    DW	  437			       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1134,20 +1134,20 @@ SV_437_XLAT:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP437_NA_UP_END-$		 ;; length of state section
+   DW	 CP437_NA_UP_END_kdfsv-$		 ;; length of state section
    DB	 NON_ALPHA_UPPER	       ;; State ID
    DW	 G_KB+P12_KB		       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 CP437_NA_UP_T1_END-$		 ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CP437_NA_UP_T1_END_kdfsv-$		 ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv 	       ;; xlat options:
    DB	 1			       ;; number of entries
    DB	  5,0			       ;; International Currency Symb
-CP437_NA_UP_T1_END:		       ;;
+CP437_NA_UP_T1_END_kdfsv:		       ;;
 				       ;;
     DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP437_NA_UP_END:		       ;;
+CP437_NA_UP_END_kdfsv:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 437
@@ -1156,20 +1156,20 @@ CP437_NA_UP_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP437_NA_K1_LO_END-$	       ;; length of state section
+   DW	 CP437_NA_K1_LO_END_kdfsv-$	       ;; length of state section
    DB	 NON_ALPHA_LOWER	       ;; State ID
    DW	 G_KB+P12_KB		       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 CP437_NA_LO_K1_T1_END-$       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CP437_NA_LO_K1_T1_END_kdfsv-$       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv 	       ;; xlat options:
    DB	 1			       ;; number of entries
    DB	 41,015H		       ;; SECTION Symb
-CP437_NA_LO_K1_T1_END:		       ;;
+CP437_NA_LO_K1_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP437_NA_K1_LO_END:		       ;;
+CP437_NA_K1_LO_END_kdfsv:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 437
@@ -1178,24 +1178,24 @@ CP437_NA_K1_LO_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP437_AC_LO_END-$		 ;; length of state section
+   DW	 CP437_AC_LO_END_kdfsv-$		 ;; length of state section
    DB	 ACUTE_LOWER		       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 39,0			       ;; error character = standalone accent
 				       ;;
-   DW	 CP437_AC_LO_T1_END-$		 ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CP437_AC_LO_T1_END_kdfsv-$		 ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv+ZERO_SCAN      ;; xlat options:
    DB	 5			       ;; number of scans
    DB	 18,'Ç'                        ;; scan code,ASCII - e
    DB	 22,'£'                        ;; scan code,ASCII - u
    DB	 23,'°'                        ;; scan code,ASCII - i
    DB	 24,'¢'                        ;; scan code,ASCII - o
    DB	 30,'†'                        ;; scan code,ASCII - a
-CP437_AC_LO_T1_END:			 ;;
+CP437_AC_LO_T1_END_kdfsv:			 ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP437_AC_LO_END:			 ;;
+CP437_AC_LO_END_kdfsv:			 ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 437
@@ -1204,20 +1204,20 @@ CP437_AC_LO_END:			 ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP437_AC_UP_END-$		 ;; length of state section
+   DW	 CP437_AC_UP_END_kdfsv-$		 ;; length of state section
    DB	 ACUTE_UPPER		       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 39,0			       ;; error character = standalone accent
 				       ;;
-   DW	 CP437_AC_UP_T1_END-$		 ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CP437_AC_UP_T1_END_kdfsv-$		 ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of entries
    DB	 18,'ê'                        ;; scan code,ASCII - ê
-CP437_AC_UP_T1_END:			 ;;
+CP437_AC_UP_T1_END_kdfsv:			 ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP437_AC_UP_END:			 ;;
+CP437_AC_UP_END_kdfsv:			 ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 437
@@ -1226,20 +1226,20 @@ CP437_AC_UP_END:			 ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP437_AC_SP_END-$		 ;; length of state section
+   DW	 CP437_AC_SP_END_kdfsv-$		 ;; length of state section
    DB	 ACUTE_SPACE		       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 39,0			       ;; error character = standalone accent
 				       ;;
-   DW	 CP437_AC_SP_T1_END-$		 ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CP437_AC_SP_T1_END_kdfsv-$		 ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 57,39			       ;; scan code,ASCII - SPACE
-CP437_AC_SP_T1_END:			 ;;
+CP437_AC_SP_T1_END_kdfsv:			 ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP437_AC_SP_END:			 ;;
+CP437_AC_SP_END_kdfsv:			 ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: CP437
@@ -1248,13 +1248,13 @@ CP437_AC_SP_END:			 ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP437_DI_LO_END-$		 ;; length of state section
+   DW	 CP437_DI_LO_END_kdfsv-$		 ;; length of state section
    DB	 DIARESIS_LOWER 	       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 254,0			       ;; error character = standalone accent
 				       ;;
-   DW	 CP437_DI_LO_T1_END-$		 ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CP437_DI_LO_T1_END_kdfsv-$		 ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv+ZERO_SCAN      ;; xlat options:
    DB	 6			       ;; number of scans
    DB	 18,'â'                        ;; scan code,ASCII - e
    DB	 21,'ò'                        ;; scan code,ASCII - y
@@ -1262,11 +1262,11 @@ CP437_AC_SP_END:			 ;;
    DB	 23,'ã'                        ;; scan code,ASCII - i
    DB	 24,'î'                        ;; scan code,ASCII - o
    DB	 30,'Ñ'                        ;; scan code,ASCII - a
-CP437_DI_LO_T1_END:			 ;;
+CP437_DI_LO_T1_END_kdfsv:			 ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP437_DI_LO_END:			 ;; length of state section
+CP437_DI_LO_END_kdfsv:			 ;; length of state section
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: CP437
@@ -1275,22 +1275,22 @@ CP437_DI_LO_END:			 ;; length of state section
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP437_DI_UP_END-$		 ;; length of state section
+   DW	 CP437_DI_UP_END_kdfsv-$		 ;; length of state section
    DB	 DIARESIS_UPPER 	       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 254,0			       ;; error character = standalone accent
 				       ;;
-   DW	 CP437_DI_UP_T1_END-$		 ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CP437_DI_UP_T1_END_kdfsv-$		 ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv+ZERO_SCAN      ;; xlat options:
    DB	 3			       ;; number of scans
    DB	 22,'ö'                        ;; scan code,ASCII - U
    DB	 24,'ô'                        ;; scan code,ASCII - O
    DB	 30,'é'                        ;; scan code,ASCII - A
-CP437_DI_UP_T1_END:			 ;;
+CP437_DI_UP_T1_END_kdfsv:			 ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP437_DI_UP_END:			 ;; length of state section
+CP437_DI_UP_END_kdfsv:			 ;; length of state section
 				       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1318,7 +1318,7 @@ CP437_DI_UP_END:			 ;; length of state section
 				       ;;
    DW	  0			       ;; LAST STATE
 				       ;;
-CP437_XLAT_END: 		       ;;
+CP437_XLAT_END_kdfsv: 		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;***************************************
@@ -1326,10 +1326,10 @@ CP437_XLAT_END: 		       ;;
 ;;***************************************
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
- PUBLIC SV_850_XLAT		       ;;
+; PUBLIC SV_850_XLAT		       ;;
 SV_850_XLAT:			       ;;
 				       ;;
-   DW	  CP850_XLAT_END-$	       ;; length of section
+   DW	  CP850_XLAT_END_kdfsv-$	       ;; length of section
    DW	  850			       ;;
 				       ;;
 				       ;;
@@ -1387,20 +1387,20 @@ SV_850_XLAT:			       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_NA_UP_END-$		 ;; length of state section
+   DW	 CP850_NA_UP_END_kdfsv-$		 ;; length of state section
    DB	 NON_ALPHA_UPPER	       ;; State ID
    DW	 G_KB+P12_KB		       ;; Keyboard Type *** CNS 12/18
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 CP850_NA_UP_T1_END-$		 ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CP850_NA_UP_T1_END_kdfsv-$		 ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv 	       ;; xlat options:
    DB	 1			       ;; number of entries
    DB	   5,0CFH		       ;; International Currency Symb
-CP850_NA_UP_T1_END:			 ;;
+CP850_NA_UP_T1_END_kdfsv:			 ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_NA_UP_END:			 ;;
+CP850_NA_UP_END_kdfsv:			 ;;
 				       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1411,20 +1411,20 @@ CP850_NA_UP_END:			 ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_NA_K1_LO_END-$	       ;; length of state section
+   DW	 CP850_NA_K1_LO_END_kdfsv-$	       ;; length of state section
    DB	 NON_ALPHA_LOWER	       ;; State ID
    DW	 G_KB+P12_KB		       ;; Keyboard Type
    DB	 -1,-1			       ;; Buffer entry for error character
 				       ;;
-   DW	 CP850_NA_LO_K1_T1_END-$       ;; Size of xlat table
-   DB	 STANDARD_TABLE 	       ;; xlat options:
+   DW	 CP850_NA_LO_K1_T1_END_kdfsv-$       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv 	       ;; xlat options:
    DB	 1			       ;; number of entries
    DB	 41,0F5H		       ;; SECTION Symb
-CP850_NA_LO_K1_T1_END:		       ;;
+CP850_NA_LO_K1_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_NA_K1_LO_END:		       ;;
+CP850_NA_K1_LO_END_kdfsv:		       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
@@ -1433,13 +1433,13 @@ CP850_NA_K1_LO_END:		       ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_AC_LO_END-$		 ;; length of state section
+   DW	 CP850_AC_LO_END_kdfsv-$		 ;; length of state section
    DB	 ACUTE_LOWER		       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 239,0			       ;; error character = standalone accent
 				       ;;
-   DW	 CP850_AC_LO_T1_END-$		 ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CP850_AC_LO_T1_END_kdfsv-$		 ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv+ZERO_SCAN      ;; xlat options:
    DB	 6			       ;; number of scans
    DB	 18,'Ç'                        ;; scan code,ASCII - e
    DB	 21,0ECH		       ;; y acute
@@ -1447,11 +1447,11 @@ CP850_NA_K1_LO_END:		       ;;
    DB	 23,'°'                        ;; scan code,ASCII - i
    DB	 24,'¢'                        ;; scan code,ASCII - o
    DB	 30,'†'                        ;; scan code,ASCII - a
-CP850_AC_LO_T1_END:			 ;;
+CP850_AC_LO_T1_END_kdfsv:			 ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_AC_LO_END:			 ;;
+CP850_AC_LO_END_kdfsv:			 ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
@@ -1460,13 +1460,13 @@ CP850_AC_LO_END:			 ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_AC_UP_END-$		 ;; length of state section
+   DW	 CP850_AC_UP_END_kdfsv-$		 ;; length of state section
    DB	 ACUTE_UPPER		       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 239,0			       ;; error character = standalone accent
 				       ;;
-   DW	 CP850_AC_UP_T1_END-$		 ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CP850_AC_UP_T1_END_kdfsv-$		 ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv+ZERO_SCAN      ;; xlat options:
    DB	 6			       ;; number of entries
    DB	 18,090H		       ;;    E acute
    DB	 21,0EDH		       ;;    Y acute
@@ -1474,11 +1474,11 @@ CP850_AC_LO_END:			 ;;
    DB	 23,0D6H		       ;;    I acute
    DB	 24,0E0H		       ;;    O acute
    DB	 30,0B5H		       ;;    A acute
-CP850_AC_UP_T1_END:			 ;;
+CP850_AC_UP_T1_END_kdfsv:			 ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_AC_UP_END:			 ;;
+CP850_AC_UP_END_kdfsv:			 ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
@@ -1487,20 +1487,20 @@ CP850_AC_UP_END:			 ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_AC_SP_END-$		 ;; length of state section
+   DW	 CP850_AC_SP_END_kdfsv-$		 ;; length of state section
    DB	 ACUTE_SPACE		       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 239,0			       ;; error character = standalone accent
 				       ;;
-   DW	 CP850_AC_SP_T1_END-$		 ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CP850_AC_SP_T1_END_kdfsv-$		 ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 57,239 		       ;; scan code,ASCII - SPACE
-CP850_AC_SP_T1_END:			 ;;
+CP850_AC_SP_T1_END_kdfsv:			 ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_AC_SP_END:			 ;;
+CP850_AC_SP_END_kdfsv:			 ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
@@ -1509,13 +1509,13 @@ CP850_AC_SP_END:			 ;;
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_DI_LO_END-$		 ;; length of state section
+   DW	 CP850_DI_LO_END_kdfsv-$		 ;; length of state section
    DB	 DIARESIS_LOWER 	       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 249,0			       ;; error character = standalone accent
 				       ;;
-   DW	 CP850_DI_LO_T1_END-$		 ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CP850_DI_LO_T1_END_kdfsv-$		 ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv+ZERO_SCAN      ;; xlat options:
    DB	 6			       ;; number of scans
    DB	 18,'â'                        ;; scan code,ASCII - e
    DB	 21,'ò'                        ;; scan code,ASCII - y
@@ -1523,11 +1523,11 @@ CP850_AC_SP_END:			 ;;
    DB	 23,'ã'                        ;; scan code,ASCII - i
    DB	 24,'î'                        ;; scan code,ASCII - o
    DB	 30,'Ñ'                        ;; scan code,ASCII - a
-CP850_DI_LO_T1_END:			 ;;
+CP850_DI_LO_T1_END_kdfsv:			 ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_DI_LO_END:			 ;; length of state section
+CP850_DI_LO_END_kdfsv:			 ;; length of state section
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
@@ -1536,24 +1536,24 @@ CP850_DI_LO_END:			 ;; length of state section
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_DI_UP_END-$		 ;; length of state section
+   DW	 CP850_DI_UP_END_kdfsv-$		 ;; length of state section
    DB	 DIARESIS_UPPER 	       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 249,0			       ;; error character = standalone accent
 				       ;;
-   DW	 CP850_DI_UP_T1_END-$		 ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CP850_DI_UP_T1_END_kdfsv-$		 ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv+ZERO_SCAN      ;; xlat options:
    DB	 5			       ;; number of scans
    DB	 18,0D3H		       ;;    E Diaeresis
    DB	 22,'ö'                        ;;    U Diaeresis
    DB	 23,0D8H		       ;;    I Diaeresis
    DB	 24,'ô'                        ;;    O Diaeresis
    DB	 30,'é'                        ;;    A Diaeresis
-CP850_DI_UP_T1_END:			 ;;
+CP850_DI_UP_T1_END_kdfsv:			 ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_DI_UP_END:			 ;; length of state section
+CP850_DI_UP_END_kdfsv:			 ;; length of state section
 				       ;;
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1563,19 +1563,19 @@ CP850_DI_UP_END:			 ;; length of state section
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_DI_SP_END-$		 ;; length of state section
+   DW	 CP850_DI_SP_END_kdfsv-$		 ;; length of state section
    DB	 DIARESIS_SPACE 	       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 249,0			       ;; error character = standalone accent
 				       ;;
-   DW	 CP850_DI_SP_T1_END-$		 ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CP850_DI_SP_T1_END_kdfsv-$		 ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv+ZERO_SCAN      ;; xlat options:
    DB	 1			       ;; number of scans
    DB	 57,249 		       ;; error character = standalone accent
-CP850_DI_SP_T1_END:			 ;;
+CP850_DI_SP_T1_END_kdfsv:			 ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
-CP850_DI_SP_END:			 ;; length of state section
+CP850_DI_SP_END_kdfsv:			 ;; length of state section
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
@@ -1584,24 +1584,24 @@ CP850_DI_SP_END:			 ;; length of state section
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_GR_UP_END-$	       ;; length of state section
+   DW	 CP850_GR_UP_END_kdfsv-$	       ;; length of state section
    DB	 GRAVE_UPPER		       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 96,0			       ;; error character = standalone accent
 				       ;;
-   DW	 CP850_GR_UP_T1_END-$	       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CP850_GR_UP_T1_END_kdfsv-$	       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv+ZERO_SCAN      ;; xlat options:
    DB	 5			       ;; number of scans
    DB	 18,0D4H		       ;;    E grave
    DB	 22,0EBH		       ;;    U grave
    DB	 23,0DEH		       ;;    I grave
    DB	 24,0E3H		       ;;    O grave
    DB	 30,0B7H		       ;;    A grave
-CP850_GR_UP_T1_END:		       ;;
+CP850_GR_UP_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_GR_UP_END:		       ;; length of state section
+CP850_GR_UP_END_kdfsv:		       ;; length of state section
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; CODE PAGE: 850
@@ -1610,21 +1610,21 @@ CP850_GR_UP_END:		       ;; length of state section
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					;;
-    DW	  CP850_TI_LO_END-$		;; length of state section
+    DW	  CP850_TI_LO_END_kdfsv-$		;; length of state section
     DB	  TILDE_LOWER			;; State ID
     DW	  ANY_KB			;; Keyboard Type
     DB	  07EH,0			;; error character = standalone accent
 					;;
-    DW	  CP850_TI_LO_T1_END-$		;; Size of xlat table
-    DB	  STANDARD_TABLE+ZERO_SCAN	;; xlat options:
+    DW	  CP850_TI_LO_T1_END_kdfsv-$		;; Size of xlat table
+    DB	  STANDARD_TABLE_kdfsv+ZERO_SCAN	;; xlat options:
     DB	  2				;; number of scans
     DB	  24,0E4H			;; scan code,ASCII - o tilde
     DB	  30,0C6H			;; scan code,ASCII - a tilde
- CP850_TI_LO_T1_END:			;;
+ CP850_TI_LO_T1_END_kdfsv:			;;
 					;;
     DW	  0				;;
 					;;
- CP850_TI_LO_END:			;;
+ CP850_TI_LO_END_kdfsv:			;;
 					;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; CODE PAGE: 850
@@ -1633,21 +1633,21 @@ CP850_GR_UP_END:		       ;; length of state section
 ;;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					;;
-    DW	  CP850_TI_UP_END-$		;; length of state section
+    DW	  CP850_TI_UP_END_kdfsv-$		;; length of state section
     DB	  TILDE_UPPER			;; State ID
     DW	  ANY_KB			;; Keyboard Type
     DB	  07EH,0			;; error character = standalone accent
 					;;
-    DW	  CP850_TI_UP_T1_END-$		;; Size of xlat table
-    DB	  STANDARD_TABLE+ZERO_SCAN	;; xlat options:
+    DW	  CP850_TI_UP_T1_END_kdfsv-$		;; Size of xlat table
+    DB	  STANDARD_TABLE_kdfsv+ZERO_SCAN	;; xlat options:
     DB	  2				;; number of scans
     DB	  24,0E5H			;; scan code,ASCII - O tilde
     DB	  30,0C7H			;; scan code,ASCII - A tilde
- CP850_TI_UP_T1_END:			;;
+ CP850_TI_UP_T1_END_kdfsv:			;;
 					;;
     DW	  0				;; Size of xlat table - null table
 					;;
- CP850_TI_UP_END:			;; length of state section
+ CP850_TI_UP_END_kdfsv:			;; length of state section
 					;;
 					;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1657,31 +1657,31 @@ CP850_GR_UP_END:		       ;; length of state section
 ;; TABLE TYPE: Translate
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-   DW	 CP850_CI_UP_END-$	       ;; length of state section
+   DW	 CP850_CI_UP_END_kdfsv-$	       ;; length of state section
    DB	 CIRCUMFLEX_UPPER	       ;; State ID
    DW	 ANY_KB 		       ;; Keyboard Type
    DB	 94,0			       ;; error character = standalone accent
 				       ;;
-   DW	 CP850_CI_UP_T1_END-$	       ;; Size of xlat table
-   DB	 STANDARD_TABLE+ZERO_SCAN      ;; xlat options:
+   DW	 CP850_CI_UP_T1_END_kdfsv-$	       ;; Size of xlat table
+   DB	 STANDARD_TABLE_kdfsv+ZERO_SCAN      ;; xlat options:
    DB	 5			       ;; number of scans
    DB	 18,0D2H		       ;;    E circumflex
    DB	 22,0EAH		       ;;    U circumflex
    DB	 23,0D7H		       ;;    I circumflex
    DB	 24,0E2H		       ;;    O circumflex
    DB	 30,0B6H		       ;;    A circumflex
-CP850_CI_UP_T1_END:		       ;;
+CP850_CI_UP_T1_END_kdfsv:		       ;;
 				       ;;
    DW	 0			       ;; Size of xlat table - null table
 				       ;;
-CP850_CI_UP_END:		       ;; length of state section
+CP850_CI_UP_END_kdfsv:		       ;; length of state section
 				       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
    DW	 0			       ;; LAST STATE
 				       ;;
-CP850_XLAT_END: 		       ;;
+CP850_XLAT_END_kdfsv: 		       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-CODE	 ENDS			       ;;
-	 END			       ;;
+;CODE	 ENDS			       ;;
+;	 END			       ;;

@@ -82,242 +82,328 @@ BOTRH_F_CAPS	    EQU   41	       ;;
 
 UNKNOWN = 255
 
-FIND_FLAG MACRO  FLAG_MASK
-       IFIDN <FLAG_MASK>,<SCAN_MATCH>
+macro FIND_FLAG FLAG_MASK
+{
+       define idn$keybmac1 idn$no
+       match =SCAN_MATCH, FLAG_MASK \{ define idn$keybmac1 idn$yes \}
+       match =idn$yes, idn$keybmac1 \{
 	  FLAG_ID = EXT_KB_FLAG_ID
-       ELSE
-       IFIDN <FLAG_MASK>,<EITHER_SHIFT>
+       \}
+       match =idn$no, idn$keybmac1 \{
+       define idn$keybmac2 idn$no
+       match =EITHER_SHIFT, FLAG_MASK \\{ define idn$keybmac2 idn$yes \\}
+       match =idn$yes, idn$keybmac2 \\{
 	  FLAG_ID = EXT_KB_FLAG_ID
-       ELSE
-       IFIDN <FLAG_MASK>,<CAPS_STATE>
+       \\}
+       match =idn$no, idn$keybmac2 \\{
+       define idn$keybmac3 idn$no
+       match =CAPS_STATE, FLAG_MASK \\\{ define idn$keybmac3 idn$yes \\\}
+       match =idn$yes, idn$keybmac3 \\\{
 	  FLAG_ID = KB_FLAG_ID
-       ELSE
-       IFIDN <FLAG_MASK>,<NUM_STATE>
+       \\\}
+       match =idn$no, idn$keybmac3 \\\{
+       define idn$keybmac4 idn$no
+       match =NUM_STATE, FLAG_MASK \\\\{ define idn$keybmac4 idn$yes \\\\}
+       match =idn$yes, idn$keybmac4 \\\\{
 	  FLAG_ID = KB_FLAG_ID
-       ELSE
-       IFIDN <FLAG_MASK>,<EITHER_CTL>
+       \\\\}
+       match =idn$no, idn$keybmac4 \\\\{
+       define idn$keybmac5 idn$no
+       match =EITHER_CTL, FLAG_MASK \\\\\{ define idn$keybmac5 idn$yes \\\\\}
+       match =idn$yes, idn$keybmac5 \\\\\{
 	  FLAG_ID = EXT_KB_FLAG_ID
-       ELSE
-       IFIDN <FLAG_MASK>,<EITHER_ALT>
+       \\\\\}
+       match =idn$no, idn$keybmac5 \\\\\{
+       define idn$keybmac6 idn$no
+       match =EITHER_ALT, FLAG_MASK \\\\\\{ define idn$keybmac6 idn$yes \\\\\\}
+       match =idn$yes, idn$keybmac6 \\\\\\{
 	  FLAG_ID = EXT_KB_FLAG_ID
-       ELSE
-       IFIDN <FLAG_MASK>,<LEFT_SHIFT>
+       \\\\\\}
+       match =idn$no, idn$keybmac6 \\\\\\{
+       define idn$keybmac7 idn$no
+       match =LEFT_SHIFT, FLAG_MASK \\\\\\\{ define idn$keybmac7 idn$yes \\\\\\\}
+       match =idn$yes, idn$keybmac7 \\\\\\\{
 	  FLAG_ID = KB_FLAG_ID
-       ELSE
-       IFIDN <FLAG_MASK>,<RIGHT_SHIFT>
+       \\\\\\\}
+       match =idn$no, idn$keybmac7 \\\\\\\{
+       define idn$keybmac8 idn$no
+       match =RIGHT_SHIFT, FLAG_MASK \\\\\\\\{ define idn$keybmac8 idn$yes \\\\\\\\}
+       match =idn$yes, idn$keybmac8 \\\\\\\\{
 	  FLAG_ID = KB_FLAG_ID
-       ELSE
-       IFIDN <FLAG_MASK>,<ALT_SHIFT>
+       \\\\\\\\}
+       match =idn$no, idn$keybmac8 \\\\\\\\{
+       define idn$keybmac9 idn$no
+       match =ALT_SHIFT, FLAG_MASK \\\\\\\\\{ define idn$keybmac9 idn$yes \\\\\\\\\}
+       match =idn$yes, idn$keybmac9 \\\\\\\\\{
 	  FLAG_ID = KB_FLAG_ID
-       ELSE
-       IFIDN <FLAG_MASK>,<CTL_SHIFT>
+       \\\\\\\\\}
+       match =idn$no, idn$keybmac9 \\\\\\\\\{
+       define idn$keybmac10 idn$no
+       match =CTL_SHIFT, FLAG_MASK \\\\\\\\\\{ define idn$keybmac10 idn$yes \\\\\\\\\\}
+       match =idn$yes, idn$keybmac10 \\\\\\\\\\{
 	  FLAG_ID = KB_FLAG_ID
-       ELSE
-       IFIDN <FLAG_MASK>,<R_ALT_SHIFT>
+       \\\\\\\\\\}
+       match =idn$no, idn$keybmac10 \\\\\\\\\\{
+       define idn$keybmac11 idn$no
+       match =R_ALT_SHIFT, FLAG_MASK \\\\\\\\\\\{ define idn$keybmac11 idn$yes \\\\\\\\\\\}
+       match =idn$yes, idn$keybmac11 \\\\\\\\\\\{
 	  FLAG_ID = KB_FLAG_3_ID
-       ELSE
-       IFIDN <FLAG_MASK>,<R_CTL_SHIFT>
+       \\\\\\\\\\\}
+       match =idn$no, idn$keybmac11 \\\\\\\\\\\{
+       define idn$keybmac12 idn$no
+       match =R_CTL_SHIFT, FLAG_MASK \\\\\\\\\\\\{ define idn$keybmac12 idn$yes \\\\\\\\\\\\}
+       match =idn$yes, idn$keybmac12 \\\\\\\\\\\\{
 	  FLAG_ID = KB_FLAG_3_ID
-       ELSE
-       IFIDN <FLAG_MASK>,<TILDE>
+       \\\\\\\\\\\\}
+       match =idn$no, idn$keybmac12 \\\\\\\\\\\\{
+       define idn$keybmac13 idn$no
+       match =TILDE, FLAG_MASK \\\\\\\\\\\\\{ define idn$keybmac13 idn$yes \\\\\\\\\\\\\}
+       match =idn$yes, idn$keybmac13 \\\\\\\\\\\\\{
 	  FLAG_ID = NLS_FLAG_1_ID
-       ELSE
-       IFIDN <FLAG_MASK>,<ACUTE>
+       \\\\\\\\\\\\\}
+       match =idn$no, idn$keybmac13 \\\\\\\\\\\\\{
+       define idn$keybmac14 idn$no
+       match =ACUTE, FLAG_MASK \\\\\\\\\\\\\\{ define idn$keybmac14 idn$yes \\\\\\\\\\\\\\}
+       match =idn$yes, idn$keybmac14 \\\\\\\\\\\\\\{
 	  FLAG_ID = NLS_FLAG_1_ID
-       ELSE
-       IFIDN <FLAG_MASK>,<GRAVE>
+       \\\\\\\\\\\\\\}
+       match =idn$no, idn$keybmac14 \\\\\\\\\\\\\\{
+       define idn$keybmac15 idn$no
+       match =GRAVE, FLAG_MASK \\\\\\\\\\\\\\\{ define idn$keybmac15 idn$yes \\\\\\\\\\\\\\\}
+       match =idn$yes, idn$keybmac15 \\\\\\\\\\\\\\\{
 	  FLAG_ID = NLS_FLAG_1_ID
-       ELSE
-       IFIDN <FLAG_MASK>,<DIARESIS>
+       \\\\\\\\\\\\\\\}
+       match =idn$no, idn$keybmac15 \\\\\\\\\\\\\\\{
+       define idn$keybmac16 idn$no
+       match =DIARESIS, FLAG_MASK \\\\\\\\\\\\\\\\{ define idn$keybmac16 idn$yes \\\\\\\\\\\\\\\\}
+       match =idn$yes, idn$keybmac16 \\\\\\\\\\\\\\\\{
 	  FLAG_ID = NLS_FLAG_1_ID
-       ELSE
-       IFIDN <FLAG_MASK>,<CEDILLA>
+       \\\\\\\\\\\\\\\\}
+       match =idn$no, idn$keybmac16 \\\\\\\\\\\\\\\\{
+       define idn$keybmac17 idn$no
+       match =CEDILLA, FLAG_MASK \\\\\\\\\\\\\\\\\{ define idn$keybmac17 idn$yes \\\\\\\\\\\\\\\\\}
+       match =idn$yes, idn$keybmac17 \\\\\\\\\\\\\\\\\{
 	  FLAG_ID = NLS_FLAG_1_ID
-       ELSE
-       IFIDN <FLAG_MASK>,<CIRCUMFLEX>
+       \\\\\\\\\\\\\\\\\}
+       match =idn$no, idn$keybmac17 \\\\\\\\\\\\\\\\\{
+       define idn$keybmac18 idn$no
+       match =CIRCUMFLEX, FLAG_MASK \\\\\\\\\\\\\\\\\\{ define idn$keybmac18 idn$yes \\\\\\\\\\\\\\\\\\}
+       match =idn$yes, idn$keybmac18 \\\\\\\\\\\\\\\\\\{
 	  FLAG_ID = NLS_FLAG_1_ID
-       ELSE
-       IFIDN <FLAG_MASK>,<LC_E0>
+       \\\\\\\\\\\\\\\\\\}
+       match =idn$no, idn$keybmac18 \\\\\\\\\\\\\\\\\\{
+       define idn$keybmac19 idn$no
+       match =LC_E0, FLAG_MASK \\\\\\\\\\\\\\\\\\\{ define idn$keybmac19 idn$yes \\\\\\\\\\\\\\\\\\\}
+       match =idn$yes, idn$keybmac19 \\\\\\\\\\\\\\\\\\\{
 	  FLAG_ID = KB_FLAG_3_ID
-       ELSE
+       \\\\\\\\\\\\\\\\\\\}
+       match =idn$no, idn$keybmac19 \\\\\\\\\\\\\\\\\\\{
 	  FLAG_ID = UNKNOWN
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-       ENDIF
-    ENDM
+       \\\\\\\\\\\\\\\\\\\}
+       \\\\\\\\\\\\\\\\\\}
+       \\\\\\\\\\\\\\\\\}
+       \\\\\\\\\\\\\\\\}
+       \\\\\\\\\\\\\\\}
+       \\\\\\\\\\\\\\}
+       \\\\\\\\\\\\\}
+       \\\\\\\\\\\\}
+       \\\\\\\\\\\}
+       \\\\\\\\\\}
+       \\\\\\\\\}
+       \\\\\\\\}
+       \\\\\\\}
+       \\\\\\}
+       \\\\\}
+       \\\\}
+       \\\}
+       \\}
+       \}
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-FLAG MACRO  FLAG_MASK
+macro FLAG FLAG_MASK
+{
        FIND_FLAG FLAG_MASK
-       IF (FLAG_ID EQ UNKNOWN)
-	  IF2
-	      %OUT Unknown parameter FLAG_MASK on FLAG MACRO
-	  ENDIF
+       IF (FLAG_ID = UNKNOWN)
+;	  IF2
+;	      %OUT Unknown parameter FLAG_MASK on FLAG MACRO
+;	  ENDIF
        ELSE
 	  DB FLAG_ID
 	  DB FLAG_MASK
-       ENDIF
-    ENDM
+       end if
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-IFF MACRO  FLAG_MASK,MASK_TYPE
+macro IFF FLAG_MASK,MASK_TYPE
+{
     MAC_OK = 1
-    IFB  <MASK_TYPE>
+    match , MASK_TYPE \{
 	 NOT_BIT = 00000000B
-    ELSE
-	 IFIDN <MASK_TYPE>,<NOT>
+    \}
+    match any$, MASK_TYPE \{
+	 define idn$keybmac20 idn$no
+	 match =NOT, MASK_TYPE \\{ define idn$keybmac20 idn$yes \\}
+	 match =idn$yes, idn$keybmac20 \\{
 	     NOT_BIT = 00001000B
-	 ELSE
+	 \\}
+	 match =idn$no, idn$keybmac20 \\{
 	     MAC_OK = 0
-	     IF2
-		 %OUT Unknown parameter MASK_TYPE on IFF MACRO
-	     ENDIF
-	 ENDIF
-    ENDIF
+;	     IF2
+;		 %OUT Unknown parameter MASK_TYPE on IFF MACRO
+;	     ENDIF
+	 \\}
+    \}
     IF MAC_OK
        FIND_FLAG FLAG_MASK
-       IF (FLAG_ID EQ UNKNOWN)
-	  IF2
-	      %OUT Unknown parameter FLAG_MASK on IFF MACRO
-	  ENDIF
+       IF (FLAG_ID = UNKNOWN)
+;	  IF2
+;	      %OUT Unknown parameter FLAG_MASK on IFF MACRO
+;	  ENDIF
        ELSE
 	  DB IFF_COMMAND+NOT_BIT+FLAG_ID
 	  DB FLAG_MASK
-       ENDIF
-    ENDIF
-    ENDM
+       end if
+    end if
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-IFKBD MACRO  SYS
+macro IFKBD SYS
+{
        DB IFKBD_COMMAND
        DW SYS
-    ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-ANDF MACRO  FLAG_MASK,MASK_TYPE
+macro ANDF FLAG_MASK,MASK_TYPE
+{
     MAC_OK = 1
-    IFB  <MASK_TYPE>
+    match , MASK_TYPE \{
 	 NOT_BIT = 00000000B
-    ELSE
-	 IFIDN <MASK_TYPE>,<NOT>
+    \}
+    match any$, MASK_TYPE \{
+	 define idn$keybmac21 idn$no
+	 match =NOT, MASK_TYPE \\{ define idn$keybmac21 idn$yes \\}
+	 match =idn$yes, idn$keybmac21 \\{
 	     NOT_BIT = 00001000B
-	 ELSE
+	 \\}
+	 match =idn$no, idn$keybmac21 \\{
 	     MAC_OK = 0
-	     IF2
-		 %OUT Unknown parameter MASK_TYPE on ANDF MACRO
-	     ENDIF
-	 ENDIF
-    ENDIF
+;	     IF2
+;		 %OUT Unknown parameter MASK_TYPE on ANDF MACRO
+;	     ENDIF
+	 \\}
+    \}
     IF MAC_OK
        FIND_FLAG FLAG_MASK
-       IF (FLAG_ID EQ UNKNOWN)
-	  IF2
-	      %OUT Unknown parameter FLAG_MASK on ANDF MACRO
-	  ENDIF
+       IF (FLAG_ID = UNKNOWN)
+;	  IF2
+;	      %OUT Unknown parameter FLAG_MASK on ANDF MACRO
+;	  ENDIF
        ELSE
 	  DB ANDF_COMMAND+NOT_BIT+FLAG_ID
 	  DB FLAG_MASK
-       ENDIF
-    ENDIF
-    ENDM
+       end if
+    end if
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-ELSEF  MACRO
+macro ELSEF 
+{
        DB  ELSEF_COMMAND
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-ENDIFF MACRO
+macro ENDIFF 
+{
        DB  ENDIFF_COMMAND
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-XLATT  MACRO STATE
+macro XLATT STATE
+{
        DB  XLATT_COMMAND
        DB  STATE
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-PUT_ERROR_CHAR	MACRO STATE
+macro PUT_ERROR_CHAR STATE
+{
        DB  PUT_ERROR_COMMAND
        DB  STATE
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-OPTION MACRO MASK,MASK_TYPE
+macro OPTION MASK,MASK_TYPE
+{
     MAC_OK = 1
-    IFB  <MASK_TYPE>
+    match , MASK_TYPE \{
 	 NOT_BIT = 00000000B
-    ELSE
-	 IFIDN <MASK_TYPE>,<NOT>
+    \}
+    match any$, MASK_TYPE \{
+	 define idn$keybmac22 idn$no
+	 match =NOT, MASK_TYPE \\{ define idn$keybmac22 idn$yes \\}
+	 match =idn$yes, idn$keybmac22 \\{
 	     NOT_BIT = 00001000B
-	 ELSE
+	 \\}
+	 match =idn$no, idn$keybmac22 \\{
 	     MAC_OK = 0
-	     IF2
-		 %OUT Unknown parameter MASK_TYPE on OPTION MACRO
-	     ENDIF
-	 ENDIF
-    ENDIF
+;	     IF2
+;		 %OUT Unknown parameter MASK_TYPE on OPTION MACRO
+;	     ENDIF
+	 \\}
+    \}
     IF MAC_OK
        DB  OPTION_COMMAND+NOT_BIT
        DB  MASK
-    ENDIF
-    ENDM
+    end if
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-SET_FLAG  MACRO STATE
+macro SET_FLAG STATE
+{
        DB  SET_FLAG_COMMAND
        DB  STATE
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-RESET_NLS  MACRO
+macro RESET_NLS 
+{
        DB  RESET_NLS_COMMAND
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-BEEP   MACRO
+macro BEEP 
+{
        DB  BEEP_COMMAND
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-GOTO	MACRO GOTO_OFFSET
+macro GOTO GOTO_OFFSET
+{
        DB  GOTO_COMMAND
        DW  GOTO_OFFSET-$-2
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-EXIT_INT_9  MACRO
+macro EXIT_INT_9 
+{
        DB  GOTO_COMMAND+EXIT_INT_9_FLAG
        DW  0
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-EXIT_STATE_LOGIC  MACRO
+macro EXIT_STATE_LOGIC 
+{
        DB  GOTO_COMMAND+EXIT_STATE_LOGIC_FLAG
        DW  0
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-CHECK_FOR_CORE_KEY MACRO
+macro CHECK_FOR_CORE_KEY 
+{
        DB  CHECK_CORE_COMMAND
-       ENDM
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .LIST

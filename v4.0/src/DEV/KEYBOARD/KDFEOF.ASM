@@ -17,16 +17,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
 				       ;;
-CODE	SEGMENT PUBLIC 'CODE'          ;;
-	ASSUME CS:CODE,DS:CODE	       ;;
+;CODE	SEGMENT PUBLIC 'CODE'          ;;
+;	ASSUME CS:CODE,DS:CODE	       ;;
 				       ;;
 				       ;;
 				       ;;
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; 
-include copyrigh.inc
+include 'COPYRIGH.INC'
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	DB  1AH 		       ;; EOF
 				       ;;
-CODE	ENDS			       ;;
-	END			       ;;
+;CODE	ENDS			       ;;
+;	END			       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
