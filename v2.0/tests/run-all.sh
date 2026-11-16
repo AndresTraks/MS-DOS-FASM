@@ -8,12 +8,18 @@
 # one call and the copy is down to about ten seconds, so it runs with the
 # rest; the file it copies is made here.
 #
-# Three tests are left out for taking too long.  tests/profil.sh assembles and
-# links the profiler on the system before it can run it, about nine minutes,
-# and checks the .PRF that comes out.  tests/format.sh formats a disk with our
-# own FORMAT, about three, the bad sector scan reading every allocation unit
-# on it, and then uses the disk it made.  tests/bootable.sh formats one too,
-# then puts the system on it with SYS and boots a machine from it.
+# Two tests are left out for taking too long.  tests/format.sh formats a disk
+# with our own FORMAT, about three minutes, the bad sector scan reading every
+# allocation unit on it, and then uses the disk it made.  tests/bootable.sh
+# formats one too, then puts the system on it with SYS and boots a machine
+# from it.
+#
+# tests/profil.sh used to be the third of them, nine minutes of MASM and LINK
+# building the profiler on the system before it could be run, and then some
+# minutes more profiling a program that reads a disk with the clock taken
+# over.  Both of its modules are FASM now and assemble.sh builds the .COM,
+# and what it profiles only uses the processor, so it is one boot like the
+# rest and runs here.
 set -e
 cd "$(dirname "$0")/.."
 
@@ -94,6 +100,10 @@ fi
 # Queues a file with PRINT and reads what reached the printer, pressing keys
 # at the prompt to give DOS the idle interrupts PRINT prints from.
 ./tests/print.sh || fail=1
+
+# Profiles EXE2BIN with the profiler and decodes the .PRF it wrote, which is
+# the end to end test of the clock module in source/PCLOCK_IBM.ASM.
+./tests/profil.sh || fail=1
 
 if [ $fail -eq 0 ]; then
     printf '\n======== all passed\n'

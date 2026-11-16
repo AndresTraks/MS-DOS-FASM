@@ -6,7 +6,8 @@
 
 FORMAT is the one utility in the release with no binary beside it: there is no
 FORMAT.COM in bin, so the only way to have a formatter on this system is to
-assemble the source.  SYS and CHKDSK do have binaries, but they were built for
+assemble the source.  PROFIL has none either, for a different reason: it was
+shipped as PROFIL.OBJ, the clock module being the OEM's to write.  SYS and CHKDSK do have binaries, but they were built for
 2.00 and refuse to run on 2.11, which is what this DOS reports; built from the
 source in this directory they accept it, the source itself saying 1.54 to 2.11.
 
@@ -29,6 +30,15 @@ than modelling groups and ASSUMEs:
     of turning into a load from FOO.
   * MASM makes a STRUC's field names offsets in their own right, so a field is
     rewritten to hang off its structure as the converted DOSSYM.ASM has it.
+  * A variable indexed by a register the way MASM wrote it, BUCKET[BX],
+    becomes [BUCKET+BX].
+  * NAME EQU THIS SIZE, which names the place the counter has reached without
+    laying anything down, becomes label NAME size, which is what it means.
+  * A SEGMENT AT becomes a virtual block: it lays nothing down either, naming
+    the fields of memory that is already there, as PCLOCK_IBM.ASM does to
+    reach an interrupt vector.  In a program whose modules are read once per
+    segment the block goes in the pass over the first segment, so that the
+    names it declares are declared once however often the module is read.
 
 A program whose segments are listed below is wrapped segment by segment in
 "if SEGSEL = S_<name>", the way COMMAND's modules are, and its link file sets
@@ -214,6 +224,29 @@ PROGRAMS = {
         # only the label and the references to it.
         "reserved": ("ENTER", "ERR", "FSAVE", "IN", "INT3", "LOAD", "OUT",
                      "STACK", "STORE", "TEST"),
+        "renames": {},
+        "macros": {},
+    },
+    "PROFIL": {
+        # The profiler, and the one program here the release shipped as an
+        # object file rather than a binary: bin/PROFIL.OBJ is this PROFIL.ASM
+        # assembled, and PROFILE.DOC leaves the clock module to the OEM.
+        # source/PCLOCK_IBM.ASM is this repository's own, for the PC's 8253,
+        # and it had to stay MASM while LINK was the only thing that could
+        # join it to the object.  Converted, FASM assembles the two together
+        # and there is nothing left to link: the PROFIL.COM that comes out is
+        # the one the system used to spend nine minutes building for itself.
+        "dossym": "",           # its equates are its own, as FIND's are
+        "modules": ("PROFIL.ASM", "PCLOCK_IBM.ASM"),
+        # In the order PROFIL.ASM declares them, under the heading "Segments
+        # in load order", which is the order LINK laid them out in.  PCLOCK
+        # adds to CODE and declares INTSEG AT 0, which lays nothing down.
+        "segments": ("CODE", "DATA", "INIT"),
+        "group": "DG",
+        # OUT is the routine PROFIL prints a character with, and an
+        # instruction PCLOCK talks to the 8253 with; STACK is the top of
+        # PROFIL's own stack and a FASM directive.
+        "reserved": ("OUT", "STACK"),
         "renames": {},
         "macros": {},
     },
@@ -446,6 +479,16 @@ def data_labels(text):
                 SIZES[m.group(1).upper()] = {"DB": "byte", "DW": "word",
                                              "DD": "dword"}[d.group(1).upper()]
             continue
+        # MASM's NAME LABEL SIZE names storage as surely as a DB does, and
+        # says what size it is: PROFIL keeps its output FCB behind an
+        # OUT_FCB LABEL WORD and writes [OUT_FCB+14] to set the record
+        # length.  Only the three storage sizes, so that a LABEL NEAR or
+        # LABEL FAR -- a code label -- is left out of this.
+        m = re.match(r"^(\w+)\s+LABEL\s+(BYTE|WORD|DWORD)\s*$", code, re.I)
+        if m:
+            labels.add(m.group(1).upper())
+            SIZES[m.group(1).upper()] = m.group(2).lower()
+            continue
         # A macro that defines storage, as SYSMES.ASM's Message defines both
         # the text and a word holding its length.
         for name, suffixes in MACROS.items():
@@ -495,8 +538,13 @@ def one_operand(op, labels):
             core, again = mp.group(1).strip(), True
 
     inner = None
+    # MASM indexes a variable by writing the register after its name: PROFIL
+    # counts a sample with INC BUCKET[BX], which is [BUCKET+BX].
+    indexed = re.match(r"^(\w+)\s*\[([^\]]+)\]$", core)
     if core.startswith("[") and core.endswith("]"):
         inner = core[1:-1]
+    elif indexed and indexed.group(1).upper() in labels:
+        inner = "%s+%s" % (indexed.group(1), indexed.group(2).strip())
     elif seg:
         inner = core
     else:
@@ -626,7 +674,7 @@ def line(code):
 def convert(text, renames, first=False):
     """first says this is the module that brings DOSSYM in: every module had
     its own INCLUDE of it, and including it twice redefines every structure."""
-    out, inmacro, infar = [], [], []
+    out, inmacro, infar, absolute = [], [], [], []
     for raw in text.splitlines():
         # Before anything else, so that a renamed macro parameter is renamed
         # in the MACRO line too and not only in the body.
@@ -636,6 +684,28 @@ def convert(text, renames, first=False):
             # exactly left the definition behind under its old name.
             raw = outside_strings(raw, lambda t, w=re.escape(was), n=now:
                                   re.sub(r"\b%s\b" % w, n, t, flags=re.I))
+        # A SEGMENT AT lays nothing down: it names the fields of memory that
+        # is already there, and MASM resolved a reference to one of them to
+        # the address it said.  PCLOCK_IBM.ASM declares INTSEG AT 0 to reach
+        # the counter 0 interrupt vector, which is FASM's virtual block.
+        # The names it declares have to be declared once however many times
+        # the walk reads the module, so in a segmented program the block goes
+        # in the pass over the first segment and holds for the rest.
+        m = re.match(r"^\s*(\w+)\s+SEGMENT\s+AT\s+(\S.*?)\s*$", raw, re.I)
+        if m:
+            if SEGMENTS:
+                out.append("if SEGSEL = S_%s" % SEGMENTS[0])
+            out.append("virtual at %s" % m.group(2))
+            absolute.append(m.group(1).upper())
+            continue
+        if absolute:
+            m = re.match(r"^\s*(\w+)\s+ENDS\s*$", raw, re.I)
+            if m and m.group(1).upper() == absolute[-1]:
+                absolute.pop()
+                out.append("end virtual")
+                if SEGMENTS:
+                    out.append("end if")
+                continue
         if SEGMENTS:
             m = re.match(r"^\s*(\w+)\s+SEGMENT\b", raw, re.I)
             if m and m.group(1).upper() in SEGMENTS:
@@ -712,6 +782,16 @@ def convert(text, renames, first=False):
         m = re.match(r"^(\s*\w+\s+)LABEL\s+(BYTE|WORD|DWORD)\s*$", body, re.I)
         if m:
             body = "label %s %s" % (m.group(1).strip(), m.group(2).lower())
+        # MASM's THIS names the place the counter has reached without
+        # laying anything down, which is what LABEL does: PROFIL declares
+        # PROG_ENTRY EQU THIS DWORD over the two words of the program's
+        # entry point.  Turned into a plain = it would be the address as a
+        # number and lose the size with it.
+        m = re.match(r"^(\s*)(\w+)\s+EQU\s+THIS\s+(BYTE|WORD|DWORD)\s*$",
+                     body, re.I)
+        if m:
+            body = "%slabel %s %s" % (m.group(1), m.group(2),
+                                      m.group(3).lower())
         m = re.match(r"^(\s*)(\w+)(\s+)EQU(\s+)(.*)$", body, re.I)
         if m:
             value, pad = m.group(5).rstrip(), ""

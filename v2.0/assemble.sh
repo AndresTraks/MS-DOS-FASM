@@ -84,6 +84,18 @@ $FASM source/MORLINK.ASM bin/MOREF.COM
 # that Microsoft's stays where it is -- see SYSLINK.ASM.
 $FASM source/SYSLINK.ASM bin/SYSF.COM
 
+# A program for the profiler to profile: it spins for a moment and exits the
+# 1.x way, which is the only way a profiled program can get back to PROFIL.
+# Not on the image: tests/profil.sh is what puts it there.
+$FASM tests/spin.asm bin/SPIN.COM
+
+# PROFIL.COM, from PROFIL.ASM and the clock module in PCLOCK_IBM.ASM.  The
+# release shipped PROFIL.OBJ and no binary at all, the clock module being the
+# OEM's to write, and the profiler used to be built on the system itself with
+# MASM and LINK.  Converted there is nothing left to link, and what comes out
+# is that build's .COM but for two instructions -- see PROLINK.ASM.
+$FASM source/PROLINK.ASM bin/PROFIL.COM
+
 # COMMAND.COM, from the sixteen modules COMLINK lists.  Built under another
 # name so that Microsoft's, which the release shipped and which is useful to
 # compare against, stays where it is; create_image.sh puts this one on the

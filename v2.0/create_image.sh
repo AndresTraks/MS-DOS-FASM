@@ -58,12 +58,13 @@ mcopy -i "$IMAGE" bin/SYSF.COM ::SYS.COM
 # FORMAT.COM to go with it.
 mcopy -i "$IMAGE" bin/FORMAT.COM ::
 
-# The profiler, which is in pieces: PROFIL.OBJ is Microsoft's, assembled, and
-# the clock module it wants is ours.  PCLOCK_IBM.ASM goes on as PCLOCKPC.ASM
-# because PCLOCK.ASM is taken, by Microsoft's for the Seattle Computer
-# Products machine, and because the name has to fit 8.3 for DOS to see it.
-# tests/profil.bat builds and runs it on the system itself.
-mcopy -i "$IMAGE" bin/PROFIL.OBJ ::
-mcopy -i "$IMAGE" source/PCLOCK_IBM.ASM ::PCLOCKPC.ASM
+# The profiler is ours as well, and nobody else's: the release shipped
+# PROFIL.OBJ and left the clock module to the OEM, so there was no PROFIL.COM
+# to ship.  It used to be built on this system, nine minutes of MASM and LINK
+# on a floppy, from that object and a clock module that had to stay MASM for
+# LINK's sake; both modules are FASM now and assemble.sh builds it here.
+# bin/PROFIL.OBJ stays where it is: it is what the conversion was checked
+# against, instruction for instruction, and source/PROLINK.ASM says how.
+mcopy -i "$IMAGE" bin/PROFIL.COM ::
 
 dd if=bin/bootsect.bin of="$IMAGE" bs=512 count=1 conv=notrunc status=none

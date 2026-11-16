@@ -1,39 +1,36 @@
 #!/bin/sh
-# Build the profiler on the system under test and profile a program with it.
+# Profile a program with the profiler and decode what it wrote.
 #
-# This is the end to end test of source/PCLOCK_IBM.ASM, the clock module for
-# this machine.  It assembles that module with MASM, links it to the released
-# PROFIL.OBJ, converts the result to a .COM with EXE2BIN and runs it on
-# EXE2BIN.EXE, then decodes the .PRF that comes out.  Everything but the
-# decoding happens on MS-DOS 2.0 itself.
+# This is the end to end test of PROFIL.ASM and of source/PCLOCK_IBM.ASM, the
+# clock module for this machine.  The profiler loads SPIN.COM, runs it, counts
+# where the processor was every 400 microseconds and writes a SPIN.PRF; this
+# reads that file back and checks it.  The counts are the evidence, and they
+# exist only if the clock interrupt fired at the rate asked for, CLK_INTER
+# classified CS:IP and LEAVE_INT's EOI let the next interrupt through -- and
+# PROFIL could only write the file at all because CLOCKOFF put the clock back
+# first.
 #
-# EXE2BIN is handed a file it will refuse ("File cannot be converted").  That
-# is deliberate and it does not matter: the point is that the profiled program
-# runs, makes its DOS calls and terminates, and that PROFIL survives all of it
-# and writes its data.  The counts in the .PRF are the evidence, and they
-# exist only if the clock interrupt fired, CLK_INTER classified CS:IP and
-# LEAVE_INT's EOI let the next interrupt through -- and PROFIL could only
-# write the file at all because CLOCKOFF put the clock back first.
+# It used to build the profiler before it could run it, on the system under
+# test: MASM on the clock module, LINK on it and the released PROFIL.OBJ,
+# EXE2BIN on the .EXE that came out, about nine minutes of a floppy, which is
+# why it was kept out of run-all.sh.  Both modules are FASM now and
+# assemble.sh builds the .COM, so all that is left to do here is run it --
+# see source/PROLINK.ASM.
 #
-# The target has to be a program that terminates the 1.x way, through INT 20h
-# or a far return to PSP:0, as EXE2BIN does.  PROFIL loads the program itself
-# and gives it a program header built with function 26h, which does not make
-# that header current, so a program that exits with function 4Ch goes back to
-# COMMAND instead of to PROFIL -- _EXIT in PROC.ASM takes the terminate
-# address from CurrentPDB, which is still PROFIL's.  FIND, SORT and the other
-# 2.0 utilities do that, and profiling one of them leaves an empty .PRF.  That
-# is PROFIL's own limitation, not this system's.
-#
-# MASM on a floppy is slow, so this takes about nine minutes -- which is why
-# it is not in run-all.sh.
+# It also used to profile EXE2BIN.EXE, which reads a file, and tests/spin.asm
+# says why that is a bad idea: with the clock taken over, a profiled program
+# that touches a disk takes minutes to get through it.  SPIN.COM only uses the
+# processor and is done in a moment.
 set -e
 cd "$(dirname "$0")/.."
 
-./runtest.sh -t 520 -f tests/profila.txt -g EXE2BIN.PRF \
-             -e "Program terminated normally" -e "DONE" tests/profil.bat
+./runtest.sh -t 45 -f tests/profila.txt -f bin/SPIN.COM -g SPIN.PRF \
+             -e "SPIN done" -e "Program terminated normally" -e "DONE" \
+             tests/profil.bat
 
-# The answers in tests/profila.txt ask for a 100 microsecond sample interval
+# The answers in tests/profila.txt ask for a 400 microsecond sample interval
 # and 16 paragraph buckets, so finding them in the header is also how we know
 # the answers reached PROFIL through the redirected input.
-echo "--- EXE2BIN.PRF"
-exec python3 tests/readprf.py --grain 100 --bucket 16 test-out/EXE2BIN.PRF
+echo "--- SPIN.PRF"
+exec python3 tests/readprf.py --grain 400 --bucket 16 --inprog 8 --spread 2 \
+                             test-out/SPIN.PRF

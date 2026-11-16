@@ -1,4 +1,3 @@
-        TITLE   PROFIL - MS-DOS Profile program
 
 ;Profiler for MS-DOS 1.25 2.00
 ;
@@ -8,125 +7,121 @@
 
 
 ;System calls
-PRINTBUF        EQU     9
-SETDMA          EQU     26
-CREATE          EQU     22
-OPEN            EQU     15
-CLOSE           EQU     16
-GETBUF          EQU     10
-BLKWRT          EQU     40
-BLKRD           EQU     39
-OUTCH           EQU     2
-SETBASE         EQU     38
+PRINTBUF        =     9
+SETDMA          =     26
+CREATE          =     22
+OPEN            =     15
+CLOSE           =     16
+GETBUF          =     10
+BLKWRT          =     40
+BLKRD           =     39
+OUTCH           =     2
+SETBASE         =     38
 
-FCB             EQU     5CH
-BUFLEN          EQU     80
+FCB             =     5CH
+BUFLEN          =     80
 
 ; FCB offsets
-RR              EQU     33
-RECLEN          EQU     14
-FILELEN         EQU     16
+RR              =     33
+RECLEN          =     14
+FILELEN         =     16
 
 
 ;Segments in load order
 
-CODE    SEGMENT PUBLIC
-CODE    ENDS
+if SEGSEL = S_CODE
+end if
 
-DATA    SEGMENT BYTE
-DATA    ENDS
+if SEGSEL = S_DATA
+end if
 
-INIT    SEGMENT BYTE
-INIT    ENDS
+if SEGSEL = S_INIT
+end if
 
-DG      GROUP   CODE,DATA,INIT
 
 ;The data segment
 
-DATA    SEGMENT BYTE
-        ORG     0
+if SEGSEL = S_DATA
 ENDMES          DB      13,10,"Program terminated normally",13,10,"$"
 ABORTMES        DB      13,10,"Program aborted",13,10,"$"
 TOOBIG          DB      "Program too big",13,10,"$"
 EXEBAD          DB      "EXE file bad",13,10,"$"
 
-OUT_FCB         LABEL   WORD
+label OUT_FCB word
                 DB      0
 OUTNAME         DB      "        PRF"
                 DB      30 DUP(0)
 
-                DB      80H DUP(?)
-STACK           LABEL   WORD
+                DB      80H dup (0)
+label STACK_ word
 
-BYTEBUF         DB      BUFLEN DUP(?)           ;Processed input queue
-AXSAVE          DW      ?                       ;See interrupt routine
-BXSAVE          DW      ?                       ; "     "        "
-PROG_AREA       DW      ?                       ;Segment of program start
+BYTEBUF         DB      BUFLEN dup (0)           ;Processed input queue
+AXSAVE          DW      0;See interrupt routine
+BXSAVE          DW      0; "     "        "
+PROG_AREA       DW      0;Segment of program start
 
 ;EXE file header
-RUNVAR          LABEL   WORD
-RELPT           DW      ?
-LASTP           LABEL   WORD
-RELSEG          DW      ?
-PSIZE           LABEL   WORD
-PAGES           DW      ?
-RELCNT          DW      ?
-HEADSIZ         DW      ?
-                DW      ?
-LOADLOW         DW      ?
-PROG_SS         LABEL   WORD                    ;Program stack seg
-INITSS          DW      ?
-PROG_SP         LABEL   WORD                    ;Program SP
-INITSP          DW      ?
-                DW      ?
-PROG_ENTRY      EQU     THIS DWORD
-PROG_RA         LABEL   WORD                    ;Program start offset
-INITIP          DW      ?
-PROG_SA         LABEL   WORD                    ;Program start segment (may be different from PROG_AREA)
-INITCS          DW      ?
-RELTAB          DW      ?
-RUNVARSIZ       EQU     $-RUNVAR
+label RUNVAR word
+RELPT           DW      0
+label LASTP word
+RELSEG          DW      0
+label PSIZE word
+PAGES           DW      0
+RELCNT          DW      0
+HEADSIZ         DW      0
+                DW      0
+LOADLOW         DW      0
+label PROG_SS word;Program stack seg
+INITSS          DW      0
+label PROG_SP word;Program SP
+INITSP          DW      0
+                DW      0
+label PROG_ENTRY dword
+label PROG_RA word;Program start offset
+INITIP          DW      0
+label PROG_SA word;Program start segment (may be different from PROG_AREA)
+INITCS          DW      0
+RELTAB          DW      0
+RUNVARSIZ       =     $-RUNVAR
 
 EXEFILE         DB      0                       ;Flag to indicate EXE file
-DRV_VALID       DW      ?                       ;Init for AX register
-OUTPUT_DATA     LABEL   WORD                    ;Start of the profile data
-CLOCK_GRAIN     DW      ?                       ;Clock interval micro-seconds
-BUCKET_NUM      DW      ?                       ;Number of buckets
-BUCKET_SIZE     DW      ?                       ;Paragraphs per bucket
-PROG_LOW_PA     DW      ?                       ;Start of program (PARA #)
-PROG_HIGH_PA    DW      ?                       ;End of program (PARA #)
-DOS_PA          DW      ?                       ;IO-DOS PARA boundry
+DRV_VALID       DW      0;Init for AX register
+label OUTPUT_DATA word;Start of the profile data
+CLOCK_GRAIN     DW      0;Clock interval micro-seconds
+BUCKET_NUM      DW      0;Number of buckets
+BUCKET_SIZE     DW      0;Paragraphs per bucket
+PROG_LOW_PA     DW      0;Start of program (PARA #)
+PROG_HIGH_PA    DW      0;End of program (PARA #)
+DOS_PA          DW      0;IO-DOS PARA boundry
 HIT_IO          DW      0                       ;IO bucket
 HIT_DOS         DW      0                       ;DOS bucket
 HIT_HIGH        DW      0                       ;Above Program bucket
-NUM_DATA_WORDS  EQU     ($-OUTPUT_DATA)/2       ;Number of word items
-BUCKET          LABEL   WORD                    ;Bucket count area
+NUM_DATA_WORDS  =     ($-OUTPUT_DATA)/2       ;Number of word items
+label BUCKET word;Bucket count area
 
 ;The following data will be overwritten when the buckets are initialized
 LINEBUF         DB      BUFLEN,1,0DH            ;Raw input buffer
-                DB      BUFLEN DUP(?)
+                DB      BUFLEN dup (0)
 
 NOFILE          DB      "File not found",13,10,"$"
 OUTERR          DB      "Cannot open output file",13,10,"$"
 GRAIN_PROMPT    DB      "Sample time (micro-sec) >= 60 ? ","$"
 SIZE_PROMPT     DB      "Number of paragraphs (16 bytes) per bucket? ","$"
 PARAM_PROMPT    DB      "Parameters to program? ","$"
-DATA    ENDS
+end if
 
 ;The resident code portion
-CODE    SEGMENT PUBLIC
+if SEGSEL = S_CODE
 ASSUME  CS:DG,DS:DG,ES:DG,SS:DG
 
 ;The clock interrupt routine
-        PUBLIC  CLK_INTER
 
 ;Stuff provided by external clock handler routine
-        EXTRN   CLOCKON:NEAR,CLOCKOFF:NEAR,LEAVE_INT:NEAR
 
         ORG     100H
 START:
         CLD
-        MOV     SP,OFFSET DG:STACK      ;Use internal stack
+        MOV     SP,STACK_      ;Use internal stack
         CALL    SETUP
 ;The following setup stuff cannot be done in SETUP because we're probably
 ; overwritting the INIT area
@@ -143,16 +138,16 @@ COMTAIL:
         JNZ     COMTAIL
         SUB     DI,82H                  ;Figure length
         XCHG    AX,DI
-        MOV     BYTE PTR ES:[80H],AL
+        MOV     byte [ES:80H],AL
         POP     SI
         MOV     DI,FCB                  ;First param
         MOV     AX,2901H
         INT     21H
-        MOV     BYTE PTR [DRV_VALID],AL
+        MOV     byte [DRV_VALID],AL
         MOV     AX,2901H                
         MOV     DI,6CH                  ;Second param
         INT     21H
-        MOV     BYTE PTR [DRV_VALID+1],AL
+        MOV     byte [DRV_VALID+1],AL
 
         MOV     AX,ES                   ;Prog segment to AX
         MOV     DX,[PROG_RA]            ;Offset
@@ -168,8 +163,8 @@ EXELOAD:
         MOV     BX,AX
         AND     AX,0FE00H
         AND     BX,0FH
-        MOV     WORD PTR DS:[FCB+RR],AX         ;Position in file of program
-        MOV     WORD PTR DS:[FCB+RR+2],BX       ;Record size
+        MOV     word [DS:FCB+RR],AX         ;Position in file of program
+        MOV     word [DS:FCB+RR+2],BX       ;Record size
         MOV     DX,[PAGES]                      ;Size in 512 byte blocks
         DEC     DX
         XCHG    DH,DL
@@ -196,9 +191,9 @@ PARTP:
         XCHG    AX,CX
         MOV     BX,[PROG_AREA]
         ADD     BX,10H
-        MOV     AX,WORD PTR DS:[2]
+        MOV     AX,word [DS:2]
         SUB     AX,CX
-        MOV     DX,OFFSET DG:TOOBIG
+        MOV     DX,TOOBIG
         JB      ERROR
         CMP     BX,AX
         JA      ERROR
@@ -211,7 +206,7 @@ LOADEXE:
         CALL    READ
         JC      HAVEXE
 BADEXE:
-        MOV     DX,OFFSET DG:EXEBAD
+        MOV     DX,EXEBAD
 
 ERROR:
         MOV     AH,PRINTBUF             ;Print the message in DX
@@ -220,9 +215,9 @@ ERROR:
 
 HAVEXE:
         MOV     AX,[RELTAB]             ;Get position of relocation table
-        MOV     WORD PTR DS:[FCB+RR],AX
-        MOV     WORD PTR DS:[FCB+RR+2],0
-        MOV     DX,OFFSET DG:RELPT      ;Four byte buffer
+        MOV     word [DS:FCB+RR],AX
+        MOV     word [DS:FCB+RR+2],0
+        MOV     DX,RELPT      ;Four byte buffer
         MOV     AH,SETDMA
         INT     21H
         CMP     [RELCNT],0
@@ -238,7 +233,7 @@ RELOC:
         MOV     AX,[RELSEG]     ;pointer segment
         ADD     AX,BP           ;Bias with actual load segment
         MOV     ES,AX
-        ADD     ES:[DI],BP      ;Relocate
+        ADD     [ES:DI],BP      ;Relocate
         DEC     [RELCNT]
         JNZ     RELOC
 
@@ -248,15 +243,15 @@ NOREL:
         JMP     SHORT PROGGO
 
 BINFIL:
-        MOV     WORD PTR DS:[FCB+RECLEN],1
+        MOV     word [DS:FCB+RECLEN],1
         MOV     SI,-1
         MOV     DI,SI
         CALL    READ
         MOV     ES,[PROG_SA]            ;Prog segment to ES
-        MOV     AX,WORD PTR ES:[6]
+        MOV     AX,word [ES:6]
         MOV     [PROG_SP],AX            ;Default SP for non EXE files
         DEC     AH
-        MOV     WORD PTR ES:[6],AX      ;Fix size
+        MOV     word [ES:6],AX      ;Fix size
         
 PROGGO:
         PUSH    DS
@@ -269,7 +264,7 @@ PROGGO:
         MOV     BX,[BUCKET_NUM]
         SHL     BX,1                    ;Mult by 2 to get #bytes in bucket area
 CLEAR:
-        MOV     BUCKET[BX],0            ;Zero counts
+        MOV     [BUCKET+BX],0            ;Zero counts
         SUB     BX,2
         JGE     CLEAR
         MOV     DX,[CLOCK_GRAIN]
@@ -292,9 +287,8 @@ CLEAR:
         MOV     DS,DI                   ;Set up segments
         MOV     ES,DI
         STI                             ;Start collecting data
-XXX     PROC    FAR
-        RET                             ;Hop to program
-XXX     ENDP
+XXX:
+        RETF                             ;Hop to program
         
 READ:
 ; AX:DX is disk transfer address (segment:offset)
@@ -339,16 +333,16 @@ RET10:  STC
 
 TERMINATE:
         CLI                             ;Stop collecting data
-        MOV     DX,OFFSET DG:ENDMES
+        MOV     DX,ENDMES
         JMP     SHORT WRITEOUT
 ABORT:
         CLI                             ;Stop collecting data
-        MOV     DX,OFFSET DG:ABORTMES
+        MOV     DX,ABORTMES
 WRITEOUT:
         MOV     AX,CS
         MOV     DS,AX
         MOV     SS,AX
-        MOV     SP,OFFSET DG:STACK      ;Use internal stack
+        MOV     SP,STACK_      ;Use internal stack
         PUSH    DX
         CALL    CLOCKOFF                ;Restore original clock routine
         STI                             ;Back to normal clock
@@ -356,22 +350,22 @@ WRITEOUT:
         MOV     AH,PRINTBUF
         INT     21H                     ;Apropriate termination message
         MOV     [OUT_FCB+14],2          ;Word size records
-        MOV     DX,OFFSET DG:OUTPUT_DATA
+        MOV     DX,OUTPUT_DATA
         MOV     AH,SETDMA
         INT     21H                     ;Set the transfer address
         MOV     CX,NUM_DATA_WORDS
         ADD     CX,[BUCKET_NUM]
-        MOV     DX,OFFSET DG:OUT_FCB
+        MOV     DX,OUT_FCB
         MOV     AH,BLKWRT
         INT     21H                     ;Write out data
-        MOV     DX,OFFSET DG:OUT_FCB
+        MOV     DX,OUT_FCB
         MOV     AH,CLOSE
         INT     21H
         INT     20H                     ;Exit
 
 
 ;The clock interrupt routine
-CLK_INTER       PROC    NEAR
+CLK_INTER:
         CLI
         PUSH    DS
         PUSH    CS
@@ -379,12 +373,12 @@ CLK_INTER       PROC    NEAR
         MOV     [AXSAVE],AX
         MOV     [BXSAVE],BX
         POP     AX                      ;old DS
-        MOV     BX,OFFSET DG:LEAVE_INT
+        MOV     BX,LEAVE_INT
         PUSH    BX
         PUSH    AX
         PUSH    ES
-        PUSH    [AXSAVE]
-        PUSH    [BXSAVE]
+        PUSH    word [AXSAVE]
+        PUSH    word [BXSAVE]
         PUSH    CX
         PUSH    DX
 
@@ -403,7 +397,7 @@ CLK_INTER       PROC    NEAR
 ;SP->   OLDDX
 
         MOV     BX,SP
-        LES     BX,DWORD PTR SS:[BX+14]         ;Get CS:IP
+        LES     BX,dword [SS:BX+14]         ;Get CS:IP
         MOV     AX,BX
         MOV     CL,4
         SHR     AX,CL
@@ -422,7 +416,7 @@ CLK_INTER       PROC    NEAR
         DIV     [BUCKET_SIZE]
         MOV     BX,AX
         SHL     BX,1                    ;Mult by 2 to get byte offset
-        INC     BUCKET[BX]
+        INC     [BUCKET+BX]
         JMP     SHORT DONE
 
 IOHIT:
@@ -446,16 +440,14 @@ DONE:
         STI
         RET             ;To LEAVE_INT
 
-CLK_INTER       ENDP
 
-CODE    ENDS
+end if
 
 ;The init segment contains code to process input parameters
 ; It will be blasted as soon as the program to be run is read in
 ; And/or the bucket area is initialized
  
-INIT    SEGMENT BYTE
-        ORG     0
+if SEGSEL = S_INIT
 
 SETUP:
         MOV     DX,FCB
@@ -463,28 +455,28 @@ SETUP:
         INT     21H                     ;Open program file
         AND     AL,AL
         JZ      OPENOK
-        MOV     DX,OFFSET DG:NOFILE
+        MOV     DX,NOFILE
         JMP     ERROR
 
 OPENOK:
         XOR     BX,BX
-        MOV     WORD PTR DS:[FCB+RR],BX
-        MOV     WORD PTR DS:[FCB+RR+2],BX       ;RR to 0
+        MOV     word [DS:FCB+RR],BX
+        MOV     word [DS:FCB+RR+2],BX       ;RR to 0
         MOV     SI,FCB
-        MOV     DI,OFFSET DG:OUT_FCB
+        MOV     DI,OUT_FCB
         MOV     CX,4
         REP     MOVSW
         MOVSB                           ;Transfer drive spec and file to output
-        MOV     DX,OFFSET DG:OUT_FCB
+        MOV     DX,OUT_FCB
         MOV     AH,CREATE
         INT     21H                     ;Try to create the output file
         AND     AL,AL
         JZ      GETSIZE
-        MOV     DX,OFFSET DG:OUTERR
+        MOV     DX,OUTERR
         JMP     ERROR
 
 GETSIZE:                                ;Get bucket size
-        MOV     DX,OFFSET DG:SIZE_PROMPT
+        MOV     DX,SIZE_PROMPT
         MOV     AH,PRINTBUF
         INT     21H
         CALL    INBUF
@@ -496,19 +488,19 @@ GETSIZE:                                ;Get bucket size
         JC      GETSIZE         ;Bad number
         MOV     [BUCKET_SIZE],DX
 
-        CMP     WORD PTR DS:[FCB+9],5800H+"E"           ;"EX"
+        CMP     word [DS:FCB+9],5800H+"E"           ;"EX"
         JNZ     NOTEXE
-        CMP     BYTE PTR DS:[FCB+11],"E"
+        CMP     byte [DS:FCB+11],"E"
         JNZ     NOTEXE
 
 LOADEXEHEAD:                            ;Load the EXE header
         MOV     [EXEFILE],1
-        MOV     DX,OFFSET DG:RUNVAR     ;Read header in here
+        MOV     DX,RUNVAR     ;Read header in here
         MOV     AH,SETDMA
         INT     21H
         MOV     CX,RUNVARSIZ
         MOV     DX,FCB
-        MOV     WORD PTR DS:[FCB+RECLEN],1
+        MOV     word [DS:FCB+RECLEN],1
         OR      AL,AL
         MOV     AH,BLKRD
         INT     21H
@@ -522,8 +514,8 @@ EXEOK:
         JMP     SHORT SETBUCKET
 
 NOTEXE:
-        MOV     AX,WORD PTR DS:[FCB+FILELEN]
-        MOV     DX,WORD PTR DS:[FCB+FILELEN+2]  ;Size of file in bytes DX:AX
+        MOV     AX,word [DS:FCB+FILELEN]
+        MOV     DX,word [DS:FCB+FILELEN+2]  ;Size of file in bytes DX:AX
         ADD     AX,15
         ADC     DX,0                            ;Round to PARA
         MOV     CL,4
@@ -541,7 +533,7 @@ SETBUCKET:
         DIV     [BUCKET_SIZE]
         INC     AX                      ;Round up
         MOV     [BUCKET_NUM],AX
-        MOV     BX,OFFSET DG:BUCKET
+        MOV     BX,BUCKET
         SHL     AX,1                    ;Number of bytes in bucket area
         ADD     AX,BX                   ;Size of profil in bytes
         ADD     AX,15                   ;Round up to PARA boundry
@@ -569,13 +561,13 @@ SETBOUNDS:                              ;Set the sample window
 SETDOS:
         XOR     DX,DX
         MOV     ES,DX                   ;look in interrupt area
-        MOV     DX,WORD PTR ES:[82H]    ;From int #20
+        MOV     DX,word [ES:82H]    ;From int #20
         MOV     [DOS_PA],DX
         PUSH    DS
         POP     ES
 
 GETGRAIN:                               ;Get sample interval
-        MOV     DX,OFFSET DG:GRAIN_PROMPT
+        MOV     DX,GRAIN_PROMPT
         MOV     AH,PRINTBUF
         INT     21H
         CALL    INBUF
@@ -586,16 +578,16 @@ GETGRAIN:                               ;Get sample interval
         JC      GETGRAIN                ;Bad number
         MOV     [CLOCK_GRAIN],DX
 
-        MOV     DX,OFFSET DG:PARAM_PROMPT
+        MOV     DX,PARAM_PROMPT
         MOV     AH,PRINTBUF
         INT     21H
         CALL    INBUF                   ;Get program parameters
 
         MOV     AX,2522H                ;Set vector 22H
-        MOV     DX,OFFSET DG:TERMINATE
+        MOV     DX,TERMINATE
         INT     21H
         MOV     AL,23H                  ;Set vector 23H
-        MOV     DX,OFFSET DG:ABORT
+        MOV     DX,ABORT
         INT     21H
         RET                             ;Back to resident code
 
@@ -635,10 +627,10 @@ BADNUM:
 
 INBUF:                                  ;Read in from console, SI points to start on exit
         MOV     AH,GETBUF
-        MOV     DX,OFFSET DG:LINEBUF
+        MOV     DX,LINEBUF
         INT     21H
-        MOV     SI,2 + OFFSET DG:LINEBUF
-        MOV     DI,OFFSET DG:BYTEBUF
+        MOV     SI,2 + LINEBUF
+        MOV     DI,BYTEBUF
 CASECHK:
         LODSB
         CMP     AL,'a'
@@ -666,16 +658,16 @@ KILLSTR:
         JMP     SHORT CASECHK
 
 INDONE:
-        MOV     SI,OFFSET DG:BYTEBUF
+        MOV     SI,BYTEBUF
 
 ;Output CR/LF
 
 CRLF:
         MOV     AL,13
-        CALL    OUT
+        CALL    OUT_
         MOV     AL,10
 
-OUT:
+OUT_:
         PUSH    AX
         PUSH    DX
         AND     AL,7FH
@@ -697,8 +689,7 @@ SCANNEXT:
         DEC     SI
         POP     AX
 EOLCHK:
-        CMP     BYTE PTR[SI],13
+        CMP     byte [SI],13
         RET
 
-INIT    ENDS
-        END     START
+end if

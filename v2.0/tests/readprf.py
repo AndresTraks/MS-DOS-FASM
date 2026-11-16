@@ -7,11 +7,14 @@
 # are only there because the interrupt fired, CLK_INTER classified CS:IP and
 # LEAVE_INT's EOI let the next interrupt through.
 #
-#       ./readprf.py [--grain N] [--bucket N] file.PRF
+#       ./readprf.py [--grain N] [--bucket N] [--inprog N] [--spread N] file.PRF
 #
 # --grain and --bucket check the sample interval and the paragraphs per
 # bucket that were asked for, which is how we know the answers PROFIL was
-# fed actually reached it.
+# fed actually reached it.  --inprog is the fewest samples that have to have
+# landed in the program's own buckets and --spread the fewest buckets that
+# have to hold one, which is how we know CLK_INTER put a sample where it
+# belonged rather than counting everything as the DOS.
 
 import struct
 import sys
@@ -26,14 +29,17 @@ def main(argv):
     args = []
     while argv:
         a = argv.pop(0)
-        if a in ("--grain", "--bucket"):
+        if a in ("--grain", "--bucket", "--inprog", "--spread"):
             if not argv:
                 sys.exit("%s wants a number" % a)
-            want["clock_grain" if a == "--grain" else "bucket_siz"] = int(argv.pop(0))
+            want[{"--grain": "clock_grain", "--bucket": "bucket_siz",
+                  "--inprog": "in the program", "--spread": "buckets used"}[a]] \
+                = int(argv.pop(0))
         else:
             args.append(a)
     if len(args) != 1:
-        sys.exit("usage: readprf.py [--grain N] [--bucket N] file.PRF")
+        sys.exit("usage: readprf.py [--grain N] [--bucket N] [--inprog N] "
+                 "[--spread N] file.PRF")
 
     d = open(args[0], "rb").read()
     if len(d) < HEADER:
@@ -68,8 +74,13 @@ def main(argv):
                    % (h["prog_low_pa"], h["prog_high_pa"]))
     if total == 0:
         bad.append("no samples: the clock interrupt never reached CLK_INTER")
+    h["in the program"] = sum(buckets)
+    h["buckets used"] = len([c for c in buckets if c])
     for name, n in want.items():
-        if h[name] != n:
+        if name in ("in the program", "buckets used"):
+            if h[name] < n:
+                bad.append("%s: %d, wanted %d or more" % (name, h[name], n))
+        elif h[name] != n:
             bad.append("%s is %d, asked for %d" % (name, h[name], n))
     if bad:
         sys.exit("FAIL: " + "; ".join(bad))

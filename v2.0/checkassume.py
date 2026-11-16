@@ -319,8 +319,21 @@ def utility_labels(src, mods, segs, want):
     share one, the segment itself where they do not."""
     where = {}
     for name in mods:
-        stack = []
+        stack, virtual = [], False
         for line in read(os.path.join(src, name)).splitlines():
+            # A virtual block names memory that is already there and lays
+            # nothing down, which is what MASM's SEGMENT AT did: PCLOCK_IBM
+            # declares the counter 0 interrupt vector that way and reaches it
+            # with DS at zero, having said ASSUME DS:INTSEG.  Such a name is
+            # not a label of this program at all, so there is nothing for an
+            # override to be missing from.
+            code = line.split(";")[0]
+            if re.match(r"\s*virtual\b", code, re.I):
+                virtual = True
+                continue
+            if virtual:
+                virtual = not re.match(r"\s*end\s+virtual\b", code, re.I)
+                continue
             if segs and segment_of(line, stack):
                 continue
             if segs:
