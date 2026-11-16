@@ -1702,6 +1702,40 @@ UTILITIES = {
         # segment, which is the whole of what any of them says.
         START={'cs': 'CODE', 'ds': 'CODE', 'es': None, 'ss': None},
     ),
+    # EGA.CPI, the code page information file DISPLAY.SYS and MODE load the
+    # screen's fonts out of, and the last thing in this release that is built
+    # from assembler alone.  Seven modules in one segment, all of them data:
+    # CPI-HEAD is the file's tag and the pointer to the table of entries,
+    # five modules are a code page apiece -- 437, 850, 860, 863 and 865 --
+    # and COPYRIGH is the notice and the 1AH that ends the file.  Each code
+    # page module holds three fonts, 8x16, 8x14 and 8x8, and reads each of
+    # them out of a file of its own: fifteen more files of nothing but DB,
+    # which are read as they stand and want no converting.
+    #
+    # No module names anything another module reads: a code page's header
+    # points at the next one with the end of its own module, which is where
+    # the next begins.  The release links the seven and runs EXE2BIN over the
+    # result.
+    'EGACPI': dict(
+        DIR='src/DEV/DISPLAY/EGA',
+        MODULES=('CPI-HEAD.ASM', '437-CPI.ASM', '850-CPI.ASM', '860-CPI.ASM',
+                 '863-CPI.ASM', '865-CPI.ASM', 'COPYRIGH.ASM'),
+        ONESEG=True,
+        SHARED=('COPYRIGH.INC',),
+        START={'cs': 'CODE', 'ds': 'CODE', 'es': None, 'ss': None},
+    ),
+    # LCD.CPI, the same thing for the screen of a Convertible: seven modules
+    # in one segment, FONT-R3 for the tag and the table, the same five code
+    # pages and the same notice.  Its code page modules hold their one font
+    # inline rather than reading it out of a file of its own.
+    'LCDCPI': dict(
+        DIR='src/DEV/DISPLAY/LCD',
+        MODULES=('FONT-R3.ASM', '437-CPI.ASM', '850-CPI.ASM', '860-CPI.ASM',
+                 '863-CPI.ASM', '865-CPI.ASM', 'COPYRIGH.ASM'),
+        ONESEG=True,
+        SHARED=('COPYRIGH.INC',),
+        START={'cs': 'CODE', 'ds': 'CODE', 'es': None, 'ss': None},
+    ),
 }
 
 NAME = sys.argv[1].upper() if len(sys.argv) > 1 else ''
@@ -3863,6 +3897,12 @@ def grouped_equ(text):
         # PAGE_ALLOC_LIST], and a pair of ours in front of that would make
         # a memory operand into something fasm cannot read at all.
         if '[' in body:
+            return m.group(0)
+        # A value the release already wrote in brackets of its own wants no
+        # second pair: EGA.CPI's code page modules measure each font with
+        # LEN_D437 EQU ($-D437).
+        if body.startswith('(') and body.endswith(')') \
+                and '(' not in body[1:-1] and ')' not in body[1:-1]:
             return m.group(0)
         if not re.search(r"[-+*/]|\b(?:shl|shr|mod|and|or|xor|not)\b",
                          body, re.I):

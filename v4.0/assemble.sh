@@ -437,3 +437,26 @@ device XMA2EMS XMA2LNK XMA2EMS.SYS
 # language apiece, and KDFEOF is the copyright and the 1AH that ends the
 # file.  The release links the twenty and runs EXE2BIN over the result.
 device KEYBOARD KBDLNK KEYBOARD.SYS
+
+# EGA.CPI and LCD.CPI, the code page information files DISPLAY.SYS and MODE
+# load the screen's fonts out of: seven modules apiece in one segment, all of
+# them data, which EGALNK.ASM and LCDLNK.ASM read in turn.  Each holds five
+# code pages -- 437, 850, 860, 863 and 865 -- with three fonts each for the
+# EGA (8x16, 8x14 and 8x8, read out of fifteen files of nothing but DB) and
+# one for the Convertible's screen.  The release links the seven and runs
+# EXE2BIN over the result.  These are the last things in the release built
+# from assembler alone.
+fonts() {
+    if [ "$FASM" = fasm ]; then
+        INCLUDE="$PWD/src/INC:$PWD/src/DEV/DISPLAY/$1"
+    else
+        win() { printf 'Z:%s' "$(echo "$1" | sed 's|/|\\|g')"; }
+        INCLUDE="$(win "$PWD/src/INC");$(win "$PWD/src/DEV/DISPLAY/$1")"
+    fi
+    export INCLUDE
+    $FASM "src/DEV/DISPLAY/$1/$2.ASM" "bin/$3"
+    unset INCLUDE
+}
+
+fonts EGA EGALNK EGA.CPI
+fonts LCD LCDLNK LCD.CPI

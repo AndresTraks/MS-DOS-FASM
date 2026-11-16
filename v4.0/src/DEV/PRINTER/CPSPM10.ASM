@@ -816,7 +816,7 @@ label CMD_CODES byte   ;;
 	DB	12			;;  output
 ; = and not equ: fasm's equ is text put in where the name is used, so a $
 ; in it would be the address of the use and not of this line.
-CMD_INDX =	(($-CMD_CODES))	;;  number of entries in CMD_CODES
+CMD_INDX =	($-CMD_CODES)		;;  number of entries in CMD_CODES
 					;;
 					;;  Write (CMD_WRT) has exceptional
 					;;  support by LPTn
@@ -835,7 +835,7 @@ label GIO_CODES byte   ;; minor GIO functions supported :
 	DB	MIF_IVK 		;; - invoke
 	DB	MIF_QIV 		;; - query-invoked
 	DB	MIF_QLS 		;; - query-list
-GIO_INDX =	(($-GIO_CODES))	;;  number of entries in GIO_CODES
+GIO_INDX =	($-GIO_CODES)		;;  number of entries in GIO_CODES
 					;;
 					;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					;; Cases supported by LPTn

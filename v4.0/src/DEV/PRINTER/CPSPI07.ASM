@@ -23,7 +23,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 					;;
 include 'CPSPEQU.INC' ;;
-INT2F_LOW	equ	((4*2FH))	;; WGR interrupt 2F vector location	    ;AN000;
+INT2F_LOW	EQU	(4*2FH) 	;; WGR interrupt 2F vector location	    ;AN000;
 INT2F_HI	equ	((4*2FH)+2)	;; WGR					    ;AN000;
 					;;
 .XLIST					;;

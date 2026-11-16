@@ -71,8 +71,8 @@ macro store_vector dword_holder
 ;ษอออออออออออออออออออออออออออออออ  E Q U A T E S  ออออออออออออออออออออออออออออออออออออออออออป
 ;บ											    บ
 
-ADJUSTMENT equ	((ENTPT - move_destination))	;# of bytes the resident code is moved
-adjustment_in_paragraphs  equ  ((ADJUSTMENT / 10H))	;# paragraphs the code moved
+ADJUSTMENT EQU	(ENTPT - move_destination)	;# of bytes the resident code is moved
+adjustment_in_paragraphs  EQU  (ADJUSTMENT / 10H)	;# paragraphs the code moved
 COM_status_bios	EQU	03		  ;BIOS input for com status request	;AN001;
 E_rescode		EQU	1		  ;value of "res_com_retry_type" for E retry requested	 ;AN001;
 false		EQU	0
@@ -259,7 +259,7 @@ PUSHAX:
 	POP	DS			; REGS
 	PUSHF				;SAVE FLAGS TO SIMULATE INT INSTRUCTION
 
-VEC	equ	((VECTOR14 +1))	;OFFSET TO IMMEDIATE FIELD OF PREVIOUSLY SET
+VEC	EQU	(VECTOR14 +1)  ;OFFSET TO IMMEDIATE FIELD OF PREVIOUSLY SET
 ;				FAR JMP INSTRUCTION, FILLED WITH THE
 ;				ORIGINAL CONTENTS OF THE INTERRUPT VECTOR
 	CALL	dword [cs:VEC]         ;CALL PREVIOUS RS232 HANDLER

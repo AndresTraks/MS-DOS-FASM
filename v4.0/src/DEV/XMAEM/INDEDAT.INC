@@ -530,9 +530,9 @@ PAGE
 
 GDT_LOC         EQU     0C100H          ; GDT location relative to CS       @P2C
 
-SIDT_LOC        equ     ((GDT_LOC + GDT_LEN))	; The system IDT is next
+SIDT_LOC        EQU     (GDT_LOC + GDT_LEN)  ; The system IDT is next
 
-DISPATCH_LOC     equ     ((SIDT_LOC + SIDT_LEN))
+DISPATCH_LOC     EQU     (SIDT_LOC + SIDT_LEN)
 
 ; End marker
 

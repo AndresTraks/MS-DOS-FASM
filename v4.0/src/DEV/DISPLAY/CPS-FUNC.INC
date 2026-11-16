@@ -28,7 +28,7 @@ CHAR_HEIGHT     DB      8               ;
                 DB      0               ;
                 DB      0               ;
                 DB      0               ;
-NUM_CHAR_HEIGHT = (($-CHAR_HEIGHT))	;
+NUM_CHAR_HEIGHT = ($-CHAR_HEIGHT)     ;
                                         ;
                                         ;
 GENERIC_IOCTL:                          ; CON OUTPUT

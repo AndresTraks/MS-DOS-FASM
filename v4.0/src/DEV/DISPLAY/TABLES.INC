@@ -67,7 +67,7 @@ DC_FONT DB	00000111b			;
 	DW	EGA_FONT_SIZE         ;
 ; = and not equ: fasm's equ is text put in where the name is used, so a $
 ; in it would be the address of the use and not of this line.
-DC_ENTRY	= (($-DISPLAY_CONFIG))	;
+DC_ENTRY	= ($-DISPLAY_CONFIG)		;
 	DB	"EGA 8   "                      ; EGA (5153)
 	DB	00000001b			;
 	DW	EGA_MODES         ;
@@ -127,7 +127,7 @@ EGA_MODES:			;
 	DB	00110000b	;1D
 	DB	00110000b	;1E
 	DB	00110000b	;1F
-NUM_MODES    = (($-EGA_MODES))	;
+NUM_MODES    = ($-EGA_MODES)	;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 EGAM_MODES:			;
 	DB	11111111b	;0

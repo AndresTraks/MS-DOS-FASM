@@ -1,13 +1,13 @@
-CODE    SEGMENT BYTE PUBLIC 'CODE'
-        ASSUME CS:CODE,DS:CODE
+;CODE    SEGMENT BYTE PUBLIC 'CODE'
+;        ASSUME CS:CODE,DS:CODE
 
-IF1
-        %OUT    EGA.CPI creation file
-        %OUT    .
-        %OUT    CP SRC files:
-        %OUT    .
-        %OUT    .       CODE PAGE:  850
-ENDIF
+;IF1
+;        %OUT    EGA.CPI creation file
+;        %OUT    .
+;        %OUT    CP SRC files:
+;        %OUT    .
+;        %OUT    .       CODE PAGE:  850
+;ENDIF
 
 EGA850: DW     LEN_850                  ; SIZE OF ENTRY HEADER
         DW     POST_EGA850,0            ; POINTER TO NEXT HEADER
@@ -15,8 +15,10 @@ EGA850: DW     LEN_850                  ; SIZE OF ENTRY HEADER
         DB     "EGA     "               ; DEVICE SUBTYPE ID
         DW     850                      ; CODE PAGE ID
         DW     3 DUP(0)                 ; RESERVED
-        DW     OFFSET DATA850,0         ; POINTER TO FONTS
-LEN_850 EQU    ($-EGA850)               ;
+        DW     DATA850,0                ; POINTER TO FONTS
+; = and not equ: fasm's equ is text put in where the name is used, so a $
+; in it would be the address of the use and not of this line.
+LEN_850 =    ($-EGA850)               ;
                                         ;
 DATA850:DW     1                        ; CART/NON-CART
         DW     3                        ; # OF FONTS
@@ -26,24 +28,24 @@ D850:                                   ;
         DB     0,0                      ; ASPECT RATIO (UNUSED)
         DW     256                      ; NUMBER OF CHARACTERS
                                         ;
-        INCLUDE 850-8X16.ASM            ;
+        include '850-8X16.ASM'          ;
                                         ;
         DB     14,8                     ; CHARACTER BOX SIZE
         DB     0,0                      ; ASPECT RATIO (UNUSED)
         DW     256                      ; NUMBER OF CHARACTERS
                                         ;
-        INCLUDE 850-8X14.ASM            ;
+        include '850-8X14.ASM'          ;
                                         ;
         DB     8,8                      ; CHARACTER BOX SIZE
         DB     0,0                      ; ASPECT RATIO (UNUSED)
         DW     256                      ; NUMBER OF CHARACTERS
                                         ;
-        INCLUDE 850-8X8.ASM             ;
+        include '850-8X8.ASM'           ;
                                         ;
-LEN_D850        EQU ($-D850)            ;
+LEN_D850        = ($-D850)            ;
                                         ;
-POST_EGA850     EQU     $               ;
+POST_EGA850     =     $               ;
                                         ;
-CODE    ENDS                            ;
-        END                             ;
+;CODE    ENDS                            ;
+;        END                             ;
 

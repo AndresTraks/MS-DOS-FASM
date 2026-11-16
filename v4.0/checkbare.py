@@ -213,15 +213,17 @@ def headers(names):
 def utilities():
     """The programs assemble.sh builds, and the source it hands fasm.
 
-    A utility is under src/CMD and a driver under src/DEV, and the shell
-    function that builds one says which: they are the same kind of thing
-    here, one program with names of its own, so what comes back is the
-    directory under src rather than the bare name.
+    A utility is under src/CMD, a driver under src/DEV and a code page
+    file under src/DEV/DISPLAY, and the shell function that builds one says
+    which: they are the same kind of thing here, one program with names of
+    its own, so what comes back is the directory under src rather than the
+    bare name.
     """
     text = open(os.path.join(HERE, "assemble.sh")).read()
-    return [("%s/%s" % ("CMD" if kind == "utility" else "DEV", name), source)
+    WHERE = {"utility": "CMD", "device": "DEV", "fonts": "DEV/DISPLAY"}
+    return [("%s/%s" % (WHERE[kind], name), source)
             for kind, name, source
-            in re.findall(r"(?m)^(utility|device)\s+(\S+)\s+(\S+)\s",
+            in re.findall(r"(?m)^(utility|device|fonts)\s+(\S+)\s+(\S+)\s",
                           text)]
 
 

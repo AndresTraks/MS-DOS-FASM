@@ -350,15 +350,15 @@ BUF     equ     cs:BX	;
 ;       General  Constants
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-INT_2F_LOW equ  ((4*2FH))	; INTERRUPT 2FH CON/KEYB COMMUNICATION
+INT_2F_LOW EQU  (4*2FH)                 ; INTERRUPT 2FH CON/KEYB COMMUNICATION
 INT_2F_HI equ    ((4*2FH)+2)	;
-INT_43_LOW equ  ((4*43H))	; INTERRUPT 43H 0-255 CHARACTER VECTOR
+INT_43_LOW EQU  (4*43H)                 ; INTERRUPT 43H 0-255 CHARACTER VECTOR
 INT_43_HI equ    ((4*43H)+2)	;
-INT_44_LOW equ  ((4*44H))	; INTERRUPT 44H 0-255 CHARACTER VECTOR
+INT_44_LOW EQU  (4*44H)                 ; INTERRUPT 44H 0-255 CHARACTER VECTOR
 INT_44_HI equ    ((4*44H)+2)	;
-INT_1F_LOW equ  ((4*1FH))	; INTERRUPT 1FH EXTENDED CHARACTER SUPPORT
+INT_1F_LOW EQU  (4*1FH)                 ; INTERRUPT 1FH EXTENDED CHARACTER SUPPORT
 INT_1F_HI equ    ((4*1FH)+2)	;
-INT_10_LOW equ  ((4*10H))	; INTERRUPT 10H fix FOR PALACE
+INT_10_LOW EQU  (4*10H)                 ; INTERRUPT 10H fix FOR PALACE
 INT_10_HI equ    ((4*10H)+2)	;
 GET_MODE      EQU    0FH                ; WGR                                  ;AN000;
 ON            EQU    1                  ; WGR                                  ;AN000;

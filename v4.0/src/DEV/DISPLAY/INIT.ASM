@@ -289,7 +289,7 @@ INIT_7: MOV	AX,[RESIDENT_ENDS] ; GET SEGMENT OF RESIDENT END
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 DEVICE_NAMES	DB	"CON     "      ; ONLY ONE VALID NAME FOR DEVICE...
-L_DEVICE_NAMES	= (($-DEVICE_NAMES))	;
+L_DEVICE_NAMES	= ($-DEVICE_NAMES)	;
 N_DEVICE_NAMES	= (($-DEVICE_NAMES)/L_DEVICE_NAMES)
 					;
 HANDLE_DEVICE_NAME:       ; [ TABLE 3 ]
@@ -335,7 +335,7 @@ H_DN_0: POP	SI			;
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ID_NAMES	DB	"EGA     "      ;
-L_ID_NAMES	= (($-ID_NAMES))	;
+L_ID_NAMES	= ($-ID_NAMES)	;
 		DB	"EGA 8   "      ; INTERNAL USE ONLY
 		DB	"EGA 14  "      ; INTERNAL USE ONLY
 		DB	"EGA 14M "      ; INTERNAL USE ONLY

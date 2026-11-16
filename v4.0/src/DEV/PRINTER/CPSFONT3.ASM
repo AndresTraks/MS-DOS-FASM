@@ -114,7 +114,7 @@ FDLEN_LOB DB	00H			;; FONT DATA LENGTH
 FDLEN_HIB DB	00H			;;
 ; = and not equ: fasm's equ is text put in where the name is used, so a $
 ; in it would be the address of the use and not of this line.
-PRE_FONT_ND	= (($-MOD_WORD))	;; used to update target for font data
+PRE_FONT_ND	= ($-MOD_WORD)	;; used to update target for font data
 					;; to follow. -- for NON-DISPLAY
 DISP_ROWS DB	00H			;; DISPLAY's parameters :
 DISP_COLS DB	00H			;; BOX SIZE
@@ -123,20 +123,20 @@ DISP_Y	  DB	00H			;;
 label COUNT_WORD word     ;; NO. OF DISPLAY CHARACTERS
 COUNT_LOB DB	00H			;;
 COUNT_HIB DB	00H			;;
-PRE_FONT_D	= (($-MOD_WORD))	;; used to update target for font data
+PRE_FONT_D	= ($-MOD_WORD)	;; used to update target for font data
 					;; to follow. -- for DISPLAY
 					;;
 label PTR_SEL_WORD word  ;;
 PTR_SELOB DB	00H			;;
 PTR_SEHIB DB	00H			;;
-PRE_FONT_P0	= (($-PTR_SELOB+PRE_FONT_ND))	;; to update target for font data
+PRE_FONT_P0	= ($-PTR_SELOB+PRE_FONT_ND) ;; to update target for font data
 					;; to follow -- for PRINTER with
 					;; selection type = 0.
 					;;
 label PTR_LEN_WORD word  ;;
 PTR_LNLOB DB	00H			;;
 PTR_LNHIB DB	00H			;;
-PRE_FONT_P	= (($-PTR_SELOB+PRE_FONT_ND))	;; to update target for font data
+PRE_FONT_P	= ($-PTR_SELOB+PRE_FONT_ND) ;; to update target for font data
 					;; to follow -- for PRINTER with
 					;; selection type <> 0.
 					;;

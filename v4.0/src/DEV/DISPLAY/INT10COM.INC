@@ -111,7 +111,7 @@ label FONT_SIZE byte  ; RESERVE 32 MODE SETTINGS
 		rb      32   ; REFER TO TABLES.INC FOR DETAILS
 ; = and not equ: fasm's equ is text put in where the name is used, so a $
 ; in it would be the address of the use and not of this line.
-NUM_FONT_SIZES	= (($-FONT_SIZE))	;
+NUM_FONT_SIZES	= ($-FONT_SIZE)	;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ;	INTERRUPT 10H SUPPORT CODE
@@ -416,7 +416,7 @@ label CHAR_H word   ;
 	DW	?			; CHARACTER HEIGHT
 	DB	?			; DISPLAY COMBINATION (ACTIVE)
 	DB	?			; DISPLAY COMBINATION (ALTERNATE)
-L_RET_INFO	= (($-RETURN_INFO))	;
+L_RET_INFO	= ($-RETURN_INFO)	;
 	rb      (40h-L_RET_INFO)        ; REMAINING DATA....
 					;
 					;
