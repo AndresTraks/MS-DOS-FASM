@@ -227,10 +227,10 @@ NUM_NLS_FLAGS       EQU   2            ;; '+1' below is the EXT_KB_FLAG
 NUM_FLAGS           equ   (NUM_BIOS_FLAGS+NUM_NLS_FLAGS+1)
                                        ;;
                                        ;;
-EITHER_SHIFT        EQU   80H          ;; EXT_KB_FLAG : our own shift state
-EITHER_CTL          EQU   40H          ;;  flags
-EITHER_ALT          EQU   20H          ;;
-SCAN_MATCH          EQU   08H          ;; set if scan code found in XLATT
+EITHER_SHIFT        =   80H          ;; EXT_KB_FLAG : our own shift state
+EITHER_CTL          =   40H          ;;  flags
+EITHER_ALT          =   20H          ;;
+SCAN_MATCH          =   08H          ;; set if scan code found in XLATT
                                        ;; or SET_FLAG searches
                                        ;;
                                        ;;

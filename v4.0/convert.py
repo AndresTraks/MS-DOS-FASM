@@ -1691,6 +1691,13 @@ UTILITIES = {
         # the state logic and the two code page tables, three names a
         # language, which KDFNOW takes with an EXTRN apiece.
         LOCALS='all',
+        # The flag masks KEYBMAC's FIND_FLAG is handed by name and compares
+        # by name, to say which of the four flag bytes each belongs to.  The
+        # other nine it asks after are in INC/POSTEQU.INC, which says there
+        # why they are written with = as well.
+        NUMERIC=('SCAN_MATCH', 'EITHER_SHIFT', 'EITHER_CTL', 'EITHER_ALT',
+                 'ACUTE', 'GRAVE', 'DIARESIS', 'CIRCUMFLEX', 'CEDILLA',
+                 'TILDE'),
         # Every module says ASSUME CS:CODE,DS:CODE at the head of the
         # segment, which is the whole of what any of them says.
         START={'cs': 'CODE', 'ds': 'CODE', 'es': None, 'ss': None},
@@ -3888,7 +3895,13 @@ def dollar_equ(text):
                   r"([^;'\"\n]*\$[^;'\"\n]*)", one, text)
 
 
-FORWARD = U.get('FORWARD', ())
+# And the ones a macro compares by name, which must not be an EQU either:
+# fasm substitutes an EQU on a macro's call line before the macro sees it,
+# so a name handed to a macro that asks IFIDN what it is would arrive as its
+# own number and match nothing.  KEYBOARD's FIND_FLAG is handed a flag mask
+# by name and asks which of the four flag bytes it belongs to, and every
+# IFF and ANDF in the twenty layouts goes through it.
+FORWARD = tuple(U.get('FORWARD', ())) + tuple(U.get('NUMERIC', ()))
 
 
 def forwards(text):
@@ -3899,6 +3912,12 @@ def forwards(text):
     nothing at all.  The = is a number fasm resolves wherever it stands, so
     the ones the table names become that: NLSFUNC declares PAD_CHAR after
     the eleven headers it reads, and MSG2NLS.INC lays three of them down.
+
+    NUMERIC names go the same way for the other reason: fasm substitutes an
+    EQU on a macro's call line before the macro sees it, so a name handed to
+    a macro that asks what it is -- MASM's IFIDN, fasm's MATCH -- arrives as
+    its own number and matches nothing.  An = is not substituted, and the
+    name arrives as the name.
     """
     if not FORWARD:
         return text

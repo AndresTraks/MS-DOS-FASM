@@ -20,12 +20,12 @@
 ;; Dead key flags
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				       ;;
-ACUTE		    EQU   80H	       ;; NLS_FLAG_1
-GRAVE		    EQU   40H	       ;;
-DIARESIS	    EQU   20H	       ;;
-CIRCUMFLEX	    EQU   10H	       ;;
-CEDILLA 	    EQU   08H	       ;;
-TILDE		    EQU   04H	       ;;
+ACUTE		    =   80H	       ;; NLS_FLAG_1
+GRAVE		    =   40H	       ;;
+DIARESIS	    =   20H	       ;;
+CIRCUMFLEX	    =   10H	       ;;
+CEDILLA 	    =   08H	       ;;
+TILDE		    =   04H	       ;;
 				       ;; NLS_FLAG_2 : nothing defined yet
 				       ;;
 				       ;;
