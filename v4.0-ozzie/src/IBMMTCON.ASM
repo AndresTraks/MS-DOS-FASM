@@ -197,13 +197,13 @@ if SEGSEL = S_CODE
 ASSUME	cs:Code,ds:NOTHING,es:NOTHING,ss:NOTHING
 
 IF	INBIOS
-CONDEV	dd	AUXDEV
+CONDEV	dd	AUXDEV$FAR
 ELSE
 CONDEV	dw	0FFFFh,0FFFFh
 end if	;INBIOS
 ;*** should ioctl bit be set for gen ioctl too?
 	dw	1100000000010011b	; console in and out
-	dw	Strategy
+	dw	Strategy$CON
 	dw	Entry_
 	db	"CON     "
 
@@ -293,7 +293,7 @@ Entry_:	RETF
 
 
 ;------------------------------------------------------------------------
-;	2.0 Strategy Routine, main entry point
+;	2.0 Strategy$CON Routine, main entry point
 ;
 ; entry
 ;	ES:BX	points to Request packet
@@ -301,7 +301,7 @@ Entry_:	RETF
 
 StratP:
 
-Strategy:
+Strategy$CON:
 IF	INBIOS
 
 	push	si
@@ -604,7 +604,7 @@ ChrIn:
 ;	DEBUG	10h,1,< con.do.16 >,<>
 	mov	ah,0			; no, do a read call
 	pushf
-	call	0:DoInt16
+	call	BiosSeg:DoInt16
 ;;	int	16h
 ;	DEBUG	10h,1,< con.got.$x >,<ax>
 	or	ax,ax			; check for non-key after BREAK
@@ -1364,11 +1364,9 @@ end if
 	jmp	StatusComplete
 
 
-IF	INBIOS
 end if
 
 if SEGSEL = S_BIOSINIT
-end if
 
 Intro	db	"--- Installing MTCON Device Driver V"
 	db	CVERS+"0",".",CREV/10+"0"

@@ -1,9 +1,8 @@
 ; IBMMTCON, the Multitasking DOS console driver, as its object file has it.
 ;
 ; As with src/BIOLNK.ASM, this assembles the one module alone so that what
-; FASM lays down can be held against IBMMTCON.OBJ: there is no bootable
-; IBMBIO.COM to build, two of the five objects BIOSOBJ.MAK links having been
-; shipped without their sources.
+; FASM lays down can be held against IBMMTCON.OBJ.  The bootable IBMBIO.COM
+; is src/BIOSLNK.ASM's, which reads all three modules together.
 ;
 ; Two segments in the group BiosSeg, Code and BiosInit, which the object
 ; declares at 2959 and 47 bytes.  Three more are SEGMENT AT and lay nothing
@@ -33,9 +32,16 @@ StatusError		= 0
 StatusDevReady		= 0
 
 ; A FAR external is a segment and an offset, and an equ of a seg:off pair is
-; substituted as it stands, so a CALL or JMP of one comes out five bytes as
-; MASM assembled it.
-AUXDEV			equ 0:0	; the serial device header, in IBMBIO
+; substituted as it stands, so a DD of one comes out a far pointer as MASM
+; laid it down.  The name carries the spelling of its EXTRN rather than its
+; own, because the link that builds the whole BIOS reads IBMBIO too and there
+; the name is IBMBIO's label -- see src/BIOSLNK.ASM.
+AUXDEV$FAR		equ 0:0	; the serial device header, in IBMBIO
+
+; The group's own base, which MASM wrote on the far call of DoInt16 and left
+; to LINK.  Assembled by itself there is nothing for it to be but zero, and
+; the object's fixup covers the bytes it reaches.
+BiosSeg			= 0
 
 S_CODE		= 1
 S_BIOSINIT	= 2

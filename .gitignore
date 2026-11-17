@@ -28,3 +28,6 @@ v4.0/bin/
 MSBIO.BIN
 IO.SYS
 MSLOAD.COM
+SYSINIT.BIN
+v4.0-ozzie/bin/IBMBIO.COM
+ozzie.img

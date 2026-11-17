@@ -4,19 +4,24 @@ source.
 
     python3 checkobj.py
 
-This is the only check there is in this tree, and it has to be, because
-nothing here can be run.  bin/DISK2/BIOS holds three modules of assembler and
-five object files, and BIOSOBJ.MAK makes IBMBIO.COM out of all five --
+bin/DISK2/BIOS holds three modules of assembler and five object files, and
+BIOSOBJ.MAK makes IBMBIO.COM out of all five --
 
 	link ibmbio ibmmtcon ibmdsk sysini sysimes,ibmbio,ibmbio/map;
 	exe2bin ibmbio ibmbio.com
 
--- but the sources of SYSINI.OBJ and SYSIMES.OBJ were never published, and
-sysini.asm would have wanted dossym.inc, devsym.inc and syscalls.inc, which
-are not there either.  So there is no bootable binary to make and no machine
-to boot it on.  What there is, for each module that does have a source, is the
-object Microsoft shipped beside it: the same assembler text, assembled in
-1984.  Held against that, byte by byte, a conversion has nowhere to hide.
+-- and the sources of SYSINI.OBJ and SYSIMES.OBJ were never published.  Beside
+each module that does have one, though, is the object Microsoft shipped: the
+same assembler text, assembled in 1984.  Held against that, byte by byte, a
+conversion has nowhere to hide, which is what this does.
+
+It was for a while the only check this tree had.  It is not any more:
+sysinit.py resolves the two objects nobody has the source of, src/BIOSLNK.ASM
+lays all five down where LINK put them, and tests/boot.sh starts a machine
+from the result.  The two checks answer different questions -- this one asks
+whether a module is what MASM made of it, the boot asks whether the whole
+thing runs -- and this one is the sharper of them by far: it reads every
+byte, where a boot only shows that nothing it happened to need was broken.
 
 The bytes a FIXUPP record covers are compared differently, because MASM left
 them zero: they are the bytes LINK was to fill in -- the externals, and every
@@ -88,26 +93,34 @@ def after_index(body, p):
     return p + (2 if body[p] & 0x80 else 1)
 
 
-def iterated(body, p):
+def iterated(body, p, runs=None, at=0):
     """One iterated data block of a LIDATA record, flattened, and where the
     next one starts.
 
     A block is a repeat count, a count of the blocks inside it, and then
     either -- the inner count being zero -- a byte count and that many bytes,
     or that many blocks of the same shape again.  The whole of it is laid
-    down as many times as the repeat count says."""
+    down as many times as the repeat count says.
+
+    RUNS, if given, collects (where the bytes are in the record, where they
+    land, how many) for each run of literal bytes, and AT is where this
+    block's output begins.  A fixup in a LIDATA record is at an offset into
+    the record and not into what the record lays down, so that is the only
+    way to know which byte it means -- see records()."""
     count = int.from_bytes(body[p:p+2], "little")
     blocks = int.from_bytes(body[p+2:p+4], "little")
     p += 4
     if blocks == 0:
         n = body[p]
         p += 1
+        if runs is not None:
+            runs.append((p, at, n))
         out = bytes(body[p:p+n])
         p += n
     else:
         out = b""
         for _ in range(blocks):
-            part, p = iterated(body, p)
+            part, p = iterated(body, p, runs, at + len(out))
             out += part
     return out * count, p
 
@@ -121,7 +134,7 @@ def records(path):
     d = open(path, "rb").read()
     i = 0
     names, segs, chunks, wild, fixups = [], [], [], set(), []
-    cur = None
+    cur, curmap = None, None
     while i < len(d):
         t = d[i]
         n = int.from_bytes(d[i+1:i+3], "little")
@@ -144,6 +157,7 @@ def records(path):
                          "frame": frame})
         elif t in (0xa0, 0xa1):                         # LEDATA
             cur = (body[0], int.from_bytes(body[1:3], "little"), body[3:])
+            curmap = None                               # the offsets are plain
             chunks.append(cur)
         elif t in (0xa2, 0xa3):                         # LIDATA
             # Repeated data, which MASM wrote for a structure instance:
@@ -151,10 +165,19 @@ def records(path):
             # four per-drive tables -- and the defaults in the declaration
             # are laid down field by field, each field one block.  Read as
             # nothing at all the first 166 bytes of its CODE went uncompared.
-            data, p = b"", 3
+            data, p, runs = b"", 3, []
             while p < len(body):
-                part, p = iterated(body, p)
+                part, p = iterated(body, p, runs, len(data))
                 data += part
+            # Where a fixup in this record would land.  Its offset counts the
+            # bytes of the record, headers and all, not the bytes the record
+            # lays down, so the two have to be matched up run by run.  None of
+            # the three modules fixes up iterated data; SYSINI does, and
+            # sysinit.py reads these same records.
+            curmap = {}
+            for raw, laid, length in runs:
+                for k in range(length):
+                    curmap[raw - 3 + k] = laid + k
             cur = (body[0], int.from_bytes(body[1:3], "little"), data)
             chunks.append(cur)
         elif t in (0x9c, 0x9d):                         # FIXUPP
@@ -181,11 +204,12 @@ def records(path):
                     width = {0: 1, 1: 2, 2: 2, 3: 4, 4: 1,
                              5: 2, 9: 2, 11: 4, 13: 2}.get(loc, 2)
                     if cur:
+                        at = off if curmap is None else curmap[off]
                         for k in range(width):
-                            wild.add((cur[0], cur[1] + off + k))
+                            wild.add((cur[0], cur[1] + at + k))
                         # What LINK was told to put there, which is more than
                         # enough to work out what this build should have.
-                        fixups.append((cur[0], cur[1] + off, loc, relative,
+                        fixups.append((cur[0], cur[1] + at, loc, relative,
                                        fixdat & 3, index, disp))
                 else:                                   # a thread
                     method = (body[p] >> 2) & 7

@@ -43,9 +43,15 @@ What this tree asks for on top of that:
     .RADIX 0 -- an error on purpose.  FASM says that with err.
   * A segment written inside another, which MASM allowed and IBMDSK does
     with BiosInit: the outer one is suspended and resumed rather than ended.
+    IBMMTCON goes one worse and moves from Code to BiosInit inside an IF,
+    where the two conditionals would interleave; segment_guards() settles
+    that one from the switches the module sets itself.
   * A macro whose body reaches the module's own data, which MASM expanded at
     the call site and under the ASSUME in force there.  The register is
     handed in as an argument, because the decision was the caller's.
+  * The segment MASM wrote on a far pointer, which is the group's base: a DD
+    of a label, or a CALL or JMP of one declared LABEL FAR.  See
+    farpointer(); the link file says what the base came to.
 
 There is no DOSSYM here: each module declares the equates it needs itself.
 
@@ -58,9 +64,12 @@ import sys
 SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
 # One entry per module, because MASM assembled each of them on its own --
 # BIOSOBJ.MAK says "masm ibmbio;" and so on -- and each shipped with the
-# object that came out.  So each is converted, assembled and held against its
-# own object by itself, and the externals between them are placeholders in the
-# link file.
+# object that came out.  So each is converted and held against its own object
+# by itself, with the externals between them standing in as placeholders in
+# its link file.  src/BIOSLNK.ASM then reads all three together to build the
+# bootable IBMBIO.COM, where nothing is external any more -- which is what
+# the renames below are for: two modules private to themselves could both
+# call a routine Strategy, and in one name space they cannot.
 #
 # Per module: the files the link file reads, the segments to wrap, the group
 # they are in, the names FASM will not take as labels, and the macro calls
@@ -80,7 +89,12 @@ PROGRAMS = {
         "segments": ("CODE", "BIOSINIT"),
         "group": "BiosSeg",
         "reserved": (),
-        "renames": {},
+        # EXTRN FloppyTimer:FAR, which IBMDSK defines and this module calls.
+        # MASM told the two apart by which file it was reading; FASM has one
+        # name space for the link that reads both, and there the name belongs
+        # to IBMDSK's label.  So the call site gets the spelling the EXTRN
+        # has, and the link file says which segment and offset it comes to.
+        "renames": {"IBMBIO.ASM": {"FloppyTimer": "FloppyTimer$FAR"}},
         "macros": {},
         # DEBUG lays nothing down with DEBUGFLG undefined.
         "silent": ("DEBUG",),
@@ -103,7 +117,22 @@ PROGRAMS = {
         # for a control break; both are FASM's own words -- entry names an
         # MZ file's entry point and break leaves a while block.
         "reserved": ("Entry", "Break"),
-        "renames": {},
+        # EXTRN AUXDEV:FAR, which IBMBIO defines as a device header and this
+        # module's own header points at.  As with IBMBIO's FloppyTimer, the
+        # link that reads both modules has one name space and the name
+        # belongs to IBMBIO's label, so the reference gets the spelling the
+        # EXTRN has and the link file says what it comes to.  IBMDSK's
+        # Com1Dev needs no such thing: MASM was blind to the case of a name
+        # and IBMBIO spells that one COM1DEV, so FASM sees two names already.
+        #
+        # Strategy is this module's own, and IBMBIO has one of that name too
+        # -- the console driver here is the one IBMBIO leaves out when
+        # CONSFLAG is off, so the two were written to look alike.  Each is
+        # private to its own module and MASM never had to tell them apart;
+        # the link that reads both does, so this one is marked for the module
+        # it belongs to.
+        "renames": {"IBMMTCON.ASM": {"AUXDEV": "AUXDEV$FAR",
+                                     "Strategy": "Strategy$CON"}},
         "macros": {},
         "silent": ("DEBUG",),
         "regions": (),
@@ -126,7 +155,23 @@ PROGRAMS = {
         "segments": ("CODE", "BIOSINIT"),
         "group": "BiosSeg",
         "reserved": (),
-        "renames": {},
+        # Eleven labels in Disk_Init, every one of them IBMBIO's as well:
+        # this module's initialisation sets the drive tables up and IBMBIO's
+        # does the same work for the boot, down to the names the two walk
+        # their way through.  Private to a module apiece, and MASM assembled
+        # the two apart; the link that reads both wants them told apart, so
+        # these carry the module they belong to.
+        "renames": {"IBMDSK.ASM": {"NOTSNGL": "NOTSNGL$DSK",
+                                   "ENDDRV": "ENDDRV$DSK",
+                                   "NOTOK": "NOTOK$DSK",
+                                   "SETIT": "SETIT$DSK",
+                                   "ITSOK": "ITSOK$DSK",
+                                   "GETBOOT": "GETBOOT$DSK",
+                                   "SETHRD": "SETHRD$DSK",
+                                   "SET1": "SET1$DSK",
+                                   "SETRET": "SETRET$DSK",
+                                   "SET2": "SET2$DSK",
+                                   "SET3": "SET3$DSK"}},
         "macros": {},
         "silent": ("DEBUG",),
         # This is the module that calls DBBEG, and it calls it three times.
@@ -321,7 +366,7 @@ def silenced(text):
                 continue
             out.append((";" if state == "skip" else "") + line)
             continue
-        m = re.match(r"(?i)^[ \t]*(\w+:[ \t]*)?(\w+)\b", code)
+        m = re.match(r"(?i)^[ \t]*(" + N + r":[ \t]*)?(\w+)\b", code)
         name = m.group(2).upper() if m else None
         opens = name in {s.upper() for s in REGIONS}
         if name in {s.upper() for s in SILENT} or opens:
@@ -520,8 +565,10 @@ def one_struc(text):
 # A label may sit in front of the instruction, as in "FDPB:   MOV DL,DRIVE",
 # and need not leave a space after the colon: RECOVER writes "recfil0:mov
 # lastfat,1", which went unrecognised and so unbracketed while the same
-# variable was bracketed everywhere else.
-MNEMONIC = re.compile(r"^((?:\w+:\s*|\s+))([A-Za-z][\w]*)(\s+)(\S.*)$")
+# variable was bracketed everywhere else.  The name is the whole of what MASM
+# allows in one and not just \w: a label with a dollar in it -- TIM$READ, or
+# one of the names the table renames -- went the same unrecognised way.
+MNEMONIC = re.compile(r"^((?:" + N + r":\s*|\s+))([A-Za-z][\w]*)(\s+)(\S.*)$")
 NOTCODE = {"DB", "DW", "DD", "LABEL", "INCLUDE", "IF", "ELSE", "END", "STRUC",
            "VIRTUAL", "ORG", "MACRO", "ASSUME", "EQU", "REPT", "IRP", "ENDM",
            "REPEAT", "DISPLAY", "ERR", "WHILE",
@@ -950,14 +997,8 @@ def bracket(body, labels):
             size = SIZES.get(b.group(1).upper(), "word") if b else "word"
             ops[i] = op.replace("[", size + " [", 1)
 
-    # A CALL or JMP of a label declared LABEL FAR.  The segment is the
-    # group's base, which only LINK knew, so it is a zero here -- and every
-    # one of these is a fixup in the object, so those bytes are bytes the
-    # comparison ignores in any case.
-    if m.group(2).upper() in ("JMP", "CALL"):
-        for i, op in enumerate(ops):
-            if op.strip().upper() in FARLABEL:
-                ops[i] = op.replace(op.strip(), "0:" + op.strip(), 1)
+    # A CALL or JMP of a label declared LABEL FAR needs the segment written
+    # on it, which farpointer() does once the rest of the line is settled.
 
     # PUSH and POP of memory: MASM took a word, FASM wants it said.
     if m.group(2).upper() in ("PUSH", "POP"):
@@ -1025,7 +1066,7 @@ def bracket(body, labels):
 # reference, so it is held back while the rest of the line is rewritten.
 # Leading whitespace is required, which is what tells an instruction from a
 # definition: "STACK LABEL BYTE" starts in the first column.
-MNEMONIC_POS = re.compile(r"^(\s+(?:\w+:\s*)?)([A-Za-z]\w*)(?=\s)")
+MNEMONIC_POS = re.compile(r"^(\s+(?:" + N + r":\s*)?)([A-Za-z]\w*)(?=\s)")
 
 
 def line(code):
@@ -1143,6 +1184,137 @@ def line(code):
     return out.replace("\0", hold, 1) if hold else out
 
 
+def switches(text):
+    """The module's own switches, as numbers: NAME EQU TRUE and the like.
+
+    Only what one of these files sets at the top of itself and tests with an
+    IF -- a number, TRUE, FALSE, NOT of one of those, or another name that
+    comes to one of them.  Anything else is left unresolved, and
+    segment_guards() stops rather than guess at it."""
+    said = {}
+    for raw in text.splitlines():
+        code = raw.split(";")[0]
+        m = re.match(r"(?i)^\s*(" + N + r")\s*(?:=|\bEQU\b)\s*(.+?)\s*$", code)
+        if m:
+            said.setdefault(m.group(1).upper(), m.group(2))
+
+    def value(word, seen=()):
+        word = word.strip().upper()
+        if re.fullmatch(r"-?\d+", word):
+            return int(word)
+        if re.fullmatch(r"[0-9A-F]+H", word):
+            return int(word[:-1], 16)
+        m = re.fullmatch(r"NOT\s+(.+)", word)
+        if m:
+            inner = value(m.group(1), seen)
+            return None if inner is None else ~inner
+        if word in seen or word not in said:
+            return None
+        return value(said[word], seen + (word,))
+
+    return {name: value(said[name]) for name in said}
+
+
+def segment_guards(text):
+    """The lines of a conditional that moves from one segment to another.
+
+    IBMMTCON ends its Code segment and opens BiosInit inside an IF:
+
+	IF	INBIOS
+	Code	ends
+	BiosInit	segment	para public 'CODE'
+	ENDIF
+
+    and a conditional cannot straddle the one the walk is wrapped in.  Written
+    through as they stand the two interleave: MASM's ENDIF closes the
+    conditional the SEGMENT opened, the data after it falls inside the segment
+    that was meant to have ended, and BiosInit comes out with nothing in it.
+    It came out that way, and the single module's build hid it -- BiosInit
+    holds one message, the message is the last thing in the file, and
+    concatenated after Code's bytes it landed exactly where BIOSINIT's bytes
+    belonged.  Only the link that lays all three modules out showed it, Code
+    being 47 bytes longer than its object with IBMDSK's bytes after it.
+
+    So a conditional that holds a SEGMENT or an ENDS of a walked segment is
+    resolved here instead of being handed to FASM, from the switches the
+    module sets itself, and only the branch MASM took is written.  Returns
+    the lines to leave out.  A segment that opens and closes inside the one
+    conditional is not one of these: IBMBIO declares RomData that way, the
+    pair nests, and it is left alone."""
+    drop, stack = set(), []
+    said = switches(text)
+    lines = text.splitlines()
+    for i, raw in enumerate(lines):
+        code = raw.split(";")[0]
+        if OPENSIF.match(code):
+            m = re.match(r"(?i)^\s*IF\s+(" + N + r")\s*$", code)
+            stack.append({"if": i, "name": m.group(1) if m else None,
+                          "else": None, "holds": False})
+            continue
+        if ELSESIF.match(raw) and stack:
+            stack[-1]["else"] = i
+            continue
+        if CLOSESIF.match(code) and stack:
+            top = stack.pop()
+            if not top["holds"]:
+                continue
+            taken = said.get((top["name"] or "").upper())
+            if taken is None:
+                sys.exit("line %d: %s moves from one segment to another and "
+                         "nothing here says whether it was taken"
+                         % (top["if"] + 1, lines[top["if"]].strip()))
+            drop.add(top["if"])
+            drop.add(i)
+            if top["else"] is None:
+                dead = range(i, i) if taken else range(top["if"] + 1, i)
+            else:
+                drop.add(top["else"])
+                dead = (range(top["else"] + 1, i) if taken
+                        else range(top["if"] + 1, top["else"]))
+            drop.update(dead)
+            continue
+        m = re.match(r"(?i)^\s*(\w+)\s+(SEGMENT|ENDS)\b", code)
+        if m and m.group(1).upper() in SEGMENTS and stack:
+            stack[-1]["holds"] = True
+    return drop
+
+
+def farpointer(code):
+    """The segment MASM wrote on a far pointer, which is the group's base.
+
+    Two lines in these modules hold a label's offset and the segment it is
+    in, and in both MASM wrote the segment itself and left LINK to fill it:
+
+      * a CALL or JMP of a label declared LABEL FAR, which is a far
+        instruction because the declaration says so, and
+      * a DD of a label, which is how a device header points at the next
+        device in the chain -- IBMDSK's floppy at its fixed disk, its fixed
+        disk at IBMBIO's COM1, IBMMTCON's console at IBMBIO's AUX.
+
+    Both become the group's name and the label, and the link file says what
+    the group's base came to: zero where a module is assembled by itself,
+    those bytes being a fixup the object comparison ignores, and 70h in the
+    link that builds the whole BIOS, where they have to be right.  Left as a
+    bare label the DD came out an offset and a zero, and the device chain
+    led to 0000:011Dh instead of 0070:011Dh.
+
+    This runs after the rest of the line is settled, because line() strips a
+    group qualifier off a label -- an offset counted from the group's base is
+    what a label in the group already is -- and would strip this one too."""
+    if not GROUP:
+        return code
+    m = re.match(r"(?i)^(\s*)(CALL|JMP)(\s+)(" + N + r")(\s*)$", code)
+    if m and m.group(4).upper() in FARLABEL:
+        return "%s%s%s%s:%s%s" % (m.group(1), m.group(2), m.group(3),
+                                  GROUP, m.group(4), m.group(5))
+    m = re.match(r"(?i)^(\s*(?:" + N + r"\s+)?)(DD)(\s+)(" + N + r")(\s*)$",
+                 code)
+    if m and m.group(4).upper() in LABELS:
+        return "%s%s%s%s:%s%s" % (m.group(1), m.group(2), m.group(3),
+                                  GROUP, m.group(4), m.group(5))
+    return code
+
+
 def seeded(text):
     """What the segment registers hold before the module's first line.
 
@@ -1170,7 +1342,12 @@ def convert(text, renames, first=False, assume=""):
     # reference against.  It starts as MASM started a module, on nothing,
     # unless the table says this one is read inside another.
     cover = seeded(assume)
-    for raw in text.splitlines():
+    # A conditional that moves from one segment to another is settled before
+    # the walk sees it, these being its lines.
+    skip = segment_guards(text)
+    for at, raw in enumerate(text.splitlines()):
+        if at in skip:
+            continue
         # Before anything else, so that a renamed macro parameter is renamed
         # in the MACRO line too and not only in the body.
         for was, now in renames.items():
@@ -1276,7 +1453,7 @@ def convert(text, renames, first=False, assume=""):
         # ends "RET 2" to drop the flags word of the frame it was entered on,
         # and left near it returned into the middle of the stack.
         if infar and infar[-1]:
-            raw = re.sub(r"^(\s*(?:\w+:\s*)?)RET\b(\s*(?:\d+\s*)?(?:;.*)?)$",
+            raw = re.sub(r"^(\s*(?:" + N + r":\s*)?)RET\b(\s*(?:\d+\s*)?(?:;.*)?)$",
                          r"\1RETF\2", raw, flags=re.I)
         m = re.match(r"^\s*(\w+)\s+MACRO\s*(.*?)\s*$", raw, re.I)
         if m:
@@ -1381,6 +1558,7 @@ def convert(text, renames, first=False, assume=""):
         body = overrides(body, cover,
                          "seg" if inmacro and inmacro[-1] else None)
         body = line(body)
+        body = farpointer(body)
         out.append(body + sep + comment if sep else body)
     return "\n".join(out) + "\n"
 

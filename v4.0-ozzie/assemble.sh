@@ -13,10 +13,10 @@ else
     exit 1
 fi
 
-# IBMBIO, the BIOS proper.  Not a bootable IBMBIO.COM and it cannot be: two
-# of the five objects BIOSOBJ.MAK links were shipped without their sources.
-# What this is for is to lay down the one module the way MASM did, so that
-# checkobj.py can hold it against IBMBIO.OBJ -- see src/BIOLNK.ASM.
+# Each module alone first, laid down the way MASM did, so that checkobj.py
+# can hold it against the object MASM made of it.
+#
+# IBMBIO, the BIOS proper -- see src/BIOLNK.ASM.
 $FASM src/BIOLNK.ASM bin/IBMBIO.BIN
 
 # IBMMTCON, the console driver: the screen, the keyboard, eight virtual
@@ -27,3 +27,11 @@ $FASM src/MTCLNK.ASM bin/IBMMTCON.BIN
 # apiece, and the Int 13 handler the rest of the system makes its requests
 # through -- see src/DSKLNK.ASM.
 $FASM src/DSKLNK.ASM bin/IBMDSK.BIN
+
+# And the whole BIOS: the three modules laid out where LINK put them, with
+# SYSINITSEG -- the SYSINIT program, whose source was never published --
+# resolved out of SYSINI.OBJ and SYSIMES.OBJ.  This one is bootable, and
+# 12363 bytes is the length of the IBMBIO.COM Microsoft shipped.  See
+# src/BIOSLNK.ASM, and create_image.sh for the disk to start it from.
+python3 -I sysinit.py
+$FASM src/BIOSLNK.ASM bin/IBMBIO.COM

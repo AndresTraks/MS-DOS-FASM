@@ -298,7 +298,7 @@ FixedQueue	DD  0			; List of requests for fixed disk
 ; Device driver headers
 
 label FloppyDevice word
-	DD	FixedDevice		; Next device is hard disk
+	DD	BiosSeg:FixedDevice		; Next device is hard disk
 	DW	100000B			; This is 4.0 driver
 	DW	JustReturn		; Strategy does nothing
 	DW	FloppyRequest		; Interrupt does the work
@@ -419,47 +419,47 @@ Disk_Init:
 	rol	al,1			; rotate around to low order bits
 	rol	al,1
 	AND	AL,11B			;MASK DRIVE BITS
-	JNZ	NOTSNGL		;Zero means single drive system
+	JNZ	NOTSNGL$DSK		;Zero means single drive system
 	INC	[Single]	;REMEMBER THIS
 	inc	al		; make it look like two-drive system
-NOTSNGL:
+NOTSNGL$DSK:
 	inc	al
 	MOV	[NumFloppy],AL		;Remember how many drives
 	MOV	AH,8
 	MOV	DL,80H
 	INT	13H		;Request number of hardfiles attached
-	JC	ENDDRV		;Carry indicates old rom, so no hardfile
+	JC	ENDDRV$DSK		;Carry indicates old rom, so no hardfile
 	MOV	[NumFixed],DL
 	test	dl,dl			; any specified?
-	jz	ENDDRV			; no
+	jz	ENDDRV$DSK			; no
 	cmp	[NumFloppy],2		; too many floppies?
-	jbe	ENDDRV
+	jbe	ENDDRV$DSK
 	mov	[NumFloppy],2		; limit to two floppies max.
-ENDDRV:
+ENDDRV$DSK:
 
 ;*	Initialize the hard disk BPBs
 
 	MOV	DL,80H
 	MOV	DI,DriveC
 	CMP	[NumFixed],0
-	JLE	ITSOK
-	CALL	SETHRD		;SET UP FIRST HARDFILE
+	JLE	ITSOK$DSK
+	CALL	SETHRD$DSK		;SET UP FIRST HARDFILE
 
 	MOV	DL,81H		;SET UP FOR NEXT CALL
 	MOV	DI,DriveD
-	JC	NOTOK
+	JC	NOTOK$DSK
 	CMP	[NumFixed],2
-	JZ	SETIT
-	JMP	SHORT ITSOK
-NOTOK:
+	JZ	SETIT$DSK
+	JMP	SHORT ITSOK$DSK
+NOTOK$DSK:
 	MOV	DI,DriveC
 	DEC	[NumFixed]
 	CMP	[NumFixed],0
-	JZ	ITSOK
-SETIT:	CALL	SETHRD		;SET UP SECOND HARDFILE
-	JNC	ITSOK
+	JZ	ITSOK$DSK
+SETIT$DSK:	CALL	SETHRD$DSK		;SET UP SECOND HARDFILE
+	JNC	ITSOK$DSK
 	DEC	[NumFixed]
-ITSOK:
+ITSOK$DSK:
 	cmp	[NumFixed],0	; any hard disks found?
 	jnz	itsok2		; yes
 	mov	ax,[FixedDevice]  ; no, patch device chain to skip fixed disk
@@ -489,7 +489,7 @@ itsok2:
 ;
 ;	READ A BOOT RECORD INTO Scratch buffer
 ;
-GETBOOT:
+GETBOOT$DSK:
 	MOV	CX,1
 	MOV	AX,0201H
 	push	CS
@@ -497,69 +497,69 @@ GETBOOT:
 	mov	BX,ScratchBuffer
 	xor	DH,DH
 	INT	13H
-	JC	SETRET
+	JC	SETRET$DSK
 	CMP	word [ES:BX+1FEH],0AA55H
-	JNZ	SETRET
+	JNZ	SETRET$DSK
 	RET
 ;
 ;	SETUP VARIABLE SIZED HARDFILE
 ;	ON ENTRY DL=DRIVE NUMBER (80 OR 81)
 ;		DI=PTR TO B.P.B
 ;
-SETHRD: PUSH	DX
+SETHRD$DSK: PUSH	DX
 	MOV	AH,8		;GET DRIVE PARAMETERS
 	INT	13H
 	INC	DH
 	MOV	byte [DI+DriveStruc.BPBnhead],DH
 	POP	DX
-	JC	SETRET
+	JC	SETRET$DSK
 	AND	CL,3FH
 	MOV	byte [DI+DriveStruc.BPBtrksiz],CL
-	CALL	GETBOOT		;GET THE BOOT RECORD
-	JC	SETRET
+	CALL	GETBOOT$DSK		;GET THE BOOT RECORD
+	JC	SETRET$DSK
 	add	BX,1C2H
 	mov	cx,4
-SET1:	CMP	byte [ES:BX],1
-	JZ	SET2
+SET1$DSK:	CMP	byte [ES:BX],1
+	JZ	SET2$DSK
 	ADD	BX,16
-	loop	SET1
-SETRET: STC			;NOT FOUND SO USE DEFAULTS
-;	debug	8,3,<Sethrd err rtn: drive $x stat $x\n>,<dx,ax>
+	loop	SET1$DSK
+SETRET$DSK: STC			;NOT FOUND SO USE DEFAULTS
+;	debug	8,3,<SETHRD$DSK err rtn: drive $x stat $x\n>,<dx,ax>
 	RET
 
-SET2:	MOV	AX,[ES:BX+4]
+SET2$DSK:	MOV	AX,[ES:BX+4]
 	MOV	[DS:DI+DriveStruc.BPBhidsec],AX	;SET HIDDEN SECTOR COUNT
 	MOV	AX,[ES:BX+8]
 	CMP	AX,64			;HAS TO BE AT LEAST 32K
-	JB	SETRET
+	JB	SETRET$DSK
 	MOV	[DS:DI+DriveStruc.BPBnsec],AX	;SAVE LOGICAL SECTOR COUNT
 	MOV	CX,0100H		;SET CLUS SIZE AND SHIFT COUNT
 	MOV	DX,64			;SET NUMBER OF DIR ENTRIES
 	CMP	AX,512
-	JBE	SET3
+	JBE	SET3$DSK
 
 	ADD	CH,CH
 	INC	CL
 	MOV	DX,112
 	CMP	AX,2048
-	JBE	SET3
+	JBE	SET3$DSK
 
 	ADD	CH,CH
 	INC	CL
 	MOV	DX,256
 	CMP	AX,8192
-	JBE	SET3
+	JBE	SET3$DSK
 
 	ADD	CH,CH
 	INC	CL
 	ADD	DX,DX
 	CMP	AX,32680	;NOT 32768! MAX NUMBER OF CLUSTERS=4085
-	JBE	SET3
+	JBE	SET3$DSK
 
 	ADD	CH,CH
 	INC	CL
 	ADD	DX,DX
-SET3:
+SET3$DSK:
 ;
 ;	DX=NUMBER OF DIR ENTRIES, CH=NUMBER OF SECTORS PER CLUSTER
 ;				  CL=LOG BASE 2 OF CH

@@ -580,7 +580,7 @@ Flush:
 ;
 CON$WRIT:
 	JCXZ	EXVEC
-CON$LP: MOV	AL,ES:[DI]	;GET CHAR
+CON$LP: MOV	AL,[ES:DI]	;GET CHAR
 	INC	DI
 	PUSH	CX
 	PUSH	DI
@@ -1132,7 +1132,7 @@ csch1:	POP	AX			; Stack is now clean
 	sub	dx,dx			; (dx) = 0 = tic subfunction
 	mov	ax,SCHEDCOUNT		; 10 milliseconds per tic
 	CALL	dword [CS:DosFunction]		; Do the tick
-	CALL	FloppyTimer		; timer service for floppy disk also
+	CALL	FloppyTimer$FAR		; timer service for floppy disk also
 NoSchedActive:
 	IRET				; All done
 

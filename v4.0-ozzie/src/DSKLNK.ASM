@@ -1,9 +1,9 @@
 ; IBMDSK, the Multitasking DOS disk drivers, as its object file has them.
 ;
 ; As with src/BIOLNK.ASM and src/MTCLNK.ASM, this assembles the one module
-; alone so that what FASM lays down can be held against IBMDSK.OBJ: there is
-; no bootable IBMBIO.COM to build, two of the five objects BIOSOBJ.MAK links
-; having been shipped without their sources.
+; alone so that what FASM lays down can be held against IBMDSK.OBJ.  The
+; bootable IBMBIO.COM is src/BIOSLNK.ASM's, which reads all three modules
+; together.
 ;
 ; Two segments in the group BiosSeg, Code and BiosInit, which the object
 ; declares at 3925 and 361 bytes.  This module writes the second inside the
@@ -37,6 +37,12 @@ SetStatus		= 0
 Com1Dev			= 0	; the serial device header, in IBMBIO: the
 				; next link of the device chain, which the
 				; fixed disk's header points at
+
+; The group's own base, which MASM wrote on the far pointer from the floppy's
+; device header to the fixed disk's and left to LINK.  Assembled by itself
+; there is nothing for it to be but zero, and the object's fixup covers the
+; bytes it reaches.
+BiosSeg			= 0
 
 S_CODE		= 1
 S_BIOSINIT	= 2

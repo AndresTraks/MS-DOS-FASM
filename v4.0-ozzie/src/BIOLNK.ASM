@@ -1,17 +1,9 @@
 ; IBMBIO, the Multitasking DOS 4.0 BIOS, as its object file has it.
 ;
-; This does not build a bootable IBMBIO.COM and it cannot.  BIOSOBJ.MAK makes
-; one out of five objects --
-;
-;	link ibmbio ibmmtcon ibmdsk sysini sysimes,ibmbio,ibmbio/map;
-;	exe2bin ibmbio ibmbio.com
-;
-; -- and the sources of the last two were never published: bin/DISK2/BIOS has
-; SYSINI.OBJ and SYSIMES.OBJ and no .ASM for either, and sysini.asm would
-; want dossym.inc, devsym.inc and syscalls.inc, which are not there either.
-; So what this file is for is to assemble the one module the way MASM did,
-; alone, so that what FASM lays down can be held against IBMBIO.OBJ, which
-; is the only check there is here.
+; This assembles the one module alone, the way MASM did, so that what FASM
+; lays down can be held against IBMBIO.OBJ.  The bootable IBMBIO.COM is built
+; by src/BIOSLNK.ASM, which reads all three modules at once and lays them out
+; where LINK put them; this file is the check on one of the three.
 ;
 ; Two segments, Code and BiosInit, which the source groups as BiosSeg and
 ; which the object declares in that order at 1009 and 1502 bytes.  The walk
@@ -53,8 +45,19 @@ Disk_Init		= 0	; and its initialisation
 ; instruction: MASM assembled CALL and JMP of these as 9A and EA, five bytes
 ; each, where a near one is three.  An equ of a seg:off pair is substituted
 ; as it stands, so the call sites read as far calls without being rewritten.
+;
+; FloppyTimer carries the spelling of its EXTRN rather than its own, because
+; the link that builds the whole BIOS reads IBMDSK too and there the name is
+; IBMDSK's label -- see src/BIOSLNK.ASM.
 SYSINIT			equ 0:0	; the module that was never published
-FloppyTimer		equ 0:0	; the floppy's share of the timer tick, in IBMDSK
+FloppyTimer$FAR		equ 0:0	; the floppy's share of the timer tick, in IBMDSK
+
+; The group's own base, which MASM wrote on a far pointer and left to LINK.
+; This module calls IBMDSK's FloppyTimer through one and writes its device
+; headers with the base spelled out as BIOSEG; assembled by itself there is
+; nothing for it to be but zero, and the object's fixups cover every byte it
+; reaches.
+BiosSeg			= 0
 
 ; And the two paragraph addresses MASM was asked for with SEG, which are
 ; fixups in the object for the same reason: one names the module that was
