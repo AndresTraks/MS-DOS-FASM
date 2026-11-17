@@ -358,7 +358,7 @@ TDW:
 ;	(AX) = value
 ;	(CX) = 10
 
-TDW$	PROC	NEAR
+tdw$:
 
 	sub	dx,dx
 	div	cx		; (ax) = quotient, (dx) = remainder

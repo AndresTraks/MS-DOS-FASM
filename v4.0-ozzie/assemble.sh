@@ -18,3 +18,7 @@ fi
 # What this is for is to lay down the one module the way MASM did, so that
 # checkobj.py can hold it against IBMBIO.OBJ -- see src/BIOLNK.ASM.
 $FASM src/BIOLNK.ASM bin/IBMBIO.BIN
+
+# IBMMTCON, the console driver: the screen, the keyboard, eight virtual
+# screens and an ANSI interpreter -- see src/MTCLNK.ASM.
+$FASM src/MTCLNK.ASM bin/IBMMTCON.BIN

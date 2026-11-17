@@ -76,6 +76,31 @@ PROGRAMS = {
         "silent": ("DEBUG",),
         "regions": (),
     },
+    "IBMMTCON": {
+        # The console driver: the screen, the keyboard, eight virtual
+        # screens and an ANSI interpreter.  Its object declares ROMDATA at
+        # 103 bytes, MONOSC and COLORSC at nothing, CODE at 2959 and
+        # BIOSINIT at 47.  All four of its switches are on -- BLANK, INBIOS,
+        # ANSI with LINE25, and EAGLE, which works around a ROM that botches
+        # CRT_LEN -- so there is no dead code to speak of.
+        "dossym": "",
+        # ANSI.INC is included by the module, in the middle of its Code
+        # segment, and converted with it.
+        "modules": ("IBMMTCON.ASM", "ANSI.INC"),
+        "segments": ("CODE", "BIOSINIT"),
+        "group": "BiosSeg",
+        # Entry is the far entry point of the driver and Break the handler
+        # for a control break; both are FASM's own words -- entry names an
+        # MZ file's entry point and break leaves a while block.
+        "reserved": ("Entry", "Break"),
+        "renames": {},
+        "macros": {},
+        "silent": ("DEBUG",),
+        "regions": (),
+        # ANSI.INC is read in the middle of the Code segment, under the
+        # ASSUME in force there.
+        "assume": {"ANSI.INC": "CS:BiosSeg,DS:NOTHING,ES:NOTHING"},
+    },
 }
 STRINGS = re.compile(r"'[^']*'|\"[^\"]*\"")
 # A name as MASM spelt one.  Python's \w is not enough: $, ? and @ are name
@@ -115,11 +140,18 @@ RESERVED = ()
 RENAMES = {}
 SILENT = ()
 REGIONS = ()
+# The ASSUME a module that has none of its own is read under.
+ASSUMED = {}
 EXTERNAL = {}
 # Which address space each name the module declares lives in, and which group
 # each segment belongs to.
 SPACE = {}
 GROUPOF = {}
+# The names declared LABEL FAR, which a CALL or JMP of reaches with a far
+# instruction even from inside the same segment.
+FARLABEL = set()
+# Every segment and group name the module declares.
+SEGNAMES = set()
 GROUP = ""
 MACROS = {}
 CANON = {}
@@ -266,6 +298,77 @@ def irp_macros(text):
                            nl, nl, nl, m.group(5)), text)
 
 
+def dollars(text):
+    """A name that begins with a dollar, which FASM keeps for itself.
+
+    $ alone is the address the assembler has reached, so a name cannot start
+    with one; MASM allowed it and the console driver's entry points are all
+    named that way -- $ConRead, $ConWrit, $GenIOCTL and a dozen more.  The
+    dollar moves to the end, which is what v4.0's conversion did with the
+    kernel's $GET_DATE.
+
+    Only where the dollar starts the name: TIM$READ and CON$WRIT have one in
+    the middle, which FASM is content with, and rewriting those would have
+    made two names of one.  Strings are left alone, and so are comments,
+    which is where the debugging format strings' own $b and $x live."""
+    out = []
+    for line in text.split("\n"):
+        body, sep, comment = line.partition(";")
+        out.append(outside_strings(
+            body, lambda s: re.sub(r"(?<![\w@?$])\$([A-Za-z_@?][\w@?$]*)",
+                                   r"\1$", s)) + sep + comment)
+    return "\n".join(out)
+
+
+def numbers(text):
+    """The names the module defines as a plain number, which is as much
+    arithmetic as anything here needs to do."""
+    found = {}
+    for raw in text.splitlines():
+        m = re.match(r"(?i)^(" + N + r")\s+(?:EQU|=)\s+"
+                     r"(\d+|[0-9][0-9A-Fa-f]*[hH])\s*(;.*)?$",
+                     raw.split(";")[0] + (";" if ";" in raw else ""))
+        if m:
+            value = m.group(2)
+            found[m.group(1).upper()] = (int(value[:-1], 16)
+                                         if value[-1] in "hH"
+                                         else int(value))
+    return found
+
+
+def struct_arrays(text):
+    """An array of structures, which MASM wrote as a count and a DUP.
+
+    IBMMTCON keeps its eight screen information blocks as
+    SIB SIBst MaxSIB dup (<>), each of them carrying the defaults the
+    structure declares -- a zero, a seven, the number of segments and the
+    structure's own size.  FASM declares one instance at a time and hangs
+    the field names on each, so the count is counted out here and each
+    instance given a name made of the array's and its number.  Nothing
+    refers to those names: the code reaches a block through a register and
+    the structure's own field offsets, which is why MASM's instance needed
+    no name either."""
+    known = numbers(text)
+
+    def one(m):
+        name, struct, count = m.group(2), m.group(3), m.group(4)
+        if struct.upper() not in STRUCS:
+            return m.group(0)
+        n = known.get(count.upper())
+        if n is None and re.fullmatch(r"\d+", count):
+            n = int(count)
+        if n is None:
+            sys.exit("%s %s %s dup: no number for %s"
+                     % (name, struct, count, count))
+        out = ["%slabel %s" % (m.group(1), name)]
+        out += ["%s%s$%d\t%s" % (m.group(1), name, k, STRUCS[struct.upper()])
+                for k in range(n)]
+        return "\n".join(out) + (m.group(5) or "")
+    return re.sub(r"(?im)^([ \t]*)(" + N + r")[ \t]+(" + N + r")[ \t]+"
+                  r"(" + N + r"|\d+)[ \t]+dup[ \t]*\([ \t]*<>[ \t]*\)"
+                  r"[ \t]*(;.*)?$", one, text)
+
+
 def struc(text):
     """Turn the MASM STRUC into a FASM one, and remember its fields."""
     while True:
@@ -296,9 +399,18 @@ def one_struc(text):
             lines.append(".%-14s %s %s" % (f.group(1), f.group(2).lower(), init))
         elif line.strip():
             lines.append(line.rstrip())
-    new = ["STRUC %s" % name, "{"] + ["        " + l for l in lines] + ["}", "",
-           "virtual at 0", "  %s %s" % (name, name),
-           "  sizeof.%s = $ - %s" % (name, name), "end virtual"]
+    # The block that measures the structure declares an instance of it, and
+    # a program whose modules are read once per segment would declare that
+    # instance once per segment.  So it goes in the pass over the first of
+    # them, as the virtual block of a SEGMENT AT does, and the size it works
+    # out holds for the rest.
+    new = ["STRUC %s" % name, "{"] + ["        " + l for l in lines] + ["}", ""]
+    if SEGMENTS:
+        new.append("if SEGSEL = S_%s" % SEGMENTS[0])
+    new += ["virtual at 0", "  %s %s" % (name, name),
+            "  sizeof.%s = $ - %s" % (name, name), "end virtual"]
+    if SEGMENTS:
+        new.append("end if")
     return text[:m.start()] + "\n".join(new) + text[m.end():], False
 
 
@@ -392,12 +504,21 @@ def spaces(text):
     # BiosInit.  Read with one name, the first RomData ENDS left the rest of
     # Code with no segment at all, and every name declared after it lost the
     # address space it is in -- and with it the override MASM wrote.
+    # A file with no segments of its own is an include that sits inside one,
+    # and its names are in that segment: ANSI.INC is read in the middle of
+    # IBMMTCON's Code and declares two dozen variables of its own, and with
+    # no segment to put them in not one of them got the CS: override MASM
+    # wrote.  The program's first segment is the one it lands in here, which
+    # is where every include in this tree is read.
     stack = []
+    if not re.search(r"(?im)^\s*\w+\s+SEGMENT\b", text) and SEGMENTS:
+        stack.append(SEGMENTS[0])
     for raw in text.splitlines():
         code = raw.split(";")[0]
         m = re.match(r"(?i)^\s*(\w+)\s+SEGMENT\b", code)
         if m:
             stack.append(m.group(1).upper())
+            SEGNAMES.add(m.group(1).upper())
             continue
         m = re.match(r"(?i)^\s*(\w+)\s+ENDS\s*$", code)
         if m and stack and stack[-1] == m.group(1).upper():
@@ -406,10 +527,25 @@ def spaces(text):
         segment = stack[-1] if stack else None
         m = re.match(r"(?i)^\s*(\w+)\s+GROUP\s+(.*)$", code)
         if m:
+            SEGNAMES.add(m.group(1).upper())
             for seg in m.group(2).split(","):
                 GROUPOF[seg.strip().upper()] = m.group(1).upper()
             continue
         if segment is None:
+            continue
+        # An EXTRN declared inside a segment belongs to that segment, and
+        # that is how MASM knew which register reached it: IBMMTCON declares
+        # EXTRN DosFunction:DWORD inside its Code segment, so DosFunction is
+        # in BiosSeg and every reference to it carries the CS: that reaches
+        # the group.  IBMBIO declares its own five externals above its first
+        # SEGMENT, so they are in no segment, and MASM read them through DS
+        # with no override at all -- which is the difference between the two
+        # modules, and nothing in the EXTRN itself says it.
+        m = re.match(r"(?i)^\s*EXTRN\b(.*)$", code)
+        if m:
+            for name in re.findall(r"(" + N + r")\s*:", m.group(1)):
+                SPACE.setdefault(name.upper(),
+                                 GROUPOF.get(segment, segment))
             continue
         m = (re.match(r"(?i)^(" + N + r")\s+(?:DB|DW|DD|DQ|DT|LABEL)\b", code)
              or re.match(r"(?i)^(" + N + r"):", code))
@@ -442,22 +578,36 @@ def overrides(body, cover):
     them the instruction is a byte shorter and reads from the wrong segment,
     which is the one kind of change that assembles, runs, and is wrong.
 
-    A name another module declares is left alone: MASM had its EXTRN to say
-    which space it is in, this module cannot know, and the ASSUME at the
-    point of use says DS -- which is the override MASM wrote nothing for.
+    A name another module declares is in the segment its EXTRN was declared
+    in, which is MASM's rule and spaces() reads it that way.  One declared
+    outside every segment is in none, so nothing here reaches it and no
+    override is written -- which is what MASM did with it too.
     """
     def one(m):
         inner = m.group(1)
         if re.match(r"(?i)^\s*(?:cs|ds|es|ss)\s*:", inner):
             return m.group(0)                   # the source said it already
         name = re.match(r"\s*([A-Za-z_@?$][\w@?$]*)", inner)
-        if not name or name.group(1).upper() in EXTERNAL:
+        if not name:
             return m.group(0)
         reg = covered(cover, SPACE.get(name.group(1).upper()))
         if reg in (None, "ds"):
             return m.group(0)
         return "[%s:%s]" % (reg.upper(), inner)
     return re.sub(r"\[([^\]]*)\]", one, body)
+
+
+def far_labels(text):
+    """The names declared LABEL FAR.
+
+    MASM assembles a CALL or a JMP of one as a far instruction, five bytes
+    with a segment in it, even where the label is in the same segment as the
+    instruction: the declaration is what says so.  IBMMTCON gives its
+    interrupt 16H handler a second name that way, DoInt16 LABEL FAR, and
+    calls it from a page above; dropped, the call came out as a three byte
+    near one and everything after it moved."""
+    return {m.group(1).upper() for m in
+            re.finditer(r"(?im)^(" + N + r")\s+LABEL\s+FAR\s*(;.*)?$", text)}
 
 
 def extrn_labels(text):
@@ -581,9 +731,12 @@ def one_operand(op, labels):
     # them: these sources are full of DS:[BX].CMD, which is [ds:bx+CMD].
     # The field is left to the passes that know the structures; this only
     # gets it inside the brackets, where FASM wants it.
-    dotted = re.match(r"^\[([^\]]+)\]\s*\.(\w+)$", core)
+    # The field may have an offset of its own after it: IBMMTCON writes the
+    # segment of a buffer to DS:[bx].DatBuf+2.
+    dotted = re.match(r"^\[([^\]]+)\]\s*\.(\w+)((?:\s*[-+]\s*\w+)*)$", core)
     if dotted:
-        inner = "%s+%s" % (dotted.group(1).strip(), dotted.group(2))
+        inner = "%s+%s%s" % (dotted.group(1).strip(), dotted.group(2),
+                             dotted.group(3).replace(" ", ""))
     elif core.startswith("[") and core.endswith("]"):
         inner = core[1:-1]
     elif indexed and (seg or indexed_base(indexed.group(1)) in labels):
@@ -613,6 +766,37 @@ def bracket(body, labels):
         return body
     ops = [one_operand(op, labels) for op in split_operands(m.group(4))]
 
+    # An indirect JMP or CALL with no PTR on it, which MASM assembled as a
+    # near one: ANSI.INC dispatches on its command table with JMP [SI].
+    if m.group(2).upper() in ("JMP", "CALL"):
+        for i, op in enumerate(ops):
+            if not re.fullmatch(r"\s*\[[^\]]+\]\s*", op):
+                continue
+            # The width is what makes it near or far, and MASM took it from
+            # the name's own declaration: the console driver reaches the DOS
+            # through CALL DosFunction, declared EXTRN DosFunction:DWORD,
+            # and the keyboard ROM through CALL [OldKbdHandler], a DD of its
+            # own, and both of those are far calls.  Where there is no name
+            # to ask -- ANSI.INC dispatches with JMP [SI] -- MASM assembled
+            # a near one.
+            # Past the override, if the line carries one: the console
+            # driver's keyboard handler reaches the ROM's through
+            # CALL CS:OldKeyInterrupt, and read as far as the CS the name
+            # looked up was the register and the call came out near.
+            b = re.fullmatch(r"\s*\[(?:(?:CS|DS|ES|SS):)?"
+                             r"([A-Za-z_@?$][\w@?$]*)[^\]]*\]\s*", op, re.I)
+            size = SIZES.get(b.group(1).upper(), "word") if b else "word"
+            ops[i] = op.replace("[", size + " [", 1)
+
+    # A CALL or JMP of a label declared LABEL FAR.  The segment is the
+    # group's base, which only LINK knew, so it is a zero here -- and every
+    # one of these is a fixup in the object, so those bytes are bytes the
+    # comparison ignores in any case.
+    if m.group(2).upper() in ("JMP", "CALL"):
+        for i, op in enumerate(ops):
+            if op.strip().upper() in FARLABEL:
+                ops[i] = op.replace(op.strip(), "0:" + op.strip(), 1)
+
     # PUSH and POP of memory: MASM took a word, FASM wants it said.
     if m.group(2).upper() in ("PUSH", "POP"):
         for i, op in enumerate(ops):
@@ -631,10 +815,13 @@ def bracket(body, labels):
     for i, op in enumerate(ops):
         if SIZED.match(op):
             continue
-        b = re.fullmatch(r"(\s*)\[([A-Za-z_@?$][\w@?$]*)([^\]]*)\](\s*)", op)
-        if b and b.group(2).upper() in EXTERNAL:
-            ops[i] = "%s%s [%s%s]%s" % (b.group(1), EXTERNAL[b.group(2).upper()],
-                                        b.group(2), b.group(3), b.group(4))
+        b = re.fullmatch(r"(\s*)\[((?:(?:CS|DS|ES|SS):)?)"
+                         r"([A-Za-z_@?$][\w@?$]*)([^\]]*)\](\s*)", op, re.I)
+        if b and b.group(3).upper() in EXTERNAL:
+            ops[i] = "%s%s [%s%s%s]%s" % (b.group(1),
+                                          EXTERNAL[b.group(3).upper()],
+                                          b.group(2), b.group(3), b.group(4),
+                                          b.group(5))
 
     if any(re.fullmatch(r"\s*[ABCD][LH]\s*", op, re.I) for op in ops):
         for i, op in enumerate(ops):
@@ -670,6 +857,15 @@ def line(code):
         # error here rather than a wrong number.
         t = re.sub(r"\bOFFSET\s+(?:CS|DS|ES|SS)\s*:\s*", "OFFSET ", t,
                    flags=re.I)
+        # A segment of the module's own in front of the name, as in
+        # "mov ax,offset RomData:KeyBuffer".  A label in a SEGMENT AT is
+        # already the offset in that segment -- the conversion makes a
+        # virtual block of it at the same address -- and a label in the
+        # group is already a group offset, so either way the qualifier has
+        # nothing left to say.
+        t = re.sub(r"\bOFFSET\s+(" + N + r")\s*:\s*",
+                   lambda m: ("OFFSET " if m.group(1).upper() in SEGNAMES
+                              else m.group(0)), t, flags=re.I)
         # MASM's SEG, the paragraph a name lives in, which LINK filled in
         # and which this build cannot know: SYSINIT is in the module whose
         # source was never published, and BiosInit's own base is a fixup in
@@ -699,6 +895,13 @@ def line(code):
             if SEGMENTS:
                 t = re.sub(r"\b%s_?:" % SEGMENTS[0], "", t, flags=re.I)
         t = re.sub(r"\bENDIF\b", "end if", t, flags=re.I)
+        # MASM spells the comparisons in letters.  There are two in the
+        # tree, both in an assertion: ANSI.INC checks that its terminal
+        # state fits the room the SIB leaves for it, and IBMDSK that the
+        # error table it indexes has not moved.
+        for was, now in (("GE", ">="), ("LE", "<="), ("NE", "<>"),
+                         ("GT", ">"), ("LT", "<"), ("EQ", "=")):
+            t = re.sub(r"\b%s\b" % was, now, t, flags=re.I)
         # IFDEF and IFNDEF, which ask whether a name has been defined at
         # all.  FASM asks the same question with defined, and the switch
         # these sources ask about -- DEBUGFLG -- is never defined, each
@@ -753,13 +956,33 @@ def line(code):
     return out.replace("\0", hold, 1) if hold else out
 
 
-def convert(text, renames, first=False):
+def seeded(text):
+    """What the segment registers hold before the module's first line.
+
+    MASM read a file as part of the one it is included in, so an include
+    inherits the ASSUME in force where it is read: ANSI.INC has not one
+    ASSUME of its own and is read in the middle of IBMMTCON's Code, under
+    ASSUME CS:BiosSeg,DS:NOTHING,ES:NOTHING.  Converted with the registers
+    on nothing, as MASM starts a module, not one of its two dozen variables
+    got the override MASM wrote for it.  The table says which, because
+    nothing in the file itself does."""
+    cover = {"cs": None, "ds": None, "es": None, "ss": None}
+    for reg, seg in re.findall(r"(?i)\b(cs|ds|es|ss)\s*:\s*(?:SEG\s+)?(\w+)",
+                               text):
+        name = seg.upper()
+        cover[reg.lower()] = (None if name == "NOTHING"
+                              else GROUPOF.get(name, name))
+    return cover
+
+
+def convert(text, renames, first=False, assume=""):
     """first says this is the module that brings DOSSYM in: every module had
     its own INCLUDE of it, and including it twice redefines every structure."""
     out, inmacro, infar, absolute = [], [], [], []
     # What each segment register is assumed to hold, which MASM read every
-    # reference against.  It starts as MASM started it, on nothing.
-    cover = {"cs": None, "ds": None, "es": None, "ss": None}
+    # reference against.  It starts as MASM started a module, on nothing,
+    # unless the table says this one is read inside another.
+    cover = seeded(assume)
     for raw in text.splitlines():
         # Before anything else, so that a renamed macro parameter is renamed
         # in the MACRO line too and not only in the body.
@@ -780,7 +1003,17 @@ def convert(text, renames, first=False):
         if m:
             if SEGMENTS:
                 out.append("if SEGSEL = S_%s" % SEGMENTS[0])
-            out.append("virtual at %s" % m.group(2))
+            # The paragraph the segment sits at, which is what MASM gave
+            # when the segment's name was used as a value: IBMMTCON loads
+            # the ROM's data area with "mov ax,RomData" and the display
+            # buffers with MonoSc and ColorSc.
+            out.append("%s = %s" % (m.group(1), m.group(2)))
+            # And the offsets inside it, which are the segment's own and
+            # start at zero.  Not at the paragraph: every one of these
+            # blocks happens to open with an ORG that would have covered the
+            # difference, but a block without one would have had every label
+            # in it out by the segment's address.
+            out.append("virtual at 0")
             absolute.append(m.group(1).upper())
             continue
         if absolute:
@@ -819,9 +1052,18 @@ def convert(text, renames, first=False):
         # The comment after it is not decoration in every source: FIND has
         # "badfart proc far ;(what a hack!!)", and without the comment allowed
         # for here the line went through as an instruction and FASM refused it.
-        m = re.match(r"^(\s*)(\w+)\s+PROC\s*(NEAR|FAR)?\s*(;.*)?$", raw, re.I)
+        m = re.match(r"^(\s*)(" + N + r")\s+PROC\s*(NEAR|FAR)?\s*(;.*)?$",
+                     raw, re.I)
         if m:
-            out.append("%s%s:%s" % (m.group(1), m.group(2), m.group(4) or ""))
+            # The name may be one FASM keeps, and this branch is the one
+            # place a definition never reached the pass that renames those:
+            # IBMMTCON declares Break PROC NEAR for its control break
+            # handler, every reference to it came out Break_, and the
+            # definition stayed behind under the old name.
+            name = m.group(2)
+            if name.upper() in {r.upper() for r in RESERVED}:
+                name += "_"
+            out.append("%s%s:%s" % (m.group(1), name, m.group(4) or ""))
             infar.append((m.group(3) or "NEAR").upper() == "FAR")
             continue
         if re.match(r"^\s*\w+\s+ENDP\s*(;.*)?$", raw, re.I):
@@ -878,9 +1120,19 @@ def convert(text, renames, first=False):
         if not body.strip():
             out.append(raw)
             continue
-        m = re.match(r"^(\s*\w+\s+)LABEL\s+(BYTE|WORD|DWORD)\s*$", body, re.I)
+        m = re.match(r"^(\s*" + N + r"\s+)LABEL\s+(BYTE|WORD|DWORD)\s*$",
+                     body, re.I)
         if m:
             body = "label %s %s" % (m.group(1).strip(), m.group(2).lower())
+        # A LABEL NEAR or FAR names a place in the code rather than storage,
+        # and a colon is all that is: IBMMTCON gives its interrupt 16H entry
+        # a second name that way, DoInt16 LABEL FAR.  What made the call to
+        # it far was the FAR on the EXTRN in the module that calls it, which
+        # the link file says instead.
+        m = re.match(r"^(\s*)(" + N + r")\s+LABEL\s+(?:NEAR|FAR)\s*$",
+                     body, re.I)
+        if m:
+            body = "%s%s:" % (m.group(1), m.group(2))
         # MASM's THIS names the place the counter has reached without
         # laying anything down, which is what LABEL does: PROFIL declares
         # PROG_ENTRY EQU THIS DWORD over the two words of the program's
@@ -920,6 +1172,8 @@ def main(program):
     RESERVED, RENAMES = spec["reserved"], spec["renames"]
     global SILENT, REGIONS
     SILENT, REGIONS = spec["silent"], spec["regions"]
+    global ASSUMED
+    ASSUMED = spec.get("assume", {})
     global GROUP
     GROUP = spec["group"]
     global DOSSYM
@@ -936,7 +1190,8 @@ def main(program):
         text = open(path, newline="").read()
         if "end if" in text or "virtual at" in text:
             sys.exit("%s looks converted already; nothing done." % name)
-        texts[name] = struc(irp_macros(silenced(commented(page_breaks(text)))))
+        texts[name] = struct_arrays(struc(irp_macros(
+            dollars(silenced(commented(page_breaks(text)))))))
     # The program's own structures are read by now, and MASM makes their field
     # names offsets in their own right as well, so they go in the same map.
     DOSFIELDS.update(FIELDS)
@@ -959,6 +1214,7 @@ def main(program):
     LABELS = set()
     for name, text in texts.items():
         spaces(text)
+        FARLABEL.update(far_labels(text))
         found = data_labels(text) | extrn_labels(text)
         for was, now in RENAMES.get(name, {}).items():
             if was in found:
@@ -967,7 +1223,8 @@ def main(program):
         LABELS |= found
     for name, text in texts.items():
         open(os.path.join(SRC, name), "w", newline="").write(
-            convert(text, RENAMES.get(name, {}), name == MODULES[0]))
+            convert(text, RENAMES.get(name, {}), name == MODULES[0],
+                    ASSUMED.get(name, "")))
         print("converted %s" % name)
     print("%d labels that MASM would have resolved for itself" % len(LABELS))
 

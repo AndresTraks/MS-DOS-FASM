@@ -381,7 +381,7 @@ SetAddr:
 	mov	ax,0
 	mov	cx,1
 	mov	dx,16
-	call	[CS:DosFunction]
+	call	dword [CS:DosFunction]
 	mov	word [CS:ScrnIOok],ax
 	mov	word [CS:ScrnIOok+2],dx
 	JMP	StatusComplete
@@ -434,7 +434,8 @@ IF	CONSFLAG
 Key2ndPart	DB	0		; Leftover byte of 2 key codes
 
 if SEGSEL = S_CODE
-virtual at 40H
+RomData = 40H
+virtual at 0
 	ORG	1AH
 Bufferhead	DW      0
 BufferTail	DW      0
@@ -468,7 +469,7 @@ Break:
 ;	DS:BX	Pointer to device request packet
 ;	*
 
-Con$Read	PROC	NEAR
+Con$Read:
 	JCXZ	StatusComplete
 CON$LOOP:
 	PUSH	CX		;SAVE COUNT
@@ -523,7 +524,7 @@ KeyRet: RET
 ;Exit parameters:
 ;	DS:BX	Pointer to device request packet
 ;	*
-Con$RdNd	PROC	NEAR
+Con$RdNd:
 	MOV	AL,[CS:Key2ndPart]
 	OR	AL,AL
 	JNZ	RDexit
@@ -548,7 +549,7 @@ Con$RdNd	ENDP
 ;
 ;	KEYBOARD FLUSH ROUTINE
 ;
-Con$Flsh	PROC	NEAR
+Con$Flsh:
 	MOV	[CS:Key2ndPart],0		       ;Clear out holding buffer
 
 	CALL	Flush			; Flush the keyboard
@@ -563,7 +564,7 @@ Flush:
     ASSUME	DS:RomData
 
 	CLI				; ** Disable interrupts
-	MOV	AX,RomData:KeyBuffer  ; Start of Rom buffer
+	MOV	AX,KeyBuffer  ; Start of Rom buffer
 	MOV	[Bufferhead],AX
 	MOV	[BufferTail],AX		; Empty the queue
 	STI				; ** enable interrupts
@@ -609,7 +610,7 @@ KeyboardInterrupt:
     ASSUME	DS:RomData
 
 	PUSHF				; Save flags to simulate INT
-	CALL	[CS:OldKeyInterrupt]	; Now do ROM code
+	CALL	dword [CS:OldKeyInterrupt]	; Now do ROM code
 ; Now tell scheduler keyboard had char
 	cli				; interrupts off!
 	mov	bx,[BufferTail]		; Get tail of queue
@@ -617,13 +618,13 @@ KeyboardInterrupt:
 	JE	NoKey			; No, don't requeue then
 	dec	bx
 	dec	bx
-	cmp	bx,RomData:KeyBuffer
+	cmp	bx,KeyBuffer
 	jae	kbi1			; no rap around in buffer
-	mov	bx,RomData:KeyBuffer+KeyBufLen
+	mov	bx,KeyBuffer+KeyBufLen
 kbi1:
 	mov	ax,[bx]			; get last queued char.
 	mov	dx,5			; ConsInputFilter subfunction
-	call	[CS:DosFunction]
+	call	dword [CS:DosFunction]
 	jnz	kbi2			; key should remain in buffer
 	mov	[BufferTail],bx		; discard key from buffer
 	jmp	SHORT NoKey
@@ -639,7 +640,7 @@ kbi2:
 	mov	bx,KeySem
 	mov	byte [CS:bx],0	; reset keyboard semaphore
 	mov	dx,10			;; ProcRun
-	call	[CS:DosFunction]		; awaken anyone waiting on input
+	call	dword [CS:DosFunction]		; awaken anyone waiting on input
 	pop	dx
 	pop	cx
 	pop	bx
@@ -673,7 +674,7 @@ KeyBoardHandler:
 	cmp	ah,1
 	je	DoLocalStat
 OldKBint:
-	jmp	[CS:OldKbdHandler]
+	jmp	dword [CS:OldKbdHandler]
 
 DoLocalStat:
 	push	bx
@@ -700,14 +701,14 @@ DoLocalRd1:
 	jnz	DoLocalRd2
 	xor	cx,cx
 	mov	dx,9			;; ProcBlock
-	call	[CS:DosFunction]		; sleep until a char is typed
+	call	dword [CS:DosFunction]		; sleep until a char is typed
 	jmp	DoLocalRd1
 
 DoLocalRd2:
 	mov	ah,1			; get console status
 	pushf				; simulate INT to old handler
 	cli
-	call	[CS:OldKbdHandler]
+	call	dword [CS:OldKbdHandler]
 	cli				; subfunction 1 unconditionally sets IF
 	jnz	LocalRead		; go read character
 	mov	ax,cs
@@ -715,7 +716,7 @@ DoLocalRd2:
 	mov	byte [CS:bx],0FFh	; set keyboard semaphore
 	xor	cx,cx
 	mov	dx,9			;; ProcBlock
-	call	[CS:DosFunction]		; sleep until a char is typed
+	call	dword [CS:DosFunction]		; sleep until a char is typed
 	jmp	DoLocalRd1
 
 LocalRead:
@@ -723,7 +724,7 @@ LocalRead:
 	pop	cx
 	pop	bx
 	pop	ax
-	jmp	[CS:OldKbdHandler]		; read the character and return
+	jmp	dword [CS:OldKbdHandler]		; read the character and return
 
 
 end if	;CONSFLAG
@@ -1044,7 +1045,8 @@ TIM$READ:
 ;	*
 
 if SEGSEL = S_CODE
-virtual at 040H
+RomData = 040H
+virtual at 0
 	ORG	03FH
 Motor_Status	DB	1 dup (0)
 Motor_Count	DB	1 dup (0)
@@ -1129,7 +1131,7 @@ csch1:	POP	AX			; Stack is now clean
 	JE	NoSchedActive		; Not yet, don't call sched
 	sub	dx,dx			; (dx) = 0 = tic subfunction
 	mov	ax,SCHEDCOUNT		; 10 milliseconds per tic
-	CALL	[CS:DosFunction]		; Do the tick
+	CALL	dword [CS:DosFunction]		; Do the tick
 	CALL	FloppyTimer		; timer service for floppy disk also
 NoSchedActive:
 	IRET				; All done
@@ -1192,7 +1194,7 @@ memsizhandler:
 	pop	si
 	pop	bx
 	pop	ax
-	jmp	[CS:memsizint]
+	jmp	dword [CS:memsizint]
 ;++++
 
 ;----------------------------------------------
@@ -1582,7 +1584,8 @@ INITABH DW	HDRIVE
 	DW	DRIVEX
 
 if SEGSEL = S_CODE
-virtual at 040H
+RomData = 040H
+virtual at 0
 	ORG	03EH
 Seek_Status	DB	1 dup (0)
 end virtual
@@ -1832,7 +1835,7 @@ end if	;CONSFLAG
 	STOSB
 
 	pushf				;simulate int 12h
-	call	[CS:memsizint]		;Get memory size--1K blocks in AX
+	call	dword [CS:memsizint]		;Get memory size--1K blocks in AX
 	MOV	CL,6
 	SHL	AX,CL			;Convert to 16-byte blocks(segment no.)
 	POP	CX			;Recall drive info
