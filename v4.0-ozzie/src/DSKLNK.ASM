@@ -44,6 +44,11 @@ Com1Dev			= 0	; the serial device header, in IBMBIO: the
 ; bytes it reaches.
 BiosSeg			= 0
 
+; The module is laid down as the release wrote it: the two changes QEMU's
+; floppy controller wants are in IBMDSK alone -- see convert.py's table, and they are what the object
+; this is held against knows nothing of.
+QEMUFDC		= 0
+
 S_CODE		= 1
 S_BIOSINIT	= 2
 

@@ -1,19 +1,25 @@
 #!/bin/sh
 # Start a machine from the disk create_image.sh makes, with our BIOS on it.
 #
-# How far it gets is not far, and it is as far as the release itself gets: the
-# BIOS says what it is, the kernel says what it is, and then the kernel stops
-# with "Internal Error 4560 / HardErr: no handler" -- a hard error raised
-# before any process owns INT 24H to be asked about it.  Microsoft's own
-# IBMBIO.COM on Microsoft's own diskette stops at the same line on this
-# machine, which is what tests/boot.sh holds the two against each other for.
+# The disk carries bin/IBMBIOQ.COM, the build with the two things QEMU's
+# floppy controller wants in it -- see src/QEMULNK.ASM.  Without them nothing
+# starts, Microsoft's own IBMBIO.COM included; with them the system comes up:
+# COMMAND.COM, AUTOEXEC.BAT, and SM.EXE if you type SM, which is the session
+# manager this release is for.  F7 and F8 are the two shells SM.INI defines.
+#
+# The release as it was written goes on a disk with
+#
+#	./create_image.sh ozzie.img bin/IBMBIO.COM
+#
+# and that one stops where Microsoft's does: the kernel's banner and a panic.
+# tests/boot.sh starts both and holds each against what it should do.
 #
 # Multi-tasking MS-DOS was written for the IBM PC of 1984 and this release
 # says in its README that it had to "hook out the entire disk (both floppy and
 # hard disk) ROM code" because the IBM ROM waits for the interrupt in a loop;
 # so the drivers in src/IBMDSK.ASM drive the controller and the DMA chip
 # themselves, against a ROM whose innards they name.  A machine with the IBM
-# ROM in it -- 86Box or PCem -- is the place to see it go further.
+# ROM in it -- 86Box or PCem -- is the place to run the unchanged build.
 #
 # QEMU is asked for a 640K machine with one diskette in it, which is what this
 # system expects to find.  A second diskette can go in with

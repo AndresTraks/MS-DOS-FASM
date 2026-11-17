@@ -66,6 +66,11 @@ BiosSeg			= 0
 SYSINIT$SEG		= 0
 BiosInit$SEG		= 0
 
+; The module is laid down as the release wrote it: the two changes QEMU's
+; floppy controller wants are not in this module, and they are what the object
+; this is held against knows nothing of.
+QEMUFDC		= 0
+
 S_CODE		= 1
 S_BIOSINIT	= 2
 

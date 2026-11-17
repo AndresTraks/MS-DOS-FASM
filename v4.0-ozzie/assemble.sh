@@ -35,3 +35,7 @@ $FASM src/DSKLNK.ASM bin/IBMDSK.BIN
 # src/BIOSLNK.ASM, and create_image.sh for the disk to start it from.
 python3 -I sysinit.py
 $FASM src/BIOSLNK.ASM bin/IBMBIO.COM
+
+# And the same again with the two changes QEMU's floppy controller wants,
+# which is the one that starts -- see src/QEMULNK.ASM.
+$FASM src/QEMULNK.ASM bin/IBMBIOQ.COM

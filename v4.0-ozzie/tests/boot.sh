@@ -1,32 +1,31 @@
 #!/bin/sh
-# Start a machine from our BIOS, and from Microsoft's, and hold the one
-# against the other.
+# Start machines from our BIOS and see what the system does.
 #
 # checkobj.py says our three modules are the bytes MASM made of them, which is
 # the strongest thing a comparison can say and still says nothing about
-# whether the result runs.  This is the other kind of test: both diskettes are
-# started, and what reaches the screen has to be the same text.
+# whether the result runs.  This is the other kind of test, and it starts two
+# machines, because there are two builds:
 #
-# What reaches the screen is three lines of the system saying what it is and
-# then a kernel panic:
+#   * bin/IBMBIO.COM, the release as it was written.  It does not start on
+#     this machine and Microsoft's own IBMBIO.COM does not either: both reach
+#     the kernel's banner and panic in the same line.  So the two diskettes
+#     are started and the screens held against each other -- the conversion
+#     has to fail exactly where the original fails.
+#   * bin/IBMBIOQ.COM, the same with the two things QEMU's floppy controller
+#     wants -- four Sense Interrupt Status commands after a reset of the 765,
+#     and 300 kbps rather than 250.  convert.py's table says what goes wrong
+#     without them.  That one starts, so it is driven: the date and the time
+#     AUTOEXEC.BAT asks for, a DIR, and SM, the session manager this release
+#     exists for.
 #
-#	Internal Work #2.06 - May 25, 1984
-#	MS-DOS version 4.00
-#	Copyright 1981,82,83,84 Microsoft Corp.
-#	*  Internal Error 4560  *
-#	HardErr: no handler
-#
-# which is as far as the release goes on a machine with this ROM in it -- see
-# run.sh.  Little of it is ours: all five lines are IBMDOS.COM's, the kernel
-# we have no source for.  What is ours is everything that had to work for them
-# to be printed at all.  The boot sector reads IBMBIO.COM and jumps into it;
-# the BIOS sizes memory, installs its interrupts, initialises the console
-# driver and the disk drivers and asks the disk driver for IBMDOS.COM, which
-# is read through src/IBMDSK.ASM a sector at a time; the kernel's banner and
-# the panic go to the screen through src/IBMMTCON.ASM.  So the four lines are
-# proof that two of the three converted modules do their work, and the fifth
-# is proof that the third gets the same answer out of the hardware as
-# Microsoft's own build of it did.
+# Little of what reaches the screen is ours -- the banners and the panic are
+# IBMDOS.COM's, the kernel we have no source for, and the listing is
+# COMMAND.COM's -- but everything that had to work for them to be printed is.
+# The boot sector reads IBMBIO.COM and jumps into it; the BIOS sizes memory,
+# installs its interrupts and initialises the console and the disk drivers;
+# the disk driver reads all 49324 bytes of IBMDOS.COM and then COMMAND.COM a
+# sector at a time; every character goes out through src/IBMMTCON.ASM and
+# every keystroke comes in through it.
 set -e
 cd "$(dirname "$0")/.."
 
@@ -37,78 +36,139 @@ OUT=${TMPDIR:-/tmp}/ozzieboot.$$
 mkdir -p "$OUT"
 trap 'rm -rf "$OUT"' EXIT
 
-./create_image.sh "$OUT/ours.img" >/dev/null
+# Waiting for the guest, as v4.0's tests do it: the monitor is asked for the
+# text screen, and what comes back is read.  A test that waited a length of
+# time instead would have to wait the worst case every time.
+TIMEOUT=${TIMEOUT:-90}
+_shots=0
+snap() {
+    # A dump of its own each time: the monitor writes the file when it gets
+    # round to it, and a name that is used twice is a file that can be read
+    # while the last write is still in it.
+    _shots=$((_shots + 1))
+    _shot=$OUT/shot.$_shots
+    echo "pmemsave 0xb8000 4000 \"$_shot\""
+    _n=0
+    while [ "$(wc -c < "$_shot" 2>/dev/null || echo 0)" -ne 4000 ]; do
+        _n=$((_n + 1))
+        [ "$_n" -gt 60 ] && return
+        sleep 0.05
+    done
+    python3 -I tests/screen.py "$_shot" > "$SEEN"
+    rm -f "$_shot"
+}
+
+# await TEXT: until TEXT is on the screen.  Giving up is not an error here --
+# the checks below say what was missing, and they say it better.
+await() {
+    _i=0
+    while [ "$_i" -lt $((TIMEOUT * 4)) ]; do
+        snap
+        grep -qF -e "$1" "$SEEN" && return
+        _i=$((_i + 1))
+        sleep 0.2
+    done
+    echo "$0: waited ${TIMEOUT}s for \"$1\" on the screen" >&2
+}
+
+# The release as it was written, and the diskette Microsoft shipped, which
+# should leave the same screen.
+./create_image.sh "$OUT/ours.img" bin/IBMBIO.COM >/dev/null
 cp bin/DRDOS1_IMD.img "$OUT/theirs.img"
 
-# boot DISK NAME: start the machine, wait for the last line the system
-# prints, and leave the screen in $OUT/NAME.txt.  The wait is on the text
-# rather than on a length of time, as v4.0's tests are: nothing is paid for
-# it when the guest answers.
-boot() {
-    _shot=$OUT/$2.bin
-    rm -f "$_shot"
+asitwas() {
+    SEEN=$OUT/$2.txt
     {
-        _i=0
-        while [ "$_i" -lt 200 ]; do
-            rm -f "$_shot"
-            echo "pmemsave 0xb8000 4000 \"$_shot\""
-            sleep 0.2
-            [ "$(wc -c < "$_shot" 2>/dev/null || echo 0)" -eq 4000 ] &&
-                grep -qa "HardErr" "$_shot" && break
-            _i=$((_i + 1))
-        done
+        await "HardErr"
         echo quit
     } | "$QEMU" -rtc base=localtime -m 640 \
                 -drive file="$OUT/$1",format=raw,if=floppy,index=0 \
                 -display none -monitor stdio >/dev/null 2>&1 || true
-    [ -s "$_shot" ] || { echo "$0: the screen never came back" >&2; exit 1; }
-    python3 -I - "$_shot" > "$OUT/$2.txt" <<'PY'
-import sys
-
-d = open(sys.argv[1], "rb").read()
-# The adapter's text page: a character and an attribute per cell.  The lines
-# the firmware wrote before the system started are left out -- SeaBIOS and
-# iPXE print addresses that are not the same twice -- by beginning at the
-# BIOS's own first line.
-rows = []
-for row in range(25):
-    cells = (d[(row * 80 + c) * 2] for c in range(80))
-    rows.append("".join(chr(c) if 32 <= c < 127 else " " for c in cells).rstrip())
-while rows and "Internal Work" not in rows[0]:
-    rows.pop(0)
-print("\n".join(r for r in rows if r.strip()))
-PY
+    # The firmware's own lines go: SeaBIOS and iPXE print addresses that are
+    # not the same twice.  The system's first line is the BIOS's.
+    sed -n '/Internal Work/,$p' "$OUT/$2.txt" | sed '/^$/d' > "$OUT/$2.screen"
 }
 
-boot ours.img ours
-boot theirs.img theirs
+asitwas ours.img ours
+asitwas theirs.img theirs
 
 echo "--- Microsoft's IBMBIO.COM"
-sed 's/^/   /' "$OUT/theirs.txt"
-echo "--- ours"
-sed 's/^/   /' "$OUT/ours.txt"
+sed 's/^/   /' "$OUT/theirs.screen"
+echo "--- ours, as the release was written"
+sed 's/^/   /' "$OUT/ours.screen"
 
 rc=0
 echo "--- checks"
 for text in "Internal Work #2.06 - May 25, 1984" "MS-DOS version 4.00" \
             "Copyright 1981,82,83,84 Microsoft Corp."; do
-    if grep -qF "$text" "$OUT/ours.txt"; then
+    if grep -qF "$text" "$OUT/ours.screen"; then
         echo "ok      $text"
     else
         echo "MISSING $text"
         rc=1
     fi
 done
-
-if [ ! -s "$OUT/theirs.txt" ]; then
+if [ ! -s "$OUT/theirs.screen" ]; then
     echo "WRONG   the release's own diskette printed nothing to compare with"
     rc=1
-elif cmp -s "$OUT/ours.txt" "$OUT/theirs.txt"; then
-    echo "ok      our BIOS leaves the same screen as Microsoft's own"
+elif cmp -s "$OUT/ours.screen" "$OUT/theirs.screen"; then
+    echo "ok      it stops where Microsoft's own build stops, to the line"
 else
     echo "WRONG   the two screens are not the same:"
-    diff "$OUT/theirs.txt" "$OUT/ours.txt" | sed 's/^/        /'
+    diff "$OUT/theirs.screen" "$OUT/ours.screen" | sed 's/^/        /'
     rc=1
 fi
+
+# And the build that runs: driven through AUTOEXEC.BAT, a DIR and the session
+# manager.
+./create_image.sh "$OUT/qemu.img" bin/IBMBIOQ.COM >/dev/null
+SEEN=$OUT/q.txt
+{
+    await "Enter new date"
+    echo "sendkey ret"
+    await "Current time is"
+    echo "sendkey ret"
+    await "path a"
+    # Before DIR scrolls them off the top: the interpreter's banner and the
+    # two questions AUTOEXEC.BAT asked.
+    cp "$SEEN" "$OUT/early.screen"
+    for k in d i r ret; do echo "sendkey $k"; sleep 0.1; done
+    await "File(s)"
+    cp "$SEEN" "$OUT/dir.screen"
+    for k in s m ret; do echo "sendkey $k"; sleep 0.1; done
+    await "SESSION MANAGER"
+    cp "$SEEN" "$OUT/sm.screen"
+    echo "sendkey f7"
+    await "Command v. 4.00"
+    cp "$SEEN" "$OUT/session.screen"
+    echo quit
+} | "$QEMU" -rtc base=localtime -m 640 \
+            -drive file="$OUT/qemu.img",format=raw,if=floppy,index=0 \
+            -display none -monitor stdio >/dev/null 2>&1 || true
+
+for what in early dir sm session; do
+    echo "--- the screen at $what"
+    [ -s "$OUT/$what.screen" ] && sed '/^$/d;s/^/   /' "$OUT/$what.screen"
+done
+
+echo "--- checks"
+check() {
+    # printf, not echo: a name with a backslash in it is a name this shell's
+    # echo reads as an escape, and a:\command.com cut the line short.
+    if [ -s "$OUT/$1.screen" ] && grep -qF -e "$2" "$OUT/$1.screen"; then
+        printf 'ok      %s: %s\n' "$2" "$3"
+    else
+        printf 'MISSING %s\n' "$2"
+        rc=1
+    fi
+}
+check early "Command v. 4.00" "COMMAND.COM was read off the disk and EXECed"
+check early "Current date is" "the kernel dispatches and the console driver writes"
+check dir "A:\\>dir" "the date and the time went in through the keyboard"
+check dir "IBMBIO   COM    12363" "DIR read the root directory, our own BIOS in it"
+check dir "File(s)" "and ran to the end of the listing"
+check sm "Microsoft SESSION MANAGER Ver 1.00" "the session manager started"
+check sm "a:\\command.com" "and found the programs SM.INI defines"
+check session "A:\\>" "and F7 put a shell in a session of its own"
 
 exit $rc

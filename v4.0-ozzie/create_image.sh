@@ -19,16 +19,25 @@
 # IBMBIO.COM is the first entry of the root directory and that it runs from
 # the first cluster of the data area without a break.
 #
-# The disk is ozzie.img unless another path is asked for.
+# The disk is ozzie.img unless another path is asked for, and the BIOS on it
+# is bin/IBMBIOQ.COM -- the build with the two things QEMU's floppy controller
+# wants, which is the one that starts.  bin/IBMBIO.COM, the release as it was
+# written, goes on with
+#
+#	./create_image.sh ozzie.img bin/IBMBIO.COM
+#
+# and gets as far as the kernel's banner and the panic, which is where
+# Microsoft's own build gets to on this machine.  See src/QEMULNK.ASM.
 set -e
 cd "$(dirname "$0")"
 IMAGE=${1:-ozzie.img}
+BIOS=${2:-bin/IBMBIOQ.COM}
 
 ./assemble.sh >/dev/null
 
 cp bin/DRDOS1_IMD.img "$IMAGE"
 
-python3 -I - "$IMAGE" bin/IBMBIO.COM bin/DISK1/IBMBIO.COM <<'PY'
+python3 -I - "$IMAGE" "$BIOS" bin/DISK1/IBMBIO.COM <<'PY'
 import struct
 import sys
 

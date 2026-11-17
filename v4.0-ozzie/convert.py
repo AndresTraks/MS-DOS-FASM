@@ -176,6 +176,53 @@ PROGRAMS = {
         "silent": ("DEBUG",),
         # This is the module that calls DBBEG, and it calls it three times.
         "regions": ("DBBEG",),
+        # THE TWO THINGS QEMU'S FLOPPY CONTROLLER WANTS, which are not
+        # conversions but changes -- see adapted().  Each is wrapped in
+        # IF QEMUFDC, which only src/QEMULNK.ASM turns on.
+        #
+        # The first is four Sense Interrupt Status commands after a reset of
+        # the 765.  A controller coming out of reset raises its interrupt and
+        # holds the line up until the four are read, one per drive, which is
+        # what the IBM ROM does and this driver does not.  The driver's own
+        # interrupt handler takes that interrupt, finds the device idle, sends
+        # the 8259 its EOI and returns, so the line stays up -- and the next
+        # command's completion raises no new edge, so the interrupt the state
+        # machine is waiting for never arrives.  The sanity timer runs out,
+        # the driver writes 48h into ST0 by hand ("not ready"), retries three
+        # times and fails the request; the kernel raises INT 24H with no
+        # handler owning it and panics with Internal Error 4560.
+        #
+        # The second is the data rate.  Port 3F7H on the AT is the data rate
+        # register; on the PC of 1984 there was nothing there at all, which is
+        # why this writes it as a step rate and calls the value Rate44.  QEMU
+        # has no 360K drive among its three -- 1.2M, 1.44M, 2.88M -- so it
+        # reads the diskette as a 360K medium in a 1.2M drive, where the rate
+        # is 300 kbps and not the 250 a 360K drive uses.  Asked for 250 it
+        # answers every read with abnormal termination and a missing address
+        # mark.  The driver is right about real hardware and wrong about this.
+        #
+        # With both, the system starts: COMMAND.COM, AUTOEXEC.BAT, DIR
+        # through this driver, and the session manager with a shell in it.
+        "adapt": {"IBMDSK.ASM": (
+            ("Rate44=\t\t002H\t\t; Step rate 48tpi disk in 48tpi drive\r\n",
+             "Rate44=\t\t002H\t\t; Step rate 48tpi disk in 48tpi drive\r\n"
+             "IF\tQEMUFDC\r\n"
+             "Rate44=\t\t001H\t\t; 300 kbps, which is what QEMU wants of a\r\n"
+             "\t\t\t\t;  360K diskette: it has no 360K drive\r\n"
+             "ENDIF\r\n"),
+            ("\tMOV\tCS:Floppy.DOR,AL\t\t; Update value\r\n"
+             "\tOUT\tDX,AL\r\n"
+             "\tRET\r\n",
+             "\tMOV\tCS:Floppy.DOR,AL\t\t; Update value\r\n"
+             "\tOUT\tDX,AL\r\n"
+             "IF\tQEMUFDC\r\n"
+             "\tCALL\tSense765\t\t; clear the interrupt the reset raised,\r\n"
+             "\tCALL\tSense765\t\t;  one sense per drive, as the IBM ROM\r\n"
+             "\tCALL\tSense765\t\t;  does -- or the controller holds its\r\n"
+             "\tCALL\tSense765\t\t;  line up and the next command's\r\n"
+             "ENDIF\t\t\t\t;  completion raises no new edge\r\n"
+             "\tRET\r\n"),
+        )},
         # Its two semaphore macros reach the module's own data, and are
         # called from both kinds of place.
         "segmacros": {"SemWait": {"wchan": "byte"},
@@ -226,6 +273,7 @@ RENAMES = {}
 SILENT = ()
 REGIONS = ()
 SEGMACROS = {}
+ADAPT = {}
 # The ASSUME a module that has none of its own is read under.
 ASSUMED = {}
 EXTERNAL = {}
@@ -1184,6 +1232,30 @@ def line(code):
     return out.replace("\0", hold, 1) if hold else out
 
 
+def adapted(name, text):
+    """The release's own text, with what the machine we run on needs.
+
+    Everything else here is a conversion: the same program said in another
+    assembler.  These two are not.  They are changes to what the source does,
+    because the machine QEMU puts in front of it is not the IBM PC of 1984,
+    and without them the system cannot be started at all -- Microsoft's own
+    IBMBIO.COM cannot either, so they are the machine's doing and not the
+    conversion's.  Both are wrapped in IF QEMUFDC, which src/BIOSLNK.ASM
+    leaves at zero and src/QEMULNK.ASM turns on, so the faithful build is
+    byte for byte what it was and only the second one differs.
+
+    What goes wrong, and why each is needed, is in the table beside the text.
+    Nothing is guessed: the change is written in MASM and converted with the
+    rest, the anchor it replaces has to appear exactly once, and the module
+    is re-derived from the release's own file every time."""
+    for was, now in ADAPT.get(name, ()):
+        if text.count(was) != 1:
+            sys.exit("%s: the text this adapts appears %d times, not once:\n%s"
+                     % (name, text.count(was), was))
+        text = text.replace(was, now)
+    return text
+
+
 def switches(text):
     """The module's own switches, as numbers: NAME EQU TRUE and the like.
 
@@ -1568,11 +1640,13 @@ def main(program):
     # module names variables another defines, so the set of things that need
     # brackets is only complete once all of them have been read.
     global LABELS, DOSFIELDS, DOSFIELD_RE, MODULES, SEGMENTS, RESERVED, RENAMES
+    global ADAPT
     if program not in PROGRAMS:
         sys.exit("usage: convert.py %s" % " | ".join(sorted(PROGRAMS)))
     spec = PROGRAMS[program]
     MODULES, SEGMENTS = spec["modules"], tuple(spec["segments"])
     RESERVED, RENAMES = spec["reserved"], spec["renames"]
+    ADAPT = spec.get("adapt", {})
     global SILENT, REGIONS, SEGMACROS
     SILENT, REGIONS = spec["silent"], spec["regions"]
     SEGMACROS = spec.get("segmacros", {})
@@ -1597,6 +1671,7 @@ def main(program):
         text = open(path, newline="").read()
         if "end if" in text or "virtual at" in text:
             sys.exit("%s looks converted already; nothing done." % name)
+        text = adapted(name, text)
         texts[name] = struct_arrays(struc(irp_macros(
             dollars(silenced(commented(page_breaks(text)))))))
         field_aliases(texts[name])

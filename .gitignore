@@ -30,4 +30,5 @@ IO.SYS
 MSLOAD.COM
 SYSINIT.BIN
 v4.0-ozzie/bin/IBMBIO.COM
+v4.0-ozzie/bin/IBMBIOQ.COM
 ozzie.img

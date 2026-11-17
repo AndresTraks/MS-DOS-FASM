@@ -17,6 +17,10 @@ DelayLoad=	35			; 35 milliseconds to load head
 Rate99=		000H		; Step rate 96tpi disk in 96tpi drive
 Rate49=		001H		; Step rate 48tpi disk in 96tpi drive
 Rate44=		002H		; Step rate 48tpi disk in 48tpi drive
+IF	QEMUFDC
+Rate44=		001H		; 300 kbps, which is what QEMU wants of a
+				;  360K diskette: it has no 360K drive
+end if
 
 ; Commands to floppy disk controller
 
@@ -2254,6 +2258,12 @@ RstDelayLoop:
 	OR	AL,DORmask
 	MOV	[CS:Floppy+DeviceStruc.DOR],AL		; Update value
 	OUT	DX,AL
+IF	QEMUFDC
+	CALL	Sense765		; clear the interrupt the reset raised,
+	CALL	Sense765		;  one sense per drive, as the IBM ROM
+	CALL	Sense765		;  does -- or the controller holds its
+	CALL	Sense765		;  line up and the next command's
+end if				;  completion raises no new edge
 	RET
 
 
