@@ -22,3 +22,8 @@ $FASM src/BIOLNK.ASM bin/IBMBIO.BIN
 # IBMMTCON, the console driver: the screen, the keyboard, eight virtual
 # screens and an ANSI interpreter -- see src/MTCLNK.ASM.
 $FASM src/MTCLNK.ASM bin/IBMMTCON.BIN
+
+# IBMDSK, the disk drivers: the floppy and the fixed disk, a state machine
+# apiece, and the Int 13 handler the rest of the system makes its requests
+# through -- see src/DSKLNK.ASM.
+$FASM src/DSKLNK.ASM bin/IBMDSK.BIN

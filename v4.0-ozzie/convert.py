@@ -19,23 +19,33 @@ passes, which are described in that file:
   * EQU becomes =, DW ? and DB n DUP (?) become zeros, a bare variable name
     gets the brackets MASM did not need, a variable indexed by a register
     becomes [NAME+REG], and a STRUC's fields hang off their structure.
-  * A SEGMENT AT becomes a virtual block: all three modules reach into the
-    ROM's data at 40H that way, and two of them into the display buffers at
-    B000H and B800H.
+  * A SEGMENT AT becomes a virtual block: two of the three modules reach
+    into the ROM's data at 40H that way, and one of them into the display
+    buffers at B000H and B800H.
 
 What this tree asks for on top of that:
 
+  * The segment override MASM wrote for itself out of the ASSUME.  The whole
+    of this BIOS runs with DS on nothing, so every reference it makes to its
+    own data carries a CS -- and a conversion that drops one assembles, runs,
+    and reads the caller's segment.  See overrides() and spaces().
   * The debugging macros in DEFDBUG.INC lay nothing down, DEBUGFLG being
-    undefined, and there are 57 calls of DEBUG between the three modules
+    undefined, and there are 59 calls of DEBUG between the three modules
     whose arguments are format strings full of $ and \n and lists of lists.
     A macro that does nothing still has to be able to read its arguments, so
     the calls are commented out instead, which is what MASM made of them.
     DBBEG is worse: its body opens an IFDEF that the macro never closes, so
-    the caller's own ENDIF closes it and everything between the two
-    disappears.  FASM has no way to say that, and there is one such region
-    in the tree, so the table names it and the lines go.
+    the call behaves as IFDEF DEBUGFLG does and the caller's own ELSE or
+    ENDIF is what closes it.  FASM has no way to say that, so the table
+    names the macro and silenced() reads the region as the false conditional
+    it is.
   * The assertions, which MASM wrote as a conditional whose false branch is
     .RADIX 0 -- an error on purpose.  FASM says that with err.
+  * A segment written inside another, which MASM allowed and IBMDSK does
+    with BiosInit: the outer one is suspended and resumed rather than ended.
+  * A macro whose body reaches the module's own data, which MASM expanded at
+    the call site and under the ASSUME in force there.  The register is
+    handed in as an argument, because the decision was the caller's.
 
 There is no DOSSYM here: each module declares the equates it needs itself.
 
@@ -101,6 +111,31 @@ PROGRAMS = {
         # ASSUME in force there.
         "assume": {"ANSI.INC": "CS:BiosSeg,DS:NOTHING,ES:NOTHING"},
     },
+    "IBMDSK": {
+        # The disk drivers, floppy and fixed: two device headers, two
+        # dispatch tables and a state machine apiece, and the Int 13 handler
+        # the rest of the system makes its requests through.  Its object
+        # declares CODE at 3925 bytes and BIOSINIT at 361.
+        "dossym": "",
+        # One module, DEFDBUG.INC apart, which the link file brings in.
+        "modules": ("IBMDSK.ASM",),
+        # Code and BiosInit again, except that this module writes BiosInit
+        # inside Code rather than after it.  The object says so plainly: its
+        # CODE chunks run to 0x334 and start again at 0x334 with the whole of
+        # BIOSINIT laid down in between.
+        "segments": ("CODE", "BIOSINIT"),
+        "group": "BiosSeg",
+        "reserved": (),
+        "renames": {},
+        "macros": {},
+        "silent": ("DEBUG",),
+        # This is the module that calls DBBEG, and it calls it three times.
+        "regions": ("DBBEG",),
+        # Its two semaphore macros reach the module's own data, and are
+        # called from both kinds of place.
+        "segmacros": {"SemWait": {"wchan": "byte"},
+                      "SemSig": {"wchan": "byte"}},
+    },
 }
 STRINGS = re.compile(r"'[^']*'|\"[^\"]*\"")
 # A name as MASM spelt one.  Python's \w is not enough: $, ? and @ are name
@@ -113,6 +148,11 @@ N = r"[A-Za-z_@?$][A-Za-z0-9_@?$]*"
 DROP = re.compile(r"""^\s*(
       \.(xlist|list|radix|xcref|cref
          |sall|lall|xall|sfcond|lfcond|tfcond)\b
+    | NAME\s+\w+\s*$                    # MASM's module name, which went in
+                                       # the object's THEADR.  IBMDSK is the
+                                       # one module here that writes one, and
+                                       # the link file is what names this
+                                       # build
     | (PAGE|SUBTTL|TITLE)\b(?!:)         # not a label of that name: EDLIN
                                        # has one called PAGE, and dropping
                                        # its definition left every reference
@@ -140,6 +180,7 @@ RESERVED = ()
 RENAMES = {}
 SILENT = ()
 REGIONS = ()
+SEGMACROS = {}
 # The ASSUME a module that has none of its own is read under.
 ASSUMED = {}
 EXTERNAL = {}
@@ -163,6 +204,15 @@ MODULES = ()
 SEGMENTS = ()
 
 FIELDS = {}
+# What each structure field was declared as.
+FIELDSIZE = {}
+# And the fields that are reached through a second name, with the size of the
+# field behind it.  FASM takes the size of a memory operand from a label in
+# it, and the block that measures a structure gives every field a label of
+# its own, so [Floppy+DeviceStruc.State] says how wide it is by itself.  An
+# EQU of a field is a plain number and says nothing, so [Fixed+DCB] has to be
+# told.
+UNSIZED = {}
 LABELS = set()
 SIZES = {}
 DOSFIELDS = {}
@@ -223,44 +273,76 @@ def commented(text):
     return "\n".join(out)
 
 
-def silenced(text):
-    """The debugging macro calls, which lay nothing down, and the one region
-    a macro opened a conditional over.
+# The directives a conditional opens and closes with, which the region a
+# macro opened has to be counted out against: one of these inside it is not
+# the one that closes it.
+OPENSIF = re.compile(r"(?i)^[ \t]*IF(DEF|NDEF|E|B|NB|IDN|DIF|1|2)?\b")
+CLOSESIF = re.compile(r"(?i)^[ \t]*ENDIF\b")
+# The CR of a CRLF file counts as neither space nor tab, and these sources
+# are not all one or the other.
+ELSESIF = re.compile(r"(?i)^[ \t]*ELSE[ \t\r]*$")
 
-    DEBUG is called 57 times between the three modules and expands to
+
+def silenced(text):
+    """The debugging macro calls, which lay nothing down, and the regions a
+    macro opened a conditional over.
+
+    DEBUG is called 59 times between the three modules and expands to
     nothing, DEBUGFLG being undefined; its arguments are format strings full
     of $ and backslashes and lists of lists, which a macro that did nothing
-    would still have to be able to read.  DBBEG is worse: its body opens an
-    IFDEF and never closes it, so the caller's own ENDIF is what closes it
-    and everything in between disappears.  Both are commented out, which is
-    what MASM made of them."""
-    out, closing = [], None
+    would still have to be able to read.  So the calls are commented out.
+
+    DBBEG is worse.  Its body opens an IFDEF and never closes it, so the
+    call behaves exactly as IFDEF DEBUGFLG does: everything after it goes
+    until the caller's own ELSE or ENDIF closes it.  IBMDSK calls it three
+    times, and the three are not alike -- two are closed by an ENDIF and the
+    whole region disappears, and one by an ELSE whose branch MASM did
+    assemble, so FloppyInit's last instruction is in it.  A region is
+    therefore read as the false conditional it is: the lines up to the ELSE
+    or ENDIF that closes it are commented out, what an ELSE leaves is kept,
+    and the ENDIF that would have closed a conditional FASM never opened is
+    commented out with it."""
+    out, state, depth = [], None, 0
     for line in text.split("\n"):
         code = line.split(";")[0]
-        if closing is not None:
-            out.append(";" + line)
-            if re.match(r"(?i)^[ \t]*%s[ \t]*$" % closing, code):
-                closing = None
+        if state is not None:
+            if OPENSIF.match(code):
+                depth += 1
+            elif CLOSESIF.match(code):
+                if depth:
+                    depth -= 1
+                else:
+                    out.append(";" + line)      # the one the macro opened
+                    state = None
+                    continue
+            elif ELSESIF.match(code) and not depth and state == "skip":
+                out.append(";" + line)
+                state = "keep"
+                continue
+            out.append((";" if state == "skip" else "") + line)
             continue
         m = re.match(r"(?i)^[ \t]*(\w+:[ \t]*)?(\w+)\b", code)
         name = m.group(2).upper() if m else None
-        opens = next((e for s, e in REGIONS if s.upper() == name), None)
+        opens = name in {s.upper() for s in REGIONS}
         if name in {s.upper() for s in SILENT} or opens:
             # The call may be carrying a label, and the label is not part of
             # what the macro lays down: IBMBIO writes
             # "GETFAT: debug 1,2,<GETFAT.>,<>" and the CALL GETFAT a page
-            # above it has to still have something to reach.  So the label
+            # above it has to still have something to reach.  IBMDSK does
+            # the same with a DBBEG, "fxxe2: dbbeg 8,4", and there the label
+            # is the target of a JMP SHORT a dozen lines above.  So the label
             # stays and the call after it becomes the comment.
             if m.group(1):
                 out.append("%s;%s" % (m.group(1).rstrip(),
                                       line[m.start(2):]))
             else:
                 out.append(";" + line)
-            closing = opens
+            if opens:
+                state, depth = "skip", 0
             continue
         out.append(line)
-    if closing is not None:
-        sys.exit("a %s region was never closed" % closing)
+    if state is not None:
+        sys.exit("a region a macro opened was never closed")
     return "\n".join(out)
 
 
@@ -369,6 +451,25 @@ def struct_arrays(text):
                   r"[ \t]*(;.*)?$", one, text)
 
 
+def field_aliases(text):
+    """A second name for a structure field, which MASM wrote as an EQU of it
+    after the ENDS.
+
+    IBMDSK lays the fixed disk's Device Control Block over the four bytes of
+    floppy controller status the structure ends with -- DCB EQU ST0 -- and
+    then writes Fixed.DCB seven times.  The EQU is a number either way, the
+    field's own offset, so it needs nothing doing to it; what it needs is to
+    be known as a field, or Fixed.DCB stays a name with a dot in it that
+    nothing defines."""
+    for raw in text.splitlines():
+        m = re.match(r"(?i)^\s*(" + N + r")\s+EQU\s+(" + N + r")\s*$",
+                     raw.split(";")[0])
+        if m and m.group(2).upper() in FIELDS:
+            FIELDS.setdefault(m.group(1).upper(), m.group(1))
+            UNSIZED.setdefault(m.group(1).upper(),
+                               FIELDSIZE[m.group(2).upper()])
+
+
 def struc(text):
     """Turn the MASM STRUC into a FASM one, and remember its fields."""
     while True:
@@ -388,6 +489,8 @@ def one_struc(text):
         f = re.match(r"\s*(\w+)\s+(DB|DW|DD)\b(.*)$", line, re.I)
         if f:
             FIELDS[f.group(1).upper()] = "%s.%s" % (name, f.group(1))
+            FIELDSIZE[f.group(1).upper()] = {"DB": "byte", "DW": "word",
+                                             "DD": "dword"}[f.group(2).upper()]
             # A field reserving several bytes keeps its count: dropping it for
             # a plain 0 would shift every field after it.
             init = f.group(3)
@@ -549,6 +652,11 @@ def spaces(text):
             continue
         m = (re.match(r"(?i)^(" + N + r")\s+(?:DB|DW|DD|DQ|DT|LABEL)\b", code)
              or re.match(r"(?i)^(" + N + r"):", code))
+        # A structure instance reserves storage as surely as a DB does.
+        if not m:
+            i = re.match(r"(?i)^(" + N + r")\s+(" + N + r")\s*<\s*>\s*$",
+                         code.rstrip())
+            m = i if i and i.group(2).upper() in STRUCS else None
         if m:
             SPACE.setdefault(m.group(1).upper(),
                              GROUPOF.get(segment, segment))
@@ -568,7 +676,7 @@ def covered(cover, space):
     return None
 
 
-def overrides(body, cover):
+def overrides(body, cover, through=None):
     """The segment override MASM wrote for itself, from the ASSUME in force.
 
     The whole of this BIOS runs with ASSUME CS:BiosSeg,DS:NOTHING, DS being
@@ -582,7 +690,20 @@ def overrides(body, cover):
     in, which is MASM's rule and spaces() reads it that way.  One declared
     outside every segment is in none, so nothing here reaches it and no
     override is written -- which is what MASM did with it too.
+
+    through is the name of a macro parameter, for a line inside a macro that
+    reaches the module's own data: MASM expanded the macro at the call site
+    and wrote the override from the ASSUME in force there, which is not the
+    one in force where the macro is written.
     """
+    # LEA works out an address and reads no memory, so there is no segment in
+    # it for an override to change and MASM wrote none however DS stood:
+    # IBMDSK has four, LEA SI,FloppyFunction and the like, and each of them
+    # is five bytes in the object where ours came out six with a 2E in front.
+    m = MNEMONIC.match(body)
+    if m and m.group(2).upper() == "LEA":
+        return body
+
     def one(m):
         inner = m.group(1)
         if re.match(r"(?i)^\s*(?:cs|ds|es|ss)\s*:", inner):
@@ -590,7 +711,10 @@ def overrides(body, cover):
         name = re.match(r"\s*([A-Za-z_@?$][\w@?$]*)", inner)
         if not name:
             return m.group(0)
-        reg = covered(cover, SPACE.get(name.group(1).upper()))
+        space = SPACE.get(name.group(1).upper())
+        if through and space and space == GROUP.upper():
+            return "[%s:%s]" % (through, inner)
+        reg = covered(cover, space)
         if reg in (None, "ds"):
             return m.group(0)
         return "[%s:%s]" % (reg.upper(), inner)
@@ -662,6 +786,16 @@ def data_labels(text):
             labels.add(m.group(1).upper())
             SIZES[m.group(1).upper()] = m.group(2).lower()
             continue
+        # An instance of a structure, which reserves as much storage as the
+        # structure is long: IBMDSK keeps each driver's state in one, Floppy
+        # and Fixed, and writes Floppy.State and Fixed.Flags throughout.  No
+        # size, because the instance as a whole has none -- the field says
+        # what size a reference is.
+        m = re.match(r"^(" + N + r")\s+(" + N + r")\s*<\s*>\s*$",
+                     code.rstrip(), re.I)
+        if m and m.group(2).upper() in STRUCS:
+            labels.add(m.group(1).upper())
+            continue
         # A macro that defines storage, as SYSMES.ASM's Message defines both
         # the text and a word holding its length.
         for name, suffixes in MACROS.items():
@@ -720,6 +854,20 @@ def one_operand(op, labels):
             core, again = mp.group(1).strip(), True
 
     inner = None
+    # MASM's type names are numbers as well as casts, and without PTR a
+    # number is all they are: WORD is 2, and MASM added it to what came
+    # after.  IBMDSK writes "cmp word [SemDiskIO],0001h" once, and the
+    # object settles what MASM made of it -- the fixup on that instruction
+    # names SemDiskIO+2, which is not the semaphore but the first byte of
+    # the code after the data, and the compare is a byte compare of
+    # FloppyInit's PUSH DS against 1.  So the Int 13 case it guards never
+    # runs.  It is converted as MASM assembled it, which is the whole point
+    # of converting rather than correcting.
+    typed = re.match(r"(?i)^(BYTE|WORD|DWORD)\s*\[([^\]]+)\]$", core)
+    if typed:
+        core = "[%s+%d]" % (typed.group(2).strip(),
+                            {"BYTE": 1, "WORD": 2,
+                             "DWORD": 4}[typed.group(1).upper()])
     # MASM indexes a variable by writing the register after its name: PROFIL
     # counts a sample with INC BUCKET[BX], which is [BUCKET+BX].
     # The name may carry an offset of its own before the bracket, or be a
@@ -734,9 +882,15 @@ def one_operand(op, labels):
     # The field may have an offset of its own after it: IBMMTCON writes the
     # segment of a buffer to DS:[bx].DatBuf+2.
     dotted = re.match(r"^\[([^\]]+)\]\s*\.(\w+)((?:\s*[-+]\s*\w+)*)$", core)
+    # And it writes a plain offset after the brackets as readily as inside
+    # them: IBMDSK looks at the next request in a queue with
+    # CMP WORD PTR [SI]+2,0.
+    after = re.match(r"^\[([^\]]+)\]((?:\s*[-+]\s*\w+)+)$", core)
     if dotted:
         inner = "%s+%s%s" % (dotted.group(1).strip(), dotted.group(2),
                              dotted.group(3).replace(" ", ""))
+    elif after:
+        inner = after.group(1).strip() + after.group(2).replace(" ", "")
     elif core.startswith("[") and core.endswith("]"):
         inner = core[1:-1]
     elif indexed and (seg or indexed_base(indexed.group(1)) in labels):
@@ -745,8 +899,16 @@ def one_operand(op, labels):
     elif seg:
         inner = core
     else:
+        # A variable with a field on it and no brackets anywhere: MASM
+        # resolved that to memory as surely as it resolved a bare name, and
+        # IBMDSK writes it 124 times -- MOV Floppy.State,Start.  The field
+        # is left to the pass that knows the structures, as it is for
+        # DS:[BX].CMD; this only says that the operand is memory.
+        field = re.match(r"^(" + N + r")\.(\w+)((?:\s*[-+]\s*\w+)?)$", core)
         bare = re.match(r"^(\w+)((?:\s*[+-]\s*\w+)?)$", core)
-        if bare and bare.group(1).upper() in labels:
+        if field and field.group(1).upper() in labels:
+            inner = core.replace(" ", "")
+        elif bare and bare.group(1).upper() in labels:
             inner = bare.group(1) + bare.group(2).replace(" ", "")
     if inner is None:
         return op                       # a register or a number, left alone
@@ -822,6 +984,31 @@ def bracket(body, labels):
                                           EXTERNAL[b.group(3).upper()],
                                           b.group(2), b.group(3), b.group(4),
                                           b.group(5))
+
+    # The size of a field reached through a second name, which MASM read from
+    # the field the name stands for and FASM has nothing to read: an EQU of a
+    # field is a number.  MOV Fixed.DCB,HD_CREAD says nothing else about how
+    # wide it is, where MOV Fixed.State,Start is told by the label the
+    # structure's own field has.
+    # Only where nothing else on the line says it.  A register operand does,
+    # and where the two disagreed MASM took the register's size -- it let a
+    # byte register meet a word field and read the low byte of it -- so a
+    # line with a register on it is left alone.
+    if UNSIZED and not any(
+            re.fullmatch(r"\s*(?:[ABCD][XLH]|[SD]I|[BS]P|CS|DS|ES|SS)\s*",
+                         op, re.I) for op in ops):
+        for i, op in enumerate(ops):
+            if SIZED.match(op):
+                continue
+            b = re.fullmatch(r"(\s*)\[([^\]]*)\](\s*)", op)
+            if not b:
+                continue
+            for word in re.findall(r"[A-Za-z_@?$][\w@?$]*", b.group(2)):
+                if word.upper() in UNSIZED:
+                    ops[i] = "%s%s [%s]%s" % (b.group(1),
+                                              UNSIZED[word.upper()],
+                                              b.group(2), b.group(3))
+                    break
 
     if any(re.fullmatch(r"\s*[ABCD][LH]\s*", op, re.I) for op in ops):
         for i, op in enumerate(ops):
@@ -978,7 +1165,7 @@ def seeded(text):
 def convert(text, renames, first=False, assume=""):
     """first says this is the module that brings DOSSYM in: every module had
     its own INCLUDE of it, and including it twice redefines every structure."""
-    out, inmacro, infar, absolute = [], [], [], []
+    out, inmacro, infar, absolute, opened = [], [], [], [], []
     # What each segment register is assumed to hold, which MASM read every
     # reference against.  It starts as MASM started a module, on nothing,
     # unless the table says this one is read inside another.
@@ -1025,13 +1212,28 @@ def convert(text, renames, first=False, assume=""):
                     out.append("end if")
                 continue
         if SEGMENTS:
+            # MASM lets one segment stand inside another, and IBMDSK writes
+            # BiosInit in the middle of Code: the object says so, its CODE
+            # chunks stopping at 0x334 and starting again there with the
+            # whole of BIOSINIT in between.  The outer segment is suspended
+            # rather than ended, so the pass over it is closed and the inner
+            # one's opened -- written as a conditional inside a conditional,
+            # the inner block would have stood inside one that is false in
+            # its own pass, and BIOSINIT would have come out empty.
             m = re.match(r"^\s*(\w+)\s+SEGMENT\b", raw, re.I)
             if m and m.group(1).upper() in SEGMENTS:
+                if opened:
+                    out.append("end if")
                 out.append("if SEGSEL = S_%s" % m.group(1).upper())
+                opened.append(m.group(1).upper())
                 continue
             m = re.match(r"^\s*(\w+)\s+ENDS\s*$", raw, re.I)
             if m and m.group(1).upper() in SEGMENTS:
                 out.append("end if")
+                if opened:
+                    opened.pop()
+                if opened:
+                    out.append("if SEGSEL = S_%s" % opened[-1])
                 continue
         # FASM's macro names are case sensitive, and the ASSUME the conversion
         # leans on -- a macro that does nothing, MASM's being a directive --
@@ -1078,9 +1280,14 @@ def convert(text, renames, first=False, assume=""):
                          r"\1RETF\2", raw, flags=re.I)
         m = re.match(r"^\s*(\w+)\s+MACRO\s*(.*?)\s*$", raw, re.I)
         if m:
-            out.append("macro %s %s" % (m.group(1), m.group(2)))
+            # A macro whose body reaches the module's own data takes the
+            # register that reaches it as its first argument, because the
+            # ASSUME that decided it was the call site's and not this one's.
+            seg = m.group(1).upper() in {k.upper() for k in SEGMACROS}
+            out.append("macro %s %s%s" % (m.group(1), "seg," if seg else "",
+                                          m.group(2)))
             out.append("{")
-            inmacro.append(True)
+            inmacro.append(seg)
             continue
         if re.match(r"^\s*ENDM\s*$", raw, re.I):
             out.append("}")
@@ -1098,10 +1305,14 @@ def convert(text, renames, first=False, assume=""):
                            m.group(4).strip(), m.group(5)))
         # A structure instance: MASM takes the default values as <>, and FASM
         # declares the instance as NAME STRUC and names its fields NAME.field.
-        m = re.match(r"^(\s*\w+\s+)(\w+)\s*<\s*>\s*$", raw)
+        # The comment after it is not decoration: IBMDSK says which drive
+        # each of its four drive tables is for.
+        m = re.match(r"^(\s*\w+\s+)(\w+)\s*<\s*>\s*(;.*)?$", raw.rstrip())
         if m:
             n = STRUC_PARAMS.get(m.group(2).upper(), 0)
-            raw = m.group(1) + m.group(2) + (" " + ",".join("?" * n) if n else "")
+            raw = (m.group(1) + m.group(2)
+                   + (" " + ",".join("?" * n) if n else "")
+                   + ("\t" + m.group(3) if m.group(3) else ""))
         # MASM's way of writing an assertion: a conditional whose false
         # branch is .RADIX 0, which is not a radix and stops the assembly.
         # ANSI.INC checks that its state table is big enough that way.
@@ -1153,8 +1364,22 @@ def convert(text, renames, first=False, assume=""):
                                       m.group(4), value, pad)
         # FASM wants the file name quoted
         body = re.sub(r"^(\s*)INCLUDE\s+([\w.]+)\s*$", r"\1INCLUDE '\2'", body, flags=re.I)
+        # And the call of one hands it in.  MASM expanded the macro here,
+        # under the ASSUME in force here: IBMDSK calls SemWait and SemSig
+        # from six places, four of them with DS on nothing, where the
+        # override is CS, and two with DS on BiosSeg, where MASM wrote none.
+        if SEGMACROS:
+            m = re.match(r"^(\s*)(\w+)(\s+)(.*?)(\s*)$", body)
+            if m and m.group(2).upper() in {k.upper() for k in SEGMACROS}:
+                reg = covered(cover, GROUP.upper())
+                if reg is None:
+                    sys.exit("%s is called where nothing reaches %s"
+                             % (m.group(2), GROUP))
+                body = "%s%s%s%s,%s%s" % (m.group(1), m.group(2), m.group(3),
+                                          reg.upper(), m.group(4), m.group(5))
         body = bracket(body, LABELS)
-        body = overrides(body, cover)
+        body = overrides(body, cover,
+                         "seg" if inmacro and inmacro[-1] else None)
         body = line(body)
         out.append(body + sep + comment if sep else body)
     return "\n".join(out) + "\n"
@@ -1170,8 +1395,9 @@ def main(program):
     spec = PROGRAMS[program]
     MODULES, SEGMENTS = spec["modules"], tuple(spec["segments"])
     RESERVED, RENAMES = spec["reserved"], spec["renames"]
-    global SILENT, REGIONS
+    global SILENT, REGIONS, SEGMACROS
     SILENT, REGIONS = spec["silent"], spec["regions"]
+    SEGMACROS = spec.get("segmacros", {})
     global ASSUMED
     ASSUMED = spec.get("assume", {})
     global GROUP
@@ -1183,6 +1409,9 @@ def main(program):
     # A macro call is not an instruction, and its arguments are names rather
     # than memory: bracketing them would pass [BadDrv] where BadDrv was meant.
     NOTCODE.update(MACROS)
+    # The call of a macro that takes its caller's segment register is not an
+    # instruction either, and the register is written on to it by hand.
+    NOTCODE.update(k.upper() for k in SEGMACROS)
     DOSFIELDS = dossym_fields()
     texts = {}
     for name in MODULES:
@@ -1192,6 +1421,7 @@ def main(program):
             sys.exit("%s looks converted already; nothing done." % name)
         texts[name] = struct_arrays(struc(irp_macros(
             dollars(silenced(commented(page_breaks(text)))))))
+        field_aliases(texts[name])
     # The program's own structures are read by now, and MASM makes their field
     # names offsets in their own right as well, so they go in the same map.
     DOSFIELDS.update(FIELDS)
@@ -1212,6 +1442,16 @@ def main(program):
                           % "|".join(sorted(CANON, key=len, reverse=True)),
                           re.I) if CANON else None
     LABELS = set()
+    # A macro parameter that stands for a variable is memory, and FASM has no
+    # declaration of it to read: the size the caller's variable has is in the
+    # table, and the address space is the module's own, which is what says
+    # the override goes on it.
+    for params in SEGMACROS.values():
+        for param, size in params.items():
+            LABELS.add(param.upper())
+            SIZES[param.upper()] = size
+            EXTERNAL[param.upper()] = size
+            SPACE[param.upper()] = GROUP.upper()
     for name, text in texts.items():
         spaces(text)
         FARLABEL.update(far_labels(text))

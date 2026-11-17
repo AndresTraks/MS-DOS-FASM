@@ -18,30 +18,47 @@ to boot it on.  What there is, for each module that does have a source, is the
 object Microsoft shipped beside it: the same assembler text, assembled in
 1984.  Held against that, byte by byte, a conversion has nowhere to hide.
 
-What is ignored, and why that is sound:
-
-  * every byte a FIXUPP record covers.  Those are the bytes LINK was to fill
-    in -- the externals, and every reference to the second segment of the
-    group, whose base only LINK knew.  MASM left them zero and they say
-    nothing about the conversion.  They are 272 of IBMBIO's CODE and 244 of
-    its BIOSINIT, so this is not a small allowance; what makes it safe is
-    that the bytes around them are not ignored, so an instruction that moved
-    or changed length still shows.
+The bytes a FIXUPP record covers are compared differently, because MASM left
+them zero: they are the bytes LINK was to fill in -- the externals, and every
+reference to the module's own data, whose offset in the finished CODE depends
+on how much of the other modules went in front of it.  They are a fifth of
+each module, so they are far too many to pass over: a reference to the wrong
+variable would be invisible.  What they are held against instead is the
+FIXUPP record itself, which says which segment or external the value points
+into and the offset inside it -- enough to work out what this build should
+have written there, since this build knows where it put its segments and the
+link file declares every external to be zero.  What is left over is said at
+the end of each module, and it comes to three things: a paragraph LINK was to
+assign, a pointer's segment word, and a word immediate the two assemblers
+wrote at different widths.
 
 What is allowed, and counted so that it cannot grow unnoticed: the encoding
 choices the two assemblers make differently, which are the same instruction
 either way.  MASM writes MOV AX,BX as 8B C3, reg <- rm, where FASM writes
 89 D8, rm <- reg; it writes CMP AX,40H with the accumulator's own opcode,
-3D 40 00, where FASM writes 83 F8 40; and it gives a logical operation on a
-word register the full word immediate, 81 /4 and four bytes, where FASM takes
-the 8086's sign extended byte form, 83 /4 and three.  Only the last of those
-changes the length, and there are none of it here.
+3D 40 00, where FASM writes 83 F8 40; it gives a logical operation on a word
+register the full word immediate, 81 /4 and four bytes, where FASM takes the
+8086's sign extended byte form, 83 /4 and three; and it leaves a NOP where it
+shortened a forward jump of its own, having reserved three bytes for it and
+then found the target within reach of two.
+
+The last two of those change the length, and the length changing is what
+makes the rest of the walk hard: an instruction that came out shorter moves
+everything after it, so the displacement of every branch across it differs
+too.  Those are checked rather than passed over.  A relative branch counts
+from the instruction after it, so the two displacements have to differ by
+exactly the number of bytes the object has and ours has not between the
+branch and where it lands -- which is arithmetic, and needs nothing said
+about which instruction it is.  The earlier attempt to read the instruction
+went wrong twice: a byte walk cannot tell an opcode from an operand, and
+every E3 was read as a JCXZ where D1 E3 is SHL BX,1.
 
 Anything else stops the walk and is printed with the bytes either side of it.
+And whatever is allowed, the arithmetic has to come out: the object's own
+segment lengths less what the allowances account for is what our binary must
+weigh, and it is said so at the end of each module.
 """
 import os
-import re
-import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -49,7 +66,8 @@ OBJ = os.path.join(HERE, "bin", "DISK2", "BIOS")
 
 # Per module: the object MASM made, and the binary assemble.sh lays down.
 MODULES = (("IBMBIO", "IBMBIO.OBJ", "IBMBIO.BIN"),
-           ("IBMMTCON", "IBMMTCON.OBJ", "IBMMTCON.BIN"))
+           ("IBMMTCON", "IBMMTCON.OBJ", "IBMMTCON.BIN"),
+           ("IBMDSK", "IBMDSK.OBJ", "IBMDSK.BIN"))
 
 # rm <- reg forms, whose reg <- rm twin is the opcode with bit 1 set
 SWAPPABLE = {0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x88,
@@ -70,15 +88,39 @@ def after_index(body, p):
     return p + (2 if body[p] & 0x80 else 1)
 
 
+def iterated(body, p):
+    """One iterated data block of a LIDATA record, flattened, and where the
+    next one starts.
+
+    A block is a repeat count, a count of the blocks inside it, and then
+    either -- the inner count being zero -- a byte count and that many bytes,
+    or that many blocks of the same shape again.  The whole of it is laid
+    down as many times as the repeat count says."""
+    count = int.from_bytes(body[p:p+2], "little")
+    blocks = int.from_bytes(body[p+2:p+4], "little")
+    p += 4
+    if blocks == 0:
+        n = body[p]
+        p += 1
+        out = bytes(body[p:p+n])
+        p += n
+    else:
+        out = b""
+        for _ in range(blocks):
+            part, p = iterated(body, p)
+            out += part
+    return out * count, p
+
+
 def records(path):
-    """The LNAMES, SEGDEF, LEDATA and FIXUPP of an OMF object file.
+    """The LNAMES, SEGDEF, LEDATA, LIDATA and FIXUPP of an OMF object file.
 
     A record is a type byte, a length word, that many bytes less the
-    checksum, and the checksum.  Only the four that say what the module
+    checksum, and the checksum.  Only the five that say what the module
     laid down are read."""
     d = open(path, "rb").read()
     i = 0
-    names, segs, chunks, wild = [], [], [], set()
+    names, segs, chunks, wild, fixups = [], [], [], set(), []
     cur = None
     while i < len(d):
         t = d[i]
@@ -92,14 +134,28 @@ def records(path):
                 p += 1 + l
         elif t in (0x98, 0x99):                         # SEGDEF
             acbp = body[0]
-            p = 1
+            p, frame = 1, None
             if (acbp >> 5) & 7 == 0:                    # absolute: frame and offset
+                frame = int.from_bytes(body[1:3], "little")
                 p += 3
             segs.append({"name": names[body[p+2]-1],
                          "length": int.from_bytes(body[p:p+2], "little"),
-                         "absolute": (acbp >> 5) & 7 == 0})
+                         "absolute": (acbp >> 5) & 7 == 0,
+                         "frame": frame})
         elif t in (0xa0, 0xa1):                         # LEDATA
             cur = (body[0], int.from_bytes(body[1:3], "little"), body[3:])
+            chunks.append(cur)
+        elif t in (0xa2, 0xa3):                         # LIDATA
+            # Repeated data, which MASM wrote for a structure instance:
+            # IBMDSK declares six of them -- the two drivers' state and the
+            # four per-drive tables -- and the defaults in the declaration
+            # are laid down field by field, each field one block.  Read as
+            # nothing at all the first 166 bytes of its CODE went uncompared.
+            data, p = b"", 3
+            while p < len(body):
+                part, p = iterated(body, p)
+                data += part
+            cur = (body[0], int.from_bytes(body[1:3], "little"), data)
             chunks.append(cur)
         elif t in (0x9c, 0x9d):                         # FIXUPP
             p = 0
@@ -108,26 +164,36 @@ def records(path):
                     w = (body[p] << 8) | body[p+1]
                     p += 2
                     off, loc = w & 0x3FF, (w >> 10) & 0xF
+                    relative = (w >> 14) & 1            # or self relative
                     fixdat = body[p]
                     p += 1
                     if not (fixdat >> 7) & 1 and (fixdat >> 4) & 7 in (0, 1, 2):
                         p = after_index(body, p)        # frame datum
+                    index = None
                     if not (fixdat >> 3) & 1:
+                        index = body[p] & 0x7F if not body[p] & 0x80 else \
+                            ((body[p] & 0x7F) << 8) | body[p+1]
                         p = after_index(body, p)        # target datum
+                    disp = 0
                     if not (fixdat >> 2) & 1:
+                        disp = int.from_bytes(body[p:p+2], "little")
                         p += 2                          # target displacement
                     width = {0: 1, 1: 2, 2: 2, 3: 4, 4: 1,
                              5: 2, 9: 2, 11: 4, 13: 2}.get(loc, 2)
                     if cur:
                         for k in range(width):
                             wild.add((cur[0], cur[1] + off + k))
+                        # What LINK was told to put there, which is more than
+                        # enough to work out what this build should have.
+                        fixups.append((cur[0], cur[1] + off, loc, relative,
+                                       fixdat & 3, index, disp))
                 else:                                   # a thread
                     method = (body[p] >> 2) & 7
                     p += 1
                     if method <= 2:
                         p = after_index(body, p)
         i += 3 + n
-    return segs, chunks, wild
+    return segs, chunks, wild, fixups
 
 
 def swapped(modrm):
@@ -135,15 +201,6 @@ def swapped(modrm):
     if modrm & 0xC0 != 0xC0:
         return None
     return 0xC0 | ((modrm & 7) << 3) | ((modrm >> 3) & 7)
-
-
-# A relative branch, by opcode, and how many bytes of displacement it has.
-# These are the instructions whose operand is a distance rather than a place,
-# so an instruction that came out shorter earlier in the chunk changes them
-# without anything being wrong.
-RELATIVE = dict([(0xeb, 1), (0xe3, 1), (0xe0, 1), (0xe1, 1), (0xe2, 1),
-                 (0xe8, 2), (0xe9, 2)]
-                + [(0x70 + k, 1) for k in range(16)])
 
 
 def explain(blob, ours, seg, off, base, wild, i, j, notes=None):
@@ -199,34 +256,73 @@ def explain(blob, ours, seg, off, base, wild, i, j, notes=None):
     return None
 
 
-def resync(blob, ours, seg, off, base, wild, i, j, reach=3, run=6):
-    """Where the two streams come together again, if they do within a few
-    bytes.  Returns the cursors to carry on from, or None.
+def extras(blob, ours, seg, off, base, wild, drift):
+    """Where the object has bytes ours has not, by offset in the object, and
+    which of its bytes belong to an instruction the two assemblers encoded
+    differently.
 
-    Once an instruction has come out shorter, the displacement of every jump
-    across it differs, and so does any address worked out from a label after
-    it.  There is no telling those bytes from any other by looking: a byte
-    walk cannot say which byte is an opcode and which an operand, and the
-    attempt to -- reading every E3 as a JCXZ, when D1 E3 is SHL BX,1 --
-    left real bytes uncompared.  So the rule is blunt and stated: a
-    difference is passed over only if the streams then agree for six steps
-    running, each of which must itself be explained."""
-    def agrees(di, dj):
-        for _ in range(run):
-            step = explain(blob, ours, seg, off, base, wild, di, dj)
-            if step is None:
-                return False
-            di += step[0]
-            dj += step[1]
-        return True
-    for d in range(1, reach + 1):
-        for di, dj in ((i + d, j + d), (i + d, j), (i, j + d)):
-            if agrees(di, dj):
-                return di, dj
+    There are two ways that happens and explain() knows both of them: a NOP
+    MASM left where it shortened its own jump, and a word immediate FASM
+    writes sign extended.  Found here in a walk of its own, ahead of the one
+    that compares, because a jump reaches forward over them and the walk
+    cannot know what it has not read yet.  Over the whole of a segment at
+    once, chunk after chunk, because a branch reaches across the boundary
+    between two of them as readily: one of IBMDSK's reaches 117 bytes back
+    into the chunk before.  A difference that is not one of those is stepped
+    over a byte at a time, which is what the comparing walk will have to
+    account for: its value is that walk's business and its length is one byte
+    either way.
+
+    The re-encoded bytes are wanted for a different reason.  Where MASM wrote
+    ADD AX,imm with the accumulator's own opcode and FASM wrote 83 /0, the
+    immediate is a word in one and a sign extended byte in the other, so a
+    fixup that lands in it has nothing in our copy to be held against."""
+    found, recoded, i, j = {}, set(), 0, off + drift
+    while i < len(blob):
+        step = explain(blob, ours, seg, off, base, wild, i, j)
+        if step is None:
+            i, j = i + 1, j + 1
+            continue
+        if step != (1, 1):
+            recoded.update(range(off + i, off + i + step[0]))
+        if step[0] != step[1]:
+            found[off + i] = step[0] - step[1]
+        i += step[0]
+        j += step[1]
+    return found, recoded, j - off - i
+
+
+def displaced(blob, ours, off, base, i, j, extra):
+    """Whether the byte the walk has stopped on is a branch displacement that
+    moved, and the width of it; None if the arithmetic does not come out.
+
+    This is the one difference left once the encodings are allowed for, and
+    it has to be, because a shortened instruction moves everything after it:
+    a jump across one comes out that much shorter.  It is checked rather than
+    guessed at.  A relative branch counts from the instruction after it, so
+    the two displacements must differ by exactly the number of bytes the
+    object has and ours has not between the branch and where it lands --
+    which extras() has worked out.  A byte that differs for any other reason
+    would have to agree with that sum by accident.
+
+    The earlier attempt to read the instruction instead went wrong twice: a
+    byte walk cannot say which byte is an opcode and which an operand, and
+    every E3 was read as a JCXZ where D1 E3 is SHL BX,1.  This asks nothing
+    about the instruction."""
+    for width in (1, 2):
+        if i + width > len(blob) or base + j + width > len(ours):
+            continue
+        a = int.from_bytes(blob[i:i+width], "little", signed=True)
+        b = int.from_bytes(ours[base+j:base+j+width], "little", signed=True)
+        here = off + i + width                  # the instruction after it
+        lo, hi = (here, here + a) if a >= 0 else (here + a, here)
+        gap = sum(n for at, n in extra.items() if lo <= at < hi)
+        if gap and a - b == (gap if a >= 0 else -gap):
+            return width
     return None
 
 
-def walk(blob, ours, seg, off, base, wild, notes, drift):
+def walk(blob, ours, seg, off, base, wild, notes, drift, extra):
     """Hold one chunk of the object against our copy of it, byte by byte.
 
     Two cursors, because an instruction FASM writes shorter does not throw
@@ -244,15 +340,95 @@ def walk(blob, ours, seg, off, base, wild, notes, drift):
             continue
         if base + j >= len(ours):
             return "ours stops at the object's 0x%x" % (off + i), j - off - i
-        back = resync(blob, ours, seg, off, base, wild, i, j)
-        if back is not None:
-            notes["a byte that moved with a shortened instruction"] += 1
-            i, j = back
+        width = displaced(blob, ours, off, base, i, j, extra)
+        if width is not None:
+            notes["a branch displacement, shorter by the bytes it jumps "
+                  "over"] += 1
+            i += width
+            j += width
             continue
         return ("0x%04x\n    object %s\n    ours   %s"
                 % (off + i, blob[max(0, i-10):i+12].hex(),
                    ours[base+j-10:base+j+12].hex())), j - off - i
     return None, j - off - i
+
+
+def resolved(fixups, bases, extra, recoded, ours, segs):
+    """The bytes LINK was to fill in, held against what FASM put there.
+
+    These are the bytes the walk has to ignore, and they are a fifth of the
+    module: MASM left a zero wherever the value was not its to know -- an
+    external, or a reference to the module's own data, whose offset in the
+    finished CODE depends on how much of IBMBIO and IBMMTCON went in front of
+    it.  Ignored, a reference to the wrong variable would not show at all,
+    which is the one hole left in the comparison.
+
+    It need not be a hole, because the FIXUPP record says what LINK was to
+    write: which segment or external the value points into and the offset
+    inside it.  This build knows where it put that segment, and the externals
+    are zero by declaration in the link file, so the value FASM should have
+    written can be worked out and compared.  What is left out is only what
+    nobody here can know: a segment's own paragraph, which is the base LINK
+    would have assigned.
+
+    An offset in the object is an offset in our copy less whatever came out
+    shorter before it, which is what extra holds.
+
+    An absolute segment is a window on somebody else's memory -- the ROM's
+    data at 40H, the display buffers at B000H and B800H -- and its paragraph
+    is in the source rather than LINK's to decide, so a reference into one is
+    checked as well: the offset against the virtual block the conversion
+    makes of it, which starts at nothing as the segment's own offsets do, and
+    the paragraph against the number the SEGMENT AT gave."""
+    def ourat(seg, off):
+        return bases[seg] + off - sum(n for at, n in extra[seg].items()
+                                      if at < off)
+    import collections
+    checked, left, complaints = 0, collections.Counter(), []
+    for seg, off, loc, relative, method, index, disp in fixups:
+        if seg not in bases:
+            left["in a segment that lays nothing down"] += 2
+            continue
+        if any(off + k in recoded[seg] for k in range(2)):
+            left["inside an instruction the two wrote differently"] += 2
+            continue
+        into = segs[index-1] if method == 0 else None
+        if loc == 2:                        # a paragraph, not an offset
+            if into is None or not into["absolute"]:
+                left["a paragraph LINK was to assign"] += 2
+                continue
+            # A window on memory that is already there, and the SEGMENT AT
+            # said where: RomData = 40H.
+            target = into["frame"]
+        elif loc not in (1, 3):
+            left["a kind of fixup this does not read"] += 2
+            continue
+        elif method == 0 and index in bases:            # this module's own
+            if disp > into["length"]:
+                left["a target past the end of its segment"] += 2
+                continue                    # which the one WORD without PTR
+                                            #   is, and MASM meant no such
+                                            #   thing
+            target = ourat(index, disp)
+        elif method == 0 and into["absolute"]:
+            # An offset in the virtual block the conversion makes of it,
+            # which starts at nothing as the segment's own offsets do.
+            target = disp
+        elif method == 2:                   # an external, which is zero here
+            target = disp
+        else:
+            left["a target of a kind this does not read"] += 2
+            continue
+        if loc == 3:
+            left["a pointer's segment word"] += 2
+        at = ourat(seg, off)
+        want = (target if relative else target - (at + 2)) & 0xFFFF
+        got = int.from_bytes(ours[at:at+2], "little")
+        checked += 1
+        if got != want:
+            complaints.append("0x%04x: LINK was to write 0x%04x, FASM wrote "
+                              "0x%04x" % (off, want, got))
+    return checked, left, complaints
 
 
 def main():
@@ -264,7 +440,7 @@ def main():
             print("%s: not built; run assemble.sh" % binfile)
             bad += 1
             continue
-        segs, chunks, wild = records(os.path.join(OBJ, objfile))
+        segs, chunks, wild, fixups = records(os.path.join(OBJ, objfile))
         ours = open(path, "rb").read()
         # The link file lays the group's segments out in the order the object
         # declares them, from one origin, which is what a group is.  An
@@ -282,21 +458,45 @@ def main():
         # wrong.
         print("=== %s, against %s" % (name, objfile))
         for k, seg in enumerate(segs, 1):
-            if seg["absolute"]:
-                print("    %-10s %5d bytes, somewhere else: %s"
-                      % (seg["name"], seg["length"],
-                         "nothing laid down, as a virtual block lays nothing"))
+            if not seg["absolute"]:
+                continue
+            # A window on memory that is already there, which the conversion
+            # makes a virtual block of: our build lays nothing down there,
+            # and the object mostly does not either.  Mostly: MASM gives a
+            # DW ? a word of zero in the object where it gives n DUP (?)
+            # nothing at all, so IBMMTCON's ROMDATA has 18 bytes in it --
+            # bytes LINK would have written into the ROM's own data area.
+            had = sum(len(b) for g, o, b in chunks if g == k)
+            print("    %-10s %5d bytes, somewhere else: %s"
+                  % (seg["name"], seg["length"],
+                     "nothing laid down, as a virtual block lays nothing"
+                     if not had else
+                     "%d bytes the object lays down there and ours does not, "
+                     "a virtual block laying nothing" % had))
         expected = base
         notes = collections.Counter()
         running = 0
+        bases, extras_of, recoded_of = {}, {}, {}
         for k in sorted(where):
+            bases[k] = where[k] + running
+            # Where the object has bytes ours has not, over the whole of this
+            # segment before any of it is compared: the walk that compares
+            # needs them to hand, and a branch reaches forward.
+            extra, mixed, drift = {}, set(), 0
+            for seg, off, blob in chunks:
+                if seg != k:
+                    continue
+                found, these, drift = extras(blob, ours, seg, off, bases[k],
+                                             wild, drift)
+                extra.update(found)
+                mixed |= these
+            extras_of[k], recoded_of[k] = extra, mixed
             drift = 0
             for seg, off, blob in chunks:
                 if seg != k:
                     continue
-                complaint, drift = walk(blob, ours, seg, off,
-                                        where[seg] + running, wild, notes,
-                                        drift)
+                complaint, drift = walk(blob, ours, seg, off, bases[k],
+                                        wild, notes, drift, extra)
                 print("    %-10s 0x%04x %5d bytes  %s"
                       % (segs[seg-1]["name"], off, len(blob),
                          "the same" if complaint is None
@@ -317,8 +517,15 @@ def main():
                   "them accounted for above" % -running)
         for what, n in sorted(notes.items()):
             print("    %5d  %s" % (n, what))
-        print("    %5d  bytes left to LINK and not compared"
-              % len([w for w in wild if w[0] in where]))
+        checked, left, complaints = resolved(
+            fixups, bases, extras_of, recoded_of, ours, segs)
+        print("    %5d  bytes left to LINK, held against what the FIXUPP "
+              "record says LINK was to write" % (checked * 2))
+        for what, n in sorted(left.items()):
+            print("    %5d  and not held against anything: %s" % (n, what))
+        for complaint in complaints:
+            print("           %s" % complaint)
+        bad += len(complaints)
     print("\n%s" % ("something differs" if bad else
                     "every module is the object's own bytes"))
     return 1 if bad else 0
