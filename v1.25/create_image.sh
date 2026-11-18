@@ -1,7 +1,10 @@
 #!/bin/sh
 set -e
 cd "$(dirname "$0")"
-IMAGE=msdos.img
+# The image to write, msdos.img unless another is named: a test makes one of
+# its own and puts its own files on it, which is how the tests under tests/
+# are run side by side without treading on each other or on this one.
+IMAGE=${1:-msdos.img}
 
 ./assemble.sh
 

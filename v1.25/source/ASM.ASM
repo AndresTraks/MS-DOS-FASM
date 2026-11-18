@@ -60,6 +60,20 @@ MEMORY	EQU	18H	;For general memory operations
 STACKOP	EQU	10H	;Two register arithmetic with pop
 ARITH	EQU	8	;Non-pop arithmetic operations
 
+; SCP ASM's DM, "define message": the bytes of a DB with the high bit set on
+; the last of them.  That bit is the end of the string everywhere this
+; program prints one -- PRINT reads a byte, prints it and stops when the byte
+; is negative, and the table of error messages is scanned for the next byte
+; with the bit set -- so a DM written as a plain DB runs one message into the
+; next.  Line 1319 is where the assembler does this to a DM of its own.
+macro DM [value]
+{
+ common
+	db	value
+	load dm$last byte from $-1
+	store byte dm$last or 80h at $-1
+}
+
 	ORG	100H
 
 	JMP	BEGIN
@@ -116,7 +130,7 @@ NOPRN:
 	MOV	BX,NOFILE
 	OR	AL,AL
 	JZ	$+5
-	JMP	PRERR
+	JMP	near PRERR
 	MOV	DX,HEXFCB
 	CALL	MAKFIL
 	MOV	DX,LSTFCB
@@ -159,7 +173,7 @@ L0002:
 	CMP	AL,EOL
 	JZ	ENDLN
 	MOV	AL,14H		;Garbage at end of line error
-	JP	ENDLIN
+	JMP	ENDLIN
 ENDJ:	JMP	_END
 
 ENDLN:
@@ -168,7 +182,7 @@ ENDLIN:
 ;AL = error code for line. Stack depth unknown
 	MOV	SP,_STACK
 	CALL	NEXLIN
-	JP	_LOOP
+	JMP	_LOOP
 
 NEXLIN:
 	MOV	CH,0C0H		;Put end of line marker and error code (AL)
@@ -181,7 +195,7 @@ GETEOL:
 	CMP	AL,1AH
 	JZ	ENDJ
 	CALL	NEXTCHR		;Scan over comments for linefeed
-	JP	GETEOL
+	JMP	GETEOL
 
 ABORT:
 	MOV	BX,NOMEM
@@ -219,7 +233,7 @@ CHKDSK:
 	JC	MAKFIL_RET
 DSKERR:
 	MOV	BX,BADDSK
-	JP	PRERR
+	JMP	PRERR
 
 ERROR:
 	MOV	AL,CL
@@ -323,7 +337,7 @@ SEGCHK:
 	XCHG	DX,BX		;Flip which operand is first and second
 	MOV	AL,XREG
 	SUB	AL,DH		;Let RR perform finish the test
-	JP	RR
+	JMP	RR
 
 _STORE:
 	TEST	CL,004H		;Check if storing is OK
@@ -467,7 +481,7 @@ FLG:
 	CALL	GETSYM
 	CMP	AL,','
 	JZ	GETOP
-	JP	GETOP1
+	JMP	GETOP1
 
 
 GETVAL:
@@ -521,7 +535,7 @@ NOIND:
 	RCL	AL,1		;Check BP bit
 	JC	MODE
 	INC	CH		;If not, must be BX
-	JP	MODE
+	JMP	MODE
 
 EXPRESSION:
 ;Analyze arbitrary expression. Flag byte in AH.
@@ -537,7 +551,7 @@ EXPRESSION:
 	PUSH	DX
 	PUSH	CX
 	MOV	DX,DI
-	JP	OPERATE
+	JMP	OPERATE
 PLSMNS:
 	MOV	CL,AL
 	PUSH	DX
@@ -714,7 +728,7 @@ BYTSIZ:
 	MOV	AL,[CHR]
 	MOV	DL,AL
 	CALL	GETCHR
-	JP	STRGDAT
+	JMP	STRGDAT
 
 ZERLEN:
 	CALL	NEXTCHR
@@ -771,7 +785,7 @@ SCANT:
 	JNZ	GETSYM_RET
 NEXB:
 	CALL	NEXTCHR
-	JP	SCANT
+	JMP	SCANT
 
 DOLLAR:
 	MOV	DX,[OLDPC]
@@ -790,7 +804,7 @@ GETSY:
 	JNC	NEXTCHJ
 	CMP	AL,'a'
 	JC	$+5
-	JMP	LETTER
+	JMP	near LETTER
 	CMP	AL,'9'+1
 	JNC	NEXTCHJ
 	CMP	AL,'0'
@@ -804,7 +818,7 @@ GETSY:
 	MOV	BX,0
 	CMP	AL,'h'
 	JNZ	$+5
-	JMP	HEX
+	JMP	near HEX
 	INC	CL
 	MOV	[IX],ID
 _DEC:
@@ -813,7 +827,7 @@ _DEC:
 	INC	[IX]
 	CMP	AL,'9'+1
 	JC	$+5
-	JMP	ERROR
+	JMP	near ERROR
 	SUB	AL,'0'
 	MOV	DX,BX
 	SHL	BX,1
@@ -1052,7 +1066,7 @@ SMALL:
 	STC
 	JZ	ALLRET_RET
 	XCHG	DX,BX
-	JP	LOOK
+	JMP	LOOK
 
 LOOKRET:
 	MOV	AL,CH
@@ -1163,7 +1177,7 @@ CREATE:
 	MOV	BX,[CODE]	;Check to make sure there's enough
 	CMP	BX,DX
 	JB	$+5
-	JMP	ABORT
+	JMP	near ABORT
 	PUSH	DX
 	MOV	BX,LENID
 	MOV	CL,[BX]
@@ -1217,7 +1231,7 @@ NOT1:
 	CMP	AL,':'
 	JNZ	LABCHK
 	CALL	NEXTCHR
-	JP	_LABEL
+	JMP	_LABEL
 LABCHK:
 	OR	AL,AL
 	TEST	DH,001H
@@ -1226,7 +1240,7 @@ _LABEL:
 	MOV	AL,[CHKLAB]
 	OR	AL,AL
 	JZ	$+5
-	JMP	GETLET
+	JMP	near GETLET
 	CALL	LOOKUP
 	MOV	CL,11
 	JNZ	ERR5
@@ -1245,7 +1259,7 @@ ASMLIN:
 	MOV	[OLDPC],BX
 	CALL	GETLAB
 	JNC	$+5
-	JMP	ENDLN
+	JMP	near ENDLN
 	MOV	BX,LENID
 	MOV	AL,[BX]
 	MOV	CL,12
@@ -1352,7 +1366,7 @@ TRY2XM1:
 	CMP	AL,"2"-"a"
 	JNZ	OPERR
 	MOV	DI,XM1
-	JP	LOOKNDP
+	JMP	LOOKNDP
 
 SPECIALOP:
 	AND	AL,7		;Mask to special op number
@@ -1557,7 +1571,7 @@ STIMM:
 	MOV	AL,[FLAG]
 	CALL	IMM
 	CALL	PUTADD
-	JP	FINIMM
+	JMP	FINIMM
 
 IMM:
 	AND	AL,1
@@ -1623,7 +1637,7 @@ PUTWOR:
 	MOV	CH,80H
 	PUSH	DX
 	PUSH	BX
-	JP	PUTBW
+	JMP	PUTBW
 
 PUTBYT:
 ;Same as PUTWOR, above, but for byte value.
@@ -1658,7 +1672,7 @@ PUTCHK:
 	TEST	CH,080H
 	JZ	SMPUT
 	CALL	GEN
-	JP	PRET
+	JMP	PRET
 SMPUT:
 	CALL	PUTCD
 	CALL	GEN1
@@ -1680,7 +1694,7 @@ NOUNDEF:
 	MOV	CH,0
 	JZ	PRET
 	CALL	GEN
-	JP	PRET
+	JMP	PRET
 
 PUTADD:
 ;Save complete addressing mode. Addressing mode is in AL; if this is a register
@@ -1706,7 +1720,7 @@ PUTADD:
 TWOBT:
 	MOV	BX,[ADDR]
 	MOV	DX,[ALABEL]
-	JP	PUTCHK
+	JMP	PUTCHK
 
 GRP2:
 	CALL	GETOP
@@ -1719,7 +1733,7 @@ GRP2:
 	MOV	CH,6
 	CMP	AL,SREG
 	JNZ	$+5
-	JMP	PACKREG
+	JMP	near PACKREG
 	MOV	CL,20
 	JMP	ERROR
 
@@ -1829,10 +1843,10 @@ GRP5:
 	JZ	_EQU
 	DEC	AL
 	JZ	$+5
-	JMP	_IF
+	JMP	near _IF
 PUTOP:
 	MOV	AL,-3
-	JP	NEWLOC
+	JMP	NEWLOC
 _ALIGN:
 	MOV	AL,BYTE[PC]
 	AND	AL,1
@@ -1845,7 +1859,7 @@ DSJ:
 	MOV	[PC],BX
 	XCHG	DX,BX
 	MOV	AL,-4
-	JP	NEWLOC
+	JMP	NEWLOC
 _EQU:
 	XCHG	DX,BX
 	MOV	BX,[LABPT]
@@ -1896,7 +1910,7 @@ ACCJ:	JMP	ACCIMM
 GRP8:
 	MOV	CL,AL
 	MOV	CH,0FEH
-	JP	ONEOP
+	JMP	ONEOP
 GRP9:
 	MOV	CL,AL
 	MOV	CH,0F6H
@@ -2005,7 +2019,7 @@ AIMM:
 	POP	AX
 	SAHF
 	JNZ	$+5
-	JMP	PUTBYT
+	JMP	near PUTBYT
 	JMP	PUTWOR
 
 ERR8:	JMP	ERROR
@@ -2121,7 +2135,7 @@ NOTLON:
 	JNZ	L0011
 	CALL	GETSYM
 L0011:	
-	JP	GETSP
+	JMP	GETSP
 NODEC:
 ;Return is intra-segment (short) without add to SP. 
 ;Record position for RET symbol.
@@ -2263,11 +2277,11 @@ GRP22:
 	MOV	CX,8F00H
 	CMP	AL,UNDEFID
 	JNZ	$+5
-	JMP	PMEM
+	JMP	near PMEM
 	MOV	CH,58H
 	CMP	AL,XREG
 	JNZ	$+5
-	JMP	PXREG
+	JMP	near PXREG
 	MOV	CH,7
 	CMP	AL,SREG
 	JZ	PACKREG
@@ -2284,7 +2298,7 @@ GETDAT:
 	MOV	AL,[DATSIZ]
 	JNZ	ENDDAT
 	CALL	SAVDAT
-	JP	GETDAT
+	JMP	GETDAT
 ENDDAT:
 	CMP	AL,2
 	JNZ	SAVDAT
@@ -2296,7 +2310,7 @@ ENDDAT:
 SAVDAT:
 	OR	AL,AL
 	JZ	$+5
-	JMP	PUTBYT
+	JMP	near PUTBYT
 	JMP	PUTWOR
 _IF:
 	OR	BX,BX
@@ -2330,7 +2344,7 @@ SKIPLP:
 	CMPSB
 	JNZ	SKIPLP
 	INC	BYTE[CHKLAB]
-	JP	SKIPLP
+	JMP	SKIPLP
 
 ENDCOND:
 	DEC	BYTE[CHKLAB]
@@ -2399,7 +2413,7 @@ TESTTYP:
 	JC	EMARK
 OBJBT:
 	STOSB
-	JP	NEXBT
+	JMP	NEXBT
 
 FIXUP:
 ;Either a word or byte fixup is needed from a forward reference
@@ -2415,7 +2429,7 @@ HAVDEF:
 	OR	CL,CL		;See if word or byte fixup
 	JS	DEFBYT
 	STOSW
-	JP	NEXBT
+	JMP	NEXBT
 
 DEFBYT:
 	MOV	DX,AX
@@ -2440,7 +2454,7 @@ DEFBYT:
 	JNZ	OBJBT		;If not, we're OK
 RNGERR:
 	MOV	BYTE[_ERR],101	;Value out of range
-	JP	OBJBT
+	JMP	OBJBT
 
 FINIJ:	JMP	FINI
 
@@ -2562,7 +2576,7 @@ CRLF:
 	MOV	AL,13
 	CALL	LIST
 	MOV	AL,10
-	JP	LIST
+	JMP	LIST
 
 OUT10:
 	XOR	DX,DX
@@ -2583,7 +2597,7 @@ LEAD:
 	MOV	AL,BL
 	CALL	HIDIG		;Convert to decimal and print 10s digit
 	MOV	BH,0		;Ensure leading zero suppression is off
-	JP	DIGIT
+	JMP	DIGIT
 
 HIDIG:
 	AAM			;Convert binary to unpacked BCD
@@ -2595,7 +2609,7 @@ DIGIT:
 	MOV	BH,0		;Turn off zero suppression if not zero
 SUPZ:
 	SUB	AL,BH		;Convert leading zeros to blanks
-	JP	LIST
+	JMP	LIST
 
 STRTLIN:
 	MOV	BYTE[LINFLG],0
@@ -2654,7 +2668,7 @@ PHEX:
 	CALL	LIST
 	POP	AX
 	CALL	LHALF
-	JP	LIST
+	JMP	LIST
 
 FINI:
 	OR	BYTE[LSTDEV],1
@@ -2779,7 +2793,7 @@ TABVAL:
 	JZ	NEXSYMLIN
 	MOV	AL,9
 	CALL	LIST
-	JP	RIGHTSON
+	JMP	RIGHTSON
 NEXSYMLIN:
 	CALL	CRLF
 	MOV	BYTE[SYMLIN],SYMWID
@@ -2858,7 +2872,7 @@ PRINT:
 	OR	AL,AL
 	JS	SYSTEM_RET
 	INC	BX
-	JP	PRINT
+	JMP	PRINT
 
 OUTA:
 	MOV	DL,AL
@@ -3539,199 +3553,199 @@ X4:
 
 XM1:	;F2XM1
 	DB	1		;One opcode
-	DB	"xm1"
+	DM	"xm1"
 	DB	1,0F0H
 
 NDPA:
 	DB	3
-	DB	"dd"
+	DM	"dd"
 	DB	6+ARITH,0C1H
-	DB	"ddp"
+	DM	"ddp"
 	DB	NEEDOP+STACKOP,0
-	DB	"bs"
+	DM	"bs"
 	DB	1,0E1H
 
 NDPB:
 	DB	2
-	DB	"ld"
+	DM	"ld"
 	DB	7+NEEDOP+MEMORY,20H
-	DB	"stp"
+	DM	"stp"
 	DB	7+NEEDOP+MEMORY,30H
 
 NDPC:
 	DB	5
-	DB	"om"
+	DM	"om"
 	DB	0+ONEREG+REAL,0D1H
-	DB	"omp"
+	DM	"omp"
 	DB	0+ONEREG+REAL,0D9H
-	DB	"hs"
+	DM	"hs"
 	DB	1,0E0H
-	DB	"ompp"
+	DM	"ompp"
 	DB	6,0D9H
-	DB	"lex"
+	DM	"lex"
 	DB	3,0E2H
 
 NDPD:
 	DB	6
-	DB	"iv"
+	DM	"iv"
 	DB	6+ARITH,0F1H
-	DB	"ivp"
+	DM	"ivp"
 	DB	NEEDOP+STACKOP,30H
-	DB	"ivr"
+	DM	"ivr"
 	DB	6+ARITH,0F9H
-	DB	"ivrp"
+	DM	"ivrp"
 	DB	NEEDOP+STACKOP,38H
-	DB	"ecstp"
+	DM	"ecstp"
 	DB	1,0F6H
-	DB	"isi"
+	DM	"isi"
 	DB	3,0E1H
 
 NDPE:
 	DB	1
-	DB	"ni"
+	DM	"ni"
 	DB	3,0E0H
 
 NDPF:
 	DB	1
-	DB	"ree"
+	DM	"ree"
 	DB	5+NEEDOP+ONEREG,0
 
 NDPI:
 	DB	13
-	DB	"add"
+	DM	"add"
 	DB	2+NEEDOP+INTEGER,0
-	DB	"ld"
+	DM	"ld"
 	DB	3+NEEDOP+INTEGER+EXTENDED,0
-	DB	"sub"
+	DM	"sub"
 	DB	2+NEEDOP+INTEGER,20H
-	DB	"stp"
+	DM	"stp"
 	DB	3+NEEDOP+INTEGER+EXTENDED,18H
-	DB	"st"
+	DM	"st"
 	DB	3+NEEDOP+INTEGER,10H
-	DB	"mul"
+	DM	"mul"
 	DB	2+NEEDOP+INTEGER,8
-	DB	"div"
+	DM	"div"
 	DB	2+NEEDOP+INTEGER,30H
-	DB	"subr"
+	DM	"subr"
 	DB	2+NEEDOP+INTEGER,28H
-	DB	"divr"
+	DM	"divr"
 	DB	2+NEEDOP+INTEGER,38H
-	DB	"com"
+	DM	"com"
 	DB	2+NEEDOP+INTEGER,10H
-	DB	"comp"
+	DM	"comp"
 	DB	2+NEEDOP+INTEGER,18H
-	DB	"ncstp"
+	DM	"ncstp"
 	DB	1,0F7H
-	DB	"nit"
+	DM	"nit"
 	DB	3,0E3H
 
 NDPL:
 	DB	10
-	DB	"d"
+	DM	"d"
 	DB	1+NEEDOP+ONEREG+REAL+EXTENDED,0
-	DB	"dz"
+	DM	"dz"
 	DB	1,0EEH
-	DB	"d1"
+	DM	"d1"
 	DB	1,0E8H
-	DB	"dpi"
+	DM	"dpi"
 	DB	1,0EBH
-	DB	"dl2t"
+	DM	"dl2t"
 	DB	1,0E9H
-	DB	"dl2e"
+	DM	"dl2e"
 	DB	1,0EAH
-	DB	"dlg2"
+	DM	"dlg2"
 	DB	1,0ECH
-	DB	"dln2"
+	DM	"dln2"
 	DB	1,0EDH
-	DB	"dcw"
+	DM	"dcw"
 	DB	1+NEEDOP+MEMORY,28H
-	DB	"denv"
+	DM	"denv"
 	DB	1+NEEDOP+MEMORY,20H
 
 NDPM:
 	DB	2
-	DB	"ul"
+	DM	"ul"
 	DB	6+ARITH,0C9H
-	DB	"ulp"
+	DM	"ulp"
 	DB	NEEDOP+STACKOP,8
 
 NDPO:
 	DB	1
-	DB	"p"
+	DM	"p"
 	DB	NEEDOP+1,0	;Flag special handling
 
 NDPN:
 	DB	1
-	DB	"op"
+	DM	"op"
 	DB	1,0D0H
 
 NDPP:
 	DB	3
-	DB	"rem"
+	DM	"rem"
 	DB	1,0F8H
-	DB	"tan"
+	DM	"tan"
 	DB	1,0F2H
-	DB	"atan"
+	DM	"atan"
 	DB	1,0F3H
 
 NDPR:
 	DB	2
-	DB	"ndint"
+	DM	"ndint"
 	DB	1,0FCH
-	DB	"stor"
+	DM	"stor"
 	DB	5+NEEDOP+MEMORY,20H
 
 NDPS:
 	DB	12
-	DB	"t"
+	DM	"t"
 	DB	5+NEEDOP+ONEREG+REAL,0D0H
-	DB	"tp"
+	DM	"tp"
 	DB	7+NEEDOP+ONEREG+REAL+EXTENDED,0D8H
-	DB	"ub"
+	DM	"ub"
 	DB	6+ARITH,0E1H
-	DB	"ubp"
+	DM	"ubp"
 	DB	NEEDOP+STACKOP,0E0H
-	DB	"ubr"
+	DM	"ubr"
 	DB	6+ARITH,0E9H
-	DB	"ubrp"
+	DM	"ubrp"
 	DB	NEEDOP+STACKOP,0E8H
-	DB	"qrt"
+	DM	"qrt"
 	DB	1,0FAH
-	DB	"cale"
+	DM	"cale"
 	DB	1,0FDH
-	DB	"ave"
+	DM	"ave"
 	DB	5+NEEDOP+MEMORY,30H
-	DB	"tcw"
+	DM	"tcw"
 	DB	1+NEEDOP+MEMORY,38H
-	DB	"tenv"
+	DM	"tenv"
 	DB	1+NEEDOP+MEMORY,30H
-	DB	"tsw"
+	DM	"tsw"
 	DB	5+NEEDOP+MEMORY,38H
 
 NDPT:
 	DB	1
-	DB	"st"
+	DM	"st"
 	DB	1,0E4H
 
 NDPW:
 	DB	1
-	DB	"ait"
+	DM	"ait"
 	DB	NEEDOP,0	;Flag special handling
 
 NDPX:
 	DB	3
-	DB	"ch"
+	DM	"ch"
 	DB	1+ONEREG,0C9H
-	DB	"am"
+	DM	"am"
 	DB	1,0E5H
-	DB	"tract"
+	DM	"tract"
 	DB	1,0F4H
 
 NDPY:
 	DB	2
-	DB	"l2x"
+	DM	"l2x"
 	DB	1,0F1H
-	DB	"l2xp1"
+	DM	"l2xp1"
 	DB	1,0F9H
 
 
@@ -3913,110 +3927,110 @@ NDPTAB:
 ;Error message table
 
 ERRTAB:
-	DB	1,"Register not allowed in immediate value"
-	DB	2,"Index or base register must be BP, BX, SI, or DI"
-	DB	3,"Only one base register (BX, BP) allowed"
-	DB	4,"Only one index register (SI or DI) allowed"
-	DB	5,"Only addition allowed on register or undefined label"
-	DB	6,"Only one undefined label per expression allowed"
-	DB	7,"Illegal digit in hexadecimal number"
-	DB	8,"Illegal digit in decimal number"
-	DB	10,"Illegal character in label or opcode"
-	DB	11,"Label defined twice"
-	DB	12,"Opcode not recognized"
-	DB	20,"Invalid operand"
-	DB	21,'"," and second operand expected'
-	DB	22,"Register mismatch"
-	DB	23,"Immediate operand not allowed"
-	DB	24,'"]" expected'
-	DB	25,"Two memory operands not allowed"
-	DB	26,"Destination must not be immediate value"
-	DB	27,"Both operands must not be registers"
-	DB	28,"Operand must be segment register"
-	DB	29,"First operand must be register"
-	DB	30,"Undefined label not allowed"
-	DB	31,"Value out of range"
-	DB	32,"Missing or illegal operand size flag"
-	DB	33,"Must have label on same line"
-	DB	35,"Zero-length string illegal"
-	DB	36,"ENDIF without IF"
-	DB	37,"One-character strings only"
-	DB	38,"Illegal expression"
-	DB	39,"End of string not found"
-	DB	100,"Undefined label"
-	DB	101,"Value out of range (forward)"
+	DM	1,"Register not allowed in immediate value"
+	DM	2,"Index or base register must be BP, BX, SI, or DI"
+	DM	3,"Only one base register (BX, BP) allowed"
+	DM	4,"Only one index register (SI or DI) allowed"
+	DM	5,"Only addition allowed on register or undefined label"
+	DM	6,"Only one undefined label per expression allowed"
+	DM	7,"Illegal digit in hexadecimal number"
+	DM	8,"Illegal digit in decimal number"
+	DM	10,"Illegal character in label or opcode"
+	DM	11,"Label defined twice"
+	DM	12,"Opcode not recognized"
+	DM	20,"Invalid operand"
+	DM	21,'"," and second operand expected'
+	DM	22,"Register mismatch"
+	DM	23,"Immediate operand not allowed"
+	DM	24,'"]" expected'
+	DM	25,"Two memory operands not allowed"
+	DM	26,"Destination must not be immediate value"
+	DM	27,"Both operands must not be registers"
+	DM	28,"Operand must be segment register"
+	DM	29,"First operand must be register"
+	DM	30,"Undefined label not allowed"
+	DM	31,"Value out of range"
+	DM	32,"Missing or illegal operand size flag"
+	DM	33,"Must have label on same line"
+	DM	35,"Zero-length string illegal"
+	DM	36,"ENDIF without IF"
+	DM	37,"One-character strings only"
+	DM	38,"Illegal expression"
+	DM	39,"End of string not found"
+	DM	100,"Undefined label"
+	DM	101,"Value out of range (forward)"
 	DB	255
 
-ERRMES:	DB	'***** ERROR:  '
+ERRMES:	DM	'***** ERROR:  '
 NOSPAC:	DB	13,10,'File creation error',13,10,"$"
 NOMEM:	DB	13,10,'Insufficient memory',13,10,'$'
 NOFILE:	DB	13,10,'File not found',13,10,'$'
 WRTERR:	DB	13,10,'Disk full',13,10,'$'
 BADDSK:	DB	13,10,'Bad disk specifier',13,10,'$'
-ERCNTM:	DB	13,10,13,10,'Error Count ='
-SYMSIZE	DB	13,10,'Symbol Table size = '
-FRESIZE	DB	      'Free space =        '
-SYMMES:	DB	13,10,'Symbol Table',13,10,13,10
+ERCNTM:	DM	13,10,13,10,'Error Count ='
+SYMSIZE:	DM	13,10,'Symbol Table size = '
+FRESIZE:	DM	      'Free space =        '
+SYMMES:	DM	13,10,'Symbol Table',13,10,13,10
 EXTEND:	DB	'ASM',0,0
 IFEND:	DB	5,'endif'
 IFNEST:	DB	2,'if'
-RETSTR:	DB	'ret'
+RETSTR:	DM	'ret'
 HEXFCB:	DB	0,'        HEX',0,0,0,0
-	DW	16
+	rb	16
 	DB	0,0,0,0,0
 LSTFCB:	DB	0,'        PRN',0,0,0,0
-	DW	16
+	rb	16
 	DB	0,0,0,0,0
-PC	DW	2
-OLDPC:	DW	2
-LABPT:	DW	2
-FLAG:	DW	1
-MAXFLG:	DW	1
-ADDR:	DW	2
-ALABEL:	DW	2
-_DATA	DW	2
-DLABEL	DW	2
-CON:	DW	2
-UNDEF	DW	2
-LENID:	DW	1
-ID:	DW	80
-CHR:	DW	1
-SYM:	DW	1
-BASE:	DW	2
-_HEAP	DW	2
-SYMFLG:	DW	1
-SYMLIN:	DW	1
-CODE	DW	2
-DATSIZ:	DW	1
-RELOC:	DW	1
-BCOUNT	DW	1
-COUNT:	DW	1
-_ERR:	DW	1
-LINE:	DW	2
-HEXLEN:	DW	2
-HEXADD	DW	2
-LASTAD:	DW	2
-HEXCNT:	DW	1
-CHKSUM:	DW	1
-LINFLG:	DW	1
-PREV:	DW	1
-IFFLG:	DW	1
-CHKLAB:	DW	1
-ERRCNT	DW	2
-LSTRET:	DW	2
-RETPT:	DW	2
-LSTDEV:	DW	2
-SPC:	DW	1
-NOWAIT:	DW	1
-IX	DW	2
-IY	DW	2
-HEXPNT	DW	2
-LSTPNT	DW	2
-HEXBUF:	DW	HEXBUFSIZ
-LSTBUF:	DW	LSTBUFSIZ
-BUFPT	DW	2
-SRCBUF:	DW	BUFSIZ
-	DW	100H
-ALIGN	4
+PC	rw	1
+OLDPC:	rw	1
+LABPT:	rw	1
+FLAG:	rb	1
+MAXFLG:	rb	1
+ADDR:	rw	1
+ALABEL:	rw	1
+_DATA	rw	1
+DLABEL	rw	1
+CON:	rw	1
+UNDEF	rw	1
+LENID:	rb	1
+ID:	rb	80
+CHR:	rb	1
+SYM:	rb	1
+BASE:	rw	1
+_HEAP	rw	1
+SYMFLG:	rb	1
+SYMLIN:	rb	1
+CODE	rw	1
+DATSIZ:	rb	1
+RELOC:	rb	1
+BCOUNT	rb	1
+COUNT:	rb	1
+_ERR:	rb	1
+LINE:	rw	1
+HEXLEN:	rw	1
+HEXADD	rw	1
+LASTAD:	rw	1
+HEXCNT:	rb	1
+CHKSUM:	rb	1
+LINFLG:	rb	1
+PREV:	rb	1
+IFFLG:	rb	1
+CHKLAB:	rb	1
+ERRCNT	rw	1
+LSTRET:	rw	1
+RETPT:	rw	1
+LSTDEV:	rw	1
+SPC:	rb	1
+NOWAIT:	rb	1
+IX	rw	1
+IY	rw	1
+HEXPNT	rw	1
+LSTPNT	rw	1
+HEXBUF:	rb	HEXBUFSIZ
+LSTBUF:	rb	LSTBUFSIZ
+BUFPT	rw	1
+SRCBUF:	rb	BUFSIZ
+	rb	100H
+	align	2		; SCP ASM's ALIGN is to a word
 _STACK	=	$
 START	=	$

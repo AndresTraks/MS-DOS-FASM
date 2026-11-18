@@ -203,10 +203,10 @@ NOFILE:	DB	"File not found$"
 ADDR:	DB	"Address out of range--conversion aborted$"
 DIRFUL:	DB	"Disk directory full$"
 
-OFFSET	DW	2
-SEGSIZ:	DW	2
-SIGN:	DW	1
-BUFFER:	DW	BUFSIZ
+OFFSET	rw	1
+SEGSIZ:	rw	1
+SIGN:	rb	1
+BUFFER:	rb	BUFSIZ
 
 START:
 STARTSEG =	(START+15)/16

@@ -442,7 +442,7 @@ ELSE
 	MOV	AH,AL
 	IN	AL,STCDATA
 	XCHG	AL,AH		;Count of days
-	JP	POINTSTAT
+	JMP	POINTSTAT
 
 STCTIME:
 	CALL	STCBYTE
@@ -580,7 +580,7 @@ SETTIME:
 	CALL	LOAD0
 	MOV	AL,27H		;Arm counters 1,2,3
 	OUT	STCCOM,AL
-	JP	POINTSTAT
+	JMP	POINTSTAT
 
 LOAD0:
 	XOR	CX,CX
@@ -1827,7 +1827,7 @@ SEEK:
 	TEST	DH,DDENBIT	; Check if double-density.
 	JZ	HAVSECT		; Jump if not.
 	MOV	DL,SMALLDDSECT	; Number of sectors on small DD track.
-	JP	HAVSECT
+	JMP	HAVSECT
 BIGONE:
 	TEST	DH,DDENBIT	; Check if double-density.
 	JZ	HAVSECT		; Jump if not.
@@ -1853,7 +1853,7 @@ BIGONE:
 	TEST	DH,DDENBIT	; Check if double-density.
 	JZ	HAVSECT		; Jump if not.
 	MOV	DL,SMALLDDSECT	; Number of sectors on small DD track.
-	JP	HAVSECT
+	JMP	HAVSECT
 BIGONE:
 	TEST	DH,DDENBIT	; Check if double-density.
 	JZ	HAVSECT		; Jump if not.
@@ -1926,7 +1926,7 @@ SETUP:
 	JBE	PUTSEC		; Jump if ok.
 
 	IF	(LARGEDS-1)*((SMALLDS*(SCP+CROMEMCO))-1)
-	JP	STEP		; If only SS drives, we gotta step.
+	JMP	STEP		; If only SS drives, we gotta step.
 	END	IF
 
 	IF	SCP*LARGEDS*(SMALLDS-1)
@@ -1965,7 +1965,7 @@ SETUP:
 	OUT	04H
 	END	IF
 
-	JP	PUTSEC
+	JMP	PUTSEC
 	END	IF
 
 	END	IF
@@ -2210,7 +2210,7 @@ CHKRES:
 	TEST	AL,DONEBIT
 	JZ	CHKRES
 	IN	AL,DISK
-	JP	_RESTORE		;Reload head
+	JMP	_RESTORE		;Reload head
 RESDONE:
 	MOV	AL,7FH
 	OUT	4,AL
