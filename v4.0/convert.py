@@ -1736,6 +1736,48 @@ UTILITIES = {
         SHARED=('COPYRIGH.INC',),
         START={'cs': 'CODE', 'ds': 'CODE', 'es': None, 'ss': None},
     ),
+    # EMM386.COM, the utility that reads and sets the mode of the EMM386
+    # driver: two modules in one segment, which EMMCOM.LNK names, and the
+    # two headers they read.  MEMMCOM is the program -- the entry, the
+    # stack, the signature it looks for and the far call it reaches the
+    # driver through; MEMMONF takes ON, OFF or AUTO off the command tail,
+    # does it, and prints what came of it.
+    #
+    # It asks the driver and not the hardware: the vector of INT 67H names
+    # the segment a device header stands at, the eight bytes of the name
+    # field say whether that header is EMM386's, and ELIM_Entry_off in the
+    # header is the offset of the routine that reads and writes the mode.
+    #
+    # The release's own build does not build it.  src/MEMM/MEMM/MAKEFILE
+    # declares the target and then comments the rule out, along with the
+    # two rules that would assemble the modules, so EMM386.COM is the one
+    # thing in the release made of assembler alone that Microsoft's build
+    # leaves unmade.  Nothing else of MEMM can be built here: EMM386.EXE
+    # links ..\emm\emmlib.lib, which is C.
+    'EMM386': dict(
+        DIR='src/MEMM/MEMM',
+        MODULES=('MEMMCOM.ASM', 'MEMMONF.ASM', 'ASCII_SM.EQU',
+                 'MEMM_MSG.INC'),
+        ONESEG=True,
+        SHARED=(),
+        # _TEXT's own ASSUME, which both modules repeat: a .COM is entered
+        # with every segment register on the prefix and the program's one
+        # segment holds its stack as well.
+        START={'cs': '_TEXT', 'ds': '_TEXT', 'es': '_TEXT', 'ss': '_TEXT'},
+        # The command tail DOS leaves at 80h of the prefix, which the
+        # program reads from 81h: the module names the place with a DW,
+        # which reserves the two bytes as well as naming them.  MASM and
+        # LINK laid the whole segment down from nought and EXE2BIN threw
+        # the first 100h bytes of it away, so the reservation never reached
+        # the file; fasm writes what is laid down and counts addresses
+        # apart from it, so those two bytes would be the first two of the
+        # image and everything after them would be read a word early.  A
+        # LABEL names the place and lays nothing down, which is what the
+        # line has to mean here.
+        EARLY={'MEMMCOM.ASM': [(
+            "cmd_line\tdw\t?\t\t; pointer to command line",
+            "cmd_line\tLABEL\tWORD\t\t; pointer to command line")]},
+    ),
 }
 
 NAME = sys.argv[1].upper() if len(sys.argv) > 1 else ''
@@ -3876,6 +3918,34 @@ def places(text):
                   text)
 
 
+def this_operator(text):
+    """MASM's THIS inside an expression, which is fasm's $.
+
+    THIS BYTE is the place the next byte would go, and the width said what
+    to call the type of what came out rather than anything about the
+    address.  A whole EQU of one is a name for that place and places()
+    above has already made it a LABEL -- GRAFTABL's TABLEUS EQU THIS BYTE,
+    MODE's EQUIP_FLAG -- so what reaches here is the other use, THIS in the
+    middle of something being worked out: EMM386 measures six things that
+    way, each with the EQU under what it measures.  SIG_LENGTH EQU (THIS
+    BYTE - oursig) stands below the signature it is the length of, the
+    three argument lengths stand below their strings, and no_arg and
+    max_args count how far the table of arguments has got.
+
+    So this runs after places() and before dollar_equ(), which is what
+    turns the EQU those are written with into an =, the value having to be
+    taken where the line stands.
+    """
+    out = []
+    for line in text.split('\n'):
+        j = comment_at(line)
+        code, note = (line, '') if j < 0 else (line[:j], line[j:])
+        out.append(outside_strings(
+            r"(?i)\bTHIS[ \t]+(?:BYTE|WORD|DWORD|QWORD|TBYTE)\b",
+            '$', code) + note)
+    return '\n'.join(out)
+
+
 def grouped_equ(text):
     """An EQU whose value is an expression, in brackets of its own.
 
@@ -5307,6 +5377,7 @@ for stem in MODULES:
     text = thens(text)
     text = distances(text)
     text = places(text)
+    text = this_operator(text)
     text = grouped_equ(text)
     text = dollar_equ(text)
     text = forwards(text)

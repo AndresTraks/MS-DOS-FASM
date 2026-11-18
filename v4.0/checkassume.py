@@ -537,16 +537,18 @@ def report(title, paths, labels, groups):
 def utilities():
     """The programs assemble.sh builds, and the source it hands fasm.
 
-    A utility is under src/CMD, a driver under src/DEV and a code page file
-    under src/DEV/DISPLAY, and the shell function that builds one says which,
-    so what comes back is the directory under src rather than the bare name.
+    A utility is under src/CMD, a driver under src/DEV, a code page file
+    under src/DEV/DISPLAY and EMM386.COM under src/MEMM, and the shell
+    function that builds one says which, so what comes back is the directory
+    under src rather than the bare name.
     """
-    WHERE = {"utility": "CMD", "device": "DEV", "fonts": "DEV/DISPLAY"}
+    WHERE = {"utility": "CMD", "device": "DEV", "fonts": "DEV/DISPLAY",
+             "memm": "MEMM"}
     text = read(os.path.join(HERE, "assemble.sh"))
     return [("%s/%s" % (WHERE[kind], where), source)
             for kind, where, source
-            in re.findall(r"(?m)^(utility|device|fonts)\s+(\S+)\s+(\S+)\s*\S*",
-                          text)]
+            in re.findall(r"(?m)^(utility|device|fonts|memm)"
+                          r"\s+(\S+)\s+(\S+)\s*\S*", text)]
 
 
 def utility_program(where, source):

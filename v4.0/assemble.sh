@@ -444,8 +444,7 @@ device KEYBOARD KBDLNK KEYBOARD.SYS
 # code pages -- 437, 850, 860, 863 and 865 -- with three fonts each for the
 # EGA (8x16, 8x14 and 8x8, read out of fifteen files of nothing but DB) and
 # one for the Convertible's screen.  The release links the seven and runs
-# EXE2BIN over the result.  These are the last things in the release built
-# from assembler alone.
+# EXE2BIN over the result.
 fonts() {
     if [ "$FASM" = fasm ]; then
         INCLUDE="$PWD/src/INC:$PWD/src/DEV/DISPLAY/$1"
@@ -460,3 +459,21 @@ fonts() {
 
 fonts EGA EGALNK EGA.CPI
 fonts LCD LCDLNK LCD.CPI
+
+# EMM386.COM, under src/MEMM, which is where the expanded memory manager is
+# -- and the one program in the release made of assembler alone that the
+# release's own build does not build: MAKEFILE there declares the target and
+# comments out the rule that would link it, along with the two rules that
+# would assemble its modules.  Two modules in one segment, which ECOMLNK.ASM
+# reads in the order EMMCOM.LNK names them.  It is the utility, not the
+# driver: EMM386 ON, OFF or AUTO, and EMM386 by itself for the mode the
+# driver is in, which it asks the driver for through the general entry point
+# in its device header.  Neither module reads anything from src/INC -- the
+# two headers they want are in the directory, where fasm looks for an
+# include beside the file that asked for it -- so there is no include path
+# to set and nothing of the message retriever in it.
+memm() {
+    $FASM "src/MEMM/$1/$2.ASM" "bin/$3"
+}
+
+memm MEMM ECOMLNK EMM386.COM

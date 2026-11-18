@@ -8,9 +8,13 @@ QEMU=${QEMU:-qemu-system-i386}
 # create_image.sh makes the system disk and nothing else, which is what the
 # tests want of it -- two of them count what is on the disk.  A machine driven
 # by hand wants the programs as well, so they go on here: the utilities under
-# src/CMD and the drivers under src/DEV that are converted, in the order
-# assemble.sh builds them.  A driver is loaded by a DEVICE= line in
+# src/CMD, the drivers under src/DEV and EMM386.COM under src/MEMM, in the
+# order assemble.sh builds them.  A driver is loaded by a DEVICE= line in
 # CONFIG.SYS, which this disk has none of; it is here to be named by one.
+# EMM386.COM has nothing to talk to on this disk -- the driver it asks is one
+# of the things here that cannot be built, being C -- so what it says is that
+# the driver is not installed.  tests/emm386.sh stands something in for the
+# driver and reaches the rest of it.
 for util in MORE.COM SORT.EXE FIND.EXE LABEL.COM TREE.COM COMP.COM EXE2BIN.EXE \
             RECOVER.COM DISKCOMP.COM DISKCOPY.COM EDLIN.COM SYS.COM \
             CHKDSK.COM XCOPY.EXE FORMAT.COM DEBUG.COM GRAFTABL.COM \
@@ -18,7 +22,7 @@ for util in MORE.COM SORT.EXE FIND.EXE LABEL.COM TREE.COM COMP.COM EXE2BIN.EXE \
             FASTOPEN.EXE KEYB.COM GRAPHICS.COM SHARE.EXE IFSFUNC.EXE \
             DRIVER.SYS ANSI.SYS VDISK.SYS DISPLAY.SYS PRINTER.SYS \
             RAMDRIVE.SYS SMARTDRV.SYS MKCNTRY.EXE XMAEM.SYS XMA2EMS.SYS \
-            KEYBOARD.SYS EGA.CPI LCD.CPI; do
+            KEYBOARD.SYS EGA.CPI LCD.CPI EMM386.COM; do
     mcopy -o -i msdos.img "bin/$util" "::$util"
 done
 

@@ -24,9 +24,9 @@
 ;   06/28/86  0.02	Name change from MEMM386 to MEMM
 ;
 ;******************************************************************************
-ifndef INC_LIST
+if ~ defined INC_LIST
 .xlist
-endif
+end if
 NUL		equ	0		; 00   ^@   Null
 BEL		equ	7		; 07   ^G   Bell
 BS		equ	8		; 08   ^H   Backspace

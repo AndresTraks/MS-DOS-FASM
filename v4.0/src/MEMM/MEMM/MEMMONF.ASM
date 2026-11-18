@@ -36,14 +36,14 @@
 ;
 ;******************************************************************************
 .lfcond 				; list false conditionals
-.386p
+;.386p
 	page
 ;******************************************************************************
 ;			P U B L I C   D E C L A R A T I O N S
 ;******************************************************************************
 ;
-	public	onf_func
-	public	get_token
+;	public	onf_func
+;	public	get_token
 ;
 ;******************************************************************************
 ;			E X T E R N A L   R E F E R E N C E S
@@ -51,10 +51,10 @@
 
 
 
-_TEXT	segment byte use16 public 'CODE'
-	extrn	Inst_chk:near
-	extrn	ELIM_link:near
-_TEXT	ends
+;_TEXT	segment byte use16 public 'CODE'
+;	extrn	Inst_chk:near
+;	extrn	ELIM_link:near
+;_TEXT	ends
 ;
 	page
 ;******************************************************************************
@@ -63,57 +63,59 @@ _TEXT	ends
 ;
 MSDOS		equ	21h			; MS-DOS function call
 
-	include ascii_sm.equ
+	include 'ASCII_SM.EQU'
 
 ;******************************************************************************
 ;			S E G M E N T	D E F I N I T I O N
 ;******************************************************************************
 ;
-_TEXT	segment byte use16 public 'CODE'
-	assume	cs:_TEXT, ds:_TEXT, es:_TEXT, ss:_TEXT
+;_TEXT	segment byte use16 public 'CODE'
+;	assume	cs:_TEXT, ds:_TEXT, es:_TEXT, ss:_TEXT
 ;
 ;******************************************************************************
 ;			L O C A L   D A T A   A R E A
 ;******************************************************************************
 ;
-	include 	memm_msg.inc
+	include 'MEMM_MSG.INC'
 ;
-msg_tbl 	label	word		; table of final messages to display
-		dw	offset vmode	; on
-		dw	offset rmode	; off
-		dw	offset amode	; auto
+label msg_tbl word   ; table of final messages to display
+		dw	vmode        ; on
+		dw	rmode        ; off
+		dw	amode        ; auto
 		dw	0		; no parameter will use above msgs
-		dw	offset parmerr	; invalid parameter
-		dw	offset verr_msg	; error entering vmode
-		dw	offset rerr	; error entering rmode
-		dw	offset aerr	; error entering amode
+		dw	parmerr        ; invalid parameter
+		dw	verr_msg        ; error entering vmode
+		dw	rerr        ; error entering rmode
+		dw	aerr        ; error entering amode
 ;
 ;	the valid arguments
 ;
 on_arg		db	"on"
-on_len		equ	(this byte - on_arg)
+; = and not equ: fasm's equ is text put in where the name is used, so a $
+; in it would be the address of the use and not of this line.
+on_len		=	($ - on_arg)
 
 off_arg 	db	"off"
-off_len 	equ	(this byte - off_arg)
+off_len 	=	($ - off_arg)
 
 auto_arg	db	"auto"
-auto_len	equ	(this byte - auto_arg)
+auto_len	=	($ - auto_arg)
 
 null_arg	db	" "
 null_len	equ	1
 max_arg_len	equ	11
 arg_str 	db	max_arg_len	dup(0)		; storage for get_token
 ;
-arg_tbl 	label	word		; table of valid arguments
-		dw	offset	on_arg
-		dw	offset	off_arg
-		dw	offset	auto_arg
+label arg_tbl word   ; table of valid arguments
+		dw	on_arg
+		dw	off_arg
+		dw	auto_arg
 ;
-no_arg		equ	(this byte - arg_tbl)
-		dw	offset null_arg 	; should be last entry
-max_args	equ	(this byte - arg_tbl)
+no_arg		=	($ - arg_tbl)
+		dw	null_arg         ; should be last entry
+max_args	=	($ - arg_tbl)
 ;
-arg_len 	label	word		; table of argument lengths
+label arg_len word   ; table of argument lengths
 		dw	on_len
 		dw	off_len
 		dw	auto_len
@@ -131,7 +133,7 @@ page
 ;	USED: none
 ;
 ;******************************************************************************
-onf_func	proc	near
+onf_func:
 
 	push	ax
 	push	dx
@@ -144,7 +146,7 @@ onf_func	proc	near
 	call	Inst_chk		; ax = 0/1 => isn't/is installed
 	or	ax,ax			; q: is it installed?
 	jnz	drvr_installed
-	mov	dx,offset not_there	; Not installed message
+	mov	dx,not_there        ; Not installed message
 	jmp	term			; display message and quit
 ;
 drvr_installed:
@@ -169,7 +171,7 @@ get_status:
 	cmp	ax,2			; q: auto mode?
 	jb	msg_disp		; n: display mode
 	push	ax			; save it
-	mov	dx,offset amode
+	mov	dx,amode
 	mov	ah,9
 	int	MSDOS			; print auto mode
 	pop	ax			; restore mode
@@ -178,7 +180,7 @@ get_status:
 msg_disp:
 	shl	ax,1			; make it a word index
 	mov	di,ax			; offset into message table
-	mov	dx,msg_tbl[di]		; get appropriate message
+	mov	dx,[di+msg_tbl] ; get appropriate message
 term:
 	mov	ah,9
 	int	MSDOS			; display error message
@@ -188,7 +190,7 @@ term:
 	pop	ax
 
 	ret
-onf_func	endp
+;onf_func	endp
 
 	page
 ;******************************************************************************
@@ -205,7 +207,7 @@ onf_func	endp
 ;	USED: see above
 ;
 ;******************************************************************************
-get_token	proc		near
+get_token:
 	push	si		; save storage area
 	push	bx
 	push	ax
@@ -216,7 +218,7 @@ get_token	proc		near
 ; go to first non-blank character
 ;
 gloop1:
-	mov	al,es:[di]	; get a character
+	mov	al,[es:di]	; get a character
 	inc	di		; point to next
 	cmp	al,' '		; Q: space ?
 	je	gloop1		; y: skip it
@@ -224,7 +226,7 @@ gloop1:
 	je	gloop1		; y: skip it
 	dec	di		; N: start parsing and reset di
 gloop2:
-	mov	al,es:[di]	; get next char
+	mov	al,[es:di]	; get next char
 	cmp	al,CR		; q: carriage return?
 	je	token_xit	; y: quit
 	cmp	al,LF		; q: line feed?
@@ -238,7 +240,7 @@ gloop2:
 	cmp	cx,bx		; q: have we stored our limit yet?
 	ja	gloop2		; y: don't store any more
 	or	al,20h		; make it lower case
-	mov	ds:[si],al	; store it
+	mov	[ds:si],al	; store it
 	inc	si		; and point to next
 	jmp	short gloop2	; continue
 token_xit:
@@ -247,7 +249,7 @@ token_xit:
 	pop	bx
 	pop	si
 	ret
-get_token	endp
+;get_token	endp
 
 	page
 ;******************************************************************************
@@ -267,7 +269,7 @@ get_token	endp
 ;	USED: see above
 ;
 ;******************************************************************************
-parse_onf	proc		near
+parse_onf:
 ;
 	push	si
 	push	ds
@@ -279,7 +281,7 @@ parse_onf	proc		near
 ;
 ;	es:di = 1st char
 ;
-	mov	si,offset arg_str	; ds:si = storage for argument
+	mov	si,arg_str        ; ds:si = storage for argument
 	push	cs
 	pop	ds		; arg storage in _CODE
 	mov	cx,max_arg_len	; maximum argument length
@@ -292,9 +294,9 @@ parse_onf	proc		near
 
 	xor	bx,bx		; index into parameter table
 ploop2:
-	cmp	cx,arg_len[bx]	; q: lengths equal?
+	cmp	cx,[bx+arg_len] ; q: lengths equal?
 	jne	not_found	; n: keep looking
-	mov	di,arg_tbl[bx]	; get destination address
+	mov	di,[bx+arg_tbl] ; get destination address
 	push	si		; save source string addr
 	repe	cmpsb		; q: is this a valid argument?
 	pop	si		;     restore source string address (command line)
@@ -330,8 +332,8 @@ parse_xit2:
 	pop	si
 ;
 	ret
-parse_onf	endp
+;parse_onf	endp
 
-_TEXT	ends
+;_TEXT	ends
 
-	end
+;	end
