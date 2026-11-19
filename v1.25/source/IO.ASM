@@ -45,6 +45,24 @@ COMBIN	EQU	0		; Two 8-inch and one 5.25-inch.
 SMALL	EQU	0		; Three 5.25-inch drives.
 CUSTOM	EQU	0		; User defined.
 ;
+; Mask the A20 address line, which is what makes this machine the machine
+; 86-DOS was written for.  The CP/M-compatible call at offset 5 of a
+; program's base is a long call the kernel points at (0CH-n):(n*16), whose
+; address is a megabyte above 0:00C0 -- and 0:00C0 is where the kernel has
+; left a long jump to its own dispatcher.  An 8088 has twenty address lines
+; and no twenty-first, so the call arrives at 00C0 and the wrap is the
+; mechanism; on anything later the A20 gate decides, and a modern BIOS --
+; SeaBIOS under QEMU -- leaves it open, so the call lands in whatever is a
+; megabyte up and the machine is gone.  Nothing in this system addresses
+; above a megabyte, so there is nothing else to lose by closing the gate.
+; Port 92H is the fast gate every chipset since the PS/2 has; the other way
+; round is command D1H to the 8042 at port 64H, which has to read the output
+; port first and keep bit 0 set -- writing a nought there pulls the
+; processor's reset line.
+; TRANS.COM is the program this is for: every system call it makes goes
+; through the call at 5, and nothing else in the release uses that entry.
+A20OFF	EQU	IBM
+;
 ; If 8-inch drives are PerSci, select FASTSEEK here:
 ; (Fastseek with Tarbell controllers doesn't work yet).
 FASTSEEK	EQU	1
@@ -161,6 +179,12 @@ INIT:
 	MOV	SP,7C00H
 	ELSE
 	MOV	SP,BIOSSEG*16
+	END	IF
+
+	IF	A20OFF
+	IN	AL,92H		; the A20 gate is bit 1 of port A
+	AND	AL,0FDH		; closed, so the top of memory wraps
+	OUT	92H,AL
 	END	IF
 
 	IF	INTINP-1

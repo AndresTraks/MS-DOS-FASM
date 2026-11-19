@@ -12,7 +12,7 @@ rm -f "$IMAGE"
 mformat -C -f 1440 -i "$IMAGE" ::
 
 mcopy -i "$IMAGE" bin/IO.SYS ::
-mcopy -i "$IMAGE" bin/MSDOS.SYS bin/COMMAND.COM bin/ASM.COM bin/HEX2BIN.COM ::
+mcopy -i "$IMAGE" bin/MSDOS.SYS bin/COMMAND.COM bin/ASM.COM bin/HEX2BIN.COM bin/TRANS.COM ::
 
 mcopy -i "$IMAGE" \
     bin/BASIC.COM bin/BASICA.COM bin/CHKDSK.COM bin/COMP.COM bin/DEBUG.COM \

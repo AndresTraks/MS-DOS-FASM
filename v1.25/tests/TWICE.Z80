@@ -1,0 +1,17 @@
+; A Z80 program for TRANS.COM, the translator this release ships.
+;
+; It prints its message twice: B is the count, DJNZ the Z80 loop, and the
+; CP/M call at 5 with the function in C is how a program asked 86-DOS for
+; anything.  TRANS maps the Z80 registers onto the 8086 ones -- B to CH,
+; BC to CX, DE to DX, C to CL -- and writes 8086 source for ASM.COM.
+	ORG	100H
+	LD	B,2
+AGAIN:	PUSH	BC
+	LD	DE,MSG
+	LD	C,9
+	CALL	5
+	POP	BC
+	DJNZ	AGAIN
+	RET
+MSG:	DB	"Twice, from the Z80",13,10,"$"
+
