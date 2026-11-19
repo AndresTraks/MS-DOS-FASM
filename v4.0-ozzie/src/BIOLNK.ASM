@@ -70,6 +70,7 @@ BiosInit$SEG		= 0
 ; floppy controller wants are not in this module, and they are what the object
 ; this is held against knows nothing of.
 QEMUFDC		= 0
+QEMUA20		= 0
 
 S_CODE		= 1
 S_BIOSINIT	= 2

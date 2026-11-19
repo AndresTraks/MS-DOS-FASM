@@ -99,6 +99,52 @@ PROGRAMS = {
         # DEBUG lays nothing down with DEBUGFLG undefined.
         "silent": ("DEBUG",),
         "regions": (),
+        # THE THING QEMU'S A20 GATE WANTS, which is not a conversion but a
+        # change -- see adapted().  It is wrapped in IF QEMUA20, which only
+        # src/QEMULNK.ASM turns on, and it is a switch of its own because it
+        # has nothing to do with the floppy controller the other two are for.
+        #
+        # The kernel keeps a second door for programs carried over from CP/M:
+        # a CALL 5 with the function in CL.  It writes a long call at offset 5
+        # of a program's base pointing at (0CH-n):(n*16), and leaves a long
+        # jump to its own dispatcher at 0:00C0 -- and the first of those
+        # addresses is exactly a megabyte above the second.  An 8086 has
+        # twenty address lines and no twenty-first, so the call arrives at
+        # 00C0 and the wrap is the mechanism.  A modern BIOS leaves the A20
+        # gate open (SeaBIOS under QEMU does), so the call lands at 1000C0H in
+        # nothing and the machine is gone.
+        #
+        # Nothing in this release uses that door -- COMMAND.COM and SM.EXE ask
+        # through INT 21H -- so the system comes up and runs either way, and
+        # only a CP/M-era program finds it shut.  The same is true of v1.25,
+        # v2.0 and v4.0, where it was found first; v1.25's and v2.0's BIOSes
+        # are this repository's own code and close the gate at init, and
+        # v4.0's must not, because by 4.00 RAMDRIVE, SMARTDRV and XMA2EMS
+        # reach above the first megabyte on purpose.  This BIOS is 1984 and
+        # addresses nothing above a megabyte, so closing the gate here is
+        # being the machine the code was written for.
+        #
+        # It goes at START$, the first instruction the boot sector jumps to,
+        # and it goes there rather than at INIT because of where the room is.
+        # LINK left CODE seven NOPs short of 1ED5H and eleven more to the
+        # paragraph at 1EE0H -- eighteen bytes, twelve of which the senses
+        # above take, so these three instructions are the last six that fit.
+        # BIOSINIT has no room at all: its three shares end on 2659H exactly,
+        # and each begins on a paragraph, so six bytes added to IBMBIO's share
+        # would cost sixteen and push SYSINITSEG off 2660H.  A fourth change
+        # would have to move a boundary, and was() in src/BIOSIMG.ASM stops
+        # the assembly rather than write a file laid out differently from the
+        # one SYSINITSEG's own pointers were resolved for.
+        "adapt": {"IBMBIO.ASM": (
+            ("START$:\r\n\tJMP\tINIT\r\n",
+             "START$:\r\n"
+             "IF\tQEMUA20\r\n"
+             "\tIN\tAL,92H\t\t; the A20 gate is bit 1 of port A, and\r\n"
+             "\tAND\tAL,0FDH\t\t;  closed is what twenty address lines\r\n"
+             "\tOUT\t92H,AL\t\t;  give: the top of memory wraps, which\r\n"
+             "ENDIF\t\t\t\t;  is what the CALL 5 entry is built on\r\n"
+             "\tJMP\tINIT\r\n"),
+        )},
     },
     "IBMMTCON": {
         # The console driver: the screen, the keyboard, eight virtual
@@ -1236,12 +1282,14 @@ def adapted(name, text):
     """The release's own text, with what the machine we run on needs.
 
     Everything else here is a conversion: the same program said in another
-    assembler.  These two are not.  They are changes to what the source does,
-    because the machine QEMU puts in front of it is not the IBM PC of 1984,
-    and without them the system cannot be started at all -- Microsoft's own
-    IBMBIO.COM cannot either, so they are the machine's doing and not the
-    conversion's.  Both are wrapped in IF QEMUFDC, which src/BIOSLNK.ASM
-    leaves at zero and src/QEMULNK.ASM turns on, so the faithful build is
+    assembler.  These three are not.  They are changes to what the source
+    does, because the machine QEMU puts in front of it is not the IBM PC of
+    1984 -- and for two of the three the system cannot be started at all
+    without them, Microsoft's own IBMBIO.COM included, so they are the
+    machine's doing and not the conversion's.  Two switches carry them:
+    IF QEMUFDC for what the floppy controller wants and IF QEMUA20 for the
+    address line the kernel's CP/M entry is built on.  src/BIOSLNK.ASM leaves
+    both at zero and src/QEMULNK.ASM turns both on, so the faithful build is
     byte for byte what it was and only the second one differs.
 
     What goes wrong, and why each is needed, is in the table beside the text.

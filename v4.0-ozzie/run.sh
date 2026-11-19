@@ -1,9 +1,10 @@
 #!/bin/sh
 # Start a machine from the disk create_image.sh makes, with our BIOS on it.
 #
-# The disk carries bin/IBMBIOQ.COM, the build with the two things QEMU's
-# floppy controller wants in it -- see src/QEMULNK.ASM.  Without them nothing
-# starts, Microsoft's own IBMBIO.COM included; with them the system comes up:
+# The disk carries bin/IBMBIOQ.COM, the build with the three things this
+# machine wants in it -- two for QEMU's floppy controller and one for the A20
+# gate -- see src/QEMULNK.ASM.  Without the first two nothing starts,
+# Microsoft's own IBMBIO.COM included; with them the system comes up:
 # COMMAND.COM, AUTOEXEC.BAT, and SM.EXE if you type SM, which is the session
 # manager this release is for.  F7 and F8 are the two shells SM.INI defines.
 #

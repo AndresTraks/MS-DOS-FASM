@@ -42,6 +42,11 @@ if SEGSEL = S_CODE
    ASSUME CS:BiosSeg,DS:NOTHING,ES:NOTHING
 
 START$:
+IF	QEMUA20
+	IN	AL,92H		; the A20 gate is bit 1 of port A, and
+	AND	AL,0FDH		;  closed is what twenty address lines
+	OUT	92H,AL		;  give: the top of memory wraps, which
+end if				;  is what the CALL 5 entry is built on
 	JMP	INIT
 
 	DB	20 DUP (0)	; IBM WANTS SOME ZEROED AREA

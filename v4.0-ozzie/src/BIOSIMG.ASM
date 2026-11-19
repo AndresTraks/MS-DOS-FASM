@@ -65,7 +65,9 @@ include 'DEFDBUG.INC'
 
 ; QEMUFDC says whether the two changes QEMU's floppy controller wants are in
 ; -- four Sense Interrupt Status commands after a controller reset, and 300
-; kbps instead of 250.  They are changes to what the source does and not
+; kbps instead of 250 -- and QEMUA20 whether the A20 gate is closed at the
+; BIOS's first instruction, which is what the kernel's CP/M call at offset 5
+; is built on.  All three are changes to what the source does and not
 ; conversions of it, so neither build makes the choice for itself: whichever
 ; file read this one has already said which it is, and convert.py's table says
 ; what goes wrong without them.

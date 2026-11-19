@@ -11,11 +11,12 @@
 #     the kernel's banner and panic in the same line.  So the two diskettes
 #     are started and the screens held against each other -- the conversion
 #     has to fail exactly where the original fails.
-#   * bin/IBMBIOQ.COM, the same with the two things QEMU's floppy controller
-#     wants -- four Sense Interrupt Status commands after a reset of the 765,
-#     and 300 kbps rather than 250.  convert.py's table says what goes wrong
-#     without them.  That one starts, so it is driven: the date and the time
-#     AUTOEXEC.BAT asks for, a DIR, and SM, the session manager this release
+#   * bin/IBMBIOQ.COM, the same with the three things this machine wants --
+#     four Sense Interrupt Status commands after a reset of the 765, 300 kbps
+#     rather than 250, and the A20 gate closed.  convert.py's table says what
+#     goes wrong without each.  That one starts, so it is driven: the date and
+#     the time AUTOEXEC.BAT asks for, a DIR, the kernel's CP/M call at offset
+#     5 through tests/call5.asm, and SM, the session manager this release
 #     exists for.
 #
 # Little of what reaches the screen is ours -- the banners and the panic are
@@ -31,6 +32,19 @@ cd "$(dirname "$0")/.."
 
 QEMU=${QEMU:-qemu-system-i386}
 command -v "$QEMU" >/dev/null 2>&1 || { echo "$0: $QEMU not found" >&2; exit 2; }
+command -v mcopy >/dev/null 2>&1 || { echo "$0: mtools not found" >&2; exit 2; }
+
+# For tests/call5.asm, which is this test's own and not the release's.
+if command -v fasm >/dev/null 2>&1; then
+    FASM=fasm
+elif command -v wine >/dev/null 2>&1; then
+    FASM="wine ../fasmw17332/FASM.EXE"
+    WINEDEBUG=${WINEDEBUG:--all}
+    export WINEDEBUG
+else
+    echo "$0: neither fasm nor wine found" >&2
+    exit 2
+fi
 
 OUT=${TMPDIR:-/tmp}/ozzieboot.$$
 mkdir -p "$OUT"
@@ -122,6 +136,12 @@ fi
 # And the build that runs: driven through AUTOEXEC.BAT, a DIR and the session
 # manager.
 ./create_image.sh "$OUT/qemu.img" bin/IBMBIOQ.COM >/dev/null
+# tests/call5.asm goes on that disk: the kernel's other door, which only this
+# build can reach.  It is copied after create_image.sh has written the BIOS,
+# because that is done by offset and wants IBMBIO.COM at the front of the
+# data area.
+$FASM tests/call5.asm "$OUT/CALL5.COM" >/dev/null
+mcopy -o -i "$OUT/qemu.img" "$OUT/CALL5.COM" ::CALL5.COM
 SEEN=$OUT/q.txt
 {
     await "Enter new date"
@@ -135,6 +155,9 @@ SEEN=$OUT/q.txt
     for k in d i r ret; do echo "sendkey $k"; sleep 0.1; done
     await "File(s)"
     cp "$SEEN" "$OUT/dir.screen"
+    for k in c a l l 5 ret; do echo "sendkey $k"; sleep 0.1; done
+    await "and back from it"
+    cp "$SEEN" "$OUT/call5.screen"
     for k in s m ret; do echo "sendkey $k"; sleep 0.1; done
     await "SESSION MANAGER"
     cp "$SEEN" "$OUT/sm.screen"
@@ -146,7 +169,7 @@ SEEN=$OUT/q.txt
             -drive file="$OUT/qemu.img",format=raw,if=floppy,index=0 \
             -display none -monitor stdio >/dev/null 2>&1 || true
 
-for what in early dir sm session; do
+for what in early dir call5 sm session; do
     echo "--- the screen at $what"
     [ -s "$OUT/$what.screen" ] && sed '/^$/d;s/^/   /' "$OUT/$what.screen"
 done
@@ -167,6 +190,8 @@ check early "Current date is" "the kernel dispatches and the console driver writ
 check dir "A:\\>dir" "the date and the time went in through the keyboard"
 check dir "IBMBIO   COM    12363" "DIR read the root directory, our own BIOS in it"
 check dir "File(s)" "and ran to the end of the listing"
+check call5 "CALL 5: yes" "the kernel's other door answers: the CP/M call at 5, through the wrap at the top of twenty address lines"
+check call5 "and back from it" "and came back, so the kernel re-ordered the stack as if an interrupt had been used"
 check sm "Microsoft SESSION MANAGER Ver 1.00" "the session manager started"
 check sm "a:\\command.com" "and found the programs SM.INI defines"
 check session "A:\\>" "and F7 put a shell in a session of its own"
