@@ -105,6 +105,11 @@ fi
 # the end to end test of the clock module in source/PCLOCK_IBM.ASM.
 ./tests/profil.sh || fail=1
 
+# Asks the system for the same thing through INT 21H and through the CP/M
+# CALL 5, which is the entry nothing else in the release uses and the one
+# that needs the A20 line closed.
+./tests/call5.sh || fail=1
+
 if [ $fail -eq 0 ]; then
     printf '\n======== all passed\n'
 else

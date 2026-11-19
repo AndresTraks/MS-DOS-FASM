@@ -13,6 +13,23 @@
 use16
 org 0
 
+; Mask the A20 address line, which is what makes this machine the machine
+; this system was written for.  The CP/M-compatible call at offset 5 of a
+; program's base is a long call the kernel points at (0CH-n):(n*16) -- see
+; ENTRYPOINTSEG in MISC.ASM -- and that address is a megabyte above 0:00C0,
+; where the kernel has left a long jump to its own dispatcher.  An 8088 has
+; twenty address lines and no twenty-first, so the call arrives at 00C0 and
+; the wrap is the mechanism; a modern BIOS leaves the A20 gate open, so under
+; QEMU the call lands a megabyte up, in nothing, and the machine is gone.
+; Nothing in DOS 2 addresses above a megabyte, so there is nothing else to
+; lose by closing it.  Port 92H is the fast gate; the 8042 at port 64H is the
+; other way round, and there a nought in bit 0 of the output port pulls the
+; processor's reset line.
+; v1.25's IO.ASM does the same thing for the same reason.  v4.0 must not:
+; by then RAMDRIVE, SMARTDRV and XMA2EMS reach above the first megabyte
+; themselves, so the gate is live state there and not a constant.
+A20OFF          equ 1
+
 BIOSSEG         equ 60h         ; where the boot sector puts this file
 BIOSIZS         equ 200h        ; paragraphs reserved for it, so that the
                                 ;  boot sector knows where MSDOS.SYS goes
@@ -920,6 +937,12 @@ HWINIT:
         MOV     SS,BP
         MOV     SP,BIOSSEG*16           ; below this file, above the vectors
         STI
+
+        IF      A20OFF
+        IN      AL,92h                  ; the A20 gate is bit 1 of port A
+        AND     AL,0FDh                 ; closed, so the top of memory wraps
+        OUT     92h,AL
+        END IF
         PUSH    CS
         POP     DS
         PUSH    CS
