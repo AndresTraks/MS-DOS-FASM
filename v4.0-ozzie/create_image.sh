@@ -37,28 +37,5 @@ BIOS=${2:-bin/IBMBIOQ.COM}
 
 cp bin/DRDOS1_IMD.img "$IMAGE"
 
-python3 -I - "$IMAGE" "$BIOS" bin/DISK1/IBMBIO.COM <<'PY'
-import struct
-import sys
-
-image, ours, theirs = sys.argv[1], sys.argv[2], sys.argv[3]
-new = open(ours, "rb").read()
-old = open(theirs, "rb").read()
-if len(new) != len(old):
-    sys.exit("create_image.sh: our BIOS is %d bytes and the release's is %d; "
-             "it cannot be written in place" % (len(new), len(old)))
-
-with open(image, "r+b") as f:
-    disk = bytearray(f.read())
-    # The data area: the boot sector, both copies of the FAT, and the root
-    # directory, all of which this leaves exactly as the release wrote them.
-    bps, spc, res, fats, rootent = struct.unpack("<HBHBH", disk[11:19])
-    spf = struct.unpack("<H", disk[22:24])[0]
-    at = (res + fats * spf) * bps + rootent * 32
-    if disk[at:at+len(old)] != old:
-        sys.exit("create_image.sh: IBMBIO.COM is not at the front of the "
-                 "data area; the image is not the one this expects")
-    disk[at:at+len(new)] = new
-    f.seek(0)
-    f.write(disk)
-PY
+# Our BIOS where the release's was, which is what SYS does -- see putbios.py.
+python3 -I putbios.py "$IMAGE" "$BIOS" bin/DISK1/IBMBIO.COM

@@ -31,19 +31,9 @@ mformat -C -f 1440 -i "$IMAGE" ::
 # No volume label: it would take the first directory entry, and the boot
 # sector wants IO.SYS there.
 
-python3 - "$IMAGE" bin/MSBOOT.BIN <<'PY'
-import sys
-image, boot = sys.argv[1], sys.argv[2]
-with open(image, "r+b") as f:
-    theirs = bytearray(f.read(512))
-    ours = bytearray(open(boot, "rb").read())
-    assert len(ours) == 512, "the boot sector is %d bytes" % len(ours)
-    # 0Bh to 3Eh: the BPB, the physical drive and head, and the extended
-    # fields -- the serial number, the volume label and "FAT12".
-    ours[0x0B:0x3E] = theirs[0x0B:0x3E]
-    f.seek(0)
-    f.write(ours)
-PY
+# Our boot sector, with the table mformat wrote left in it -- which is what
+# FORMAT and SYS do as well; see bootsect.py.
+python3 -I bootsect.py "$IMAGE" bin/MSBOOT.BIN
 
 # IO.SYS and MSDOS.SYS, in the order the boot sector looks for them.
 mcopy -i "$IMAGE" bin/IO.SYS ::
